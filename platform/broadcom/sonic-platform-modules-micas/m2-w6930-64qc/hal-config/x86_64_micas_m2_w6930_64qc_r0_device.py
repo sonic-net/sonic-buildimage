@@ -422,7 +422,7 @@ devices = {
         {
             "name": "BOARD_TEMP",
             "temp_id": "TEMP1",
-            "api_name": "Board",
+            "api_name": "BOARD_TEMP",
             "Temperature": {
                 "value": {"loc": "/sys/bus/i2c/devices/118-004f/hwmon/hwmon*/temp1_input", "way": "sysfs"},
                 "Min": -10000,
@@ -436,7 +436,7 @@ devices = {
         {
             "name": "CPU_TEMP",
             "temp_id": "TEMP2",
-            "api_name": "CPU",
+            "api_name": "CPU_TEMP",
             "Temperature": {
                 "value": {"loc": "/sys/bus/platform/devices/coretemp.0/hwmon/hwmon*/temp1_input", "way": "sysfs"},
                 "Min": -15000,
@@ -450,7 +450,7 @@ devices = {
         {
             "name": "INLET_TEMP",
             "temp_id": "TEMP3",
-            "api_name": "Inlet",
+            "api_name": "INLET_TEMP",
             "Temperature": {
                 "value": [
                     {"loc": "/sys/bus/i2c/devices/79-004b/hwmon/*/temp1_input", "way": "sysfs"},
@@ -466,7 +466,7 @@ devices = {
         {
             "name": "OUTLET_TEMP",
             "temp_id": "TEMP4",
-            "api_name": "Outlet",
+            "api_name": "OUTLET_TEMP",
             "Temperature": {
                 "value": [
                     {"loc": "/sys/bus/i2c/devices/93-0048/hwmon/hwmon*/temp1_input", "way": "sysfs"},

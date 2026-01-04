@@ -1,0 +1,10 @@
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0, 512, 4) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+    {%- if PORT_ALL.append("Ethernet512") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet513") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet514") %}{%- endif %}
+    {%- if PORT_ALL.append("Ethernet515") %}{%- endif %}
+{%- endmacro %}

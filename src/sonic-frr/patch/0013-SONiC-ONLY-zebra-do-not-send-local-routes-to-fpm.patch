@@ -1,0 +1,78 @@
+[PATCH]  https://github.com/FRRouting/frr/pull/12600, we are now
+
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Mon, 25 Nov 2024 01:32:36 -0800
+Subject: [PATCH]  https://github.com/FRRouting/frr/pull/12600, we are now
+ installing a new host  route for every connected route (along with the subnet
+ route). However, the  orchagent already installs a host route for a connected
+ interface address.  Hence, not sending the connected host route to the FPM.
+
+---
+ zebra/connected.c |    4 ++--
+ zebra/zebra_rib.c |   16 ++++++++++++++--
+ 2 files changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/zebra/connected.c b/zebra/connected.c
+index ce4f6919d..b144030e1 100644
+--- a/zebra/connected.c
++++ b/zebra/connected.c
+@@ -229,7 +229,7 @@ void connected_up(struct interface *ifp, struct connected *ifc)
+ 	uint32_t flags = 0;
+ 	uint32_t count = 0;
+ 	struct connected *c;
+-	bool install_local = true;
++	bool install_local = false;
+ 
+ 	zvrf = ifp->vrf->info;
+ 	if (!zvrf) {
+@@ -435,7 +435,7 @@ void connected_down(struct interface *ifp, struct connected *ifc)
+ 	struct zebra_vrf *zvrf;
+ 	uint32_t count = 0;
+ 	struct connected *c;
+-	bool remove_local = true;
++	bool remove_local = false;
+ 
+ 	zvrf = ifp->vrf->info;
+ 	if (!zvrf) {
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index 0d5bd2efc..22925a5ad 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -671,6 +671,12 @@ void rib_install_kernel(struct route_node *rn, struct route_entry *re,
+ 	/* Update fib selection */
+ 	dest->selected_fib = re;
+ 
++	/* Do not install local routes to FIB */
++	if (re->type == ZEBRA_ROUTE_LOCAL) {
++		zlog_debug("Not installing local route re %p (%s)",
++		 re, zebra_route_string(re->type));
++		return;
++	}
+ 	/*
+ 	 * Make sure we update the FPM any time we send new information to
+ 	 * the kernel.
+@@ -723,6 +729,12 @@ void rib_uninstall_kernel(struct route_node *rn, struct route_entry *re)
+ {
+ 	struct zebra_vrf *zvrf = zebra_vrf_lookup_by_id(re->vrf_id);
+ 
++	/* Do not uninstall local routes to FIB */
++	if (re->type == ZEBRA_ROUTE_LOCAL) {
++		zlog_debug("Not uninstalling local route re %p (%s)",
++		 re, zebra_route_string(re->type));
++		return;
++	}
+ 	/*
+ 	 * Make sure we update the FPM any time we send new information to
+ 	 * the dataplane.
+@@ -1226,9 +1238,9 @@ static struct route_entry *rib_choose_best(struct route_entry *current,
+ 	 * or loopback interface.  If not, pick the last connected
+ 	 * route of the set of lowest metric connected routes.
+ 	 */
+-	possible = rib_choose_best_type(ZEBRA_ROUTE_LOCAL, current, alternate);
++	/*possible = rib_choose_best_type(ZEBRA_ROUTE_LOCAL, current, alternate);
+ 	if (possible)
+-		return possible;
++		return possible; */
+ 
+ 	possible = rib_choose_best_type(ZEBRA_ROUTE_CONNECT, current, alternate);
+ 	if (possible)

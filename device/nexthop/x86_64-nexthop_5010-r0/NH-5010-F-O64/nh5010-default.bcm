@@ -1,0 +1,2269 @@
+# ----------------------------------------------------------------------------------------------------
+#     core_0
+# ----------------------------------------------------------------------------------------------------
+ucode_port_185.BCM8887X=CDGE4_0:core_0.1
+tm_port_header_type_out_185.BCM8887X=ETH
+ucode_port_189.BCM8887X=CDGE4_1:core_0.5
+tm_port_header_type_out_189.BCM8887X=ETH
+
+# core 0 lane0
+lane_to_serdes_map_nif_lane0.BCM8887X=rx6:tx7
+phy_rx_polarity_flip_phy0.BCM8887X=0
+phy_tx_polarity_flip_phy0.BCM8887X=1
+serdes_tx_taps_0.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane1
+lane_to_serdes_map_nif_lane1.BCM8887X=rx4:tx3
+phy_rx_polarity_flip_phy1.BCM8887X=0
+phy_tx_polarity_flip_phy1.BCM8887X=1
+serdes_tx_taps_1.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane2
+lane_to_serdes_map_nif_lane2.BCM8887X=rx7:tx1
+phy_rx_polarity_flip_phy2.BCM8887X=0
+phy_tx_polarity_flip_phy2.BCM8887X=0
+serdes_tx_taps_2.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane3
+lane_to_serdes_map_nif_lane3.BCM8887X=rx5:tx2
+phy_rx_polarity_flip_phy3.BCM8887X=0
+phy_tx_polarity_flip_phy3.BCM8887X=1
+serdes_tx_taps_3.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane4
+lane_to_serdes_map_nif_lane4.BCM8887X=rx2:tx0
+phy_rx_polarity_flip_phy4.BCM8887X=0
+phy_tx_polarity_flip_phy4.BCM8887X=0
+serdes_tx_taps_4.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane5
+lane_to_serdes_map_nif_lane5.BCM8887X=rx3:tx6
+phy_rx_polarity_flip_phy5.BCM8887X=1
+phy_tx_polarity_flip_phy5.BCM8887X=1
+serdes_tx_taps_5.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane6
+lane_to_serdes_map_nif_lane6.BCM8887X=rx0:tx4
+phy_rx_polarity_flip_phy6.BCM8887X=0
+phy_tx_polarity_flip_phy6.BCM8887X=0
+serdes_tx_taps_6.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 0 lane7
+lane_to_serdes_map_nif_lane7.BCM8887X=rx1:tx5
+phy_rx_polarity_flip_phy7.BCM8887X=0
+phy_tx_polarity_flip_phy7.BCM8887X=0
+serdes_tx_taps_7.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_1
+# ----------------------------------------------------------------------------------------------------
+ucode_port_177.BCM8887X=CDGE4_2:core_0.9
+tm_port_header_type_out_177.BCM8887X=ETH
+ucode_port_181.BCM8887X=CDGE4_3:core_0.13
+tm_port_header_type_out_181.BCM8887X=ETH
+
+# core 1 lane8
+lane_to_serdes_map_nif_lane8.BCM8887X=rx10:tx8
+phy_rx_polarity_flip_phy8.BCM8887X=0
+phy_tx_polarity_flip_phy8.BCM8887X=0
+serdes_tx_taps_8.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane9
+lane_to_serdes_map_nif_lane9.BCM8887X=rx11:tx14
+phy_rx_polarity_flip_phy9.BCM8887X=1
+phy_tx_polarity_flip_phy9.BCM8887X=1
+serdes_tx_taps_9.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane10
+lane_to_serdes_map_nif_lane10.BCM8887X=rx8:tx12
+phy_rx_polarity_flip_phy10.BCM8887X=1
+phy_tx_polarity_flip_phy10.BCM8887X=0
+serdes_tx_taps_10.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane11
+lane_to_serdes_map_nif_lane11.BCM8887X=rx9:tx13
+phy_rx_polarity_flip_phy11.BCM8887X=0
+phy_tx_polarity_flip_phy11.BCM8887X=0
+serdes_tx_taps_11.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane12
+lane_to_serdes_map_nif_lane12.BCM8887X=rx14:tx15
+phy_rx_polarity_flip_phy12.BCM8887X=0
+phy_tx_polarity_flip_phy12.BCM8887X=1
+serdes_tx_taps_12.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane13
+lane_to_serdes_map_nif_lane13.BCM8887X=rx12:tx11
+phy_rx_polarity_flip_phy13.BCM8887X=0
+phy_tx_polarity_flip_phy13.BCM8887X=1
+serdes_tx_taps_13.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane14
+lane_to_serdes_map_nif_lane14.BCM8887X=rx15:tx9
+phy_rx_polarity_flip_phy14.BCM8887X=0
+phy_tx_polarity_flip_phy14.BCM8887X=0
+serdes_tx_taps_14.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 1 lane15
+lane_to_serdes_map_nif_lane15.BCM8887X=rx13:tx10
+phy_rx_polarity_flip_phy15.BCM8887X=0
+phy_tx_polarity_flip_phy15.BCM8887X=1
+serdes_tx_taps_15.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_2
+# ----------------------------------------------------------------------------------------------------
+ucode_port_169.BCM8887X=CDGE4_4:core_0.17
+tm_port_header_type_out_169.BCM8887X=ETH
+ucode_port_173.BCM8887X=CDGE4_5:core_0.21
+tm_port_header_type_out_173.BCM8887X=ETH
+
+# core 2 lane16
+lane_to_serdes_map_nif_lane16.BCM8887X=rx18:tx16
+phy_rx_polarity_flip_phy16.BCM8887X=0
+phy_tx_polarity_flip_phy16.BCM8887X=0
+serdes_tx_taps_16.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane17
+lane_to_serdes_map_nif_lane17.BCM8887X=rx19:tx22
+phy_rx_polarity_flip_phy17.BCM8887X=1
+phy_tx_polarity_flip_phy17.BCM8887X=1
+serdes_tx_taps_17.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane18
+lane_to_serdes_map_nif_lane18.BCM8887X=rx16:tx20
+phy_rx_polarity_flip_phy18.BCM8887X=0
+phy_tx_polarity_flip_phy18.BCM8887X=0
+serdes_tx_taps_18.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane19
+lane_to_serdes_map_nif_lane19.BCM8887X=rx17:tx21
+phy_rx_polarity_flip_phy19.BCM8887X=0
+phy_tx_polarity_flip_phy19.BCM8887X=0
+serdes_tx_taps_19.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane20
+lane_to_serdes_map_nif_lane20.BCM8887X=rx22:tx23
+phy_rx_polarity_flip_phy20.BCM8887X=0
+phy_tx_polarity_flip_phy20.BCM8887X=1
+serdes_tx_taps_20.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane21
+lane_to_serdes_map_nif_lane21.BCM8887X=rx20:tx19
+phy_rx_polarity_flip_phy21.BCM8887X=0
+phy_tx_polarity_flip_phy21.BCM8887X=1
+serdes_tx_taps_21.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane22
+lane_to_serdes_map_nif_lane22.BCM8887X=rx23:tx17
+phy_rx_polarity_flip_phy22.BCM8887X=0
+phy_tx_polarity_flip_phy22.BCM8887X=0
+serdes_tx_taps_22.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 2 lane23
+lane_to_serdes_map_nif_lane23.BCM8887X=rx21:tx18
+phy_rx_polarity_flip_phy23.BCM8887X=0
+phy_tx_polarity_flip_phy23.BCM8887X=1
+serdes_tx_taps_23.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_3
+# ----------------------------------------------------------------------------------------------------
+ucode_port_161.BCM8887X=CDGE4_6:core_0.25
+tm_port_header_type_out_161.BCM8887X=ETH
+ucode_port_165.BCM8887X=CDGE4_7:core_0.29
+tm_port_header_type_out_165.BCM8887X=ETH
+
+# core 3 lane24
+lane_to_serdes_map_nif_lane24.BCM8887X=rx26:tx26
+phy_rx_polarity_flip_phy24.BCM8887X=1
+phy_tx_polarity_flip_phy24.BCM8887X=0
+serdes_tx_taps_24.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane25
+lane_to_serdes_map_nif_lane25.BCM8887X=rx27:tx25
+phy_rx_polarity_flip_phy25.BCM8887X=0
+phy_tx_polarity_flip_phy25.BCM8887X=1
+serdes_tx_taps_25.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane26
+lane_to_serdes_map_nif_lane26.BCM8887X=rx28:tx31
+phy_rx_polarity_flip_phy26.BCM8887X=0
+phy_tx_polarity_flip_phy26.BCM8887X=0
+serdes_tx_taps_26.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane27
+lane_to_serdes_map_nif_lane27.BCM8887X=rx30:tx24
+phy_rx_polarity_flip_phy27.BCM8887X=1
+phy_tx_polarity_flip_phy27.BCM8887X=0
+serdes_tx_taps_27.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane28
+lane_to_serdes_map_nif_lane28.BCM8887X=rx29:tx28
+phy_rx_polarity_flip_phy28.BCM8887X=1
+phy_tx_polarity_flip_phy28.BCM8887X=1
+serdes_tx_taps_28.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane29
+lane_to_serdes_map_nif_lane29.BCM8887X=rx31:tx27
+phy_rx_polarity_flip_phy29.BCM8887X=0
+phy_tx_polarity_flip_phy29.BCM8887X=1
+serdes_tx_taps_29.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane30
+lane_to_serdes_map_nif_lane30.BCM8887X=rx24:tx30
+phy_rx_polarity_flip_phy30.BCM8887X=0
+phy_tx_polarity_flip_phy30.BCM8887X=1
+serdes_tx_taps_30.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 3 lane31
+lane_to_serdes_map_nif_lane31.BCM8887X=rx25:tx29
+phy_rx_polarity_flip_phy31.BCM8887X=0
+phy_tx_polarity_flip_phy31.BCM8887X=1
+serdes_tx_taps_31.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_4
+# ----------------------------------------------------------------------------------------------------
+ucode_port_57.BCM8887X=CDGE4_8:core_1.1
+tm_port_header_type_out_57.BCM8887X=ETH
+ucode_port_61.BCM8887X=CDGE4_9:core_1.5
+tm_port_header_type_out_61.BCM8887X=ETH
+
+# core 4 lane32
+lane_to_serdes_map_nif_lane32.BCM8887X=rx35:tx39
+phy_rx_polarity_flip_phy32.BCM8887X=1
+phy_tx_polarity_flip_phy32.BCM8887X=0
+serdes_tx_taps_32.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane33
+lane_to_serdes_map_nif_lane33.BCM8887X=rx34:tx35
+phy_rx_polarity_flip_phy33.BCM8887X=0
+phy_tx_polarity_flip_phy33.BCM8887X=0
+serdes_tx_taps_33.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane34
+lane_to_serdes_map_nif_lane34.BCM8887X=rx37:tx34
+phy_rx_polarity_flip_phy34.BCM8887X=1
+phy_tx_polarity_flip_phy34.BCM8887X=0
+serdes_tx_taps_34.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane35
+lane_to_serdes_map_nif_lane35.BCM8887X=rx39:tx33
+phy_rx_polarity_flip_phy35.BCM8887X=1
+phy_tx_polarity_flip_phy35.BCM8887X=1
+serdes_tx_taps_35.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane36
+lane_to_serdes_map_nif_lane36.BCM8887X=rx33:tx36
+phy_rx_polarity_flip_phy36.BCM8887X=1
+phy_tx_polarity_flip_phy36.BCM8887X=0
+serdes_tx_taps_36.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane37
+lane_to_serdes_map_nif_lane37.BCM8887X=rx32:tx37
+phy_rx_polarity_flip_phy37.BCM8887X=0
+phy_tx_polarity_flip_phy37.BCM8887X=1
+serdes_tx_taps_37.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane38
+lane_to_serdes_map_nif_lane38.BCM8887X=rx36:tx38
+phy_rx_polarity_flip_phy38.BCM8887X=0
+phy_tx_polarity_flip_phy38.BCM8887X=0
+serdes_tx_taps_38.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 4 lane39
+lane_to_serdes_map_nif_lane39.BCM8887X=rx38:tx32
+phy_rx_polarity_flip_phy39.BCM8887X=0
+phy_tx_polarity_flip_phy39.BCM8887X=1
+serdes_tx_taps_39.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_5
+# ----------------------------------------------------------------------------------------------------
+ucode_port_49.BCM8887X=CDGE4_10:core_1.9
+tm_port_header_type_out_49.BCM8887X=ETH
+ucode_port_53.BCM8887X=CDGE4_11:core_1.13
+tm_port_header_type_out_53.BCM8887X=ETH
+
+# core 5 lane40
+lane_to_serdes_map_nif_lane40.BCM8887X=rx43:tx47
+phy_rx_polarity_flip_phy40.BCM8887X=1
+phy_tx_polarity_flip_phy40.BCM8887X=0
+serdes_tx_taps_40.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane41
+lane_to_serdes_map_nif_lane41.BCM8887X=rx42:tx43
+phy_rx_polarity_flip_phy41.BCM8887X=0
+phy_tx_polarity_flip_phy41.BCM8887X=0
+serdes_tx_taps_41.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane42
+lane_to_serdes_map_nif_lane42.BCM8887X=rx45:tx42
+phy_rx_polarity_flip_phy42.BCM8887X=1
+phy_tx_polarity_flip_phy42.BCM8887X=0
+serdes_tx_taps_42.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane43
+lane_to_serdes_map_nif_lane43.BCM8887X=rx47:tx41
+phy_rx_polarity_flip_phy43.BCM8887X=1
+phy_tx_polarity_flip_phy43.BCM8887X=1
+serdes_tx_taps_43.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane44
+lane_to_serdes_map_nif_lane44.BCM8887X=rx41:tx44
+phy_rx_polarity_flip_phy44.BCM8887X=1
+phy_tx_polarity_flip_phy44.BCM8887X=0
+serdes_tx_taps_44.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane45
+lane_to_serdes_map_nif_lane45.BCM8887X=rx40:tx45
+phy_rx_polarity_flip_phy45.BCM8887X=0
+phy_tx_polarity_flip_phy45.BCM8887X=1
+serdes_tx_taps_45.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane46
+lane_to_serdes_map_nif_lane46.BCM8887X=rx44:tx46
+phy_rx_polarity_flip_phy46.BCM8887X=0
+phy_tx_polarity_flip_phy46.BCM8887X=0
+serdes_tx_taps_46.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 5 lane47
+lane_to_serdes_map_nif_lane47.BCM8887X=rx46:tx40
+phy_rx_polarity_flip_phy47.BCM8887X=0
+phy_tx_polarity_flip_phy47.BCM8887X=1
+serdes_tx_taps_47.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_6
+# ----------------------------------------------------------------------------------------------------
+ucode_port_41.BCM8887X=CDGE4_12:core_1.17
+tm_port_header_type_out_41.BCM8887X=ETH
+ucode_port_45.BCM8887X=CDGE4_13:core_1.21
+tm_port_header_type_out_45.BCM8887X=ETH
+
+# core 6 lane48
+lane_to_serdes_map_nif_lane48.BCM8887X=rx51:tx55
+phy_rx_polarity_flip_phy48.BCM8887X=1
+phy_tx_polarity_flip_phy48.BCM8887X=0
+serdes_tx_taps_48.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane49
+lane_to_serdes_map_nif_lane49.BCM8887X=rx50:tx51
+phy_rx_polarity_flip_phy49.BCM8887X=0
+phy_tx_polarity_flip_phy49.BCM8887X=0
+serdes_tx_taps_49.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane50
+lane_to_serdes_map_nif_lane50.BCM8887X=rx53:tx50
+phy_rx_polarity_flip_phy50.BCM8887X=1
+phy_tx_polarity_flip_phy50.BCM8887X=0
+serdes_tx_taps_50.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane51
+lane_to_serdes_map_nif_lane51.BCM8887X=rx55:tx49
+phy_rx_polarity_flip_phy51.BCM8887X=1
+phy_tx_polarity_flip_phy51.BCM8887X=1
+serdes_tx_taps_51.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane52
+lane_to_serdes_map_nif_lane52.BCM8887X=rx49:tx52
+phy_rx_polarity_flip_phy52.BCM8887X=1
+phy_tx_polarity_flip_phy52.BCM8887X=0
+serdes_tx_taps_52.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane53
+lane_to_serdes_map_nif_lane53.BCM8887X=rx48:tx53
+phy_rx_polarity_flip_phy53.BCM8887X=0
+phy_tx_polarity_flip_phy53.BCM8887X=1
+serdes_tx_taps_53.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane54
+lane_to_serdes_map_nif_lane54.BCM8887X=rx52:tx54
+phy_rx_polarity_flip_phy54.BCM8887X=0
+phy_tx_polarity_flip_phy54.BCM8887X=0
+serdes_tx_taps_54.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 6 lane55
+lane_to_serdes_map_nif_lane55.BCM8887X=rx54:tx48
+phy_rx_polarity_flip_phy55.BCM8887X=0
+phy_tx_polarity_flip_phy55.BCM8887X=1
+serdes_tx_taps_55.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_7
+# ----------------------------------------------------------------------------------------------------
+ucode_port_33.BCM8887X=CDGE4_14:core_1.25
+tm_port_header_type_out_33.BCM8887X=ETH
+ucode_port_37.BCM8887X=CDGE4_15:core_1.29
+tm_port_header_type_out_37.BCM8887X=ETH
+
+# core 7 lane56
+lane_to_serdes_map_nif_lane56.BCM8887X=rx58:tx59
+phy_rx_polarity_flip_phy56.BCM8887X=1
+phy_tx_polarity_flip_phy56.BCM8887X=1
+serdes_tx_taps_56.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane57
+lane_to_serdes_map_nif_lane57.BCM8887X=rx59:tx61
+phy_rx_polarity_flip_phy57.BCM8887X=0
+phy_tx_polarity_flip_phy57.BCM8887X=1
+serdes_tx_taps_57.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane58
+lane_to_serdes_map_nif_lane58.BCM8887X=rx60:tx60
+phy_rx_polarity_flip_phy58.BCM8887X=0
+phy_tx_polarity_flip_phy58.BCM8887X=1
+serdes_tx_taps_58.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane59
+lane_to_serdes_map_nif_lane59.BCM8887X=rx62:tx56
+phy_rx_polarity_flip_phy59.BCM8887X=1
+phy_tx_polarity_flip_phy59.BCM8887X=1
+serdes_tx_taps_59.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane60
+lane_to_serdes_map_nif_lane60.BCM8887X=rx56:tx62
+phy_rx_polarity_flip_phy60.BCM8887X=0
+phy_tx_polarity_flip_phy60.BCM8887X=0
+serdes_tx_taps_60.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane61
+lane_to_serdes_map_nif_lane61.BCM8887X=rx57:tx58
+phy_rx_polarity_flip_phy61.BCM8887X=0
+phy_tx_polarity_flip_phy61.BCM8887X=0
+serdes_tx_taps_61.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane62
+lane_to_serdes_map_nif_lane62.BCM8887X=rx63:tx63
+phy_rx_polarity_flip_phy62.BCM8887X=0
+phy_tx_polarity_flip_phy62.BCM8887X=1
+serdes_tx_taps_62.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 7 lane63
+lane_to_serdes_map_nif_lane63.BCM8887X=rx61:tx57
+phy_rx_polarity_flip_phy63.BCM8887X=0
+phy_tx_polarity_flip_phy63.BCM8887X=1
+serdes_tx_taps_63.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_8
+# ----------------------------------------------------------------------------------------------------
+ucode_port_129.BCM8887X=CDGE4_16:core_2.1
+tm_port_header_type_out_129.BCM8887X=ETH
+ucode_port_133.BCM8887X=CDGE4_17:core_2.5
+tm_port_header_type_out_133.BCM8887X=ETH
+
+# core 8 lane64
+lane_to_serdes_map_nif_lane64.BCM8887X=rx67:tx71
+phy_rx_polarity_flip_phy64.BCM8887X=0
+phy_tx_polarity_flip_phy64.BCM8887X=0
+serdes_tx_taps_64.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane65
+lane_to_serdes_map_nif_lane65.BCM8887X=rx66:tx65
+phy_rx_polarity_flip_phy65.BCM8887X=0
+phy_tx_polarity_flip_phy65.BCM8887X=1
+serdes_tx_taps_65.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane66
+lane_to_serdes_map_nif_lane66.BCM8887X=rx70:tx70
+phy_rx_polarity_flip_phy66.BCM8887X=1
+phy_tx_polarity_flip_phy66.BCM8887X=1
+serdes_tx_taps_66.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane67
+lane_to_serdes_map_nif_lane67.BCM8887X=rx68:tx66
+phy_rx_polarity_flip_phy67.BCM8887X=1
+phy_tx_polarity_flip_phy67.BCM8887X=0
+serdes_tx_taps_67.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane68
+lane_to_serdes_map_nif_lane68.BCM8887X=rx69:tx67
+phy_rx_polarity_flip_phy68.BCM8887X=0
+phy_tx_polarity_flip_phy68.BCM8887X=0
+serdes_tx_taps_68.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane69
+lane_to_serdes_map_nif_lane69.BCM8887X=rx71:tx69
+phy_rx_polarity_flip_phy69.BCM8887X=1
+phy_tx_polarity_flip_phy69.BCM8887X=1
+serdes_tx_taps_69.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane70
+lane_to_serdes_map_nif_lane70.BCM8887X=rx65:tx68
+phy_rx_polarity_flip_phy70.BCM8887X=0
+phy_tx_polarity_flip_phy70.BCM8887X=0
+serdes_tx_taps_70.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 8 lane71
+lane_to_serdes_map_nif_lane71.BCM8887X=rx64:tx64
+phy_rx_polarity_flip_phy71.BCM8887X=1
+phy_tx_polarity_flip_phy71.BCM8887X=1
+serdes_tx_taps_71.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_9
+# ----------------------------------------------------------------------------------------------------
+ucode_port_137.BCM8887X=CDGE4_18:core_2.9
+tm_port_header_type_out_137.BCM8887X=ETH
+ucode_port_141.BCM8887X=CDGE4_19:core_2.13
+tm_port_header_type_out_141.BCM8887X=ETH
+
+# core 9 lane72
+lane_to_serdes_map_nif_lane72.BCM8887X=rx75:tx79
+phy_rx_polarity_flip_phy72.BCM8887X=0
+phy_tx_polarity_flip_phy72.BCM8887X=0
+serdes_tx_taps_72.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane73
+lane_to_serdes_map_nif_lane73.BCM8887X=rx74:tx73
+phy_rx_polarity_flip_phy73.BCM8887X=0
+phy_tx_polarity_flip_phy73.BCM8887X=1
+serdes_tx_taps_73.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane74
+lane_to_serdes_map_nif_lane74.BCM8887X=rx78:tx78
+phy_rx_polarity_flip_phy74.BCM8887X=1
+phy_tx_polarity_flip_phy74.BCM8887X=1
+serdes_tx_taps_74.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane75
+lane_to_serdes_map_nif_lane75.BCM8887X=rx76:tx74
+phy_rx_polarity_flip_phy75.BCM8887X=1
+phy_tx_polarity_flip_phy75.BCM8887X=0
+serdes_tx_taps_75.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane76
+lane_to_serdes_map_nif_lane76.BCM8887X=rx77:tx75
+phy_rx_polarity_flip_phy76.BCM8887X=0
+phy_tx_polarity_flip_phy76.BCM8887X=0
+serdes_tx_taps_76.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane77
+lane_to_serdes_map_nif_lane77.BCM8887X=rx79:tx77
+phy_rx_polarity_flip_phy77.BCM8887X=1
+phy_tx_polarity_flip_phy77.BCM8887X=1
+serdes_tx_taps_77.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane78
+lane_to_serdes_map_nif_lane78.BCM8887X=rx73:tx76
+phy_rx_polarity_flip_phy78.BCM8887X=0
+phy_tx_polarity_flip_phy78.BCM8887X=0
+serdes_tx_taps_78.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 9 lane79
+lane_to_serdes_map_nif_lane79.BCM8887X=rx72:tx72
+phy_rx_polarity_flip_phy79.BCM8887X=1
+phy_tx_polarity_flip_phy79.BCM8887X=1
+serdes_tx_taps_79.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_10
+# ----------------------------------------------------------------------------------------------------
+ucode_port_145.BCM8887X=CDGE4_20:core_2.17
+tm_port_header_type_out_145.BCM8887X=ETH
+ucode_port_149.BCM8887X=CDGE4_21:core_2.21
+tm_port_header_type_out_149.BCM8887X=ETH
+
+# core 10 lane80
+lane_to_serdes_map_nif_lane80.BCM8887X=rx83:tx87
+phy_rx_polarity_flip_phy80.BCM8887X=0
+phy_tx_polarity_flip_phy80.BCM8887X=0
+serdes_tx_taps_80.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane81
+lane_to_serdes_map_nif_lane81.BCM8887X=rx82:tx81
+phy_rx_polarity_flip_phy81.BCM8887X=0
+phy_tx_polarity_flip_phy81.BCM8887X=1
+serdes_tx_taps_81.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane82
+lane_to_serdes_map_nif_lane82.BCM8887X=rx86:tx86
+phy_rx_polarity_flip_phy82.BCM8887X=1
+phy_tx_polarity_flip_phy82.BCM8887X=1
+serdes_tx_taps_82.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane83
+lane_to_serdes_map_nif_lane83.BCM8887X=rx84:tx82
+phy_rx_polarity_flip_phy83.BCM8887X=1
+phy_tx_polarity_flip_phy83.BCM8887X=0
+serdes_tx_taps_83.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane84
+lane_to_serdes_map_nif_lane84.BCM8887X=rx85:tx83
+phy_rx_polarity_flip_phy84.BCM8887X=0
+phy_tx_polarity_flip_phy84.BCM8887X=0
+serdes_tx_taps_84.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane85
+lane_to_serdes_map_nif_lane85.BCM8887X=rx87:tx85
+phy_rx_polarity_flip_phy85.BCM8887X=1
+phy_tx_polarity_flip_phy85.BCM8887X=1
+serdes_tx_taps_85.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane86
+lane_to_serdes_map_nif_lane86.BCM8887X=rx81:tx84
+phy_rx_polarity_flip_phy86.BCM8887X=0
+phy_tx_polarity_flip_phy86.BCM8887X=0
+serdes_tx_taps_86.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 10 lane87
+lane_to_serdes_map_nif_lane87.BCM8887X=rx80:tx80
+phy_rx_polarity_flip_phy87.BCM8887X=1
+phy_tx_polarity_flip_phy87.BCM8887X=1
+serdes_tx_taps_87.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_11
+# ----------------------------------------------------------------------------------------------------
+ucode_port_153.BCM8887X=CDGE4_22:core_2.25
+tm_port_header_type_out_153.BCM8887X=ETH
+ucode_port_157.BCM8887X=CDGE4_23:core_2.29
+tm_port_header_type_out_157.BCM8887X=ETH
+
+# core 11 lane88
+lane_to_serdes_map_nif_lane88.BCM8887X=rx91:tx95
+phy_rx_polarity_flip_phy88.BCM8887X=0
+phy_tx_polarity_flip_phy88.BCM8887X=0
+serdes_tx_taps_88.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane89
+lane_to_serdes_map_nif_lane89.BCM8887X=rx90:tx89
+phy_rx_polarity_flip_phy89.BCM8887X=0
+phy_tx_polarity_flip_phy89.BCM8887X=1
+serdes_tx_taps_89.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane90
+lane_to_serdes_map_nif_lane90.BCM8887X=rx94:tx94
+phy_rx_polarity_flip_phy90.BCM8887X=1
+phy_tx_polarity_flip_phy90.BCM8887X=1
+serdes_tx_taps_90.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane91
+lane_to_serdes_map_nif_lane91.BCM8887X=rx92:tx90
+phy_rx_polarity_flip_phy91.BCM8887X=1
+phy_tx_polarity_flip_phy91.BCM8887X=0
+serdes_tx_taps_91.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane92
+lane_to_serdes_map_nif_lane92.BCM8887X=rx93:tx91
+phy_rx_polarity_flip_phy92.BCM8887X=0
+phy_tx_polarity_flip_phy92.BCM8887X=0
+serdes_tx_taps_92.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane93
+lane_to_serdes_map_nif_lane93.BCM8887X=rx95:tx93
+phy_rx_polarity_flip_phy93.BCM8887X=1
+phy_tx_polarity_flip_phy93.BCM8887X=1
+serdes_tx_taps_93.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane94
+lane_to_serdes_map_nif_lane94.BCM8887X=rx89:tx92
+phy_rx_polarity_flip_phy94.BCM8887X=0
+phy_tx_polarity_flip_phy94.BCM8887X=0
+serdes_tx_taps_94.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 11 lane95
+lane_to_serdes_map_nif_lane95.BCM8887X=rx88:tx88
+phy_rx_polarity_flip_phy95.BCM8887X=1
+phy_tx_polarity_flip_phy95.BCM8887X=1
+serdes_tx_taps_95.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_12
+# ----------------------------------------------------------------------------------------------------
+ucode_port_1.BCM8887X=CDGE4_24:core_3.1
+tm_port_header_type_out_1.BCM8887X=ETH
+ucode_port_5.BCM8887X=CDGE4_25:core_3.5
+tm_port_header_type_out_5.BCM8887X=ETH
+
+# core 12 lane96
+lane_to_serdes_map_nif_lane96.BCM8887X=rx100:tx103
+phy_rx_polarity_flip_phy96.BCM8887X=1
+phy_tx_polarity_flip_phy96.BCM8887X=0
+serdes_tx_taps_96.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane97
+lane_to_serdes_map_nif_lane97.BCM8887X=rx96:tx98
+phy_rx_polarity_flip_phy97.BCM8887X=1
+phy_tx_polarity_flip_phy97.BCM8887X=1
+serdes_tx_taps_97.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane98
+lane_to_serdes_map_nif_lane98.BCM8887X=rx99:tx99
+phy_rx_polarity_flip_phy98.BCM8887X=0
+phy_tx_polarity_flip_phy98.BCM8887X=0
+serdes_tx_taps_98.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane99
+lane_to_serdes_map_nif_lane99.BCM8887X=rx101:tx97
+phy_rx_polarity_flip_phy99.BCM8887X=0
+phy_tx_polarity_flip_phy99.BCM8887X=0
+serdes_tx_taps_99.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane100
+lane_to_serdes_map_nif_lane100.BCM8887X=rx98:tx100
+phy_rx_polarity_flip_phy100.BCM8887X=1
+phy_tx_polarity_flip_phy100.BCM8887X=0
+serdes_tx_taps_100.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane101
+lane_to_serdes_map_nif_lane101.BCM8887X=rx103:tx96
+phy_rx_polarity_flip_phy101.BCM8887X=1
+phy_tx_polarity_flip_phy101.BCM8887X=0
+serdes_tx_taps_101.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane102
+lane_to_serdes_map_nif_lane102.BCM8887X=rx102:tx101
+phy_rx_polarity_flip_phy102.BCM8887X=0
+phy_tx_polarity_flip_phy102.BCM8887X=1
+serdes_tx_taps_102.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 12 lane103
+lane_to_serdes_map_nif_lane103.BCM8887X=rx97:tx102
+phy_rx_polarity_flip_phy103.BCM8887X=1
+phy_tx_polarity_flip_phy103.BCM8887X=1
+serdes_tx_taps_103.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_13
+# ----------------------------------------------------------------------------------------------------
+ucode_port_9.BCM8887X=CDGE4_26:core_3.9
+tm_port_header_type_out_9.BCM8887X=ETH
+ucode_port_13.BCM8887X=CDGE4_27:core_3.13
+tm_port_header_type_out_13.BCM8887X=ETH
+
+# core 13 lane104
+lane_to_serdes_map_nif_lane104.BCM8887X=rx107:tx108
+phy_rx_polarity_flip_phy104.BCM8887X=1
+phy_tx_polarity_flip_phy104.BCM8887X=0
+serdes_tx_taps_104.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane105
+lane_to_serdes_map_nif_lane105.BCM8887X=rx106:tx107
+phy_rx_polarity_flip_phy105.BCM8887X=0
+phy_tx_polarity_flip_phy105.BCM8887X=1
+serdes_tx_taps_105.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane106
+lane_to_serdes_map_nif_lane106.BCM8887X=rx110:tx110
+phy_rx_polarity_flip_phy106.BCM8887X=0
+phy_tx_polarity_flip_phy106.BCM8887X=0
+serdes_tx_taps_106.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane107
+lane_to_serdes_map_nif_lane107.BCM8887X=rx108:tx109
+phy_rx_polarity_flip_phy107.BCM8887X=0
+phy_tx_polarity_flip_phy107.BCM8887X=1
+serdes_tx_taps_107.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane108
+lane_to_serdes_map_nif_lane108.BCM8887X=rx105:tx111
+phy_rx_polarity_flip_phy108.BCM8887X=1
+phy_tx_polarity_flip_phy108.BCM8887X=1
+serdes_tx_taps_108.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane109
+lane_to_serdes_map_nif_lane109.BCM8887X=rx104:tx104
+phy_rx_polarity_flip_phy109.BCM8887X=0
+phy_tx_polarity_flip_phy109.BCM8887X=0
+serdes_tx_taps_109.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane110
+lane_to_serdes_map_nif_lane110.BCM8887X=rx111:tx106
+phy_rx_polarity_flip_phy110.BCM8887X=1
+phy_tx_polarity_flip_phy110.BCM8887X=1
+serdes_tx_taps_110.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 13 lane111
+lane_to_serdes_map_nif_lane111.BCM8887X=rx109:tx105
+phy_rx_polarity_flip_phy111.BCM8887X=1
+phy_tx_polarity_flip_phy111.BCM8887X=1
+serdes_tx_taps_111.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_14
+# ----------------------------------------------------------------------------------------------------
+ucode_port_17.BCM8887X=CDGE4_28:core_3.17
+tm_port_header_type_out_17.BCM8887X=ETH
+ucode_port_21.BCM8887X=CDGE4_29:core_3.21
+tm_port_header_type_out_21.BCM8887X=ETH
+
+# core 14 lane112
+lane_to_serdes_map_nif_lane112.BCM8887X=rx115:tx116
+phy_rx_polarity_flip_phy112.BCM8887X=1
+phy_tx_polarity_flip_phy112.BCM8887X=0
+serdes_tx_taps_112.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane113
+lane_to_serdes_map_nif_lane113.BCM8887X=rx114:tx115
+phy_rx_polarity_flip_phy113.BCM8887X=1
+phy_tx_polarity_flip_phy113.BCM8887X=1
+serdes_tx_taps_113.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane114
+lane_to_serdes_map_nif_lane114.BCM8887X=rx118:tx118
+phy_rx_polarity_flip_phy114.BCM8887X=0
+phy_tx_polarity_flip_phy114.BCM8887X=0
+serdes_tx_taps_114.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane115
+lane_to_serdes_map_nif_lane115.BCM8887X=rx116:tx117
+phy_rx_polarity_flip_phy115.BCM8887X=0
+phy_tx_polarity_flip_phy115.BCM8887X=1
+serdes_tx_taps_115.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane116
+lane_to_serdes_map_nif_lane116.BCM8887X=rx113:tx119
+phy_rx_polarity_flip_phy116.BCM8887X=1
+phy_tx_polarity_flip_phy116.BCM8887X=1
+serdes_tx_taps_116.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane117
+lane_to_serdes_map_nif_lane117.BCM8887X=rx112:tx112
+phy_rx_polarity_flip_phy117.BCM8887X=0
+phy_tx_polarity_flip_phy117.BCM8887X=0
+serdes_tx_taps_117.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane118
+lane_to_serdes_map_nif_lane118.BCM8887X=rx119:tx114
+phy_rx_polarity_flip_phy118.BCM8887X=1
+phy_tx_polarity_flip_phy118.BCM8887X=1
+serdes_tx_taps_118.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 14 lane119
+lane_to_serdes_map_nif_lane119.BCM8887X=rx117:tx113
+phy_rx_polarity_flip_phy119.BCM8887X=1
+phy_tx_polarity_flip_phy119.BCM8887X=1
+serdes_tx_taps_119.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_15
+# ----------------------------------------------------------------------------------------------------
+ucode_port_25.BCM8887X=CDGE4_30:core_3.25
+tm_port_header_type_out_25.BCM8887X=ETH
+ucode_port_29.BCM8887X=CDGE4_31:core_3.29
+tm_port_header_type_out_29.BCM8887X=ETH
+
+# core 15 lane120
+lane_to_serdes_map_nif_lane120.BCM8887X=rx123:tx124
+phy_rx_polarity_flip_phy120.BCM8887X=1
+phy_tx_polarity_flip_phy120.BCM8887X=0
+serdes_tx_taps_120.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane121
+lane_to_serdes_map_nif_lane121.BCM8887X=rx122:tx123
+phy_rx_polarity_flip_phy121.BCM8887X=1
+phy_tx_polarity_flip_phy121.BCM8887X=1
+serdes_tx_taps_121.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane122
+lane_to_serdes_map_nif_lane122.BCM8887X=rx126:tx126
+phy_rx_polarity_flip_phy122.BCM8887X=0
+phy_tx_polarity_flip_phy122.BCM8887X=0
+serdes_tx_taps_122.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane123
+lane_to_serdes_map_nif_lane123.BCM8887X=rx124:tx125
+phy_rx_polarity_flip_phy123.BCM8887X=0
+phy_tx_polarity_flip_phy123.BCM8887X=1
+serdes_tx_taps_123.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane124
+lane_to_serdes_map_nif_lane124.BCM8887X=rx121:tx127
+phy_rx_polarity_flip_phy124.BCM8887X=1
+phy_tx_polarity_flip_phy124.BCM8887X=1
+serdes_tx_taps_124.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane125
+lane_to_serdes_map_nif_lane125.BCM8887X=rx120:tx120
+phy_rx_polarity_flip_phy125.BCM8887X=0
+phy_tx_polarity_flip_phy125.BCM8887X=0
+serdes_tx_taps_125.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane126
+lane_to_serdes_map_nif_lane126.BCM8887X=rx127:tx122
+phy_rx_polarity_flip_phy126.BCM8887X=1
+phy_tx_polarity_flip_phy126.BCM8887X=1
+serdes_tx_taps_126.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 15 lane127
+lane_to_serdes_map_nif_lane127.BCM8887X=rx125:tx121
+phy_rx_polarity_flip_phy127.BCM8887X=1
+phy_tx_polarity_flip_phy127.BCM8887X=1
+serdes_tx_taps_127.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_16
+# ----------------------------------------------------------------------------------------------------
+ucode_port_65.BCM8887X=CDGE4_32:core_4.1
+tm_port_header_type_out_65.BCM8887X=ETH
+ucode_port_69.BCM8887X=CDGE4_33:core_4.5
+tm_port_header_type_out_69.BCM8887X=ETH
+
+# core 16 lane128
+lane_to_serdes_map_nif_lane128.BCM8887X=rx131:tx135
+phy_rx_polarity_flip_phy128.BCM8887X=0
+phy_tx_polarity_flip_phy128.BCM8887X=0
+serdes_tx_taps_128.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane129
+lane_to_serdes_map_nif_lane129.BCM8887X=rx130:tx131
+phy_rx_polarity_flip_phy129.BCM8887X=0
+phy_tx_polarity_flip_phy129.BCM8887X=1
+serdes_tx_taps_129.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane130
+lane_to_serdes_map_nif_lane130.BCM8887X=rx129:tx129
+phy_rx_polarity_flip_phy130.BCM8887X=1
+phy_tx_polarity_flip_phy130.BCM8887X=1
+serdes_tx_taps_130.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane131
+lane_to_serdes_map_nif_lane131.BCM8887X=rx128:tx130
+phy_rx_polarity_flip_phy131.BCM8887X=0
+phy_tx_polarity_flip_phy131.BCM8887X=1
+serdes_tx_taps_131.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane132
+lane_to_serdes_map_nif_lane132.BCM8887X=rx133:tx132
+phy_rx_polarity_flip_phy132.BCM8887X=1
+phy_tx_polarity_flip_phy132.BCM8887X=1
+serdes_tx_taps_132.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane133
+lane_to_serdes_map_nif_lane133.BCM8887X=rx135:tx133
+phy_rx_polarity_flip_phy133.BCM8887X=0
+phy_tx_polarity_flip_phy133.BCM8887X=0
+serdes_tx_taps_133.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane134
+lane_to_serdes_map_nif_lane134.BCM8887X=rx132:tx128
+phy_rx_polarity_flip_phy134.BCM8887X=1
+phy_tx_polarity_flip_phy134.BCM8887X=1
+serdes_tx_taps_134.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 16 lane135
+lane_to_serdes_map_nif_lane135.BCM8887X=rx134:tx134
+phy_rx_polarity_flip_phy135.BCM8887X=0
+phy_tx_polarity_flip_phy135.BCM8887X=1
+serdes_tx_taps_135.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_17
+# ----------------------------------------------------------------------------------------------------
+ucode_port_73.BCM8887X=CDGE4_34:core_4.9
+tm_port_header_type_out_73.BCM8887X=ETH
+ucode_port_77.BCM8887X=CDGE4_35:core_4.13
+tm_port_header_type_out_77.BCM8887X=ETH
+
+# core 17 lane136
+lane_to_serdes_map_nif_lane136.BCM8887X=rx139:tx143
+phy_rx_polarity_flip_phy136.BCM8887X=0
+phy_tx_polarity_flip_phy136.BCM8887X=0
+serdes_tx_taps_136.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane137
+lane_to_serdes_map_nif_lane137.BCM8887X=rx138:tx139
+phy_rx_polarity_flip_phy137.BCM8887X=0
+phy_tx_polarity_flip_phy137.BCM8887X=1
+serdes_tx_taps_137.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane138
+lane_to_serdes_map_nif_lane138.BCM8887X=rx137:tx137
+phy_rx_polarity_flip_phy138.BCM8887X=1
+phy_tx_polarity_flip_phy138.BCM8887X=1
+serdes_tx_taps_138.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane139
+lane_to_serdes_map_nif_lane139.BCM8887X=rx136:tx138
+phy_rx_polarity_flip_phy139.BCM8887X=1
+phy_tx_polarity_flip_phy139.BCM8887X=1
+serdes_tx_taps_139.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane140
+lane_to_serdes_map_nif_lane140.BCM8887X=rx141:tx140
+phy_rx_polarity_flip_phy140.BCM8887X=1
+phy_tx_polarity_flip_phy140.BCM8887X=1
+serdes_tx_taps_140.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane141
+lane_to_serdes_map_nif_lane141.BCM8887X=rx143:tx141
+phy_rx_polarity_flip_phy141.BCM8887X=0
+phy_tx_polarity_flip_phy141.BCM8887X=0
+serdes_tx_taps_141.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane142
+lane_to_serdes_map_nif_lane142.BCM8887X=rx140:tx136
+phy_rx_polarity_flip_phy142.BCM8887X=1
+phy_tx_polarity_flip_phy142.BCM8887X=1
+serdes_tx_taps_142.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 17 lane143
+lane_to_serdes_map_nif_lane143.BCM8887X=rx142:tx142
+phy_rx_polarity_flip_phy143.BCM8887X=0
+phy_tx_polarity_flip_phy143.BCM8887X=1
+serdes_tx_taps_143.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_18
+# ----------------------------------------------------------------------------------------------------
+ucode_port_81.BCM8887X=CDGE4_36:core_4.17
+tm_port_header_type_out_81.BCM8887X=ETH
+ucode_port_85.BCM8887X=CDGE4_37:core_4.21
+tm_port_header_type_out_85.BCM8887X=ETH
+
+# core 18 lane144
+lane_to_serdes_map_nif_lane144.BCM8887X=rx147:tx151
+phy_rx_polarity_flip_phy144.BCM8887X=0
+phy_tx_polarity_flip_phy144.BCM8887X=0
+serdes_tx_taps_144.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane145
+lane_to_serdes_map_nif_lane145.BCM8887X=rx146:tx147
+phy_rx_polarity_flip_phy145.BCM8887X=0
+phy_tx_polarity_flip_phy145.BCM8887X=1
+serdes_tx_taps_145.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane146
+lane_to_serdes_map_nif_lane146.BCM8887X=rx145:tx145
+phy_rx_polarity_flip_phy146.BCM8887X=1
+phy_tx_polarity_flip_phy146.BCM8887X=1
+serdes_tx_taps_146.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane147
+lane_to_serdes_map_nif_lane147.BCM8887X=rx144:tx146
+phy_rx_polarity_flip_phy147.BCM8887X=0
+phy_tx_polarity_flip_phy147.BCM8887X=1
+serdes_tx_taps_147.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane148
+lane_to_serdes_map_nif_lane148.BCM8887X=rx149:tx148
+phy_rx_polarity_flip_phy148.BCM8887X=1
+phy_tx_polarity_flip_phy148.BCM8887X=1
+serdes_tx_taps_148.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane149
+lane_to_serdes_map_nif_lane149.BCM8887X=rx151:tx149
+phy_rx_polarity_flip_phy149.BCM8887X=0
+phy_tx_polarity_flip_phy149.BCM8887X=0
+serdes_tx_taps_149.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane150
+lane_to_serdes_map_nif_lane150.BCM8887X=rx148:tx144
+phy_rx_polarity_flip_phy150.BCM8887X=1
+phy_tx_polarity_flip_phy150.BCM8887X=1
+serdes_tx_taps_150.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 18 lane151
+lane_to_serdes_map_nif_lane151.BCM8887X=rx150:tx150
+phy_rx_polarity_flip_phy151.BCM8887X=0
+phy_tx_polarity_flip_phy151.BCM8887X=1
+serdes_tx_taps_151.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_19
+# ----------------------------------------------------------------------------------------------------
+ucode_port_89.BCM8887X=CDGE4_38:core_4.25
+tm_port_header_type_out_89.BCM8887X=ETH
+ucode_port_93.BCM8887X=CDGE4_39:core_4.29
+tm_port_header_type_out_93.BCM8887X=ETH
+
+# core 19 lane152
+lane_to_serdes_map_nif_lane152.BCM8887X=rx155:tx156
+phy_rx_polarity_flip_phy152.BCM8887X=0
+phy_tx_polarity_flip_phy152.BCM8887X=1
+serdes_tx_taps_152.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane153
+lane_to_serdes_map_nif_lane153.BCM8887X=rx154:tx155
+phy_rx_polarity_flip_phy153.BCM8887X=0
+phy_tx_polarity_flip_phy153.BCM8887X=0
+serdes_tx_taps_153.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane154
+lane_to_serdes_map_nif_lane154.BCM8887X=rx158:tx158
+phy_rx_polarity_flip_phy154.BCM8887X=1
+phy_tx_polarity_flip_phy154.BCM8887X=1
+serdes_tx_taps_154.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane155
+lane_to_serdes_map_nif_lane155.BCM8887X=rx156:tx157
+phy_rx_polarity_flip_phy155.BCM8887X=1
+phy_tx_polarity_flip_phy155.BCM8887X=0
+serdes_tx_taps_155.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane156
+lane_to_serdes_map_nif_lane156.BCM8887X=rx153:tx159
+phy_rx_polarity_flip_phy156.BCM8887X=0
+phy_tx_polarity_flip_phy156.BCM8887X=0
+serdes_tx_taps_156.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane157
+lane_to_serdes_map_nif_lane157.BCM8887X=rx152:tx152
+phy_rx_polarity_flip_phy157.BCM8887X=1
+phy_tx_polarity_flip_phy157.BCM8887X=1
+serdes_tx_taps_157.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane158
+lane_to_serdes_map_nif_lane158.BCM8887X=rx159:tx154
+phy_rx_polarity_flip_phy158.BCM8887X=0
+phy_tx_polarity_flip_phy158.BCM8887X=0
+serdes_tx_taps_158.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 19 lane159
+lane_to_serdes_map_nif_lane159.BCM8887X=rx157:tx153
+phy_rx_polarity_flip_phy159.BCM8887X=0
+phy_tx_polarity_flip_phy159.BCM8887X=0
+serdes_tx_taps_159.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_20
+# ----------------------------------------------------------------------------------------------------
+ucode_port_193.BCM8887X=CDGE4_40:core_5.1
+tm_port_header_type_out_193.BCM8887X=ETH
+ucode_port_197.BCM8887X=CDGE4_41:core_5.5
+tm_port_header_type_out_197.BCM8887X=ETH
+
+# core 20 lane160
+lane_to_serdes_map_nif_lane160.BCM8887X=rx166:tx167
+phy_rx_polarity_flip_phy160.BCM8887X=0
+phy_tx_polarity_flip_phy160.BCM8887X=1
+serdes_tx_taps_160.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane161
+lane_to_serdes_map_nif_lane161.BCM8887X=rx164:tx163
+phy_rx_polarity_flip_phy161.BCM8887X=1
+phy_tx_polarity_flip_phy161.BCM8887X=0
+serdes_tx_taps_161.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane162
+lane_to_serdes_map_nif_lane162.BCM8887X=rx160:tx162
+phy_rx_polarity_flip_phy162.BCM8887X=0
+phy_tx_polarity_flip_phy162.BCM8887X=1
+serdes_tx_taps_162.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane163
+lane_to_serdes_map_nif_lane163.BCM8887X=rx161:tx161
+phy_rx_polarity_flip_phy163.BCM8887X=0
+phy_tx_polarity_flip_phy163.BCM8887X=1
+serdes_tx_taps_163.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane164
+lane_to_serdes_map_nif_lane164.BCM8887X=rx162:tx166
+phy_rx_polarity_flip_phy164.BCM8887X=0
+phy_tx_polarity_flip_phy164.BCM8887X=1
+serdes_tx_taps_164.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane165
+lane_to_serdes_map_nif_lane165.BCM8887X=rx163:tx160
+phy_rx_polarity_flip_phy165.BCM8887X=0
+phy_tx_polarity_flip_phy165.BCM8887X=1
+serdes_tx_taps_165.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane166
+lane_to_serdes_map_nif_lane166.BCM8887X=rx167:tx164
+phy_rx_polarity_flip_phy166.BCM8887X=1
+phy_tx_polarity_flip_phy166.BCM8887X=1
+serdes_tx_taps_166.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 20 lane167
+lane_to_serdes_map_nif_lane167.BCM8887X=rx165:tx165
+phy_rx_polarity_flip_phy167.BCM8887X=0
+phy_tx_polarity_flip_phy167.BCM8887X=1
+serdes_tx_taps_167.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_21
+# ----------------------------------------------------------------------------------------------------
+ucode_port_201.BCM8887X=CDGE4_42:core_5.9
+tm_port_header_type_out_201.BCM8887X=ETH
+ucode_port_205.BCM8887X=CDGE4_43:core_5.13
+tm_port_header_type_out_205.BCM8887X=ETH
+
+# core 21 lane168
+lane_to_serdes_map_nif_lane168.BCM8887X=rx170:tx174
+phy_rx_polarity_flip_phy168.BCM8887X=0
+phy_tx_polarity_flip_phy168.BCM8887X=1
+serdes_tx_taps_168.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane169
+lane_to_serdes_map_nif_lane169.BCM8887X=rx171:tx168
+phy_rx_polarity_flip_phy169.BCM8887X=0
+phy_tx_polarity_flip_phy169.BCM8887X=1
+serdes_tx_taps_169.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane170
+lane_to_serdes_map_nif_lane170.BCM8887X=rx175:tx172
+phy_rx_polarity_flip_phy170.BCM8887X=1
+phy_tx_polarity_flip_phy170.BCM8887X=1
+serdes_tx_taps_170.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane171
+lane_to_serdes_map_nif_lane171.BCM8887X=rx173:tx173
+phy_rx_polarity_flip_phy171.BCM8887X=0
+phy_tx_polarity_flip_phy171.BCM8887X=1
+serdes_tx_taps_171.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane172
+lane_to_serdes_map_nif_lane172.BCM8887X=rx174:tx175
+phy_rx_polarity_flip_phy172.BCM8887X=0
+phy_tx_polarity_flip_phy172.BCM8887X=1
+serdes_tx_taps_172.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane173
+lane_to_serdes_map_nif_lane173.BCM8887X=rx172:tx171
+phy_rx_polarity_flip_phy173.BCM8887X=1
+phy_tx_polarity_flip_phy173.BCM8887X=0
+serdes_tx_taps_173.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane174
+lane_to_serdes_map_nif_lane174.BCM8887X=rx168:tx170
+phy_rx_polarity_flip_phy174.BCM8887X=0
+phy_tx_polarity_flip_phy174.BCM8887X=1
+serdes_tx_taps_174.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 21 lane175
+lane_to_serdes_map_nif_lane175.BCM8887X=rx169:tx169
+phy_rx_polarity_flip_phy175.BCM8887X=0
+phy_tx_polarity_flip_phy175.BCM8887X=1
+serdes_tx_taps_175.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_22
+# ----------------------------------------------------------------------------------------------------
+ucode_port_209.BCM8887X=CDGE4_44:core_5.17
+tm_port_header_type_out_209.BCM8887X=ETH
+ucode_port_213.BCM8887X=CDGE4_45:core_5.21
+tm_port_header_type_out_213.BCM8887X=ETH
+
+# core 22 lane176
+lane_to_serdes_map_nif_lane176.BCM8887X=rx178:tx182
+phy_rx_polarity_flip_phy176.BCM8887X=0
+phy_tx_polarity_flip_phy176.BCM8887X=1
+serdes_tx_taps_176.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane177
+lane_to_serdes_map_nif_lane177.BCM8887X=rx179:tx176
+phy_rx_polarity_flip_phy177.BCM8887X=0
+phy_tx_polarity_flip_phy177.BCM8887X=1
+serdes_tx_taps_177.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane178
+lane_to_serdes_map_nif_lane178.BCM8887X=rx183:tx180
+phy_rx_polarity_flip_phy178.BCM8887X=1
+phy_tx_polarity_flip_phy178.BCM8887X=1
+serdes_tx_taps_178.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane179
+lane_to_serdes_map_nif_lane179.BCM8887X=rx181:tx181
+phy_rx_polarity_flip_phy179.BCM8887X=0
+phy_tx_polarity_flip_phy179.BCM8887X=1
+serdes_tx_taps_179.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane180
+lane_to_serdes_map_nif_lane180.BCM8887X=rx182:tx183
+phy_rx_polarity_flip_phy180.BCM8887X=0
+phy_tx_polarity_flip_phy180.BCM8887X=1
+serdes_tx_taps_180.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane181
+lane_to_serdes_map_nif_lane181.BCM8887X=rx180:tx179
+phy_rx_polarity_flip_phy181.BCM8887X=1
+phy_tx_polarity_flip_phy181.BCM8887X=0
+serdes_tx_taps_181.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane182
+lane_to_serdes_map_nif_lane182.BCM8887X=rx176:tx178
+phy_rx_polarity_flip_phy182.BCM8887X=0
+phy_tx_polarity_flip_phy182.BCM8887X=1
+serdes_tx_taps_182.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 22 lane183
+lane_to_serdes_map_nif_lane183.BCM8887X=rx177:tx177
+phy_rx_polarity_flip_phy183.BCM8887X=0
+phy_tx_polarity_flip_phy183.BCM8887X=1
+serdes_tx_taps_183.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_23
+# ----------------------------------------------------------------------------------------------------
+ucode_port_217.BCM8887X=CDGE4_46:core_5.25
+tm_port_header_type_out_217.BCM8887X=ETH
+ucode_port_221.BCM8887X=CDGE4_47:core_5.29
+tm_port_header_type_out_221.BCM8887X=ETH
+
+# core 23 lane184
+lane_to_serdes_map_nif_lane184.BCM8887X=rx187:tx191
+phy_rx_polarity_flip_phy184.BCM8887X=1
+phy_tx_polarity_flip_phy184.BCM8887X=1
+serdes_tx_taps_184.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane185
+lane_to_serdes_map_nif_lane185.BCM8887X=rx186:tx185
+phy_rx_polarity_flip_phy185.BCM8887X=1
+phy_tx_polarity_flip_phy185.BCM8887X=0
+serdes_tx_taps_185.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane186
+lane_to_serdes_map_nif_lane186.BCM8887X=rx190:tx190
+phy_rx_polarity_flip_phy186.BCM8887X=0
+phy_tx_polarity_flip_phy186.BCM8887X=0
+serdes_tx_taps_186.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane187
+lane_to_serdes_map_nif_lane187.BCM8887X=rx188:tx186
+phy_rx_polarity_flip_phy187.BCM8887X=0
+phy_tx_polarity_flip_phy187.BCM8887X=1
+serdes_tx_taps_187.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane188
+lane_to_serdes_map_nif_lane188.BCM8887X=rx189:tx187
+phy_rx_polarity_flip_phy188.BCM8887X=1
+phy_tx_polarity_flip_phy188.BCM8887X=1
+serdes_tx_taps_188.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane189
+lane_to_serdes_map_nif_lane189.BCM8887X=rx191:tx189
+phy_rx_polarity_flip_phy189.BCM8887X=0
+phy_tx_polarity_flip_phy189.BCM8887X=0
+serdes_tx_taps_189.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane190
+lane_to_serdes_map_nif_lane190.BCM8887X=rx185:tx188
+phy_rx_polarity_flip_phy190.BCM8887X=1
+phy_tx_polarity_flip_phy190.BCM8887X=1
+serdes_tx_taps_190.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 23 lane191
+lane_to_serdes_map_nif_lane191.BCM8887X=rx184:tx184
+phy_rx_polarity_flip_phy191.BCM8887X=0
+phy_tx_polarity_flip_phy191.BCM8887X=0
+serdes_tx_taps_191.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_24
+# ----------------------------------------------------------------------------------------------------
+ucode_port_121.BCM8887X=CDGE4_48:core_6.1
+tm_port_header_type_out_121.BCM8887X=ETH
+ucode_port_125.BCM8887X=CDGE4_49:core_6.5
+tm_port_header_type_out_125.BCM8887X=ETH
+
+# core 24 lane192
+lane_to_serdes_map_nif_lane192.BCM8887X=rx194:tx195
+phy_rx_polarity_flip_phy192.BCM8887X=0
+phy_tx_polarity_flip_phy192.BCM8887X=0
+serdes_tx_taps_192.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane193
+lane_to_serdes_map_nif_lane193.BCM8887X=rx195:tx197
+phy_rx_polarity_flip_phy193.BCM8887X=1
+phy_tx_polarity_flip_phy193.BCM8887X=0
+serdes_tx_taps_193.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane194
+lane_to_serdes_map_nif_lane194.BCM8887X=rx196:tx196
+phy_rx_polarity_flip_phy194.BCM8887X=1
+phy_tx_polarity_flip_phy194.BCM8887X=0
+serdes_tx_taps_194.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane195
+lane_to_serdes_map_nif_lane195.BCM8887X=rx198:tx192
+phy_rx_polarity_flip_phy195.BCM8887X=0
+phy_tx_polarity_flip_phy195.BCM8887X=0
+serdes_tx_taps_195.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane196
+lane_to_serdes_map_nif_lane196.BCM8887X=rx192:tx198
+phy_rx_polarity_flip_phy196.BCM8887X=1
+phy_tx_polarity_flip_phy196.BCM8887X=1
+serdes_tx_taps_196.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane197
+lane_to_serdes_map_nif_lane197.BCM8887X=rx193:tx194
+phy_rx_polarity_flip_phy197.BCM8887X=0
+phy_tx_polarity_flip_phy197.BCM8887X=1
+serdes_tx_taps_197.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane198
+lane_to_serdes_map_nif_lane198.BCM8887X=rx199:tx199
+phy_rx_polarity_flip_phy198.BCM8887X=1
+phy_tx_polarity_flip_phy198.BCM8887X=0
+serdes_tx_taps_198.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 24 lane199
+lane_to_serdes_map_nif_lane199.BCM8887X=rx197:tx193
+phy_rx_polarity_flip_phy199.BCM8887X=1
+phy_tx_polarity_flip_phy199.BCM8887X=0
+serdes_tx_taps_199.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_25
+# ----------------------------------------------------------------------------------------------------
+ucode_port_113.BCM8887X=CDGE4_50:core_6.9
+tm_port_header_type_out_113.BCM8887X=ETH
+ucode_port_117.BCM8887X=CDGE4_51:core_6.13
+tm_port_header_type_out_117.BCM8887X=ETH
+
+# core 25 lane200
+lane_to_serdes_map_nif_lane200.BCM8887X=rx202:tx203
+phy_rx_polarity_flip_phy200.BCM8887X=0
+phy_tx_polarity_flip_phy200.BCM8887X=0
+serdes_tx_taps_200.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane201
+lane_to_serdes_map_nif_lane201.BCM8887X=rx203:tx205
+phy_rx_polarity_flip_phy201.BCM8887X=1
+phy_tx_polarity_flip_phy201.BCM8887X=0
+serdes_tx_taps_201.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane202
+lane_to_serdes_map_nif_lane202.BCM8887X=rx204:tx204
+phy_rx_polarity_flip_phy202.BCM8887X=1
+phy_tx_polarity_flip_phy202.BCM8887X=0
+serdes_tx_taps_202.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane203
+lane_to_serdes_map_nif_lane203.BCM8887X=rx206:tx200
+phy_rx_polarity_flip_phy203.BCM8887X=0
+phy_tx_polarity_flip_phy203.BCM8887X=0
+serdes_tx_taps_203.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane204
+lane_to_serdes_map_nif_lane204.BCM8887X=rx200:tx206
+phy_rx_polarity_flip_phy204.BCM8887X=1
+phy_tx_polarity_flip_phy204.BCM8887X=1
+serdes_tx_taps_204.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane205
+lane_to_serdes_map_nif_lane205.BCM8887X=rx201:tx202
+phy_rx_polarity_flip_phy205.BCM8887X=1
+phy_tx_polarity_flip_phy205.BCM8887X=1
+serdes_tx_taps_205.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane206
+lane_to_serdes_map_nif_lane206.BCM8887X=rx207:tx207
+phy_rx_polarity_flip_phy206.BCM8887X=1
+phy_tx_polarity_flip_phy206.BCM8887X=0
+serdes_tx_taps_206.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 25 lane207
+lane_to_serdes_map_nif_lane207.BCM8887X=rx205:tx201
+phy_rx_polarity_flip_phy207.BCM8887X=1
+phy_tx_polarity_flip_phy207.BCM8887X=0
+serdes_tx_taps_207.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_26
+# ----------------------------------------------------------------------------------------------------
+ucode_port_105.BCM8887X=CDGE4_52:core_6.17
+tm_port_header_type_out_105.BCM8887X=ETH
+ucode_port_109.BCM8887X=CDGE4_53:core_6.21
+tm_port_header_type_out_109.BCM8887X=ETH
+
+# core 26 lane208
+lane_to_serdes_map_nif_lane208.BCM8887X=rx210:tx211
+phy_rx_polarity_flip_phy208.BCM8887X=0
+phy_tx_polarity_flip_phy208.BCM8887X=0
+serdes_tx_taps_208.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane209
+lane_to_serdes_map_nif_lane209.BCM8887X=rx211:tx213
+phy_rx_polarity_flip_phy209.BCM8887X=1
+phy_tx_polarity_flip_phy209.BCM8887X=0
+serdes_tx_taps_209.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane210
+lane_to_serdes_map_nif_lane210.BCM8887X=rx212:tx212
+phy_rx_polarity_flip_phy210.BCM8887X=1
+phy_tx_polarity_flip_phy210.BCM8887X=0
+serdes_tx_taps_210.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane211
+lane_to_serdes_map_nif_lane211.BCM8887X=rx214:tx208
+phy_rx_polarity_flip_phy211.BCM8887X=0
+phy_tx_polarity_flip_phy211.BCM8887X=0
+serdes_tx_taps_211.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane212
+lane_to_serdes_map_nif_lane212.BCM8887X=rx208:tx214
+phy_rx_polarity_flip_phy212.BCM8887X=1
+phy_tx_polarity_flip_phy212.BCM8887X=1
+serdes_tx_taps_212.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane213
+lane_to_serdes_map_nif_lane213.BCM8887X=rx209:tx210
+phy_rx_polarity_flip_phy213.BCM8887X=1
+phy_tx_polarity_flip_phy213.BCM8887X=1
+serdes_tx_taps_213.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane214
+lane_to_serdes_map_nif_lane214.BCM8887X=rx215:tx215
+phy_rx_polarity_flip_phy214.BCM8887X=1
+phy_tx_polarity_flip_phy214.BCM8887X=0
+serdes_tx_taps_214.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 26 lane215
+lane_to_serdes_map_nif_lane215.BCM8887X=rx213:tx209
+phy_rx_polarity_flip_phy215.BCM8887X=1
+phy_tx_polarity_flip_phy215.BCM8887X=0
+serdes_tx_taps_215.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_27
+# ----------------------------------------------------------------------------------------------------
+ucode_port_97.BCM8887X=CDGE4_54:core_6.25
+tm_port_header_type_out_97.BCM8887X=ETH
+ucode_port_101.BCM8887X=CDGE4_55:core_6.29
+tm_port_header_type_out_101.BCM8887X=ETH
+
+# core 27 lane216
+lane_to_serdes_map_nif_lane216.BCM8887X=rx218:tx219
+phy_rx_polarity_flip_phy216.BCM8887X=0
+phy_tx_polarity_flip_phy216.BCM8887X=0
+serdes_tx_taps_216.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane217
+lane_to_serdes_map_nif_lane217.BCM8887X=rx219:tx221
+phy_rx_polarity_flip_phy217.BCM8887X=1
+phy_tx_polarity_flip_phy217.BCM8887X=0
+serdes_tx_taps_217.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane218
+lane_to_serdes_map_nif_lane218.BCM8887X=rx220:tx220
+phy_rx_polarity_flip_phy218.BCM8887X=1
+phy_tx_polarity_flip_phy218.BCM8887X=0
+serdes_tx_taps_218.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane219
+lane_to_serdes_map_nif_lane219.BCM8887X=rx222:tx216
+phy_rx_polarity_flip_phy219.BCM8887X=0
+phy_tx_polarity_flip_phy219.BCM8887X=0
+serdes_tx_taps_219.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane220
+lane_to_serdes_map_nif_lane220.BCM8887X=rx216:tx222
+phy_rx_polarity_flip_phy220.BCM8887X=1
+phy_tx_polarity_flip_phy220.BCM8887X=1
+serdes_tx_taps_220.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane221
+lane_to_serdes_map_nif_lane221.BCM8887X=rx217:tx218
+phy_rx_polarity_flip_phy221.BCM8887X=1
+phy_tx_polarity_flip_phy221.BCM8887X=1
+serdes_tx_taps_221.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane222
+lane_to_serdes_map_nif_lane222.BCM8887X=rx223:tx223
+phy_rx_polarity_flip_phy222.BCM8887X=1
+phy_tx_polarity_flip_phy222.BCM8887X=0
+serdes_tx_taps_222.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 27 lane223
+lane_to_serdes_map_nif_lane223.BCM8887X=rx221:tx217
+phy_rx_polarity_flip_phy223.BCM8887X=1
+phy_tx_polarity_flip_phy223.BCM8887X=0
+serdes_tx_taps_223.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_28
+# ----------------------------------------------------------------------------------------------------
+ucode_port_249.BCM8887X=CDGE4_56:core_7.1
+tm_port_header_type_out_249.BCM8887X=ETH
+ucode_port_253.BCM8887X=CDGE4_57:core_7.5
+tm_port_header_type_out_253.BCM8887X=ETH
+
+# core 28 lane224
+lane_to_serdes_map_nif_lane224.BCM8887X=rx224:tx229
+phy_rx_polarity_flip_phy224.BCM8887X=0
+phy_tx_polarity_flip_phy224.BCM8887X=1
+serdes_tx_taps_224.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane225
+lane_to_serdes_map_nif_lane225.BCM8887X=rx228:tx230
+phy_rx_polarity_flip_phy225.BCM8887X=1
+phy_tx_polarity_flip_phy225.BCM8887X=0
+serdes_tx_taps_225.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane226
+lane_to_serdes_map_nif_lane226.BCM8887X=rx229:tx228
+phy_rx_polarity_flip_phy226.BCM8887X=1
+phy_tx_polarity_flip_phy226.BCM8887X=0
+serdes_tx_taps_226.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane227
+lane_to_serdes_map_nif_lane227.BCM8887X=rx227:tx224
+phy_rx_polarity_flip_phy227.BCM8887X=0
+phy_tx_polarity_flip_phy227.BCM8887X=1
+serdes_tx_taps_227.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane228
+lane_to_serdes_map_nif_lane228.BCM8887X=rx225:tx231
+phy_rx_polarity_flip_phy228.BCM8887X=0
+phy_tx_polarity_flip_phy228.BCM8887X=0
+serdes_tx_taps_228.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane229
+lane_to_serdes_map_nif_lane229.BCM8887X=rx230:tx226
+phy_rx_polarity_flip_phy229.BCM8887X=0
+phy_tx_polarity_flip_phy229.BCM8887X=0
+serdes_tx_taps_229.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane230
+lane_to_serdes_map_nif_lane230.BCM8887X=rx231:tx227
+phy_rx_polarity_flip_phy230.BCM8887X=0
+phy_tx_polarity_flip_phy230.BCM8887X=0
+serdes_tx_taps_230.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 28 lane231
+lane_to_serdes_map_nif_lane231.BCM8887X=rx226:tx225
+phy_rx_polarity_flip_phy231.BCM8887X=1
+phy_tx_polarity_flip_phy231.BCM8887X=1
+serdes_tx_taps_231.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_29
+# ----------------------------------------------------------------------------------------------------
+ucode_port_241.BCM8887X=CDGE4_58:core_7.9
+tm_port_header_type_out_241.BCM8887X=ETH
+ucode_port_245.BCM8887X=CDGE4_59:core_7.13
+tm_port_header_type_out_245.BCM8887X=ETH
+
+# core 29 lane232
+lane_to_serdes_map_nif_lane232.BCM8887X=rx234:tx234
+phy_rx_polarity_flip_phy232.BCM8887X=1
+phy_tx_polarity_flip_phy232.BCM8887X=1
+serdes_tx_taps_232.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane233
+lane_to_serdes_map_nif_lane233.BCM8887X=rx235:tx233
+phy_rx_polarity_flip_phy233.BCM8887X=1
+phy_tx_polarity_flip_phy233.BCM8887X=0
+serdes_tx_taps_233.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane234
+lane_to_serdes_map_nif_lane234.BCM8887X=rx236:tx239
+phy_rx_polarity_flip_phy234.BCM8887X=1
+phy_tx_polarity_flip_phy234.BCM8887X=1
+serdes_tx_taps_234.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane235
+lane_to_serdes_map_nif_lane235.BCM8887X=rx238:tx232
+phy_rx_polarity_flip_phy235.BCM8887X=0
+phy_tx_polarity_flip_phy235.BCM8887X=1
+serdes_tx_taps_235.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane236
+lane_to_serdes_map_nif_lane236.BCM8887X=rx237:tx236
+phy_rx_polarity_flip_phy236.BCM8887X=0
+phy_tx_polarity_flip_phy236.BCM8887X=0
+serdes_tx_taps_236.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane237
+lane_to_serdes_map_nif_lane237.BCM8887X=rx239:tx235
+phy_rx_polarity_flip_phy237.BCM8887X=1
+phy_tx_polarity_flip_phy237.BCM8887X=0
+serdes_tx_taps_237.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane238
+lane_to_serdes_map_nif_lane238.BCM8887X=rx232:tx238
+phy_rx_polarity_flip_phy238.BCM8887X=1
+phy_tx_polarity_flip_phy238.BCM8887X=0
+serdes_tx_taps_238.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 29 lane239
+lane_to_serdes_map_nif_lane239.BCM8887X=rx233:tx237
+phy_rx_polarity_flip_phy239.BCM8887X=1
+phy_tx_polarity_flip_phy239.BCM8887X=0
+serdes_tx_taps_239.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_30
+# ----------------------------------------------------------------------------------------------------
+ucode_port_233.BCM8887X=CDGE4_60:core_7.17
+tm_port_header_type_out_233.BCM8887X=ETH
+ucode_port_237.BCM8887X=CDGE4_61:core_7.21
+tm_port_header_type_out_237.BCM8887X=ETH
+
+# core 30 lane240
+lane_to_serdes_map_nif_lane240.BCM8887X=rx242:tx242
+phy_rx_polarity_flip_phy240.BCM8887X=0
+phy_tx_polarity_flip_phy240.BCM8887X=1
+serdes_tx_taps_240.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane241
+lane_to_serdes_map_nif_lane241.BCM8887X=rx243:tx241
+phy_rx_polarity_flip_phy241.BCM8887X=1
+phy_tx_polarity_flip_phy241.BCM8887X=0
+serdes_tx_taps_241.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane242
+lane_to_serdes_map_nif_lane242.BCM8887X=rx244:tx247
+phy_rx_polarity_flip_phy242.BCM8887X=1
+phy_tx_polarity_flip_phy242.BCM8887X=1
+serdes_tx_taps_242.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane243
+lane_to_serdes_map_nif_lane243.BCM8887X=rx246:tx240
+phy_rx_polarity_flip_phy243.BCM8887X=0
+phy_tx_polarity_flip_phy243.BCM8887X=1
+serdes_tx_taps_243.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane244
+lane_to_serdes_map_nif_lane244.BCM8887X=rx245:tx244
+phy_rx_polarity_flip_phy244.BCM8887X=0
+phy_tx_polarity_flip_phy244.BCM8887X=0
+serdes_tx_taps_244.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane245
+lane_to_serdes_map_nif_lane245.BCM8887X=rx247:tx243
+phy_rx_polarity_flip_phy245.BCM8887X=1
+phy_tx_polarity_flip_phy245.BCM8887X=0
+serdes_tx_taps_245.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane246
+lane_to_serdes_map_nif_lane246.BCM8887X=rx240:tx246
+phy_rx_polarity_flip_phy246.BCM8887X=1
+phy_tx_polarity_flip_phy246.BCM8887X=0
+serdes_tx_taps_246.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 30 lane247
+lane_to_serdes_map_nif_lane247.BCM8887X=rx241:tx245
+phy_rx_polarity_flip_phy247.BCM8887X=1
+phy_tx_polarity_flip_phy247.BCM8887X=0
+serdes_tx_taps_247.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_31
+# ----------------------------------------------------------------------------------------------------
+ucode_port_225.BCM8887X=CDGE4_62:core_7.25
+tm_port_header_type_out_225.BCM8887X=ETH
+ucode_port_229.BCM8887X=CDGE4_63:core_7.29
+tm_port_header_type_out_229.BCM8887X=ETH
+
+# core 31 lane248
+lane_to_serdes_map_nif_lane248.BCM8887X=rx250:tx250
+phy_rx_polarity_flip_phy248.BCM8887X=0
+phy_tx_polarity_flip_phy248.BCM8887X=1
+serdes_tx_taps_248.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane249
+lane_to_serdes_map_nif_lane249.BCM8887X=rx251:tx249
+phy_rx_polarity_flip_phy249.BCM8887X=1
+phy_tx_polarity_flip_phy249.BCM8887X=0
+serdes_tx_taps_249.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane250
+lane_to_serdes_map_nif_lane250.BCM8887X=rx252:tx255
+phy_rx_polarity_flip_phy250.BCM8887X=1
+phy_tx_polarity_flip_phy250.BCM8887X=1
+serdes_tx_taps_250.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane251
+lane_to_serdes_map_nif_lane251.BCM8887X=rx254:tx248
+phy_rx_polarity_flip_phy251.BCM8887X=0
+phy_tx_polarity_flip_phy251.BCM8887X=1
+serdes_tx_taps_251.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane252
+lane_to_serdes_map_nif_lane252.BCM8887X=rx253:tx252
+phy_rx_polarity_flip_phy252.BCM8887X=0
+phy_tx_polarity_flip_phy252.BCM8887X=0
+serdes_tx_taps_252.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane253
+lane_to_serdes_map_nif_lane253.BCM8887X=rx255:tx251
+phy_rx_polarity_flip_phy253.BCM8887X=1
+phy_tx_polarity_flip_phy253.BCM8887X=0
+serdes_tx_taps_253.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane254
+lane_to_serdes_map_nif_lane254.BCM8887X=rx248:tx254
+phy_rx_polarity_flip_phy254.BCM8887X=1
+phy_tx_polarity_flip_phy254.BCM8887X=0
+serdes_tx_taps_254.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# core 31 lane255
+lane_to_serdes_map_nif_lane255.BCM8887X=rx249:tx253
+phy_rx_polarity_flip_phy255.BCM8887X=1
+phy_tx_polarity_flip_phy255.BCM8887X=0
+serdes_tx_taps_255.BCM8887X=mode:PAM4,pre:0,main:128,post:0,pre2:0,post2:0,pre3:0
+
+# ----------------------------------------------------------------------------------------------------
+#     core_32
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
+# ----------------------------------------------------------------------------------------------------
+ucode_port_257.BCM8887X=CGE64:core_2.33
+tm_port_header_type_out_257.BCM8887X=ETH
+
+# core 32 lane256
+lane_to_serdes_map_nif_lane256.BCM8887X=rx257:tx257
+phy_rx_polarity_flip_phy256.BCM8887X=0
+phy_tx_polarity_flip_phy256.BCM8887X=0
+
+# core 32 lane257
+lane_to_serdes_map_nif_lane257.BCM8887X=rx256:tx256
+phy_rx_polarity_flip_phy257.BCM8887X=0
+phy_tx_polarity_flip_phy257.BCM8887X=1
+
+# core 32 lane258
+lane_to_serdes_map_nif_lane258.BCM8887X=rx258:tx258
+phy_rx_polarity_flip_phy258.BCM8887X=1
+phy_tx_polarity_flip_phy258.BCM8887X=0
+
+# core 32 lane259
+lane_to_serdes_map_nif_lane259.BCM8887X=rx259:tx259
+phy_rx_polarity_flip_phy259.BCM8887X=0
+phy_tx_polarity_flip_phy259.BCM8887X=0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_33
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
+# ----------------------------------------------------------------------------------------------------
+ucode_port_261.BCM8887X=CGE65:core_6.33
+tm_port_header_type_out_261.BCM8887X=ETH
+
+# core 33 lane260
+lane_to_serdes_map_nif_lane260.BCM8887X=rx260:tx260
+phy_rx_polarity_flip_phy260.BCM8887X=0
+phy_tx_polarity_flip_phy260.BCM8887X=0
+
+# core 33 lane261
+lane_to_serdes_map_nif_lane261.BCM8887X=rx261:tx261
+phy_rx_polarity_flip_phy261.BCM8887X=0
+phy_tx_polarity_flip_phy261.BCM8887X=1
+
+# core 33 lane262
+lane_to_serdes_map_nif_lane262.BCM8887X=rx262:tx262
+phy_rx_polarity_flip_phy262.BCM8887X=0
+phy_tx_polarity_flip_phy262.BCM8887X=0
+
+# core 33 lane263
+lane_to_serdes_map_nif_lane263.BCM8887X=rx263:tx263
+phy_rx_polarity_flip_phy263.BCM8887X=0
+phy_tx_polarity_flip_phy263.BCM8887X=0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     Static Properties
+# ----------------------------------------------------------------------------------------------------
+
+port_init_speed_xl.BCM8887X=40000
+port_init_speed_cd.BCM8887X=400000
+port_init_speed_d3c.BCM8887X=800000
+port_init_speed_ce.BCM8887X=100000
+port_init_speed_le.BCM8887X=50000
+port_init_speed_fabric.BCM8887X=53125
+port_init_speed_xe.BCM8887X=25000
+port_init_speed_cc.BCM8887X=200000
+port_init_speed_ge.BCM8887X=1000
+
+outlif_logical_to_physical_phase_map_1.BCM8887X=S1
+outlif_logical_to_physical_phase_map_2.BCM8887X=L1
+outlif_logical_to_physical_phase_map_3.BCM8887X=XL
+outlif_logical_to_physical_phase_map_4.BCM8887X=L2
+outlif_logical_to_physical_phase_map_5.BCM8887X=M1
+outlif_logical_to_physical_phase_map_6.BCM8887X=M2
+outlif_logical_to_physical_phase_map_7.BCM8887X=M3
+outlif_logical_to_physical_phase_map_8.BCM8887X=S2
+
+outlif_physical_phase_data_granularity_S1.BCM8887X=60
+outlif_physical_phase_data_granularity_S2.BCM8887X=60
+outlif_physical_phase_data_granularity_M1.BCM8887X=60
+outlif_physical_phase_data_granularity_M2.BCM8887X=60
+outlif_physical_phase_data_granularity_M3.BCM8887X=60
+outlif_physical_phase_data_granularity_L1.BCM8887X=60
+outlif_physical_phase_data_granularity_L2.BCM8887X=60
+outlif_physical_phase_data_granularity_XL.BCM8887X=60
+
+appl_param_rcy_mirror_ports_range.BCM8887X=500-1000
+
+#                                     -----------------------------------------------
+#                                    |  FPP  |  FPP  |  FPP  |  FPP  |  FPP  |  FPP  |
+#                                    | 11,12 | 13,14 | 15,16 | 17,18 | 19,20 | 21,22 |
+#                                    |-----------------------------------------------|
+#                                    |  ETH  |  ETH  |  ETH  |  ETH  |  ETH  |  ETH  |
+#                                    | 33,37 | 41,45 | 49,53 | 57,61 | 65,69 | 73,77 |
+#                     ---------------|-----------------------------------------------|----------------
+#                    |               |  Core |  Core |  Core | Core  | Core  | Core  |                |
+#                    |               |   06  |   05  |   04  |  16   |  17   |  18   |                |
+#   -----------------|------          -----------------------------------------------           ------|---------|-------
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 09,10 | 185,189 |  07  |                                                                  |  19  | 193,197 | 23,24 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 07,08 | 177,181 |  15  |                                                                  |  27  | 201,205 | 25,26 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                      AGERA2 -> QSFP_DD_112                       | Core |   ETH   |  FPP  |
+#  | 05,06 | 169,173 |  14  |                                                                  |  26  | 209,213 | 27,28 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 03,04 | 161,165 |  13  |                                                                  |  25  | 217,221 | 29,30 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 01,02 | 153,157 |  12  |                                                                  |  24  | 225,229 | 31,32 |
+#  |-------|---------|------|----------------------------  Q3D  -------------------------------|------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 33,34 | 129,133 |  08  |                                                                  |  28  | 249,253 | 62,63 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 35,36 | 137,141 |  09  |                                                                  |  29  | 241,245 | 60,61 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 36,37 | 145,149 |  10  |                           QSFP_112                               |  30  | 233,237 | 58,59 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 38,39 | 153,157 |  11  |                                                                  |  31  | 225,229 | 56,57 |
+#  |-------|---------|------|                                                                  |------|---------|-------|
+#  |  FPP  |   ETH   | Core |                                                                  | Core |   ETH   |  FPP  |
+#  | 40,41 | 161,165 |  03  |                                                                  |  23  | 217,221 | 54,55 |
+#   -----------------|------          _______________________________________________           ------|-----------------
+#                    |               |  Core |  Core |  Core | Core  | Core  | Core  |                |
+#                    |               |   02  |   01  |   00  |  20   |  21   |  22   |                |
+#                     ---------------|-----------------------------------------------|----------------
+#                                    |  ETH  |  ETH  |  ETH  |  ETH  |  ETH  |  ETH  |
+#                                    |169,173|177,181|185,189|193,197|201,205|209,213|
+#                                    |-----------------------------------------------|
+#                                    |  FPP  |  FPP  |  FPP  |  FPP  |  FPP  |  FPP  |
+#                                    | 42,43 | 44,45 | 46,47 | 48,49 | 50,51 | 52,53 |
+#                                     -----------------------------------------------
+
+dpp_db_path=/usr/share/bcm/db
+rif_id_max=8192
+trunk_group_max_members=128
+custom_feature_ts_pll_internal_clock_reference.BCM8887X=1
+port_init_cl72.BCM8887X=0
+port_priorities_d3c.BCM8887X=8
+port_priorities_cd.BCM8887X=8
+port_priorities_ce.BCM8887X=8
+port_priorities_xe.BCM8887X=8
+port_priorities_ge.BCM8887X=8
+port_priorities=8
+#port_priorities_sch=8
+#CPU ports
+port_priorities_0=2
+port_priorities_sch_0=8
+port_priorities_380=2
+port_priorities_sch_380=8
+port_priorities_381=2
+port_priorities_sch_381=8
+port_priorities_382=2
+port_priorities_sch_382=8
+port_priorities_383=2
+port_priorities_sch_383=8
+port_priorities_384=2
+port_priorities_sch_384=8
+port_priorities_385=2
+port_priorities_sch_385=8
+port_priorities_386=2
+port_priorities_sch_386=8
+port_priorities_387=2
+port_priorities_sch_387=8
+port_priorities_rcy=2
+port_priorities_sch_rcy=8
+
+appl_param_oam_enable=0
+soc_family.BCM8887X=BCM8887X
+
+#enable HBM
+ext_ram_enabled_bitmap.BCM8887X=0xF
+
+####################################################
+##Reference applications related properties - End
+####################################################
+###Default interfaces for Qumran3D
+#CPU interfaces
+ucode_port_0.BCM8887X=CPU.0:core_0.0
+ucode_port_380.BCM8887X=CPU.8:core_1.200
+ucode_port_381.BCM8887X=CPU.16:core_0.201
+ucode_port_382.BCM8887X=CPU.24:core_2.202
+ucode_port_383.BCM8887X=CPU.32:core_3.203
+ucode_port_384.BCM8887X=CPU.4:core_6.204
+ucode_port_385.BCM8887X=CPU.12:core_7.205
+ucode_port_386.BCM8887X=CPU.20:core_4.206
+ucode_port_387.BCM8887X=CPU.28:core_5.207
+
+#special ports
+ucode_port_330.BCM8887X=EVENTOR:core_0.230
+
+#ucode_port_231.BCM8887X=EVENTOR:core_4.231
+ucode_port_340.BCM8887X=OLP0:core_0.240
+ucode_port_341.BCM8887X=OLP1:core_0.241
+ucode_port_342.BCM8887X=OLP0:core_4.242
+ucode_port_343.BCM8887X=OLP1:core_4.243
+ucode_port_332.BCM8887X=OAMP:core_0.232
+ucode_port_333.BCM8887X=OAMP:core_1.233
+ucode_port_334.BCM8887X=OAMP:core_2.234
+ucode_port_335.BCM8887X=OAMP:core_3.235
+ucode_port_336.BCM8887X=OAMP:core_4.236
+ucode_port_337.BCM8887X=OAMP:core_5.237
+ucode_port_338.BCM8887X=OAMP:core_6.238
+ucode_port_339.BCM8887X=OAMP:core_7.239
+
+
+ucode_port_332.BCM8887X_ADAPTER=OAMP:core_0.232
+ucode_port_333.BCM8887X_ADAPTER=OAMP:core_1.233
+ucode_port_334.BCM8887X_ADAPTER=OAMP:core_2.234
+ucode_port_335.BCM8887X_ADAPTER=OAMP:core_3.235
+ucode_port_336.BCM8887X_ADAPTER=OAMP:core_4.236
+ucode_port_337.BCM8887X_ADAPTER=OAMP:core_5.237
+ucode_port_338.BCM8887X_ADAPTER=OAMP:core_6.238
+ucode_port_339.BCM8887X_ADAPTER=OAMP:core_7.239
+
+
+#OAMP
+oamp_dual_mode.BCM8887X=1
+
+sai_disable_srcmacqedstmac_ctrl=1
+
+#RCY ports
+sai_recycle_port_lane_base=300
+ucode_port_321.BCM8887X=RCY.21:core_0.221
+tm_port_header_type_in_321.BCM8887X=ETH
+
+# SAT
+## Enable SAT Interface. 0 - Disable, 1 - Enable (Default)
+ucode_port_316.BCM8887X=SAT:core_2.216
+ucode_port_317.BCM8887X=SAT:core_3.217
+ucode_port_318.BCM8887X=SAT:core_0.218
+ucode_port_319.BCM8887X=SAT:core_1.219
+ucode_port_312.BCM8887X=SAT:core_6.212
+ucode_port_313.BCM8887X=SAT:core_7.213
+ucode_port_314.BCM8887X=SAT:core_4.214
+ucode_port_315.BCM8887X=SAT:core_5.215
+tm_port_header_type_in_316.BCM8887X=INJECTED_2
+tm_port_header_type_in_317.BCM8887X=INJECTED_2
+tm_port_header_type_in_318.BCM8887X=INJECTED_2
+tm_port_header_type_in_319.BCM8887X=INJECTED_2
+tm_port_header_type_in_312.BCM8887X=INJECTED_2
+tm_port_header_type_in_313.BCM8887X=INJECTED_2
+tm_port_header_type_in_314.BCM8887X=INJECTED_2
+tm_port_header_type_in_315.BCM8887X=INJECTED_2
+tm_port_header_type_out_316.BCM8887X=CPU
+tm_port_header_type_out_317.BCM8887X=CPU
+tm_port_header_type_out_318.BCM8887X=CPU
+tm_port_header_type_out_319.BCM8887X=CPU
+tm_port_header_type_out_312.BCM8887X=CPU
+tm_port_header_type_out_313.BCM8887X=CPU
+tm_port_header_type_out_314.BCM8887X=CPU
+tm_port_header_type_out_315.BCM8887X=CPU
+
+
+#########################
+### High Availability ###
+#########################
+#if warmboot is not needed this property can be deleted
+#warmboot_support.BCM8887X=on
+#warmboot_support.BCM8887X_ADAPTER=on
+
+#size of memory block pre-allocated for sw-state use when working with warmboot_support=on
+sw_state_max_size.BCM8887X=1650000000
+sw_state_max_size.BCM8887X_ADAPTER=1650000000
+
+#location of warmboot NV memory
+#Allowed options for dnx are - 3:external storage in filesystem 4:driver will save the state directly in shared memory
+stable_location.BCM8887X=4
+stable_location.BCM8887X_ADAPTER=3
+
+# Note that each unit should have a unique filename and that adapter does not play well with tmp and dev/shm folders.
+stable_filename.BCM8887X_ADAPTER=warmboot_data_0
+stable_filename.BCM8887X=/dev/shm/warmboot_data_0
+stable_filename.1.BCM8887X=/dev/shm/warmboot_data_1
+stable_filename.2.BCM8887X=/dev/shm/warmboot_data_2
+
+#Maximum size for NVM used for WB storage, must be larger than sw_state_max_size.BCM8887X
+stable_size.BCM8887X=1700000000
+stable_size.BCM8887X_ADAPTER=1700000000
+
+#counter stat interval
+bcm_stat_interval.BCM8887X_ADAPTER=1000000
+
+#########################
+#########################
+#########################
+
+### MDB configuration ###
+mdb_profile.BCM8887X=Elastic-Balanced
+
+### Enable Descriptor-DMA ###
+dma_desc_aggregator_chain_length_max.BCM8887X=256
+dma_desc_aggregator_buff_size_kb.BCM8887X=64
+dma_desc_aggregator_enable_specific_MDB_LPM.BCM8887X=1
+dma_desc_aggregator_enable_specific_MDB_FEC.BCM8887X=1
+dma_desc_aggregator_enable_specific_XLTCAM.BCM8887X=1
+dma_desc_aggregator_enable_specific_INIT.BCM8887X=1
+
+# PMF Map payload size, can be any of 30/60/120
+pmf_maps_payload_size.BCM8887X=30
+
+# Set CPU to work with PTCHoITMH header incoming direction and CPU - system headers + network headers outgoing direction
+tm_port_header_type_in_0.BCM8887X=INJECTED
+tm_port_header_type_out_0.BCM8887X=CPU
+
+tm_port_header_type_in_380.BCM8887X=INJECTED
+tm_port_header_type_out_380.BCM8887X=ETH
+tm_port_header_type_in_381.BCM8887X=INJECTED
+tm_port_header_type_out_381.BCM8887X=ETH
+tm_port_header_type_in_382.BCM8887X=INJECTED
+tm_port_header_type_out_382.BCM8887X=ETH
+tm_port_header_type_in_383.BCM8887X=INJECTED
+tm_port_header_type_out_383.BCM8887X=ETH
+tm_port_header_type_in_384.BCM8887X=INJECTED
+tm_port_header_type_out_384.BCM8887X=ETH
+tm_port_header_type_in_385.BCM8887X=INJECTED
+tm_port_header_type_out_385.BCM8887X=ETH
+tm_port_header_type_in_386.BCM8887X=INJECTED
+tm_port_header_type_out_386.BCM8887X=ETH
+tm_port_header_type_in_387.BCM8887X=INJECTED
+tm_port_header_type_out_387.BCM8887X=ETH
+
+# set EVENTOR port to work with PTCHoITMH
+tm_port_header_type_in_330.BCM8887X=INJECTED
+
+
+#OAMP
+tm_port_header_type_in_332.BCM8887X=INJECTED_2
+tm_port_header_type_out_332.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_333.BCM8887X=INJECTED_2
+tm_port_header_type_out_333.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_334.BCM8887X=INJECTED_2
+tm_port_header_type_out_334.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_335.BCM8887X=INJECTED_2
+tm_port_header_type_in_336.BCM8887X=INJECTED_2
+tm_port_header_type_out_336.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_337.BCM8887X=INJECTED_2
+tm_port_header_type_out_337.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_338.BCM8887X=INJECTED_2
+tm_port_header_type_out_338.BCM8887X=ENCAP_EXTERNAL_CPU
+tm_port_header_type_in_339.BCM8887X=INJECTED_2
+tm_port_header_type_out_339.BCM8887X=ENCAP_EXTERNAL_CPU
+
+#OLP
+tm_port_header_type_in_340.BCM8887X=TM
+tm_port_header_type_out_340.BCM8887X=ETH
+tm_port_header_type_in_341.BCM8887X=TM
+tm_port_header_type_out_341.BCM8887X=ETH
+tm_port_header_type_in_342.BCM8887X=TM
+tm_port_header_type_out_342.BCM8887X=ETH
+tm_port_header_type_in_343.BCM8887X=TM
+tm_port_header_type_out_343.BCM8887X=ETH
+
+# Set statically the region mode per region id
+# 0: queue connectors only.
+# 3: [default] SE only (SharingOrder = Low-To-High)
+# 7: SE only (SharingOrder = High-To-Low)
+dtm_flow_mapping_mode_region_65.BCM8887X=3
+dtm_flow_mapping_mode_region_66.BCM8887X=3
+dtm_flow_mapping_mode_region_67.BCM8887X=3
+dtm_flow_mapping_mode_region_68.BCM8887X=3
+dtm_flow_mapping_mode_region_69.BCM8887X=3
+dtm_flow_mapping_mode_region_70.BCM8887X=3
+dtm_flow_mapping_mode_region_71.BCM8887X=3
+dtm_flow_mapping_mode_region_72.BCM8887X=3
+dtm_flow_mapping_mode_region_73.BCM8887X=3
+dtm_flow_mapping_mode_region_74.BCM8887X=7
+dtm_flow_mapping_mode_region_75.BCM8887X=3
+dtm_flow_mapping_mode_region_76.BCM8887X=3
+dtm_flow_mapping_mode_region_77.BCM8887X=3
+dtm_flow_mapping_mode_region_78.BCM8887X=3
+dtm_flow_mapping_mode_region_79.BCM8887X=3
+dtm_flow_mapping_mode_region_80.BCM8887X=3
+dtm_flow_mapping_mode_region_81.BCM8887X=3
+dtm_flow_mapping_mode_region_82.BCM8887X=3
+dtm_flow_mapping_mode_region_83.BCM8887X=3
+dtm_flow_mapping_mode_region_84.BCM8887X=3
+dtm_flow_mapping_mode_region_85.BCM8887X=3
+dtm_flow_mapping_mode_region_86.BCM8887X=3
+dtm_flow_mapping_mode_region_87.BCM8887X=3
+dtm_flow_mapping_mode_region_88.BCM8887X=3
+dtm_flow_mapping_mode_region_89.BCM8887X=3
+dtm_flow_mapping_mode_region_90.BCM8887X=3
+dtm_flow_mapping_mode_region_91.BCM8887X=3
+dtm_flow_mapping_mode_region_92.BCM8887X=3
+dtm_flow_mapping_mode_region_93.BCM8887X=3
+dtm_flow_mapping_mode_region_94.BCM8887X=3
+
+# Set nof remote cores
+dtm_flow_nof_remote_cores_region.BCM8887X=8
+
+## Fabric transmission mode
+# Set the Connect mode to the Fabric
+# Options: FE - presence of a Fabric device (single stage)
+#          SINGLE_FAP - stand-alone device
+#          MESH - devices in Mesh
+# Note: If 'diag_chassis' is on, value will be override in dnx.soc
+#       to be FE instead of SINGLE_FAP.
+fabric_connect_mode.BCM8887X=SINGLE_FAP
+
+### Fabric configuration ###
+#SFI speed rate
+port_init_speed_fabric.BCM8887X=53125
+
+### import SoC properties that shared with Ucode
+#import config-qumran3d-ucode.bcm
+#programmability_image_name.BCM8887X=S121
+# ucode input file, depending on image
+#programmability_ucode_relative_path.BCM8887X=pemla/ucode/S121/jr3native/u_code_db2pem.txt
+
+custom_feature_adapter_do_collect_enable.BCM8887X_ADAPTER=1
+custom_feature_use_new_access.BCM8887X_ADAPTER=1
+mem_cache_enable_all.BCM8887X_ADAPTER=1
+
+#dram
+
+dram_temperature_monitor_enable.BCM8887X_ADAPTER=0
+#Interrupt polling mode on adapter
+polled_irq_mode.BCM8887X_ADAPTER=1
+polled_irq_delay.BCM8887X_ADAPTER=200000
+
+#Eventor SBUS DMA channels
+eventor_sbus_dma_channels.BCM8887X=0,24,0,25,1,24,1,25
+
+#Default CPU Tx Tc Queue
+sai_default_cpu_tx_tc=7
+
+#macsec properties
+xflow_macsec_secure_chan_to_num_secure_assoc=4
+xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
+xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4

@@ -46,15 +46,22 @@ PSU_DATA psu_data = {0};
 /* PSU CLIENT DATA */
 PDDF_DATA_ATTR(psu_idx, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.idx, NULL);
 PDDF_DATA_ATTR(psu_fans, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_fans, NULL);
+PDDF_DATA_ATTR(psu_thermals, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_thermals, NULL);
+PDDF_DATA_ATTR(psu_temp_high_thresh_bitmap, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_temp_high_thresh_bitmap, NULL);
+
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.aname, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devtype, NULL);
 PDDF_DATA_ATTR(attr_devname, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devname, NULL);
+PDDF_DATA_ATTR(attr_data_format, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.data_format, NULL);
 PDDF_DATA_ATTR(attr_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.devaddr, NULL);
 PDDF_DATA_ATTR(attr_offset, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.offset, NULL);
 PDDF_DATA_ATTR(attr_mask, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.mask, NULL);
 PDDF_DATA_ATTR(attr_cmpval, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.cmpval, NULL);
 PDDF_DATA_ATTR(attr_len, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.len, NULL);
+PDDF_DATA_ATTR(attr_m, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.m, NULL);
+PDDF_DATA_ATTR(attr_b, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.b, NULL);
+PDDF_DATA_ATTR(attr_r, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.r, NULL);
 PDDF_DATA_ATTR(attr_ops, S_IWUSR, NULL, do_attr_operation, PDDF_CHAR, 8, (void*)&psu_data, NULL);
 PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*)&psu_data, (void*)&pddf_data);
 
@@ -63,15 +70,21 @@ PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*
 static struct attribute *psu_attributes[] = {
     &attr_psu_idx.dev_attr.attr,
     &attr_psu_fans.dev_attr.attr,
+    &attr_psu_thermals.dev_attr.attr,
+    &attr_psu_temp_high_thresh_bitmap.dev_attr.attr,
 
     &attr_attr_name.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
     &attr_attr_devname.dev_attr.attr,
+    &attr_attr_data_format.dev_attr.attr,
     &attr_attr_devaddr.dev_attr.attr,
     &attr_attr_offset.dev_attr.attr,
     &attr_attr_mask.dev_attr.attr,
     &attr_attr_cmpval.dev_attr.attr,
     &attr_attr_len.dev_attr.attr,
+    &attr_attr_m.dev_attr.attr,
+    &attr_attr_b.dev_attr.attr,
+    &attr_attr_r.dev_attr.attr,
     &attr_attr_ops.dev_attr.attr,
     &attr_dev_ops.dev_attr.attr,
     NULL
@@ -121,6 +134,8 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
 
         psu_platform_data->idx = pdata->idx;
         psu_platform_data->num_psu_fans = pdata->num_psu_fans;
+        psu_platform_data->num_psu_thermals = pdata->num_psu_thermals;
+        psu_platform_data->psu_temp_high_thresh_bitmap = pdata->psu_temp_high_thresh_bitmap;
         psu_platform_data->len = pdata->len;
 
         for (i=0;i<num;i++)
@@ -157,6 +172,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     if (strncmp(buf, "add", strlen(buf)-1)==0)
     {
         adapter = i2c_get_adapter(cdata->parent_bus);
+        if (!adapter) {
+            printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+            goto clear_data;
+        }
         board_info = i2c_get_psu_board_info(pdata, cdata);
 
         /* Populate the platform data for psu */

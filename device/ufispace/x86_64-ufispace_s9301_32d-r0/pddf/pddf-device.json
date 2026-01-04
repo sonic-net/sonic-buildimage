@@ -5,6 +5,7 @@
         "num_fans_pertray": 2,
         "num_ports": 34,
         "num_temps": 7,
+        "num_components":6,
         "pddf_dev_types": {
             "description": "PDDF supported devices",
             "CPLD": [
@@ -20,7 +21,8 @@
         },
         "std_perm_kos": [
             "igb",
-            "i40e"
+            "i40e",
+            "x86-64-ufispace-s9301-32d-i2c-smbus"
         ],
         "std_kos": [
             "i2c_i801",
@@ -51,6 +53,54 @@
             "x86-64-ufispace-s9301-32d-lpc",
             "x86-64-ufispace-s9301-32d-sys-eeprom",
             "pddf_custom_sysstatus_module"
+        ]
+    },
+    "COMPONENT1":
+    {
+        "comp_attr":{ "name": "CPU_CPLD", "type": "cpld", "description": "CPU CPLD"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "major_minor=$(xxd -s 0x600 -p -l 1 /dev/port);major=$(((16#$major_minor & 2#11000000) >> 6));minor=$((16#$major_minor & 2#00111111));build=$((16#$(xxd -s 0x6E0 -p -l 1 /dev/port)));printf '%d.%02d.%03d' $major $minor $build" }
+        ]
+    },    
+    "COMPONENT2":
+    {
+        "comp_attr":{ "name": "CPLD1", "type": "cpld", "description": "CPLD 1"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_build)" }
+        ]
+    },
+    "COMPONENT3":
+    {
+        "comp_attr":{ "name": "CPLD2", "type": "cpld", "description":"CPLD 2"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_build)" }
+        ]
+    },
+    "COMPONENT4":
+    {
+        "comp_attr":{ "name": "CPLD3", "type": "cpld", "description":"CPLD 3"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld3_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld3_build)" }
+        ]
+    },
+    "COMPONENT5":
+    {
+        "comp_attr":{ "name": "BIOS", "type": "bios", "description": "Basic Input/Output System"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "cat /sys/class/dmi/id/bios_version" }
+        ]
+    },
+    "COMPONENT6":
+    {
+        "comp_attr":{ "name": "BMC", "type": "bmc", "description":"BMC"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "r=(`ipmitool raw 0x6 0x1 | cut -d ' ' -f 4,5,16,15,14`) && echo ${r[0]}.${r[1]}.${r[4]}.${r[3]}${r[2]}" }
         ]
     },
     "SYSTEM": {

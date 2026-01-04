@@ -1,0 +1,230 @@
+From b90c68ec0551fdecde71039c2665811a93e223cb Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 11:05:22 -0700
+Subject: zebra: fix memory leak dplane pthread mutex destroy
+
+valgrind report snippet:
+==214726== 240 bytes in 1 blocks are possibly lost in loss record 18,308 of 19,216
+==214726==    at 0x48465EF: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==214726==    by 0x492A42F: qcalloc (in /usr/lib/x86_64-linux-gnu/frr/libfrr.so.0.0.0)
+==214726==    by 0x1FED89: dplane_provider_register (in /usr/lib/frr/zebra)
+==214726==    by 0x2003AA: zebra_dplane_init (in /usr/lib/frr/zebra)
+==214726==    by 0x1C0279: main (in /usr/lib/frr/zebra)
+
+Ticket: #4559520
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ zebra/zebra_dplane.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 827d55d686..409e3e4943 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -7695,6 +7695,7 @@ void zebra_dplane_shutdown(void)
+ 	dp = dplane_prov_list_first(&zdplane_info.dg_providers);
+ 	while (dp) {
+ 		dplane_prov_list_del(&zdplane_info.dg_providers, dp);
++		pthread_mutex_destroy(&dp->dp_mutex);
+ 		XFREE(MTYPE_DP_PROV, dp);
+ 
+ 		dp = dplane_prov_list_first(&zdplane_info.dg_providers);
+@@ -7711,6 +7712,9 @@ void zebra_dplane_shutdown(void)
+ 		}
+ 	}
+ 	DPLANE_UNLOCK();
++
++	/* Destroy global mutex */
++	pthread_mutex_destroy(&zdplane_info.dg_mutex);
+ }
+ 
+ /*
+-- 
+2.48.1
+
+
+From 14f1a5519c60128d816abfc7236366a81c923dfd Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 14:05:22 -0700
+Subject: zebra: fix memory leak in netlink link chg err case
+
+valgrind report snippet:
+==214726== 45,600 bytes in 30 blocks are possibly lost in loss record
+19,202 of 19,216
+==214726==    at 0x48465EF: calloc (in
+/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==214726==    by 0x492A42F: qcalloc (in
+/usr/lib/x86_64-linux-gnu/frr/libfrr.so.0.0.0)
+==214726==    by 0x1C7EEB: netlink_link_change (in /usr/lib/frr/zebra)
+==214726==    by 0x1D586E: netlink_parse_info (in /usr/lib/frr/zebra)
+==214726==    by 0x1C9930: interface_lookup_netlink (in
+/usr/lib/frr/zebra)
+==214726==    by 0x1C9E80: interface_list (in /usr/lib/frr/zebra)
+==214726==    by 0x23883D: zebra_ns_init (in /usr/lib/frr/zebra)
+==214726==    by 0x1C0294: main (in /usr/lib/frr/zebra)
+
+Ticket: #4559520
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ zebra/if_netlink.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/if_netlink.c b/zebra/if_netlink.c
+index 1cfcc84bd9..7d31684c56 100644
+--- a/zebra/if_netlink.c
++++ b/zebra/if_netlink.c
+@@ -638,6 +638,9 @@ netlink_bridge_vxlan_vlan_vni_map_update(struct zebra_dplane_ctx *ctx,
+ 	if (count) {
+ 		vniarray->count = count;
+ 		dplane_ctx_set_ifp_vxlan_vni_array(ctx, vniarray);
++	} else if (vniarray) {
++		/* Free allocated memory if count is 0 */
++		XFREE(MTYPE_TMP, vniarray);
+ 	}
+ 	return 0;
+ }
+@@ -705,6 +708,9 @@ static void netlink_bridge_vlan_update(struct zebra_dplane_ctx *ctx,
+ 	if (count) {
+ 		bvarray->count = count;
+ 		dplane_ctx_set_ifp_bridge_vlan_info_array(ctx, bvarray);
++	} else if (bvarray) {
++		/* Free allocated memory if count is 0 */
++		XFREE(MTYPE_TMP, bvarray);
+ 	}
+ }
+ 
+@@ -1749,8 +1755,13 @@ int netlink_vlan_change(struct nlmsghdr *h, ns_id_t ns_id, int startup)
+ 				   bvm->ifindex, ns_id);
+ 
+ 		dplane_provider_enqueue_to_zebra(ctx);
+-	} else
++	} else {
++		if (vlan_array) {
++			/* Free allocated memory if count is 0 */
++			XFREE(MTYPE_VLAN_CHANGE_ARR, vlan_array);
++		}
+ 		dplane_ctx_fini(&ctx);
++	}
+ 
+ 
+ 	return 0;
+-- 
+2.48.1
+
+
+From d34057d035a5e6410deaef9daa46ce0ed943c520 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 14:09:40 -0700
+Subject: zebra: fix memory leak in dplane zns info entries
+
+valgrind report snippet:
+==214726== 48 bytes in 1 blocks are possibly lost in loss record 13,919
+of 19,216
+==214726==    at 0x48465EF: calloc (in
+/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==214726==    by 0x492A42F: qcalloc (in
+/usr/lib/x86_64-linux-gnu/frr/libfrr.so.0.0.0)
+==214726==    by 0x1FFA30: zebra_dplane_ns_enable (in
+/usr/lib/frr/zebra)
+==214726==    by 0x238835: zebra_ns_init (in /usr/lib/frr/zebra)
+==214726==    by 0x1C0294: main (in /usr/lib/frr/zebra)
+
+Ticket: #4559520
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ zebra/zebra_dplane.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 409e3e4943..9e26cf6803 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -7665,6 +7665,7 @@ void zebra_dplane_shutdown(void)
+ {
+ 	struct zebra_dplane_provider *dp;
+ 	struct zebra_dplane_ctx *ctx;
++	struct dplane_zns_info *zi;
+ 
+ 	if (IS_ZEBRA_DEBUG_DPLANE)
+ 		zlog_debug("Zebra dataplane shutdown called");
+@@ -7701,6 +7702,14 @@ void zebra_dplane_shutdown(void)
+ 		dp = dplane_prov_list_first(&zdplane_info.dg_providers);
+ 	}
+ 
++	/* Clean up namespace info entries */
++	zi = zns_info_list_first(&zdplane_info.dg_zns_list);
++	while (zi) {
++		zns_info_list_del(&zdplane_info.dg_zns_list, zi);
++		XFREE(MTYPE_DP_NS, zi);
++		zi = zns_info_list_first(&zdplane_info.dg_zns_list);
++	}
++
+ 	/* TODO -- Clean queue(s), free memory */
+ 	DPLANE_LOCK();
+ 	{
+-- 
+2.48.1
+
+
+From ea672814b716dbd9c6387e0533fa7a5efff8c8d9 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 15:11:40 -0700
+Subject: zebra: fix memory leak dplane providers queued contex
+
+valgrind report snippet:
+==214726== 1,520 bytes in 1 blocks are possibly lost in loss record
+19,054 of 19,216
+==214726==    at 0x48465EF: calloc (in
+/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==214726==    by 0x492A42F: qcalloc (in
+/usr/lib/x86_64-linux-gnu/frr/libfrr.so.0.0.0)
+==214726==    by 0x20029D: zebra_dplane_startup_stage (in
+/usr/lib/frr/zebra)
+==214726==    by 0x23883D: zebra_ns_init (in /usr/lib/frr/zebra)
+==214726==    by 0x1C0294: main (in /usr/lib/frr/zebra)
+
+Ticket: #4559520
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ zebra/zebra_dplane.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 9e26cf6803..18599a02b5 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -7722,6 +7722,23 @@ void zebra_dplane_shutdown(void)
+ 	}
+ 	DPLANE_UNLOCK();
+ 
++	/* Clean up any startup stage contexts in provider queues */
++	frr_each (dplane_prov_list, &zdplane_info.dg_providers, dp) {
++		/* Clean in-queue contexts */
++		ctx = dplane_ctx_list_pop(&dp->dp_ctx_in_list);
++		while (ctx) {
++			dplane_ctx_free(&ctx);
++			ctx = dplane_ctx_list_pop(&dp->dp_ctx_in_list);
++		}
++
++		/* Clean out-queue contexts */
++		ctx = dplane_ctx_list_pop(&dp->dp_ctx_out_list);
++		while (ctx) {
++			dplane_ctx_free(&ctx);
++			ctx = dplane_ctx_list_pop(&dp->dp_ctx_out_list);
++		}
++	}
++
+ 	/* Destroy global mutex */
+ 	pthread_mutex_destroy(&zdplane_info.dg_mutex);
+ }
+-- 
+2.48.1
+

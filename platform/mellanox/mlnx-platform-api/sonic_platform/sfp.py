@@ -36,7 +36,11 @@ try:
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
-    from sonic_platform_base.sonic_xcvr.api.public import cmis, sff8636, sff8436
+    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
+
+    from sonic_platform_base.sonic_xcvr.api.public import cmis as cmis_api
+    from sonic_platform_base.sonic_xcvr.codes.public import cmis as cmis_codes
+    from sonic_platform_base.sonic_xcvr.mem_maps.public import cmis as cmis_mem
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -72,6 +76,7 @@ QSFP_DD_TYPE_CODE_LIST = [
 ]
 
 RJ45_TYPE = "RJ45"
+CPO_TYPE = "CPO"
 
 #variables for sdk
 REGISTER_NUM = 1
@@ -842,13 +847,27 @@ class SFP(NvidiaSFPCommon):
             print(e)
         return [False] * api.NUM_CHANNELS if api else None
     
+    def _get_serial(self):
+        """
+        Get serial number from EEPROM. sfp_base.get_serial() might read from
+        memory cache, which is not always up to date. This function is used by reinit_if_sn_changed() to detect if a SFP is replaced.
+        """
+        api = self.get_xcvr_api()
+        if not api:
+            return None
+        
+        sn = api.xcvr_eeprom.read(consts.VENDOR_SERIAL_NO_FIELD)
+        if sn is None:
+            return None
+        return sn.rstrip()
+    
     def reinit_if_sn_changed(self):
         """Reinitialize the SFP if the module ID has changed
         """
-        sn = self.get_serial()
+        sn = self._get_serial()
         if sn != self.sn:
             self.reinit()
-            self.sn = self.get_serial()
+            self.sn = self._get_serial()
             self.temp_high_threshold = None
             self.temp_critical_threshold = None
             return True
@@ -861,47 +880,40 @@ class SFP(NvidiaSFPCommon):
             tuple: (temperature, warning_threshold, critical_threshold)
         """
         try:
+            sw_control = self.is_sw_control()
+            if not sw_control:
+                return sw_control, None, None, None
+
             sn_changed = self.reinit_if_sn_changed()
-            if not self.is_sw_control():
-                # firmware control, read from sysfs
-                temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
-                if not os.path.exists(temp_file):
-                    logger.log_error(f'Failed to read from file {temp_file} - not exists')
-                    temperature = None
-                else:
-                    temperature = utils.read_int_from_file(temp_file,
-                                                       log_func=None)
-                    temperature = temperature / SFP_TEMPERATURE_SCALE if temperature is not None else None
-            else:
-                # software control, read from EEPROM
-                temperature = super().get_temperature()
+            # software control, read from EEPROM
+            temperature = super().get_temperature()
             if temperature is None:
                 # Failed to read temperature, no need read threshold
-                return None, None, None
+                return sw_control, None, None, None
             elif temperature == 0.0:
                 # Temperature is not supported, no need read threshold
-                return 0.0, 0.0, 0.0
+                return sw_control, 0.0, 0.0, 0.0
             else:
                 if not sn_changed and self.temp_high_threshold is not None and self.temp_critical_threshold is not None:
-                    return temperature, self.temp_high_threshold, self.temp_critical_threshold
+                    return sw_control, temperature, self.temp_high_threshold, self.temp_critical_threshold
                 else:
                     # Read threshold from EEPROM
                     api = self.get_xcvr_api()
                     thresh_support = api.get_transceiver_thresholds_support()
                     if thresh_support is None:
                         # Failed to read threshold support field, no need read threshold
-                        return temperature, None, None
+                        return sw_control, temperature, None, None
                     if thresh_support:
                         # Read threshold from EEPROM
                         self.temp_high_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_WARNING_FIELD)
                         self.temp_critical_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_ALARM_FIELD)
-                        return temperature, self.temp_high_threshold, self.temp_critical_threshold
+                        return sw_control, temperature, self.temp_high_threshold, self.temp_critical_threshold
                     else:
                         # No threshold support, use default threshold
-                        return temperature, 0.0, 0.0
+                        return sw_control, temperature, 0.0, 0.0
         except:
             # module under initialization, return as temperature not supported
-            return 0.0, 0.0, 0.0
+            return False, None, None, None
 
     def get_temperature(self):
         """Get SFP temperature
@@ -1093,7 +1105,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api is of type CMIS
         """
-        return isinstance(xcvr_api, cmis.CmisApi)
+        return isinstance(xcvr_api, cmis_api.CmisApi)
 
     def is_sff_api(self, xcvr_api):
         """Check if the api type is SFF
@@ -1818,3 +1830,36 @@ class RJ45Port(NvidiaSFPCommon):
         """
         status = super().get_module_status()
         return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status
+
+
+class CpoPort(SFP):
+    """class derived from SFP, representing CPO ports"""
+
+    def __init__(self, sfp_index):
+        super(CpoPort, self).__init__(sfp_index)
+        self._sfp_type_str = None
+        self.sfp_type = CPO_TYPE
+
+    def get_transceiver_info(self):
+        transceiver_info_dict = super().get_transceiver_info()
+        transceiver_info_dict['type'] = self.sfp_type
+        return transceiver_info_dict
+
+    def get_xcvr_api(self):
+        if self._xcvr_api is None:
+            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
+        return self._xcvr_api
+
+    def get_presence(self):
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
+        present = utils.read_int_from_file(file_path)
+        return present == 1
+
+    def reinit(self):
+        """
+        Nothing to do for cpo. Just provide it to avoid exception
+        :return:
+        """
+        return
+
+

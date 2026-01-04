@@ -7,9 +7,9 @@ DERIVED_TARGETS = $(SWIG) $(SWIG_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -fr ./swig-$(SWIG_VERSION) *.deb
-	wget -O swig_$(SWIG_VERSION).orig.tar.gz                      'https://sonicstorage.blob.core.windows.net/public/swig_3.0.12.orig.tar.gz'
-	wget -O swig_$(SWIG_VERSION).dsc                              'https://sonicstorage.blob.core.windows.net/public/swig_3.0.12-2.dsc'
-	wget -O swig_$(SWIG_VERSION)-$(SWIG_SUBVERSION).debian.tar.xz 'https://sonicstorage.blob.core.windows.net/public/swig_3.0.12-2.debian.tar.xz'
+	wget -O swig_$(SWIG_VERSION).orig.tar.gz                      'https://packages.trafficmanager.net/public/swig_3.0.12.orig.tar.gz'
+	wget -O swig_$(SWIG_VERSION).dsc                              'https://packages.trafficmanager.net/public/swig_3.0.12-2.dsc'
+	wget -O swig_$(SWIG_VERSION)-$(SWIG_SUBVERSION).debian.tar.xz 'https://packages.trafficmanager.net/public/swig_3.0.12-2.debian.tar.xz'
 	dpkg-source -x swig_$(SWIG_VERSION).dsc
 
 	pushd ./swig-$(SWIG_VERSION)

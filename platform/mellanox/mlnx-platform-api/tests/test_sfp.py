@@ -29,7 +29,7 @@ test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
-from sonic_platform.sfp import SFP, RJ45Port, SX_PORT_MODULE_STATUS_INITIALIZING, SX_PORT_MODULE_STATUS_PLUGGED, SX_PORT_MODULE_STATUS_UNPLUGGED, SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR, SX_PORT_MODULE_STATUS_PLUGGED_DISABLED
+from sonic_platform.sfp import SFP, RJ45Port, CpoPort, CPO_TYPE, cmis_api, SX_PORT_MODULE_STATUS_INITIALIZING, SX_PORT_MODULE_STATUS_PLUGGED, SX_PORT_MODULE_STATUS_UNPLUGGED, SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR, SX_PORT_MODULE_STATUS_PLUGGED_DISABLED
 from sonic_platform.chassis import Chassis
 
 
@@ -302,7 +302,19 @@ class TestSfp:
         sfp = SFP(0)
         api = sfp.get_xcvr_api()
         assert api is None
-        mock_read.return_value = bytearray([0x18])
+
+        # Mock EEPROM reads with proper side_effect to handle different offsets
+        def eeprom_side_effect(offset, length):
+            if (offset, length) == (0, 1):
+                return bytearray([0x18])  # Module ID (CMIS)
+            if (offset, length) == (129, 16):
+                return b'INNOLIGHT       '  # Vendor name (padded to 16 bytes)
+            if (offset, length) == (148, 16):
+                return b'T-DL8CNT-NCI    '  # Vendor part number (padded to 16 bytes)
+            # Return zeros for any other reads
+            return bytearray([0] * length)
+
+        mock_read.side_effect = eeprom_side_effect
         api = sfp.get_xcvr_api()
         assert api is not None
 
@@ -318,6 +330,18 @@ class TestSfp:
         assert sfp.get_transceiver_bulk_status()
         assert sfp.get_transceiver_threshold_info()
         sfp.reinit()
+
+    @mock.patch('sonic_platform.sfp.CpoPort.read_eeprom')
+    def test_cpo_get_xcvr_api(self, mock_read):
+        sfp = CpoPort(0)
+        api = sfp.get_xcvr_api()
+        assert isinstance(api, cmis_api.CmisApi)
+
+    @mock.patch('sonic_platform.sfp.SfpOptoeBase.get_transceiver_info', return_value={})
+    def test_cpo_get_transceiver_info(self, mock_get_info):
+        sfp = CpoPort(0)
+        info = sfp.get_transceiver_info()
+        assert info['type'] == CPO_TYPE
 
     @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_int_from_file')
@@ -507,6 +531,7 @@ class TestSfp:
         assert error_desc is None
 
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     def test_initialize_sfp_modules(self):
         c = Chassis()
@@ -553,7 +578,6 @@ class TestSfp:
         sfp = SFP(0)
         sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
         sfp.is_sw_control = mock.MagicMock(return_value=False)
-        sfp.is_sw_control.return_value = False
         mock_api = mock.MagicMock()
         mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=True)
         mock_api.xcvr_eeprom = mock.MagicMock()
@@ -567,31 +591,31 @@ class TestSfp:
 
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
-        with mock.patch('os.path.exists', mock.MagicMock(return_value=False)):
-            assert sfp.get_temperature_info() == (None, None, None)
+        assert sfp.get_temperature_info() == (False, None, None, None)
 
-        with mock.patch('os.path.exists', mock.MagicMock(return_value=True)):
-            mock_read_int.return_value = None
-            assert sfp.get_temperature_info() == (None, None, None)
-            
-            mock_read_int.return_value = 0.0
-            assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)
-
-            mock_read_int.return_value = 448
-            assert sfp.get_temperature_info() == (56.0, 75.0, 85.0)
-        
-        
         sfp.is_sw_control.return_value = True
         mock_super_get_temperature.return_value = 58.0
-        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
         
         mock_api.get_transceiver_thresholds_support.return_value = None
-        assert sfp.get_temperature_info() == (58.0, None, None)
+        assert sfp.get_temperature_info() == (True, 58.0, None, None)
         
         mock_api.get_transceiver_thresholds_support.return_value = False
-        assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 0.0, 0.0)
         
         sfp.reinit_if_sn_changed.return_value = False
-        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')
-        assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)
+        assert sfp.get_temperature_info() == (False, None, None, None)
+
+    def test_reinit_if_sn_changed(self):
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert not sfp.reinit_if_sn_changed()
+        
+        sfp.get_xcvr_api.return_value = mock.MagicMock()
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read = mock.MagicMock(return_value='1234567890')
+        assert sfp.reinit_if_sn_changed()
+        
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read.return_value = '1234567891'
+        assert sfp.reinit_if_sn_changed()

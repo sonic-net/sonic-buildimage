@@ -1,296 +1,203 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
-FROM {{ prefix }}ubuntu:20.04
-
-{% set legacy = LEGACY_SONIC_MGMT_DOCKER %}
+FROM {{ prefix }}ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y apt-transport-https \
-                                         apt-utils \
-                                         build-essential \
-                                         ca-certificates \
-                                         cmake \
-                                         conserver-client \
-                                         curl \
-                                         default-jre \
-                                         git \
-                                         gnupg \
-                                         gnupg-agent \
-                                         iproute2 \
-                                         iputils-ping \
-                                         isc-dhcp-client \
-                                         libffi-dev \
-                                         libssl-dev \
-                                         libxml2 \
-                                         libxslt1-dev \
-                                         lsb-release \
-                                         jq \
-                                         openssh-server \
-                                         psmisc \
-                                         python \
-                                         python-dev \
-                                         python3-pip \
-                                         python3-venv \
-                                         rsyslog \
-                                         shellcheck \
-                                         snmp \
-                                         software-properties-common \
-                                         sshpass \
-                                         sudo \
-                                         tcpdump \
-                                         telnet \
-                                         vim \
-                                         bats
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    apt-utils \
+    bats \
+    build-essential \
+    ca-certificates \
+    cmake \
+    conserver-client \
+    curl \
+    default-jre \
+    git \
+    gnupg \
+    gnupg-agent \
+    iproute2 \
+    iputils-ping \
+    isc-dhcp-client \
+    libffi-dev \
+    libssl-dev \
+    libxml2 \
+    libxslt1-dev \
+    lsb-release \
+    jq \
+    openssh-server \
+    protobuf-compiler \
+    psmisc \
+    python3 \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    python-is-python3 \
+    rsyslog \
+    shellcheck \
+    snmp \
+    software-properties-common \
+    sshpass \
+    sudo \
+    tcpdump \
+    telnet \
+    vim
 
-RUN python3 -m pip install --upgrade pip setuptools wheel
-RUN python3 -m pip install aiohttp \
-                 allure-pytest==2.8.22 \
-                 ansible==6.7.0 \
-                 azure-storage-blob==12.9.0 \
-                 azure-kusto-data \
-                 azure-kusto-ingest \
-                 defusedxml \
-                 celery[redis]==5.5.2 \
-                 cffi \
-                 contextlib2==0.6.0.post1 \
-                 cryptography==41.0.2 \
-                 ctypesgen \
-                 dpkt \
-                 dpugen==0.1.1 \
-                 "future>=0.16.0" \
-                 gitpython \
-                 ipaddr \
-                 ipython==8.12.2 \
-                 ixload \
-                 ixnetwork-restpy==1.6.1 \
-                 ixnetwork-open-traffic-generator==0.0.79 \
-                 jinja2==3.1.2 \
-                 jsonpatch \
-                 lxml \
-                 markupsafe==2.0.1 \
-                 mock \
-                 msrest==0.6.21 \
-                 natsort \
-                 ncclient \
-                 netaddr \
-                 netmiko==2.4.2 \
-                 pandas \
-                 paramiko==2.9.5 \
-                 passlib \
-                 pexpect \
-                 prettytable \
-                 psutil \
-                 ptf \
-                 pyasn1==0.4.8 \
-                 pycryptodome==3.9.8 \
-                 pyfiglet \
-                 pylint==1.8.1 \
-                 pyro4 \
-                 pysnmp==4.4.12 \
-                 pysubnettree \
-                 pytest-ansible==4.0.0 \
-                 pytest-html \
-                 pytest-repeat \
-                 pytest-xdist==1.28.0 \
-                 python-dateutil \
-                 pytest==7.4.0 \
-                 pytest-stress \
-                 PyYAML \
-                 redis \
-                 requests \
-                 retry \
-                 rpyc \
-                 scandir \
-                 scapy==2.5.0 \
-                 setuptools-rust \
-                 six \
-                 snappi==1.27.1 \
-                 snappi-ixnetwork==1.27.2 \
-                 tabulate \
-                 textfsm==1.1.2 \
-                 thrift==0.11.0 \
-                 virtualenv \
-                 debugpy \
-    && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
-    && tar xvfz 1.2.tar.gz \
-    && cd nanomsg-1.2      \
+# Ubuntu 24.04 recommends installing pip packages in a virtual environment
+# Create a virtual environment at /opt/venv and install all required python packages there
+RUN python3 -m venv --system-site-packages /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
+# Without this change, running pip or python with sudo will not use the binaries from /opt/venv/bin
+RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
+    && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
+
+RUN pip install --no-cache-dir \
+    aiohttp \
+    allure-pytest \
+    ansible==11.10.0 \
+    azure-storage-blob \
+    azure-kusto-data \
+    azure-kusto-ingest \
+    defusedxml \
+    celery[redis] \
+    cffi \
+    contextlib2 \
+    cryptography \
+    ctypesgen \
+    debugpy \
+    dpkt \
+    dpugen \
+    future \
+    gitpython \
+    ipaddr \
+    ipython \
+    ixload \
+    ixnetwork-restpy \
+    ixnetwork-open-traffic-generator \
+    jinja2 \
+    jsonpatch \
+    lxml \
+    markupsafe \
+    matplotlib \
+    mock \
+    msrest \
+    natsort \
+    ncclient \
+    netaddr \
+    netmiko \
+    opentelemetry-api==1.27.0 \
+    opentelemetry-sdk==1.27.0 \
+    opentelemetry-exporter-otlp==1.27.0 \
+    pandas \
+    paramiko \
+    passlib \
+    pexpect \
+    prettytable \
+    psutil \
+    ptf \
+    pyasn1 \
+    pycryptodome \
+    pyfiglet \
+    pylint \
+    pyro4 \
+    pysnmp \
+    pysubnettree \
+    pytest \
+    pytest-ansible \
+    pytest-html \
+    pytest-repeat \
+    pytest-stress \
+    pytest-xdist \
+    python-dateutil \
+    PyYAML \
+    redis \
+    requests \
+    retry \
+    rich \
+    rpyc \
+    scandir \
+    scapy \
+    seaborn \
+    setuptools-rust \
+    six \
+    snappi \
+    snappi-ixnetwork \
+    tabulate \
+    textfsm \
+    thrift \
+    && wget https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.1.tar.gz \
+    && tar xvfz 1.2.1.tar.gz \
+    && cd nanomsg-1.2.1      \
     && mkdir -p build      \
     && cd build            \
     && cmake ..            \
     && make install        \
     && ldconfig            \
     && cd ../..            \
-    && rm -fr nanomsg-1.2  \
-    && rm -f 1.2.tar.gz  \
-    && python3 -m pip install nnpy
+    && rm -fr nanomsg-1.2.1  \
+    && rm -f 1.2.1.tar.gz  \
+    && python3 -m pip install --no-cache-dir nnpy
 
-{% if legacy == 'y' or legacy == '1' %}
-RUN curl -fsSL https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py \
-    && python2 get-pip.py \
-    && rm -f get-pip.py
+# Install docker-ce-cli, azure-cli
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update  \
+    && apt-get install -y docker-ce-cli \
+    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-RUN python2 -m pip install --upgrade pip setuptools wheel
-RUN python2 -m pip install allure-pytest==2.8.22 \
-                ansible==2.8.20 \
-                azure-storage-blob==12.9.0 \
-                celery[redis]==4.4.7 \
-                cffi==1.12.0 \
-                contextlib2==0.6.0.post1 \
-                cryptography==3.3.2 \
-                ctypesgen \
-                dpkt \
-                dpugen==0.1.1 \
-                "future>=0.16.0" \
-                gitpython \
-                ipaddr \
-                ipaddress \
-                ipython==5.4.1 \
-                ixload \
-                ixnetwork-restpy==1.0.64 \
-                ixnetwork-open-traffic-generator==0.0.79 \
-                snappi_ixload==0.0.5 \
-                jinja2==2.10.1 \
-                jsonpatch \
-                lazy-object-proxy==1.6.0 \
-                lxml \
-                macaddress \
-                mock \
-                msrest==0.6.21 \
-                natsort \
-                netaddr==0.10.1 \
-                netmiko==2.4.2 \
-                nnpy \
-                pandas \
-                paramiko==2.7.2 \
-                passlib \
-                pexpect \
-                prettytable \
-                protobuf==3.15.0 \
-                psutil \
-                ptf \
-                pyaml==21.10.1 \
-                pyasn1==0.1.9 \
-                pycryptodome==3.9.8 \
-                pyfiglet \
-                pylint==1.8.1 \
-                pyro4 \
-                pysnmp==4.2.5 \
-                pysubnettree \
-                pytest==4.6.11 \
-                pytest-ansible \
-                pytest-repeat \
-                pytest-html \
-                pytest-xdist==1.28.0 \
-                python-dateutil \
-                PyYAML \
-                redis \
-                requests \
-                retry \
-                rpyc \
-                scandir \
-                scapy==2.5.0 \
-                six \
-                snappi==0.9.1 \
-                snappi-convergence==0.4.1 \
-                snappi-ixnetwork==0.9.1 \
-                statistics \
-                tabulate \
-                textfsm==1.1.3 \
-                thrift==0.11.0 \
-                virtualenv
-{% endif %}
-
-# Install docker-ce-cli
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
-    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"    \
-    && apt-get update                                                                                              \
-    && apt-get install -y docker-ce-cli
-
-# Install Azure CLI, following https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt#option-2-step-by-step-installation-instructions
-RUN mkdir -p /etc/apt/keyrings \
-    && curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null \
-    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
-    && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
-    && apt-get update && apt-get install -y azure-cli
-
-# Remove old python protobuf package if existing
-RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
-# Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
-RUN mkdir -p /tmp/protobuf \
-    && cd /tmp/protobuf \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
-    && dpkg -i *.deb \
-    && rm -rf /tmp/protobuf
+# Install dash-api
+RUN tmpdir=$(mktemp -d) \
+    && python_site_packages=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+    && mkdir -p "$python_site_packages/dash_api" \
+    && git clone --depth 1 https://github.com/sonic-net/sonic-dash-api.git $tmpdir/sonic-dash-api \
+    && cp $tmpdir/sonic-dash-api/misc/pypkg/dash_api/__init__.py "$python_site_packages/dash_api/__init__.py" \
+    && protoc -I=$tmpdir/sonic-dash-api/proto --python_out="$python_site_packages/dash_api" $tmpdir/sonic-dash-api/proto/*.proto \
+    && rm -rf "$tmpdir"
 
 ## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
-
-RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
+COPY debs/sonic-device-data_*.deb debs/
+RUN dpkg -i debs/sonic-device-data_*.deb
 
 # Install dash-pipeline-utils
 COPY ["files/github_get.py", "/usr/bin"]
-RUN cd /tmp \
+RUN tmpdir=$(mktemp -d) \
+    && cd "$tmpdir" \
     && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
     && cd utils \
     && python3 setup.py bdist_wheel \
     && python3 -m pip install dist/dash_pipeline_utils*.whl \
     && cd / \
-    && rm -rf /tmp/utils
+    && rm -rf "$tmpdir"
+
+# Apply patches to ansible and ptf
+COPY \
+    0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+    0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    /tmp/
+RUN site_packages_dir=$(/opt/venv/bin/python3 -c "import site; print(site.getsitepackages()[0])") \
+    && patch -u -b "$site_packages_dir/ansible/plugins/loader.py" -i /tmp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    && rm -f /tmp/*.patch
 
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Add user
-ARG user
-ARG uid
-ARG guid
-ARG hostname
+# Make it ready to be used as azure pipeline agent
+COPY start.sh /azp/
+RUN chmod +x /azp/start.sh
 
-ENV BUILD_HOSTNAME $hostname
-ENV USER $user
 ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BUNDLED_FREETDS=1
 
-RUN groupadd -f -r -g $guid g$user
-
-RUN useradd $user -l -u $uid -g $guid -d /var/$user -m -s /bin/bash
-
-COPY sonic-jenkins.pub /var/$user/.ssh/authorized_keys2
-
-RUN echo "Host *\n\tStrictHostKeyChecking no\n" > /var/$user/.ssh/config
-RUN chown $user /var/$user/.ssh -R
-RUN chmod go= /var/$user/.ssh -R
-
-# Add user to sudoers
-RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
-
-USER $user
-WORKDIR /var/$user
-
-# Add az symlink for backwards compatibility
-RUN mkdir bin && ln -s /usr/bin/az bin/az
-
-USER root
-WORKDIR /azp
-COPY start.sh \
-     0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
-     0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
-     0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
-     ./
-RUN chmod +x start.sh \
-    && ln -sf /usr/bin/python3 /usr/bin/python \
-    && ln -sf `which pip3` /usr/bin/pip \
-    && ln -sf `which pip3` /usr/local/sbin/pip \
-    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
-    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
-    && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
-
-RUN rm -rf /usr/local/lib/python3.8/dist-packages/tests
-
-USER $user
-WORKDIR /var/$user
+# Remove the default ubuntu user of Ubuntu 24.04 to avoid conflicts with setup-container.sh in sonic-mgmt repo
+# The SONiC community usually uses the setup-container.sh tool in the sonic-mgmt repo to create the sonic-mgmt container.
+# The tool will create a user with the same uid and gid of the host user who runs the tool.
+RUN if getent passwd ubuntu; then userdel -r ubuntu; fi

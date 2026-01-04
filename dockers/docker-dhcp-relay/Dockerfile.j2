@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -7,15 +9,13 @@ ARG image_version
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Pass the image_version to container
-ENV IMAGE_VERSION=$image_version
-
 # Update apt's cache of available packages
 RUN apt-get update
 
 RUN apt-get install -y libjsoncpp-dev \
                        python3-dev    \
-                       build-essential
+                       build-essential \
+                       libpcap-dev
 
 RUN pip3 install psutil
 
@@ -38,16 +38,20 @@ RUN pip3 install psutil
 # Clean up
 RUN apt-get remove -y build-essential     \
                 python3-dev
-RUN apt-get clean -y         && \
-    apt-get autoclean -y     && \
-    apt-get autoremove -y    && \
-    rm -rf /debs
 
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["docker-dhcp-relay.supervisord.conf.j2", "port-name-alias-map.txt.j2", "wait_for_intf.sh.j2", "/usr/share/sonic/templates/"]
-COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv6-relay.agents.j2", "dhcp-relay.monitors.j2", "/usr/share/sonic/templates/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv4-sonic-relay.agents.j2", "dhcpv6-relay.agents.j2", "dhcp-relay.monitors.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["cli", "/cli/"]
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

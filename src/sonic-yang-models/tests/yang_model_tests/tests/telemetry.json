@@ -17,5 +17,8 @@
     },
     "TELEMETRY_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
+    },
+    "TELEMETRY_TABLE_WITH_VALID_USER_AUTH": {
+        "desc": "TABLE WITH VALID USER_AUTH."
     }
 }

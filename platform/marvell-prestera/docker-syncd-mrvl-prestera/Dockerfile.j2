@@ -1,5 +1,7 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -8,12 +10,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-COPY \
-{% for deb in docker_syncd_mrvl_prestera_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
-
 RUN apt-get update \
  && apt-get -y install  \
     net-tools           \
@@ -21,17 +17,19 @@ RUN apt-get update \
 
 RUN apt-get -y install libpcap-dev libxml2-dev python3-dev swig
 
-RUN dpkg -i \
-{% for deb in docker_syncd_mrvl_prestera_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor %}
+{% if docker_syncd_mrvl_prestera_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_syncd_mrvl_prestera_debs.split(' '), "/debs/") }}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_mrvl_prestera_debs.split(' ')) }}
+{%- endif %}
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
-## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs
+FROM $BASE
 
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

@@ -5,6 +5,7 @@
         "num_fans_pertray": 1,
         "num_ports": 56,
         "num_temps": 5,
+        "num_components": 4,
         "pddf_dev_types": {
             "description": "PDDF supported devices",
             "CPLD": [
@@ -35,7 +36,7 @@
             "lm75",
             "gpio-pca953x",
             "ucd9000",
-            "eeprom"
+            "at24"
         ],
         "pddf_kos": [
             "pddf_client_module",
@@ -58,6 +59,38 @@
             "x86-64-ufispace-s6301-56st-lpc",
             "x86-64-ufispace-s6301-56st-sys-eeprom",
             "pddf_custom_psu"
+        ]
+    },
+    "COMPONENT1":
+    {
+        "comp_attr":{ "name": "CPLD1", "type": "cpld", "description": "CPLD 1"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "cat /sys/devices/platform/x86_64_ufispace_s6301_56st_lpc/mb_cpld/mb_cpld_1_version_h" }
+        ]
+    },
+    "COMPONENT2":
+    {
+        "comp_attr":{ "name": "BIOS", "type": "bios", "description": "Basic Input/Output System"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "cat /sys/class/dmi/id/bios_version" }
+        ]
+    },
+    "COMPONENT3":
+    {
+        "comp_attr":{ "name": "PCIe", "type": "pcie", "description":"ASIC PCIe Firmware"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4" }
+        ]
+    },
+    "COMPONENT4":
+    {
+        "comp_attr":{ "name": "PCIe Loader", "type": "pcie", "description":"ASIC PCIe Firmware Loader"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "bcmcmd 'pciephy fw version' | grep 'PCIe FW loader version' | cut -d ' ' -f 5" }
         ]
     },
     "SYSTEM": {
@@ -873,7 +906,7 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "i2cget -y -f 2 0x58 0x0 > /dev/null 2>&1; [ $? -ne 0 ] && echo '0' || echo '1'",
+                        "bmc_cmd": "[ -n \"$(cat /sys/bus/i2c/devices/2-0058/psu_mfr_id | tr -d '\n')\" ] && echo '1' || echo '0'",
                         "raw": "1",
                         "type": "raw"
                     }
@@ -1038,7 +1071,7 @@
             "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x50",
-                "dev_type":"eeprom"
+                "dev_type":"24c02"
             },
             "attr_list":
             [
@@ -1067,7 +1100,7 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "i2cget -y -f 2 0x59 0x0 > /dev/null 2>&1; [ $? -ne 0 ] && echo '0' || echo '1'",
+                        "bmc_cmd": "[ -n \"$(cat /sys/bus/i2c/devices/2-0059/psu_mfr_id | tr -d '\n')\" ] && echo '1' || echo '0'",
                         "raw": "1",
                         "type": "raw"
                     }
@@ -1232,7 +1265,7 @@
             "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x51",
-                "dev_type":"eeprom"
+                "dev_type":"24c02"
             },
             "attr_list":
             [

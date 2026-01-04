@@ -44,7 +44,9 @@ module sonic-vnet {
 
                 leaf name {
                     description "An alphanumaric string to represent the name of the unique vnet";
-                    type string;
+                    type string {
+                        length 1..255;
+                    }
                 }
 
                 leaf vxlan_tunnel {
@@ -121,20 +123,25 @@ module sonic-vnet {
                     type stypes:sonic-ip4-prefix;
                 }
                 
-                leaf endpoint {
-                    description "Endpoint/nexthop tunnel IP";
+                leaf-list endpoint {
+                    description "Endpoint/nexthop tunnel IPs";
                     type inet:ipv4-address;
-                    mandatory true;
+                    min-elements 1;
                 }
 
-                leaf mac_address {
-                    description "Inner dest mac in encapsulated packet";
+                leaf-list mac_address {
+                    description "Inner dest macs in encapsulated packet";
                     type yang:mac-address;
                 }
 
-                leaf vni {
-                    description "A valid and active vni value in encapsulated packet";
+                leaf-list vni {
+                    description "Valid and active vni values in encapsulated packet";
                     type stypes:vnid_type;
+                }
+
+                leaf consistent_hashing_buckets {
+                    description "Number of consistent hashing buckets to use, if consistent hashing is desired";
+                    type uint16;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */

@@ -55,7 +55,7 @@ confdir /etc/chrony/conf.d
 {% endfor -%}
 
 {# Enable the NTP server configuration only if the switch type is smartswitch -#}
-{% if device_metadata.subtype == 'SmartSwitch' -%}
+{% if device_metadata.subtype == 'SmartSwitch' and device_metadata.type != 'SmartSwitchDPU' -%}
 {# Enable NTP server functionality if server_role is enabled or DHCP configuration is enabled -#}
 {% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
 allow

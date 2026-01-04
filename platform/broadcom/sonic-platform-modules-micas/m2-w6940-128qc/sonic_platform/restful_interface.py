@@ -81,7 +81,7 @@ class RestfulApi(RestfulApiClient):
             "temp2": "OUTLET_2_TEMP",
             "temp3": "OUTLET_1_TEMP",
             "temp4": "ASIC_TEMP",
-            "temp5": "CPU",
+            "temp5": "CPU_TEMP",
             "temp6": "PSU1_TEMP",
             "temp7": "PSU2_TEMP",
             "temp8": "PSU3_TEMP",

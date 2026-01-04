@@ -13,7 +13,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener --container-name pmon
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name pmon
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
@@ -199,7 +199,37 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_thermalctld %}
 [program:thermalctld]
-command={% if API_VERSION == 3 and 'thermalctld' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/thermalctld
+{% set base_command = (
+    "python3 /usr/local/bin/thermalctld"
+    if API_VERSION == 3 and 'thermalctld' not in python2_daemons
+    else "python2 /usr/local/bin/thermalctld"
+) %}
+{% set options = "" -%}
+
+{% if thermalctld is defined %}
+    {% if thermalctld.thermal_monitor_initial_interval is defined and thermalctld.thermal_monitor_initial_interval is not none %}
+        {%- set options = options + " --thermal-monitor-initial-interval " + thermalctld.thermal_monitor_initial_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_interval is defined and thermalctld.thermal_monitor_update_interval is not none %}
+        {%- set options = options + " --thermal-monitor-update-interval " + thermalctld.thermal_monitor_update_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_elapsed_threshold is defined and thermalctld.thermal_monitor_update_elapsed_threshold is not none %}
+        {%- set options = options + " --thermal-monitor-update-elapsed-threshold " + thermalctld.thermal_monitor_update_elapsed_threshold|string %}
+    {% endif -%}
+
+    {% if thermalctld.enable_liquid_cooling %}
+    {%- set options = options + " --enable_liquid_cooling" %}
+    {% endif -%}
+
+    {% if thermalctld.liquid_cooling_update_interval %}
+    {%- set options = options ~ " --liquid_cooling_update_interval " ~ thermalctld.liquid_cooling_update_interval %}
+    {% endif -%}
+{% endif -%}
+
+{%- set command = base_command ~ options %}
+command={{ command }}
 priority=10
 autostart=false
 autorestart=unexpected

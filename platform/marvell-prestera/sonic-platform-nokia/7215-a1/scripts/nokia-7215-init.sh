@@ -2,11 +2,17 @@
 
 # Platform init script
 
+# Check if init is already done previously
+lsmod |grep nokia_7215_ixs_a1_cpld > /dev/null
+if [ "$?" = "0" ]; then
+    exit 0
+fi
+
 # Load required kernel-mode drivers
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"
-    sudo insmod /lib/modules/6.1.0-29-2-arm64/kernel/extra/nokia_7215_ixs_a1_cpld.ko
-    sudo insmod /lib/modules/6.1.0-29-2-arm64/kernel/extra/cn9130_cpu_thermal_sensor.ko
+    sudo insmod /lib/modules/6.12.41+deb13-sonic-arm64/kernel/extra/nokia_7215_ixs_a1_cpld.ko
+    sudo insmod /lib/modules/6.12.41+deb13-sonic-arm64/kernel/extra/cn9130_cpu_thermal_sensor.ko
 }
 
 fw_uboot_env_cfg()
@@ -64,12 +70,12 @@ echo tmp75 0x4A > /sys/bus/i2c/devices/i2c-0/new_device
 echo nokia_7215_a1_cpld 0x41 > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate system eeprom
-echo 24c64 0x53 > /sys/class/i2c-adapter/i2c-0/new_device
+echo 24c64 0x53 > /sys/bus/i2c/devices/i2c-0/new_device
 
-file_exists /sys/class/i2c-adapter/i2c-0/0-0053/eeprom
+file_exists /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 status=$?
 if [ "$status" == "1" ]; then
-    chmod 644 /sys/class/i2c-adapter/i2c-0/0-0053/eeprom
+    chmod 644 /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 else
     echo "SYSEEPROM file not foud"
 fi
@@ -93,7 +99,7 @@ for((i=0; i<10; i++));
 # Enumerate the SFP eeprom device on each mux channel
 for mux in ${ismux_bus}
 do
-    echo optoe2 0x50 > /sys/class/i2c-adapter/${mux}/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/${mux}/new_device
 done
 
 # Enable optical SFP Tx

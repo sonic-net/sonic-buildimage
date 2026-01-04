@@ -1,27 +1,25 @@
-#DPKG FRK
 include $(PLATFORM_PATH)/sai-modules.dep
 include $(PLATFORM_PATH)/sai.dep
-# TODO: re-enable once the following have been updated for bookworm:
-# * Nokia
-# * Juniper
-# * Ragile
+# TODO(trixie): re-enable modules after updating for Trixie
 include $(PLATFORM_PATH)/platform-modules-s6000.dep
 include $(PLATFORM_PATH)/platform-modules-dell.dep
 include $(PLATFORM_PATH)/platform-modules-arista.dep
-include $(PLATFORM_PATH)/platform-modules-ingrasys.dep
-include $(PLATFORM_PATH)/platform-modules-accton.dep
-include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
-include $(PLATFORM_PATH)/platform-modules-inventec.dep
+include $(PLATFORM_PATH)/platform-modules-nexthop.dep
+#include $(PLATFORM_PATH)/platform-modules-ingrasys.dep
+#include $(PLATFORM_PATH)/platform-modules-accton.dep
+#include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
+#include $(PLATFORM_PATH)/platform-modules-inventec.dep
 include $(PLATFORM_PATH)/platform-modules-cel.dep
-include $(PLATFORM_PATH)/platform-modules-delta.dep
-include $(PLATFORM_PATH)/platform-modules-quanta.dep
+#include $(PLATFORM_PATH)/platform-modules-delta.dep
+#include $(PLATFORM_PATH)/platform-modules-quanta.dep
 #include $(PLATFORM_PATH)/platform-modules-mitac.dep
 #include $(PLATFORM_PATH)/platform-modules-juniper.dep
+#include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.dep
+#include $(PLATFORM_PATH)/platform-modules-ruijie.dep
 #include $(PLATFORM_PATH)/platform-modules-ragile.dep
-include $(PLATFORM_PATH)/platform-modules-ruijie.dep
-include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.dep
+include $(PLATFORM_PATH)/platform-modules-supermicro.dep
 include $(PLATFORM_PATH)/platform-modules-ufispace.dep
-include $(PLATFORM_PATH)/platform-modules-micas.dep
+#include $(PLATFORM_PATH)/platform-modules-micas.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.dep
 include $(PLATFORM_PATH)/docker-saiserver-brcm.dep

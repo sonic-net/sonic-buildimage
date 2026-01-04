@@ -1,4 +1,7 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -11,23 +14,23 @@ RUN apt-get update && \
 RUN pip3 install requests \
                  urllib3
 
-COPY \
-{% for deb in docker_sonic_mgmt_framework_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
+{% if docker_sonic_mgmt_framework_debs.strip() -%}
+# Copy built Debian packages
+{{ copy_files("debs/", docker_sonic_mgmt_framework_debs.split(' '), "/debs/") }}
 
-RUN dpkg -i \
-{% for deb in docker_sonic_mgmt_framework_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor %}
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_mgmt_framework_debs.split(' ')) }}
+{%- endif %}
 
 COPY ["start.sh", "rest-server.sh", "/usr/bin/"]
 COPY ["mgmt_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
 RUN apt-get remove -y g++ python3-dev
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs ~/.cache
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

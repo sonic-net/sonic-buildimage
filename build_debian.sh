@@ -31,9 +31,9 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:24.0.2-1~debian.12~$IMAGE_DISTRO
-CONTAINERD_IO_VERSION=1.6.21-1
-LINUX_KERNEL_VERSION=6.1.0-29-2
+DOCKER_VERSION=5:28.2.2-1~debian.13~$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=1.7.27-1
+LINUX_KERNEL_VERSION=6.12.41+deb13
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -135,18 +135,10 @@ echo 'Dir::Bin::dpkg "/usr/local/bin/dpkg";' | sudo tee $FILESYSTEM_ROOT/etc/apt
 sudo LANG=C chroot $FILESYSTEM_ROOT rm /usr/local/sbin/dpkg -f
 
 echo '[INFO] Install packages for building image'
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install makedev psmisc
+sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install psmisc
 
 if [[ $CROSS_BUILD_ENVIRON == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT dpkg --add-architecture $CONFIGURED_ARCH
-fi
-
-## Create device files
-echo '[INFO] MAKEDEV'
-if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic-arm'
-else
-    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic'
 fi
 
 ## docker and mkinitramfs on target system will use pigz/unpigz automatically
@@ -172,6 +164,9 @@ fi
 
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
+
+## Install kbuild for sign-file into docker image (not fsroot)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
 
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
@@ -249,7 +244,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSIO
 install_kubernetes () {
     local ver="$1"
     ## Install k8s package from storage
-    local storage_prefix="https://sonicstorage.blob.core.windows.net/public/kubernetes"
+    local storage_prefix="https://packages.trafficmanager.net/public/kubernetes"
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-tools.deb -fsSL \
         ${storage_prefix}/cri-tools_${KUBERNETES_CRI_TOOLS_VERSION}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubernetes-cni.deb -fsSL \
@@ -311,7 +306,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT usermod -aG redis $USERNAME
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     ## Pre-install hardware drivers
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install      \
-        firmware-linux-nonfree
+        firmware-linux-nonfree \
+        firmware-intel-misc
 fi
 
 ## Pre-install the fundamental packages
@@ -344,13 +340,16 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     pciutils                \
     iptables-persistent     \
     ebtables                \
+    linux-sysctl-defaults   \
     logrotate               \
     curl                    \
     kexec-tools             \
     less                    \
     unzip                   \
+    fdisk                   \
     gdisk                   \
     sysfsutils              \
+    e2fsprogs               \
     squashfs-tools          \
     $bootloader_packages    \
     rsyslog                 \
@@ -365,15 +364,13 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     makedumpfile            \
     conntrack               \
     python3                 \
-    python3-distutils       \
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32           \
-    libgrpc29               \
-    libgrpc++1.51           \
+    libprotobuf32t64        \
+    libgrpc29t64            \
+    libgrpc++1.51t64        \
     haveged                 \
-    fdisk                   \
     gpg                     \
     dmidecode               \
     jq                      \
@@ -417,6 +414,20 @@ sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/group
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "mkdir -p /etc/initramfs-tools/conf.d"
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/initramfs-tools/conf.d/driver-policy"
 
+# Ensure the relevant directories exist
+sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
+sudo mkdir -p /etc/initramfs-tools/hooks
+
+# Copy the network setup scriptgit
+sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+
+# Copy the hook file
+sudo cp files/scripts/network_setup /etc/initramfs-tools/hooks/network_setup
+
+# Make the scripts executable
+sudo chmod +x /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+sudo chmod +x /etc/initramfs-tools/hooks/network_setup
+
 # Copy vmcore-sysctl.conf to add more vmcore dump flags to kernel
 sudo cp files/image_config/kdump/vmcore-sysctl.conf $FILESYSTEM_ROOT/etc/sysctl.d/
 
@@ -433,16 +444,19 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
+	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
+	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
+	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
+	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
+	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
+
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKG=grub-pc-bin
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         GRUB_PKG=grub-efi-arm64-bin
     fi
 
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get install -d -o dir::cache=/var/cache/apt \
-        $GRUB_PKG
-
-    sudo cp $FILESYSTEM_ROOT/var/cache/apt/archives/grub*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    sudo cp $debs_path/${GRUB_PKG}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
 fi
 
 ## Disable kexec supported reboot which was installed by default
@@ -488,6 +502,9 @@ EOF
 sudo sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' $FILESYSTEM_ROOT/etc/ssh/sshd_config
 sudo sed -i 's/^#ListenAddress ::/ListenAddress ::/' $FILESYSTEM_ROOT/etc/ssh/sshd_config
 
+# Use libpam_systemd, since that's now needed for limiting login sessions
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-systemd
+
 ## Config rsyslog
 sudo augtool -r $FILESYSTEM_ROOT --autosave "
 rm /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments
@@ -496,23 +513,7 @@ set /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments/1 -n
 
 sudo mkdir -p $FILESYSTEM_ROOT/var/core
 
-# Config sysctl
-sudo augtool --autosave "
-set /files/etc/sysctl.conf/kernel.core_pattern '|/usr/local/bin/coredump-compress %e %t %p %P'
-set /files/etc/sysctl.conf/kernel.softlockup_panic 1
-set /files/etc/sysctl.conf/kernel.panic 10
-set /files/etc/sysctl.conf/kernel.hung_task_timeout_secs 300
-set /files/etc/sysctl.conf/vm.panic_on_oom 2
-set /files/etc/sysctl.conf/fs.suid_dumpable 2
-" -r $FILESYSTEM_ROOT
-
-sysctl_net_cmd_string=""
-while read line; do
-  [[ "$line" =~ ^#.*$ ]] && continue
-  sysctl_net_conf_key=`echo $line | awk -F '=' '{print $1}'`
-  sysctl_net_conf_value=`echo $line | awk -F '=' '{print $2}'`
-  sysctl_net_cmd_string=$sysctl_net_cmd_string"set /files/etc/sysctl.conf/$sysctl_net_conf_key $sysctl_net_conf_value"$'\n'
-done < files/image_config/sysctl/sysctl-net.conf
+sudo cp files/image_config/sysctl/90-sonic.conf $FILESYSTEM_ROOT/usr/lib/sysctl.d/
 
 sudo augtool --autosave "$sysctl_net_cmd_string" -r $FILESYSTEM_ROOT
 
@@ -526,7 +527,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docker==7.1.0'
 
 # Install scapy
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'scapy==2.4.4'
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
 
 ## Note: keep pip installed for maintainance purpose
 
@@ -550,13 +551,6 @@ sudo cp files/dhcp/sethostname6 $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/graphserviceurl $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/snmpcommunity $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/vrf $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
-if [ -f files/image_config/ntp/ntpsec ]; then
-    sudo cp ./files/image_config/ntp/ntpsec $FILESYSTEM_ROOT/etc/init.d/
-fi
-
-if [ -f files/image_config/ntp/ntp-systemd-wrapper ]; then
-    sudo cp ./files/image_config/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/libexec/ntpsec/
-fi
 
 ## Version file part 1
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
@@ -682,10 +676,14 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable
 if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
     echo "Secure Boot support build stage: Starting .."
 
+	sudo cp $debs_path/grub-efi*.deb $FILESYSTEM_ROOT
+	basename_deb_packages=$(basename -a $debs_path/grub-efi*.deb | sed 's,^,./,')
+	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
+	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
+
     # debian secure boot dependecies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned \
-        grub-efi
+        shim-unsigned
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
@@ -723,12 +721,11 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         # verifying all EFI files and kernel modules in $OUTPUT_SEC_BOOT_DIR
         sudo ./scripts/secure_boot_signature_verification.sh -e $OUTPUT_SEC_BOOT_DIR \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+                                                             -k ${FILESYSTEM_ROOT}/usr/lib/modules
 
         # verifying vmlinuz file.
-        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH} \
-                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+        sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH} \
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT
     fi
     echo "Secure Boot support build stage: END."
 fi
@@ -737,10 +734,10 @@ fi
 sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format
 if [[ $TARGET_BOOTLOADER == uboot ]]; then
-    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}
-    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}
+    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
+    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
     if [[ $CONFIGURED_ARCH == armhf ]]; then
-        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-armmp
+        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-sonic-armmp
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
@@ -821,6 +818,8 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
+sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then

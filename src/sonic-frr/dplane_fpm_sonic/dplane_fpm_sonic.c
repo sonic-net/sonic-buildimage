@@ -45,6 +45,7 @@
 #include "lib/network.h"
 #include "lib/ns.h"
 #include "lib/frr_pthread.h"
+#include "lib/termtable.h"
 #include "zebra/debug.h"
 #include "zebra/interface.h"
 #include "zebra/zebra_dplane.h"
@@ -75,10 +76,10 @@
 #define FPM_HEADER_SIZE 4
 
 /* Default SRv6 SID format values */
-DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN = 32;
-DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN = 16;
-DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN = 16;
-DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN = 0;
+#define DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN 32
+#define DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN 16
+#define DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN 16
+#define DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN 0
 
 /*
  * Time in seconds that if the other end is not responding
@@ -126,7 +127,7 @@ enum custom_rtattr_encap_srv6 {
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_UNSPEC		= 0,
 	FPM_ROUTE_ENCAP_SRV6_VPN_SID			= 1,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR		= 2,
-	FPM_ROUTE_ENCAP_SRV6_PIC_ID			= 2,
+	FPM_ROUTE_ENCAP_SRV6_PIC_ID			= 3,
 	FPM_ROUTE_ENCAP_SRV6_NH_ID  			= 4,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_NAME		= 5,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_LEN		= 6,
@@ -176,6 +177,7 @@ struct fpm_nl_ctx {
 	bool disabled;
 	bool connecting;
 	bool use_nhg;
+	bool use_route_replace;
 	struct sockaddr_storage addr;
 
 	/* data plane buffers. */
@@ -298,6 +300,24 @@ static void fpm_rmac_reset(struct event *t);
  * CLI.
  */
 #define FPM_STR "Forwarding Plane Manager configuration\n"
+DEFUN(fpm_use_route_replace, fpm_use_route_replace_cmd,
+      "fpm use-route-replace",
+      FPM_STR
+      "Use netlink route replace semantics\n")
+{
+	gfnc->use_route_replace = true;
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_fpm_use_route_replace, no_fpm_use_route_replace_cmd,
+      "no fpm use-route-replace",
+      NO_STR
+      FPM_STR
+      "Use netlink route replace semantics\n")
+{
+	gfnc->use_route_replace = false;
+	return CMD_SUCCESS;
+}
 
 DEFUN(fpm_set_address, fpm_set_address_cmd,
       "fpm address <A.B.C.D|X:X::X:X> [port (1-65535)]",
@@ -407,6 +427,78 @@ DEFUN(fpm_reset_counters, fpm_reset_counters_cmd,
 {
 	event_add_event(gfnc->fthread->master, fpm_process_event, gfnc,
 			 FNE_RESET_COUNTERS, &gfnc->t_event);
+	return CMD_SUCCESS;
+}
+
+DEFUN(fpm_show_status,
+      fpm_show_status_cmd,
+      "show fpm status [json]$json",
+      SHOW_STR FPM_STR "FPM status\n" JSON_STR)
+{
+	struct json_object *j;
+	bool connected;
+	uint16_t port;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+	char buf[BUFSIZ];
+
+	bool json = false;
+	if (argc == 4 && !strcmp(argv[3]->arg, "json")) {
+		json = true;
+	}
+	connected = gfnc->socket > 0 ? true : false;
+
+	switch (gfnc->addr.ss_family) {
+	case AF_INET:
+		sin = (struct sockaddr_in *)&gfnc->addr;
+		snprintfrr(buf, sizeof(buf), "%pI4", &sin->sin_addr);
+		port = ntohs(sin->sin_port);
+		break;
+	case AF_INET6:
+		sin6 = (struct sockaddr_in6 *)&gfnc->addr;
+		snprintfrr(buf, sizeof(buf), "%pI6", &sin6->sin6_addr);
+		port = ntohs(sin6->sin6_port);
+		break;
+	default:
+		strlcpy(buf, "Unknown", sizeof(buf));
+		port = FPM_DEFAULT_PORT;
+		break;
+	}
+
+	if (json) {
+		j = json_object_new_object();
+
+		json_object_boolean_add(j, "connected", connected);
+		json_object_boolean_add(j, "useNHG", gfnc->use_nhg);
+		json_object_boolean_add(j, "useRouteReplace",
+					gfnc->use_route_replace);
+		json_object_boolean_add(j, "disabled", gfnc->disabled);
+		json_object_string_add(j, "address", buf);
+		json_object_int_add(j, "port", port);
+
+		vty_json(vty, j);
+	} else {
+		struct ttable *table = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
+		char *out;
+
+		ttable_rowseps(table, 0, BOTTOM, true, '-');
+		ttable_add_row(table, "Address to connect to|%s", buf);
+		ttable_add_row(table, "Port|%u", port);
+		ttable_add_row(table, "Connected|%s", connected ? "Yes" : "No");
+		ttable_add_row(table, "Use Nexthop Groups|%s",
+			       gfnc->use_nhg ? "Yes" : "No");
+		ttable_add_row(table, "Use Route Replace Semantics|%s",
+			       gfnc->use_route_replace ? "Yes" : "No");
+		ttable_add_row(table, "Disabled|%s",
+			       gfnc->disabled ? "Yes" : "No");
+
+		out = ttable_dump(table, "\n");
+		vty_out(vty, "%s\n", out);
+		XFREE(MTYPE_TMP_TTABLE, out);
+
+		ttable_del(table);
+	}
+
 	return CMD_SUCCESS;
 }
 
@@ -523,6 +615,11 @@ static int fpm_write_config(struct vty *vty)
 		written = 1;
 	}
 
+	if (!gfnc->use_route_replace) {
+		vty_out(vty, "no fpm use-route-replace\n");
+		written = 1;
+	}
+
 	return written;
 }
 
@@ -574,8 +671,8 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 
 	stream_reset(fnc->ibuf);
 	stream_reset(fnc->obuf);
-	EVENT_OFF(fnc->t_read);
-	EVENT_OFF(fnc->t_write);
+	event_cancel(&fnc->t_read);
+	event_cancel(&fnc->t_write);
 
 	/* Reset the barrier value */
 	cleaning_p = true;
@@ -602,6 +699,10 @@ static void fpm_read(struct event *t)
 	size_t available_bytes;
 	size_t hdr_available_bytes;
 	int ival;
+	struct dplane_ctx_list_head batch_list;
+
+	/* Initialize the batch list */
+	dplane_ctx_q_init(&batch_list);
 
 	/* Let's ignore the input at the moment. */
 	rv = stream_read_try(fnc->ibuf, fnc->socket,
@@ -642,7 +743,7 @@ static void fpm_read(struct event *t)
 	while (available_bytes) {
 		if (available_bytes < (ssize_t)FPM_MSG_HDR_LEN) {
 			stream_pulldown(fnc->ibuf);
-			return;
+			goto send_batch;
 		}
 
 		fpm.version = stream_getc(fnc->ibuf);
@@ -657,7 +758,7 @@ static void fpm_read(struct event *t)
 				__func__, fpm.version, fpm.msg_type);
 
 			FPM_RECONNECT(fnc);
-			return;
+			goto send_batch;
 		}
 
 		/*
@@ -669,7 +770,7 @@ static void fpm_read(struct event *t)
 				"%s: Received message length: %u that does not even fill the FPM header",
 				__func__, fpm.msg_len);
 			FPM_RECONNECT(fnc);
-			return;
+			goto send_batch;
 		}
 
 		/*
@@ -680,7 +781,7 @@ static void fpm_read(struct event *t)
 		if (fpm.msg_len > available_bytes) {
 			stream_rewind_getp(fnc->ibuf, FPM_MSG_HDR_LEN);
 			stream_pulldown(fnc->ibuf);
-			return;
+			goto send_batch;
 		}
 
 		available_bytes -= FPM_MSG_HDR_LEN;
@@ -730,8 +831,9 @@ static void fpm_read(struct event *t)
 				break;
 			}
 
-			/* Parse the route data into a dplane ctx, then
- 			 * enqueue it to zebra for processing.
+			/*
+			 * Parse the route data into a dplane ctx, add to ctx list
+ 			 * and enqueue the batch of ctx to zebra for processing.
  			 */
 			ctx = dplane_ctx_alloc();
 			dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_NOTIFY, NULL,
@@ -743,8 +845,9 @@ static void fpm_read(struct event *t)
 				dplane_ctx_set_vrf(ctx, ival);
 				dplane_ctx_set_table(ctx,
 								ZEBRA_ROUTE_TABLE_UNKNOWN);
-	
-					dplane_provider_enqueue_to_zebra(ctx);
+
+				/* Add to the list for batching */
+				dplane_ctx_enqueue_tail(&batch_list, ctx);
 			} else {
 				/*
 				 * Let's continue to read other messages
@@ -764,6 +867,15 @@ static void fpm_read(struct event *t)
 	}
 
 	stream_reset(fnc->ibuf);
+
+send_batch:
+	/* Send all contexts to zebra in a single batch if we have any */
+	if (dplane_ctx_queue_count(&batch_list) > 0) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: Sending batch of %u contexts to zebra", __func__,
+				   dplane_ctx_queue_count(&batch_list));
+		dplane_provider_enqueue_ctx_list_to_zebra(&batch_list);
+	}
 }
 
 static void fpm_write(struct event *t)
@@ -954,7 +1066,42 @@ static struct zebra_vrf *vrf_lookup_by_table_id(uint32_t table_id)
  	}
 
  	return NULL;
- }
+}
+
+static bool has_srv6_nexthop(struct zebra_dplane_ctx *ctx)
+{
+	struct nexthop *nexthop;
+
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop))
+		if (nexthop->nh_srv6)
+			return true;
+
+	return false;
+}
+
+static bool has_srv6_sidlist_nexthop(struct zebra_dplane_ctx *ctx)
+{
+	struct nexthop *nexthop;
+
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop))
+		if (nexthop->nh_srv6 && nexthop->nh_srv6->seg6_segs &&
+		    !sid_zero(nexthop->nh_srv6->seg6_segs))
+			return true;
+
+	return false;
+}
+
+static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
+{
+	struct nexthop *nexthop;
+
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop))
+		if (nexthop->nh_srv6 &&
+		    nexthop->nh_srv6->seg6local_action != ZEBRA_SEG6_LOCAL_ACTION_UNSPEC)
+			return true;
+
+	return false;
+}
 
 /**
  * Resets the SRv6 routes FPM flags so we send all SRv6 routes again.
@@ -1377,6 +1524,70 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+static bool netlink_srv6_vpn_route_msg_encode_multipath(int cmd, struct zebra_dplane_ctx *ctx,
+							uint8_t *data, size_t datalen,
+							const struct nexthop *nexthop,
+							struct nlmsghdr *nlmsg, size_t req_size,
+							bool fpm, bool force_nhg)
+{
+	struct rtattr *nest;
+	struct rtnexthop *rtnh;
+	struct interface *ifp;
+	struct in6_addr encap_src_addr = {};
+	struct connected *connected;
+	struct vrf *vrf;
+	struct prefix *cp;
+
+	rtnh = nl_attr_rtnh(nlmsg, req_size);
+	if (rtnh == NULL)
+		return false;
+
+	if (!nl_attr_put16(nlmsg, req_size, RTA_ENCAP_TYPE, FPM_ROUTE_ENCAP_SRV6))
+		return false;
+
+	nest = nl_attr_nest(nlmsg, req_size, RTA_ENCAP);
+	if (!nest)
+		return false;
+
+	/*
+     * by default, we use the loopback address as encap source address,
+     * if it is valid
+     */
+	ifp = if_lookup_by_name("lo", VRF_DEFAULT);
+
+	if (ifp) {
+		vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
+		if (!vrf)
+			return false;
+
+		FOR_ALL_INTERFACES (vrf, ifp) {
+			frr_each (if_connected, ifp->connected, connected) {
+				cp = connected->address;
+				if (cp->family == AF_INET6 &&
+				    !IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
+				    !IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
+					encap_src_addr = cp->u.prefix6;
+					break;
+				}
+			}
+		}
+	}
+
+	if (!nl_attr_put(nlmsg, req_size, FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR, &encap_src_addr,
+			 IPV6_MAX_BYTELEN))
+		return false;
+
+	if (!nl_attr_put(nlmsg, req_size, FPM_ROUTE_ENCAP_SRV6_VPN_SID,
+			 &nexthop->nh_srv6->seg6_segs->seg[0], IPV6_MAX_BYTELEN))
+		return false;
+
+	nl_attr_nest_end(nlmsg, nest);
+
+	nl_attr_rtnh_end(nlmsg, rtnh);
+
+	return true;
+}
+
 /*
  * SRv6 VPN route change via netlink interface, using a dataplane context object
  *
@@ -1400,16 +1611,13 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	struct connected *connected;
 	struct vrf *vrf;
 	struct prefix *cp;
+	unsigned int nexthop_num;
 
 	struct {
 		struct nlmsghdr n;
 		struct rtmsg r;
 		char buf[];
 	} *req = (void *)data;
-
-	nexthop = dplane_ctx_get_ng(ctx)->nexthop;
-	if (!nexthop || !nexthop->nh_srv6 || sid_zero((const struct seg6_seg_stack *)nexthop->nh_srv6->seg6_segs))
-		return -1;
 
 	p = dplane_ctx_get_dest(ctx);
 
@@ -1475,6 +1683,79 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 			nl_msg_type_to_str(cmd), p, dplane_ctx_get_vrf(ctx),
 			table_id);
 
+	/*
+	 * Counts the number of nexthops to determine if the route is singlepath
+	 * (single nexthop) or multipath (multiple nexthops)
+	 */
+	nexthop_num = 0;
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
+		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+			continue;
+		if (!NEXTHOP_IS_ACTIVE(nexthop->flags))
+			continue;
+
+		nexthop_num++;
+	}
+
+	/* Multipath case */
+	if (nexthop_num > 1) {
+		struct rtattr *nest;
+
+		nest = nl_attr_nest(&req->n, datalen, RTA_MULTIPATH);
+		if (nest == NULL)
+			return 0;
+
+		nexthop_num = 0;
+		for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
+			if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+				continue;
+
+			/* Skip non-SRv6 nexthops */
+			if (!nexthop->nh_srv6 || sid_zero(nexthop->nh_srv6->seg6_segs))
+				continue;
+
+			if (NEXTHOP_IS_ACTIVE(nexthop->flags)) {
+				nexthop_num++;
+
+				if (!netlink_srv6_vpn_route_msg_encode_multipath(cmd, ctx, data,
+										 datalen, nexthop,
+										 &req->n, datalen,
+										 fpm, force_nhg))
+					return 0;
+			}
+		}
+
+		nl_attr_nest_end(&req->n, nest);
+
+		if (nexthop_num == 0) {
+			if (IS_ZEBRA_DEBUG_FPM)
+				zlog_debug("%s: No useful nexthop.", __func__);
+		}
+
+		return NLMSG_ALIGN(req->n.nlmsg_len);
+	}
+
+	/* Singlepath case */
+	nexthop_num = 0;
+	for (ALL_NEXTHOPS_PTR(dplane_ctx_get_ng(ctx), nexthop)) {
+		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+			continue;
+		if (!NEXTHOP_IS_ACTIVE(nexthop->flags))
+			continue;
+		if (!nexthop->nh_srv6 || sid_zero(nexthop->nh_srv6->seg6_segs))
+			continue;
+
+		nexthop_num++;
+		break;
+	}
+
+	if (nexthop_num == 0) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: No useful nexthop.", __func__);
+
+		return NLMSG_ALIGN(req->n.nlmsg_len);
+	}
+
 	if (!nl_attr_put16(&req->n, datalen, RTA_ENCAP_TYPE,
 				FPM_ROUTE_ENCAP_SRV6))
 		return false;
@@ -1528,20 +1809,16 @@ static ssize_t netlink_srv6_msg_encode(int cmd,
 					   uint8_t *data, size_t datalen,
 					   bool fpm, bool force_nhg)
 {
-	struct nexthop *nexthop = NULL;
-
 	struct {
 		struct nlmsghdr n;
 		struct rtmsg r;
 		char buf[];
 	} *req = (void *)data;
 
-	nexthop = dplane_ctx_get_ng(ctx)->nexthop;
-	if (!nexthop || !nexthop->nh_srv6)
+	if (!has_srv6_nexthop(ctx))
 		return -1;
 
-	if (nexthop->nh_srv6->seg6local_action !=
-			ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+	if (has_srv6_localsid_nexthop(ctx)) {
 		if (cmd == RTM_NEWROUTE)
 			cmd = RTM_NEWSRV6LOCALSID;
 		else if (cmd == RTM_DELROUTE)
@@ -1550,7 +1827,7 @@ static ssize_t netlink_srv6_msg_encode(int cmd,
 		if (!netlink_srv6_localsid_msg_encode(
 				cmd, ctx, data, datalen, fpm, force_nhg))
 			return 0;
-	} else if (!sid_zero(nexthop->nh_srv6->seg6_segs)) {
+	} else if (has_srv6_sidlist_nexthop(ctx)) {
 		if(force_nhg){
 			if (!netlink_vpn_route_msg_encode(
 				cmd, ctx, data, datalen, force_nhg))
@@ -2167,6 +2444,7 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+#define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
  * output buffer.
@@ -2177,7 +2455,7 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
  */
 static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 {
-	uint8_t nl_buf[NL_PKT_BUF_SIZE];
+	uint8_t nl_buf[DPLANE_FPM_NL_BUF_SIZE];
 	size_t nl_buf_len;
 	ssize_t rv;
 	uint64_t obytes, obytes_peak;
@@ -2206,11 +2484,24 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	nl_buf_len = 0;
 
+	/*
+	 * If route replace is enabled then directly encode the install which
+	 * is going to use `NLM_F_REPLACE` (instead of delete/add operations).
+	 */
+	if (fnc->use_route_replace && op == DPLANE_OP_ROUTE_UPDATE) {
+		nexthop = dplane_ctx_get_ng(ctx)->nexthop;
+		if (nexthop && nexthop->nh_srv6) {
+			// Don't change op for srv6 yet. Not sure if update
+			// semantics will work or not
+		} else {
+			op = DPLANE_OP_ROUTE_INSTALL;
+		}
+	}
+
 	switch (op) {
 	case DPLANE_OP_ROUTE_UPDATE:
 	case DPLANE_OP_ROUTE_DELETE:
-		nexthop = dplane_ctx_get_ng(ctx)->nexthop;
-		if (nexthop && nexthop->nh_srv6) {
+		if (has_srv6_nexthop(ctx)) {
 			rv = netlink_srv6_msg_encode(RTM_DELROUTE, ctx,
 								nl_buf, sizeof(nl_buf),
 								true, fnc->use_nhg);
@@ -2218,6 +2509,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_srv6_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		} else {
@@ -2228,6 +2520,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_route_multipath_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		}
@@ -2240,8 +2533,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 		/* FALL THROUGH */
 	case DPLANE_OP_ROUTE_INSTALL:
-		nexthop = dplane_ctx_get_ng(ctx)->nexthop;
-		if (nexthop && nexthop->nh_srv6) {
+		if (has_srv6_nexthop(ctx)) {
 			rv = netlink_srv6_msg_encode(
 				RTM_NEWROUTE, ctx, &nl_buf[nl_buf_len],
 				sizeof(nl_buf) - nl_buf_len, true, fnc->use_nhg);
@@ -2249,16 +2541,19 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_srv6_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		} else {
 			rv = netlink_route_multipath_msg_encode(
 				RTM_NEWROUTE, ctx, &nl_buf[nl_buf_len],
-				sizeof(nl_buf) - nl_buf_len, true, fnc->use_nhg, false);
+				sizeof(nl_buf) - nl_buf_len, true, fnc->use_nhg,
+				fnc->use_route_replace);
 			if (rv <= 0) {
 				zlog_err(
 					"%s: netlink_route_multipath_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		}
@@ -2273,6 +2568,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_macfdb_update_ctx failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2285,6 +2581,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2297,6 +2594,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2309,6 +2607,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 			zlog_err(
 				"%s: netlink_srv6_msg_encode failed",
 				__func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 		nl_buf_len += (size_t)rv;
@@ -2321,6 +2620,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 			zlog_err(
 				"%s: netlink_srv6_msg_encode failed",
 				__func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 		nl_buf_len += (size_t)rv;
@@ -2332,6 +2632,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2344,6 +2645,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_pic_context_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2356,6 +2658,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_lsp_msg_encoder failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2835,7 +3138,7 @@ static void fpm_process_queue(struct event *t)
 		}
 
 		/* No space available yet. */
-		if (writeable_amount < NL_PKT_BUF_SIZE) {
+		if (writeable_amount < DPLANE_FPM_NL_BUF_SIZE) {
 			no_bufs = true;
 			break;
 		}
@@ -2859,7 +3162,6 @@ static void fpm_process_queue(struct event *t)
 		/* Account the processed entries. */
 		processed_contexts++;
 
-		dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_SUCCESS);
 		dplane_provider_enqueue_out_ctx(fnc->prov, ctx);
 	}
 
@@ -2878,7 +3180,7 @@ static void fpm_process_queue(struct event *t)
 		event_add_timer(fnc->fthread->master, fpm_process_wedged, fnc,
 				DPLANE_FPM_NL_WEDGIE_TIME, &fnc->t_wedged);
 	} else
-		EVENT_OFF(fnc->t_wedged);
+		event_cancel(&fnc->t_wedged);
 
 	/*
 	 * Let the dataplane thread know if there are items in the
@@ -2962,8 +3264,8 @@ static int fpm_nl_start(struct zebra_dplane_provider *prov)
 	fnc = dplane_provider_get_data(prov);
 	fnc->fthread = frr_pthread_new(NULL, prov_name, prov_name);
 	assert(frr_pthread_run(fnc->fthread, NULL) == 0);
-	fnc->ibuf = stream_new(NL_PKT_BUF_SIZE);
-	fnc->obuf = stream_new(NL_PKT_BUF_SIZE * 128);
+	fnc->ibuf = stream_new(DPLANE_FPM_NL_BUF_SIZE);
+	fnc->obuf = stream_new(DPLANE_FPM_NL_BUF_SIZE * 128);
 	pthread_mutex_init(&fnc->obuf_mutex, NULL);
 	fnc->socket = -1;
 	fnc->disabled = true;
@@ -2973,6 +3275,7 @@ static int fpm_nl_start(struct zebra_dplane_provider *prov)
 
 	/* Set default values. */
 	fnc->use_nhg = true;
+	fnc->use_route_replace = true;
 
 	return 0;
 }
@@ -2990,16 +3293,16 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 		return 0;
 
 	/* Disable all events and close socket. */
-	EVENT_OFF(fnc->t_lspreset);
-	EVENT_OFF(fnc->t_lspwalk);
-	EVENT_OFF(fnc->t_nhgreset);
-	EVENT_OFF(fnc->t_nhgwalk);
-	EVENT_OFF(fnc->t_ribreset);
-	EVENT_OFF(fnc->t_ribwalk);
-	EVENT_OFF(fnc->t_rmacreset);
-	EVENT_OFF(fnc->t_rmacwalk);
-	EVENT_OFF(fnc->t_event);
-	EVENT_OFF(fnc->t_nhg);
+	event_cancel(&fnc->t_lspreset);
+	event_cancel(&fnc->t_lspwalk);
+	event_cancel(&fnc->t_nhgreset);
+	event_cancel(&fnc->t_nhgwalk);
+	event_cancel(&fnc->t_ribreset);
+	event_cancel(&fnc->t_ribwalk);
+	event_cancel(&fnc->t_rmacreset);
+	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_event);
+	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_write, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_connect, NULL);
@@ -3131,6 +3434,7 @@ static int fpm_nl_new(struct event_loop *tm)
 		zlog_debug("%s register status: %d", prov_name, rv);
 
 	install_node(&fpm_node);
+	install_element(ENABLE_NODE, &fpm_show_status_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_json_cmd);
 	install_element(ENABLE_NODE, &fpm_reset_counters_cmd);
@@ -3138,6 +3442,8 @@ static int fpm_nl_new(struct event_loop *tm)
 	install_element(CONFIG_NODE, &no_fpm_set_address_cmd);
 	install_element(CONFIG_NODE, &fpm_use_nhg_cmd);
 	install_element(CONFIG_NODE, &no_fpm_use_nhg_cmd);
+	install_element(CONFIG_NODE, &fpm_use_route_replace_cmd);
+	install_element(CONFIG_NODE, &no_fpm_use_route_replace_cmd);
 
 	return 0;
 }

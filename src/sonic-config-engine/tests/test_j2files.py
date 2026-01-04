@@ -29,6 +29,7 @@ class TestJ2Files(TestCase):
         self.t0_minigraph_two_mgmt = os.path.join(self.test_dir, 't0-sample-graph-two-mgmt.xml')
         self.t0_mvrf_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-mvrf-nomgmt.xml')
         self.pc_minigraph = os.path.join(self.test_dir, 'pc-test-graph.xml')
+        self.sonic_dhcp4relay_minigraph = os.path.join(self.test_dir, 't0-sonic-dhcp4relay-graph.xml')
         self.t0_port_config = os.path.join(self.test_dir, 't0-sample-port-config.ini')
         self.t0_port_config_tiny = os.path.join(self.test_dir, 't0-sample-port-config-tiny.ini')
         self.t1_ss_port_config = os.path.join(self.test_dir, 't1-ss-sample-port-config.ini')
@@ -192,6 +193,33 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-secondary-subnets.supervisord.conf'), self.output_file))
+
+        # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is True and dhcp relay config is present
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.t0_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
+                                               'docker-dhcp-relay-sonic-agent.supervisord.conf'), self.output_file))
+
+        # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is True and dhcp relay config is not present
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-enabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.sonic_dhcp4relay_minigraph, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
+                                               'docker-dhcp-relay-sonic-agent-no-relay-cfg.supervisord.conf'), self.output_file))
+
+        # Test generation of docker-dhcp-relay.supervisord.conf when has_sonic_dhcpv4_relay is False
+        sample_data = os.path.join(self.test_dir, "dhcp-sonic-relay-disabled-sample.json")
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-j', sample_data, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
+                                  'docker-dhcp-relay.supervisord.conf'), self.output_file))
 
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes
@@ -418,7 +446,10 @@ class TestJ2Files(TestCase):
         self._test_qos_render_template('dell', 'x86_64-dell_s6100_c2538-r0', 'Force10-S6100', 'sample-dell-6100-t0-minigraph.xml', 'qos-dell6100.json', copy_files=True)
 
     def test_qos_arista7260_render_template(self):
-        self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D96C16', 'sample-arista-7260-t1-minigraph-remap-disabled.xml', 'qos-arista7260.json')
+        self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-C64', 'sample-arista-7260-t1-minigraph-remap-disabled.xml', 'qos-arista7260.json')
+
+    def test_qos_arista7060x6_render_template(self):
+        self._test_qos_render_template('arista', 'x86_64-arista_7060x6_16pe_384c_b', 'Arista-7060X6-16PE-384C-B-O128S2', 'sample-arista-7060x6-t0-minigraph.xml', 'qos-arista7060x6.json')
 
     def test_qos_arista7260t0_render_template(self):
         self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D92C16', 'sample-arista-7260-t0-minigraph.xml', 'qos-arista7260-t0.json')
@@ -699,7 +730,26 @@ class TestJ2Files(TestCase):
                                                 minigraph=test_data[3],
                                                 buffer_template=test_data[4],
                                                 expected=test_data[5])
-
+            
+    def test_buffers_lt2_ft2_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            # Skip on python2 as the change will not be backported to previous version
+            return
+        
+        TEST_DATA = [
+            # (vendor, platform, sku, minigraph, buffer_template, sample_output )
+            ('arista', 'x86_64-arista_7060x6_64pe_b', 'Arista-7060X6-64PE-P32O64', 'sample-lt2-p32o64-minigraph.xml', 'buffers.json.j2', 'buffer-lt2-p32o64.json'),
+            ('arista', 'x86_64-arista_7060x6_64pe_b', 'Arista-7060X6-64PE-P64', 'sample-ft2-p64-minigraph.xml', 'buffers.json.j2', 'buffer-ft2-p64.json')
+        ]
+        
+        for test_data in TEST_DATA:
+            self._test_buffers_render_template(vendor=test_data[0],
+                                                platform=test_data[1],
+                                                sku=test_data[2],
+                                                minigraph=test_data[3],
+                                                buffer_template=test_data[4],
+                                                expected=test_data[5])
+    
     def test_ipinip_multi_asic(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.multi_asic_minigraph, '-p', self.multi_asic_port_config, '-t', ipinip_file, '-n', 'asic0']
@@ -806,6 +856,19 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ndppd_conf_no_vlan_interfaces(self):
+        """Test ndppd.conf generation when no VLAN interfaces exist"""
+        conf_template = os.path.join(self.test_dir, "ndppd.conf.j2")
+        empty_json = os.path.join(self.test_dir, "data", "ndppd", "empty_vlan_interfaces.json")
+        
+        argument = ['-j', empty_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        
+        # Verify route-ttl is still generated even without VLAN interfaces
+        with open(self.output_file, 'r') as f:
+            content = f.read()
+            assert 'route-ttl 2147483647' in content
+
     def test_ntp_conf(self):
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
@@ -819,6 +882,15 @@ class TestJ2Files(TestCase):
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_interfaces.json")
         expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch.conf")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
+    def test_ntp_smartswitch_dpu_conf(self):
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_dpu_interfaces.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_smartswitch_dpu.conf")
 
         argument = ['-j', config_db_ntp_json, '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)

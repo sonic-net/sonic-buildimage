@@ -1,0 +1,48 @@
+        # Adjust NUM_LOGS_TO_ROTATE to reflect number of log files that trigger this block specified above
+        NUM_LOGS_TO_ROTATE=8
+
+        # Adjust LOG_FILE_ROTATE_SIZE_KB to reflect the "size" parameter specified above, in kB
+{% if var_log_kb <= 204800 %}
+        LOG_FILE_ROTATE_SIZE_KB=1024
+{% elif var_log_kb <= 409600 %}
+        LOG_FILE_ROTATE_SIZE_KB=2048
+{% else %}
+        LOG_FILE_ROTATE_SIZE_KB=16384
+{% endif %}
+
+        # Reserve space for btmp, wtmp, dpkg.log, monit.log, etc., as well as logs that
+        # should be disabled, just in case they get created and rotated
+        RESERVED_SPACE_KB=4096
+
+        VAR_LOG_SIZE_KB={{var_log_kb}}
+
+        # Limit usable space to 90% of the partition minus the reserved space for other logs
+        USABLE_SPACE_KB=$(( (VAR_LOG_SIZE_KB * 90 / 100) - RESERVED_SPACE_KB))
+
+        # Set our threshold so as to maintain enough space to write all logs from empty to full
+        # Most likely, some logs will have non-zero size when this is called, so this errs on the side
+        # of caution, giving us a bit of a cushion if a log grows quickly and passes its rotation size
+        THRESHOLD_KB=$((USABLE_SPACE_KB - (NUM_LOGS_TO_ROTATE * LOG_FILE_ROTATE_SIZE_KB * 2)))
+
+        # First, delete any *.1.gz files that might be left around from a prior incomplete
+        # logrotate execution, otherwise logrotate will fail to do its job
+        find /var/log/ -name '*.1.gz' -type f -exec rm -f {} +
+
+        while true; do
+            USED_KB=$(du -s /var/log | awk '{ print $1; }')
+
+            if [ $USED_KB -lt $THRESHOLD_KB ]; then
+                break
+            else
+                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort  | awk 'NR == 1 {print $2}')
+
+                if [ -z "$OLDEST_ARCHIVE_FILE" ]; then
+                    logger -p syslog.err -t "logrotate" "No archive file to delete -- potential for filling up /var/log partition!"
+                    break
+                fi
+
+                logger -p syslog.info -t "logrotate" "Deleting archive file $OLDEST_ARCHIVE_FILE to free up space"
+                rm -rf "$OLDEST_ARCHIVE_FILE"
+            fi
+        done
+

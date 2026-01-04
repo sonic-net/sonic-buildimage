@@ -32,7 +32,6 @@ $(DOCKER_RESTAPI)_RUN_OPT += -v /var/run/redis/redis.sock:/var/run/redis/redis.s
 $(DOCKER_RESTAPI)_RUN_OPT += -v /etc/sonic/credentials:/etc/sonic/credentials:ro
 $(DOCKER_RESTAPI)_RUN_OPT += -p=8081:8081/tcp
 
-$(DOCKER_RESTAPI)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_RESTAPI)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_RESTAPI_DBG)

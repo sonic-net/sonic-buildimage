@@ -1,5 +1,5 @@
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -58,11 +58,12 @@ BCMGENL_BLDDIR := $(OUTPUT_DIR)/bcmgenl
 GENL_PACKET_BLDDIR := $(OUTPUT_DIR)/genl-packet
 EDK_BLDDIR := $(OUTPUT_DIR)/edk
 PTPCLOCK_BLDDIR := $(OUTPUT_DIR)/ptpclock
+ST_BLDDIR := $(OUTPUT_DIR)/st
 
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
 
-KMODS := bde knet knetcb genl-packet bcmgenl edk ptpclock
+KMODS := bde knet knetcb genl-packet bcmgenl edk ptpclock st
 
 kmod: $(KMODS)
 
@@ -107,6 +108,12 @@ ptpclock: bde knet edk
 		KBUILD_EXTRA_SYMBOLS+=$(EDK_BLDDIR)/Module.symvers \
 		LKM_BLDDIR=$(PTPCLOCK_BLDDIR) $(TARGET)
 	ln -sf $(PTPCLOCK_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+st: bde
+	$(MAKE) -C $(SDK)/linux/st SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(ST_BLDDIR) $(TARGET)
+	ln -sf $(ST_BLDDIR)/*.ko $(OUTPUT_DIR)
 
 clean:
 	$(MAKE) kmod TARGET=$@

@@ -26,10 +26,12 @@
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
   * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
+  * [DEBUG_DROP_MONITOR](#debug_drop_monitor)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
   * [DHCP_RELAY](#dhcp_relay)
+  * [DHCPV4_RELAY](#dhcpv4_relay)
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
@@ -71,6 +73,7 @@
   * [Restapi](#restapi)
   * [System Port](#system-port)
   * [Tacplus Server](#tacplus-server)
+  * [TC to DSCP map](#tc-to-dscp-map)
   * [TC to Priority group map](#tc-to-priority-group-map)
   * [TC to Queue map](#tc-to-queue-map)
   * [Telemetry](#telemetry)
@@ -96,6 +99,10 @@
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)  
   * [SRv6](#srv6)
+  * [DPU](#dpu-configuration)
+  * [REMOTE_DPU](#remote_dpu-configuration)
+  * [VDPU](#vdpu-configuration)
+  * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
@@ -987,19 +994,27 @@ DEBUG_COUNTER:
 ```
 ; DEBUG_COUNTER table
 
-key             = DEBUG_COUNTER_TABLE:name
-name            = string
-type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
-alias           = string (optional)
-description     = string (optional)
-group           = string (optional)
+key                      = DEBUG_COUNTER_TABLE:name
+name                     = string
+type                     = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias                    = string (optional)
+description              = string (optional)
+group                    = string (optional)
+drop_monitor_status      = admin_mode (enabled/disabled, default disabled)
+drop_count_threshold     = uint64 (optional)
+incident_count_threshold = uint64 (optional)
+window                   = uint64 (optional)
 
 "DEBUG_COUNTER": {
     "DEBUG_4": {
         "alias": "BAD_DROPS",
         "desc": "More port ingress drops",
         "group": "BAD",
-        "type": "SWITCH_INGRESS_DROPS"
+        "type": "SWITCH_INGRESS_DROPS",
+        "drop_monitor_status": "disabled",
+        "drop_count_threshold": "10",
+        "incident_count_threshold": "2",
+        "window": "300"
     }
 }
 ```
@@ -1013,6 +1028,21 @@ reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (http
 "DEBUG_COUNTER_DROP_REASON": {
     "DEBUG_4|DIP_LINK_LOCAL": {},
     "DEBUG_4|SIP_LINK_LOCAL": {}
+}
+```
+
+### DEBUG_DROP_MONITOR
+Ingress and eggress port debug counter flows can be monitored for persistent drops using
+debug drop monitor feature. This table shows the status and configurations of the feature which can
+be modified via the CLI.
+
+```
+{
+    "DEBUG_DROP_MONITOR": {
+        "CONFIG": {
+            "status": "disabled",
+        }
+    }
 }
 ```
 
@@ -1105,6 +1135,28 @@ instance is supported in SONiC.
     ],
     "rfc6939_support": "true",
     "interface_id": "true"
+}
+
+```
+
+### DHCPV4_RELAY
+
+```
+{
+"DHCPV4_RELAY": {
+    "Vlan1000": {
+        "dhcpv4_servers": [
+            "192.168.0.1",
+            "192.168.0.2"
+        ],
+        "server_vrf": "Vrf_RED",
+        "source_interface": "Loopback0",
+        "link_selection": "enable",
+        "vrf_selection": "enable",
+        "server_id_override": "enable",
+        "agent_relay_mode": "append",
+        "max_hop_count": 10
+    }
 }
 
 ```
@@ -1339,6 +1391,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 			"POLL_INTERVAL": "10000"
 		},
 		"WRED_ECN_PORT": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "1000"
+		},
+		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
 		}
@@ -2443,6 +2499,21 @@ and is listed in this table.
 }
 ```
 
+### TC to DSCP map
+
+```json
+{
+    "TC_TO_DSCP_MAP": {
+        "AZURE": {
+            "5": "10",
+            "6": "20"
+        }
+    }
+}
+```
+
+**Note:**
+* configuration is mandatory when packet trimming Asymmetric DSCP mode is used
 
 ### TC to Priority group map
 
@@ -2595,7 +2666,8 @@ and try sending it on a different queue to deliver a packet drop notification to
 
 ***TRIMMING***
 
-```
+Symmetric DSCP and static queue:
+```json
 {
     "SWITCH_TRIMMING": {
         "GLOBAL": {
@@ -2607,7 +2679,22 @@ and try sending it on a different queue to deliver a packet drop notification to
 }
 ```
 
+Asymmetric DSCP and dynamic queue:
+```json
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "from-tc",
+            "tc_value": "8",
+            "queue_index": "dynamic"
+        }
+    }
+}
+```
+
 **Note:**
+* when `dscp_value` is set to `from-tc`, the `tc_value` is used for mapping to DSCP
 * when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions
@@ -2704,13 +2791,20 @@ monitoring sessions for the vnet routes and is optional.
 ### VNET_ROUTE_TUNNEL
 
 VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
-- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
-- VNI: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+- MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
+- VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
+- CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
+        "Vnet_1000|100.200.1.1/32": {
+        "endpoint": "192.174.1.1,192.174.1.2",
+        "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
+        "vni": "10010,10011",
+        "consistent_hashing_buckets": "10"
+    },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
         "mac_address": "f9:22:83:99:22:a2"
@@ -2740,33 +2834,75 @@ VOQ_INBAND_INTERFACE holds the name of the inband system port dedicated for cpu 
 
 ### VXLAN
 
-VXLAN_TUNNEL holds the VTEP source ip configuration.
+VXLAN_TUNNEL holds the VTEP source ip configuration (maximum 2 tunnels).
 VXLAN_TUNNEL_MAP holds the vlan to vni and vni to vlan mapping configuration.
 VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered tunnels.
 
+Single tunnel example:
 ```
 {
-"VXLAN_TUNNEL": {
+    "VXLAN_TUNNEL": {
         "vtep1": {
             "src_ip": "10.10.10.10",
-            "dst_ip": "12.12.12.12"
+            "dst_ip": "12.12.12.12",
+            "ttl_mode": "pipe"
         }
-  }
-"VXLAN_TUNNEL_MAP" : {
+    },
+    "VXLAN_TUNNEL_MAP": {
         "vtep1|map_1000_Vlan100": {
-           "vni": "1000",
-           "vlan": "100"
-         },
-        "vtep1|testmap": {
-           "vni": "22000",
-           "vlan": "70"
-         },
-  }
-  "VXLAN_EVPN_NVO": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
         "nvo1": {
             "source_vtep": "vtep1"
         }
-  }
+    }
+}
+```
+
+Dual tunnel example:
+```
+{
+    "VXLAN_TUNNEL": {
+        "vtep1": {
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12",
+            "ttl_mode": "uniform"
+        },
+        "vtep2": {
+            "src_ip": "10.20.10.10",
+            "dst_ip": "20.20.20.20"
+        }
+    },
+    "VXLAN_TUNNEL_MAP": {
+        "vtep1|map_1000_Vlan100": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        },
+        "vtep2|map_2000_Vlan200": {
+            "vni": "2000",
+            "vlan": "200"
+        },
+        "vtep2|map_3000_Vlan300": {
+            "vni": "3000",
+            "vlan": "300"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
+        "nvo1": {
+            "source_vtep": "vtep1"
+        }
+    }
 }
 ```
 
@@ -2928,6 +3064,15 @@ In this table, we allow configuring ssh server global settings. This will featur
 -   ports - Ssh port numbers - string of port numbers seperated by ','
 -   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
 -   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
+-   permit_root_login - Whether or not to allow root login. Default value: "prohibit-password"
+    - "yes"
+    - "prohibit-password"
+    - "forced-commands-only"
+    - "no"
+-   password_authentication - Whether or not to allow password authentication. Boolean.
+-   ciphers - Ciphers to allow.  See `ssh -Q ciphers`
+-   kex_algorithms - Key Exchange algorithms to allow.  See `ssh -Q kex_algorithms`
+-   macs - MAC algorithms to allow.  See `ssh -Q macs`
 ```
 {
     "SSH_SERVER": {
@@ -2936,7 +3081,12 @@ In this table, we allow configuring ssh server global settings. This will featur
             "login_timeout": "120",
             "ports": "22",
             "inactivity_timeout": "15",
-            "max_sessions": "0"
+            "max_sessions": "0",
+            "permit_root_login": "false",
+            "password_authentication": "true",
+            "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+            "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+            "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
         }
     }
 }
@@ -3067,7 +3217,19 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 	"DNS_NAMESERVER": {
 		"1.1.1.1": {},
 		"fe80:1000:2000:3000::1": {}
-	},
+	}
+}
+```
+
+DNS configuration options can also be set when nameservers are defined:
+```json
+{
+    "DNS_OPTIONS": {
+        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+        "ndots": 0,
+        "timeout": 1,
+        "attempts": 2
+    }
 }
 ```
 
@@ -3172,7 +3334,7 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 
 ### DPU Configuration
 
-The **DPU** table introduces the configuration for the DPUs(Data Processing Unit) information available on the platform.
+The **DPU** table introduces the configuration for the DPUs (Data Processing Unit) information available on the platform.
 
 ```json
 {
@@ -3184,6 +3346,7 @@ The **DPU** table introduces the configuration for the DPUs(Data Processing Unit
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "midplane_ipv4": "169.254.200.245",
             "dpu_id": "0",
             "vdpu_id": "vdpu0",
             "gnmi_port": "50052",
@@ -3196,6 +3359,7 @@ The **DPU** table introduces the configuration for the DPUs(Data Processing Unit
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "midplane_ipv4": "169.254.150.20",
             "dpu_id": "1",
             "vdpu_id": "vdpu1",
             "gnmi_port": "50052",
@@ -3206,15 +3370,145 @@ The **DPU** table introduces the configuration for the DPUs(Data Processing Unit
 ```
 
 **state**: Administrative status of the DPU (`up` or `down`).
+
 **local_port**: local port mapped to DPU port on the switch.
+
 **vip_ipv4**: VIP IPv4 address from minigraph.
+
 **vip_ipv6**: VIP IPv6 address from minigraph.
+
 **pa_ipv4**: PA IPv4 address from minigraph.
+
 **pa_ipv6**: PA IPv6 address from minigraph.
+
 **dpu_id**: Id of the DPU from minigraph.
+
 **vdpu_id**: ID of VDPUs from minigraph.
+
 **gnmi_port**: TCP listening port for gnmi service on DPU.
+
 **orchagent_zmq_port**: TCP listening port for ZMQ service on DPU orchagent.
+
+### REMOTE_DPU Configuration
+
+The **REMOTE_DPU** table introduces the configuration for the remote DPUs (Data Processing Unit) accessible on other machines.
+
+```json
+{
+    "REMOTE_DPU": {
+        "str-8103-t1-dpu0": {
+            "type": "typeA",
+            "pa_ipv4": "192.168.2.1",
+            "pa_ipv6": "2001:db8::30",
+            "npu_ipv4": "192.168.2.10",
+            "npu_ipv6": "2001:db8::40",
+            "dpu_id": "0",
+            "swbus_port": "23606"
+        },
+        "str-8103-t1-dpu1": {
+            "type": "typeB",
+            "pa_ipv4": "192.168.2.2",
+            "pa_ipv6": "2001:db8::50",
+            "npu_ipv4": "192.168.2.20",
+            "npu_ipv6": "2001:db8::60",
+            "dpu_id": "1",
+            "swbus_port": "23607"
+        }
+    }
+}
+```
+
+**type**: Type of the DPU.
+
+**pa_ipv4**: DPU IPv4 physical address.
+
+**pa_ipv6**: DPU IPv6 physical address.
+
+**npu_ipv4**: Loopback IPv4 address of remote NPU.
+
+**npu_ipv6**: Loopback IPv6 address of remote NPU.
+
+**dpu_id**: ID of the DPU from minigraph.
+
+**swbus_port**: TCP listening port for swbus service for this DPU. Must be 23606 + dpu_id.
+
+### VDPU Configuration
+
+The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Processing Unit) information available on the platform.
+
+```json
+{
+    "VDPU": {
+        "vdpu0": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu0"]
+        },
+        "vdpu1": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu1"]
+        },
+        "vdpu2": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu2"]
+        },
+        "vdpu3": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu3"]
+        }
+    }
+}
+```
+
+**profile**: VDPU profile. Currently unused, reserved for future use.
+
+**tier**: VDPU tier. Currently unused, reserved for future use.
+
+**main_dpu_ids**: Main DPUs involved in this VDPU.
+
+### DASH HA Global Configuration
+
+The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
+Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
+
+```json
+{
+    "DASH_HA_GLOBAL_CONFIG": {
+        "global": {
+            "vnet_name": "Vnet55",
+            "cp_data_channel_port": "11362",
+            "dp_channel_port": "11368",
+            "dp_channel_src_port_min": "49152",
+            "dp_channel_src_port_max": "53247",
+            "dp_channel_probe_interval_ms": "100",
+            "dp_channel_probe_fail_threshold": "3",
+            "dpu_bfd_probe_interval_in_ms": "100",
+            "dpu_bfd_probe_multiplier": "3"
+        }
+    }
+}
+```
+
+**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
+
+**cp_data_channel_port**: Control plane data channel port, used for bulk sync.
+
+**dp_channel_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_src_port_min**: Minimum source port used when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_src_port_max**: Maximum source port used when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_probe_interval_ms**: Interval in milliseconds for sending each DPU-to-DPU data path probe.
+
+**dp_channel_probe_fail_threshold**: Number of probe failures needed to consider data plane channel as dead.
+
+**dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
+
+**dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
 
 # For Developers
 

@@ -10,9 +10,6 @@ parameters:
   - amd64
   - armhf
   - arm64
-- name: march
-  type: string
-  default: ''
 - name: dist
   type: string
   values:
@@ -30,22 +27,22 @@ parameters:
   default: sonicdev
 - name: pool
   type: string
-  default: sonicbld-1es
+  default: sonicso1ES-amd64
   values:
-  - sonicbld-1es
-  - sonicbld-arm64
-  - sonicbld-armhf
+  - sonicso1ES-amd64
+  - sonicso1ES-arm64
+  - sonicso1ES-armhf
 
 jobs:
-- job: sonic_slave_${{ parameters.dist }}${{ parameters.march }}
+- job: sonic_slave_${{ parameters.dist }}_${{ parameters.arch }}
   timeoutInMinutes: 360
   variables:
-  - template: /.azure-pipelines/template-variables.yml@buildimage
-  - template: /.azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+  - template: template-variables.yml
+  - template: azure-pipelines-repd-build-variables.yml
   pool: ${{ parameters.pool }}
   steps:
   - template: cleanup.yml
-  - template: /.azure-pipelines/template-clean-sonic-slave.yml@buildimage
+  - template: template-clean-sonic-slave.yml
   - checkout: self
     clean: true
   - task: Docker@2
@@ -58,28 +55,30 @@ jobs:
       build_options="$(VERSION_CONTROL_OPTIONS)"
       image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
-      if echo ${{ parameters.pool }} | grep ${{ parameters.arch }};then
-        image_latest=$(echo ${image_latest} | sed 's/:/-${{ parameters.arch }}:/')
-      fi
-      image_branch=$(echo $(echo $image_latest | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      image_branch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      image_branch_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
       docker rmi $image_tag || true
 
       if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
         exit 0
       fi
 
-      DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker BLDENV=${{ parameters.dist }} make -f Makefile.work configure $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} $args || docker image ls $image_tag
+      BLDENV=${{ parameters.dist }} make -f Makefile.work configure $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} || docker image ls $image_tag
       if [[ "$(Build.Reason)" == "PullRequest" ]];then
         exit 0
       fi
 
       docker tag ${image_tag} ${REGISTRY_SERVER}/${image_tag}
       docker push ${REGISTRY_SERVER}/${image_tag}
-      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch}
-      docker push ${REGISTRY_SERVER}/${image_branch}
-      if [[ "$(Build.SourceBranchName)" == "master" ]];then
-        docker tag ${image_tag} ${REGISTRY_SERVER}/${image_latest}
-        docker push ${REGISTRY_SERVER}/${image_latest}
+      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch_arch}
+      docker push ${REGISTRY_SERVER}/${image_branch_arch}
+      if [[ "${{ parameters.arch }}" == "amd64" ]];then
+        docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch}
+        docker push ${REGISTRY_SERVER}/${image_branch}
+        if [[ "$(Build.SourceBranchName)" == "master" ]];then
+          docker tag ${image_tag} ${REGISTRY_SERVER}/${image_latest}
+          docker push ${REGISTRY_SERVER}/${image_latest}
+        fi
       fi
     env:
       REGISTRY_SERVER: ${{ parameters.registry_url }}

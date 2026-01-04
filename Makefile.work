@@ -41,8 +41,9 @@
 #  * ENABLE_DIALOUT: Enable dialout client in telemetry.
 #  *                 Default: unset
 #  *                 Values: y
-#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none or cache
+#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none, cache, rcache, wcache, rwcache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
+#  * SONIC_DPKG_CACHE_METHOD_OVERRIDE: Specifying whether to override the method used by SONIC_DPKG_CACHE_METHOD: none, rcache, wcache, rwcache
 #  * BUILD_LOG_TIMESTAMP: Set timestamp in the build log (simple/none)
 #  * DOCKER_EXTRA_OPTS: Extra command line arguments for dockerd running in slave container.
 #  * ENABLE_AUTO_TECH_SUPPORT: Enable the configuration for event-driven techsupport & coredump mgmt feature
@@ -69,12 +70,12 @@
 SHELL = /bin/bash
 
 USER := $(shell id -un)
-PWD := $(shell pwd)
+PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
-DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
 else
-DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm debian:trixie uname -m)
 endif
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
@@ -160,10 +161,6 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
-ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
-	override LEGACY_SONIC_MGMT_DOCKER = y
-endif
-
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -221,6 +218,7 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_MAIN_VERSION=$(FIPS_GOLANG_MAIN_VERSION) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
@@ -293,8 +291,8 @@ endif
 DOCKER_LOCKFILE_SAVE := $(DOCKER_LOCKDIR)/docker_save.lock
 $(shell mkdir -m 0777 -p $(DOCKER_LOCKDIR))
 $(shell [ -f $(DOCKER_LOCKFILE_SAVE) ] || (touch $(DOCKER_LOCKFILE_SAVE) && chmod 0777 $(DOCKER_LOCKFILE_SAVE)))
-$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT)\:/mount debian sh -c 'rm -rf /mount/*')
-$(mkdir -p $(DOCKER_ROOT))
+$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT)\:/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
+$(shell mkdir -p $(DOCKER_ROOT))
 
 ifeq ($(DOCKER_BUILDER_MOUNT),)
 override DOCKER_BUILDER_MOUNT := "$(PWD):/sonic"
@@ -304,6 +302,8 @@ ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
+# Consider removing the --ulimit flag once nothing older
+# than Bullseye is being used as a slave container.
 DOCKER_RUN := docker run --rm=true --privileged --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
@@ -312,6 +312,7 @@ DOCKER_RUN := docker run --rm=true --privileged --init \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
+    --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
 
 # Mount the $(DOCKER_ROOT) to /var/lib/docker in the slave container, the overlay fs is not supported as dockerd root folder.
@@ -333,6 +334,9 @@ ifneq ($(SECURE_UPGRADE_DEV_SIGNING_KEY),)
 endif
 ifneq ($(SECURE_UPGRADE_SIGNING_CERT),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
+endif
+ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
 endif
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
@@ -474,6 +478,7 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(DOCKER_SLAVE_BASE_PULL_REGISTRY); \
 	} || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Building... ; \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
@@ -489,6 +494,7 @@ DOCKER_SLAVE_USER_INSPECT = \
 SONIC_SLAVE_USER_BUILD = \
 	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
 		$(DOCKER_USER_BUILD) ; \
 	}
@@ -527,6 +533,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            KERNEL_PROCURE_METHOD=$(KERNEL_PROCURE_METHOD) \
                            SONIC_DPKG_CACHE_METHOD=$(SONIC_DPKG_CACHE_METHOD) \
                            SONIC_DPKG_CACHE_SOURCE=$(SONIC_DPKG_CACHE_SOURCE) \
+                           SONIC_DPKG_CACHE_METHOD_OVERRIDE=$(SONIC_DPKG_CACHE_METHOD_OVERRIDE) \
                            HTTP_PROXY=$(http_proxy) \
                            HTTPS_PROXY=$(https_proxy) \
                            NO_PROXY=$(no_proxy) \
@@ -539,7 +546,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
                            SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
                            SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
-                           SONIC_SMARTSWITCH=$(SMARTSWITCH) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
@@ -555,8 +561,9 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
+                           SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
                            SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
-                           SECURE_UPGRADE_PROD_TOOL_ARGS=$(SECURE_UPGRADE_PROD_TOOL_ARGS) \
+                           SECURE_UPGRADE_PROD_TOOL_ARGS="\"'$(SECURE_UPGRADE_PROD_TOOL_ARGS)'\"" \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
@@ -576,7 +583,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
-                           LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
+                           BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)

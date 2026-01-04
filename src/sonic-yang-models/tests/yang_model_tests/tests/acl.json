@@ -195,7 +195,7 @@
     },
     "ACL_INNERSRCMACREWRITE_INVALID_TUNNEL_VNI": {
         "desc": "Configure INNERSRCMACREWRITE ACL with invalid VNI ID",
-        "eStrKey": "Pattern"
+        "eStrKey": "Range"
     },
     "ACL_RULE_WITH_TUNNEL_VNI":{
         "desc": "Configure a ACL rule with VNI ID"
