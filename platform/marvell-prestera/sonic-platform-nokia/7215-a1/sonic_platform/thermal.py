@@ -20,10 +20,10 @@ sonic_logger = logger.Logger('thermal')
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
-    I2C_CLASS_DIR = "/sys/class/i2c-adapter/"
-    I2C_DEV_MAPPING = (['i2c-0/0-0048/hwmon/', 1],
-                       ['i2c-0/0-0049/hwmon/', 1],
-                       ['i2c-0/0-004a/hwmon/', 1])
+    I2C_CLASS_DIR = "/sys/bus/i2c/devices/"
+    I2C_DEV_MAPPING = (['0-0048/hwmon/', 1],
+                       ['0-0049/hwmon/', 1],
+                       ['0-004a/hwmon/', 1])
 
     CN9130_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
     ASIC_TEMP_INFO = "ASIC_TEMPERATURE_INFO"

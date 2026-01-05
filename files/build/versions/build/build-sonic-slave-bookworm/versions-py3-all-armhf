@@ -1,6 +1,8 @@
 bitarray==2.8.1
-click==7.0
-lxml==4.9.1
+cffi==2.0.0
+pexpect==4.9.0
+ptyprocess==0.7.0
+pyroute2==0.9.5
 pyyaml==6.0.1
-urllib3==2.5.0
-zipp==1.2.0
+urllib3==2.6.2
+wcwidth==0.2.14
