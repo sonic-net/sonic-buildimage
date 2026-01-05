@@ -165,9 +165,9 @@ enum fan_control_bit {
 };
 
 enum fan_id {
-    FAN3 = 0,
+    FAN1 = 0,
     FAN2,
-    FAN1,
+    FAN3,
 };
 
 enum port_id {
