@@ -24,7 +24,11 @@ dependent_startup_wait_for={{ _wait }}
 {% endif %}
 
 [program:zebra]
+{% if DEVICE_METADATA.localhost.nhg_fib is defined and DEVICE_METADATA.localhost.nhg_fib == 'enabled' %}
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic -M snmp --asic-offload=notify_on_offload --nhg-fib
+{% else %}
 command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic{{ ' -M snmp' if _snmp else '' }} --asic-offload=notify_on_offload
+{% endif %}
 priority={{ _pbase }}
 autostart=false
 autorestart=false
