@@ -71,7 +71,7 @@ echo 1 > /sys/bus/i2c/devices/0-0033/poe_en_ctrl
 #poetool system save_setting
 
 # PoE power bank setting
-poe_power.sh
+#poe_power.sh
 # reload PoE configuration
 #poe_cfg_init.py
 
