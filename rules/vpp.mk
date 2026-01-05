@@ -1,6 +1,6 @@
 # libvpp package
 
-VPP_VERSION_BASE = 2506
+VPP_VERSION_BASE = 2510
 VPP_VERSION = $(VPP_VERSION_BASE)-0.1
 VPP_VERSION_SONIC = $(VPP_VERSION)+b1sonic1
 VPP_SRC_PATH = platform/vpp/vppbld
