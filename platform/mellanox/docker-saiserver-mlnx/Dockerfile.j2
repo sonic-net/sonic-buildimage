@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2016-2022 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +15,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, rsync_from_builder_stage %}
 ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
@@ -60,7 +61,7 @@ RUN rm -rf /debs
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+{{ rsync_from_builder_stage() }}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]
