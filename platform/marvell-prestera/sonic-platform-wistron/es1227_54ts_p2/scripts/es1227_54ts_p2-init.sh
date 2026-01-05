@@ -50,14 +50,15 @@ load_kernel_drivers
     do
         echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-$i/new_device
     done
-	    local j
-    for j in {472..495};
-    do
-        echo $j > /sys/class/gpio/export
+
+    local j
+    for j in {488..511}; do
+        echo $j > /sys/class/gpio/export 2>/dev/null
     done
+
     local k
-    for k in $(seq 473 4 493); do
-        echo out > /sys/class/gpio/gpio$k/direction
+    for k in $(seq 488 4 508); do
+        echo out > /sys/class/gpio/gpio$k/direction 2>/dev/null
     done
 
     for i in {0..2};
