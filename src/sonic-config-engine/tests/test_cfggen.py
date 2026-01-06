@@ -500,7 +500,7 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument, False, False)
         self.assertEqual(
             utils.to_dict(output.strip()),
-            utils.to_dict("{'tunnel_v4': {'src_ip': '10.1.0.32'}}")
+            utils.to_dict("{'tunnel_v4': {'src_ip': '10.1.0.32', 'ttl_mode': 'pipe'}}")
         )
 
     def test_minigraph_default_vnet(self):
