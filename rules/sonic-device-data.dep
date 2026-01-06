@@ -2,8 +2,7 @@
 SPATH       := $($(SONIC_DEVICE_DATA)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-device-data.mk rules/sonic-device-data.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
-DEP_FILES   += $(shell find device -type l -prune -o -type f -print )
+DEP_FILES   += $(shell git ls-files $(SPATH)) $(SONIC_DEVICE_FILES_LIST)
 
 $(SONIC_DEVICE_DATA)_CACHE_MODE := GIT_CONTENT_SHA
 $(SONIC_DEVICE_DATA)_DEP_FLAGS  := $(SONIC_COMMON_FLAGS_LIST)
