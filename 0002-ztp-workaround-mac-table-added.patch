@@ -1,0 +1,78 @@
+Submodule src/sonic-ztp contains modified content
+diff --git a/src/sonic-ztp/src/usr/lib/ztp/add_macentry.py b/src/sonic-ztp/src/usr/lib/ztp/add_macentry.py
+new file mode 100755
+index 0000000..9efe6c5
+--- /dev/null
++++ b/src/sonic-ztp/src/usr/lib/ztp/add_macentry.py
+@@ -0,0 +1,58 @@
++#python
++from telnetlib import Telnet
++import subprocess
++
++result = subprocess.run(['show', 'platform', 'syseeprom'], capture_output=True, text=True, check=True)
++output = result.stdout
++target_string = "Base MAC Address     0x24        6  "
++index = output.find(target_string)
++if index != -1:
++    mac = output[index+len(target_string):index+len(target_string)+17]
++
++
++tn = Telnet()
++tn.open('localhost',12345,timeout=5000)
++
++tn.write(b'do cpss-api call cpssDxChBrgFdbMacEntrySet devNum 0\n')
++tn.read_until(b'entryType')
++tn.write(b'\n')
++tn.read_until(b'vid1')
++tn.write(b'\n')
++tn.read_until(b'key')
++tn.write(b'CPSS_MAC_ENTRY_EXT_KEY_MAC_VLAN_STC\n')
++tn.read_until(b'macAddr')
++tn.write(str.encode(mac))
++tn.write(b'\n')
++tn.read_until(b'vlanId')
++tn.write(b'1\n')
++tn.read_until(b'type')
++tn.write(b'\n')
++tn.read_until(b'devNum')
++tn.write(b'16\n')
++tn.read_until(b'portNum')
++tn.write(b'63\n')
++tn.read_until(b'trunkId')
++tn.write(b'\n')
++tn.read_until(b'vidx')
++tn.write(b'\n')
++tn.read_until(b'vlanId')
++tn.write(b'\n')
++tn.read_until(b'devNum')
++tn.write(b'\n')
++tn.read_until(b'fabricVidx')
++tn.write(b'\n')
++tn.read_until(b'index')
++tn.write(b'\n')
++tn.read_until(b'age')
++tn.write(b'\n')
++tn.read_until(b'isStatic')
++tn.write(b'true\n')
++tn.read_until(b'daCommand')
++tn.write(b'CPSS_MAC_TABLE_CNTL_E\n')
++tn.read_until(b'saCommand')
++tn.write(b'CPSS_MAC_TABLE_SOFT_DROP_E\n')
++tn.read_until(b'daRoute')
++tn.write(b'*\n')
++
++tn.write(b'CLIexit\n')
++
+diff --git a/src/sonic-ztp/src/usr/lib/ztp/ztp-profile.sh b/src/sonic-ztp/src/usr/lib/ztp/ztp-profile.sh
+index d8afbe8..5daf792 100755
+--- a/src/sonic-ztp/src/usr/lib/ztp/ztp-profile.sh
++++ b/src/sonic-ztp/src/usr/lib/ztp/ztp-profile.sh
+@@ -227,6 +227,8 @@ if [ "$CMD" = "install" ] ; then
+             echo "Restarted network configuration."
+         fi
+     fi
++    sleep 120
++    python3 /usr/lib/ztp/add_macentry.py
+ fi
+ 
+ # Process ZTP profile remove request
