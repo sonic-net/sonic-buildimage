@@ -1,0 +1,14 @@
+Submodule src/sonic-swss contains modified content
+diff --git a/src/sonic-swss/orchagent/copporch.cpp b/src/sonic-swss/orchagent/copporch.cpp
+index 05080c8d..9d702f0a 100644
+--- a/src/sonic-swss/orchagent/copporch.cpp
++++ b/src/sonic-swss/orchagent/copporch.cpp
+@@ -73,6 +73,8 @@ static map<string, sai_hostif_trap_type_t> trap_id_map = {
+     {"vrrp", SAI_HOSTIF_TRAP_TYPE_VRRP},
+     {"bgp", SAI_HOSTIF_TRAP_TYPE_BGP},
+     {"dhcpv6", SAI_HOSTIF_TRAP_TYPE_DHCPV6},
++    {"dhcp_l2", SAI_HOSTIF_TRAP_TYPE_DHCP_L2},
++    {"dhcpv6_l2", SAI_HOSTIF_TRAP_TYPE_DHCPV6_L2},
+     {"ospfv6", SAI_HOSTIF_TRAP_TYPE_OSPFV6},
+     {"isis", SAI_HOSTIF_TRAP_TYPE_ISIS},
+     {"vrrpv6", SAI_HOSTIF_TRAP_TYPE_VRRPV6},
