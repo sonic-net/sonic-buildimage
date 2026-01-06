@@ -40,6 +40,7 @@ module sonic-telemetry_client {
             enum CONFIG_DB;
             enum COUNTERS_DB;
             enum STATE_DB;
+            enum OC_YANG;
             enum OTHERS;
         }
     }
