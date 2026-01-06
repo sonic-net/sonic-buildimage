@@ -53,10 +53,10 @@ jobs:
   - bash: |
       set -ex
       build_options="$(VERSION_CONTROL_OPTIONS)"
-      tags=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave)
+      tags=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
       image_tag=$(printf '%s\n' "$tags" | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
-      user_image_tag=$(printf '%s\n' "$tags" | tail -n 2 | head -n 1)
+      user_image_tag=$(printf '%s\n' "$tags" | head -n 1)
       user_image_latest=$(echo $(echo $user_image_tag | awk -F: '{print$1}'):latest)
       image_branch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName))
       image_branch_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
