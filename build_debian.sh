@@ -207,6 +207,9 @@ sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/varlog
 #sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/mgmt-intf-dhcp
 sudo cp files/initramfs-tools/union-fsck $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/union-fsck
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/union-fsck
+# Generate the machine-id from the MAC addr during initramfs setup
+sudo cp files/initramfs-tools/machineid $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/machineid
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/machineid
 pushd $FILESYSTEM_ROOT/usr/share/initramfs-tools/scripts/init-bottom && sudo patch -p1 < $OLDPWD/files/initramfs-tools/udev.patch; popd
 if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
     sudo cp files/initramfs-tools/uboot-utils $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/uboot-utils
@@ -471,6 +474,9 @@ sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
+# The /run/machine-id will be created during initramfs preparing
+sudo ln -sf /run/machine-id $FILESYSTEM_ROOT/etc/machine-id
+sudo ln -sf /run/machine-id $FILESYSTEM_ROOT/var/lib/dbus/machine-id
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
 # 2. Configure sshd to close all SSH connetions after 15 minutes of inactivity
