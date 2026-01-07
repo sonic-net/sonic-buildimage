@@ -57,13 +57,13 @@ def get_device_name():
     return str(device_info.get_hostname()).lower()
 
 
-def _run_command(cmd, timeout=5):
+def _run_command(cmd, timeout=60):
     """ Run shell command and return exit code, along with stdout. """
     ret = 0
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
-        (o, e) = proc.communicate(timeout)
+        (o, e) = proc.communicate(timeout=timeout)
         output = to_str(o)
         err = to_str(e)
         ret = proc.returncode
@@ -159,6 +159,26 @@ def func_get_labels(args):
     return 0
 
 
+def is_ready_as_k8s_node():
+    """ Check if current node status is ready or not from k8s cluster """
+    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --no-headers"
+
+    ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
+        KUBE_ADMIN_CONF, get_device_name()))
+
+    if ret != 0:
+        log_debug("Failed to get node from Kube cluster")
+        return False
+
+    if out and len(out.strip().split()) >= 2:
+        if out.strip().split()[1].lower() == "ready":
+            log_debug("Node {} is ready.".format(get_device_name()))
+            return True
+
+    log_debug("Node {} is not ready. Out: {}".format(get_device_name(), out))
+    return False
+
+
 def is_connected(server=""):
     """ Check if we are currently connected """
 
@@ -172,7 +192,9 @@ def is_connected(server=""):
             if d:
                 o = urlparse(d)
                 if o.hostname:
-                    return not server or server == o.hostname
+                    if (not server or server == o.hostname):
+                        if is_ready_as_k8s_node():
+                            return True
     return False
 
 
@@ -243,9 +265,9 @@ users:
     client-key-data: {{ ame_key }}
     """
     if insecure:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False)
+        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False, timeout=10)
     else:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY))
+        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), timeout=10)
     if not r.ok:
         raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")
     k8s_ca = r.json()["data"]["ca.crt"]
@@ -324,7 +346,7 @@ def _do_reset(pending_join = False):
         _run_command("kubectl --kubeconfig {} --request-timeout 20s delete node {}".
                 format(KUBE_ADMIN_CONF, get_device_name()))
 
-    _run_command("kubeadm reset -f", 10)
+    _run_command("kubeadm reset -f")
     _run_command("rm -rf {}".format(CNI_DIR))
     if not pending_join:
         _run_command("rm -f {}".format(KUBE_ADMIN_CONF))
@@ -347,7 +369,7 @@ def _do_join(server, port, insecure):
 
         if ret == 0:
             (ret, out, err) = _run_command(KUBEADM_JOIN_CMD.format(
-                KUBE_ADMIN_CONF, get_device_name()), timeout=60)
+                KUBE_ADMIN_CONF, get_device_name()), timeout=360)
             log_debug("ret = {}".format(ret))
 
     except IOError as e:
@@ -359,6 +381,7 @@ def _do_join(server, port, insecure):
 
     if (ret != 0):
         log_error(err)
+        _do_reset()
 
     return (ret, out, err)
 
