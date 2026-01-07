@@ -25,6 +25,28 @@
         "desc": "Missing Vxlan_TUNNEL configuration",
         "eStrKey" : "LeafRef"
     },
+    "VNET_ROUTE_VALID_TEST": {
+        "desc": "Valid VNET Route Configuration."
+    },
+    "VNET_ROUTE_MULTI_TEST": {
+        "desc": "Multiple VNET route configurations for different VNETs in VNET_ROUTE table."
+    },
+    "VNET_ROUTE_TEST_DUPLICATE_NAME": {
+        "desc": "VNET route configuration with duplicate name keys in VNET_ROUTE table.",
+        "eStr": "Duplicated instance of \"VNET_ROUTE\" list."
+    },
+    "VNET_ROUTE_TEST_INVALID_NEXTHOP": {
+        "desc": "VNET route configuration with invalid nexthop IP value (256.256.256.256) in VNET_ROUTE table.",
+        "eStrKey": "Pattern"
+    },
+    "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
+        "desc": "VNET route configuration with missing mandatory attribute (nexthop) in VNET_ROUTE table.",
+        "eStrKey": "Mandatory"
+    },
+    "VNET_ROUTE_TEST_MISSING_INTERFACE": {
+        "desc": "VNET route configuration with missing mandatory attribute (interface) in VNET_ROUTE table.",
+        "eStrKey": "Mandatory"
+    },
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
         "desc": "Basic VNET route tunnel configuration with minimal required field - endpoint in VNET_ROUTE_TUNNEL_LIST table."
     },
