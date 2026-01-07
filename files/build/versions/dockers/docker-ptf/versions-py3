@@ -3,7 +3,7 @@ blinker==1.9.0
 cffi==2.0.0
 click==8.3.1
 cryptography==46.0.3
-cython==3.2.2
+cython==3.2.3
 decorator==5.2.1
 dpkt==1.9.8
 enum34==1.1.10
@@ -47,7 +47,7 @@ simplegeneric==0.8.1
 six==1.16.0
 supervisor==4.3.0
 thrift==0.22.0
-tornado==6.5.3
+tornado==6.5.4
 traitlets==5.14.3
 typing_extensions==4.15.0
 unittest-xml-reporting==3.2.0

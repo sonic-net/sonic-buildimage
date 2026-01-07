@@ -25,11 +25,13 @@ automake==1:1.16.5-1.3
 autopoint==0.21-12
 autotools-dev==20220109.1
 bash-completion==1:2.11-6
-bc==1.07.1-3+b1
+bc==1.07.1-3
 bind9-dnsutils==1:9.18.41-1~deb12u1
 bind9-host==1:9.18.41-1~deb12u1
 bind9-libs==1:9.18.41-1~deb12u1
 binutils==2.40-2
+binutils-aarch64-linux-gnu==2.40-2
+binutils-arm-linux-gnueabihf==2.40-2
 binutils-common==2.40-2
 binutils-x86-64-linux-gnu==2.40-2
 bison==2:3.8.2+dfsg-1+b1
@@ -58,6 +60,8 @@ cowdancer==0.89
 cpio==2.13+dfsg-7.1
 cpp==4:12.2.0-3
 cpp-12==12.2.0-14+deb12u1
+cpp-12-arm-linux-gnueabihf==12.2.0-14cross1
+cpp-arm-linux-gnueabihf==4:12.2.0-3
 cppcheck==2.10-2
 cppzmq-dev==4.9.0-1
 cron==3.0pl1-162
@@ -72,7 +76,7 @@ dbus-system-bus-common==1.14.10-1~deb12u1
 dbus-user-session==1.14.10-1~deb12u1
 dconf-gsettings-backend==0.40.0-4
 dconf-service==0.40.0-4
-dctrl-tools==2.24-3+b1
+dctrl-tools==2.24-3
 debhelper==13.11.4
 debian-keyring==2022.12.24
 debootstrap==1.0.128+nmu2+deb12u2
@@ -106,14 +110,14 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.1.2-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.1.3-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
 doxygen==1.9.4-4
 dpkg-dev==1.21.22
 dput==1.1.3
-dvipng==1.15-1.1+b1
+dvipng==1.15-1.1
 dvisvgm==3.0.3-1
 dwz==0.15-1
 eatmydata==130-2
@@ -149,7 +153,11 @@ g++-12==12.2.0-14+deb12u1
 gawk==1:5.2.1-2
 gcc==4:12.2.0-3
 gcc-12==12.2.0-14+deb12u1
+gcc-12-arm-linux-gnueabihf==12.2.0-14cross1
+gcc-12-arm-linux-gnueabihf-base==12.2.0-14cross1
+gcc-12-cross-base==12.2.0-14cross1
 gcc-12-multilib==12.2.0-14+deb12u1
+gcc-arm-linux-gnueabihf==4:12.2.0-3
 gcc-multilib==4:12.2.0-3
 gcovr==5.2-1
 gdb==13.1-3
@@ -198,6 +206,10 @@ gpgsm==2.2.40-1.1+deb12u1
 graphviz==2.42.2-7+deb12u1
 groff==1.22.4-10
 groff-base==1.22.4-10
+grub-common==2.06-13+deb12u1
+grub-efi-arm64-bin==2.06-13+deb12u1
+grub-efi-arm64-signed==1+2.06+13+deb12u1
+grub2-common==2.06-13+deb12u1
 gsettings-desktop-schemas==43.0-1
 gsfonts==2:20200910-7
 gstreamer1.0-libav==1.22.0-2
@@ -278,6 +290,7 @@ libarchive13==3.6.2-1+deb12u3
 libargon2-1==0~20171227-0.3+deb12u1
 libarray-intspan-perl==2.004-2
 libasan8==12.2.0-14+deb12u1
+libasan8-armhf-cross==12.2.0-14cross1
 libasm-java==9.4-1
 libasound2==1.2.8-1+b1
 libasound2-data==1.2.8-1
@@ -296,6 +309,7 @@ libatkmm-1.6-1v5==2.28.3-1
 libatm1==1:2.5.1-4+b2
 libatm1-dev==1:2.5.1-4+b2
 libatomic1==12.2.0-14+deb12u1
+libatomic1-armhf-cross==12.2.0-14cross1
 libatspi2.0-0==2.46.0-5
 libatspi2.0-dev==2.46.0-5
 libattr1-dev==1:2.5.1-4
@@ -414,6 +428,7 @@ libc-ares2==1.18.1-3
 libc-dev-bin==2.36-9+deb12u13
 libc-devtools==2.36-9+deb12u13
 libc-l10n==2.36-9+deb12u13
+libc6-armhf-cross==2.36-8cross1
 libc6-dbg==2.36-9+deb12u13
 libc6-dev==2.36-9+deb12u13
 libc6-dev-i386==2.36-9+deb12u13
@@ -660,6 +675,8 @@ libgbm1==22.3.6-1+deb12u1
 libgc-dev==1:8.2.2-3
 libgc1==1:8.2.2-3
 libgcc-12-dev==12.2.0-14+deb12u1
+libgcc-12-dev-armhf-cross==12.2.0-14cross1
+libgcc-s1-armhf-cross==12.2.0-14cross1
 libgd-perl==2.76-4+b1
 libgd3==2.3.3-9
 libgdbm-compat4==1.23-3
@@ -711,6 +728,7 @@ libgmp-dev==2:6.2.1+dfsg1-1.1
 libgmpxx4ldbl==2:6.2.1+dfsg1-1.1
 libgnutls-dane0==3.7.9-2+deb12u5
 libgomp1==12.2.0-14+deb12u1
+libgomp1-armhf-cross==12.2.0-14cross1
 libgoogle-perftools4==2.10-1
 libgpgme11==1.18.0-3+b1
 libgpm2==1.20.7-10+b1
@@ -775,6 +793,7 @@ libhttp-tiny-multipart-perl==0.08-2
 libhttpclient-java==4.5.14-1
 libhttpcore-java==4.4.16-1
 libhunspell-1.7-0==1.7.1-1
+libhwasan0==12.2.0-14+deb12u1
 libhwloc-dev==2.9.0-1
 libhwloc-plugins==2.9.0-1
 libhwloc15==2.9.0-1
@@ -975,8 +994,8 @@ libmunge2==0.5.15-2
 libmysofa1==1.3.1~dfsg0-1
 libnamespace-autoclean-perl==0.29-2
 libnamespace-clean-perl==0.27-2
-libnanomsg-dev==1.1.5+dfsg-1.1+b1
-libnanomsg5==1.1.5+dfsg-1.1+b1
+libnanomsg-dev==1.1.5+dfsg-1.1
+libnanomsg5==1.1.5+dfsg-1.1
 libncurses-dev==6.4-4
 libncurses5-dev==6.4-4
 libncurses6==6.4-4
@@ -1007,6 +1026,7 @@ libnl-3-200==3.7.0-0.2+b1
 libnl-3-dev==3.7.0-0.2+b1
 libnl-route-3-200==3.7.0-0.2+b1
 libnl-route-3-dev==3.7.0-0.2+b1
+libnode108==18.20.4+dfsg-1~deb12u1
 libnorm-dev==1.5.9+dfsg-2
 libnorm1==1.5.9+dfsg-2
 libnpth0==1.6-3
@@ -1284,6 +1304,7 @@ libssh2-1==1.10.0-3+b1
 libssl-dev==3.0.17-1~deb12u3
 libssl3==3.0.17-1~deb12u3
 libstdc++-12-dev==12.2.0-14+deb12u1
+libstdc++6-armhf-cross==12.2.0-14cross1
 libstemmer0d==2.2.0-2
 libstrictures-perl==2.000006-1
 libstring-copyright-perl==0.003014-1
@@ -1362,6 +1383,7 @@ libtype-tiny-perl==2.002001-1
 libtype-tiny-xs-perl==0.025-1
 libtypes-serialiser-perl==1.01-1
 libubsan1==12.2.0-14+deb12u1
+libubsan1-armhf-cross==12.2.0-14cross1
 libuchardet0==0.0.7-1
 libucx0==1.13.1-1
 libudev-dev==252.39-1~deb12u1
@@ -1531,6 +1553,7 @@ libxrender1==1:0.9.10-1.1
 libxs-parse-keyword-perl==0.33-1
 libxs-parse-sublike-perl==0.16-1+b2
 libxshmfence1==1.3-1
+libxslt1-dev==1.1.35-1+deb12u3
 libxslt1.1==1.1.35-1+deb12u3
 libxss1==1:1.2.3-1
 libxstring-perl==0.005-2+b1
@@ -1568,8 +1591,10 @@ licensecheck==3.3.5-1
 lintian==2.116.3+deb12u1
 linux-compiler-gcc-12-x86==6.1.158-1
 linux-headers-6.1.0-41-amd64==6.1.158-1
+linux-headers-6.1.0-41-arm64==6.1.158-1
 linux-headers-6.1.0-41-common==6.1.158-1
 linux-headers-amd64==6.1.158-1
+linux-headers-arm64==6.1.158-1
 linux-kbuild-6.1==6.1.158-1
 linux-libc-dev==6.1.158-1
 linuxdoc-tools==0.9.82-1
@@ -1611,6 +1636,7 @@ mesa-vulkan-drivers==22.3.6-1+deb12u1
 meson==1.0.1-5
 mime-support==3.66
 module-assistant==0.11.11
+mokutil==0.6.0-2
 mpi-default-bin==1.14
 mpi-default-dev==1.14
 mupdf-tools==1.21.1+ds2-1+b4
@@ -1622,7 +1648,14 @@ netpbm==2:11.01.00-2
 nftables==1.0.6-2+deb12u2
 ninja-build==1.11.1-2~deb12u1
 nlohmann-json3-dev==3.11.2-2
+node-acorn==8.8.1+ds+~cs25.17.7-2
+node-busboy==1.6.0+~cs2.6.0-2
+node-cjs-module-lexer==1.2.2+dfsg-5
 node-jquery==3.6.1+dfsg+~3.5.14-1
+node-undici==5.15.0+dfsg1+~cs20.10.9.3-1+deb12u4
+node-xtend==4.0.2-3
+nodejs==18.20.4+dfsg-1~deb12u1
+nodejs-doc==18.20.4+dfsg-1~deb12u1
 nss-plugin-pem==1.0.8+1-1
 ocl-icd-libopencl1==2.3.1-1
 openjade==1.4devel1-22
@@ -1637,6 +1670,7 @@ openssh-client==1:9.2p1-2+deb12u7
 openssh-server==1:9.2p1-2+deb12u7
 openssh-sftp-server==1:9.2p1-2+deb12u7
 openssl==3.0.17-1~deb12u3
+os-prober==1.81
 ovmf==2022.11-6+deb12u2
 packagekit==1.2.6-5
 packagekit-tools==1.2.6-5
@@ -1925,6 +1959,10 @@ sgmlspl==1.03ii-38
 shared-mime-info==2.2-1
 sharutils==1:4.15.2-9
 shellcheck==0.9.0-1
+shim-helpers-arm64-signed==1+15.8+1~deb12u1
+shim-signed==1.44~1+deb12u1+15.8-1~deb12u1
+shim-signed-common==1.44~1+deb12u1+15.8-1~deb12u1
+shim-unsigned==15.8-1~deb12u1
 slirp4netns==1.2.0-1
 software-properties-common==0.99.30-4.1~deb12u1
 sphinx-common==5.3.0-4
@@ -1980,7 +2018,7 @@ velocity==1.7-6
 vim==2:9.0.1378-2+deb12u2
 vim-common==2:9.0.1378-2+deb12u2
 vim-runtime==2:9.0.1378-2+deb12u2
-watchdog==5.16-1+b2
+watchdog==5.16-1+b1
 wayland-protocols==1.31-1
 wdiff==1.2.2-5
 wget==1.21.3-1+deb12u1
