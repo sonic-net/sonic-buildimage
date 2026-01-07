@@ -965,7 +965,7 @@ libnet-ssleay-perl==1.88-3+b1
 libnetfilter-conntrack-dev==1.0.8-3
 libnetfilter-conntrack3==1.0.8-3
 libnetpbm10==2:10.0-15.4
-libnetsnmptrapd40==5.9+dfsg-4+deb11u1
+libnetsnmptrapd40==5.9+dfsg-4+deb11u3
 libnewt-dev==0.52.21-4+b3
 libnewt0.52==0.52.21-4+b3
 libnfnetlink-dev==1.0.1-3+b1
@@ -1196,9 +1196,9 @@ libsnappy-java==1.1.8.3-1
 libsnappy-jni==1.1.8.3-1
 libsnappy1v5==1.1.8-1
 libsndfile1==1.0.31-2
-libsnmp-base==5.9+dfsg-4+deb11u1
-libsnmp-dev==5.9+dfsg-4+deb11u1
-libsnmp40==5.9+dfsg-4+deb11u1
+libsnmp-base==5.9+dfsg-4+deb11u3
+libsnmp-dev==5.9+dfsg-4+deb11u3
+libsnmp40==5.9+dfsg-4+deb11u3
 libsoap-lite-perl==1.27-1
 libsodium-dev==1.0.18-1
 libsodium23==1.0.18-1
