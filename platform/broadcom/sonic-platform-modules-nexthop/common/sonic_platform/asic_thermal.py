@@ -12,9 +12,10 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
     def __init__(
         self,
         index,
+        position_offset,
         pddf_data=None,
     ):
-        super().__init__(index, pddf_data)
+        super().__init__(index, position_offset, pddf_data)
         MinMaxTempMixin.__init__(self)
 
         # Get PID configuration from PDDF data
