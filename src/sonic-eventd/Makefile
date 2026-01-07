@@ -29,7 +29,9 @@ endif
 -include rsyslog_plugin/subdir.mk
 -include rsyslog_plugin_tests/subdir.mk
 
-all: sonic-eventd eventd-tests eventd-tool rsyslog-plugin rsyslog-plugin-tests
+all: sonic-eventd eventd-tool rsyslog-plugin
+
+test: eventd-tests rsyslog-plugin-tests
 
 sonic-eventd: $(OBJS)
 	@echo 'Building target: $@'
