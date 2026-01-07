@@ -6,3 +6,6 @@ nls_cp437
 nls_utf8
 nvme
 zstd
+nd_pmem
+dax_pmem_compat
+nd_e820
