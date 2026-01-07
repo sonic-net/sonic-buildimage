@@ -318,6 +318,11 @@ module sonic-bgp-global {
                     type uint16;
                     description "Hold time";
                 }
+
+                leaf route_map {
+                    type string;
+                    description "Route map to apply to BGP-learned routes in Zebra";
+                }
             }
         }
 
