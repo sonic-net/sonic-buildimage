@@ -792,7 +792,7 @@ static int __init cpld_init(void)
 	if ((ret = cdev_add(&cpld_dev_data->cdev, dev, 1)) < 0)
 		goto fail_cdev_add;
 
-	cpld_class = class_create(THIS_MODULE, "CPLD1");
+	cpld_class = class_create("CPLD1");
 	if (IS_ERR(cpld_class)) {
 		ret = PTR_ERR(cpld_class);
 		goto fail_class_create;
