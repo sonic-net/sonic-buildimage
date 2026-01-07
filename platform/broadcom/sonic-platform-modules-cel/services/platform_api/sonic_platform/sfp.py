@@ -21,7 +21,7 @@ try:
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_InterfaceId
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_Dom
     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
-    from common import Common
+    from sonic_platform.common import Common
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
