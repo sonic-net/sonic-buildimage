@@ -28,6 +28,7 @@ option provisioning-script-url code 239 = text;
 option dhcp6.user-class code 15 = text;
 option dhcp6.provisioning-script-url code 239 = text;
 option dhcp6.boot-file-url code 59 = text;
+option vendor-class code 60 = text;
 
 send host-name = gethostname();
 request subnet-mask, broadcast-address, time-offset, routers,
@@ -40,6 +41,8 @@ request subnet-mask, broadcast-address, time-offset, routers,
 {% if ZTP is defined and ZTP_DHCP_DISABLED is not defined %}
 send user-class "SONiC-ZTP";
 send dhcp6.user-class "SONiC-ZTP";
-send dhcp-client-identifier "SONiC##{{ ZTP['mode']['product-name'] }}##{{ ZTP['mode']['serial-no'] }}";
+send dhcp-client-identifier "\x00SONiC##{{ ZTP['mode']['product-name'] }}##{{ ZTP['mode']['serial-no'] }}";
 retry 60;
 {% endif %}
+
+send vendor-class "{{VENDOR_NAME}}:{{PRODUCT_NAME}}";
