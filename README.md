@@ -378,6 +378,13 @@ For example:
 * Use a pull request to do code review
 * Use issues to keep track of what is going on
 
+## Linters
+
+Some basic linters are performed via tox and pre-commit in the CI.
+The same tools can be used locally to clean up code before pushing it to the community.
+More details in the [tox and pre-commit guide](./tox_precommit.md)
+
+
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
 or contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
