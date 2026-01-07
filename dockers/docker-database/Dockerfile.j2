@@ -33,7 +33,8 @@ RUN apt-get clean -y                                  && \
              s/redis-server.sock/redis.sock/g;           \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
-             s/^databases [0-9]+$/databases 100/ \
+             s/^databases [0-9]+$/databases 100/; \
+             s/^lua-time-limit 5000$/lua-time-limit 30000/ \
             ' /etc/redis/redis.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
