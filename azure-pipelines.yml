@@ -45,6 +45,10 @@ parameters:
   type: boolean
   default: true
 
+- name: FROM_BUILDIMAGE
+  type: boolean
+  default: true
+
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
@@ -195,6 +199,7 @@ stages:
   # KVM based PR test jobs
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
+      FROM_BUILDIMAGE: ${{ parameters.FROM_BUILDIMAGE }}
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       GLOBAL_PARAMS:
         PTF_MODIFIED: $(PTF_MODIFIED)
