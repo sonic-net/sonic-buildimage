@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: sonic-change-agent
+  namespace: default
+  labels:
+    app: sonic-change-agent
+spec:
+  selector:
+    matchLabels:
+      app: sonic-change-agent
+  template:
+    metadata:
+      labels:
+        app: sonic-change-agent
+    spec:
+      serviceAccountName: sonic-change-agent
+      # Justification: Required to access SONiC Redis (localhost:6379) and gNOI server (localhost:8080)
+      hostNetwork: true # nosemgrep: yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod
+      # For minikube testing, allow scheduling on control-plane nodes
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: sonic-change-agent
+        image: sonic-change-agent:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DRY_RUN
+          value: "true"  # Set to "false" for production
+        args:
+        - --device-name=$(NODE_NAME)
+        - -v=2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65532
+          capabilities:
+            drop:
+            - ALL
