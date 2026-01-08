@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Shared utilities for SONiC sidecar containers (telemetry, acms, etc.)
+Shared utilities for SONiC sidecar containers (telemetry, restapi, etc.)
 that sync files to host and reconcile CONFIG_DB entries.
 """
 from __future__ import annotations
