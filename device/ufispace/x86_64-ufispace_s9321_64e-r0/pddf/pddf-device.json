@@ -23,6 +23,7 @@
             ]
         },
         "std_perm_kos": [
+            "x86-64-ufispace-s9321-64e-i2c-smbus",
             "i2c-i801"
         ],
         "std_kos": [
