@@ -5,7 +5,7 @@
 # 3. start/stop/restart are NON-BLOCKING
 # 4. Only target pods matching POD_SELECTOR (default: raw_container_name=<SERVICE_NAME>)
 #
-# Usage: SERVICE_NAME=acms k8s_pod_control.sh start
+# Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
 #        Or source this script after setting SERVICE_NAME
 
 set -euo pipefail
@@ -16,7 +16,7 @@ if [[ -n "${1:-}" ]] && [[ "${1}" != "start" ]] && [[ "${1}" != "stop" ]] && [[ 
   shift
 fi
 
-# SERVICE_NAME must be set by caller (e.g., "acms", "telemetry")
+# SERVICE_NAME must be set by caller (e.g., "telemetry", "telemetry")
 if [[ -z "${SERVICE_NAME:-}" ]]; then
   echo "ERROR: SERVICE_NAME must be provided as first argument or environment variable" >&2
   exit 1
@@ -31,7 +31,7 @@ BACKOFF_START=1
 BACKOFF_MAX=8
 
 # Label selector for pods; can be overridden via env
-# Example override: POD_SELECTOR="app=acms" acms.sh start
+# Example override: POD_SELECTOR="app=telemetry" telemetry.sh start
 POD_SELECTOR="${POD_SELECTOR:-raw_container_name=${SERVICE_NAME}}"
 
 NODE_NAME="$(hostname | tr '[:upper:]' '[:lower:]')"

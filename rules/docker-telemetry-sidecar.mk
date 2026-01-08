@@ -40,6 +40,6 @@ $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(K8S_POD_CONTROL)
 docker-telemetry-sidecar-ut: $(PYTHON_WHEELS_PATH)/sonic_py_common-1.0-py3-none-any.whl-install
 	@echo "Running unit tests for systemd_stub.py..."
 	@PYTHONPATH=dockers/docker-telemetry-sidecar \
-		python3 -m pytest -q dockers/docker-telemetry-sidecar/systemd_scripts/tests
+		python3 -m pytest -q dockers/docker-telemetry-sidecar/cli-plugin-tests
 
 target/docker-telemetry-sidecar.gz: docker-telemetry-sidecar-ut
