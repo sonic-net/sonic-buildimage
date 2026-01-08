@@ -129,7 +129,7 @@ module sonic-vnet {
                     mandatory true;
                 }
 
-                leaf-list mac_address {
+                leaf mac_address {
                     description "Inner dest macs in encapsulated packet";
                     type stypes:mac-address-list;
                 }
