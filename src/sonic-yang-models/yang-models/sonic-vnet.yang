@@ -127,15 +127,17 @@ module sonic-vnet {
                     description "Endpoint/nexthop tunnel IPs";
                     type inet:ipv4-address;
                     min-elements 1;
+                    ordered-by user;
                 }
 
                 leaf-list mac_address {
                     description "Inner dest macs in encapsulated packet";
                     type yang:mac-address;
+                    ordered-by user;
                 }
 
                 leaf vni {
-                    description "Comma-separated list of VNI values (1-16777215, duplicates allowed)";
+                    description "Valid and active vni values in encapsulated packet";
                     type string {
                         pattern '([1-9][0-9]*)(,([1-9][0-9]*))*' {
                             error-message "VNI must be comma-separated positive integers";
