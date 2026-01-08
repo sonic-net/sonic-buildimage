@@ -51,6 +51,15 @@ module sonic-types {
       }
     }
 
+    typedef ipv4-address-list {
+        type string {
+            pattern '([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
+                + '(,([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))*';
+        }
+        description
+            "Comma-separated IPv4 addresses";
+    }
+
     typedef admin_status {
         type enumeration {
             enum up;
@@ -268,6 +277,14 @@ module sonic-types {
         }
     }
 
+    typedef mac-address-list {
+        type string {
+            pattern "([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})(,([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}))*";
+        }
+        description
+            "Comma-separated MAC addresses";
+    }
+
     typedef hostname {
         type string {
             length 1..63;
@@ -280,6 +297,14 @@ module sonic-types {
         }
         description
             "VXLAN Network Identifier";
+    }
+
+    typedef vnid-list {
+        type string {
+            pattern "([1-9][0-9]{0,7})(,([1-9][0-9]{0,7}))*";
+        }
+        description
+            "Comma-separated VNIs";
     }
 
     typedef tc_type {

@@ -123,26 +123,20 @@ module sonic-vnet {
                     type stypes:sonic-ip4-prefix;
                 }
                 
-                leaf-list endpoint {
+                leaf endpoint {
                     description "Endpoint/nexthop tunnel IPs";
-                    type inet:ipv4-address;
-                    min-elements 1;
-                    ordered-by user;
+                    type stypes:ipv4-address-list;
+                    mandatory true;
                 }
 
                 leaf-list mac_address {
                     description "Inner dest macs in encapsulated packet";
-                    type yang:mac-address;
-                    ordered-by user;
+                    type stypes:mac-address-list;
                 }
 
                 leaf vni {
                     description "Valid and active vni values in encapsulated packet";
-                    type string {
-                        pattern '([1-9][0-9]*)(,([1-9][0-9]*))*' {
-                            error-message "VNI must be comma-separated positive integers";
-                        }
-                    }
+                    type stypes:vnid-list;
                 }
 
                 leaf consistent_hashing_buckets {

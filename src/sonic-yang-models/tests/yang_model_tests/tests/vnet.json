@@ -53,8 +53,8 @@
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_VNI": {
-        "desc": "VNET route tunnel configuration with invalid VXLAN ID (exceeding max value of 16777215) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "Range"
+        "desc": "VNET route tunnel configuration with invalid VXLAN ID in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
