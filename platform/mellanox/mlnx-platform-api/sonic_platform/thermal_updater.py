@@ -22,6 +22,7 @@ from sonic_py_common import logger
 
 import sys
 import time
+import glob
 import os
 
 sys.path.append('/run/hw-management/bin')
@@ -52,13 +53,26 @@ ERROR_READ_THERMAL_DATA = 254000
 TC_CONFIG_FILE = '/run/hw-management/config/tc_config.json'
 logger = logger.Logger('thermal-updater')
 
+# Register a clean-up routine that will run when the process exits
+def clean_thermal_data(sfp_list):
+    hw_management_independent_mode_update.thermal_data_clean_asic(0)
+    if not sfp_list:
+        return
+    hw_management_independent_mode_update.module_data_set_module_counter(len(sfp_list))
+    for sfp in sfp_list:
+        try:
+            hw_management_independent_mode_update.thermal_data_clean_module(
+                0,
+                sfp.sdk_index + 1
+            )
+        except Exception as e:
+            logger.log_warning(f'Cleanup skipped for module {sfp.sdk_index + 1}: {e}')
 
 class ThermalUpdater:
-    def __init__(self, sfp_list, update_asic=True):
+    def __init__(self, sfp_list):
         self._sfp_list = sfp_list
         self._sfp_status = {}
         self._timer = utils.Timer()
-        self._update_asic = update_asic
 
     def wait_for_sysfs_nodes(self):
         """
@@ -109,9 +123,8 @@ class ThermalUpdater:
                     if sfp_poll_interval_config:
                         sfp_poll_interval = int(sfp_poll_interval_config) / 2
 
-        if self._update_asic:
-            logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
-            self._timer.schedule(asic_poll_interval, self.update_asic)
+        logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
+        self._timer.schedule(asic_poll_interval, self.update_asic)
         logger.log_notice(f'Module polling interval: {sfp_poll_interval}')
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
@@ -119,13 +132,7 @@ class ThermalUpdater:
         self.clean_thermal_data()
         self.control_tc(False)
         self.load_tc_config()
-
-        # Wait for temperature sysfs nodes to be ready before starting the timer
-        if not self.wait_for_sysfs_nodes():
-            logger.log_error('Failed to start thermal updater: temperature sysfs nodes not available')
-            self.control_tc(True)  # Suspend TC to protect the system
-            return False
-
+        self.unlink_hw_mgmt_thermal_files()
         self._timer.start()
 
     def stop(self):
@@ -162,33 +169,56 @@ class ThermalUpdater:
             presence = sfp.get_presence()
             pre_presence = self._sfp_status.get(sfp.sdk_index)
             if presence:
-                sw_control, temperature, warning_thresh, critical_thresh = sfp.get_temperature_info()
-                if not sw_control:
-                    return
-                fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
-                temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
-                warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
-                critical_thresh = 0 if critical_thresh is None else critical_thresh * SFP_TEMPERATURE_SCALE
+                fault = 0
+                temperature = sfp.get_temperature_from_db()
+                if temperature > 0:
+                    warning_thresh = sfp.get_warning_threshold_from_db()
+                    critical_thresh = sfp.get_critical_threshold_from_db()
+                    if warning_thresh > critical_thresh:
+                        fault = ERROR_READ_THERMAL_DATA
+                else:
+                    if temperature == -1: # read failed
+                        fault = ERROR_READ_THERMAL_DATA
+                    temperature = 0
+                    warning_thresh = 0
+                    critical_thresh = 0
 
+                vendor_name = sfp.get_vendor_name_from_db()
+                part_number = sfp.get_part_number_from_db()
+
+                vendor_info = {
+                    'manufacturer': vendor_name,
+                    'part_number': part_number
+                }
                 hw_management_independent_mode_update.thermal_data_set_module(
-                    0, # ASIC index always 0 for now
+                    sfp.get_asic_index(),
                     sfp.sdk_index + 1,
-                    int(temperature),
-                    int(critical_thresh),
-                    int(warning_thresh),
+                    int(temperature * SFP_TEMPERATURE_SCALE),
+                    int(critical_thresh * SFP_TEMPERATURE_SCALE),
+                    int(warning_thresh * SFP_TEMPERATURE_SCALE),
                     fault
+                )
+                hw_management_independent_mode_update.vendor_data_set_module(
+                    sfp.get_asic_index(),
+                    sfp.sdk_index + 1,
+                    vendor_info
                 )
             else:
                 if pre_presence != presence:
                     # thermal control service requires to
                     # set value 0 to all temperature files when module is not present
                     hw_management_independent_mode_update.thermal_data_set_module(
-                        0,  # ASIC index always 0 for now
+                        sfp.get_asic_index(),
                         sfp.sdk_index + 1,
                         0,
                         0,
                         0,
                         0
+                    )
+                    hw_management_independent_mode_update.vendor_data_set_module(
+                        sfp.get_asic_index(),
+                        sfp.sdk_index + 1,
+                        {'manufacturer': '', 'part_number': ''}
                     )
 
             if pre_presence != presence:
@@ -196,7 +226,7 @@ class ThermalUpdater:
         except Exception as e:
             logger.log_error(f'Failed to update module {sfp.sdk_index} thermal data - {e}')
             hw_management_independent_mode_update.thermal_data_set_module(
-                0, # ASIC index always 0 for now
+                sfp.get_asic_index(),
                 sfp.sdk_index + 1,
                 0,
                 0,
@@ -236,3 +266,11 @@ class ThermalUpdater:
                 0,
                 ERROR_READ_THERMAL_DATA
             )
+
+    def unlink_hw_mgmt_thermal_files(self):
+        for f in glob.iglob('/run/hw-management/thermal/asic*'):
+            if os.path.islink(f):
+                os.unlink(f)
+        for f in glob.iglob('/run/hw-management/thermal/module*_temp_*'):
+            if os.path.islink(f):
+                os.unlink(f)
