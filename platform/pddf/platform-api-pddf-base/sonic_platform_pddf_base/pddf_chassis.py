@@ -108,8 +108,9 @@ class PddfChassis(ChassisBase):
 
         if asicthermal_present:
             # ASIC Thermal
+            position_offset = len(self._thermal_list)
             for i in range(self.platform_inventory.get('num_asic_temps', 0)):
-                asicthermal = AsicThermal(i, self.pddf_obj)
+                asicthermal = AsicThermal(i, position_offset, self.pddf_obj)
                 self._thermal_list.append(asicthermal)
 
         if component_present:
@@ -117,7 +118,6 @@ class PddfChassis(ChassisBase):
             for i in range(self.platform_inventory.get('num_components', 0)):
                 component = Component(i, self.pddf_obj, self.plugin_data)
                 self._component_list.append(component)
-
 
     def get_name(self):
         """
