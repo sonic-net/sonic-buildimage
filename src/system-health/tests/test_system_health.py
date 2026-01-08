@@ -591,6 +591,7 @@ def test_config():
     assert config.config_file_exists()
     config.load_config()
     assert config.interval == 60
+    assert 'dummy_feature' in config.ignore_features
     assert 'dummy_service' in config.ignore_services
     assert 'psu.voltage' in config.ignore_devices
     assert len(config.user_defined_checkers) == 0
@@ -602,6 +603,7 @@ def test_config():
     assert config.get_bootup_timeout() == 300
 
     config._reset()
+    assert not config.ignore_features
     assert not config.ignore_services
     assert not config.ignore_devices
     assert not config.user_defined_checkers
