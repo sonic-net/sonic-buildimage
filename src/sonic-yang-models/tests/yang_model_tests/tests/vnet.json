@@ -105,7 +105,11 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_VNI": {
         "desc": "VNET route tunnel configuration with invalid VNI in comma-separated vni list.",
-        "eStrKey": "Range"
+        "eStrKey": "Pattern"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VNI": {
+        "desc": "VNET route tunnel configuration with duplicate VNI values in comma-separated vni string."
     },
 
     "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING": {

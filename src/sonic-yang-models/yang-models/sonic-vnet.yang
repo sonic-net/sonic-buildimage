@@ -134,9 +134,13 @@ module sonic-vnet {
                     type yang:mac-address;
                 }
 
-                leaf-list vni {
-                    description "Valid and active vni values in encapsulated packet";
-                    type stypes:vnid_type;
+                leaf vni {
+                    description "Comma-separated list of VNI values (1-16777215, duplicates allowed)";
+                    type string {
+                        pattern '([1-9][0-9]*)(,([1-9][0-9]*))*' {
+                            error-message "VNI must be comma-separated positive integers";
+                        }
+                    }
                 }
 
                 leaf consistent_hashing_buckets {

@@ -37,7 +37,6 @@ LEAF_LIST_WITH_STRING_VALUE_DICT = {
     ('PORT', 'adv_interface_types'): ',',
     ('VNET_ROUTE_TUNNEL', 'endpoint'): ',',
     ('VNET_ROUTE_TUNNEL', 'mac_address'): ',',
-    ('VNET_ROUTE_TUNNEL', 'vni'): ',',
 }
 
 """
