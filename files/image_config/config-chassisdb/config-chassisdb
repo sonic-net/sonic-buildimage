@@ -21,10 +21,13 @@ config_chassis_db() {
     fi
 
     # Read the various device attributes
-    read -r is_chassis is_supervisor is_smartswitch is_dpu is_disagg <<<"$(python3 -c 'from sonic_py_common.device_info import is_chassis, is_supervisor, is_smartswitch, is_dpu, is_disaggregated_chassis;print("{} {} {} {} {}".format((is_chassis()),(is_supervisor()),(is_smartswitch()),(is_dpu()),(is_disaggregated_chassis())))' 2>/dev/null)"
+    read -r is_chassis is_supervisor is_smartswitch is_dpu is_disagg <<<"$(python3 -c \
+	    'from sonic_py_common.device_info import is_chassis, is_supervisor, is_smartswitch, \
+	    is_dpu, is_disaggregated_chassis;print("{} {} {} {} {}".format((is_chassis()),\
+	    (is_supervisor()),(is_smartswitch()),(is_dpu()),(is_disaggregated_chassis())))' 2>/dev/null)"
 
     #Generate the chassisdb_address_file based on the flags
-    disagg_chassis=is_disagg j2 /usr/share/sonic/templates/chassisdb_address.j2 > "$chassisdb_address_file"
+    disagg_chassis="$is_disagg" j2 /usr/share/sonic/templates/chassisdb_address.j2 > "$chassisdb_address_file"
 
     start_chassis_db=0
     chassis_db_address=""
@@ -51,7 +54,10 @@ config_chassis_db() {
        if [[ "$is_chassis" == True ]]; then
            # In Linecard, add route to chassis_db subnet via supervisor midplane ip
            # Get the supervisor midplane ip address
-           supervisor_midplane_ip=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])' 2>/dev/null)
+           supervisor_midplane_ip=$(python3 -c 'import sonic_platform.platform; \
+		   platform_chassis = sonic_platform.platform.Platform().get_chassis(); \
+		   sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() \
+		   for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])' 2>/dev/null)
            # Add a route to the chassis db address with supervisor midplane ip as next hop
            if [[ -n "$supervisor_midplane_ip" ]]; then
                ip route add $chassis_db_subnet via $supervisor_midplane_ip
