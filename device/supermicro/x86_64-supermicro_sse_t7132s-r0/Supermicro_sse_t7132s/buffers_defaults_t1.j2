@@ -74,6 +74,8 @@
         {% if port not in mgmt_port_name %}
             {% set cable = cable_length(port) -%}
             "{{ port }}": "{{ cable }}"{%- if not loop.last -%},{% endif %}
+        {% else %}
+            "{{ port }}": "0m"{%- if not loop.last -%},{% endif %}
         {% endif %}
     {% endfor %}
     }
