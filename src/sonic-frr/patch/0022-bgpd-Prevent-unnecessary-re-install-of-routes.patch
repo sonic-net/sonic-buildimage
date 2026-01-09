@@ -1,7 +1,7 @@
-From b7bd0b097586fbd492b0dc61346b89efb1a7b420 Mon Sep 17 00:00:00 2001
-From: Donald Sharp <sharpd@nvidia.com>
-Date: Sat, 18 Oct 2025 10:22:56 -0400
-Subject: [PATCH] bgpd: Prevent unnecessary re-install of routes
+From b871ec9a6e3f802946234d5efc3f7f4d2ce8b38e Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 7 Jan 2026 12:04:38 -0800
+Subject: [PATCH] [bgpd]: Prevent unnecessary re-install of routes
 
 There is this sequence of events that is happening:
 
@@ -25,25 +25,26 @@ That change is going to come in a different set of commits because
 it's a bit larger of a problem and will need a bit more work.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
  bgpd/bgp_nht.c | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
-index 330af64379..b720e37bb4 100644
+index 573fd44333..4fa2636cc4 100644
 --- a/bgpd/bgp_nht.c
 +++ b/bgpd/bgp_nht.c
-@@ -1472,7 +1472,9 @@ void evaluate_paths(struct bgp_nexthop_cache *bnc)
- 		if (path_valid != bnc_is_valid_nexthop)
+@@ -1504,7 +1504,9 @@ void evaluate_paths(struct bgp_nexthop_cache *bnc)
+ 		if (old_path_valid != bnc_is_valid_nexthop)
  			hook_call(bgp_nht_path_update, bgp_path, path, bnc_is_valid_nexthop);
  
 -		bgp_process(bgp_path, dest, path, afi, safi);
 +		if (CHECK_FLAG(bnc->change_flags, BGP_NEXTHOP_METRIC_CHANGED) ||
-+		    CHECK_FLAG(bnc->change_flags, BGP_NEXTHOP_CHANGED))
++			CHECK_FLAG(bnc->change_flags, BGP_NEXTHOP_CHANGED))
 +			bgp_process(bgp_path, dest, path, afi, safi);
  	}
  
  	if (peer) {
 -- 
-2.48.1
+2.34.1
 

@@ -1,29 +1,28 @@
-[PATCH] From ece218405fe4c086017f2a4f2b2b4c86b9790db0 Mon Sep 17
-
-From: Saikrishna Arcot <sarcot@microsoft.com>
-Date: Wed, 6 Jul 2022 11:28:16 -0700
- 00:00:00 2001 Subject: [PATCH] Make changes to support crosscompilation in
- SONiC
+From 30d7be6ec5ab8384f00ef964010c8a2525862de3 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 7 Jan 2026 11:10:50 -0800
+Subject: [PATCH] [build] Make changes to support crosscompilation in SONiC
 
 Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
- debian/frr-doc.info |    1 -
- debian/frr.manpages |   16 ----------------
- debian/rules        |   17 ++++++++++++-----
+ debian/frr-doc.info |  1 -
+ debian/frr.manpages | 16 ----------------
+ debian/rules        | 17 ++++++++++++-----
  3 files changed, 12 insertions(+), 22 deletions(-)
  delete mode 100644 debian/frr-doc.info
  delete mode 100644 debian/frr.manpages
 
 diff --git a/debian/frr-doc.info b/debian/frr-doc.info
 deleted file mode 100644
-index 1976365e3..000000000
+index 1976365e36..0000000000
 --- a/debian/frr-doc.info
 +++ /dev/null
 @@ -1 +0,0 @@
 -build/doc/user/_build/texinfo/frr.info
 diff --git a/debian/frr.manpages b/debian/frr.manpages
 deleted file mode 100644
-index 5a1b74cfc..000000000
+index 5a1b74cfca..0000000000
 --- a/debian/frr.manpages
 +++ /dev/null
 @@ -1,16 +0,0 @@
@@ -44,11 +43,11 @@ index 5a1b74cfc..000000000
 -build/doc/manpages/_build/man/mtracebis.8
 -build/doc/manpages/_build/man/vtysh.1
 diff --git a/debian/rules b/debian/rules
-index 74573c9a0..e0b626fbf 100755
+index 1103266234..e778242331 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -39,10 +39,17 @@ else
-   CONF_GRPC=--enable-grpc
+@@ -45,10 +45,17 @@ else
+   CONF_ASAN=--enable-address-sanitizer
  endif
  
 +DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
@@ -66,7 +65,7 @@ index 74573c9a0..e0b626fbf 100755
  
  override_dh_auto_configure:
  	$(shell dpkg-buildflags --export=sh); \
-@@ -80,10 +87,10 @@ override_dh_auto_configure:
+@@ -87,10 +94,10 @@ override_dh_auto_configure:
  override_dh_auto_install:
  	dh_auto_install
  
@@ -81,3 +80,6 @@ index 74573c9a0..e0b626fbf 100755
  
  # let dh_systemd_* and dh_installinit do their thing automatically
  	cp build/tools/frr.service debian/frr.service
+-- 
+2.34.1
+
