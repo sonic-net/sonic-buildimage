@@ -171,10 +171,7 @@ submodule_prs () {
 
   #https://github.com/Azure/sonic-swss/pull/4015
   _submodule_add src/sonic-swss arlakshm https://github.com/arlakshm/sonic-swss.git 1a8607e^..7bf89c8
-  
-  # https://github.com/sonic-net/sonic-platform-common/pull/611
-  _submodule_add src/sonic-platform-common upstream https://github.com/sonic-net/sonic-platform-common  6ac56928
-  
+    
   # https://github.com/saksarav-nokia/saibcm-modules.git
   _submodule_add platform/broadcom/saibcm-modules-dnx saksarav-nokia https://github.com/saksarav-nokia/saibcm-modules.git c15e9731
   
