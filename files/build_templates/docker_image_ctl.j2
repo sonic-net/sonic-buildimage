@@ -226,13 +226,26 @@ function postStartAction()
 
            # Don't run for supervisor
            if [[ "${slot_id}" != "${supervisor_slot_id}" ]]; then
-                   midplane_ip=$slot_ip_address
+               midplane_ip=$slot_ip_address
+
+               chassis_db_address=""
+               chassis_db_subnet=""
+               chassisdb_address_file="/etc/sonic/chassisdb_address"
+               # source the chassisdb_address_file, if the file exists
+               [ -f $chassisdb_address_file ] && source $chassisdb_address_file
+
+               # Get the supervisor midplane ip address
+	       supervisor_midplane_ip=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])' 2>/dev/null)
+               # Add a route to the chassis db address with supervisor midplane ip as next hop
+	       if [[ -n "$supervisor_midplane_ip" ]]; then
+                   ip netns exec "$NET_NS" ip route add $chassis_db_subnet via $supervisor_midplane_ip
+	       fi
            fi
 
            # Allow localnet routing on the new interfaces if midplane is using a
            # subnet in the 127/8 range.
            if [[ "${midplane_subnet#127}" != "$midplane_subnet" ]]; then
-              ip netns exec "$NET_NS" bash -c "echo 1 > /proc/sys/net/ipv4/conf/eth1/route_localnet"
+               ip netns exec "$NET_NS" bash -c "echo 1 > /proc/sys/net/ipv4/conf/eth1/route_localnet"
            fi
        fi
     fi
@@ -576,8 +589,11 @@ start() {
     {%- if docker_container_name == "database" %}
     start_chassis_db=0
     chassis_db_address=""
+    chassis_db_subnet=""
     chassisdb_config="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $chassisdb_config ] && source $chassisdb_config
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     DB_OPT=" -v /var/run/redis-chassis:/var/run/redis-chassis:ro "
     if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
         DB_OPT=""

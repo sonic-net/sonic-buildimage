@@ -71,6 +71,9 @@ chassis_db_address=""
 chassis_db_port=""
 chassisdb_config="/usr/share/sonic/platform/chassisdb.conf"
 [ -f $chassisdb_config ] && source $chassisdb_config
+chassisdb_address_file="/etc/sonic/chassisdb_address"
+# source the chassisdb_address_file, if the file exists
+[ -f $chassisdb_address_file ] && source $chassisdb_address_file
 
 db_cfg_file="/var/run/redis/sonic-db/database_config.json"
 db_cfg_file_tmp="/var/run/redis/sonic-db/database_config.json.tmp"

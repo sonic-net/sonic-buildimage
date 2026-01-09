@@ -676,6 +676,7 @@ echo "tacacs-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 # Copy config-chassisdb script and service file
 j2 files/build_templates/config-chassisdb.service.j2 | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/config-chassisdb.service
 sudo cp $IMAGE_CONFIGS/config-chassisdb/config-chassisdb $FILESYSTEM_ROOT/usr/bin/config-chassisdb
+sudo cp $IMAGE_CONFIGS/config-chassisdb/chassisdb_address.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 echo "config-chassisdb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable config-chassisdb.service
 
