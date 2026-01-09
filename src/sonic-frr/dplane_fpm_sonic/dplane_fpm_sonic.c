@@ -1196,7 +1196,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWSRV6LOCALSID) &&
-		(zrouter.v6_rr_semantics))
+		(zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	req->n.nlmsg_type = cmd;
@@ -1455,7 +1455,7 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWROUTE) &&
-	    ((p->family == AF_INET) || zrouter.v6_rr_semantics))
+	    ((p->family == AF_INET) || zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	if(cmd == RTM_NEWROUTE)
@@ -1629,7 +1629,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWROUTE) &&
-		((p->family == AF_INET) || zrouter.v6_rr_semantics))
+		((p->family == AF_INET) || zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	req->n.nlmsg_type = cmd;
@@ -1983,9 +1983,10 @@ static ssize_t fill_seg6ipt_encap_private(char *buffer, size_t buflen,
 
 	srhlen = SRH_BASE_HEADER_LENGTH + SRH_SEGMENT_LENGTH * segs->num_segs;
 
-	if (buflen < (sizeof(struct seg6_iptunnel_encap_pri) + srhlen))
+	if (buflen < (sizeof(struct seg6_iptunnel_encap_pri) + srhlen)) {
 		zlog_err("%s: Buffer too small", __func__);
 		return -1;
+	}
 
 	memset(buffer, 0, buflen);
 

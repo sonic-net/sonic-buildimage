@@ -1,0 +1,26 @@
+From bc8926c88eeadf1f919f435ed3017a6296d8ba8b Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 7 Jan 2026 11:38:39 -0800
+Subject: [PATCH] [zebra] Dont skip kernel routes uninstall
+
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/zebra_rib.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index a1ab69dce0..35a125b1fd 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -1510,7 +1510,7 @@ static void rib_process(struct route_node *rn)
+ 		rib_process_update_fib(zvrf, rn, old_fib, new_fib);
+ 	else if (new_fib)
+ 		rib_process_add_fib(zvrf, rn, new_fib);
+-	else if (old_fib && !RIB_KERNEL_ROUTE(old_fib))
++	else if (old_fib)
+ 		rib_process_del_fib(zvrf, rn, old_fib);
+ 
+ 	/* Remove all RE entries queued for removal */
+-- 
+2.34.1
+

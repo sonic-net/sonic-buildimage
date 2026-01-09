@@ -14,8 +14,8 @@ export DEBEMAIL := sonicproject@googlegroups.com
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Build the package
 	pushd ./frr
-	git fetch origin $(FRR_BRANCH)
-	git checkout -b $(FRR_BRANCH) origin/$(FRR_BRANCH) || git checkout $(FRR_BRANCH)
+	git fetch origin $(FRR_TAG)
+	git checkout -b $(FRR_BRANCH) $(FRR_TAG) || git checkout $(FRR_BRANCH)
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	git reset --hard
 endif
@@ -31,15 +31,13 @@ else
 endif
 	stg undo || true
 	git clean -xfdf
-	git checkout $(FRR_BRANCH)
+	git checkout $(FRR_TAG)
 	stg branch --delete --force $(STG_BRANCH)
 	git rev-parse --short HEAD | xargs git checkout
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	git reset --hard
 endif
-	git branch -f master origin/$(FRR_BRANCH)
-	git checkout master
-	git branch -D $(FRR_BRANCH)
+	git checkout $(FRR_TAG)
 	popd
 	mv $(DERIVED_TARGET) $* $(DEST)/
 
