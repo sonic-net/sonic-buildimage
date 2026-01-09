@@ -7,12 +7,11 @@ import os
 from unittest.mock import Mock, patch, mock_open
 
 # Import test fixtures
-sys.path.insert(0, '../../fixtures')
-from fixtures_unit_test import Adm1266Mock
+from fixtures.fixtures_unit_test import Adm1266Mock
 
 @pytest.fixture(scope="module")
 def decode_power_fault_cause():
-    from fixtures_unit_test import Adm1266Mock
+    from fixtures.fixtures_unit_test import Adm1266Mock
     adm = Adm1266Mock()
     _decode_power_fault_cause = adm.adm_get_reboot_cause.__globals__['decode_power_fault_cause']
     return _decode_power_fault_cause
