@@ -1,0 +1,134 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node name="/org/SONiC/HostAccountManagement">
+  <interface name="org.freedesktop.DBus.Introspectable">
+    <method name="Introspect">
+      <arg direction="out" type="s" />
+    </method>
+  </interface>
+
+  <!--
+      _                             _
+     / \   ___ ___ ___  _   _ _ __ | |_ ___
+    / _ \ / __/ __/ _ \| | | | '_ \| __/ __|
+   / ___ \ (_| (_| (_) | |_| | | | | |_\__ \
+  /_/   \_\___\___\___/ \__,_|_| |_|\__|___/
+
+  Invoked from container by translib
+  -->
+  <interface name="ham.accounts">
+      <method name="useradd">                                               <!-- See http://man7.org/linux/man-pages/man8/useradd.8.html -->
+          <arg direction="in"  type="s"  name="login"/>                     <!-- User's login Name -->
+          <arg direction="in"  type="as" name="roles"/>                     <!-- Must be a list of existing groups (/etc/group) otherwise the API will return an error -->
+          <arg direction="in"  type="s"  name="hashed_pw"/>                 <!-- This must follow the password syntax used for /etc/shadow -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+      <method name="userdel">                                               <!-- See http://man7.org/linux/man-pages/man8/userdel.8.html -->
+          <arg direction="in"  type="s"  name="login"/>                     <!-- User's login Name -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+      <method name="passwd">                                                <!-- See http://man7.org/linux/man-pages/man1/passwd.1.html -->
+          <arg direction="in"  type="s"  name="login"/>                     <!-- User's login Name -->
+          <arg direction="in"  type="s"  name="hashed_pw"/>                 <!-- This must follow the password syntax used for /etc/shadow -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+      <method name="set_roles">
+          <arg direction="in"  type="s"  name="login"/>                     <!-- User's login Name -->
+          <arg direction="in"  type="as" name="roles"/>                     <!-- Must be a list of existing groups (/etc/group) otherwise the API will return an error -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+
+      <method name="groupadd">                                              <!-- See http://man7.org/linux/man-pages/man8/groupadd.8.html -->
+          <arg direction="in"  type="s" name="group"/>                      <!-- Group Name -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+      <method name="groupdel">                                              <!-- See http://man7.org/linux/man-pages/man8/groupdel.8.html -->
+          <arg direction="in"  type="s" name="group"/>                      <!-- Group Name -->
+          <arg direction="out" type="(bs)" name="(success, errmsg)" />
+      </method>
+  </interface>
+
+
+  <!--
+   _   _                        ____                  _
+  | \ | | __ _ _ __ ___   ___  / ___|  ___ _ ____   _(_) ___ ___
+  |  \| |/ _` | '_ ` _ \ / _ \ \___ \ / _ \ '__\ \ / / |/ __/ _ \
+  | |\  | (_| | | | | | |  __/  ___) |  __/ |   \ V /| | (_|  __/
+  |_| \_|\__,_|_| |_| |_|\___| |____/ \___|_|    \_/ |_|\___\___|
+
+  Invoked from containers by libnss_ham module
+  -->
+  <interface name="ham.name_service">
+      <method name="getpwnam">
+          <arg direction="in"  type="s" name="name"/>
+          <arg direction="out" type="(bssuusss)" name="success,pw_name,pw_passwd,pw_uid,pw_gid,pw_gecos,pw_dir,pw_shell" />
+      </method>
+      <method name="getpwuid">
+          <arg direction="in"  type="u" name="uid"/>
+          <arg direction="out" type="(bssuusss)" name="success,pw_name,pw_passwd,pw_uid,pw_gid,pw_gecos,pw_dir,pw_shell" />
+      </method>
+      <method name="getpwcontents">                                         <!-- Get the whole /etc/passwd  -->
+          <arg direction="out" type="s" name="file_contents" />
+      </method>
+      <method name="getgrnam">
+          <arg direction="in"  type="s" name="name"/>
+          <arg direction="out" type="(bssuas)" name="success,gr_name,gr_passwd,gr_gid,gr_mem" />
+      </method>
+      <method name="getgrgid">
+          <arg direction="in"  type="u" name="gid"/>
+          <arg direction="out" type="(bssuas)" name="success,gr_name,gr_passwd,gr_gid,gr_mem" />
+      </method>
+      <method name="getgrcontents">                                         <!-- Get the whole /etc/group  -->
+          <arg direction="out" type="s" name="file_contents" />
+      </method>
+      <method name="getspnam">
+          <arg direction="in"  type="s" name="name"/>
+          <arg direction="out" type="(bssiiiiiiu)" name="success,sp_namp,sp_pwd,sp_lstchg,sp_min,sp_max,sp_warn,sp_inact,sp_expire,sp_flag" />
+      </method>
+  </interface>
+
+  <!--
+  ____    _    ____    __             _                                 _                      _                     _            _   _       _   __
+ / ___|  / \  / ___|  / /__ _   _ ___| |_ ___ _ __ ___     __ _ ___ ___(_) __ _ _ __   ___  __| |   ___ _ __ ___  __| | ___ _ __ | |_(_) __ _| |__\ \
+ \___ \ / _ \| |     | / __| | | / __| __/ _ \ '_ ` _ \   / _` / __/ __| |/ _` | '_ \ / _ \/ _` |  / __| '__/ _ \/ _` |/ _ \ '_ \| __| |/ _` | / __| |
+  ___) / ___ \ |___  | \__ \ |_| \__ \ ||  __/ | | | | | | (_| \__ \__ \ | (_| | | | |  __/ (_| | | (__| | |  __/ (_| |  __/ | | | |_| | (_| | \__ \ |
+ |____/_/   \_\____| | |___/\__, |___/\__\___|_| |_| |_|  \__,_|___/___/_|\__, |_| |_|\___|\__,_|  \___|_|  \___|\__,_|\___|_| |_|\__|_|\__,_|_|___/ |
+                      \_\   |___/                                         |___/                                                                   /_/
+  -->
+  <interface name="ham.sac">
+      <method name="add_unconfirmed_user">
+          <arg direction="in"  type="s" name="login"/>                  <!-- User's login Name -->
+          <arg direction="in"  type="u" name="pid"/>
+          <arg direction="out" type="s" name="errmsg" />                <!-- empty errmsg means success -->
+      </method>
+      <method name="user_confirm">
+          <arg direction="in"  type="s"  name="login"/>                 <!-- User's login Name -->
+          <arg direction="in"  type="as" name="roles"/>                 <!-- Must be a list of existing groups (/etc/group) otherwise the API will return an error -->
+          <arg direction="in"  type="s"  name="auth_method"/>           <!-- "tacacs+" or "radius" -->
+          <arg direction="out" type="s"  name="errmsg" />               <!-- empty errmsg means success -->
+      </method>
+  </interface>
+
+  <!--
+  ____       _
+ |  _ \  ___| |__  _   _  __ _
+ | | | |/ _ \ '_ \| | | |/ _` |
+ | |_| |  __/ |_) | |_| | (_| |
+ |____/ \___|_.__/ \__,_|\__, |
+                         |___/
+
+  Invoked from Host as a debugging aid (see hamctl shell program)
+  -->
+  <interface name="ham.debug">
+      <method name="troff">
+          <arg direction="out" type="s" />
+      </method>
+      <method name="tron">
+          <arg direction="out" type="s" />
+      </method>
+      <method name="show">
+          <arg direction="out" type="s" />
+      </method>
+  </interface>
+</node>
+
