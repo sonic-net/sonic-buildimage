@@ -161,6 +161,10 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
+ifeq ($(ENABLE_DOCKER_USER_PULL),)
+	override ENABLE_DOCKER_USER_PULL = n
+endif
+
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -452,6 +456,8 @@ DOCKER_USER_BUILD = docker build --no-cache \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
+DOCKER_USER_PULL = docker pull \
+			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG)
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -490,6 +496,17 @@ DOCKER_SLAVE_USER_INSPECT = \
 		echo Checking sonic-slave-user image: $(SLAVE_IMAGE):$(SLAVE_TAG); \
 		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
 	}
+
+DOCKER_SLAVE_USER_PULL_REGISTRY = \
+	[ $(ENABLE_DOCKER_USER_PULL) == y ] && \
+	{ \
+		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
+		$(DOCKER_USER_PULL); \
+	} && \
+	{ \
+		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG) $(SLAVE_IMAGE):$(SLAVE_TAG) && \
+		$(COLLECT_DOCKER); \
+	}\
 
 SONIC_SLAVE_USER_BUILD = \
 	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
