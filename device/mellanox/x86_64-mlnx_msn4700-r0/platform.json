@@ -145,27 +145,6 @@
             },
             {
                 "name": "CPU Pack Temp"
-            },
-            {
-                "name": "PMIC 1 Temp"
-            },
-            {
-                "name": "PMIC 2 Temp"
-            },
-            {
-                "name": "PMIC 3 Temp"
-            },
-            {
-                "name": "PMIC 4 Temp"
-            },
-            {
-                "name": "PMIC 5 Temp"
-            },
-            {
-                "name": "PMIC 6 Temp"
-            },
-            {
-                "name": "PMIC 7 Temp"
             }
         ],
         "sfps": [
