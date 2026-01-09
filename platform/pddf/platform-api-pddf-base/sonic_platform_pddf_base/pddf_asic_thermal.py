@@ -18,8 +18,9 @@ class PddfAsicThermal(ThermalBase):
     def get_thermal_obj_name(self):
         return "ASIC_TEMP{}".format(self.thermal_index)
 
-    def __init__(self, index, pddf_data=None):
+    def __init__(self, index, position_offset, pddf_data=None):
         self.thermal_index = index + 1
+        self.thermal_position_in_parent = index + position_offset + 1
         # The sensors are 0-indexed in the DB.
         self.sensor_db_index = index
         thermal_obj = pddf_data.data[self.get_thermal_obj_name()]
@@ -87,7 +88,7 @@ class PddfAsicThermal(ThermalBase):
             integer: The 1-based relative physical position in parent
             device or -1 if cannot determine the position
         """
-        return self.thermal_index
+        return self.thermal_position_in_parent
 
     def is_replaceable(self):
         """
