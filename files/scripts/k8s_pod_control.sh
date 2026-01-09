@@ -16,7 +16,7 @@ if [[ -n "${1:-}" ]] && [[ "${1}" != "start" ]] && [[ "${1}" != "stop" ]] && [[ 
   shift
 fi
 
-# SERVICE_NAME must be set by caller (e.g., "telemetry", "telemetry")
+# SERVICE_NAME must be set by caller (e.g., "telemetry", "restapi")
 if [[ -z "${SERVICE_NAME:-}" ]]; then
   echo "ERROR: SERVICE_NAME must be provided as first argument or environment variable" >&2
   exit 1
