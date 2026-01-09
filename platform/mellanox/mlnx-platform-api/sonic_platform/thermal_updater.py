@@ -21,6 +21,7 @@ from sonic_py_common import logger
 
 import atexit
 import functools
+import re
 import sys
 import time
 
@@ -79,6 +80,16 @@ class ThermalUpdater:
 
         atexit.register(functools.partial(clean_thermal_data, self._sfp_list))
 
+    def _find_matching_key(self, dev_parameters, pattern):
+        """
+        Find the first key in dev_parameters that matches the given regex pattern.
+        Returns the matching key and its value, or (None, None) if no match found.
+        """
+        for key in dev_parameters.keys():
+            if re.match(pattern, key):
+                return key, dev_parameters[key]
+        return None, None
+
     def load_tc_config(self):
         asic_poll_interval = 1
         sfp_poll_interval = 10
@@ -89,16 +100,28 @@ class ThermalUpdater:
         if data:
             dev_parameters = data.get('dev_parameters')
             if dev_parameters is not None:
-                asic_parameter = dev_parameters.get('asic')
+                # Find ASIC parameter using regex pattern
+                asic_key, asic_parameter = self._find_matching_key(dev_parameters, r'asic\\d*')
                 if asic_parameter is not None:
                     asic_poll_interval_config = asic_parameter.get('poll_time')
                     if asic_poll_interval_config:
                         asic_poll_interval = int(asic_poll_interval_config) / 2
-                module_parameter = dev_parameters.get('module\\d+')
+                        logger.log_notice(f'ASIC parameter found with key "{asic_key}", poll_time: {asic_poll_interval_config}, interval: {asic_poll_interval}')
+                    else:
+                        logger.log_notice(f'ASIC poll_time not configured in "{asic_key}", using default interval: {asic_poll_interval}')
+                else:
+                    logger.log_notice(f'ASIC parameter not found (pattern: asic\\d*), using default interval: {asic_poll_interval}')
+                # Find Module parameter using regex pattern
+                module_key, module_parameter = self._find_matching_key(dev_parameters, r'module\\d+')
                 if module_parameter is not None:
                     sfp_poll_interval_config = module_parameter.get('poll_time')
                     if sfp_poll_interval_config:
                         sfp_poll_interval = int(sfp_poll_interval_config) / 2
+                        logger.log_notice(f'Module parameter found with key "{module_key}", poll_time: {sfp_poll_interval_config}, interval: {sfp_poll_interval}')
+                    else:
+                        logger.log_notice(f'Module poll_time not configured in "{module_key}", using default interval: {sfp_poll_interval}')
+                else:
+                    logger.log_notice(f'Module parameter not found (pattern: module\\d+), using default interval: {sfp_poll_interval}')
 
         if self._update_asic:
             logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
