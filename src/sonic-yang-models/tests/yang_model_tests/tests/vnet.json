@@ -69,7 +69,7 @@
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
         "desc": "VNET route tunnel configuration with missing mandatory attribute (endpoint) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "MinElements"
+        "eStrKey": "Mandatory"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_NONEXISTENT_VNET": {
