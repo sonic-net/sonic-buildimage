@@ -20,9 +20,10 @@ COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
 COPY ["files/telemetry.sh", "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"]
+COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
-RUN chmod +x /usr/bin/systemd_stub.py
+RUN chmod +x /usr/bin/systemd_stub.py /usr/share/sonic/scripts/k8s_pod_control.sh
 
 FROM $BASE
 
