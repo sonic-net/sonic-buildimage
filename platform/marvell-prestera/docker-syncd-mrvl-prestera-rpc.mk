@@ -23,6 +23,5 @@ $(DOCKER_SYNCD_MRVL_RPC)_MACHINE = marvell-prestera
 $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_MRVL_RPC)
