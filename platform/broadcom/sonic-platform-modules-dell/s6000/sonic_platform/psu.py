@@ -26,7 +26,7 @@ class Psu(PsuBase):
     """DellEMC Platform-specific PSU class"""
 
     CPLD_DIR = "/sys/devices/platform/dell-s6000-cpld.0/"
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
 
     def __init__(self, psu_index):
         PsuBase.__init__(self)

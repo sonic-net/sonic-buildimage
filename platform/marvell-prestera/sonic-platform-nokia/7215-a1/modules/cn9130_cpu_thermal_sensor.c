@@ -57,7 +57,8 @@ static long cn9130_thermal_read_reg_in_mcelcius(struct device *dev, struct cn913
 
     //Read thermal value
     status_regval = readl(temp_base+CN9130_TSEN_REG_STATUS_OFFSET);
-    dev_dbg(dev, "%s: cn9130_thermal_read_reg_in_mcelcius: addr: 0x%lx value:0x%x\n", dev_name(data->hwmon_dev), temp_base+CN9130_TSEN_REG_STATUS_OFFSET, status_regval);
+    dev_dbg(dev, "%s: cn9130_thermal_read_reg_in_mcelcius: addr: %p value:0x%x\n",
+	    dev_name(data->hwmon_dev), (void*)(temp_base+CN9130_TSEN_REG_STATUS_OFFSET), status_regval);
 
     //START MEASUREMENT
     regval = readl(temp_base+CN9130_TSEN_REG_CTRL_0_OFFSET);
@@ -224,7 +225,8 @@ static int __init cn9130_thermal_init_driver(void)
     regval |= 1 << 0; //TSEN_START
     writel(regval, thermal_data->temp_base+CN9130_TSEN_REG_CTRL_0_OFFSET);
 
-    dev_info(dev, "%s: initialized. base_addr: 0x%lx virt_addr:0x%lx\n", dev_name(thermal_data->hwmon_dev), thermal_base_addr, thermal_data->temp_base);
+    dev_info(dev, "%s: initialized. base_addr: 0x%lx virt_addr:%p\n",
+	     dev_name(thermal_data->hwmon_dev), thermal_base_addr, (void *)thermal_data->temp_base);
 
     return 0;
 }

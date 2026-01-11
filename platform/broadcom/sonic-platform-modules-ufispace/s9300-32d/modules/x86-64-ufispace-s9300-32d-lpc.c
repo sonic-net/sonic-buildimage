@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2017-2020 UfiSpace Technology Corporation.
  * Jason Tsai <jason.cy.tsai@ufispace.com>
+ * Leo Lin <leo.yt.lin@ufispace.com>
  *
  * Based on ad7414.c
  * Copyright 2006 Stefan Roese <sr at denx.de>, DENX Software Engineering
@@ -27,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/gpio.h>
+#include <linux/version.h>
 
 #define BSP_LOG_R(fmt, args...)                            \
     _bsp_log(LOG_READ, KERN_INFO "%s:%s[%d]: " fmt "\r\n", \
@@ -116,6 +118,7 @@ enum lpc_sysfs_attributes
     ATT_BSP_PR_ERR,
     ATT_BSP_REG,
     ATT_BSP_GPIO_MAX,
+    ATT_BSP_GPIO_BASE,
     ATT_MAX
 };
 
@@ -146,6 +149,9 @@ char bsp_reg[8] = "0x0";
 u8 enable_log_read = LOG_DISABLE;
 u8 enable_log_write = LOG_DISABLE;
 u8 enable_log_sys = LOG_ENABLE;
+
+int lpc_init(void);
+void lpc_exit(void);
 
 /* reg shift */
 static u8 _shift(u8 mask)
@@ -636,7 +642,28 @@ static ssize_t read_gpio_max(struct device *dev,
 
     if (attr->index == ATT_BSP_GPIO_MAX)
     {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
         return sprintf(buf, "%d\n", ARCH_NR_GPIOS - 1);
+#else
+        return sprintf(buf, "%d\n", -1);
+#endif
+    }
+    return -1;
+}
+
+/* get gpio base value */
+static ssize_t read_gpio_base(struct device *dev,
+                    struct device_attribute *da,
+                    char *buf)
+{
+    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+
+    if (attr->index == ATT_BSP_GPIO_BASE) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+        return sprintf(buf, "%d\n", -1);
+#else
+        return sprintf(buf, "%d\n", GPIO_DYNAMIC_BASE);
+#endif
     }
     return -1;
 }
@@ -672,6 +699,7 @@ static SENSOR_DEVICE_ATTR(bsp_pr_info, S_IWUSR, NULL, write_bsp_pr_callback, ATT
 static SENSOR_DEVICE_ATTR(bsp_pr_err, S_IWUSR, NULL, write_bsp_pr_callback, ATT_BSP_PR_ERR);
 static SENSOR_DEVICE_ATTR(bsp_reg, S_IRUGO | S_IWUSR, read_lpc_callback, write_bsp_callback, ATT_BSP_REG);
 static SENSOR_DEVICE_ATTR(bsp_gpio_max, S_IRUGO, read_gpio_max, NULL, ATT_BSP_GPIO_MAX);
+static SENSOR_DEVICE_ATTR(bsp_gpio_base, S_IRUGO, read_gpio_base, NULL, ATT_BSP_GPIO_BASE);
 
 static struct attribute *cpu_cpld_attrs[] = {
     &sensor_dev_attr_cpu_cpld_version.dev_attr.attr,
@@ -717,6 +745,7 @@ static struct attribute *bsp_attrs[] = {
     &sensor_dev_attr_bsp_pr_err.dev_attr.attr,
     &sensor_dev_attr_bsp_reg.dev_attr.attr,
     &sensor_dev_attr_bsp_gpio_max.dev_attr.attr,
+    &sensor_dev_attr_bsp_gpio_base.dev_attr.attr,
     NULL,
 };
 
@@ -846,7 +875,11 @@ exit:
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int lpc_drv_remove(struct platform_device *pdev)
+#else
+static void lpc_drv_remove(struct platform_device *pdev)
+#endif
 {
     sysfs_remove_group(&pdev->dev.kobj, &cpu_cpld_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &mb_cpld_attr_grp);
@@ -854,7 +887,9 @@ static int lpc_drv_remove(struct platform_device *pdev)
     sysfs_remove_group(&pdev->dev.kobj, &i2c_alert_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bsp_attr_grp);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver lpc_drv = {

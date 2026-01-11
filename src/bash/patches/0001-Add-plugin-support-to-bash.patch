@@ -1,45 +1,45 @@
-From c5687a2a9a9fd5ca4d5184002070b6961037395e Mon Sep 17 00:00:00 2001
-From: liuh-80 <58683130+liuh-80@users.noreply.github.com>
-Date: Fri, 8 Oct 2021 16:36:34 +0800
+From 2381135ba6f5164a38b9033cc5041db50d35d4d9 Mon Sep 17 00:00:00 2001
+From: liuh-80 <liuh@microsoft.com>
+Date: Mon, 22 Sep 2025 10:33:40 +0800
 Subject: [PATCH] Add plugin support to bash.
 
 ---
- bash-5.1/Makefile.in   |  14 +-
- bash-5.1/config.h.in   |   3 +
- bash-5.1/configure     |  18 +-
- bash-5.1/configure.ac  |  10 +
- bash-5.1/execute_cmd.c |  35 +++-
- bash-5.1/plugin.c      | 428 +++++++++++++++++++++++++++++++++++++++++
- bash-5.1/plugin.h      |  79 ++++++++
- bash-5.1/shell.c       |  12 ++
+ bash-5.2.37/Makefile.in   |  14 +-
+ bash-5.2.37/config.h.in   |   3 +
+ bash-5.2.37/configure     |  18 +-
+ bash-5.2.37/configure.ac  |  10 +
+ bash-5.2.37/execute_cmd.c |  35 +++-
+ bash-5.2.37/plugin.c      | 428 ++++++++++++++++++++++++++++++++++++++
+ bash-5.2.37/plugin.h      |  79 +++++++
+ bash-5.2.37/shell.c       |  12 ++
  8 files changed, 583 insertions(+), 16 deletions(-)
- create mode 100644 bash-5.1/plugin.c
- create mode 100644 bash-5.1/plugin.h
+ create mode 100644 bash-5.2.37/plugin.c
+ create mode 100644 bash-5.2.37/plugin.h
 
-diff --git a/bash-5.1/Makefile.in b/bash-5.1/Makefile.in
-index 3e3a5d4..16169cd 100644
---- a/bash-5.1/Makefile.in
-+++ b/bash-5.1/Makefile.in
-@@ -380,6 +380,9 @@ LTLIBINTL = @LTLIBINTL@
+diff --git a/bash-5.2.37/Makefile.in b/bash-5.2.37/Makefile.in
+index 0b4df73..32c0ba8 100644
+--- a/bash-5.2.37/Makefile.in
++++ b/bash-5.2.37/Makefile.in
+@@ -387,6 +387,9 @@ LIBINTL = @LIBINTL@
+ LTLIBINTL = @LTLIBINTL@
  INTLLIBS = @INTLLIBS@
  INTLOBJS = @INTLOBJS@
- 
++ 
 +# Dynamic load library.
 +DYNAMICLOAD_LIB = @DYNAMICLOAD_LIB@
-+
+ 
  # Our malloc.
  MALLOC_TARGET = @MALLOC_TARGET@
+@@ -430,7 +433,7 @@ BASHINCFILES =	 $(BASHINCDIR)/posixstat.h $(BASHINCDIR)/ansi_stdlib.h \
  
-@@ -421,7 +424,7 @@ BASHINCFILES =	 $(BASHINCDIR)/posixstat.h $(BASHINCDIR)/ansi_stdlib.h \
- 		 $(BASHINCDIR)/ocache.h
+ LIBRARIES = $(GLOB_LIB) $(SHLIB_LIB) $(READLINE_LIB) $(HISTORY_LIB) \
+ 	    $(TERMCAP_LIB) $(TILDE_LIB) $(MALLOC_LIB) $(INTL_LIB) $(LIBICONV) \
+-	    $(LOCAL_LIBS)
++	    $(LOCAL_LIBS) $(DYNAMICLOAD_LIB)
  
- LIBRARIES = $(GLOB_LIB) $(SHLIB_LIB) $(READLINE_LIB) $(HISTORY_LIB) $(TERMCAP_LIB) \
--	    $(TILDE_LIB) $(MALLOC_LIB) $(INTL_LIB) $(LIBICONV) $(LOCAL_LIBS)
-+	    $(TILDE_LIB) $(MALLOC_LIB) $(INTL_LIB) $(LIBICONV) $(LOCAL_LIBS) $(DYNAMICLOAD_LIB)
- 
- LIBDEP = $(GLOB_DEP) $(SHLIB_DEP) $(INTL_DEP) $(READLINE_DEP) $(HISTORY_DEP) $(TERMCAP_DEP) \
- 	 $(TILDE_DEP) $(MALLOC_DEP)
-@@ -441,7 +444,7 @@ CSOURCES = shell.c eval.c parse.y general.c make_cmd.c print_cmd.c y.tab.c \
+ LIBDEP = $(GLOB_DEP) $(SHLIB_DEP) $(INTL_DEP) $(READLINE_DEP) $(HISTORY_DEP) \
+ 	 $(TERMCAP_DEP) $(TILDE_DEP) $(MALLOC_DEP)
+@@ -450,7 +453,7 @@ CSOURCES = shell.c eval.c parse.y general.c make_cmd.c print_cmd.c y.tab.c \
  	   input.c bashhist.c array.c arrayfunc.c assoc.c sig.c pathexp.c \
  	   unwind_prot.c siglist.c bashline.c bracecomp.c error.c \
  	   list.c stringlib.c locale.c findcmd.c redir.c \
@@ -48,7 +48,7 @@ index 3e3a5d4..16169cd 100644
  
  HSOURCES = shell.h flags.h trap.h hashcmd.h hashlib.h jobs.h builtins.h \
  	   general.h variables.h config.h $(ALLOC_HEADERS) alias.h \
-@@ -449,7 +452,7 @@ HSOURCES = shell.h flags.h trap.h hashcmd.h hashlib.h jobs.h builtins.h \
+@@ -458,7 +461,7 @@ HSOURCES = shell.h flags.h trap.h hashcmd.h hashlib.h jobs.h builtins.h \
  	   command.h input.h error.h bashansi.h dispose_cmd.h make_cmd.h \
  	   subst.h externs.h siglist.h bashhist.h bashline.h bashtypes.h \
  	   array.h arrayfunc.h sig.h mailcheck.h bashintl.h bashjmp.h \
@@ -57,25 +57,25 @@ index 3e3a5d4..16169cd 100644
  	   $(BASHINCFILES)
  
  SOURCES	 = $(CSOURCES) $(HSOURCES) $(BUILTIN_DEFS)
-@@ -482,7 +485,7 @@ OBJECTS	 = shell.o eval.o y.tab.o general.o make_cmd.o print_cmd.o $(GLOBO) \
+@@ -494,7 +497,7 @@ OBJECTS	 = shell.o eval.o y.tab.o general.o make_cmd.o print_cmd.o $(GLOBO) \
  	   trap.o input.o unwind_prot.o pathexp.o sig.o test.o version.o \
- 	   alias.o array.o arrayfunc.o assoc.o braces.o bracecomp.o bashhist.o \
+ 	   alias.o $(ARRAY_O) arrayfunc.o assoc.o braces.o bracecomp.o bashhist.o \
  	   bashline.o $(SIGLIST_O) list.o stringlib.o locale.o findcmd.o redir.o \
 -	   pcomplete.o pcomplib.o syntax.o xmalloc.o $(SIGNAMES_O)
 +	   pcomplete.o pcomplib.o syntax.o xmalloc.o plugin.o $(SIGNAMES_O)
  
  # Where the source code of the shell builtins resides.
  BUILTIN_SRCDIR=$(srcdir)/builtins
-@@ -1039,7 +1042,7 @@ eval.o: make_cmd.h subst.h sig.h pathnames.h externs.h parser.h
- eval.o: input.h execute_cmd.h 
- eval.o: bashhist.h assoc.h ${BASHINCDIR}/ocache.h ${BASHINCDIR}/chartypes.h
- execute_cmd.o: config.h bashtypes.h ${BASHINCDIR}/filecntl.h ${BASHINCDIR}/posixstat.h bashansi.h ${BASHINCDIR}/ansi_stdlib.h
--execute_cmd.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h
-+execute_cmd.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h plugin.h
- execute_cmd.o: general.h xmalloc.h bashtypes.h variables.h arrayfunc.h conftypes.h array.h hashlib.h
- execute_cmd.o: quit.h ${BASHINCDIR}/maxpath.h unwind_prot.h dispose_cmd.h
- execute_cmd.o: make_cmd.h subst.h sig.h pathnames.h externs.h parser.h
-@@ -1050,6 +1053,7 @@ execute_cmd.o: ${BASHINCDIR}/posixtime.h ${BASHINCDIR}/chartypes.h
+@@ -1027,7 +1030,7 @@ builtins/shopt.o: $(srcdir)/config-top.h
+ ${SH_LIBDIR}/tmpfile.o: $(srcdir)/config-top.h
+ 
+ # shell basics
+-copy_cmd.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h
++copy_cmd.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h plugin.h
+ copy_cmd.o: general.h xmalloc.h bashtypes.h variables.h arrayfunc.h conftypes.h array.h hashlib.h
+ copy_cmd.o: quit.h ${BASHINCDIR}/maxpath.h unwind_prot.h dispose_cmd.h
+ copy_cmd.o: make_cmd.h subst.h sig.h pathnames.h externs.h
+@@ -1066,6 +1069,7 @@ execute_cmd.o: ${BASHINCDIR}/posixtime.h ${BASHINCDIR}/chartypes.h
  execute_cmd.o: $(DEFSRC)/getopt.h
  execute_cmd.o: bashhist.h input.h ${GRAM_H} assoc.h hashcmd.h alias.h
  execute_cmd.o: ${BASHINCDIR}/ocache.h ${BASHINCDIR}/posixwait.h
@@ -83,11 +83,11 @@ index 3e3a5d4..16169cd 100644
  expr.o: config.h bashansi.h ${BASHINCDIR}/ansi_stdlib.h 
  expr.o: shell.h syntax.h config.h bashjmp.h ${BASHINCDIR}/posixjmp.h command.h ${BASHINCDIR}/stdc.h error.h
  expr.o: general.h xmalloc.h bashtypes.h variables.h arrayfunc.h conftypes.h array.h hashlib.h
-diff --git a/bash-5.1/config.h.in b/bash-5.1/config.h.in
-index ab316d4..ab5634f 100644
---- a/bash-5.1/config.h.in
-+++ b/bash-5.1/config.h.in
-@@ -38,6 +38,9 @@
+diff --git a/bash-5.2.37/config.h.in b/bash-5.2.37/config.h.in
+index d6d5293..bbad399 100644
+--- a/bash-5.2.37/config.h.in
++++ b/bash-5.2.37/config.h.in
+@@ -29,6 +29,9 @@
     BSD-like job control. */
  #undef JOB_CONTROL
  
@@ -97,11 +97,11 @@ index ab316d4..ab5634f 100644
  /* Define ALIAS if you want the alias features. */
  #undef ALIAS
  
-diff --git a/bash-5.1/configure b/bash-5.1/configure
-index 0f1d3ed..c462d55 100644
---- a/bash-5.1/configure
-+++ b/bash-5.1/configure
-@@ -632,6 +632,7 @@ LOCAL_DEFS
+diff --git a/bash-5.2.37/configure b/bash-5.2.37/configure
+index 56e8e6f..5fae3ef 100644
+--- a/bash-5.2.37/configure
++++ b/bash-5.2.37/configure
+@@ -658,6 +658,7 @@ LOCAL_DEFS
  LOCAL_LDFLAGS
  LOCAL_CFLAGS
  LOCAL_LIBS
@@ -109,15 +109,15 @@ index 0f1d3ed..c462d55 100644
  MALLOC_DEBUG
  DEBUG
  RELSTATUS
-@@ -858,6 +859,7 @@ enable_single_help_strings
- enable_strict_posix_default
+@@ -890,6 +891,7 @@ enable_strict_posix_default
+ enable_translatable_strings
  enable_usg_echo_default
  enable_xpg_echo_default
 +enable_bash_shell_execve_plugin
  enable_mem_scramble
  enable_profiling
  enable_static_link
-@@ -1568,6 +1570,7 @@ Optional Features:
+@@ -1614,6 +1616,7 @@ Optional Features:
    --enable-xpg-echo-default
                            make the echo builtin expand escape sequences by
                            default
@@ -125,23 +125,23 @@ index 0f1d3ed..c462d55 100644
    --enable-mem-scramble   scramble memory on calls to malloc and free
    --enable-profiling      allow profiling with gprof
    --enable-static-link    link bash statically, for use as a root shell
-@@ -3027,6 +3030,7 @@ opt_dircomplete_expand_default=no
+@@ -3413,6 +3416,7 @@ opt_dircomplete_expand_default=no
  opt_globascii_default=yes
  opt_function_import=yes
  opt_dev_fd_stat_broken=no
 +opt_bash_shell_execve_plugin=yes
+ opt_alt_array_impl=no
+ opt_translatable_strings=yes
  
- opt_static_link=no
- opt_profiling=no
-@@ -3048,6 +3052,7 @@ if test $opt_minimal_config = yes; then
- 	opt_multibyte=yes opt_cond_regexp=no opt_coproc=no
+@@ -3440,6 +3444,7 @@ if test $opt_minimal_config = yes; then
  	opt_casemod_attrs=no opt_casemod_expansions=no opt_extglob_default=no
+ 	opt_translatable_strings=no
  	opt_globascii_default=yes
-+	opt_bash_shell_execve_plugin=no
++    opt_bash_shell_execve_plugin=no
  fi
  
  # Check whether --enable-alias was given.
-@@ -3235,6 +3240,10 @@ if test "${enable_xpg_echo_default+set}" = set; then :
+@@ -3676,6 +3681,10 @@ then :
    enableval=$enable_xpg_echo_default; opt_xpg_echo=$enableval
  fi
  
@@ -151,8 +151,8 @@ index 0f1d3ed..c462d55 100644
 +fi
  
  # Check whether --enable-mem-scramble was given.
- if test "${enable_mem_scramble+set}" = set; then :
-@@ -3254,10 +3263,11 @@ fi
+ if test ${enable_mem_scramble+y}
+@@ -3698,10 +3707,11 @@ fi
  
  
  
@@ -167,36 +167,36 @@ index 0f1d3ed..c462d55 100644
 +fi
  
  if test $opt_alias = yes; then
- $as_echo "#define ALIAS 1" >>confdefs.h
-diff --git a/bash-5.1/configure.ac b/bash-5.1/configure.ac
-index 2fe3e7d..0064683 100644
---- a/bash-5.1/configure.ac
-+++ b/bash-5.1/configure.ac
+ printf "%s\n" "#define ALIAS 1" >>confdefs.h
+diff --git a/bash-5.2.37/configure.ac b/bash-5.2.37/configure.ac
+index 52d4029..1792f61 100644
+--- a/bash-5.2.37/configure.ac
++++ b/bash-5.2.37/configure.ac
 @@ -182,6 +182,7 @@ opt_dircomplete_expand_default=no
  opt_globascii_default=yes
  opt_function_import=yes
  opt_dev_fd_stat_broken=no
 +opt_bash_shell_execve_plugin=yes
+ opt_alt_array_impl=no
+ opt_translatable_strings=yes
  
- dnl options that affect how bash is compiled and linked
- opt_static_link=no
-@@ -203,6 +204,7 @@ if test $opt_minimal_config = yes; then
- 	opt_multibyte=yes opt_cond_regexp=no opt_coproc=no
+@@ -209,6 +210,7 @@ if test $opt_minimal_config = yes; then
  	opt_casemod_attrs=no opt_casemod_expansions=no opt_extglob_default=no
+ 	opt_translatable_strings=no
  	opt_globascii_default=yes
-+	opt_bash_shell_execve_plugin=no
++    opt_bash_shell_execve_plugin=no
  fi
  
- AC_ARG_ENABLE(alias, AC_HELP_STRING([--enable-alias], [enable shell aliases]), opt_alias=$enableval)
-@@ -242,6 +244,7 @@ AC_ARG_ENABLE(single-help-strings, AC_HELP_STRING([--enable-single-help-strings]
- AC_ARG_ENABLE(strict-posix-default, AC_HELP_STRING([--enable-strict-posix-default], [configure bash to be posix-conformant by default]), opt_strict_posix=$enableval)
- AC_ARG_ENABLE(usg-echo-default, AC_HELP_STRING([--enable-usg-echo-default], [a synonym for --enable-xpg-echo-default]), opt_xpg_echo=$enableval)
- AC_ARG_ENABLE(xpg-echo-default, AC_HELP_STRING([--enable-xpg-echo-default], [make the echo builtin expand escape sequences by default]), opt_xpg_echo=$enableval)
+ AC_ARG_ENABLE(alias, AS_HELP_STRING([--enable-alias], [enable shell aliases]), opt_alias=$enableval)
+@@ -250,6 +252,7 @@ AC_ARG_ENABLE(strict-posix-default, AS_HELP_STRING([--enable-strict-posix-defaul
+ AC_ARG_ENABLE(translatable-strings, AS_HELP_STRING([--enable-translatable-strings], [include support for $"..." translatable strings]), opt_translatable_strings=$enableval)
+ AC_ARG_ENABLE(usg-echo-default, AS_HELP_STRING([--enable-usg-echo-default], [a synonym for --enable-xpg-echo-default]), opt_xpg_echo=$enableval)
+ AC_ARG_ENABLE(xpg-echo-default, AS_HELP_STRING([--enable-xpg-echo-default], [make the echo builtin expand escape sequences by default]), opt_xpg_echo=$enableval)
 +AC_ARG_ENABLE(bash-shell-execve-plugin, AC_HELP_STRING([--enable-bash-shell-execve-plugin], [enable bash shell execve plugin features]), opt_bash_shell_execve_plugin=$enableval)
  
  dnl options that alter how bash is compiled and linked
- AC_ARG_ENABLE(mem-scramble, AC_HELP_STRING([--enable-mem-scramble], [scramble memory on calls to malloc and free]), opt_memscramble=$enableval)
-@@ -260,6 +263,13 @@ dnl opt_readline and opt_history are handled later, because AC_PROG_CC needs
+ AC_ARG_ENABLE(mem-scramble, AS_HELP_STRING([--enable-mem-scramble], [scramble memory on calls to malloc and free]), opt_memscramble=$enableval)
+@@ -268,6 +271,13 @@ dnl opt_readline and opt_history are handled later, because AC_PROG_CC needs
  dnl to be run before we can check the version of an already-installed readline
  dnl library
  
@@ -210,22 +210,22 @@ index 2fe3e7d..0064683 100644
  if test $opt_alias = yes; then
  AC_DEFINE(ALIAS)
  fi
-diff --git a/bash-5.1/execute_cmd.c b/bash-5.1/execute_cmd.c
-index d2a0dd7..e74d0f3 100644
---- a/bash-5.1/execute_cmd.c
-+++ b/bash-5.1/execute_cmd.c
-@@ -82,6 +82,10 @@ extern int errno;
+diff --git a/bash-5.2.37/execute_cmd.c b/bash-5.2.37/execute_cmd.c
+index ed1063e..3307761 100644
+--- a/bash-5.2.37/execute_cmd.c
++++ b/bash-5.2.37/execute_cmd.c
+@@ -81,6 +81,10 @@ extern int errno;
+ #if defined (COND_COMMAND)
  #  include "test.h"
  #endif
- 
++ 
 +#if defined (BASH_SHELL_EXECVE_PLUGIN)
 +#include "plugin.h"
 +#endif /* BASH_SHELL_EXECVE_PLUGIN */
-+
+ 
  #include "builtins/common.h"
  #include "builtins/builtext.h"	/* list of builtins */
- 
-@@ -171,13 +175,13 @@ static int execute_function PARAMS((SHELL_VAR *, WORD_LIST *, int, struct fd_bit
+@@ -172,13 +176,13 @@ static int execute_function PARAMS((SHELL_VAR *, WORD_LIST *, int, struct fd_bit
  static int execute_builtin_or_function PARAMS((WORD_LIST *, sh_builtin_func_t *,
  					    SHELL_VAR *,
  					    REDIRECT *, struct fd_bitmap *, int));
@@ -241,7 +241,7 @@ index d2a0dd7..e74d0f3 100644
  				      int, int, int, struct fd_bitmap *, int));
  
  static char *getinterp PARAMS((char *, int, int *));
-@@ -4587,7 +4591,7 @@ run_builtin:
+@@ -4730,7 +4734,7 @@ run_builtin:
  	  if (async == 0)
  	    subshell_level++;
  	  execute_subshell_builtin_or_function
@@ -250,7 +250,7 @@ index d2a0dd7..e74d0f3 100644
  	     pipe_in, pipe_out, async, fds_to_close,
  	     cmdflags);
  	  subshell_level--;
-@@ -4665,7 +4669,7 @@ execute_from_filesystem:
+@@ -4811,7 +4815,7 @@ execute_from_filesystem:
    if (already_forked == 0 && (cmdflags & CMD_NO_FORK) && fifos_pending() > 0)
      cmdflags &= ~CMD_NO_FORK;
  #endif
@@ -259,7 +259,7 @@ index d2a0dd7..e74d0f3 100644
  			pipe_in, pipe_out, async, fds_to_close,
  			cmdflags);
  
-@@ -5169,10 +5173,11 @@ execute_shell_function (var, words)
+@@ -5316,10 +5320,11 @@ execute_shell_function (var, words)
     to the command, REDIRECTS specifies redirections to perform before the
     command is executed. */
  static void
@@ -272,7 +272,7 @@ index d2a0dd7..e74d0f3 100644
       REDIRECT *redirects;
       sh_builtin_func_t *builtin;
       SHELL_VAR *var;
-@@ -5258,7 +5263,7 @@ execute_subshell_builtin_or_function (words, redirects, builtin, var,
+@@ -5405,7 +5410,7 @@ execute_subshell_builtin_or_function (words, redirects, builtin, var,
  	      char *command_line;
  
  	      command_line = savestring (the_printed_command_except_trap ? the_printed_command_except_trap : "");
@@ -281,7 +281,7 @@ index d2a0dd7..e74d0f3 100644
  		  -1, -1, async, (struct fd_bitmap *)0, flags|CMD_NO_FORK);
  	    }
  	  subshell_exit (r);
-@@ -5439,9 +5444,10 @@ setup_async_signals ()
+@@ -5586,9 +5591,10 @@ setup_async_signals ()
  #endif
  
  static int
@@ -293,7 +293,7 @@ index d2a0dd7..e74d0f3 100644
       REDIRECT *redirects;
       char *command_line;
       int pipe_in, pipe_out, async;
-@@ -5588,10 +5594,25 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
+@@ -5745,10 +5751,25 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
  	  exit (execute_shell_function (hookf, wl));
  	}
  
@@ -319,11 +319,11 @@ index d2a0dd7..e74d0f3 100644
        exit (shell_execve (command, args, export_env));
      }
    else
-diff --git a/bash-5.1/plugin.c b/bash-5.1/plugin.c
+diff --git a/bash-5.2.37/plugin.c b/bash-5.2.37/plugin.c
 new file mode 100644
-index 0000000..df72830
+index 0000000..bbbd324
 --- /dev/null
-+++ b/bash-5.1/plugin.c
++++ b/bash-5.2.37/plugin.c
 @@ -0,0 +1,428 @@
 +/* plugin.c -- Bash plugin support. */
 +
@@ -753,11 +753,12 @@ index 0000000..df72830
 +        return invoke_loaded_plugins(user, shell_level, cmd, argv);
 +    }
 +}
-diff --git a/bash-5.1/plugin.h b/bash-5.1/plugin.h
+\ No newline at end of file
+diff --git a/bash-5.2.37/plugin.h b/bash-5.2.37/plugin.h
 new file mode 100644
-index 0000000..116b2c5
+index 0000000..0671fee
 --- /dev/null
-+++ b/bash-5.1/plugin.h
++++ b/bash-5.2.37/plugin.h
 @@ -0,0 +1,79 @@
 +/* plugin.h - functions from plugin.c. */
 +
@@ -838,10 +839,11 @@ index 0000000..116b2c5
 +extern int invoke_plugin_on_shell_execve __P((char *, char *, char **));
 +
 +#endif /* _PLUGIN_H_ */
-diff --git a/bash-5.1/shell.c b/bash-5.1/shell.c
-index ce8087f..6928208 100644
---- a/bash-5.1/shell.c
-+++ b/bash-5.1/shell.c
+\ No newline at end of file
+diff --git a/bash-5.2.37/shell.c b/bash-5.2.37/shell.c
+index ebd8965..5a7604a 100644
+--- a/bash-5.2.37/shell.c
++++ b/bash-5.2.37/shell.c
 @@ -46,6 +46,10 @@
  #  include <unistd.h>
  #endif
@@ -853,7 +855,7 @@ index ce8087f..6928208 100644
  #include "bashintl.h"
  
  #define NEED_SH_SETLINEBUF_DECL		/* used in externs.h */
-@@ -567,6 +571,10 @@ main (argc, argv, env)
+@@ -575,6 +579,10 @@ main (argc, argv, env)
    if (shopt_alist)
      run_shopt_alist ();
  
@@ -864,7 +866,7 @@ index ce8087f..6928208 100644
    /* From here on in, the shell must be a normal functioning shell.
       Variables from the environment are expected to be set, etc. */
    shell_initialize ();
-@@ -810,6 +818,10 @@ main (argc, argv, env)
+@@ -832,6 +840,10 @@ main (argc, argv, env)
    /* Read commands until exit condition. */
    reader_loop ();
    exit_shell (last_command_exit_value);
@@ -876,5 +878,5 @@ index ce8087f..6928208 100644
  
  static int
 -- 
-2.40.0.windows.1
+2.51.0.windows.1
 

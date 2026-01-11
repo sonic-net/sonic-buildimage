@@ -36,7 +36,7 @@
             "lm75",
             "gpio-pca953x",
             "ucd9000",
-            "eeprom"
+            "at24"
         ],
         "pddf_kos": [
             "pddf_client_module",
@@ -906,7 +906,7 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "i2cget -y -f 2 0x58 0x0 > /dev/null 2>&1; [ $? -ne 0 ] && echo '0' || echo '1'",
+                        "bmc_cmd": "[ -n \"$(cat /sys/bus/i2c/devices/2-0058/psu_mfr_id | tr -d '\n')\" ] && echo '1' || echo '0'",
                         "raw": "1",
                         "type": "raw"
                     }
@@ -1071,7 +1071,7 @@
             "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x50",
-                "dev_type":"eeprom"
+                "dev_type":"24c02"
             },
             "attr_list":
             [
@@ -1100,7 +1100,7 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "i2cget -y -f 2 0x59 0x0 > /dev/null 2>&1; [ $? -ne 0 ] && echo '0' || echo '1'",
+                        "bmc_cmd": "[ -n \"$(cat /sys/bus/i2c/devices/2-0059/psu_mfr_id | tr -d '\n')\" ] && echo '1' || echo '0'",
                         "raw": "1",
                         "type": "raw"
                     }
@@ -1265,7 +1265,7 @@
             "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x51",
-                "dev_type":"eeprom"
+                "dev_type":"24c02"
             },
             "attr_list":
             [
