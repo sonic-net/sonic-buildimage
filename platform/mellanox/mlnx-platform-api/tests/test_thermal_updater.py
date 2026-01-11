@@ -62,6 +62,7 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.write_file')
     def test_start_stop(self, mock_write):
         mock_sfp = mock.MagicMock()
