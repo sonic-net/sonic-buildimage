@@ -20,7 +20,7 @@ cmake-data==3.18.4-2+deb11u1
 cpp==4:10.2.1-1
 cpp-10==10.2.1-6
 cron==3.0pl1-137
-curl==7.74.0-1.3+deb11u15
+curl==7.74.0-1.3+deb11u16
 dbus==1.12.28-0+deb11u1
 dbus-user-session==1.12.28-0+deb11u1
 dconf-gsettings-backend==0.38.0-2
@@ -129,8 +129,8 @@ libct4==1.2.3-1
 libctf-nobfd0==2.35.2-2
 libctf0==2.35.2-2
 libcups2==2.3.3op2-3+deb11u10
-libcurl3-gnutls==7.74.0-1.3+deb11u15
-libcurl4==7.74.0-1.3+deb11u15
+libcurl3-gnutls==7.74.0-1.3+deb11u16
+libcurl4==7.74.0-1.3+deb11u16
 libdaemon0==0.14-7.1
 libdatrie1==0.2.13-1
 libdbi-perl==1.643-3+b1
