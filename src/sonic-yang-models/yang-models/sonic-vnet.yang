@@ -143,6 +143,14 @@ module sonic-vnet {
                     description "Number of consistent hashing buckets to use, if consistent hashing is desired";
                     type uint16;
                 }
+
+                leaf metric {
+                    description "Value set to determine type of route";
+                    type uint8 {
+                        range "0..20";
+                    }
+                    default 0;
+                }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */
         }
