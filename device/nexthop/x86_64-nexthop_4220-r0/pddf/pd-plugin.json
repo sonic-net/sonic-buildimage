@@ -43,8 +43,10 @@
                 }
             }
         },
-        "PSU_FAN_MAX_SPEED": "29975"
-    },    
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "default": "29975"
+        }
+    },
     "FAN": {
         "present": {
             "i2c": {
