@@ -3194,6 +3194,13 @@
                 "product-name" : "product name",
                 "serial-no" : "1234-5678-91A"
             }
+        },
+        "SWITCH_FAST_LINKUP": {
+            "GLOBAL": {
+                "polling_time": "10",
+                "guard_time": "2",
+                "ber_threshold": "12"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
