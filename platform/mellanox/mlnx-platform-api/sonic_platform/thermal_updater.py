@@ -27,14 +27,17 @@ sys.path.append('/run/hw-management/bin')
 try:
     import hw_management_independent_mode_update
 except ImportError:
-    # For unit test only
-    from unittest import mock
-    hw_management_independent_mode_update = mock.MagicMock()
-    hw_management_independent_mode_update.module_data_set_module_counter = mock.MagicMock()
-    hw_management_independent_mode_update.thermal_data_set_asic = mock.MagicMock()
-    hw_management_independent_mode_update.thermal_data_set_module = mock.MagicMock()
-    hw_management_independent_mode_update.thermal_data_clean_asic = mock.MagicMock()
-    hw_management_independent_mode_update.thermal_data_clean_module = mock.MagicMock()
+    # Only mock if running under pytest (check if pytest is imported)
+    if 'pytest' in sys.modules:
+        from unittest import mock
+        hw_management_independent_mode_update = mock.MagicMock()
+        hw_management_independent_mode_update.module_data_set_module_counter = mock.MagicMock()
+        hw_management_independent_mode_update.thermal_data_set_asic = mock.MagicMock()
+        hw_management_independent_mode_update.thermal_data_set_module = mock.MagicMock()
+        hw_management_independent_mode_update.thermal_data_clean_asic = mock.MagicMock()
+        hw_management_independent_mode_update.thermal_data_clean_module = mock.MagicMock()
+    else:
+        raise
 
 
 SFP_TEMPERATURE_SCALE = 1000
