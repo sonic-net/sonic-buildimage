@@ -1,0 +1,77 @@
+# $Id: Make.lib,v 1.14 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+#
+# Make rules/targets for handling libraries
+
+.SECONDARY:: ${BOBJS}
+
+BOBJS_FAST = ${BOBJS}
+BOBJS_MAKE_CMD =
+
+ifeq ($(FAST),1)
+  ifneq ($(strip $(BOBJS)),)
+    BOBJS_FAST =
+    BOBJS_ARGS = -j9
+    BOBJS_MAKE_CMD = pwd && make LSRUN=$(SDK)/tools/lsrun.pl $(BOBJS_ARGS) ${BOBJS}
+  endif
+endif
+
+ifeq (1,$(SAND_ONLY))
+  ifeq ($(LINUX_MAKE_SHARED_LIB),1)
+    LIBSUFFIX := so.${SHAREDLIBVER}
+  endif
+endif
+
+LIBSUFFIX ?= a
+
+targetlib = ${LIBDIR}/${lib}.${LIBSUFFIX}
+
+all:: ${BLDDIR}/.tree ${targetlib}
+
+${LIBDIR}/%.${LIBSUFFIX}: ${BOBJS_FAST}
+	$(BOBJS_MAKE_CMD)
+ifdef QUIET
+	@$(ECHO) Building library $(notdir $@)
+endif
+	$Q$(RM) $@
+	$(AR) ${ARFLAGS} $@ $(sort ${BOBJS})
+
+install:: all
+
+clean::
+ifdef QUIET
+	@$(ECHO) Cleaning objects for ${LOCALDIR} and ${lib}
+endif
+	$Q$(RM) ${BOBJS}
+	$Q$(RM) ${targetlib}
+
+distclean:: clean
+
+ifeq ($(DNX_FAST_MODE),1)
+-include $(SDK)/tools/dnx/make/lib.mk
+endif

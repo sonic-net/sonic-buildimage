@@ -1,0 +1,40 @@
+# -*- Kbuild -*-
+#
+# Linux KNET Callback module.
+#
+# Copyright 2018-2024 Broadcom. All rights reserved.
+# The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# A copy of the GNU General Public License version 2 (GPLv2) can
+# be found in the LICENSES folder.
+#
+
+ifneq ($(OUTPUT_DIR),)
+INCLUDES := -I$(OUTPUT_DIR)/knet/generated/include -I$(OUTPUT_DIR)/knet/generated
+endif
+obj-m := linux_ngknetcb.o
+
+ccflags-y := $(SDK_PMD_KFLAGS) $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
+             -I$(SDK)/shr/include \
+             -I$(SDK)/bcmdrd/include \
+             -I$(SDK)/bcmltd/include \
+             -I$(SDK)/bcmlrd/include \
+             -I$(SDK)/bcmcnet/include \
+             -I$(SDK)/linux/include \
+             -I$(SDK)/linux/knetcb  \
+             -I$(SDK)/linux/knet \
+             -I$(SDK)/linux/knet/generated/include \
+             -I$(SDK)/linux/knet/generated \
+             $(INCLUDES)
+
+linux_ngknetcb-y := $(SDK_PMD_KOBJS) \
+                    ngknetcb_main.o

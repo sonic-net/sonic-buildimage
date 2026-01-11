@@ -1,0 +1,13 @@
+# -*- Kbuild -*-
+#
+# Linux Netlink channel for general packet I/O module.
+#
+# $Copyright: (c) 2024 Broadcom.
+# Broadcom Proprietary and Confidential. All rights reserved.$
+#
+
+obj-m := genl-packet.o
+
+ccflags-y := $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
+	     -I$(SDK)/linux/include/lkm \
+	     -I$(SDK)/linux/include/kernel
