@@ -40,6 +40,12 @@ DEFAULT_USERNAME = admin
 # DEFAULT_PASSWORD - default password for installer build
 DEFAULT_PASSWORD = YourPaSsWoRd
 
+# BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
+BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb
+
+# BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD - default password for BMC root account
+BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
+
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
