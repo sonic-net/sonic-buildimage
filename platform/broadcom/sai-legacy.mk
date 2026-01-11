@@ -1,0 +1,15 @@
+# Broadcom LEGACY SAI definitions
+LIBSAIBCM_LEGACY_VERSION = 13.2.1.100
+LIBSAIBCM_LEGACY_BRANCH_NAME = dev/xuliping/20260110_13_2_1_compat
+
+LIBSAIBCM_LEGACY_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/sai-broadcom/$(LIBSAIBCM_LEGACY_BRANCH_NAME)/$(LIBSAIBCM_LEGACY_VERSION)/xgs"
+
+# SAI module for LEGACY Asic family
+BRCM_LEGACY_SAI = libsaibcm_$(LIBSAIBCM_LEGACY_VERSION)_amd64.deb
+$(BRCM_LEGACY_SAI)_URL = "$(LIBSAIBCM_LEGACY_URL_PREFIX)/$(BRCM_LEGACY_SAI)"
+
+# Package registration
+SONIC_ONLINE_DEBS += $(BRCM_LEGACY_SAI)
+
+# Version handling
+$(BRCM_LEGACY_SAI)_SKIP_VERSION=y
