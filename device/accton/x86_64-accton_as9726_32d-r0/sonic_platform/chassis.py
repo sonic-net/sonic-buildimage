@@ -47,6 +47,7 @@ class Chassis(ChassisBase):
         self.__initialize_components()
         self.__initialize_sfp()
         self.__initialize_eeprom()
+        self.__initialize_watchdog()
 
     def __initialize_sfp(self):
         from sonic_platform.sfp import Sfp
