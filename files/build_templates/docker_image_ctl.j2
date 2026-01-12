@@ -709,6 +709,9 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "pmon" %}
+        $(if [ -e "/dev/mmcblk0" ]; then echo "--device=/dev/mmcblk0:/dev/mmcblk0"; fi) \
+{%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}

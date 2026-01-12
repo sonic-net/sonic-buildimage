@@ -2060,7 +2060,7 @@ sai_disable_srcmacqedstmac_ctrl=1
 #RCY ports
 sai_recycle_port_lane_base=300
 ucode_port_321.BCM8887X=RCY.21:core_0.221
-tm_port_header_type_in_321.BCM8887X=ETH
+tm_port_header_type_in_321.BCM8887X=IBCH1_MODE
 
 # SAT
 ## Enable SAT Interface. 0 - Disable, 1 - Enable (Default)
@@ -2124,7 +2124,7 @@ bcm_stat_interval.BCM8887X_ADAPTER=1000000
 #########################
 
 ### MDB configuration ###
-mdb_profile.BCM8887X=Elastic-Balanced
+mdb_profile.BCM8887X=L3-Optimized
 
 ### Enable Descriptor-DMA ###
 dma_desc_aggregator_chain_length_max.BCM8887X=256
