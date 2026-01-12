@@ -104,7 +104,9 @@
                         ],
                         "object_counters": [
                             "WATERMARK_BYTES",
-                            "XOFF_ROOM_WATERMARK_BYTES"
+                            "XOFF_ROOM_WATERMARK_BYTES",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS"
                         ]
                     },
                     {
@@ -116,7 +118,9 @@
                         ],
                         "object_counters": [
                             "PACKETS",
-                            "WRED_ECN_MARKED_PACKETS"
+                            "WRED_ECN_MARKED_PACKETS",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS"
                         ]
                     },
                     {
@@ -128,7 +132,9 @@
                         ],
                         "object_counters": [
                             "CURR_OCCUPANCY_BYTES",
-                            "XOFF_ROOM_WATERMARK_BYTES"
+                            "XOFF_ROOM_WATERMARK_BYTES",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS"
                         ]
                     },
                     {
