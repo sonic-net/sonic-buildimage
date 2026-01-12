@@ -80,12 +80,14 @@ stages:
         variables:
           swi_image: yes
           docker_syncd_rpc_image: yes
+          dbg_image: yes
           platform_rpc: brcm
           INCLUDE_RESTAPI: y
       - name: mellanox
         variables:
           dbg_image: yes
           docker_syncd_rpc_image: yes
+          session_monitor: yes
           platform_rpc: mlnx
       - name: marvell-prestera-arm64
         pool: sonicso1ES-arm64
