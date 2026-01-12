@@ -161,10 +161,6 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
-ifeq ($(ENABLE_DOCKER_USER_PULL),)
-	override ENABLE_DOCKER_USER_PULL = n
-endif
-
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -498,7 +494,7 @@ DOCKER_SLAVE_USER_INSPECT = \
 	}
 
 DOCKER_SLAVE_USER_PULL_REGISTRY = \
-	[ $(ENABLE_DOCKER_USER_PULL) == y ] && \
+	[ $(ENABLE_DOCKER_BASE_PULL) == y ] && \
 	{ \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
 		$(DOCKER_USER_PULL); \
@@ -509,7 +505,12 @@ DOCKER_SLAVE_USER_PULL_REGISTRY = \
 	}\
 
 SONIC_SLAVE_USER_BUILD = \
-	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
+	{ \
+		$(DOCKER_SLAVE_USER_INSPECT); \
+	} || \
+	{ \
+		$(DOCKER_SLAVE_USER_PULL_REGISTRY); \
+	} || \
 	{ \
 		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
