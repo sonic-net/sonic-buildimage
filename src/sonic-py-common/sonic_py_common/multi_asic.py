@@ -5,9 +5,8 @@ import subprocess
 from natsort import natsorted
 from swsscommon import swsscommon
 
-from .device_info import get_asic_conf_file_path
+from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
-from .device_info import get_expected_asic_list
 from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
 
 ASIC_NAME_PREFIX = 'asic'
@@ -498,11 +497,14 @@ def validate_namespace(namespace):
 
 def get_asic_presence_list():
     """
-    @summary: This function will get the asic presence list. On Supervisor, the list includes only the asics
-              for inserted and detected fabric cards. For non-supervisor cards, e.g. line card, the list should
-              contain all supported asics by the card. The function gets the asic list from CHASSIS_ASIC_TABLE from
-              CHASSIS_STATE_DB. The function assumes that the first N asic ids (asic0 to asic(N-1)) in
-              CHASSIS_ASIC_TABLE belongs to the supervisor, where N is the max number of asics supported by the Chassis
+    @summary: This function retrieves the asic presence list. On Supervisor, the list includes asics
+              for inserted and detected fabric cards. For non-supervisor cards (e.g., line cards), the
+              list contains all supported asics by the card.
+
+              For Line Cards: Retrieves asic list from CHASSIS_ASIC_TABLE in CHASSIS_STATE_DB.
+              For Supervisor: First attempts to get expected asic list from platform. If that list is
+                              empty, retrieves asic list from CHASSIS_FABRIC_ASIC_INFO_TABLE in
+                              CHASSIS_STATE_DB (as supervisor handles fabric asics).
     @return:  List of asics present (list of integers)
     """
     asics_list = []
@@ -513,7 +515,7 @@ def get_asic_presence_list():
             asics_list = list(range(0, get_num_asics()))
         else:
             # This is supervisor card. Some fabric cards may not be inserted.
-            # Get asic list from CHASSIS_ASIC_TABLE which lists only the asics
+            # Get asic list from platform or CHASSIS_FABRIC_ASIC_INFO_TABLE which lists only the asics
             # present based on Fabric card detection by the platform.
 
             # Get expected asic list. "Expected" refers to the ASIC IDs anticipated to be present based on

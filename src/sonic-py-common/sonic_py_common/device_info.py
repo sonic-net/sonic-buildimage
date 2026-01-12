@@ -1100,21 +1100,20 @@ def get_expected_asic_list():
     @return: List of asic ID integers
              e.g., [0, 1, 4, 5, 8, 9, 10, 11, 12, 13]
     """
-    asic_ids = []
+    asic_list = []
 
     asic_list_file = get_expected_asic_list_file_path()
 
     try:
         if asic_list_file is not None and os.path.exists(asic_list_file):
             with open(asic_list_file, 'r') as file:
-                asic_ids = yaml.safe_load(file)
+                asic_list = yaml.safe_load(file)
 
         # Ensure it's a list
-        if not isinstance(asic_ids, list):
-            asic_ids = []
+        if not isinstance(asic_list, list):
+            asic_list = []
 
     except (yaml.YAMLError, IOError, TypeError, ValueError):
-        # Handle any file reading and YAML parsing errors
-        asic_ids = []
+        asic_list = []
 
-    return asic_ids
+    return asic_list
