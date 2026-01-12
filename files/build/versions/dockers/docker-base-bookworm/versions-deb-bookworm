@@ -46,7 +46,7 @@ libreadline8==8.2-1.3
 librtmp1==2.4+20151223.gitfa8646d.1-2+b2
 libsasl2-2==2.1.28+dfsg-10
 libsasl2-modules-db==2.1.28+dfsg-10
-libsodium23==1.0.18-1
+libsodium23==1.0.18-1+deb12u1
 libsqlite3-0==3.40.1-2+deb12u2
 libssh2-1==1.10.0-3+b1
 libssl-dev==3.0.11-1~deb12u2+fips
