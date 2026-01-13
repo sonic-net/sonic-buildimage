@@ -1,5 +1,5 @@
---- a/patch/series
-+++ b/patch/series
+--- a/patches-sonic/series
++++ b/patches-sonic/series
 @@ -51,6 +51,10 @@
  0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
  0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
@@ -12,9 +12,9 @@
  ###-> mellanox_hw_mgmt-end
  
 
---- a/patch/kconfig-inclusions
-+++ b/patch/kconfig-inclusions
-@@ -41,4 +41,15 @@
+--- a/config.local/arm64/config.sonic-mellanox
++++ b/config.local/arm64/config.sonic-mellanox
+@@ -6,4 +6,15 @@
  CONFIG_HWMON=y
  CONFIG_OF=y
  CONFIG_THERMAL_NETLINK=y
