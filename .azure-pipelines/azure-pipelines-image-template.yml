@@ -25,6 +25,9 @@ parameters:
 - name: COMMIT_ID
   type: string
   default: ''
+- name: targetVersionFolder
+  type: string
+  default: 'files/build/versions-public'
 jobs:
 - template: azure-pipelines-job-groups.yml
   parameters:
