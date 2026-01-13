@@ -241,6 +241,11 @@ module sonic-port{
 						type int32;
 				}
 
+				leaf id {
+						description "Numeric identifier (SDN Port) used by the controller to address the interface";
+						type int32;
+				}
+
 			} /* end of list PORT_LIST */
 
 		} /* end of container PORT */
