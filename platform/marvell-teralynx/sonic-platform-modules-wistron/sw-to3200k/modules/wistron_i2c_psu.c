@@ -380,7 +380,7 @@ static const struct attribute_group wistron_i2c_psu_group = {
     .attrs = wistron_i2c_psu_attributes,
 };
 
-static int wistron_i2c_psu_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int wistron_i2c_psu_probe(struct i2c_client *client)
 {
     struct wistron_i2c_psu_data *data;
     int                         status;
