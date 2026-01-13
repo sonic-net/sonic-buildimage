@@ -81,7 +81,7 @@ index 00000000..84035b81
 +Source: bond
 +Priority: optional
 +Maintainer: Saikrishna Arcot <sarcot@microsoft.com>
-+Build-Depends: debhelper (>= 12), haskell-stack, rapidjson-dev, libboost-dev, libboost-thread-dev, zlib1g-dev
++Build-Depends: debhelper (>= 12), haskell-stack, rapidjson-dev, libboost1.83-dev, libboost-thread1.83-dev, zlib1g-dev
 +Standards-Version: 4.4.1
 +Section: libs
 +Homepage: https://github.com/Microsoft/bond
