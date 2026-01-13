@@ -92,7 +92,7 @@ index 00000000..84035b81
 +Section: libdevel
 +Architecture: any
 +Multi-Arch: same
-+Depends: rapidjson-dev, libboost-dev, libboost-thread-dev, zlib1g-dev, ${misc:Depends}
++Depends: rapidjson-dev, libboost1.83-dev, libboost-thread1.83-dev, zlib1g-dev, ${misc:Depends}
 +Description: Open source, cross-platform framework for working with schematized data
 + Bond is an open source, cross-platform framework for working with schematized
 + data. It supports cross-language serialization/deserialization and powerful
