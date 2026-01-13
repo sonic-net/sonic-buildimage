@@ -12,7 +12,7 @@
 	images {
 		kernel_ctc {
 			description = "ARM64 Kernel";			
-			data = /incbin/("./vmlinuz-6.1.0-29-2-arm64");
+			data = /incbin/("./vmlinuz-6.12.41+deb13-sonic-arm64");
 			type = "kernel";			
 			arch = "arm64";			
 			os = "linux";			
@@ -25,7 +25,7 @@
 		};
 		initramfs {
 			description = "initramfs";
-			data = /incbin/("./initrd.img-6.1.0-29-2-arm64");
+			data = /incbin/("./initrd.img-6.12.41+deb13-sonic-arm64");
 			type = "ramdisk";
 			arch = "arm64";
 			os = "linux";

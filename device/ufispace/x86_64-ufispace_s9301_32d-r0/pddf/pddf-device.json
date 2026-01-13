@@ -21,7 +21,8 @@
         },
         "std_perm_kos": [
             "igb",
-            "i40e"
+            "i40e",
+            "x86-64-ufispace-s9301-32d-i2c-smbus"
         ],
         "std_kos": [
             "i2c_i801",

@@ -8,4 +8,4 @@ common/actions.sh usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
 s6000/scripts/platform_reboot_override usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
 s6000/scripts/platform_update_reboot_cause usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
 s6000/scripts/override.conf /etc/systemd/system/systemd-reboot.service.d
-s6000/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
+build-s6000/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
