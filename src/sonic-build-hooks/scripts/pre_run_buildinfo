@@ -15,7 +15,7 @@ mkdir -p $POST_VERSION_PATH
 collect_version_files $PRE_VERSION_PATH
 update_version_files
 symlink_build_hooks
-set_reproducible_mirrors -c
+set_reproducible_mirrors
 
 mkdir -p /var/cache/apt/archives/
 mkdir -p ${PKG_CACHE_PATH}/deb/
