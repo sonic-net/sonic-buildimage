@@ -217,8 +217,7 @@ static int cpld_mux_probe(struct platform_device *pdev)
     for (i = 0; i < ndev; i++)
     {
         int nr = pdata->base_chan + i;
-        unsigned int class = 0;
-        ret = i2c_mux_add_adapter(muxc, nr, i, class);
+        ret = i2c_mux_add_adapter(muxc, nr, i);
         if (ret) {
             dev_err(&pdev->dev, "Failed to add adapter %d\n", i);
             goto add_adapter_failed;
@@ -235,7 +234,7 @@ alloc_failed:
     return ret;
 }
 
-static int cpld_mux_remove(struct platform_device *pdev)
+static void cpld_mux_remove(struct platform_device *pdev)
 {
     struct i2c_mux_core *muxc  = platform_get_drvdata(pdev);
     struct i2c_adapter *adap = muxc->parent;
@@ -250,8 +249,6 @@ static int cpld_mux_remove(struct platform_device *pdev)
         pddf_dbg(CPLDMUX, KERN_DEBUG "%s: Freeing cpldmux platform data\n", __FUNCTION__);
         kfree(cpldmux_pdata);
     }
-
-    return 0;
 }
 
 static const struct platform_device_id mux_ids[] = {

@@ -472,6 +472,19 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libverto-dev \
         systemtap-sdt-dev \
         xvfb \
+# For grub2
+        help2man \
+        xfonts-unifont \
+        libdevmapper-dev \
+        xfonts-unifont \
+        libsdl1.2-dev \
+        xorriso \
+        parted \
+        mtools \
+        wamerican \
+        libefiboot-dev \
+        libefivar-dev \
+        dosfstools \
 # For nvidia-bluefield sdk compilation
         cython3 \
         pandoc \
@@ -540,17 +553,16 @@ RUN eatmydata apt-get install -y kernel-wedge
 
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang golang-go
-# TODO(trixie): This needs to be updated with the symcrypt FIPS build
-#{%- if INCLUDE_FIPS == "y" %}
-#RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
-# && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
-# && eatmydata dpkg -i golang-go.deb golang-src.deb \
-# && ln -sf /usr/lib/go-1.19 /usr/local/go \
-# && rm golang-go.deb golang-src.deb
-#{%- else %}
-#RUN eatmydata apt-get install -y golang-go \
-# && ln -sf /usr/lib/go-1.19 /usr/local/go
-#{%- endif %}
+{%- if INCLUDE_FIPS == "y" %}
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+ && eatmydata dpkg -i golang-go.deb golang-src.deb \
+ && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
+ && rm golang-go.deb golang-src.deb
+{%- else %}
+RUN eatmydata apt-get install -y golang-go \
+ && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go
+{%- endif %}
 
 # For building sonic-utilities
 RUN pip3 install fastentrypoints mock
@@ -761,7 +773,7 @@ RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/b
 
 # Install Rust
 ARG RUST_ROOT=/usr/.cargo
-RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.86.0 -y'
 {% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
 RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
 {% endif -%}
@@ -770,6 +782,9 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 {% endif -%}
 ENV RUSTUP_HOME=$RUST_ROOT
 ENV PATH=$PATH:$RUST_ROOT/bin
+
+# Install cargo-tarpaulin for code coverage
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='trixie' %}

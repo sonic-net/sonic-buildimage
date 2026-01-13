@@ -17,7 +17,7 @@ $(QOS_CONFIG_TEMPLATE)_PATH = files/build_templates
 CBF_CONFIG_TEMPLATE = cbf_config.j2
 $(CBF_CONFIG_TEMPLATE)_PATH = files/build_templates
 
-SYSCTL_NET_CONFIG = sysctl-net.conf
+SYSCTL_NET_CONFIG = 90-sonic.conf
 $(SYSCTL_NET_CONFIG)_PATH = files/image_config/sysctl
 
 CONTAINER_CHECKER = container_checker

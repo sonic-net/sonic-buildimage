@@ -181,7 +181,7 @@ static const struct attribute_group wistron_fan_group = {
 	.attrs = wistron_fan_attributes,
 };
 
-static int wistron_fan_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int wistron_fan_probe(struct i2c_client *client)
 {
 	struct wistron_fan_data  *data;
 	int                         status;

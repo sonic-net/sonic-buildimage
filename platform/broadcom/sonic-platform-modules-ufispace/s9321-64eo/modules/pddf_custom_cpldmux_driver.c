@@ -6,6 +6,9 @@
 
 extern PDDF_CPLDMUX_OPS pddf_cpldmux_ops;
 
+int pddf_cpldmux_select(struct i2c_mux_core *muxc, uint32_t chan);
+int pddf_cpldmux_deselect(struct i2c_mux_core *muxc, uint32_t chan);
+
 /* NOTE: Never use i2c_smbus_write_byte_data() or i2c_smbus_xfer() since these operations
  * locks the parent bus which might lead to mutex deadlock.
  */

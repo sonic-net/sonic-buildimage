@@ -15,7 +15,7 @@ index 2b7d2cd..113e7d8 100644
      if (cmd != NULL) {
          tac_add_attrib(&attr, "cmd", cmd);
      }
-+    tac_add_attrib_pair(attr, "DeviceType", '*', "All Device Types:NDG-SONIC");
++    tac_add_attrib_pair(&attr, "DeviceType", '*', "All Device Types:NDG-SONIC");
  
      retval = tac_acct_send(tac_fd, type, user, tty, r_addr, attr);
  

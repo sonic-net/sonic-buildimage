@@ -5,15 +5,15 @@ Subject: [PATCH] Add driver-hwmon-pmbus-cisco_n2200-update2.patch
 
 Signed-off-by: Jiahua Wang <jiahwang@cisco.com>
 ---
- patch/driver-hwmon-pmbus-cisco_n2200-update2.patch | 1 +
+ patches-sonic/driver-hwmon-pmbus-cisco_n2200-update2.patch | 1 +
  2 files changed, 2 insertions(+)
- create mode 120000 patch/driver-hwmon-pmbus-cisco_n2200-update2.patch
+ create mode 120000 patches-sonic/driver-hwmon-pmbus-cisco_n2200-update2.patch
 
-diff --git a/patch/driver-hwmon-pmbus-cisco_n2200-update2.patch b/patch/driver-hwmon-pmbus-cisco_n2200-update2.patch
+diff --git a/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update2.patch b/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update2.patch
 new file mode 120000
 index 0000000..d416092
 --- /dev/null
-+++ b/patch/driver-hwmon-pmbus-cisco_n2200-update2.patch
++++ b/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update2.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200-update2.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200-update2.patch
 \ No newline at end of file

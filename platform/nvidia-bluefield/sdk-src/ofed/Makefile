@@ -17,7 +17,7 @@
 
 .ONESHELL:
 SHELL = /bin/bash
-BUILD_ARCH = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+BUILD_ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 
 OFED_TAR = MLNX_OFED_SRC-debian-$(OFED_VER_FULL).tgz
 OFED_SRC = MLNX_OFED_SRC-$(OFED_VER_FULL)
@@ -73,9 +73,7 @@ $(addprefix $(DEST)/, $(OFED_KERNEL)): $(DEST)/% :
 	chmod +x $(DKMS_TMP)/DEBIAN/postinst
 	chmod +x $(DKMS_TMP)/DEBIAN/postrm
 
-	sudo dkms build mlnx-ofed-kernel/$(OFED_KERNEL_VER_FULL) -k $(KVERSION) -a $(BUILD_ARCH)
-
-	# copy the built modules
+	# Note: Drivers are installed in DKMS_ROOT when the corresponding DKMS package is installed, no need to build again
 	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)-aarch64/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 

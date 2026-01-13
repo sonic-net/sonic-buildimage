@@ -13,9 +13,6 @@ include /usr/share/dpkg/pkg-info.mk
 
 export INSTALL_MOD_DIR:=extra
 
-PYTHON         ?= python2
-PYTHON3         ?= python3
-
 PACKAGE_PRE_NAME := sonic-platform-wistron
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
@@ -27,117 +24,46 @@ SERVICE_DIR := service
 CONF_DIR := conf
 
 %:
-	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild --pybuild-system=setuptools
 
-clean:
-	dh_testdir
-	dh_testroot
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		make clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --clean -d $${mod}; \
+		fi; \
+	done)
 	dh_clean
 
-build:
-	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_configure:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-		#$(PYTHON) $${mod}/setup.py build; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
 		if [ -f setup.py ]; then \
-			$(PYTHON3) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
 			echo "Finished making whl package for $$mod"; \
 		fi; \
 		cd $(MOD_SRC_DIR); \
 	done)
 
-binary: binary-arch binary-indep
-	# Nothing to do
+override_dh_auto_test:
+	# No tests to run
 
-binary-arch:
-	# Nothing to do
+override_dh_usrlocal:
+	# Skip dh_usrlocal because we manually install files to /usr/local/bin
 
-#install: build
-	#dh_testdir
-	#dh_testroot
-	#dh_clean -k
-	#dh_installdirs
-
-binary-indep:
-	dh_testdir
-	dh_installdirs
-
-	# Custom package commands
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_install:
+	(set -e; for mod in $(MODULE_DIRS); do \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		#cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		#$(PYTHON) $${mod}/setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 	done)
-	# Resuming debhelper scripts
-	dh_testroot
-	dh_install
-	dh_installchangelogs
-	dh_installdocs
-	dh_installsystemd
-	dh_installinit
-	dh_link
-	dh_fixperms
-	dh_compress
-	dh_strip
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-.PHONY: build binary binary-arch binary-indep clean
 
-##!/usr/bin/make -f
-#
-#export INSTALL_MOD_DIR:=extra
-#
-#PYTHON         ?= python2
-#PYTHON3         ?= python3
-#
-#KVERSION   ?= $(shell uname -r)
-#KERNEL_SRC :=  /lib/modules/$(KVERSION)
-#MOD_SRC_DIR:= $(shell pwd)
-#
-#PACKAGE_PRE_NAME := sonic-platform-wistron
-#MODULE_DIRS := 3306-32
-#MODULE_SRC  := modules
-##UTILITY_SRC := utils
-#SERVICE_SRC := service
-#COMMON_SRC  := common
-#%:
-#	dh $@
-#
-#
-#override_dh_auto_build:
-#	(for mod in $(MODULE_DIRS); do \
-#		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-#		cd $(MOD_SRC_DIR)/$${mod}; \
-#		python2.7 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
-#		cd $(MOD_SRC_DIR); \
-#	done)
-#
-#override_dh_auto_install:
-#	(for mod in $(MODULE_DIRS); do \
-#		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} \
-#			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-#		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_SRC)/*.ko \
-#			debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-#		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
-##		cp $(MOD_SRC_DIR)/$${mod}/$(UTILITY_SRC)/* \
-##			debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin; \
-#		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
-#		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_SRC)/*.service \
-#			debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system; \
-#	done)
-#
-#override_dh_usrlocal:
-#
-#override_dh_clean:
-#	dh_clean
-#	$(RM) -r $(COMMON_SRC)/*.o $(COMMON_SRC)/.*.cmd
-#	(for mod in $(MODULE_DIRS); do \
-#		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
-#	done)
