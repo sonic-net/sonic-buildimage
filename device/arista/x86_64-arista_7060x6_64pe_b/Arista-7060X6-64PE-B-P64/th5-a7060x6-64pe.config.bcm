@@ -1151,9 +1151,6 @@ device:
             CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
 
-        TM_SCHEDULER_CONFIG:
-            DYNAMIC_VOQ: 0
-
         # IFP mode
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
