@@ -1,8 +1,10 @@
 import os
 import signal
+import subprocess
 import sys
 import syslog
 import threading
+import time
 import traceback
 
 from swsscommon.swsscommon import ConfigDBConnector
@@ -11,7 +13,7 @@ from sonic_py_common import device_info
 
 from .config import ConfigMgr
 from .directory import Directory
-from .log import log_notice, log_crit
+from .log import log_notice, log_crit, log_warn
 from .managers_advertise_rt import AdvertiseRouteMgr
 from .managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME
 from .managers_allow_list import BGPAllowListMgr
@@ -43,6 +45,23 @@ def do_work():
     thr.start()
     frr = FRR(["bgpd", "zebra", "staticd"])
     frr.wait_for_daemons(seconds=20)
+
+    # Wait for mgmtd initial config load to avoid "Lock already taken on DS" error
+    log_notice("Checking mgmtd datastore readiness...")
+    for attempt in range(10):  # Max ~5 seconds
+        try:
+            out = subprocess.check_output(['vtysh', '-c', 'show mgmt datastore all'],
+                                        stderr=subprocess.DEVNULL, timeout=2, text=True)
+            # Check if any datastore is locked (FRR topotest approach)
+            locked_lines = [line for line in out.splitlines() if 'Locked:' in line and 'True' in line]
+            if not locked_lines:
+                log_notice("mgmtd datastores are ready (attempt %d)" % (attempt + 1))
+                break
+            else:
+                log_warn("mgmtd datastores still locked (attempt %d): %s" % (attempt + 1, ', '.join(locked_lines)))
+        except Exception as e:
+            log_warn("mgmtd check failed (attempt %d): %s" % (attempt + 1, str(e)))
+        time.sleep(0.5)
     #
     common_objs = {
         'directory': Directory(),
