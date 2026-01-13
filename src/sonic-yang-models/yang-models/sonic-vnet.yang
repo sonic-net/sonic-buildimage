@@ -146,10 +146,7 @@ module sonic-vnet {
 
                 leaf metric {
                     description "Value set to determine type of route";
-                    type uint8 {
-                        range "0..20";
-                    }
-                    default 0;
+                    type uint8;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */

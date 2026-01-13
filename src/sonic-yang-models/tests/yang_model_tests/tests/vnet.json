@@ -123,15 +123,5 @@
     "VNET_ROUTE_TUNNEL_TEST_INVALID_CONSISTENT_HASHING": {
         "desc": "VNET route tunnel configuration with invalid consistent_hashing_buckets value (exceeds uint16 max).",
         "eStr": "does not satisfy the constraint"
-    },
-
-    "VNET_ROUTE_TUNNEL_TEST_METRIC_DEFAULT_0": {
-        "desc": "Verify metric is default 0 for VNET route tunnel",
-        "eStrKey": "Verify",
-        "verify": {
-            "xpath": "/sonic-vnet:sonic-vnet/VNET_ROUTE_TUNNEL/VNET_ROUTE_TUNNEL_LIST[vnet_name='Vnet1'][prefix='10.0.0.0/24']/metric",
-            "key": "sonic-vnet:metric",
-            "value": 0
-        }
     }
 }
