@@ -343,12 +343,13 @@ class Chassis(ChassisBase):
             An integer, the number of sfps available on this chassis
         """
         num_sfps = 0
+        num_of_asics = device_info.get_num_npus()
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(num_of_asics)
             self._RJ45_port_inited = True
         
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(num_of_asics)
             self._cpo_port_inited = True
         
         num_sfps = DeviceDataManager.get_sfp_count()

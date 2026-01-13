@@ -1842,6 +1842,8 @@ class CpoPort(SFP):
 
     def get_transceiver_info(self):
         transceiver_info_dict = super().get_transceiver_info()
+        if transceiver_info_dict is None:
+            return None
         transceiver_info_dict['type'] = self.sfp_type
         return transceiver_info_dict
 
