@@ -42,6 +42,7 @@
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
 
 #define DRIVER_NAME "nokia_7215_a1_cpld"
 
@@ -521,8 +522,12 @@ static const struct attribute_group nokia_7215_ixs_a1_cpld_group = {
 };
 
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0))
+static int nokia_7215_ixs_a1_cpld_probe(struct i2c_client *client)
+#else
 static int nokia_7215_ixs_a1_cpld_probe(struct i2c_client *client,
         const struct i2c_device_id *dev_id)
+#endif
 {
     int status;
      struct cpld_data *data=NULL;

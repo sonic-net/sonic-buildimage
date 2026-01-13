@@ -16,17 +16,17 @@ if [ $# -ne 1 ]; then
   exit 1
 fi
 
-PSU_FAN1=/sys/class/i2c-adapter/i2c-1/1-0058/fan1_target
-PSU_FAN2=/sys/class/i2c-adapter/i2c-1/1-0059/fan1_target
+PSU_FAN1=/sys/bus/i2c/devices/i2c-1/1-0058/fan1_target
+PSU_FAN2=/sys/bus/i2c/devices/i2c-1/1-0059/fan1_target
 
 # Three fan trays with each contains two separate fans
 # fan1-fan4 fan2-fan5 fan3-fan6
-FAN1=/sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan1_target
-FAN2=/sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan2_target
-FAN3=/sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan3_target
-FAN4=/sys/class/i2c-adapter/i2c-11/11-0029/hwmon/hwmon*/fan4_target
-FAN5=/sys/class/i2c-adapter/i2c-11/11-002a/hwmon/hwmon*/fan1_target
-FAN6=/sys/class/i2c-adapter/i2c-11/11-002a/hwmon/hwmon*/fan2_target
+FAN1=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan1_target
+FAN2=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan2_target
+FAN3=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan3_target
+FAN4=/sys/bus/i2c/devices/i2c-11/11-0029/hwmon/hwmon*/fan4_target
+FAN5=/sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan1_target
+FAN6=/sys/bus/i2c/devices/i2c-11/11-002a/hwmon/hwmon*/fan2_target
 
 speed=$1
 logger -t platform-modules "Trying to set fan speed to $speed"

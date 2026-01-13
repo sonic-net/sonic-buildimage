@@ -429,7 +429,7 @@ dcb0_paddr_get(dcb_t *dcb)
  * Notes:
  *      Function made global to resolve compiler link issue.
  */
-soc_rx_reason_t *
+static soc_rx_reason_t *
 dcb0_rx_reason_map_get(dcb_op_t *dcb_op, dcb_t *dcb)
 {
     COMPILER_REFERENCE(dcb);

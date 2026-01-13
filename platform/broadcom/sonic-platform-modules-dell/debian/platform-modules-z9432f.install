@@ -5,7 +5,7 @@ z9432f/scripts/sensors usr/bin
 z9432f/scripts/qsfp_irq_enable.py usr/bin
 z9432f/cfg/z9432f-modules.conf etc/modules-load.d
 z9432f/systemd/platform-modules-z9432f.service etc/systemd/system
-z9432f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_z9432f_c3758-r0
+build-z9432f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_z9432f_c3758-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_z9432f_c3758-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin

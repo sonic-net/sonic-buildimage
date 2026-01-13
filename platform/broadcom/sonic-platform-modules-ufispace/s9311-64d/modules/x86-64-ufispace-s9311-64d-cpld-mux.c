@@ -302,6 +302,9 @@ static port_block_map_t ports_block_map[] = {
     [65] = {.reg = CPLD_MGMT_PORT_STUCK_REG, .evt_reg = CPLD_MGMT_PORT_STUCK_EVENT_REG, .mask = MASK_0001_0000, PORT_NONE_BLOCK},
 };
 
+int port_chan_get_from_reg(u8 val, int index, int *chan, int *port);
+int mux_reg_get(struct i2c_adapter *adap, struct i2c_client *client);
+
 int port_chan_get_from_reg(u8 val, int index, int *chan, int *port)
 {
     u32 i = 0;
@@ -761,7 +764,11 @@ int mux_init(struct device *dev)
     /* Now create an adapter for each channel */
     for (num = 0; num < data->chip->nchans; num++)
     {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0)
         ret = i2c_mux_add_adapter(muxc, 0, num, 0);
+#else
+        ret = i2c_mux_add_adapter(muxc, 0, num);
+#endif
         if (ret)
             goto exit;
     }

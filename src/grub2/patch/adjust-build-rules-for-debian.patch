@@ -1,0 +1,71 @@
+Adjust build rules for Debian Trixie
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+
+
+---
+ debian/control |   23 +----------------------
+ debian/rules   |    2 --
+ 2 files changed, 1 insertion(+), 24 deletions(-)
+
+diff --git a/debian/control b/debian/control
+index 1c48f28e2..976040a8c 100644
+--- a/debian/control
++++ b/debian/control
+@@ -11,8 +11,7 @@ Build-Depends: debhelper-compat (= 13),
+  po-debconf,
+  help2man,
+  texinfo,
+- gcc-12,
+- gcc-12-multilib [i386 kopensolaris-i386 any-amd64 any-ppc64 any-sparc],
++ gcc-multilib [i386 kopensolaris-i386 any-amd64 any-ppc64 any-sparc],
+  xfonts-unifont,
+  libfreetype6-dev,
+  gettext,
+@@ -20,7 +19,6 @@ Build-Depends: debhelper-compat (= 13),
+  libgeom-dev (>= 8.2+ds1-1~) [kfreebsd-any] | libgeom-dev (<< 8.2) [kfreebsd-any],
+  libsdl1.2-dev [!hurd-any],
+  xorriso,
+- qemu-system [i386 kfreebsd-i386 kopensolaris-i386 any-amd64],
+  cpio [i386 kopensolaris-i386 amd64 x32],
+  parted [!hurd-any],
+  libfuse-dev (>= 2.8.4-1.4) [linux-any kfreebsd-any],
+@@ -578,25 +576,6 @@ Description: GRand Unified Bootloader, version 2 (Open Firmware version)
+  use with Open Firmware implementations.  Installing this package indicates
+  that this version of GRUB should be the active boot loader.
+ 
+-Package: grub-firmware-qemu
+-Architecture: any-i386 any-amd64
+-Depends: ${misc:Depends}
+-Recommends: qemu-system-x86
+-Enhances: qemu-system-x86
+-Multi-Arch: foreign
+-Description: GRUB firmware image for QEMU
+- This package contains a binary of GRUB that has been built for use as
+- firmware for QEMU.  It can be used as a replacement for other PC BIOS
+- images provided by seabios, bochsbios, and so on.
+- .
+- In order to make QEMU use this firmware, simply add `-bios grub.bin' when
+- invoking it.
+- .
+- This package behaves in the same way as GRUB for coreboot, but doesn't
+- contain any code from coreboot itself, and is only suitable for QEMU. If
+- you want to install GRUB as firmware on real hardware, you need to use the
+- grub-coreboot package, and manually combine that with coreboot.
+-
+ Package: grub-uboot-bin
+ Architecture: any-arm
+ Depends: ${shlibs:Depends}, ${misc:Depends}, grub-common (= ${binary:Version})
+diff --git a/debian/rules b/debian/rules
+index d974316dc..2ed556351 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -37,8 +37,6 @@ else
+ with_check := yes
+ endif
+ 
+-CC := gcc-12
+-
+ confflags = \
+ 	PACKAGE_VERSION="$(deb_version)" PACKAGE_STRING="GRUB $(deb_version)" \
+ 	CC=$(CC) TARGET_CC=$(CC) \
