@@ -1,5 +1,6 @@
-# $Id: Makefile.linux-slk-3_14,v 1.2 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# $Id: Makefile.linux-slk Exp $
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -25,7 +26,7 @@
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
 # 
 # 
-# Makefile for SLK(BCM957812)
+# Makefile for SLK
 
 # User must select one platform from below.By default ARM_LINUX is selected. .
 ifeq (,$(BUILD_PLATFORM))
@@ -37,50 +38,36 @@ ifneq ($(ESW_CHIPS)$(LTSW_CHIPS),)
 export TCL840 := 1
 endif
 
-# Toolchain base directory for NS2 XMC card
-ifeq (BE,$(ENDIAN_MODE))
-TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/toolchains/slk/linaro-be
-TARGET_ARCHITECTURE:=aarch64_be-linux-gnu
-# Target machine for EDK-Host defconfig
-TARGET_MACHINE ?= slk_be
-KERNDIR ?= /projects/ntsw-tools/linux/iproc_ldks/slk-be/poky/brcm-released-source/git
-else
-TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/toolchains/slk/linaro-le
-# Compiler for target architecture
-TARGET_ARCHITECTURE:= aarch64-linux-gnu
+# TOOLCHAIN_BASE_DIR    Toolchain base directory for SLK devices
+# TARGET_ARCHITECTURE   Compiler for target architecture
+# KERNDIR               Kernel directory for SLK devices
+TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/slk-gcc13
+TARGET_ARCHITECTURE ?= aarch64-broadcom-linux-gnu
+KERNDIR ?= /projects/ntsw-tools/linux/slk66/kernel/linux
+
+# Tools prefix
+CROSS_COMPILE ?= aarch64-linux-
+
 # Target machine for EDK-Host defconfig
 TARGET_MACHINE ?= slk_le
-# Kernel directory
-KERNDIR ?= /projects/ntsw-tools/linux/iproc_ldks/slk/poky/brcm-released-source/git
-endif
 
-ifeq (,$(CROSS_COMPILE))
-CROSS_COMPILE:= $(TARGET_ARCHITECTURE)-
-endif
-
-# armtools
-TOOLCHAIN_BIN_DIR=$(TOOLCHAIN_BASE_DIR)/bin
-override PATH:=$(TOOLCHAIN_BIN_DIR):$(PATH)
-LD_LIBRARY_PATH=$(TOOLCHAIN_BASE_DIR)/lib
-
+# A72 tools
+TOOLCHAIN_BIN_DIR=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/bin
+override PATH:=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/$(TARGET_ARCHITECTURE)/bin:$(TOOLCHAIN_BIN_DIR):$(PATH)
+LD_LIBRARY_PATH=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/lib
 export TOOLCHAIN_BIN_DIR LD_LIBRARY_PATH
+
+CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_BIN_DIR)/$(CROSS_COMPILE)gcc -dumpversion)
+CROSS_GCC_VER_MAJOR := $(shell echo $(CROSS_GCC_VER) | cut -f1 -d.)
 
 # Default Linux include directory
 ifeq (,$(LINUX_INCLUDE))
 LINUX_INCLUDE := $(KERNDIR)/include
 endif
 
-ifeq (BE,$(ENDIAN_MODE))
-CFGFLAGS += -DSYS_BE_PIO=1 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=1
-ENDIAN = BE_HOST=1
-else
 CFGFLAGS += -DSYS_BE_PIO=0 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=0
 ENDIAN = LE_HOST=1
-endif
 
-CFGFLAGS += -D$(ENDIAN) -DBCM958525
-CFGFLAGS += -DBCM_PLATFORM_STRING=\"SLK_BCM957812\"
-CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
 ifeq (1,$(SLK_32BIT))
 CFGFLAGS += -DSAL_BDE_32BIT_USER_64BIT_KERNEL
 else
@@ -89,12 +76,41 @@ endif
 CFGFLAGS += -DPHYS_ADDRS_ARE_64BITS
 
 ifeq (1,$(USE_CLANG))
-CLANG_ADD_CFLAGS += --target=$(TARGET_ARCHITECTURE) --gcc-toolchain=$(TOOLCHAIN_BASE_DIR) --sysroot=$(TOOLCHAIN_BASE_DIR)/$(TARGET_ARCHITECTURE)/libc
-export KERNEL_LLVM = 0
+CLANG_ADD_CFLAGS += --target=$(TARGET_ARCHITECTURE) \
+                    --gcc-toolchain=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr \
+                    --sysroot=$(TOOLCHAIN_BASE_DIR)/buildroot/host/$(TARGET_ARCHITECTURE)/sysroot
 OPT_KERNEL_TOOLCHAIN = CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld AR=$(CROSS_COMPILE)ar
+export KERNEL_LLVM = 0
+export NO_PRECOMPILED_MODULE = 1
+export LIBNSL_DEPRECATED = 1
 else
-OPT_CFLAGS += -fno-aggressive-loop-optimizations
+# Needed for a warning in src/soc/phy/fcmap/src/bfcmap88060_a0.c that can't be
+# fixed because of a Montreal2 FW dependency
+ifeq ($(LOCALDIR),src/soc/phy/fcmap/src)
+OPT_CFLAGS += -Wno-address-of-packed-member
 endif
+
+CFLAGS += -fno-aggressive-loop-optimizations -fno-strict-overflow
+CFLAGS += -fgnu89-inline
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
+	CFLAGS += -fcommon
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	CFLAGS += -flarge-source-files
+	export LIBNSL_DEPRECATED := 1
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
+endif
+endif
+
+CFGFLAGS += -D$(ENDIAN) -DBCM958525
+CFGFLAGS += -DBCM_PLATFORM_STRING=\"SLK_BCM957812\"
+CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
+CFGFLAGS += -D_SIMPLE_MEMORY_ALLOCATION_=1
 
 ifdef DPP_CHIPS
 CFGFLAGS += -DDUNE_BCM -D__DUNE_LINUX_BCM_CPU_PCP_DMA__
@@ -132,48 +148,23 @@ comma = ,
 basetarget = $(basename $(notdir $@))
 modname = $(basetarget)
 
+HASH := \#
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 name-fix = $(subst $(comma),_,$(subst -,_,$1))
 basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
 modname_flags  = $(if $(filter 1,$(words $(modname))),\
                  -D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
 
-CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_BIN_DIR)/$(CROSS_COMPILE)gcc -dumpversion)
-
-KFLAG_INCLD = $(TOOLCHAIN_BASE_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
+KFLAG_INCLD ?= $(LD_LIBRARY_PATH)/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
 ifeq (,$(KFLAGS))
-KFLAGS := -D__LINUX_ARM_ARCH__=8 -D__KERNEL__ -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS -nostdinc -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm64/include -I$(KERNDIR)/arch/arm64/include/generated -I$(KERNDIR)/arch/arm64/include/generated/asm -I$(KERNDIR)/include/uapi -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/uapi -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fno-pic -pipe -ffreestanding -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -Wno-unused-but-set-variable
+KFLAGS := -D__LINUX_ARM_ARCH__=8 -D__KERNEL__ -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS -nostdinc -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm64/include -I$(KERNDIR)/arch/arm64/include/generated -I$(KERNDIR)/arch/arm64/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/generated/asm -I$(KERNDIR)/include/uapi -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/uapi  -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -fno-strict-aliasing -fno-common -fno-pic -pipe -ffreestanding -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -mcmodel=large
 endif
 
-ifdef LTSW_CHIPS
 # Default open source target build
-ifeq (BE,$(ENDIAN_MODE))
-OPENSRC_BUILD ?= linaro_arm64_be
-else
 OPENSRC_BUILD ?= linaro_arm64_le
-endif
-
-# Hardware interface (see $SDKLT/bcma/sys/probe directory)
-SYSTEM_INTERFACE ?= ngbde
-
-# Turn on direct register access if running on real hardware.
-ifeq (ngbde,$(SYSTEM_INTERFACE))
-LTSW_ADD_CPPFLAGS += -DBCMDRD_CONFIG_MEMMAP_DIRECT=1
-endif
-
-export SYSTEM_INTERFACE
-endif
-
-ifneq (, $(EDKHOST))
-ifeq (BE,$(ENDIAN_MODE))
-OPENSRC_BUILD ?= linaro_arm64_be
-else
-OPENSRC_BUILD ?= linaro_arm64_le
-endif
-endif
 
 ifneq ($(targetplat),user)
 include ${SDK}/make/Makefile.linux-kernel-3_6
