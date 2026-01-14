@@ -186,7 +186,25 @@ class Component(ComponentBase):
         if self.index == 1:
             cmdstatus, uboot_version = cmd.getstatusoutput('cat /proc/device-tree/chosen/u-boot,version')
             return uboot_version or "V1.1"
+        
+    def get_available_firmware_version(self, image_path):
+        """
+        Retrieves the available firmware version of the component
 
+        Note: the firmware version will be read from image
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            A string containing the available firmware version of the component
+        """
+        if image_path:    
+            image_name = ntpath.basename(image_path)
+            return image_name
+
+        return 'NA'
+    
     def install_firmware(self, image_path):
         """
         Installs firmware to the component
@@ -263,3 +281,23 @@ class Component(ComponentBase):
                     print("ERROR: Failed to upgrade U-BOOT: command={}, rc={}",format(e.cmd),format(e.returncode))
 
                 return success_flag
+
+    def update_firmware(self, image_path):
+        """
+        Updates firmware of the component
+
+        This API performs firmware update: it assumes firmware installation and loading in a single call.
+        In case platform component requires some extra steps (apart from calling Low Level Utility)
+        to load the installed firmware (e.g, reboot, power cycle, etc.) - this will be done automatically by API
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            Boolean False if image_path doesn't exist instead of throwing an exception error
+            Nothing when the update is successful
+
+        Raises:
+            RuntimeError: update failed
+        """
+        return self.install_firmware(image_path)
