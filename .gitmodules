@@ -47,7 +47,7 @@
 	branch = 202511
 [submodule "src/sonic-platform-daemons"]
 	path = src/sonic-platform-daemons
-	url = https://github.com/sonic-net/sonic-platform-daemons
+	url = https://github.com/nvidia-sonic/sonic-platform-daemons
 	branch = 202511
 [submodule "src/sonic-platform-pde"]
 	path = src/sonic-platform-pde
