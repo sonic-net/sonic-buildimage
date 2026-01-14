@@ -41,10 +41,6 @@ parameters:
   type: number
   default: 480
 
-- name: TARGET_VERSION_FOLDER
-  type: string
-  default: 'files/build/versions-public'
-
 - name: CHECKOUT_SONIC_MGMT
   type: boolean
   default: true
@@ -69,7 +65,6 @@ stages:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      targetVersionFolder: ${{ parameters.TARGET_VERSION_FOLDER }}
       jobGroups:
       - name: vs
 
@@ -80,7 +75,6 @@ stages:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      targetVersionFolder: ${{ parameters.TARGET_VERSION_FOLDER }}
       jobGroups:
       - name: broadcom
         variables:

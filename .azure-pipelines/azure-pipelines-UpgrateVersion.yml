@@ -38,9 +38,6 @@ parameters:
   - marvell-prestera-arm64
   - mellanox
   - nvidia-bluefield
-- name: 'targetVersionFolder'
-  type: string
-  default: 'files/build/versions-public'
 
 stages:
 - stage: Prepare
@@ -56,12 +53,6 @@ stages:
         echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
       name: SetVersions
       displayName: 'Set snapshot versions'
-    - script: |
-        TARGET_VERSION_FOLDER=${{ parameters.targetVersionFolder }}
-        echo "Creating symbolic link from $TARGET_VERSION_FOLDER to files/build/versions"
-        rm -rf files/build/versions
-        ln -s $TARGET_VERSION_FOLDER files/build/versions
-      displayName: 'Make symbolic link '
 - stage: Build
   dependsOn: Prepare
   variables:

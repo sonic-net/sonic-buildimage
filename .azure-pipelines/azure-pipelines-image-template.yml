@@ -66,12 +66,6 @@ jobs:
           sudo setfacl -R -b $(Agent.BuildDirectory)
         displayName: 'setfacl'
       - script: |
-          TARGET_VERSION_FOLDER=${{ parameters.targetVersionFolder }}
-          echo "Creating symbolic link from $TARGET_VERSION_FOLDER to files/build/versions"
-          rm -rf files/build/versions
-          ln -s $TARGET_VERSION_FOLDER files/build/versions
-        displayName: 'Make symbolic link'
-      - script: |
           set -ex
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
