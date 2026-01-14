@@ -1,0 +1,417 @@
+From 6042ecd62ab6c30f68e13e8800005e569d138bd6 Mon Sep 17 00:00:00 2001
+From: Feng Pan <fenpan@microsoft.com>
+Date: Tue, 13 Jan 2026 03:24:02 +0000
+Subject: [PATCH] Revert "Add ExclusionList for telemetry/frr_bmp since they
+ are not service in pub repo (#328)"
+
+This reverts commit ad5e3b816dfe99bb145b68f11679bb84c0408cdf.
+---
+ host_modules/docker_service.py  |   2 +
+ scripts/featured                |  13 ----
+ tests/featured/featured_test.py |  62 ++++++-----------
+ tests/featured/test_vectors.py  | 120 ++++++++++++++++++++++++++++++++
+ 4 files changed, 142 insertions(+), 55 deletions(-)
+
+diff --git a/host_modules/docker_service.py b/host_modules/docker_service.py
+index 012f79c..430e599 100644
+--- a/host_modules/docker_service.py
++++ b/host_modules/docker_service.py
+@@ -25,6 +25,7 @@ ALLOWED_CONTAINERS = {
+     "swss",
+     "syncd",
+     "teamd",
++    "telemetry",
+ }
+ 
+ # The set of allowed images that can be managed by this service.
+@@ -41,6 +42,7 @@ ALLOWED_IMAGES = {
+     "docker-sonic-bmp",
+     "docker-sonic-gnmi",
+     "docker-sonic-restapi",
++    "docker-sonic-telemetry",
+     "docker-syncd-brcm",
+     "docker-syncd-cisco",
+     "docker-teamd",
+diff --git a/scripts/featured b/scripts/featured
+index 9871d7c..4de69b1 100644
+--- a/scripts/featured
++++ b/scripts/featured
+@@ -132,7 +132,6 @@ class FeatureHandler(object):
+     FEATURE_STATE_ENABLED = "enabled"
+     FEATURE_STATE_DISABLED = "disabled"
+     FEATURE_STATE_FAILED = "failed"
+-    FEATURE_EXCLUSION_LIST = {"telemetry", "frr_bmp"}
+ 
+     def __init__(self, config_db, feature_state_table, device_config, is_advanced_boot):
+         self._config_db = config_db
+@@ -409,15 +408,7 @@ class FeatureHandler(object):
+         props = dict([line.split("=") for line in stdout.decode().strip().splitlines()])
+         return props["UnitFileState"]
+ 
+-    def is_exclusion_listed(self, feature_name):
+-        """Return True if the feature is in the exclusion list."""
+-        return str(feature_name).lower() in self.FEATURE_EXCLUSION_LIST
+-
+     def enable_feature(self, feature):
+-        if self.is_exclusion_listed(feature.name):
+-            syslog.syslog(syslog.LOG_INFO, f"ExclusionList: skip enabling '{feature.name}'")
+-            return
+-
+         feature_names, feature_suffixes = self.get_multiasic_feature_instances(feature)
+         for feature_name in feature_names:
+             # Check if it is already enabled, if yes skip the system call
+@@ -461,10 +452,6 @@ class FeatureHandler(object):
+         self.set_feature_state(feature, self.FEATURE_STATE_ENABLED)
+ 
+     def disable_feature(self, feature):
+-        if self.is_exclusion_listed(feature.name):
+-            syslog.syslog(syslog.LOG_INFO, f"ExclusionList: skip disabling '{feature.name}'")
+-            return
+-
+         feature_names, feature_suffixes = self.get_multiasic_feature_instances(feature)
+         for feature_name in feature_names:
+             # Check if it is already disabled, if yes skip the system call
+diff --git a/tests/featured/featured_test.py b/tests/featured/featured_test.py
+index 058a0c5..a42d2bb 100644
+--- a/tests/featured/featured_test.py
++++ b/tests/featured/featured_test.py
+@@ -339,43 +339,6 @@ class TestFeatureHandler(TestCase):
+         feature_handler.port_listener(key='PortInitDone', op='SET', data=None)
+         feature_handler.enable_delayed_services.assert_called_once()
+ 
+-    @mock.patch("syslog.syslog", side_effect=syslog_side_effect)
+-    def test_enable_and_disable_feature_ExclusionList_skips_actions(self, mock_syslog):
+-        """Verify that ExclusionList feature 'frr_bmp' is skipped in both enable and disable."""
+-        feature_state_table_mock = mock.Mock()
+-        device_cfg = {"DEVICE_METADATA": {"localhost": {"type": "FixedSwitch"}}}
+-        handler = featured.FeatureHandler(MockConfigDb(), feature_state_table_mock, device_cfg, False)
+-
+-        feat_cfg = {"state": "enabled", "auto_restart": "enabled"}
+-        feature = featured.Feature("frr_bmp", feat_cfg, device_cfg)
+-
+-        with mock.patch.object(handler, "get_multiasic_feature_instances",
+-                            return_value=(["frr_bmp"], ["service"])), \
+-            mock.patch.object(handler, "get_systemd_unit_state", return_value="disabled"), \
+-            mock.patch("featured.run_cmd") as mocked_run_cmd, \
+-            mock.patch.object(handler, "set_feature_state") as mocked_set_state:
+-
+-            # --- enable_feature() ---
+-            handler.enable_feature(feature)
+-
+-            mocked_run_cmd.assert_not_called()
+-            mocked_set_state.assert_not_called()
+-            assert any("ExclusionList: skip enabling 'frr_bmp'" in str(c.args[1]) for c in mock_syslog.call_args_list)
+-
+-        mock_syslog.reset_mock()
+-        with mock.patch.object(handler, "get_multiasic_feature_instances",
+-                            return_value=(["frr_bmp"], ["service"])), \
+-            mock.patch.object(handler, "get_systemd_unit_state", return_value="enabled"), \
+-            mock.patch("featured.run_cmd") as mocked_run_cmd, \
+-            mock.patch.object(handler, "set_feature_state") as mocked_set_state:
+-
+-            # --- disable_feature() ---
+-            handler.disable_feature(feature)
+-
+-            mocked_run_cmd.assert_not_called()
+-            mocked_set_state.assert_not_called()
+-            assert any("ExclusionList: skip disabling 'frr_bmp'" in str(c.args[1]) for c in mock_syslog.call_args_list)
+-
+ 
+ @mock.patch("syslog.syslog", side_effect=syslog_side_effect)
+ @mock.patch('sonic_py_common.device_info.get_device_runtime_metadata')
+@@ -398,7 +361,8 @@ class TestFeatureDaemon(TestCase):
+ 
+     def test_feature_events(self, mock_syslog, get_runtime):
+         MockSelect.set_event_queue([('FEATURE', 'dhcp_relay'),
+-                                    ('FEATURE', 'mux')])
++                                    ('FEATURE', 'mux'),
++                                    ('FEATURE', 'telemetry')])
+         with mock.patch('featured.subprocess') as mocked_subprocess:
+             popen_mock = mock.Mock()
+             attrs = {'communicate.return_value': ('output', 'error')}
+@@ -437,6 +401,7 @@ class TestFeatureDaemon(TestCase):
+     def test_delayed_service(self, mock_syslog, get_runtime):
+         MockSelect.set_event_queue([('FEATURE', 'dhcp_relay'),
+                                     ('FEATURE', 'mux'),
++                                    ('FEATURE', 'telemetry'),
+                                     ('PORT_TABLE', 'PortInitDone')])
+         # Note: To simplify testing, subscriberstatetable only read from CONFIG_DB
+         MockConfigDb.CONFIG_DB['PORT_TABLE'] = {'PortInitDone': {'lanes': '0'}, 'PortConfigDone': {'val': 'true'}}
+@@ -459,7 +424,11 @@ class TestFeatureDaemon(TestCase):
+                         call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
+                         call(['sudo', 'systemctl', 'unmask', 'mux.service'], capture_output=True, check=True, text=True),
+                         call(['sudo', 'systemctl', 'enable', 'mux.service'], capture_output=True, check=True, text=True),
+-                        call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True)]
++                        call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'unmask', 'telemetry.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'enable', 'telemetry.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'start', 'telemetry.service'], capture_output=True, check=True, text=True)]
+ 
+             mocked_subprocess.run.assert_has_calls(expected, any_order=True)
+ 
+@@ -485,7 +454,11 @@ class TestFeatureDaemon(TestCase):
+                 call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
+                 call(['sudo', 'systemctl', 'unmask', 'mux.service'], capture_output=True, check=True, text=True),
+                 call(['sudo', 'systemctl', 'enable', 'mux.service'], capture_output=True, check=True, text=True),
+-                call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True)]               
++                call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True),
++                call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
++                call(['sudo', 'systemctl', 'unmask', 'telemetry.service'], capture_output=True, check=True, text=True),
++                call(['sudo', 'systemctl', 'enable', 'telemetry.service'], capture_output=True, check=True, text=True),
++                call(['sudo', 'systemctl', 'start', 'telemetry.service'], capture_output=True, check=True, text=True)]               
+         
+             mocked_subprocess.run.assert_has_calls(expected, any_order=True)
+ 
+@@ -493,7 +466,8 @@ class TestFeatureDaemon(TestCase):
+         print(MockConfigDb.CONFIG_DB)
+         MockSelect.NUM_TIMEOUT_TRIES = 1
+         MockSelect.set_event_queue([('FEATURE', 'dhcp_relay'),
+-                                    ('FEATURE', 'mux')])
++                                    ('FEATURE', 'mux'),
++                                    ('FEATURE', 'telemetry')])
+         with mock.patch('featured.subprocess') as mocked_subprocess:
+             popen_mock = mock.Mock()
+             attrs = {'communicate.return_value': ('output', 'error')}
+@@ -513,5 +487,9 @@ class TestFeatureDaemon(TestCase):
+                         call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
+                         call(['sudo', 'systemctl', 'unmask', 'mux.service'], capture_output=True, check=True, text=True),
+                         call(['sudo', 'systemctl', 'enable', 'mux.service'], capture_output=True, check=True, text=True),
+-                        call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True)]
++                        call(['sudo', 'systemctl', 'start', 'mux.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'daemon-reload'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'unmask', 'telemetry.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'enable', 'telemetry.service'], capture_output=True, check=True, text=True),
++                        call(['sudo', 'systemctl', 'start', 'telemetry.service'], capture_output=True, check=True, text=True)]
+             mocked_subprocess.run.assert_has_calls(expected, any_order=True)
+diff --git a/tests/featured/test_vectors.py b/tests/featured/test_vectors.py
+index 1fe5726..1a5552b 100644
+--- a/tests/featured/test_vectors.py
++++ b/tests/featured/test_vectors.py
+@@ -38,6 +38,15 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled"
++                    },
+                     "pmon": {
+                         "state": "enabled",
+                         "delayed": "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}",
+@@ -68,6 +77,15 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "enabled"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled"
++                    },
+                     "pmon": {
+                         "auto_restart": "enabled",
+                         "has_global_scope": "False",
+@@ -85,6 +103,9 @@ FEATURED_TEST_VECTOR = [
+                 call(["sudo", "systemctl", "unmask", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "enable", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "start", "mux.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "unmask", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "enable", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "start", "telemetry.service"], capture_output=True, check=True, text=True),
+             ],
+             "daemon_reload_subprocess_call": [
+                 call(["sudo", "systemctl", "daemon-reload"], capture_output=True, check=True, text=True),
+@@ -127,6 +148,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                     "sflow": {
+                         "auto_restart": "enabled",
+                         "has_global_scope": "True",
+@@ -158,6 +189,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "always_disabled"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                     "sflow": {
+                         "auto_restart": "enabled",
+                         "has_global_scope": "True",
+@@ -173,6 +214,9 @@ FEATURED_TEST_VECTOR = [
+                 call(["sudo", "systemctl", "stop", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "disable", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "mask", "mux.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "unmask", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "enable", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "start", "telemetry.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "unmask", "sflow.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "enable", "sflow.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "start", "sflow.service"], capture_output=True, check=True, text=True),
+@@ -218,6 +262,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "expected_config_db": {
+@@ -240,12 +294,25 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "always_disabled"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "enable_feature_subprocess_calls": [
+                 call(["sudo", "systemctl", "stop", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "disable", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "mask", "mux.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "unmask", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "enable", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "start", "telemetry.service"], capture_output=True, check=True, text=True),
+             ],
+             "daemon_reload_subprocess_call": [
+                 call(["sudo", "systemctl", "daemon-reload"], capture_output=True, check=True, text=True),
+@@ -288,6 +355,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "expected_config_db": {
+@@ -310,6 +387,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "always_disabled"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "enable_feature_subprocess_calls": [
+@@ -319,6 +406,9 @@ FEATURED_TEST_VECTOR = [
+                 call(["sudo", "systemctl", "stop", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "disable", "mux.service"], capture_output=True, check=True, text=True),
+                 call(["sudo", "systemctl", "mask", "mux.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "unmask", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "enable", "telemetry.service"], capture_output=True, check=True, text=True),
++                call(["sudo", "systemctl", "start", "telemetry.service"], capture_output=True, check=True, text=True),
+             ],
+             "daemon_reload_subprocess_call": [
+                 call(["sudo", "systemctl", "daemon-reload"], capture_output=True, check=True, text=True),
+@@ -362,6 +452,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "expected_config_db": {
+@@ -384,6 +484,16 @@ FEATURED_TEST_VECTOR = [
+                         "set_owner": "local",
+                         "state": "enabled"
+                     },
++                    "telemetry": {
++                        "auto_restart": "enabled",
++                        "has_global_scope": "True",
++                        "has_per_asic_scope": "False",
++                        "delayed": "True",
++                        "high_mem_alert": "disabled",
++                        "set_owner": "kube",
++                        "state": "enabled",
++                        "status": "enabled"
++                    },
+                 },
+             },
+             "enable_feature_subprocess_calls": [],
+@@ -1115,6 +1225,16 @@ FEATURE_DAEMON_CFG_DB = {
+             "set_owner": "local",
+             "state": "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}"
+         },
++        "telemetry": {
++            "auto_restart": "enabled",
++            "has_global_scope": "True",
++            "has_per_asic_scope": "False",
++            "delayed": "True",
++            "high_mem_alert": "disabled",
++            "set_owner": "kube",
++            "state": "enabled",
++            "status": "enabled"
++        },
+     },
+     "DEVICE_METADATA": {
+         "localhost": {
+-- 
+2.34.1
+

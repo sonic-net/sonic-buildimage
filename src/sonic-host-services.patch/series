@@ -1,3 +1,4 @@
 0001-caclmgrd-Allow-all-incoming-traffic-on-http-https-po.patch
 0002-caclmgrd-Allow-traffic-for-telemetry-port.patch
 0003-caclmgrd-add-port-restriction.patch
+0004-Revert-Add-ExclusionList-for-telemetry-frr_bmp-since.patch
