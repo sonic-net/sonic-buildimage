@@ -307,11 +307,11 @@ static const struct attribute_group sw_to3200k_oom_group = {
     .attrs = sw_to3200k_oom_attributes,
 };
 
-static int sw_to3200k_oom_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int sw_to3200k_oom_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
     struct sw_to3200k_oom_data *data;
     int status;
-
     data = kzalloc(sizeof(struct sw_to3200k_oom_data), GFP_KERNEL);
     if (!data)
     {

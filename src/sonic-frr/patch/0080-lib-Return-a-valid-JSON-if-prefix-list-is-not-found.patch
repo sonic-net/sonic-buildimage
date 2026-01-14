@@ -1,0 +1,32 @@
+From 91edaf27519f47fbca4edc604a0a18fb6d89d7dc Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Thu, 11 Sep 2025 22:15:25 +0300
+Subject: lib: Return a valid JSON if prefix-list is not found
+
+Before it was:
+
+{
+  "zebra":,"bgpd":
+}
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ lib/plist.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/plist.c b/lib/plist.c
+index 0444cfe2d3..cfd1ae0575 100644
+--- a/lib/plist.c
++++ b/lib/plist.c
+@@ -1088,7 +1088,7 @@ static int vty_show_prefix_list(struct vty *vty, afi_t afi, const char *name,
+ 		plist = prefix_list_lookup(afi, name);
+ 		if (!plist) {
+ 			if (uj)
+-				json_object_free(json);
++				vty_json(vty, json);
+ 			else
+ 				vty_out(vty,
+ 					"%% Can't find specified prefix-list\n");
+-- 
+2.48.1
+
