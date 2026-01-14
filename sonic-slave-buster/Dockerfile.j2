@@ -475,20 +475,7 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN export VERSION=1.15.15 \
-{%- if CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON != "y" %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \
-{%- elif CONFIGURED_ARCH == "arm64" and CROSS_BUILD_ENVIRON != "y" %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-arm64.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-arm64.tar.gz \
-{%- else %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
-{%- endif %}
- && echo 'export GOROOT=/usr/local/go' >> /etc/bash.bashrc \
- && echo 'export PATH=$PATH:$GOROOT/bin' >> /etc/bash.bashrc \
- && rm go$VERSION.linux-*.tar.gz
+RUN eatmydata apt-get install -y golang golang-go
 
 RUN pip3 install --upgrade pip
 RUN pip2 install --upgrade 'pip<21'
