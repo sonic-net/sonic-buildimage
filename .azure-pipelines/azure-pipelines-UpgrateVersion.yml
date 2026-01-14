@@ -60,8 +60,7 @@ stages:
         TARGET_VERSION_FOLDER=${{ parameters.targetVersionFolder }}
         echo "Creating symbolic link from $TARGET_VERSION_FOLDER to files/build/versions"
         rm -rf files/build/versions
-        ln -s $(pwd)/$TARGET_VERSION_FOLDER $(pwd)/files/build/versions
-        ls -l files/build/versions
+        ln -s $TARGET_VERSION_FOLDER files/build/versions
       displayName: 'Make symbolic link '
 - stage: Build
   dependsOn: Prepare
