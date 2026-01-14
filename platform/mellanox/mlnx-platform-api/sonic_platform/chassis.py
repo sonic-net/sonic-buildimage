@@ -38,6 +38,11 @@ try:
     import select
     import threading
     import time
+    # Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
+    # https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
+    os.environ['DEBUG'] = '0'
+    import inotify.adapters
+    import inotify.constants
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -46,6 +51,7 @@ RJ45_TYPE = "RJ45"
 
 VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
 REVISION = "REV"
+VPD_DATA_WAIT_TIMEOUT = 45  # Timeout in seconds for waiting for VPD data file
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -968,6 +974,48 @@ class Chassis(ChassisBase):
 
         return self.vpd_data.get(REVISION, "N/A")
 
+    def _wait_for_file_creation(self, file_path, timeout):
+        """
+        Wait for a file to be created using inotify
+
+        Args:
+            file_path: Path to the file to wait for
+            timeout: Timeout in seconds
+
+        Returns:
+            True if file was created and is readable, False otherwise
+        """
+        # If file already exists and is readable, return immediately
+        if os.access(file_path, os.R_OK):
+            return True
+
+        dir_path = os.path.dirname(file_path)
+        file_name = os.path.basename(file_path)
+
+        if not os.path.exists(dir_path):
+            logger.log_debug("Directory {} does not exist, waiting for file creation".format(dir_path))
+            return False
+
+        try:
+            notifier = inotify.adapters.Inotify()
+            notifier.add_watch(dir_path,
+                             mask=inotify.constants.IN_CREATE | inotify.constants.IN_CLOSE_WRITE)
+
+            for event in notifier.event_gen(timeout_s=timeout, yield_nones=False):
+                (_, type_names, path, filename) = event
+                if filename == file_name:
+                    if "IN_CREATE" in type_names or "IN_CLOSE_WRITE" in type_names:
+                        if os.access(file_path, os.R_OK):
+                            logger.log_info("File {} created and readable".format(file_path))
+                            return True
+        except Exception as e:
+            logger.log_error("Inotify error while waiting for {}: {}".format(file_path, repr(e)))
+
+        if os.access(file_path, os.R_OK):
+            return True
+
+        return False
+
     def _parse_vpd_data(self, filename):
         """
         Read vpd_data and returns a dictionary of values
@@ -978,6 +1026,9 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
+                logger.log_debug("VPD data file {} not accessible, waiting for creation".format(filename))
+                if not self._wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
+                    logger.log_error("VPD data file {} not available after timeout".format(filename))
                 return result
 
             result = utils.read_key_value_file(filename, delimeter=": ")
