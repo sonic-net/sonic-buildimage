@@ -42,8 +42,15 @@ $(DOCKER_GNMI)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 $(DOCKER_GNMI)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
 # For host command execution in gnoi.
 $(DOCKER_GNMI)_RUN_OPT += --pid=host
-# For host command execution in gnoi.
-$(DOCKER_GNMI)_RUN_OPT += --privileged
+# Container hardening: Replace --privileged with specific capabilities
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_ADMIN
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_BOOT
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_PTRACE
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=NET_ADMIN
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=DAC_OVERRIDE
+# Security options needed for nsenter to access host namespaces from within container
+$(DOCKER_GNMI)_RUN_OPT += --security-opt apparmor=unconfined
+$(DOCKER_GNMI)_RUN_OPT += --security-opt seccomp=unconfined
 # For GNOI running sudo command in case of container NS remapping.
 $(DOCKER_GNMI)_RUN_OPT += --userns=host
 
