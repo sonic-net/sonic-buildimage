@@ -86,7 +86,8 @@
 	branch =  sdk-6.5.22-gpl-dnx
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
-	url = https://github.com/nokia/sonic-platform.git
+        url = git@gitlabsr.nuq.ion.nokia.net:sr/linux/sonic/sonic-pmon.git
+        branch = main
 [submodule "src/linkmgrd"]
 	path = src/linkmgrd
 	url = https://github.com/sonic-net/sonic-linkmgrd.git
