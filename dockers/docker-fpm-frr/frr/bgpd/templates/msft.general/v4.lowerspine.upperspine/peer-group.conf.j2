@@ -1,0 +1,16 @@
+!
+! template: bgpd/templates/msft.general/v4.lowerspine.upperspine/peer-group.conf.j2
+!
+  neighbor UPPERSPINE_V4 peer-group
+  address-family ipv4 unicast
+    neighbor UPPERSPINE_V4 activate
+    neighbor UPPERSPINE_V4 next-hop-self force
+    neighbor UPPERSPINE_V4 soft-reconfiguration inbound
+    neighbor UPPERSPINE_V4 route-map FROM_UPPERSPINE_V4 in
+    neighbor UPPERSPINE_V4 route-map TO_UPPERSPINE_V4 out
+    neighbor UPPERSPINE_V4 send-community
+    neighbor UPPERSPINE_V4 maximum-prefix 64000 90 warning-only
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v4.lowerspine.upperspine/peer-group.conf.j2
+!

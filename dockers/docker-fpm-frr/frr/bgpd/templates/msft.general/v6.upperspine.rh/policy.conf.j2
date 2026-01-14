@@ -1,0 +1,41 @@
+!
+! template: bgpd/templates/msft.general/v6.spine.rh/policy.conf.j2
+!
+bgp community-list standard LEAK_COMMUNITY permit 8075:10400
+bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
+bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+!
+bgp as-path access-list WAN_ASNS permit _8075_
+bgp as-path access-list WAN_ASNS permit _8074_
+bgp as-path access-list WAN_ASNS permit _8072_
+!
+ipv6 prefix-list DEFAULT_IPV6 permit ::/0
+!
+route-map FROM_RH_V6 permit 100
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_RH_V6 permit 200
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map FROM_RH_V6 permit 300
+  match community LEAK_COMMUNITY
+!
+route-map FROM_RH_V6 permit 400
+  match community INREGION_LEAK_COMMUNITY
+!
+route-map FROM_RH_V6 permit 500
+  match community FABRIC_INFRA_COMMUNITY
+!
+route-map FROM_RH_V6 deny 1000
+!
+route-map TO_RH_V6 deny 100
+  match as-path WAN_ASNS
+!
+route-map TO_RH_V6 deny 200
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map TO_RH_V6 permit 1000
+!
+! end of template: bgpd/templates/msft.general/v6.spine.rh/policy.conf.j2
+!

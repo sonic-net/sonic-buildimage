@@ -6,6 +6,8 @@ constants:
     "4" : 64523
   bgp:
     traffic_shift_community: 8075:8847
+    hide_internal_community: 55555:55555
+    upperspine_community: 44444:44444
     internal_community: 11111:11111
     sentinel_community: 8075:8821
     internal_fallback_community: 22222:22222
@@ -14,6 +16,7 @@ constants:
     anchor_route_community: 8075:9319
     anchor_contributing_route_community: 8075:9321
     route_do_not_send_appdb_tag: 202
+    fabric_t2_community: 12345:12345
     route_eligible_for_fallback_to_default_tag: 203
     families:
       - ipv4

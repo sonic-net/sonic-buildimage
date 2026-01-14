@@ -1,0 +1,89 @@
+!
+! template: bgpd/templates/msft.general/v6.upperspine.ah/policy.conf.j2
+!
+bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
+bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+bgp community-list standard NO_EXPORT permit no-export
+!
+bgp as-path access-list WAN_ASNS permit _8075_
+bgp as-path access-list WAN_ASNS permit _8074_
+bgp as-path access-list WAN_ASNS permit _8072_
+bgp as-path access-list RNG_ASNS permit _64915_
+bgp as-path access-list RNG_ASNS permit _64945_
+bgp as-path access-list T2_LOOPBACK permit ^$
+!
+ipv6 prefix-list DEFAULT_IPV6 permit ::/0
+!
+route-map FROM_AZNG_MIGRATION_FILTER_V6 permit 1
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_AZNG_MIGRATION_FILTER_V6 permit 2
+  match community FABRIC_INFRA_COMMUNITY
+!
+route-map FROM_AZNG_MIGRATION_FILTER_V6 deny 3
+!
+{% if slice_type is not defined or slice_type != 'AZNG_Production' %}
+route-map FROM_AH_V6 permit 10
+  call FROM_AZNG_MIGRATION_FILTER_V6
+{% endif %}
+!
+route-map FROM_AH_V6 deny 100
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map FROM_AH_V6 deny 200
+  match as-path WAN_ASNS
+!
+route-map FROM_AH_V6 deny 300
+  match as-path RNG_ASNS
+!
+route-map FROM_AH_V6 permit 400
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_AH_V6 permit 500 
+ match community FABRIC_INFRA_COMMUNITY
+ set community 65525:30 additive
+! 
+route-map FROM_AH_V6 permit 900
+ match community NO_EXPORT
+ set local-preference 80
+ set community 65525:30 additive
+!
+route-map FROM_AH_V6 permit 1000
+ set community 65525:30 no-export additive
+ set local-preference 80
+!
+route-map TO_AZNG_MIGRATION_FILTER_V6 permit 1
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map TO_AZNG_MIGRATION_FILTER_V6 permit 2
+  match as-path T2_LOOPBACK
+  set community 8075:316 additive
+!
+route-map TO_AZNG_MIGRATION_FILTER_V6 permit 3
+  match community FABRIC_INFRA_COMMUNITY
+!
+route-map TO_AZNG_MIGRATION_FILTER_V6 deny 4
+!
+{% if slice_type is not defined or slice_type != 'AZNG_Production' %}
+route-map TO_AH_V6 permit 50
+  call TO_AZNG_MIGRATION_FILTER_V6
+{% endif %}
+!
+route-map TO_AH_V6 permit 100
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map TO_AH_V6 deny 200
+  match as-path WAN_ASNS
+!
+route-map TO_AH_V6 deny 300
+  match as-path RNG_ASNS
+!
+route-map TO_AH_V6 deny 400
+  match community INREGION_LEAK_COMMUNITY
+!
+route-map TO_AH_V6 permit 1000
+!
+! end of template: bgpd/templates/msft.general/v6.upperspine.ah/policy.conf.j2
+!

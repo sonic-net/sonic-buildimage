@@ -1,0 +1,15 @@
+!
+! template: bgpd/templates/msft.general/v6.spine.rh/peer-group.conf.j2
+!
+  neighbor RH_V6 peer-group
+  address-family ipv6 unicast
+    neighbor RH_V6 activate
+    neighbor RH_V6 soft-reconfiguration inbound
+    neighbor RH_V6 route-map FROM_RH_V6 in
+    neighbor RH_V6 route-map TO_RH_V6 out
+    neighbor RH_V6 send-community
+    neighbor RH_V6 maximum-prefix 64000 90 warning-only
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v6.spine.rh/peer-group.conf.j2
+!

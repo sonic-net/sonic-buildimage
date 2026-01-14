@@ -1,0 +1,16 @@
+!
+! template: bgpd/templates/msft.general/v6.fabricspine.lowerspine/peer-group.conf.j2
+!
+  neighbor LOWERSPINE_V6 peer-group
+  address-family ipv6 unicast
+    neighbor LOWERSPINE_V6 activate
+    neighbor LOWERSPINE_V6 next-hop-self force
+    neighbor LOWERSPINE_V6 soft-reconfiguration inbound
+    neighbor LOWERSPINE_V6 route-map FROM_LOWERSPINE_V6 in
+    neighbor LOWERSPINE_V6 route-map TO_LOWERSPINE_V6 out
+    neighbor LOWERSPINE_V6 send-community
+    neighbor LOWERSPINE_V6 maximum-prefix 64000 90 warning-only
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v6.upperspine.lowerspine/peer-group.conf.j2
+!

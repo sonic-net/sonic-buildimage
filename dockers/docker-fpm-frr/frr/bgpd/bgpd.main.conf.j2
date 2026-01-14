@@ -7,6 +7,13 @@
 ! BGP configuration
 !
 ! TSA configuration
+{# Check if the device is a disaggregated T2 device #}
+{% set disagg_t2 = "false" %}
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('type' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['type'].lower() != 'none') %}
+{% if DEVICE_METADATA['localhost']['type'].lower() in ['lowerspinerouter', 'upperspinerouter', 'fabricspinerouter']%}
+{% set disagg_t2 = "true" %}
+{% endif%}
+{% endif %}
 {% set is_storage_device = DEVICE_METADATA['localhost']['storage_device'] %}
 {% if is_storage_device is not defined or is_storage_device | length == 0 %}
 {% set is_storage_device = "false" %}
@@ -65,6 +72,14 @@ route-map V6_CONNECTED_ROUTES permit 10
 !
 route-map HIDE_INTERNAL permit 10
   set community no-export
+{% if disagg_t2 == "true" %}
+{% if constants.bgp.hide_internal_community is defined %}
+  on-match next
+!
+route-map HIDE_INTERNAL permit 20
+  set community {{ constants.bgp.hide_internal_community }} additive
+{% endif %}
+{% endif %}
 {% if constants.bgp.peers is defined and constants.bgp.peers.internal is defined and constants.bgp.peers.internal.community is defined %}
   on-match next
 route-map HIDE_INTERNAL permit 20
@@ -76,6 +91,14 @@ route-map HIDE_INTERNAL permit 20
 {% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'none') and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'null') %}
 router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
+{% if disagg_t2  == "true" %}
+{% if (BGP_DEVICE_GLOBAL is defined) and ('CONFED' in BGP_DEVICE_GLOBAL) and ('asn' in BGP_DEVICE_GLOBAL['CONFED'] )  %}
+  bgp confederation identifier {{ BGP_DEVICE_GLOBAL['CONFED']['asn'] }}
+{% endif %}
+{% if (BGP_DEVICE_GLOBAL is defined) and ('CONFED' in BGP_DEVICE_GLOBAL) and ('peers' in BGP_DEVICE_GLOBAL['CONFED'] )  %}
+  bgp confederation peers {{ BGP_DEVICE_GLOBAL['CONFED']['peers'] | replace(';', ' ') }}
+{% endif %}
+{% endif %}
 {% block bgp_init %}
   bgp log-neighbor-changes
   bgp suppress-fib-pending

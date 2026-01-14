@@ -2,12 +2,15 @@
 ! template: bgpd/templates/voq_chassis/peer-group.conf.j2
 !
   neighbor VOQ_CHASSIS_V4_PEER peer-group
+  neighbor VOQ_CHASSIS_V4_PEER remote-as {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }}
   neighbor VOQ_CHASSIS_V6_PEER peer-group
+  neighbor VOQ_CHASSIS_V6_PEER remote-as {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }}
   address-family ipv4
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
     neighbor VOQ_CHASSIS_V4_PEER allowas-in 1
 {% endif %}
     neighbor VOQ_CHASSIS_V4_PEER activate
+
     neighbor VOQ_CHASSIS_V4_PEER addpath-tx-all-paths
     neighbor VOQ_CHASSIS_V4_PEER soft-reconfiguration inbound
     neighbor VOQ_CHASSIS_V4_PEER route-map FROM_VOQ_CHASSIS_V4_PEER in

@@ -1,0 +1,17 @@
+!
+bgp community-list standard FABRIC_T2_COMMUNITY  permit {{ constants.bgp.fabric_t2_community }}
+!
+route-map FROM_UPPERSPINE_V4 permit 100
+  match ip address prefix-list DEFAULT_IPV4
+!
+route-map FROM_UPPERSPINE_V4 permit 1000
+ set community {{ constants.bgp.upperspine_community }} additive
+!
+route-map TO_UPPERSPINE_V4 deny 100
+ match ip address prefix-list DEFAULT_IPV4
+!
+route-map TO_UPPERSPINE_V4 deny 200
+  match community FABRIC_T2_COMMUNITY
+!
+route-map TO_UPPERSPINE_V4 permit 1000
+!
