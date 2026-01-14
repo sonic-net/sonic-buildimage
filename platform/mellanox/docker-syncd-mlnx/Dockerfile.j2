@@ -38,8 +38,7 @@ RUN apt-get update && \
         python3-dev \
         python3-jsonschema \
         python-is-python3 \
-        pciutils \
-        linuxptp
+        pciutils
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python-pip
@@ -68,8 +67,6 @@ RUN apt-get purge -y         \
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
-COPY ["phcsync.sh", "/usr/bin/"]
-RUN chmod +x /usr/bin/phcsync.sh
 
 COPY ["files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/rdb-cli
