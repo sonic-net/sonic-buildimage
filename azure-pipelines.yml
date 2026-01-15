@@ -105,7 +105,7 @@ stages:
         pool: sonicso1ES-arm64
         variables:
           PLATFORM_NAME: nvidia-bluefield
-          PLATFORM_ARCH: amd64
+          PLATFORM_ARCH: arm64
           INCLUDE_RESTAPI: y
 
 - stage: Test
