@@ -1,0 +1,154 @@
+#######################################
+# Implementation of the A/B/C boot state machine in GRUB.
+#
+# The environment is stored in the EFI partition at the root level.
+# It contains the variables and their possible values:
+#   warmboot_env = [0, 1]
+#   install_env = [0, 1]
+#   bootcount_env = [0, 1, 2]
+#   rollback_env = [0, 1]
+#
+# The state is loaded by the call to load_env and the variables are stored
+# in the GRUB environment. This can be verified with the set command.
+#
+# The environment is stored into variabled append with '_env' to prevent
+# accidental writing of the state variables to the environment with a save_env
+# call.
+# save_state must be called to convert the state variable to the environment
+# variables.
+#######################################
+
+#######################################
+# Load the GRUB environment variables.
+#
+# Globals:
+#   warmboot_env: Flag loaded from file.
+#   install_env: Flag loaded from file.
+#   bootcount_env: Flag loaded from file.
+#   rollback_env: Flag loaded from file.
+#   bootcount: Set to bootcount_env.
+#   warmboot: Set to warmboot_env.
+#   install: Set to install_env.
+#   rollback: Set to rollback_env.
+#   kargs: kernel arguments.
+# Arguments:
+#   None
+#######################################
+function load_state {
+  echo "Loading state"
+  if [ ! -s "(hd0,gpt1)/sonie_env" ]; then
+    echo "State File not detected"
+    return
+  fi
+
+  # GRUB does not support local variables, so we use global scope.
+  env_file="(hd0,gpt1)/sonie_env"
+  load_env --file "${env_file}"
+  set warmboot="${warmboot_env}"
+  set install="${install_env}"
+  set bootcount="${bootcount_env}"
+  set rollback="${rollback_env}"
+  set kargs=""
+}
+
+#######################################
+# Compute the state.
+#
+# Determine which partition to boot from.
+#
+# Globals:
+#   default: Default GRUB menu entry (Output).
+#   warmboot: 1 if warmboot was requested.
+#   install: 1 if install was requested.
+#   bootcount: Boot order/counter.
+#   rollback: 0 for A preference, 1 for B preference.
+# Arguments:
+#   None
+#######################################
+function compute_state {
+  echo "Computing state"
+
+  # If warmboot is not set then boot SONIE
+  if [ -z "${warmboot}" ]; then
+    set default="SONIE"
+    return
+  fi
+  if [ "${warmboot}" -eq 0 ]; then
+    set default="SONIE"
+    return
+  fi
+
+  # If install flag is set, or bootcount=0, then boot SONIE
+  if [ "${install}" -eq 1 ]; then
+    set default="SONIE"
+    return
+  fi
+  if [ "${bootcount}" -eq 0 ]; then
+    set default="SONIE"
+    return
+  fi
+
+  # Ensure rollback is set, default to 0 (A preference)
+  if [ -z "${rollback}" ]; then
+    set rollback=0
+  fi
+
+  if [ "${rollback}" -eq 0 ]; then
+    # rollback=0: Preference SONIC_A then SONIC_B
+    # bootcount=2 -> SONIC_A
+    # bootcount=1 -> SONIC_B
+    if [ "${bootcount}" -eq 2 ]; then
+      set default="SONIC_A"
+    elif [ "${bootcount}" -eq 1 ]; then
+      set default="SONIC_B"
+    fi
+  else
+    # rollback=1: Preference SONIC_B then SONIC_A
+    # bootcount=2 -> SONIC_B
+    # bootcount=1 -> SONIC_A
+    if [ "${bootcount}" -eq 2 ]; then
+      set default="SONIC_B"
+    elif [ "${bootcount}" -eq 1 ]; then
+      set default="SONIC_A"
+    fi
+  fi
+
+  # Decrement the bootcount
+  if [ "${bootcount}" -eq 2 ]; then
+    set bootcount=1
+  elif [ "${bootcount}" -eq 1 ]; then
+    set bootcount=0
+  fi
+}
+
+#######################################
+# Save the state.
+#
+# Save the state to the environment file.
+#
+# Globals:
+#   warmboot: State var to persist to file.
+#   install: State var to persist to file.
+#   bootcount: State var to persist to file.
+#   rollback: State var to persist to file.
+# Arguments:
+#   None
+#######################################
+function save_state {
+  # Don't save the state if we don't detect Google ONIE
+  if [ ! -s "(hd0,gpt1)/sonie_env" ]; then
+    echo "State File not detected"
+    return
+  fi
+  echo "Saving state"
+  env_file="(hd0,gpt1)/sonie_env"
+  set warmboot_env="${warmboot}"
+  set install_env="${install}"
+  set bootcount_env="${bootcount}"
+  set rollback_env="${rollback}"
+
+  save_env --file "${env_file}" warmboot_env
+  save_env --file "${env_file}" install_env
+  save_env --file "${env_file}" bootcount_env
+  save_env --file "${env_file}" rollback_env
+}

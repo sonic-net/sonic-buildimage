@@ -1,0 +1,66 @@
+#
+# dnsmasq Configuration for QEMU IPv6 Network Boot
+#
+# This file is a template processed by envsubst in qemu_runner.sh.
+#
+
+# -- Basic Network Setup --
+# Listen only on the bridge interface.
+interface=br0
+bind-interfaces
+
+# Enable Router Advertisements for stateless autoconfiguration.
+enable-ra
+
+# -- DHCPv6 Range --
+# Assign addresses from this range with a 12-hour lease.
+dhcp-range=${CLIENT_IP6_START},${CLIENT_IP6_END},64,12h
+
+# Provide Google's public DNS server to clients.
+dhcp-option=option6:dns-server,[2001:4860:4860::8888]
+
+
+# -- Client Identification --
+# Classify clients based on their User-Class or Vendor-Class identifiers.
+# These tags are used to serve specific boot files.
+
+# iPXE bootloader
+dhcp-userclass=set:ipxe_client6,iPXE
+
+# SONiE installer environment
+dhcp-userclass=set:onie_client6,SONIE
+
+# Standard UEFI PXE and HTTP boot clients
+# Match generic and specific HTTP Client strings with Enterprise ID 343 (Intel/Industry Standard)
+dhcp-vendorclass=set:http_boot6,enterprise:343,HTTPClient
+dhcp-vendorclass=set:http_boot6,enterprise:343,HTTPClient:Arch:00016
+# Match generic and specific PXE Client strings
+dhcp-vendorclass=set:pxe_boot6,enterprise:343,PXEClient
+dhcp-vendorclass=set:pxe_boot6,enterprise:343,PXEClient:Arch:00007
+dhcp-vendorclass=set:pxe_boot6,enterprise:343,PXEClient:Arch:00009
+
+
+# -- Boot File Logic --
+# The order of these rules is important for prioritizing boot behavior.
+
+# 1. SONiE clients receive the imageset file first.
+dhcp-option=tag:onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${IMAGESET_FILE}
+
+# 2. HTTP Boot Clients (UEFI HTTPClient or iPXE) get the UKI via HTTP.
+dhcp-option=tag:http_boot6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILE}
+dhcp-option=tag:ipxe_client6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILE}
+
+# 3. Standard UEFI PXE Clients (TFTP) get the UKI via TFTP.
+#    We use the standard TFTP port (69), so no port needed in URL.
+dhcp-option=tag:pxe_boot6,tag:!ipxe_client6,tag:!http_boot6,tag:!onie_client6,option6:bootfile-url,tftp://[${BRIDGE_IP6}]/${UKI_FILE}
+
+# -- Dynamic Configuration --
+# The following line is dynamically inserted by qemu_runner.sh if a CONFIG_BUNDLE is defined.
+# It provides a configuration bundle URL to SONiE clients.
+${DNSMASQ_CONFIG_BUNDLE_LINE}
+
+
+# -- Logging --
+# Enable DHCP logging for troubleshooting.
+log-dhcp
+log-queries

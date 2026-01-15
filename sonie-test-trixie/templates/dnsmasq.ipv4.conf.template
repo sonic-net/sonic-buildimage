@@ -1,0 +1,45 @@
+#
+# dnsmasq Configuration for QEMU IPv4 Network Boot
+#
+# This file is a template processed by envsubst in qemu_runner.sh.
+#
+
+# -- Basic Network Setup --
+# Listen only on the bridge interface.
+interface=br0
+bind-interfaces
+
+# -- DHCPv4 Range and Options --
+# Assign addresses from this range with a 12-hour lease.
+dhcp-range=${CLIENT_IP_START},${CLIENT_IP_END},12h
+
+# Set the default gateway (router) to be the bridge IP.
+dhcp-option=3,${BRIDGE_IP}
+
+# Provide Google's public DNS server.
+dhcp-option=6,8.8.8.8
+
+
+# -- Client Identification --
+# Classify clients to serve specific boot files.
+
+# iPXE bootloader
+dhcp-userclass=set:ipxe_client,iPXE
+
+# Standard UEFI PXE clients (e.g., OVMF)
+dhcp-vendorclass=set:pxe_client,PXEClient:Arch:00007
+
+
+# -- Boot File Logic --
+
+# 1. All PXE clients (iPXE and standard UEFI) are served the UKI file directly via TFTP.
+dhcp-boot=tag:pxe_client,${UKI_FILE}
+
+# 2. Fallback for any other client: provide the imageset file via HTTP.
+dhcp-boot=tag:!pxe_client,http://${BRIDGE_IP}:${HTTP_PORT}/${IMAGESET_FILE}
+
+
+# -- Logging --
+# Enable DHCP logging for troubleshooting.
+log-dhcp
+log-queries
