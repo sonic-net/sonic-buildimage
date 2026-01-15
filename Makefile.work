@@ -448,6 +448,14 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
+
+DOCKER_USER_BUILD_SECRET_ARGS :=
+ifneq ($(GCLOUD_AUTH_PATH),)
+    ifneq ($(wildcard $(GCLOUD_AUTH_PATH)/application_default_credentials.json),)
+        DOCKER_USER_BUILD_SECRET_ARGS += --secret id=google_creds,src=$(GCLOUD_AUTH_PATH)/application_default_credentials.json
+    endif
+endif
+
 DOCKER_USER_BUILD = docker build --no-cache \
 	       --build-arg user=$(USER) \
 	       --build-arg uid=$(shell id -u) \
@@ -456,7 +464,7 @@ DOCKER_USER_BUILD = docker build --no-cache \
                --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
 	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
-	       --secret id=google_creds,src=$(GCLOUD_AUTH_PATH)/application_default_credentials.json \
+	       $(DOCKER_USER_BUILD_SECRET_ARGS) \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
 

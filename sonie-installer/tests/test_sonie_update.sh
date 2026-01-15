@@ -116,7 +116,7 @@ setup_mocks() {
 # Source the script (stripping main)
 sed '$d' "${INSTALL_SCRIPT}" > "${TEMP_SCRIPT}"
 # Patch TEMP_SCRIPT to comment out sourcing of default_platform.conf
-sed -i 's|\. \./default_platform.conf|# . ./default_platform.conf|' "${TEMP_SCRIPT}"
+sed -i 's|\. "\${SCRIPT_DIR}/default_platform.conf"|# . "${SCRIPT_DIR}/default_platform.conf"|' "${TEMP_SCRIPT}"
 
 test_sonie_update_flow() {
     echo "Testing Sonie Update Flow..."

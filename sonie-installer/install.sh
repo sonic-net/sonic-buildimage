@@ -295,7 +295,7 @@ install_esp_bootloader() {
 }
 
 # Export these for default_platform.conf usage
-export bootloader_state_machine="./bootloader_state_machine.grub"
+export bootloader_state_machine="${SCRIPT_DIR}/bootloader_state_machine.grub"
 
 main() {
     _trap_push true
@@ -315,11 +315,11 @@ main() {
 
     # Source platform defaults
     # shellcheck disable=SC1091
-    . ./default_platform.conf
+    . "${SCRIPT_DIR}/default_platform.conf"
 
     # shellcheck disable=SC1091
-    if [ -r ./platform.conf ]; then
-        . ./platform.conf
+    if [ -r "${SCRIPT_DIR}/platform.conf" ]; then
+        . "${SCRIPT_DIR}/platform.conf"
     fi
 
     export sonie_mnt=""
