@@ -145,7 +145,7 @@ module sonic-vnet {
                 }
 
                 leaf metric {
-                    description "Value set to determine type of route";
+                    description "Value that can be set to categorize or determine the type of route. This value does not affect route behavior.";
                     type uint8;
                 }
             }
