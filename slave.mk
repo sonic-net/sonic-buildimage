@@ -393,6 +393,8 @@ export FRR_USER_UID
 export FRR_USER_GID
 export INCLUDE_FIPS
 export ENABLE_FIPS
+export ENABLE_TRANSLIB_WRITE
+export ENABLE_NATIVE_WRITE
 
 ###############################################################################
 ## Build Options
