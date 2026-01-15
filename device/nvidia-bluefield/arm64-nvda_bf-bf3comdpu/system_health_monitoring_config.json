@@ -1,5 +1,5 @@
 {
-    "services_to_ignore": [],
+    "services_to_ignore": ["gnoi-shutdown.service"],
     "devices_to_ignore": ["psu", "fan"],
     "user_defined_checkers": [],
     "polling_interval": 60
