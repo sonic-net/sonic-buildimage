@@ -34,14 +34,9 @@ parameters:
   default:
   - vs
   - broadcom
-  - centec
-  - centec-arm64
-  - generic
   - marvell-armhf
   - marvell-arm64
   - mellanox
-  - pensando
-  - nvidia-bluefield
 
 stages:
 - stage: Prepare
@@ -50,8 +45,8 @@ stages:
     steps:
     - script: |
         DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
-        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/snapshot/debian/latest/timestamp)
-        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/snapshot/debian-security/latest/timestamp)
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
         echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
         echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
         echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
@@ -156,7 +151,7 @@ stages:
         git config user.name $GIT_USER
         git config credential.https://github.com.username $GIT_USER
         git add files/build/versions
-        git commit -m "[ci/build]: Upgrade SONiC package versions"
+        git commit -s -m "[ci/build]: Upgrade SONiC package versions"
         git checkout -b $BRANCH_NAME
         git remote add remote https://github.com/$GIT_USER/$GIT_REPO
         git push remote HEAD:refs/heads/$BRANCH_NAME -f
