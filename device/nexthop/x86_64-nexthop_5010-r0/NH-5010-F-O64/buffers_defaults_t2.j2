@@ -2,6 +2,19 @@
 
 {%- include 'buffer_ports.j2' %}
 
+{%- set ports2cable = {
+        'torrouter_server'       : '300m',
+        'leafrouter_torrouter'   : '300m',
+        'spinerouter_leafrouter' : '2000m',
+        'upperspinerouter_spinerouter' : '50m',
+        'upperspinerouter_lowerspinerouter' : '50m',
+        'regionalhub_upperspinerouter': '120000m',
+        'aznghub_upperspinerouter'    : '120000m',
+        'regionalhub_spinerouter': '120000m',
+        'aznghub_spinerouter'    : '120000m'
+        }
+-%}
+
 {%- macro generate_qos_bypass_port_list(PORT_QOS_BYPASS) %}
     {# Generate list of ports #}
     {%- for port_idx in range(256, 261, 4) %}
@@ -11,42 +24,30 @@
 
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
-        "ingress_pool": {
-            "size": "56441610000",
+        "ingress_lossless_pool": {
+            "size": "25766440000",
             "type": "both",
-            "mode": "dynamic"
+            "mode": "dynamic",
+            "xoff": "5301600256"
         }
     },
     "BUFFER_PROFILE": {
         "ingress_lossy_profile": {
-            "pool":"ingress_pool",
+            "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
+            "xon_offset": "0",
+            "dynamic_th":"0"
+        },
+        "egress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-1"
         },
         "egress_lossy_profile": {
-            "pool":"ingress_pool",
+            "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
+            "dynamic_th":"-6"
         }
     },
 {%- endmacro %}
 
-{%- macro generate_pg_profils(port_names_active) %}
-    "BUFFER_PG": {
-{% for port in port_names_active.split(',') %}
-        "{{ port }}|0-7": {
-            "profile" : "ingress_lossy_profile"
-        }{% if not loop.last %},{% endif %}
-{% endfor %}
-    },
-{%- endmacro %}
-
-{% macro generate_queue_buffers(port_names_active) %}
-    "BUFFER_QUEUE": {
-{% for port in port_names_active.split(',') %}
-        "{{ port }}|0-7": {
-            "profile" : "egress_lossy_profile"
-        }{% if not loop.last %},{% endif %}
-{% endfor %}
-    }
-{% endmacro %}
