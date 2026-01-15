@@ -90,6 +90,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         unzip \
         gzip \
         pigz \
+        xz-utils \
         git \
         build-essential \
         remake \
@@ -594,6 +595,7 @@ RUN pip3 uninstall -y enum34
 RUN pip3 install redis
 RUN pip3 install psutil
 RUN pip3 install blkinfo
+RUN pip3 install docker-squash
 
 # For sonic-swss-common testing
 RUN pip3 install Pympler==1.0

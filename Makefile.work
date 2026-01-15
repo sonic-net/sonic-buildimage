@@ -55,6 +55,9 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
+#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
+#  *                 Default: gzip
+#  *                 Values: pigz,gzip
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
@@ -65,6 +68,10 @@
 #  * ENABLE_MULTIDB: Enable multiple redis database instances.
 #  *                 Default: unset
 #  *                 Values: y
+#  * GCP_ADC_CREDS: Set to 'y' to use default GCP ADC credentials from home directory (~/.config/gcloud/application_default_credentials.json).
+#  *                Default: unset
+#  * GCP_ADC_CREDS_OVERRIDE: Specific file path to GCP Application Default Credentials. Overrides GCP_ADC_CREDS.
+#  *                         Default: unset
 ###############################################################################
 
 SHELL = /bin/bash
@@ -239,6 +246,8 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	DBGOPT='$(DBGOPT)' \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+	ENABLE_ARTIFACT_REGISTRY_APT=$(ENABLE_ARTIFACT_REGISTRY_APT) \
+	ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -311,6 +320,7 @@ DOCKER_RUN := docker run --rm=true --privileged --init \
     -e "http_proxy=$(http_proxy)" \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
+    -e "GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
     --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
@@ -350,6 +360,20 @@ endif
 
 ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
+endif
+
+# Logic for GCP Credentials
+GCP_ADC_CREDS_PATH :=
+ifneq ($(GCP_ADC_CREDS_OVERRIDE),)
+    GCP_ADC_CREDS_PATH := $(GCP_ADC_CREDS_OVERRIDE)
+else ifeq ($(GCP_ADC_CREDS),y)
+    GCP_ADC_CREDS_PATH := $(HOME)/.config/gcloud/application_default_credentials.json
+endif
+
+ifneq ($(GCP_ADC_CREDS_PATH),)
+	DOCKER_RUN += -v $(GCP_ADC_CREDS_PATH):/sonic/google_application_credentials.json:ro
+	DOCKER_RUN += -e "GOOGLE_APPLICATION_CREDENTIALS=/sonic/google_application_credentials.json"
+	SONIC_OVERRIDE_BUILD_VARS += GCP_ADC_CREDS_FILE=/sonic/google_application_credentials.json
 endif
 
 # User name and tag for "docker-*" images created by native dockerd mode.
@@ -442,6 +466,14 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
+
+DOCKER_USER_BUILD_SECRET_ARGS :=
+ifneq ($(GCLOUD_AUTH_PATH),)
+    ifneq ($(wildcard $(GCLOUD_AUTH_PATH)/application_default_credentials.json),)
+        DOCKER_USER_BUILD_SECRET_ARGS += --secret id=google_creds,src=$(GCLOUD_AUTH_PATH)/application_default_credentials.json
+    endif
+endif
+
 DOCKER_USER_BUILD = docker build --no-cache \
 	       --build-arg user=$(USER) \
 	       --build-arg uid=$(shell id -u) \
@@ -450,6 +482,7 @@ DOCKER_USER_BUILD = docker build --no-cache \
                --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
 	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
+	       $(DOCKER_USER_BUILD_SECRET_ARGS) \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
 DOCKER_USER_PULL = docker pull \
@@ -596,10 +629,13 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
+                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+                           XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
+                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
@@ -643,7 +679,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "git config --global --add safe.directory '*' && $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:

@@ -94,11 +94,15 @@ export DOCKER_BASE_ARCH
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
+GZ_COMPRESS_PROGRAM ?= gzip
+export GZ_COMPRESS_PROGRAM
 export MIRROR_SNAPSHOT
 export SONIC_OS_VERSION
 export FILES_PATH
 export PROJECT_ROOT
 export PTF_ENV_PY_VER
+export ARTIFACT_REGISTRY_URL_DEFAULT
+export ENABLE_ARTIFACT_REGISTRY_APT
 
 ###############################################################################
 ## Utility rules
@@ -281,7 +285,22 @@ PDDF_SUPPORT = n
 endif
 export PDDF_SUPPORT
 
-include $(RULES_PATH)/*.mk
+ifneq ($(GCP_ADC_CREDS_FILE),)
+DOCKER_SECRET_ARGS += --secret id=google_application_credentials,src=$(GCP_ADC_CREDS_FILE)
+DOCKER_BUILD_ENV += DOCKER_BUILDKIT=1
+endif
+
+# Explicitly include sonie-uki.mk first to ensure its targets are defined before
+# any rules that might depend on them.
+include $(RULES_PATH)/sonie-uki.mk
+
+# Include all other .mk files from the rules directory, excluding the sonie-specific
+# ones which are handled explicitly.
+include $(filter-out %/sonie-uki.mk %/sonie-image.mk, $(wildcard $(RULES_PATH)/*.mk))
+
+# Explicitly include sonie-image.mk last to ensure it is processed after its
+# dependencies have been defined.
+include $(RULES_PATH)/sonie-image.mk
 ifneq ($(CONFIGURED_PLATFORM), undefined)
 ifeq ($(PDDF_SUPPORT), y)
 PDDF_DIR = pddf
@@ -561,6 +580,12 @@ define docker-get-tag
 $(shell [ ! -z $(filter $(1).gz,$(SONIC_PACKAGES_LOCAL)) ] && [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ] && echo $(SONIC_IMAGE_VERSION) || echo latest)
 endef
 
+ifeq ($(SONIC_COMPRESSION_TYPE),xz)
+DOCKER_SAVE_COMPRESS_CMD = xz -T0 -c
+else
+DOCKER_SAVE_COMPRESS_CMD = pigz -c
+endif
+
 # $(call docker-image-save,from,to)
 # Sonic docker images are always created with username as extension. During the save operation,
 # it removes the username extension from docker image and saved them as compressed tar file for SONiC image generation.
@@ -575,8 +600,12 @@ define docker-image-save
     @echo "Obtained docker image lock for $(1) save" $(LOG)
     @echo "Tagging docker image $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) as $(1):$(call docker-get-tag,$(1))" $(LOG)
     docker tag $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(1):$(call docker-get-tag,$(1)) $(LOG)
+    if [ "$(SONIC_DOCKER_SQUASH)" = "y" ]; then \
+        echo "Squashing docker image $(1):$(call docker-get-tag,$(1))" $(LOG); \
+        docker-squash -t $(1):$(call docker-get-tag,$(1)) $(1):$(call docker-get-tag,$(1)) $(LOG); \
+    fi
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
-        docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
+	docker save $(1):$(call docker-get-tag,$(1)) | $(DOCKER_SAVE_COMPRESS_CMD) > $(2)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -1041,7 +1070,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build --no-cache \
+	$(DOCKER_BUILD_ENV) docker build --no-cache \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1050,6 +1079,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 		--build-arg guid=$(GUID) \
 		--build-arg docker_container_name=$($*.gz_CONTAINER_NAME) \
 		--label Tag=$(SONIC_IMAGE_VERSION) \
+		$(DOCKER_SECRET_ARGS) \
 		-f $(TARGET_DOCKERFILE)/Dockerfile.buildinfo \
 		-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
 
@@ -1164,6 +1194,8 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*.gz_INSTALL_DEBS))) \
 		$$($$*.gz_PATH)/Dockerfile.j2 \
 		$(call dpkg_depend,$(TARGET_PATH)/%.gz.dep)
+	$(info DEBUG: Starting recipe for $@)
+
 	$(HEADER)
 
 	# Load the target deb from DPKG cache
@@ -1181,9 +1213,11 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		mkdir -p $(TARGET_PATH)/vcache/$* $($*.gz_PATH)/vcache $(LOG)
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
 		sudo mount --bind $($*.gz_FILES_PATH) $($*.gz_PATH)/files $(LOG)
+		mkdir -p $(PYTHON_DEBS_PATH) $(LOG)
 		sudo mount --bind $(PYTHON_DEBS_PATH) $($*.gz_PATH)/python-debs $(LOG)
 		sudo mount --bind $(PYTHON_WHEELS_PATH) $($*.gz_PATH)/python-wheels $(LOG)
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
+		export gcp_adc_creds_file="$(GCP_ADC_CREDS_FILE)"
 		export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 		export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
@@ -1210,7 +1244,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build --no-cache \
+		$(DOCKER_BUILD_ENV) docker build --no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1225,6 +1259,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			--build-arg image_version=$(SONIC_IMAGE_VERSION) \
 			--label com.azure.sonic.manifest="$$(cat $($*.gz_PATH)/manifest.json)" \
 			--label Tag=$(SONIC_IMAGE_VERSION) \
+			$(DOCKER_SECRET_ARGS) \
 		        $($(subst -,_,$(notdir $($*.gz_PATH)))_labels) \
 			-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
 
@@ -1265,6 +1300,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
 		mkdir -p $(TARGET_PATH)/vcache/$*-dbg $($*.gz_PATH)/vcache $(LOG)
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
+		export gcp_adc_creds_file="$(GCP_ADC_CREDS_FILE)"
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_debs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_DEPENDS),RDEPENDS))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_image_dbgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_IMAGE_PACKAGES)))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_APT_PACKAGES),RDEPENDS))\n" | awk '!a[$$0]++'))
@@ -1279,7 +1315,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build \
+		$(DOCKER_BUILD_ENV) docker build \
 			--no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
@@ -1289,6 +1325,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 			--build-arg SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
 			--label com.azure.sonic.manifest="$$(cat $($*.gz_PATH)/manifest.json)" \
 			--label Tag=$(SONIC_IMAGE_VERSION) \
+			$(DOCKER_SECRET_ARGS) \
 			--file $($*.gz_PATH)/Dockerfile-dbg \
 			-t $(DOCKER_DBG_IMAGE_REF) $($*.gz_PATH) $(LOG)
 
@@ -1385,7 +1422,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 			./build_debian.sh $(LOG)
 
 		$(call SAVE_CACHE,$*,$@)
-
 	fi
 
 	$(FOOTER)
@@ -1613,7 +1649,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
-		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
+		IMAGE_TYPE=$($*_IMAGE_TYPE) j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
 		chmod +x sonic_debian_extension.sh,
 	)
 
@@ -1637,6 +1673,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
@@ -1656,6 +1693,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_MDM_VERSION=$(MASTER_MDM_VERSION) \
 		MASTER_MDS_VERSION=$(MASTER_MDS_VERSION) \
 		MASTER_FLUENTD_VERSION=$(MASTER_FLUENTD_VERSION) \
+		ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
@@ -1663,6 +1701,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_MACHINE=$(dep_machine) \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENABLE_IMAGE_SIGNATURE="$(SONIC_ENABLE_IMAGE_SIGNATURE)" \
 		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
 		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
@@ -1684,7 +1723,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	$(if $($*_DOCKERS),
-		rm sonic_debian_extension.sh,
+		rm -f sonic_debian_extension.sh,
 	)
 
 	chmod a+x $@
