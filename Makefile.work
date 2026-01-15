@@ -55,6 +55,9 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
+#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
+#  *                 Default: gzip
+#  *                 Values: pigz,gzip
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
@@ -243,6 +246,8 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	DBGOPT='$(DBGOPT)' \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+	ENABLE_ARTIFACT_REGISTRY_APT=$(ENABLE_ARTIFACT_REGISTRY_APT) \
+	ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -315,6 +320,7 @@ DOCKER_RUN := docker run --rm=true --privileged --init \
     -e "http_proxy=$(http_proxy)" \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
+    -e "GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
     --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
@@ -468,6 +474,7 @@ DOCKER_USER_BUILD = docker build --no-cache \
                --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
 	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
+	       --secret id=google_creds,src=$(GCLOUD_AUTH_PATH)/application_default_credentials.json \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
 
@@ -596,10 +603,13 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
+                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+                           XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
+                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
@@ -643,7 +653,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "git config --global --add safe.directory '*' && $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:

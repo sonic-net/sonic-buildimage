@@ -45,7 +45,8 @@ platform/*/docker-*/*manifest*
 
 # Installer-related files and directories
 installer/x86_64/platforms/
-
+sonie-installer/tests/
+sonie-installer/platforms/
 # Misc. files
 asic_config_checksum
 files/Aboot/boot0
@@ -121,3 +122,4 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+sonie-installer/platforms

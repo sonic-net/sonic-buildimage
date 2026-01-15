@@ -94,11 +94,15 @@ export DOCKER_BASE_ARCH
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
+GZ_COMPRESS_PROGRAM ?= gzip
+export GZ_COMPRESS_PROGRAM
 export MIRROR_SNAPSHOT
 export SONIC_OS_VERSION
 export FILES_PATH
 export PROJECT_ROOT
 export PTF_ENV_PY_VER
+export ARTIFACT_REGISTRY_URL_DEFAULT
+export ENABLE_ARTIFACT_REGISTRY_APT
 
 ###############################################################################
 ## Utility rules
@@ -286,7 +290,17 @@ DOCKER_SECRET_ARGS += --secret id=google_application_credentials,src=$(GCP_ADC_C
 DOCKER_BUILD_ENV += DOCKER_BUILDKIT=1
 endif
 
-include $(RULES_PATH)/*.mk
+# Explicitly include sonie-uki.mk first to ensure its targets are defined before
+# any rules that might depend on them.
+include $(RULES_PATH)/sonie-uki.mk
+
+# Include all other .mk files from the rules directory, excluding the sonie-specific
+# ones which are handled explicitly.
+include $(filter-out %/sonie-uki.mk %/sonie-image.mk, $(wildcard $(RULES_PATH)/*.mk))
+
+# Explicitly include sonie-image.mk last to ensure it is processed after its
+# dependencies have been defined.
+include $(RULES_PATH)/sonie-image.mk
 ifneq ($(CONFIGURED_PLATFORM), undefined)
 ifeq ($(PDDF_SUPPORT), y)
 PDDF_DIR = pddf
@@ -591,7 +605,7 @@ define docker-image-save
         docker-squash -t $(1):$(call docker-get-tag,$(1)) $(1):$(call docker-get-tag,$(1)) $(LOG); \
     fi
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
-        docker save $(1):$(call docker-get-tag,$(1)) | $(DOCKER_SAVE_COMPRESS_CMD) > $(2)
+	docker save $(1):$(call docker-get-tag,$(1)) | $(DOCKER_SAVE_COMPRESS_CMD) > $(2)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -1180,6 +1194,8 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*.gz_INSTALL_DEBS))) \
 		$$($$*.gz_PATH)/Dockerfile.j2 \
 		$(call dpkg_depend,$(TARGET_PATH)/%.gz.dep)
+	$(info DEBUG: Starting recipe for $@)
+
 	$(HEADER)
 
 	# Load the target deb from DPKG cache
@@ -1197,6 +1213,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		mkdir -p $(TARGET_PATH)/vcache/$* $($*.gz_PATH)/vcache $(LOG)
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
 		sudo mount --bind $($*.gz_FILES_PATH) $($*.gz_PATH)/files $(LOG)
+		mkdir -p $(PYTHON_DEBS_PATH) $(LOG)
 		sudo mount --bind $(PYTHON_DEBS_PATH) $($*.gz_PATH)/python-debs $(LOG)
 		sudo mount --bind $(PYTHON_WHEELS_PATH) $($*.gz_PATH)/python-wheels $(LOG)
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
@@ -1405,7 +1422,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 			./build_debian.sh $(LOG)
 
 		$(call SAVE_CACHE,$*,$@)
-
 	fi
 
 	$(FOOTER)
@@ -1633,7 +1649,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
-		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
+		IMAGE_TYPE=$($*_IMAGE_TYPE) j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
 		chmod +x sonic_debian_extension.sh,
 	)
 
@@ -1657,6 +1673,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
@@ -1676,6 +1693,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_MDM_VERSION=$(MASTER_MDM_VERSION) \
 		MASTER_MDS_VERSION=$(MASTER_MDS_VERSION) \
 		MASTER_FLUENTD_VERSION=$(MASTER_FLUENTD_VERSION) \
+		ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
@@ -1683,6 +1701,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_MACHINE=$(dep_machine) \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENABLE_IMAGE_SIGNATURE="$(SONIC_ENABLE_IMAGE_SIGNATURE)" \
 		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
 		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
@@ -1704,7 +1723,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	$(if $($*_DOCKERS),
-		rm sonic_debian_extension.sh,
+		rm -f sonic_debian_extension.sh,
 	)
 
 	chmod a+x $@
