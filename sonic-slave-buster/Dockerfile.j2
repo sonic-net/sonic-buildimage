@@ -382,21 +382,28 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
 # For linux build
 RUN apt-get -y build-dep linux
 
-# For gobgp and telemetry build
-RUN export VERSION=1.14.2 \
+# For gobgp and telemetry build (use multiple mirrors to avoid 403)
+RUN set -eux; \
+    VERSION=1.14.2; \
 {%- if CONFIGURED_ARCH == "armhf" %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \
+    GO_TARBALL=go${VERSION}.linux-armv6l.tar.gz; \
 {%- elif CONFIGURED_ARCH == "arm64" %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-arm64.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-arm64.tar.gz \
+    GO_TARBALL=go${VERSION}.linux-arm64.tar.gz; \
 {%- else %}
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
+    GO_TARBALL=go${VERSION}.linux-amd64.tar.gz; \
 {%- endif %}
- && echo 'export GOROOT=/usr/local/go' >> /etc/bash.bashrc \
- && echo 'export PATH=$PATH:$GOROOT/bin' >> /etc/bash.bashrc \
- && rm go$VERSION.linux-*.tar.gz
+    for mirror in \
+        https://dl.google.com/go \
+        https://go.dev/dl \
+        https://mirrors.aliyun.com/golang \
+    ; do \
+        wget -t 3 -T 60 "${mirror}/${GO_TARBALL}" && break; \
+    done; \
+    [ -f "${GO_TARBALL}" ]; \
+    tar -C /usr/local -xzf "${GO_TARBALL}"; \
+    echo 'export GOROOT=/usr/local/go' >> /etc/bash.bashrc; \
+    echo 'export PATH=$PATH:$GOROOT/bin' >> /etc/bash.bashrc; \
+    rm "${GO_TARBALL}"
 
 RUN pip3 install --upgrade pip
 RUN pip2 install --upgrade 'pip<21'
@@ -530,10 +537,10 @@ RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
 # Install m2crypto package, needed by SWI tools
-RUN pip2 install m2crypto==0.36.0
+#RUN pip2 install m2crypto==0.36.0
 
 # Install swi tools
-RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
+#RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline

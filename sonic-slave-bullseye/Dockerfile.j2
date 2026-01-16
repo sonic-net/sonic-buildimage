@@ -384,8 +384,8 @@ RUN apt-get -y build-dep linux
 # For gobgp and telemetry build
 RUN apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
 {%- if ENABLE_FIPS_FEATURE == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-src_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
  && dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.15 /usr/local/go \
  && rm golang-go.deb golang-src.deb
@@ -511,10 +511,10 @@ RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
 # Install m2crypto package, needed by SWI tools
-RUN pip3 install m2crypto==0.36.0
+#RUN pip3 install m2crypto==0.36.0
 
 # Install swi tools
-RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
+#RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline

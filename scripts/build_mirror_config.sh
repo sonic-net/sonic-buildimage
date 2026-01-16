@@ -11,19 +11,20 @@ MIRROR_VERSION_FILE=
 [ -f target/versions/default/versions-mirror ] && MIRROR_VERSION_FILE=target/versions/default/versions-mirror
 
 # The default mirror urls
-DEFAULT_MIRROR_URLS=http://debian-archive.trafficmanager.net/debian/
-DEFAULT_MIRROR_SECURITY_URLS=http://debian-archive.trafficmanager.net/debian-security/
-
-
-# The debian-archive.trafficmanager.net does not support armhf, use debian.org instead
-if [ "$ARCHITECTURE" == "armhf" ]; then
+# - bullseye: use deb.debian.org (security仍在线)
+# - 其他/EOL发行版：使用 archive
+if [ "$DISTRIBUTION" = "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/
     DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
+    DEFAULT_MIRROR_BACKPORTS_URLS=http://deb.debian.org/debian/
+else
+    DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
+    DEFAULT_MIRROR_SECURITY_URLS=http://archive.debian.org/debian-security/
+    DEFAULT_MIRROR_BACKPORTS_URLS=http://archive.debian.org/debian/
 fi
 
-if [ "$DISTRIBUTION" == "buster" ]; then
-    DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
-fi
+
+# Use archive for all arches to keep HTTP only
 
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     if [ -f "$MIRROR_VERSION_FILE" ]; then
@@ -34,8 +35,13 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
         DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/snapshot/debian-security/latest/timestamp)
     fi
 
-    DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
-    DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+    if [ "$DISTRIBUTION" = "bullseye" ]; then
+        DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
+        DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+    else
+        DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
+        DEFAULT_MIRROR_SECURITY_URLS=http://archive.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+    fi
 
     mkdir -p target/versions/default
     if [ ! -f target/versions/default/versions-mirror ]; then
@@ -46,13 +52,14 @@ fi
 
 [ -z "$MIRROR_URLS" ] && MIRROR_URLS=$DEFAULT_MIRROR_URLS
 [ -z "$MIRROR_SECURITY_URLS" ] && MIRROR_SECURITY_URLS=$DEFAULT_MIRROR_SECURITY_URLS
+[ -z "$MIRROR_BACKPORTS_URLS" ] && MIRROR_BACKPORTS_URLS=$DEFAULT_MIRROR_BACKPORTS_URLS
 
 TEMPLATE=files/apt/sources.list.j2
 [ -f files/apt/sources.list.$ARCHITECTURE.j2 ] && TEMPLATE=files/apt/sources.list.$ARCHITECTURE.j2
 [ -f $CONFIG_PATH/sources.list.j2 ] && TEMPLATE=$CONFIG_PATH/sources.list.j2
 [ -f $CONFIG_PATH/sources.list.$ARCHITECTURE.j2 ] && TEMPLATE=$CONFIG_PATH/sources.list.$ARCHITECTURE.j2
 
-MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > $CONFIG_PATH/sources.list.$ARCHITECTURE
+MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS MIRROR_BACKPORTS_URLS=$MIRROR_BACKPORTS_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > $CONFIG_PATH/sources.list.$ARCHITECTURE
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     # Set the snapshot mirror, and add the SET_REPR_MIRRORS flag
     sed -i -e "/^#*deb.*packages.trafficmanager.net/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" $CONFIG_PATH/sources.list.$ARCHITECTURE

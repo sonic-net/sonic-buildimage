@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SONIC_BUILD_RETRY_COUNT=0
+SONIC_BUILD_RETRY_INTERVAL=30
+
 run_with_retry(){
     [ "$SONIC_BUILD_RETRY_COUNT" -gt 0 ] || SONIC_BUILD_RETRY_COUNT=0
     [[ "$*" == "" ]] && { echo "run_with_retry: input command can't be empty." 1>&2;exit 1; }
