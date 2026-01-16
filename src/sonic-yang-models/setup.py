@@ -67,7 +67,8 @@ setup(
     ],
     setup_requires = [
         'pytest-runner',
-        'wheel'
+        'wheel',
+        'jinja2',
     ],
     include_package_data=True,
     keywords='sonic-yang-models',

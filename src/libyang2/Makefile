@@ -2,7 +2,11 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-LIBYANG_URL = https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang
+# libyang2 source for buster pulled from Debian mirror (archive URL 404s)
+# Try multiple sources: packages.trafficmanager.net, deb.debian.org, archive.debian.org
+LIBYANG_URL = https://packages.trafficmanager.net/public/debian/pool/main/liby/libyang
+LIBYANG_URL_DEB = http://deb.debian.org/debian/pool/main/liby/libyang
+LIBYANG_URL_ARCHIVE = http://archive.debian.org/debian/pool/main/liby/libyang
 
 DSC_FILE = libyang2_$(LIBYANG2_FULLVERSION).dsc
 ORIG_FILE = libyang2_$(LIBYANG2_VERSION).orig.tar.gz
@@ -19,10 +23,26 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
         # Obtaining the libyang
 	rm -fr ./libyang2-$(LIBYANG2_VERSION)
 
-	# download debian libyang
-	wget -NO "$(DSC_FILE)" $(DSC_FILE_URL)
-	wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL)
-	wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL)
+	# download debian libyang with fallback sources
+	# Try packages.trafficmanager.net first, then deb.debian.org, then archive.debian.org
+	if ! wget -NO "$(DSC_FILE)" $(DSC_FILE_URL) 2>/dev/null; then \
+		if ! wget -NO "$(DSC_FILE)" $(LIBYANG_URL_DEB)/$(DSC_FILE) 2>/dev/null; then \
+			wget -NO "$(DSC_FILE)" $(LIBYANG_URL_ARCHIVE)/$(DSC_FILE); \
+		fi; \
+	fi
+	\
+	if ! wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL) 2>/dev/null; then \
+		if ! wget -NO "$(ORIG_FILE)" $(LIBYANG_URL_DEB)/$(ORIG_FILE) 2>/dev/null; then \
+			wget -NO "$(ORIG_FILE)" $(LIBYANG_URL_ARCHIVE)/$(ORIG_FILE); \
+		fi; \
+	fi
+	\
+	if ! wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL) 2>/dev/null; then \
+		if ! wget -NO "$(DEBIAN_FILE)" $(LIBYANG_URL_DEB)/$(DEBIAN_FILE) 2>/dev/null; then \
+			wget -NO "$(DEBIAN_FILE)" $(LIBYANG_URL_ARCHIVE)/$(DEBIAN_FILE); \
+		fi; \
+	fi
+	\
 	dpkg-source -x libyang2_$(LIBYANG2_FULLVERSION).dsc
 
 	pushd libyang2-$(LIBYANG2_VERSION)

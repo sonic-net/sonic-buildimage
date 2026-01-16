@@ -69,7 +69,10 @@ RUN apt-get update && apt-get install -y \
         chrpath \
 # For frr build
         libc-ares-dev \
-        libsnmp-dev \
+        libsnmp-dev=5.9+dfsg-4+deb11u1 \
+        libsnmp40=5.9+dfsg-4+deb11u1 \
+        libnetsnmptrapd40=5.9+dfsg-4+deb11u1 \
+        libsnmp-base=5.9+dfsg-4+deb11u1 \
         libjson-c-dev \
         libsystemd-dev \
         python3-ipaddr \

@@ -8,7 +8,8 @@ DERIVED_TARGETS = libip4tc0_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libiptc0_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libxtables12_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 
-IPTABLES_URL = http://deb.debian.org/debian/pool/main/i/iptables
+# buster packages are archived; use archive.debian.org to avoid 404
+IPTABLES_URL = http://archive.debian.org/debian/pool/main/i/iptables
 
 DSC_FILE = iptables_$(IPTABLES_VERSION_FULL).dsc
 ORIG_FILE = iptables_$(IPTABLES_VERSION).orig.tar.bz2

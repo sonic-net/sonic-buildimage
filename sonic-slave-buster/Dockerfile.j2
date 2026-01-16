@@ -456,6 +456,8 @@ RUN pip2 install \
 # https://github.com/robshakir/pyangbind/issues/232
 RUN pip3 install pyangbind==0.8.1
 RUN pip3 uninstall -y enum34
+# Some pyang entrypoints are installed with a python2 shebang; ensure pathlib exists
+RUN pip2 install pathlib2
 
 # For templating
 RUN pip2 install j2cli==0.3.10
