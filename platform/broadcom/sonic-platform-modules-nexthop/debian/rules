@@ -16,6 +16,8 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4220
+MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
 
 SERVICE_DIR := service

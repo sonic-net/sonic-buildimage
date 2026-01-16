@@ -113,6 +113,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R1_PLATFORM_MODULE) \
                                $(NEXTHOP_4020_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4220_PLATFORM_MODULE) \
+                               $(NEXTHOP_4220_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_PLATFORM_MODULE) \
                                $(NEXTHOP_5010_R0_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
