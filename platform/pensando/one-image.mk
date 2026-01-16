@@ -15,7 +15,7 @@ DISABLED_PACKAGES_LOCAL = $(DOCKER_DHCP_RELAY) $(DOCKER_MACSEC)
 DISABLED_FEATURE_FLAGS = INCLUDE_SFLOW INCLUDE_MGMT_FRAMEWORK INCLUDE_NAT INCLUDE_MACSEC INCLUDE_TEAMD INCLUDE_ROUTER_ADVERTISER INCLUDE_MUX INCLUDE_RESTAPI
 $(info Disabling the following docker images: $(DISABLED_DOCKERS))
 $(info Disabling the following packages:  $(DISABLED_PACKAGES_LOCAL))
-$(info Disabling the following feauture flags:  $(DISABLED_FEATURE_FLAGS))
+$(info Disabling the following feature flags:  $(DISABLED_FEATURE_FLAGS))
 
 SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
 $(foreach feature, $(DISABLED_FEATURE_FLAGS), $(eval override $(feature)=n ))
