@@ -128,6 +128,10 @@ dependent_startup_wait_for=rsyslogd:running
     {%- set options = options + " --enable_sff_mgr" %}
 {% endif -%}
 
+{% if xcvrd and xcvrd.dom_temperature_poll_interval %}
+    {%- set options = options + " --dom_temperature_poll_interval " + xcvrd.dom_temperature_poll_interval|string %}
+{% endif -%}
+
 {% if delay_xcvrd %}
     {%- set command = "bash -c \"sleep 30 && " ~ base_command ~ options ~ "\"" %}
 {% else %}
