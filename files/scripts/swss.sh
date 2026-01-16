@@ -619,7 +619,7 @@ check_add_bgp_dependency
 check_ports_present
 PORTS_PRESENT=$?
 
-if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_enabled teamd) == "true" ]]; then
+if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_enabled "teamd$DEV") == "true" ]]; then
     MULTI_INST_DEPENDENT="teamd"
 fi
 
