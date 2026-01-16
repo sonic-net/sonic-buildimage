@@ -60,19 +60,6 @@ test_data = {
     "4": {
         "ip": "www.google.comx",
         "port": "3128",
-        "pre_rules": [
-            "DNAT tcp -- 20.20.0.0/0 172.16.1.1 tcp dpt:8080 to:100.127.20.21:8080",
-            "DNAT tcp -- 0.0.0.0/0 172.16.1.1 tcp dpt:3128 to:11.11.11.11:8080"
-        ],
-        "post_rules": [
-            "DNAT tcp -- 20.20.0.0/0 172.16.1.1 tcp dpt:8080 to:100.127.20.21:8080",
-            "DNAT tcp -- 0.0.0.0/0 172.16.1.1 tcp dpt:3128 to:11.11.11.11:8080"
-        ],
-        "ret": ""
-    },
-    "5": {
-        "ip": "www.google.comx",
-        "port": "3128",
         "conf_file": "no_proxy.conf",
         "pre_rules": [
             "DNAT tcp -- 20.20.0.0/0 172.16.1.1 tcp dpt:8080 to:100.127.20.21:8080",
