@@ -16,7 +16,7 @@ OPTIONS:
       --rpc-xgs         ; build xgs syncd rpc image only
       --rpc-mrvl        ; build mrvl (arm64) syncd rpc image only
       --features        ; apply features function
-      --platform=[marvell-prestera | vs-hw]        ; build mrvl or vs-hw for CO (arm64 build machine only)
+      --platform=[marvell-prestera | nokia-vs | vs | aspeed]        ; build mrvl or nokia-vs for CO (arm64 build machine only)
 "
   exit $1
 }
@@ -64,7 +64,14 @@ while true; do
   esac
 done
 
-if [[ $opt_platform != vs-hw && $opt_platform != marvell-prestera ]] ; then usage 1; fi
+case $opt_platform in
+  marvell-prestera|nokia-vs|vs|aspeed)
+    ;;
+  *)
+    echo "Invalid platform: $opt_platform"
+    usage 1
+    ;;
+esac
 
 set -e
 
@@ -103,7 +110,22 @@ apply_patch_files() {
 
     # Increase timeout for route_check to 500s
     _add_patch src/sonic-utilities ../../route_check_timeout.patch
-    _add_patch src/sonic-sairedis ../../co_vs-hw.patch
+    
+    # _add_patch src/sonic-swss ../../media_type.patch
+    
+    # 2/23/2026 commented the following patch fir rebase build
+    # _add_patch src/sonic-swss ../../everflow_mirror_swss.patch
+
+    #if [ "${opt_platform}" = "aspeed" ]; then
+        # Add sonic-db-gnmi/gnoi in order to support remote access to redis db
+        #_add_patch src/sonic-swss-common ../../sonic-db-gnmi.patch
+
+        # Add sonic-bmcutil for BMC CLI
+        #_add_patch src/sonic-utilities ../../sonic-bmcutil.patch
+    #fi
+
+    # IMPORTANT: When add any patch, please mention the PR number.
+    
 }
 
 # add remote github user repo for cherry-pick
@@ -152,7 +174,7 @@ submodule_prs () {
   #
   ############################################################################################################################
   #https://github.com/sonic-net/sonic-swss/pull/3660
-  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 6551d244
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss d3d2fe2
 
   #https://github.com/sonic-net/sonic-swss/pull/4001
   _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 9fa297a
@@ -160,24 +182,13 @@ submodule_prs () {
   #https://github.com/sonic-net/sonic-swss/pull/3377
   _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 52ed10e
   
-  #https://github.com/sonic-net/sonic-swss/pull/3833
-  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 4a2b68d^..95cf043
+  #tmp c1
+  _submodule_add src/sonic-sairedis hehuang-nokia https://github.com/hehuang-nokia/sonic-sairedis.git 2e8392a
 
-  #https://github.com/sonic-net/sonic-utilities/pull/4052
-  _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities 0ebbbc8
- 
-  #https://github.com/sonic-net/sonic-swss/pull/3977
-  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 7680ae1
-
-  #https://github.com/Azure/sonic-swss/pull/4015
-  _submodule_add src/sonic-swss arlakshm https://github.com/arlakshm/sonic-swss.git 1a8607e^..7bf89c8
-    
-  # https://github.com/saksarav-nokia/saibcm-modules.git
-  _submodule_add platform/broadcom/saibcm-modules-dnx saksarav-nokia https://github.com/saksarav-nokia/saibcm-modules.git c15e9731
+  #sonic-bmc aspeed
+  #https://github.com/sonic-net/sonic-linux-kernel/pull/553
+  _submodule_add src/sonic-linux-kernel nats-nokia https://github.com/nats-nokia/sonic-linux-kernel.git dbc835c
   
-  #https://github.com/sonic-net/sonic-linux-kernel/pull/522
-  _submodule_add src/sonic-linux-kernel nexthop-ai https://github.com/nexthop-ai/sonic-linux-kernel.git 75bec6c^..96a04e2
-
   # apply patches
   apply_patch_files
 
@@ -201,7 +212,11 @@ configure()
 {
   case $mach in
     x86_64)
-      make PLATFORM=broadcom configure
+      if [ "${opt_platform}" = "vs" ]; then
+        make PLATFORM=vs configure
+      else
+        make PLATFORM=broadcom configure
+      fi
       ;;
     armhf)
       make PLATFORM=marvell-prestera PLATFORM_ARCH=armhf configure
@@ -218,14 +233,21 @@ build()
     x86_64)
       submodule_prs
       features
-      make target/sonic-broadcom.bin || \
+      if [ "${opt_platform}" = "vs" ]; then
+        make target/sonic-vs.img.gz || make target/sonic-vs.img.gz
+      else
+        make target/sonic-broadcom.bin || \
         ( rm -f target/*.bin && make target/sonic-broadcom.bin )
+      fi
       ;;
     armhf)
+      submodule_prs
+      features
       make target/sonic-marvell-prestera-armhf.bin || \
         ( rm -f target/*.bin && make target/sonic-marvell-prestera-armhf.bin )
       ;;
     aarch64)
+      submodule_prs
       features
       make target/sonic-${opt_platform}-arm64.bin || \
         ( rm -f target/*.bin && make target/sonic-${opt_platform}-arm64.bin )
