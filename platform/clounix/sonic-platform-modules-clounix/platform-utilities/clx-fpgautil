@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with fpga Controller in PDDF mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+# Global platform-specific fpgautil class instance
+platform_chassis = None
+
+def _wrapper_get_num_fpgas():
+    try:
+        return platform_chassis.get_num_fpgas()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fpga_name(idx):
+    return platform_chassis.get_fpga(idx - 1).get_name()
+
+def _wrapper_get_fpga_type(idx):
+    return platform_chassis.get_fpga(idx - 1).get_type()
+
+def _wrapper_get_fpga_hw_version(idx):
+    return platform_chassis.get_fpga(idx - 1).get_hw_version()
+
+def _wrapper_get_fpga_board_version(idx):
+    return platform_chassis.get_fpga(idx - 1).get_board_version()
+
+def _wrapper_debug_sysfs():
+    return platform_chassis.get_debug_info('fpga')
+
+# This is our main entrypoint - the main 'fpgautil' command
+@click.group()
+def cli():
+    """pddf_fpgautil - Command line utility for providing fpga information"""
+
+    global platform_chassis
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        from sonic_platform.platform import Platform
+        platform_chassis = Platform().get_chassis()
+    except Exception as e:
+        click.echo("Failed to load chassis due to {}".format(str(e)))
+
+    # Load platform-specific fpgautil class if new platform object class is not found
+    if platform_chassis is None:
+        click.echo("Failed to load chassis...")
+        sys.exit(2)
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("PDDF fpgautil version {0}".format(VERSION))
+
+# 'num' subcommand
+@cli.command()
+def num():
+    """Display number of fpgas installed on device"""
+    click.echo(_wrapper_get_num_fpgas())
+
+# 'info' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of fpga")
+def info(index):
+    """Display fpga manufacturer info"""
+    supported_fpga = list(range(1, _wrapper_get_num_fpgas() + 1))
+    fpga_ids = []
+    if (index < 0):
+        fpga_ids = supported_fpga
+    else:
+        fpga_ids = [index]
+
+    status_table = []
+    for fpga in fpga_ids:
+        if fpga not in supported_fpga:
+            click.echo("Error! The fpga is not available on the platform.\n" \
+                       "Number of supported fpga - {}.".format(len(supported_fpga)))
+            continue
+        fpga_name = _wrapper_get_fpga_name(fpga)
+        fpga_type = _wrapper_get_fpga_type(fpga)
+        hw_version = _wrapper_get_fpga_hw_version(fpga)
+        board_version = _wrapper_get_fpga_board_version(fpga)
+
+        status_table.append([fpga_name, fpga_type, hw_version, board_version])
+
+    header = ['FPGA', 'FPGA Type', 'HW Version', 'Board Version']
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'debug' subcommand
+@cli.command('debug', short_help='Show fpga debug info')
+def debug():
+    """kddf_fpgautil debug commands"""
+    debug = _wrapper_debug_sysfs()
+    if debug is None:
+        debug = 'N/A'
+    click.echo(debug)
+
+if __name__ == '__main__':
+    cli()

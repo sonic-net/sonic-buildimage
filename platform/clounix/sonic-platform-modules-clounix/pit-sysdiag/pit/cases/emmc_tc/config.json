@@ -1,0 +1,6 @@
+{
+    "name": "emmc-test",
+    "description": "Check EMMC storage",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

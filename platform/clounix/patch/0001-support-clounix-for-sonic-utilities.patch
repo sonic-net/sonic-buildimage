@@ -1,0 +1,28 @@
+From ca2a02c9db61446a01ae7b8510e180ec905e4497 Mon Sep 17 00:00:00 2001
+From: Fanqi Lu <lufq@clounix.com>
+Date: Mon, 5 Dec 2022 20:57:37 +0800
+Subject: [PATCH 1/2] Support clounix
+
+---
+ scripts/fast-reboot | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/scripts/fast-reboot b/scripts/fast-reboot
+index e2ddfb75..13d3a5a0 100755
+--- a/scripts/fast-reboot
++++ b/scripts/fast-reboot
+@@ -746,6 +746,11 @@ then
+   systemctl stop nps-modules-`uname -r`.service || debug "Ignore stopping nps service error $?"
+ fi
+ 
++if [[ "$sonic_asic_type" = 'clounix' ]];
++then
++  systemctl stop clx-modules.service || debug "Ignore stopping clounix service error $?"
++fi
++
+ # Stop opennsl modules for Broadcom platform
+ if [[ "$sonic_asic_type" = 'broadcom' ]];
+ then
+-- 
+2.17.1
+

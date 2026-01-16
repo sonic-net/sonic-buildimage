@@ -1,0 +1,66 @@
+From 635d45d7a1a89b94ec1f1039881591053c58230d Mon Sep 17 00:00:00 2001
+From: Fanqi Lu <lufq@clounix.com>
+Date: Thu, 6 Apr 2023 12:09:37 +0800
+Subject: [PATCH] Support Clounix
+
+---
+ configure.ac                       | 1 +
+ syncd/Makefile.am                  | 5 +++++
+ syncd/scripts/syncd_init_common.sh | 6 ++++++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 409eccfb..60140aa8 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -17,6 +17,7 @@ AX_ADD_AM_MACRO_STATIC([])
+ 
+ AM_CONDITIONAL(SONIC_ASIC_PLATFORM_BAREFOOT,   test x$CONFIGURED_PLATFORM = xbarefoot)
+ AM_CONDITIONAL(SONIC_ASIC_PLATFORM_BROADCOM,   test x$CONFIGURED_PLATFORM = xbroadcom)
++AM_CONDITIONAL(SONIC_ASIC_PLATFORM_CLOUNIX,    test x$CONFIGURED_PLATFORM = xclounix)
+ 
+ AC_ARG_ENABLE(debug,
+ [  --enable-debug          turn on debugging],
+diff --git a/syncd/Makefile.am b/syncd/Makefile.am
+index 4a6cc516..abb3fc05 100644
+--- a/syncd/Makefile.am
++++ b/syncd/Makefile.am
+@@ -79,6 +79,11 @@ if SONIC_ASIC_PLATFORM_BROADCOM
+ libSyncd_a_CXXFLAGS += -DMDIO_ACCESS_USE_NPU
+ endif
+ 
++if SONIC_ASIC_PLATFORM_CLOUNIX
++syncd_CPPFLAGS += -DSAI_SUPPORT_UNINIT_DATA_PLANE_ON_REMOVAL
++libSyncd_a_CPPFLAGS += -DSAI_SUPPORT_UNINIT_DATA_PLANE_ON_REMOVAL
++endif
++
+ libSyncdRequestShutdown_a_SOURCES = \
+ 									RequestShutdown.cpp \
+ 									RequestShutdownCommandLineOptions.cpp \
+diff --git a/syncd/scripts/syncd_init_common.sh b/syncd/scripts/syncd_init_common.sh
+index c7d219af..3a712516 100644
+--- a/syncd/scripts/syncd_init_common.sh
++++ b/syncd/scripts/syncd_init_common.sh
+@@ -309,6 +309,10 @@ config_syncd_soda()
+     CMD_ARGS+=" -l -p $HWSKU_DIR/sai.profile"
+ }
+ 
++config_syncd_clounix()
++{
++    CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
++}
+ config_syncd_innovium()
+ {
+     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
+@@ -374,6 +378,8 @@ config_syncd()
+ 
+     if [ "$SONIC_ASIC_TYPE" == "cisco-8000" ]; then
+         config_syncd_cisco_8000
++    elif [ "$SONIC_ASIC_TYPE" == "clounix" ]; then
++        config_syncd_clounix
+     elif [ "$SONIC_ASIC_TYPE" == "broadcom" ]; then
+         config_syncd_bcm
+     elif [ "$SONIC_ASIC_TYPE" == "mellanox" ]; then
+-- 
+2.17.1
+

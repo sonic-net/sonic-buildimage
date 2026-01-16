@@ -1,0 +1,6 @@
+{
+    "name": "firmware-version-test",
+    "description": "firmware version info",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "power", "pa", "smoke"]
+}

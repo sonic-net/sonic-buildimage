@@ -1,0 +1,6 @@
+{
+    "name": "tlv_eeprom_write_test",
+    "description": "write tlv-eeprom and check",
+    "type": "auto",
+    "tags": ["manufacture", "development", "pa", "smoke"]
+}

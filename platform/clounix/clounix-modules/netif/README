@@ -1,0 +1,140 @@
+1. Porting
+
+1.1. To build the NETIF kernel module with SDK, please enable the flag in config.mk.
+
+    File: clx_system/config.mk
+
+    CLX_EN_NETIF := ENABLED
+
+    Or you could build the kernel module independently, it then refers to build.mk for below parameters:
+
+    File: clx_system/config.mk
+
+    ENABLED_CHIPS
+
+    File: clx_system/build.mk
+
+    OS_PATH
+    CROSS_COMPILE_PATH
+    CROSS_COMPILE
+    EXTRA_CFLAGS
+
+1.2. To port NETIF kernel module, the OS related APIs may need to be refined.
+
+    File: clx_system/app/netif/common/netif_osal.c
+
+    This file contains all of the linux resources including skb, dma, memory, thread, and semaphore handle.
+
+    Below APIs are used for skb management with dma operation.
+    - osal_skb_alloc()
+    - osal_skb_free()
+    - osal_skb_mapDma()
+    - osal_skb_unmapDma()
+
+    To make packets received by the OS net interface, below API should be ported correctly.
+    - osal_skb_recv()
+
+1.3. Modify below macros for porting or performance tuning.
+
+    File: clx_system/clx_sdk/src/inc/hal/light/dawn/hal_lt_dawn_pkt.h (if Dawn is set in ENABLED_CHIPS)
+    File: clx_system/clx_sdk/src/inc/hal/light/lightning/hal_lt_lightning_pkt.h (if Lightning is set in ENABLED_CHIPS)
+
+    Take Dawn for example:
+
+    Performance parameters:
+    - packet ring size          HAL_LT_DAWN_PKT_PDMA_TX_GPD_NUM, HAL_LT_DAWN_PKT_PDMA_RX_GPD_NUM
+    - queue length              HAL_LT_DAWN_PKT_TX_QUEUE_MAX_LEN, HAL_LT_DAWN_PKT_RX_QUEUE_MAX_LEN
+
+    Linux driver parameters:
+    - I/O device number         HAL_LT_DAWN_PKT_DRIVER_MAJOR_NUM, HAL_LT_DAWN_PKT_DRIVER_MINOR_NUM
+    - network device name       HAL_LT_DAWN_PKT_DRIVER_NAME
+
+
+    File: clx_system/app/netif/common/netif_knl.c
+
+    Take Dawn for example:
+
+    Linux driver parameters:
+    - I/O device number         NETIF_KNL_DRIVER_MINOR_NUM (should be the same with HAL_LT_DAWN_PKT_DRIVER_MINOR_NUM)
+    - network device name       NETIF_KNL_DRIVER_NAME (should be the same with HAL_LT_DAWN_PKT_DRIVER_NAME)
+
+
+2. Usage
+
+2.1. When you enable to compile this NETIF kernel module, you will see clx_netif.ko as an additional output.
+     Please load clx_netif.ko right after clx_dev.ko.
+
+2.2. Create port-based net interfaces in Linux kernel.
+
+    In order to forwarded packets to Linux protocol layer, it's required to create net interfaces.
+
+    clx_netif_createIntf() helps the users to create a net interface for any switch front port specified as the argument of this API.
+    Those Packets sent to CPU will be, by default, forwarded to the net interfaces created on the same ingress port.
+    If there's no such a net interface for the ingress port, the packets will be dropped.
+
+    Example: Create a net interface for port 5.
+
+      CLX_NETIF_INTF_T     intf;      /* input meta data */
+      UI32_T               id;        /* output intf id  */
+
+      intf.port = 5;
+      osal_strncpy(intf.name, "Ethernet5", CLX_NETIF_NAME_LEN);
+      clx_netif_createIntf(0, &intf, &id);
+
+2.3. Create net profiles to make packets received by SDK Rx callback instead of the original net interface created for the corresponding ingress ports.
+
+    A net profile decides what kinds of packets received by SDK Rx callback rather than being sent to Linux protocol layer.
+
+    Keys of profile include the ingress port ID, CPU reason and 4 sets of payload pattern with mask and position offset. Note that each payload pattern/mask should be less or equal to 8 bytes. Users must assign
+    a priority value to each profile to control the matching sequence for packets. A lower value indicates higher priority where those profiles will be looked up for each coming packets. Once a profile is hit,
+    packets will be sent to the corresponding destination. However, currently only SDK callback can be chosen as the packet destination. Thus, the priority value cannot take its effect for now.
+
+    Example 1. Create a net profile which makes all the to-CPU packet with reason CLX_PKT_RX_REASON_TTL_EXPIRE sent to SDK callback.
+
+      CLX_NETIF_PROFILE_T  profile;   /* input meta data    */
+      UI32_T               id;        /* output profile id  */
+
+      profile.flags = 0; /* reset the flag which claims the key types */
+
+      profile.priority = 20;
+      osal_strncpy(profile.name, "TTL-ERR", CLX_NETIF_NAME_LEN);
+
+      CLX_PKT_SET_REASONTBIT(profile.reason_bitmap, CLX_PKT_RX_REASON_TTL_EXPIRE);
+      profile.flags |= CLX_NETIF_PROFILE_FLAGS_REASON;
+
+      clx_netif_createProfile(0, &profile, &id);
+
+
+    Example 2. Create a net profile which makes LACP packets received from port 23 sent to SDK callback.
+
+      CLX_NETIF_PROFILE_T  profile;   /* input meta data    */
+      UI32_T               id;        /* output profile id  */
+      UI8_T                lacp_da_pattern[6]   = {0x01, 0x80, 0xC2, 0x00, 0x00, 0x02};
+      UI8_T                lacp_da_mask[6]      = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+      UI8_T                lacp_type_pattern[2] = {0x88, 0x09};
+      UI8_T                lacp_type_mask[2]    = {0xFF, 0xFF};
+
+      profile.flags = 0; /* reset the flag which claims the key types */
+
+      profile.priority = 25;
+      osal_memcpy(profile.name, "LACP", osal_strlen("LACP"));
+
+      profile.port = 23;
+      profile.flags |= CLX_NETIF_PROFILE_FLAGS_PORT;
+
+      osal_memcpy(profile.pattern[0], lacp_da_pattern, 6);
+      osal_memcpy(profile.mask[0], lacp_da_mask, 6);
+      profile.offset[0] = 0;          /* da starts from the position offset 0 */
+      profile.flags |= CLX_NETIF_PROFILE_FLAGS_PATTERN_0;
+
+      osal_memcpy(profile.pattern[1], lacp_type_pattern, 2);
+      osal_memcpy(profile.mask[1], lacp_type_mask, 2);
+      profile.offset[1] = 12;         /* ethertype starts from the position offset 12 */
+      profile.flags |= CLX_NETIF_PROFILE_FLAGS_PATTERN_1;
+
+      clx_netif_createProfile(0, &profile, &id);
+
+3. Limitation
+    Currently, NETIF supports only
+    - Tx asynchronus mode
+    - To send/receive packet from a single socket buffer

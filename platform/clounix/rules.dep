@@ -1,0 +1,8 @@
+#DPKG FRK
+include $(PLATFORM_PATH)/clounix-modules.dep
+include $(PLATFORM_PATH)/sdk.dep
+include $(PLATFORM_PATH)/platform-modules-clounix.dep
+include $(PLATFORM_PATH)/docker-syncd-clounix.dep
+include $(PLATFORM_PATH)/docker-syncd-clounix-rpc.dep
+include $(PLATFORM_PATH)/one-image.dep
+include $(PLATFORM_PATH)/pde-image.dep

@@ -1,0 +1,6 @@
+{
+    "name": "bmcupgrade-test",
+    "description": "Bmc upgrade and checkout test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc"]
+}

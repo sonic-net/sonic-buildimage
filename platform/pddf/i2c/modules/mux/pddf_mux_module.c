@@ -68,12 +68,16 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 	if (strncmp(buf, "add", strlen(buf)-1)==0)
 	{
 		/* Supported types are pca_9540, pca_9542, pca_9543, pca_9544, pca_9545, pca_9546, pca_9547, pca_9548,
-		 * pca_9846, pca_9847, pca_9848, pca_9849
+		 * pca_9846, pca_9847, pca_9848, pca_9849 pca9641
 		 */
 		if ( (strncmp(device_ptr->dev_type, "pca954", 6) == 0) ||
-				(strncmp(device_ptr->dev_type, "pca984", 6) == 0) )
+				(strncmp(device_ptr->dev_type, "pca984", 6) == 0) || (strncmp(device_ptr->dev_type, "pca9641", 7) == 0) )
 		{
 			adapter = i2c_get_adapter(device_ptr->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "Parent adapter (%d) not found\n", device_ptr->parent_bus);
+                            return -ENODEV;
+            }
 			board_info = (struct i2c_board_info) {
 				.platform_data = NULL,
 			};

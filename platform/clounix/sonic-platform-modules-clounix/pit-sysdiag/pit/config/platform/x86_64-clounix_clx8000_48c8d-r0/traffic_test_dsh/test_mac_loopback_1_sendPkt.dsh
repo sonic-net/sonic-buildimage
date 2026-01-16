@@ -1,0 +1,246 @@
+vlan del member vid=1 portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 untag-portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248
+
+port set intf-property portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 mtu=9100
+
+port set intf-property portlist=0 pvid=100
+port set intf-property portlist=4 pvid=104
+port set intf-property portlist=8 pvid=108
+port set intf-property portlist=12 pvid=112
+port set intf-property portlist=16 pvid=116
+port set intf-property portlist=20 pvid=120
+port set intf-property portlist=24 pvid=124
+port set intf-property portlist=28 pvid=128
+port set intf-property portlist=32 pvid=132
+port set intf-property portlist=36 pvid=136
+port set intf-property portlist=40 pvid=140
+port set intf-property portlist=44 pvid=144
+port set intf-property portlist=48 pvid=148
+port set intf-property portlist=52 pvid=152
+port set intf-property portlist=56 pvid=156
+port set intf-property portlist=60 pvid=160
+port set intf-property portlist=64 pvid=164
+port set intf-property portlist=68 pvid=168
+port set intf-property portlist=72 pvid=172
+port set intf-property portlist=76 pvid=176
+port set intf-property portlist=80 pvid=180
+port set intf-property portlist=84 pvid=184
+port set intf-property portlist=88 pvid=188
+port set intf-property portlist=92 pvid=192
+port set intf-property portlist=96 pvid=196
+port set intf-property portlist=100 pvid=1100
+port set intf-property portlist=104 pvid=1104
+port set intf-property portlist=108 pvid=1108
+port set intf-property portlist=112 pvid=1112
+port set intf-property portlist=116 pvid=1116
+port set intf-property portlist=120 pvid=1120
+port set intf-property portlist=124 pvid=1124
+port set intf-property portlist=128 pvid=1128
+port set intf-property portlist=132 pvid=1132
+port set intf-property portlist=136 pvid=1136
+port set intf-property portlist=140 pvid=1140
+port set intf-property portlist=144 pvid=1144
+port set intf-property portlist=148 pvid=1148
+port set intf-property portlist=152 pvid=1152
+port set intf-property portlist=156 pvid=1156
+port set intf-property portlist=160 pvid=1160
+port set intf-property portlist=164 pvid=1164
+port set intf-property portlist=168 pvid=1168
+port set intf-property portlist=172 pvid=1172
+port set intf-property portlist=176 pvid=1176
+port set intf-property portlist=180 pvid=1180
+port set intf-property portlist=184 pvid=1184
+port set intf-property portlist=188 pvid=1188
+port set intf-property portlist=192 pvid=1192
+port set intf-property portlist=200 pvid=1200
+port set intf-property portlist=224 pvid=1224
+port set intf-property portlist=232 pvid=1232
+port set intf-property portlist=208 pvid=1208
+port set intf-property portlist=216 pvid=1216
+port set intf-property portlist=240 pvid=1240
+port set intf-property portlist=248 pvid=1248
+
+vlan add member vid=100  portlist=188,0,4     untag-portlist=188,0,4  
+vlan add member vid=104  portlist=0,4,8       untag-portlist=0,4,8    
+vlan add member vid=108  portlist=4,8,12      untag-portlist=4,8,12   
+vlan add member vid=112  portlist=8,12,16     untag-portlist=8,12,16  
+vlan add member vid=116  portlist=12,16,20    untag-portlist=12,16,20 
+vlan add member vid=120  portlist=16,20,24    untag-portlist=16,20,24 
+vlan add member vid=124  portlist=20,24,28    untag-portlist=20,24,28 
+vlan add member vid=128  portlist=24,28,32    untag-portlist=24,28,32 
+vlan add member vid=132  portlist=28,32,36    untag-portlist=28,32,36 
+vlan add member vid=136  portlist=32,36,40    untag-portlist=32,36,40 
+vlan add member vid=140  portlist=36,40,44    untag-portlist=36,40,44 
+vlan add member vid=144  portlist=40,44,48    untag-portlist=40,44,48 
+vlan add member vid=148  portlist=44,48,52    untag-portlist=44,48,52 
+vlan add member vid=152  portlist=48,52,56    untag-portlist=48,52,56 
+vlan add member vid=156  portlist=52,56,60    untag-portlist=52,56,60 
+vlan add member vid=160  portlist=56,60,64    untag-portlist=56,60,64 
+vlan add member vid=164  portlist=60,64,68    untag-portlist=60,64,68 
+vlan add member vid=168  portlist=64,68,72    untag-portlist=64,68,72 
+vlan add member vid=172  portlist=68,72,76    untag-portlist=68,72,76 
+vlan add member vid=176  portlist=72,76,80    untag-portlist=72,76,80 
+vlan add member vid=180  portlist=76,80,84    untag-portlist=76,80,84 
+vlan add member vid=184  portlist=80,84,88    untag-portlist=80,84,88 
+vlan add member vid=188  portlist=84,88,92    untag-portlist=84,88,92 
+vlan add member vid=192  portlist=88,92,96    untag-portlist=88,92,96 
+vlan add member vid=196  portlist=92,96,100   untag-portlist=92,96,100
+vlan add member vid=1100 portlist=96,100,104  untag-portlist=96,100,104 
+vlan add member vid=1104 portlist=100,104,108 untag-portlist=100,104,108
+vlan add member vid=1108 portlist=104,108,112 untag-portlist=104,108,112
+vlan add member vid=1112 portlist=108,112,116 untag-portlist=108,112,116
+vlan add member vid=1116 portlist=112,116,120 untag-portlist=112,116,120
+vlan add member vid=1120 portlist=116,120,124 untag-portlist=116,120,124
+vlan add member vid=1124 portlist=120,124,128 untag-portlist=120,124,128
+vlan add member vid=1128 portlist=124,128,132 untag-portlist=124,128,132
+vlan add member vid=1132 portlist=128,132,136 untag-portlist=128,132,136
+vlan add member vid=1136 portlist=132,136,140 untag-portlist=132,136,140
+vlan add member vid=1140 portlist=136,140,144 untag-portlist=136,140,144
+vlan add member vid=1144 portlist=140,144,148 untag-portlist=140,144,148
+vlan add member vid=1148 portlist=144,148,152 untag-portlist=144,148,152
+vlan add member vid=1152 portlist=148,152,156 untag-portlist=148,152,156
+vlan add member vid=1156 portlist=152,156,160 untag-portlist=152,156,160
+vlan add member vid=1160 portlist=156,160,164 untag-portlist=156,160,164
+vlan add member vid=1164 portlist=160,164,168 untag-portlist=160,164,168
+vlan add member vid=1168 portlist=164,168,172 untag-portlist=164,168,172
+vlan add member vid=1172 portlist=168,172,176 untag-portlist=168,172,176
+vlan add member vid=1176 portlist=172,176,180 untag-portlist=172,176,180
+vlan add member vid=1180 portlist=176,180,184 untag-portlist=176,180,184
+vlan add member vid=1184 portlist=180,184,188 untag-portlist=180,184,188
+vlan add member vid=1188 portlist=184,188,0   untag-portlist=184,188,0
+vlan add member vid=1192 portlist=248,192,200 untag-portlist=248,192,200
+vlan add member vid=1200 portlist=192,200,208 untag-portlist=192,200,208
+vlan add member vid=1208 portlist=200,208,216 untag-portlist=200,208,216
+vlan add member vid=1216 portlist=208,216,224 untag-portlist=208,216,224
+vlan add member vid=1224 portlist=216,224,232 untag-portlist=216,224,232
+vlan add member vid=1232 portlist=224,232,240 untag-portlist=224,232,240
+vlan add member vid=1240 portlist=232,240,248 untag-portlist=232,240,248
+vlan add member vid=1248 portlist=240,248,192 untag-portlist=240,248,192
+
+
+
+l2 add mac-table static mac=00:00:00:00:00:01 vid=100  port=4
+l2 add mac-table static mac=00:00:00:00:00:01 vid=104  port=8
+l2 add mac-table static mac=00:00:00:00:00:01 vid=108  port=12
+l2 add mac-table static mac=00:00:00:00:00:01 vid=112  port=16
+l2 add mac-table static mac=00:00:00:00:00:01 vid=116  port=20
+l2 add mac-table static mac=00:00:00:00:00:01 vid=120  port=24
+l2 add mac-table static mac=00:00:00:00:00:01 vid=124  port=28
+l2 add mac-table static mac=00:00:00:00:00:01 vid=128  port=32
+l2 add mac-table static mac=00:00:00:00:00:01 vid=132  port=36
+l2 add mac-table static mac=00:00:00:00:00:01 vid=136  port=40
+l2 add mac-table static mac=00:00:00:00:00:01 vid=140  port=44
+l2 add mac-table static mac=00:00:00:00:00:01 vid=144  port=48
+l2 add mac-table static mac=00:00:00:00:00:01 vid=148  port=52
+l2 add mac-table static mac=00:00:00:00:00:01 vid=152  port=56
+l2 add mac-table static mac=00:00:00:00:00:01 vid=156  port=60
+l2 add mac-table static mac=00:00:00:00:00:01 vid=160  port=64
+l2 add mac-table static mac=00:00:00:00:00:01 vid=164  port=68
+l2 add mac-table static mac=00:00:00:00:00:01 vid=168  port=72
+l2 add mac-table static mac=00:00:00:00:00:01 vid=172  port=76
+l2 add mac-table static mac=00:00:00:00:00:01 vid=176  port=80
+l2 add mac-table static mac=00:00:00:00:00:01 vid=180  port=84
+l2 add mac-table static mac=00:00:00:00:00:01 vid=184  port=88
+l2 add mac-table static mac=00:00:00:00:00:01 vid=188  port=92
+l2 add mac-table static mac=00:00:00:00:00:01 vid=192  port=96
+l2 add mac-table static mac=00:00:00:00:00:01 vid=196  port=100
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1100 port=104
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1104 port=108
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1108 port=112
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1112 port=116
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1116 port=120
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1120 port=124
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1124 port=128
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1128 port=132
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1132 port=136
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1136 port=140
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1140 port=144
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1144 port=148
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1148 port=152
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1152 port=156
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1156 port=160
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1160 port=164
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1164 port=168
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1168 port=172
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1172 port=176
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1176 port=180
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1180 port=184
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1184 port=188
+l2 add mac-table static mac=00:00:00:00:00:01 vid=1188 port=0
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1192 port=200
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1200 port=208
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1208 port=216
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1216 port=224
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1224 port=232
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1232 port=240
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1240 port=248
+l2 add mac-table static mac=00:00:00:00:00:02 vid=1248 port=192
+
+
+l2 add mac-table static mac=00:00:00:00:00:03 vid=100  port=188
+l2 add mac-table static mac=00:00:00:00:00:03 vid=104  port=0
+l2 add mac-table static mac=00:00:00:00:00:03 vid=108  port=4
+l2 add mac-table static mac=00:00:00:00:00:03 vid=112  port=8
+l2 add mac-table static mac=00:00:00:00:00:03 vid=116  port=12
+l2 add mac-table static mac=00:00:00:00:00:03 vid=120  port=16
+l2 add mac-table static mac=00:00:00:00:00:03 vid=124  port=20
+l2 add mac-table static mac=00:00:00:00:00:03 vid=128  port=24
+l2 add mac-table static mac=00:00:00:00:00:03 vid=132  port=28
+l2 add mac-table static mac=00:00:00:00:00:03 vid=136  port=32
+l2 add mac-table static mac=00:00:00:00:00:03 vid=140  port=36
+l2 add mac-table static mac=00:00:00:00:00:03 vid=144  port=40
+l2 add mac-table static mac=00:00:00:00:00:03 vid=148  port=44
+l2 add mac-table static mac=00:00:00:00:00:03 vid=152  port=48
+l2 add mac-table static mac=00:00:00:00:00:03 vid=156  port=52
+l2 add mac-table static mac=00:00:00:00:00:03 vid=160  port=56
+l2 add mac-table static mac=00:00:00:00:00:03 vid=164  port=60
+l2 add mac-table static mac=00:00:00:00:00:03 vid=168  port=64
+l2 add mac-table static mac=00:00:00:00:00:03 vid=172  port=68
+l2 add mac-table static mac=00:00:00:00:00:03 vid=176  port=72
+l2 add mac-table static mac=00:00:00:00:00:03 vid=180  port=76
+l2 add mac-table static mac=00:00:00:00:00:03 vid=184  port=80
+l2 add mac-table static mac=00:00:00:00:00:03 vid=188  port=84
+l2 add mac-table static mac=00:00:00:00:00:03 vid=192  port=88
+l2 add mac-table static mac=00:00:00:00:00:03 vid=196  port=92
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1100 port=96
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1104 port=100
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1108 port=104
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1112 port=108
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1116 port=112
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1120 port=116
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1124 port=120
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1128 port=124
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1132 port=128
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1136 port=132
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1140 port=136
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1144 port=140
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1148 port=144
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1152 port=148
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1156 port=152
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1160 port=156
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1164 port=160
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1168 port=164
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1172 port=168
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1176 port=172
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1180 port=176
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1184 port=180
+l2 add mac-table static mac=00:00:00:00:00:03 vid=1188 port=184
+
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1192 port=248
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1200 port=192
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1208 port=200
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1216 port=208
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1224 port=216
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1232 port=224
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1240 port=232
+l2 add mac-table static mac=00:00:00:00:00:04 vid=1248 port=240
+
+pkt set sequence clear
+pkt set rx init
+pkt set monitor sequence
+pkt clear monitor
+
+pkt send tx portlist=0   len=250 num=2000 dmac=00:00:00:00:00:01 smac=00:00:00:01:00:01 payload=0xffff sequence
+pkt send tx portlist=192 len=250 num=800 dmac=00:00:00:00:00:02 smac=00:00:00:01:00:01 payload=0xffff sequence
+pkt send tx portlist=4   len=250 num=2000 dmac=00:00:00:00:00:03 smac=00:00:00:01:00:01 payload=0xffff sequence
+pkt send tx portlist=200 len=250 num=800 dmac=00:00:00:00:00:04 smac=00:00:00:01:00:01 payload=0xffff sequence
+

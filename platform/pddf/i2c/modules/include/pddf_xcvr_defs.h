@@ -86,9 +86,12 @@ struct xcvr_data {
     uint32_t            reset;
     uint32_t            intr_status;
     uint32_t            lpmode;
+    uint32_t            power_en;
+    uint32_t            power_fault;
     uint32_t            rxlos;
     uint32_t            txdisable;
     uint32_t            txfault;
+    uint32_t            overwrite_en;
 };
 
 typedef struct XCVR_SYSFS_ATTR_OPS
@@ -109,9 +112,12 @@ enum xcvr_sysfs_attributes {
     XCVR_RESET,
     XCVR_INTR_STATUS,
     XCVR_LPMODE,
+    XCVR_POWER_EN,
+    XCVR_POWER_FAULT,
     XCVR_RXLOS,
     XCVR_TXDISABLE,
     XCVR_TXFAULT,
+    XCVR_OVERWRITE_EN,
     XCVR_ATTR_MAX
 };
 

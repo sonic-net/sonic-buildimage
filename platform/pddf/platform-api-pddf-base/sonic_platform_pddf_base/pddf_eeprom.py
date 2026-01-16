@@ -6,9 +6,12 @@
 
 try:
     from sonic_eeprom import eeprom_tlvinfo
+    import os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+CACHE_ROOT = '/var/cache/sonic/decode-syseeprom'
+CACHE_FILE = 'syseeprom_cache'
 
 class PddfEeprom(eeprom_tlvinfo.TlvInfoDecoder):
     _TLV_INFO_MAX_LEN = 256
@@ -29,6 +32,20 @@ class PddfEeprom(eeprom_tlvinfo.TlvInfoDecoder):
 
         super(PddfEeprom, self).__init__(self.eeprom_path, 0, '', True)
         self.eeprom_tlv_dict = dict()
+
+        # Create the cache directory if not created
+        if not os.path.exists(CACHE_ROOT):
+            try:
+                os.makedirs(CACHE_ROOT)
+            except Exception as e:
+                print("Error in creating Eeprom cache directory - {}".format(str(e)))
+
+        # Assign cache_name in eeprom_base.py
+        try:
+            self.set_cache_name(os.path.join(CACHE_ROOT, CACHE_FILE))
+        except:
+            pass
+
         try:
             self.eeprom_data = self.read_eeprom()
         except:
@@ -36,6 +53,11 @@ class PddfEeprom(eeprom_tlvinfo.TlvInfoDecoder):
             raise RuntimeError("PddfEeprom is not Programmed")
         else:
             eeprom = self.eeprom_data
+
+            try:
+                self.update_cache(eeprom)
+            except:
+                pass
 
             if not self.is_valid_tlvinfo_header(eeprom):
                 return

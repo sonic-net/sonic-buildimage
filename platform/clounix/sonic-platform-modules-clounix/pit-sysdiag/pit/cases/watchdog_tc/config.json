@@ -1,0 +1,6 @@
+{
+    "name": "watchdog-test",
+    "description": "Check watchdog state",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "pa", "smoke"]
+}

@@ -54,9 +54,12 @@ XCVR_SYSFS_ATTR_OPS xcvr_ops[XCVR_ATTR_MAX] = {
     {XCVR_RESET, get_module_reset, NULL, sonic_i2c_get_mod_reset, NULL, set_module_reset, NULL, sonic_i2c_set_mod_reset, NULL},
     {XCVR_INTR_STATUS, get_module_intr_status, NULL, sonic_i2c_get_mod_intr_status, NULL, NULL, NULL, NULL, NULL},
     {XCVR_LPMODE, get_module_lpmode, NULL, sonic_i2c_get_mod_lpmode, NULL, set_module_lpmode, NULL, sonic_i2c_set_mod_lpmode, NULL},
+    {XCVR_POWER_EN, get_module_power_en, NULL, sonic_i2c_get_mod_power_en, NULL, set_module_power_en, NULL, sonic_i2c_set_mod_power_en, NULL},
+    {XCVR_POWER_FAULT, get_module_power_fault, NULL, sonic_i2c_get_mod_power_fault, NULL, NULL, NULL, NULL, NULL},
     {XCVR_RXLOS, get_module_rxlos, NULL, sonic_i2c_get_mod_rxlos, NULL, NULL, NULL, NULL, NULL},
     {XCVR_TXDISABLE, get_module_txdisable, NULL, sonic_i2c_get_mod_txdisable, NULL, set_module_txdisable, NULL, sonic_i2c_set_mod_txdisable, NULL},
     {XCVR_TXFAULT, get_module_txfault, NULL, sonic_i2c_get_mod_txfault, NULL, NULL, NULL, NULL, NULL},
+    {XCVR_OVERWRITE_EN, get_module_overwrite_en, NULL, sonic_i2c_get_mod_overwrite_en, NULL, set_module_overwrite_en, NULL, sonic_i2c_set_mod_overwrite_en, NULL}
 };
 EXPORT_SYMBOL(xcvr_ops);
 
@@ -67,9 +70,12 @@ static SENSOR_DEVICE_ATTR(xcvr_present, S_IWUSR|S_IRUGO, get_module_presence,   
 static SENSOR_DEVICE_ATTR(xcvr_reset,   S_IWUSR|S_IRUGO, get_module_reset, set_module_reset, XCVR_RESET);
 static SENSOR_DEVICE_ATTR(xcvr_intr_status, S_IWUSR|S_IRUGO, get_module_intr_status, NULL, XCVR_INTR_STATUS);
 static SENSOR_DEVICE_ATTR(xcvr_lpmode,  S_IWUSR|S_IRUGO, get_module_lpmode, set_module_lpmode, XCVR_LPMODE);
+static SENSOR_DEVICE_ATTR(xcvr_power_en, S_IWUSR|S_IRUGO, get_module_power_en, set_module_power_en, XCVR_POWER_EN);
+static SENSOR_DEVICE_ATTR(xcvr_power_fault, S_IWUSR|S_IRUGO, get_module_power_fault, NULL, XCVR_POWER_FAULT);
 static SENSOR_DEVICE_ATTR(xcvr_rxlos,   S_IWUSR|S_IRUGO, get_module_rxlos, NULL, XCVR_RXLOS);
 static SENSOR_DEVICE_ATTR(xcvr_txdisable,   S_IWUSR|S_IRUGO, get_module_txdisable, set_module_txdisable, XCVR_TXDISABLE);
 static SENSOR_DEVICE_ATTR(xcvr_txfault, S_IWUSR|S_IRUGO, get_module_txfault, NULL, XCVR_TXFAULT);
+static SENSOR_DEVICE_ATTR(xcvr_overwrite_en, S_IWUSR|S_IRUGO, get_module_overwrite_en, set_module_overwrite_en, XCVR_OVERWRITE_EN);
 
 /* List of all the xcvr attribute structures 
  * to get name, use sensor_dev_attr_<>.dev_attr.attr.name
@@ -80,9 +86,12 @@ static struct sensor_device_attribute *xcvr_attr_list[MAX_XCVR_ATTRS] = {
     &sensor_dev_attr_xcvr_reset,
     &sensor_dev_attr_xcvr_intr_status,
     &sensor_dev_attr_xcvr_lpmode,
+    &sensor_dev_attr_xcvr_power_en,
+    &sensor_dev_attr_xcvr_power_fault,
     &sensor_dev_attr_xcvr_rxlos,
     &sensor_dev_attr_xcvr_txdisable,
     &sensor_dev_attr_xcvr_txfault,
+    &sensor_dev_attr_xcvr_overwrite_en,
 };
 
 static struct attribute *xcvr_attributes[MAX_XCVR_ATTRS] = {NULL};
@@ -96,7 +105,7 @@ static int xcvr_probe(struct i2c_client *client,
 {
     struct xcvr_data *data;
     int status =0;
-    int i,j,num;
+    int i,j,k = 0,num;
     XCVR_PDATA *xcvr_platform_data;
     XCVR_ATTR *attr_data;
 
@@ -141,17 +150,16 @@ static int xcvr_probe(struct i2c_client *client,
         attr_data = xcvr_platform_data->xcvr_attrs + i;
         for(j=0;j<XCVR_ATTR_MAX;j++)
         {
-            aptr = &xcvr_attr_list[j]->dev_attr.attr;
-
+            aptr = &xcvr_attr_list[j]->dev_attr.attr;            
             if (strncmp(aptr->name, attr_data->aname, strlen(attr_data->aname))==0)
                 break;
         }
         
         if (j<XCVR_ATTR_MAX)
-            xcvr_attributes[i] = &xcvr_attr_list[j]->dev_attr.attr;
+            xcvr_attributes[k++] = &xcvr_attr_list[j]->dev_attr.attr;
 
     }
-    xcvr_attributes[i] = NULL;
+    xcvr_attributes[k] = NULL;
 
     /* Register sysfs hooks */
     status = sysfs_create_group(&client->dev.kobj, &xcvr_group);
@@ -278,7 +286,7 @@ int xcvr_init(void)
 }
 EXPORT_SYMBOL(xcvr_init);
 
-void __exit xcvr_exit(void)
+void xcvr_exit(void)
 {
     pddf_dbg(XCVR, "PDDF XCVR DRIVER.. exit\n");
     if (pddf_xcvr_ops.pre_exit) (pddf_xcvr_ops.pre_exit)();
@@ -288,9 +296,9 @@ void __exit xcvr_exit(void)
 }
 EXPORT_SYMBOL(xcvr_exit);
 
+module_init(xcvr_init);
+module_exit(xcvr_exit);
+
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Driver for transceiver operations");
 MODULE_LICENSE("GPL");
-
-module_init(xcvr_init);
-module_exit(xcvr_exit);

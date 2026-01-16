@@ -78,33 +78,19 @@ class PddfFanDrawer(FanDrawerBase):
         return self.fantray_index
 
     def get_status_led(self):
-        led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
-
-        if led_device_name not in self.pddf_obj.data.keys():
+        fan_led_device = "FANTRAY{}".format(self.fantray_index) + "_LED"
+        if (not fan_led_device in self.pddf_obj.data.keys()):
             # Implement a generic status_led color scheme
             if self.get_status():
                 return self.STATUS_LED_COLOR_GREEN
             else:
                 return self.STATUS_LED_COLOR_OFF
 
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', str(self.fantray_index-1), self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
+        result, color = self.pddf_obj.get_system_led_color(fan_led_device)
         return (color)
 
     def set_status_led(self, color):
         result = False
         led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (False)
-
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', str(self.fantray_index-1), self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        return (result)

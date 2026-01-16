@@ -1,0 +1,6 @@
+{
+    "FPGA": {
+        "version": "0xe",
+        "description": "Subcard borad FPGA code version "
+    }
+}

@@ -112,6 +112,15 @@ endif
 ifeq ($(PLATFORM_ARCH),)
 	override PLATFORM_ARCH = $(CONFIGURED_ARCH)
 endif
+SAI_HEADER_VERSION ?= 1.11.0
+SAI_CHIP_ID ?= namchabarwa
+SAI_DEB_URL ?= yes
+SAI_COMMIT_ID ?= c749df
+COMPRESS_ALG ?= gzip
+SONIC_DPKG_CACHE_METHOD ?= cache
+NONE_OCP_SAI_IMPL ?= yes
+SONIC_DPKG_CACHE_SOURCE ?= /home/share/cache/sonic_202205/$(shell [ -f .platform ] && cat .platform || echo generic)/
+
 
 ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
@@ -399,6 +408,11 @@ SONIC_BUILD_INSTRUCTION :=  make \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
+			   SAI_HEADER_VERSION=$(SAI_HEADER_VERSION) \
+                           SAI_CHIP_ID=$(SAI_CHIP_ID) \
+                           SAI_DEB_URL=$(SAI_DEB_URL) \
+                           SAI_COMMIT_ID=$(SAI_COMMIT_ID) \
+                           COMPRESS_ALG=$(COMPRESS_ALG) \
                            ENABLE_AUTO_TECH_SUPPORT=$(ENABLE_AUTO_TECH_SUPPORT) \
                            BUILD_MULTIASIC_KVM=$(BUILD_MULTIASIC_KVM) \
                            ENABLE_ASAN=$(ENABLE_ASAN) \

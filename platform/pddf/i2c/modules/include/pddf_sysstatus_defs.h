@@ -29,6 +29,7 @@
 typedef struct SYSSTATUS_ADDR_ATTR
 {
     char aname[ATTR_NAME_LEN];  // attr name
+    char devtype[32]; ;
     uint32_t devaddr;
     uint32_t offset;
     uint32_t mask;

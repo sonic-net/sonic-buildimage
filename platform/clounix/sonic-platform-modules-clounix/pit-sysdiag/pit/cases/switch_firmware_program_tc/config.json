@@ -1,0 +1,6 @@
+{
+    "name": "switch-firmware-program-test",
+    "description": "switch pcie firmware program test",
+    "type": "manual",
+    "tags": ["manufacture", "development"]
+}

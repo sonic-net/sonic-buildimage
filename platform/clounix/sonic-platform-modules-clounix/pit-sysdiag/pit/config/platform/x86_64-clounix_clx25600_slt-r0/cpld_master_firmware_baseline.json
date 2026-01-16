@@ -1,0 +1,10 @@
+{
+    "CPLD-1": {
+        "version": "0xb",
+        "description": "MB CPLD#1 "
+    },
+    "CPLD-2": {
+        "version": "0xb",
+        "description": "MB CPLD#2 "
+    }
+}

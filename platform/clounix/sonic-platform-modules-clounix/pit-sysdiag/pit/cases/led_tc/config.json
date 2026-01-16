@@ -1,0 +1,6 @@
+{
+    "name": "led-test",
+    "description": "check led status",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

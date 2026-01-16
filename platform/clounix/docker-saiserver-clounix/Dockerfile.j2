@@ -1,0 +1,105 @@
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+COPY ["base_image_files/rsyslog.conf", "/etc/rsyslog.conf"]
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install libboost-atomic1.71.0
+
+COPY \
+{% for deb in docker_saiserver_clounix_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
+{% for deb in docker_saiserver_clounix_debs.split(' ') -%}
+dpkg_apt debs/{{ deb }}{{'; '}}
+{%- endfor %}
+
+## install ptf_nn refrence
+COPY ["base_image_files/get-pip.py", "get-pip.py"]
+COPY ["base_image_files/nnpy-1.0.tar.gz", "nnpy-1.0.tar.gz"]
+COPY ["base_image_files/nanomsg-1.0.0.tar.gz", "nanomsg-1.0.0.tar.gz"]
+
+RUN apt-get install -y git make gcc cmake clang python-dev libxml2-dev libxslt-dev
+
+RUN python get-pip.py
+RUN tar zxf nanomsg-1.0.0.tar.gz \
+    && cd nanomsg-1.0.0    \
+    && mkdir -p build  \
+    && cd build        \
+    && cmake ..        \
+    && make install    \
+    && ldconfig       \
+    && cd ../..      \
+    && rm -fr nanomsg-1.0.0 \
+    && rm -f nanomsg-1.0.0.tar.gz
+RUN tar zxf nnpy-1.0.tar.gz \
+    && cd nnpy-1.0   \
+    && pip install cffi \
+    && pip install --upgrade cffi \
+    && pip install .     \
+    && cd ..    \
+    && rm -rf nnpy-1.0   \
+    && rm -rf nnpy-1.0.tar.gz
+RUN git clone https://github.com/p4lang/ptf.git \
+    && cp ptf/ptf_nn/ptf_nn_agent.py ./    \
+    && chmod +x ptf_nn_agent.py  \
+    && cd ptf \
+    && git checkout 10a2d4b7 \
+    && python setup.py install \
+    && cd ..
+## ptf_nn install end
+
+## TODO: add kmod into Depends
+RUN apt-get install -yf kmod \
+# Install IPython, jupyter-console packages
+        jupyter-console      \
+        jupyter-client
+
+COPY ["files/dsserve", "start.sh", "/usr/bin/"]
+COPY ["clx_diag", "/usr/bin/"]
+COPY ["warm-verifier", "/usr/bin/"]
+RUN chmod +x  /usr/bin/clx_diag /usr/bin/warm-verifier /usr/bin/dsserve
+
+COPY ["profile.ini", "/etc/sai/"]
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+# IPython kernel config
+COPY ["ipython_config.json", "/etc/ipython/"]
+
+# Install IPython Cling Kernel
+{%- if INCLUDE_CLING_KERNEL == "yes" %}
+COPY ["install_clingkernel.sh", "/usr/bin/"]
+COPY ["cling-0.9-buster.tar", "/opt/"]
+RUN /usr/bin/install_clingkernel.sh
+
+RUN apt-get install -y build-essential      \
+                       libc-dev             \
+                       libc6-dev-i386
+
+ENV CLING_OPTS "-I/usr/include/sai/ \
+                -I/usr/include/clounix/ \
+                -I/usr/include/clx_system/clx_sdk/include \
+                -I/usr/include/clx_system/clx_sdk/include/cdb \
+                -I/usr/include/clx_system/clx_sdk/include/osal \
+                -I/usr/include/clx_system/clx_sdk/src/inc \
+                -DCLX_EN_HOST_64_BIT_LITTLE_ENDIAN \
+                -DCLX_EN_LITTLE_ENDIAN \
+                -DCLX_EN_COMPILER_SUPPORT_LONG_LONG \
+                -DCLX_LINUX_USER_MODE \
+                -DCLX_SDK \
+                -DCLX_EN_NETIF \
+                -DCLX_EN_64BIT_ADDR "
+{%- endif %}
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

@@ -116,6 +116,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     if (strncmp(buf, "add", strlen(buf)-1)==0)
     {
         adapter = i2c_get_adapter(device_ptr->parent_bus);
+        if (!adapter) {
+            printk(KERN_ERR "Parent adapter (%d) not found\n", device_ptr->parent_bus);
+            return -ENODEV;
+        }
         board_info = i2c_get_gpio_board_info(gpio_ptr, device_ptr);
 
         /*pddf_dbg(KERN_ERR "Creating a client %s on 0x%x, platform_data 0x%x\n", board_info->type, board_info->addr, board_info->platform_data);*/

@@ -1,0 +1,17 @@
+{
+    "Base MAC Address": "02:88:22:03:80:AA",
+    "Device Version": "8",
+    "ONIE Version": "2023.08-dirty",
+    "Platform Name": "x86_64-clounix_clx12800_32d-r0",
+    "Serial Number": "CLX888",
+    "Product Name": "CLOUNIX12800",
+    "Part Number": "PIBC",
+    "Manufacturer": "Clounix",
+    "Manufacture Date": "08/28/2023 01:01:01",
+    "Manufacture Country": "CHN",
+    "Vendor Name": "Clounix",
+    "Diag Version": "1.0.0",
+    "Service Tag": "6",
+    "Label Revision": "R01",
+    "MAC Addresses": "5"
+}

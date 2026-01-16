@@ -22,7 +22,7 @@
 
 
 #define MAX_NUM_PSU 5
-#define MAX_PSU_ATTRS 32
+#define MAX_PSU_ATTRS 64
 #define ATTR_NAME_LEN 32
 #define STR_ATTR_SIZE 32
 #define DEV_TYPE_LEN 32
@@ -86,5 +86,9 @@ typedef struct PSU_PDATA
 
 extern int board_i2c_cpld_read(unsigned short cpld_addr, u8 reg);
 extern int board_i2c_cpld_write(unsigned short cpld_addr, u8 reg, u8 value);
+extern int (*ptr_fpgapci_read)(uint32_t);
+extern int (*ptr_fpgapci_write)(uint32_t, uint32_t);
 
+extern unsigned char lpc_cpld_read_reg(u16 address);
+extern void lpc_cpld_write_reg(u16 address, u8 reg_val);
 #endif

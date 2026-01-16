@@ -1,0 +1,15 @@
+[Unit]
+Description=Clounix common Platform initialization service
+Wants=pddf-platform-init.service pddf-s3ip-init.service
+After=pddf-platform-init.service pddf-s3ip-init.service
+Before=determine-reboot-cause.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/clxProcess/main.py install
+ExecStop=/usr/local/bin/clxProcess/main.py uninstall
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

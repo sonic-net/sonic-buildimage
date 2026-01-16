@@ -1,0 +1,117 @@
+pkt set sequence verify
+
+netif destroy profile profile-id=0
+netif destroy profile profile-id=1
+
+pkt set rx deinit
+pkt set monitor disable
+
+tm set shaper  portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248 max-bw=0 max-burst=64000000
+tm set shaper  portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248 queue=0 max-bw=0 max-burst=64000000
+
+l2 del mac-table   mac=00:00:00:00:00:01 vid=100  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=108  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=116  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=124  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=132  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=140  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=148  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=156  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=164  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=172  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=180  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=188  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=196  
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1104 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1112 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1120 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1128 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1136 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1144 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1152 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1160 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1168 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1176 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1184 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1192 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1200 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1208 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1216 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1224 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1232 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1240 
+l2 del mac-table   mac=00:00:00:00:00:01 vid=1248 
+
+l2 del mac-table   mac=00:00:00:00:00:02 vid=100  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=108  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=116  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=124  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=132  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=140  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=148  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=156  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=164  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=172  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=180  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=188  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=196  
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1104 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1112 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1120 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1128 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1136 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1144 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1152 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1160 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1168 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1176 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1184 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1192 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1200 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1208 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1216 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1224 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1232 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1240 
+l2 del mac-table   mac=00:00:00:00:00:02 vid=1248 
+
+vlan del member vid=100  portlist=248,0,8     untag-portlist=248,0,8    
+vlan del member vid=108  portlist=0,8,16      untag-portlist=0,8,16     
+vlan del member vid=116  portlist=8,16,24     untag-portlist=8,16,24    
+vlan del member vid=124  portlist=16,24,32    untag-portlist=16,24,32   
+vlan del member vid=132  portlist=24,32,40    untag-portlist=24,32,40   
+vlan del member vid=140  portlist=32,40,48    untag-portlist=32,40,48   
+vlan del member vid=148  portlist=40,48,56    untag-portlist=40,48,56   
+vlan del member vid=156  portlist=48,56,64    untag-portlist=48,56,64   
+vlan del member vid=164  portlist=56,64,72    untag-portlist=56,64,72   
+vlan del member vid=172  portlist=64,72,80    untag-portlist=64,72,80   
+vlan del member vid=180  portlist=72,80,88    untag-portlist=72,80,88   
+vlan del member vid=188  portlist=80,88,96    untag-portlist=80,88,96   
+vlan del member vid=196  portlist=88,96,104   untag-portlist=88,96,104  
+vlan del member vid=1104 portlist=96,104,112  untag-portlist=96,104,112 
+vlan del member vid=1112 portlist=104,112,120 untag-portlist=104,112,120
+vlan del member vid=1120 portlist=112,120,128 untag-portlist=112,120,128
+vlan del member vid=1128 portlist=120,128,136 untag-portlist=120,128,136
+vlan del member vid=1136 portlist=128,136,144 untag-portlist=128,136,144
+vlan del member vid=1144 portlist=136,144,152 untag-portlist=136,144,152
+vlan del member vid=1152 portlist=144,152,160 untag-portlist=144,152,160
+vlan del member vid=1160 portlist=152,160,168 untag-portlist=152,160,168
+vlan del member vid=1168 portlist=160,168,176 untag-portlist=160,168,176
+vlan del member vid=1176 portlist=168,176,184 untag-portlist=168,176,184
+vlan del member vid=1184 portlist=176,184,192 untag-portlist=176,184,192
+vlan del member vid=1192 portlist=184,192,200 untag-portlist=184,192,200
+vlan del member vid=1200 portlist=192,200,208 untag-portlist=192,200,208
+vlan del member vid=1208 portlist=200,208,216 untag-portlist=200,208,216
+vlan del member vid=1216 portlist=208,216,224 untag-portlist=208,216,224
+vlan del member vid=1224 portlist=216,224,232 untag-portlist=216,224,232
+vlan del member vid=1232 portlist=224,232,240 untag-portlist=224,232,240
+vlan del member vid=1240 portlist=232,240,248 untag-portlist=232,240,248
+vlan del member vid=1248 portlist=240,248,0   untag-portlist=240,248,0  
+
+
+port set intf-property portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248 mtu=1536
+
+port set intf-property portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248 pvid=1
+
+vlan add member vid=1 portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248 untag-portlist=0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184,192,200,208,216,224,232,240,248
+

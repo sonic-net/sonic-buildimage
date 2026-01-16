@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with Thermal sensors in PDDF mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+    from utilities_common.util_base import UtilHelper
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+SYSLOG_IDENTIFIER = "thermalutil"
+PLATFORM_SPECIFIC_MODULE_NAME = "thermalutil"
+PLATFORM_SPECIFIC_CLASS_NAME = "ThermalUtil"
+
+# Global platform-specific fanutil class instance
+platform_chassis = None
+platform_sensors = None
+
+# Wrapper APIs so that this util is suited to both 1.0 and 2.0 platform APIs
+
+# ==================== Tempture Sensor Wrapper APIS ====================
+def _wrapper_get_num_thermals():
+    return platform_sensors.get_num_thermals()
+
+def _wrapper_get_thermal_name(idx):
+    return platform_sensors.get_thermal(idx-1).get_name()
+
+def _wrapper_get_thermal_type(idx):
+    return platform_sensors.get_thermal(idx-1).get_type()
+
+def _wrapper_get_thermal_temperature(idx):
+    return platform_sensors.get_thermal(idx-1).get_temperature()
+
+def _wrapper_get_thermal_high_threshold(idx):
+    return platform_sensors.get_thermal(idx-1).get_high_threshold()
+
+def _wrapper_get_thermal_low_threshold(idx):
+    return platform_sensors.get_thermal(idx-1).get_low_threshold()
+
+def _wrapper_get_thermal_hyst(idx):
+    return platform_sensors.get_thermal(idx-1).get_hyst()
+
+# ==================== Voltage Sensor Wrapper APIS ====================
+def _wrapper_get_num_voltages():
+    return platform_sensors.get_num_voltages()
+
+def _wrapper_get_voltage_name(idx):
+    return platform_sensors.get_voltage(idx-1).get_name()
+
+def _wrapper_get_voltage_type(idx):
+    return platform_sensors.get_voltage(idx-1).get_type()
+
+def _wrapper_get_voltage(idx):
+    return platform_sensors.get_voltage(idx-1).get_voltage()
+
+def _wrapper_get_voltage_high_threshold(idx):
+    return platform_sensors.get_voltage(idx-1).get_high_threshold()
+
+def _wrapper_get_voltage_low_threshold(idx):
+    return platform_sensors.get_voltage(idx-1).get_low_threshold()
+
+# ==================== Current Sensor Wrapper APIS ====================
+def _wrapper_get_num_currents():
+    return platform_sensors.get_num_currs()
+
+def _wrapper_get_current_name(idx):
+    return platform_sensors.get_current(idx-1).get_name()
+
+def _wrapper_get_current_type(idx):
+    return platform_sensors.get_current(idx-1).get_type()
+
+def _wrapper_get_current_input(idx):
+    return platform_sensors.get_current(idx-1).get_input()
+
+def _wrapper_get_current_max(idx):
+    return platform_sensors.get_current(idx-1).get_max()
+
+def _wrapper_get_current_min(idx):
+    return platform_sensors.get_current(idx-1).get_min()
+
+def _wrapper_get_current_average(idx):
+    return platform_sensors.get_current(idx-1).get_average()
+
+def _wrapper_debug_sysfs():
+    return platform_chassis.get_debug_info('sensor')
+
+# This is our main entrypoint - the main 'thermalutil' command
+@click.group()
+def cli():
+    """pddf_thermalutil - Command line utility for providing Temp Sensors information"""
+
+    global platform_sensors
+    global platform_chassis
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        import sonic_platform.platform
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+        platform_sensors = platform_chassis.get_sensor()
+    except Exception as e:
+        click.echo("Failed to load chassis due to {}".format(str(e)))
+
+    # Load platform-specific fanutil class
+    if platform_sensors is None:
+        click.echo("Failed to load platform sensors")
+        sys.exit(2)
+
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("PDDF thermalutil version {0}".format(VERSION))
+
+# 'numthermals' subcommand
+@cli.command()
+def numthermals():
+    """Display number of Thermal Sensors installed """
+    click.echo(_wrapper_get_num_thermals())
+
+# 'numvoltages' subcommand
+@cli.command()
+def numvoltages():
+    """Display number of Voltage Sensors installed """
+    click.echo(_wrapper_get_num_voltages())
+
+# 'numcurrents' subcommand
+@cli.command()
+def numcurrents():
+    """Display number of Current Sensors installed """
+    click.echo(_wrapper_get_num_currents())
+
+# 'temp' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of Temp Sensor")
+def temp(index):
+    """Display Temperature values of thermal sensors"""
+    if _wrapper_get_num_thermals() <= 0:
+        click.echo("No Thermal Sensor.")
+        sys.exit(1)
+
+    supported_thermal = list(range(1,  _wrapper_get_num_thermals()+ 1))
+    thermal_ids = []
+    if (index < 0):
+        thermal_ids = supported_thermal
+    else:
+        thermal_ids = [index]
+
+    header=[]
+    status_table = []
+
+    for thermal in thermal_ids:
+        thermal_name = _wrapper_get_thermal_name(thermal)
+        if thermal not in supported_thermal:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported Temp - {}.".format(thermal_name, len(supported_thermal)))
+            continue
+        temp = _wrapper_get_thermal_temperature(thermal)
+        # if temp:
+            # value = "temp1\t %+.1f C (" % temp
+        high = _wrapper_get_thermal_high_threshold(thermal)
+        # if high:
+            # value += "high = %+.1f C" % high
+        low = _wrapper_get_thermal_low_threshold(thermal)
+        # if high and low:
+            # value += ", "
+        # if low:
+            # value += "low = %+.1f C" % low
+        # value +=")"
+
+        type = _wrapper_get_thermal_type(thermal)
+        label = _wrapper_get_thermal_type(thermal)
+        status_table.append([thermal_name, type, label, temp, high, low])
+
+    # Sensor Temperature    High TH    Low TH    Crit High TH    Crit Low TH    Warning          Timestamp
+    header = ['Sensor', 'Type', 'Label', 'Temperature', 'High TH', 'Low TH']
+    click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'voltage' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of Voltage Sensor")
+def voltage(index):
+    """Display Voltage values of thermal sensors"""
+    if _wrapper_get_num_voltages() <= 0:
+        click.echo("No Voltage Sensor.")
+        sys.exit(1)
+
+    supported_voltage = list(range(1,  _wrapper_get_num_voltages() + 1))
+    voltage_ids = []
+    if (index < 0):
+        voltage_ids = supported_voltage
+    else:
+        voltage_ids = [index]
+
+    header=[]
+    status_table = []
+
+    for voltage in voltage_ids:
+        voltage_name = _wrapper_get_voltage_name(voltage)
+        if voltage not in supported_voltage:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported Voltage - {}.".format(voltage_name, len(supported_voltage)))
+            continue
+
+        label = _wrapper_get_voltage_type(voltage)
+        input_voltage = _wrapper_get_voltage(voltage)
+        high = _wrapper_get_voltage_high_threshold(voltage)
+        low = _wrapper_get_voltage_low_threshold(voltage)
+        status_table.append([voltage_name, label, input_voltage, low, high])
+
+    header = ['Voltage Sensor', 'Label', 'Low Threshold', 'High Threshold']
+    click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of Current Sensor")
+def curr(index):
+    """Display Current values of thermal sensors"""
+    if _wrapper_get_num_currents() <= 0:
+        click.echo("No Current Sensor.")
+        sys.exit(1)
+
+    supported_current = list(range(1,  _wrapper_get_num_currents() + 1))
+    current_ids = []
+    if (index < 0):
+        current_ids = supported_current
+    else:
+        current_ids= [index]
+
+    header=[]
+    status_table = []
+
+    for current in current_ids:
+        current_name = _wrapper_get_current_name(current)
+        if current not in supported_current:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported Current - {}.".format(current_name, len(supported_current)))
+            continue
+
+        name = _wrapper_get_current_name(current)
+        lable = _wrapper_get_current_type(current)
+        input = _wrapper_get_current_input(current)
+        max = _wrapper_get_current_max(current)
+        min = _wrapper_get_current_min(current)
+        average = _wrapper_get_current_average(current)
+        status_table.append([current_name, name, lable, input, max, min, average])
+
+    header = ['Temp Sensor', 'Name', 'Label', 'Input', 'Max', 'Min', 'Average']
+    click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'debug' subcommand
+@cli.command('debug', short_help='Show psu debug info')
+def debug():
+    """kddf_fanutil debug commands"""
+    debug = _wrapper_debug_sysfs()
+    if debug is None:
+        debug = 'N/A'
+    click.echo(debug)
+
+if __name__ == '__main__':
+    cli()

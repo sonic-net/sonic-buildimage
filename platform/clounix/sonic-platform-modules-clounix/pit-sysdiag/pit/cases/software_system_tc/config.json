@@ -1,0 +1,6 @@
+{
+    "name": "software-system-test",
+    "description": "Check software system function",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

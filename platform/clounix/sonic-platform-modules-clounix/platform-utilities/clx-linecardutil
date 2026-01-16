@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with Linecard Controller in kddf mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+# Global platform-specific linecardutil class instance
+platform_chassis = None
+
+# Wrapper APIs so that this util is suited to 2.0 platform APIs
+def _wrapper_get_num_linecards():
+    try:
+        return platform_chassis.get_num_slots()
+    except NotImplementedError:
+        pass
+    return None
+
+def _wrapper_get_slot_name(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_name()
+    except NotImplementedError:
+        pass
+    return "Linecard-{}".format(idx)
+
+def _wrapper_get_slot_presence(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_presence()
+    except NotImplementedError:
+        pass
+    return False
+
+def _wrapper_get_slot_model(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_model()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_serial(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_serial()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_status(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_status()
+    except NotImplementedError:
+        pass
+    return False
+
+def _wrapper_get_slot_part_number(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_part_number()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_power_on(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_power_on()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_vendor(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_vendor()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_hw_version(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_hw_version()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_alarm(idx):
+    try:
+        return platform_chassis.get_slot(idx-1).get_alarm()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_slot_status_led(idx):
+    if platform_chassis is not None:
+        outputs = platform_chassis.get_slot(idx-1).get_status_led()
+    else:
+        outputs = "Not Support"
+    return outputs
+
+def _wrapper_debug_sysfs():
+    return platform_chassis.get_debug_info('slot')
+
+
+# ==================== CLI commands and groups ====================
+
+# This is our main entrypoint - the main 'linecardutil' command
+@click.group()
+def cli():
+    """linecardutil - Command line utility for providing Linecard status"""
+
+    global platform_chassis
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        import sonic_platform.platform
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        click.echo("Failed to load chassis due to {}".format(str(e)))
+
+    # Load platform-specific linecardutil class if 2.0 implementation is not present
+    if platform_chassis is None:
+        click.echo("Failed to load chassis..")
+        sys.exit(2)
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("kddf linecardutil version {0}".format(VERSION))
+
+# 'numlinecards' subcommand
+@cli.command()
+def numlinecards():
+    """Display number of supported Linecards on device"""
+    click.echo(_wrapper_get_num_linecards())
+
+# 'status' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of Linecard")
+def status(index):
+    """Display Linecard status"""
+    supported_linecard = list(range(1, _wrapper_get_num_linecards() + 1))
+    linecard_ids = []
+    if (index < 0):
+        linecard_ids = supported_linecard
+    else:
+        linecard_ids = [index]
+
+    header = ['Linecard', 'Status', 'Led Status', 'Power ON']
+    status_table = []
+
+    for linecard in linecard_ids:
+        msg = ""
+        linecard_name = _wrapper_get_slot_name(linecard)
+        if linecard not in supported_linecard:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported Linecard - {}.".format(linecard_name, len(supported_linecard)))
+            continue
+        presence = _wrapper_get_slot_presence(linecard)
+        if presence:
+            oper_status = _wrapper_get_slot_status(linecard)
+            msg = 'OK' if oper_status else "NOT OK"
+        else:
+            msg = 'NOT PRESENT'
+        led_status = _wrapper_get_slot_status_led(linecard)
+        power_on = _wrapper_get_slot_power_on(linecard)
+        status_table.append([linecard_name, msg, led_status, power_on])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'info' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of Linecard")
+def info(index):
+    """Display Linecard manufacturer info"""
+    supported_linecard = list(range(1, _wrapper_get_num_linecards() + 1))
+    linecard_ids = []
+    if (index < 0):
+        linecard_ids = supported_linecard
+    else:
+        linecard_ids = [index]
+
+    header = ['Linecard', 'Vendor Name', 'Part Number', 'Model', 'Serial Number', 'HW Version', 'Linecard Alarm']
+    status_table = []
+    for linecard in linecard_ids:
+        linecard_name = _wrapper_get_slot_name(linecard)
+        if linecard not in supported_linecard:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported Linecard - {}.".format(linecard_name, len(supported_linecard)))
+            continue
+        status = _wrapper_get_slot_status(linecard)
+        if not status:
+            click.echo("{} is Not OK {}\n".format(linecard_name, status))
+            continue
+
+        vendor = _wrapper_get_slot_vendor(linecard)
+        part_number = _wrapper_get_slot_part_number(linecard)
+        model_name = _wrapper_get_slot_model(linecard)
+        serial_num = _wrapper_get_slot_serial(linecard)
+        hw_version = _wrapper_get_slot_hw_version(linecard)
+        alarm = _wrapper_get_slot_alarm(linecard)
+
+        status_table.append([linecard_name, vendor, part_number, model_name, serial_num, hw_version, alarm])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'debug' subcommand
+@cli.command('debug', short_help='Show linecard debug info')
+def debug():
+    """kddf_linecardutil debug commands"""
+    debug = _wrapper_debug_sysfs()
+    if debug is None:
+        debug = 'N/A'
+    click.echo(debug)
+
+if __name__ == '__main__':
+    cli()

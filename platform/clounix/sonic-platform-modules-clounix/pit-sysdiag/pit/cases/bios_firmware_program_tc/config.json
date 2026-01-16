@@ -1,0 +1,6 @@
+{
+    "name": "bios-firmware-program-test",
+    "description": "bios firmware program test",
+    "type": "manual",
+    "tags": ["manufacture", "development"]
+}

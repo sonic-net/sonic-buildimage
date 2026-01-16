@@ -1,0 +1,6 @@
+{
+    "name": "ssdstress-test",
+    "description": "Check SSD Stress Test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "stress"]
+}

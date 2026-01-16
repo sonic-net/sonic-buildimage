@@ -1,0 +1,6 @@
+{
+    "name": "usbstress-test",
+    "description": "Usb Stress test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "stress"]
+}

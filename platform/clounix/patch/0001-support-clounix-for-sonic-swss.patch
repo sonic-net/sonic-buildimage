@@ -1,0 +1,189 @@
+From 18ba004837dc4becc5294ca427d567d788687e98 Mon Sep 17 00:00:00 2001
+From: Fanqi Lu <lufq@clounix.com>
+Date: Mon, 5 Dec 2022 21:34:10 +0800
+Subject: [PATCH] Support clounix
+
+---
+ orchagent/Makefile.am            |  1 +
+ orchagent/aclorch.cpp            |  2 +
+ orchagent/orch.h                 |  1 +
+ orchagent/orchdaemon.cpp         |  5 +-
+ orchagent/pfc_detect_clounix.lua | 99 ++++++++++++++++++++++++++++++++
+ 5 files changed, 107 insertions(+), 1 deletion(-)
+ create mode 100644 orchagent/pfc_detect_clounix.lua
+
+diff --git a/orchagent/Makefile.am b/orchagent/Makefile.am
+index 5e3cd741..c706806a 100644
+--- a/orchagent/Makefile.am
++++ b/orchagent/Makefile.am
+@@ -18,6 +18,7 @@ dist_swss_DATA = \
+ 		 rif_rates.lua \
+ 		 pfc_detect_innovium.lua  \
+ 		 pfc_detect_mellanox.lua  \
++		 pfc_detect_clounix.lua  \
+ 		 pfc_detect_broadcom.lua \
+ 		 pfc_detect_barefoot.lua \
+ 		 pfc_detect_nephos.lua \
+diff --git a/orchagent/aclorch.cpp b/orchagent/aclorch.cpp
+index c6644b3b..a31563b2 100644
+--- a/orchagent/aclorch.cpp
++++ b/orchagent/aclorch.cpp
+@@ -2914,6 +2914,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+             platform == INVM_PLATFORM_SUBSTRING ||
+             platform == NPS_PLATFORM_SUBSTRING ||
+             platform == XS_PLATFORM_SUBSTRING ||
++            platform == CLX_PLATFORM_SUBSTRING ||
+             platform == VS_PLATFORM_SUBSTRING)
+     {
+         m_mirrorTableCapabilities =
+@@ -2943,6 +2944,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+         platform == CISCO_8000_PLATFORM_SUBSTRING ||
+         platform == MRVL_PLATFORM_SUBSTRING ||
+         platform == XS_PLATFORM_SUBSTRING ||
++        platform == CLX_PLATFORM_SUBSTRING ||
+         (platform == BRCM_PLATFORM_SUBSTRING && sub_platform == BRCM_DNX_PLATFORM_SUBSTRING))
+     {
+         m_isCombinedMirrorV6Table = false;
+diff --git a/orchagent/orch.h b/orchagent/orch.h
+index 6c620a3e..b44d15d5 100644
+--- a/orchagent/orch.h
++++ b/orchagent/orch.h
+@@ -41,6 +41,7 @@ const char state_db_key_delimiter  = '|';
+ #define MRVL_PLATFORM_SUBSTRING "marvell"
+ #define CISCO_8000_PLATFORM_SUBSTRING "cisco-8000"
+ #define XS_PLATFORM_SUBSTRING   "xsight"
++#define CLX_PLATFORM_SUBSTRING  "clounix"
+ 
+ #define CONFIGDB_KEY_SEPARATOR "|"
+ #define DEFAULT_KEY_SEPARATOR  ":"
+diff --git a/orchagent/orchdaemon.cpp b/orchagent/orchdaemon.cpp
+index af0f598a..40e36c63 100644
+--- a/orchagent/orchdaemon.cpp
++++ b/orchagent/orchdaemon.cpp
+@@ -518,6 +518,7 @@ bool OrchDaemon::init()
+                     PFC_WD_POLL_MSECS));
+     }
+     else if ((platform == INVM_PLATFORM_SUBSTRING)
++             || (platform == CLX_PLATFORM_SUBSTRING)
+              || (platform == BFN_PLATFORM_SUBSTRING)
+              || (platform == NPS_PLATFORM_SUBSTRING))
+     {
+@@ -550,7 +551,9 @@ bool OrchDaemon::init()
+ 
+         static const vector<sai_queue_attr_t> queueAttrIds;
+ 
+-        if ((platform == INVM_PLATFORM_SUBSTRING) || (platform == NPS_PLATFORM_SUBSTRING))
++        if ((platform == INVM_PLATFORM_SUBSTRING) 
++			|| (platform == CLX_PLATFORM_SUBSTRING)
++			|| (platform == NPS_PLATFORM_SUBSTRING))
+         {
+             m_orchList.push_back(new PfcWdSwOrch<PfcWdZeroBufferHandler, PfcWdLossyHandler>(
+                         m_configDb,
+diff --git a/orchagent/pfc_detect_clounix.lua b/orchagent/pfc_detect_clounix.lua
+new file mode 100644
+index 00000000..72f1cbea
+--- /dev/null
++++ b/orchagent/pfc_detect_clounix.lua
+@@ -0,0 +1,99 @@
++-- KEYS - queue IDs
++-- ARGV[1] - counters db index
++-- ARGV[2] - counters table name
++-- ARGV[3] - poll time interval (milliseconds)
++-- return queue Ids that satisfy criteria
++
++local counters_db = ARGV[1]
++local counters_table_name = ARGV[2]
++local poll_time = tonumber(ARGV[3]) * 1000
++
++local rets = {}
++
++redis.call('SELECT', counters_db)
++
++-- Iterate through each queue
++local n = table.getn(KEYS)
++for i = n, 1, -1 do
++    local counter_keys = redis.call('HKEYS', counters_table_name .. ':' .. KEYS[i])
++    local counter_num = 0
++    local old_counter_num = 0
++    local is_deadlock = false
++    local pfc_wd_status = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'PFC_WD_STATUS')
++    local pfc_wd_action = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'PFC_WD_ACTION')
++    local big_red_switch_mode = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'BIG_RED_SWITCH_MODE')
++    if not big_red_switch_mode and (pfc_wd_status == 'operational' or pfc_wd_action == 'alert') then
++        local detection_time = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'PFC_WD_DETECTION_TIME')
++        if detection_time then
++            detection_time = tonumber(detection_time)
++            local time_left = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'PFC_WD_DETECTION_TIME_LEFT')
++            if not time_left  then
++                time_left = detection_time
++            else
++                time_left = tonumber(time_left)
++            end
++
++            local queue_index = redis.call('HGET', 'COUNTERS_QUEUE_INDEX_MAP', KEYS[i])
++            local port_id = redis.call('HGET', 'COUNTERS_QUEUE_PORT_MAP', KEYS[i])
++            local pfc_rx_pkt_key = 'SAI_PORT_STAT_PFC_' .. queue_index .. '_RX_PKTS'
++            local pfc_duration_key = 'SAI_PORT_STAT_PFC_' .. queue_index .. '_RX_PAUSE_DURATION'
++
++            -- Get all counters
++            local occupancy_bytes = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'SAI_QUEUE_STAT_CURR_OCCUPANCY_BYTES')
++            local packets = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'SAI_QUEUE_STAT_PACKETS')
++            local pfc_rx_packets = redis.call('HGET', counters_table_name .. ':' .. port_id, pfc_rx_pkt_key)
++            local pfc_duration = redis.call('HGET', counters_table_name .. ':' .. port_id, pfc_duration_key)
++
++            if occupancy_bytes and packets and pfc_rx_packets and pfc_duration then
++                occupancy_bytes = tonumber(occupancy_bytes)
++                packets = tonumber(packets)
++                pfc_rx_packets = tonumber(pfc_rx_packets)
++                pfc_duration =  tonumber(pfc_duration)
++
++                local packets_last = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'SAI_QUEUE_STAT_PACKETS_last')
++                local pfc_rx_packets_last = redis.call('HGET', counters_table_name .. ':' .. port_id, pfc_rx_pkt_key .. '_last')
++                local pfc_duration_last = redis.call('HGET', counters_table_name .. ':' .. port_id, pfc_duration_key .. '_last')
++                -- DEBUG CODE START. Uncomment to enable
++                local debug_storm = redis.call('HGET', counters_table_name .. ':' .. KEYS[i], 'DEBUG_STORM')
++                -- DEBUG CODE END.
++
++                -- If this is not a first run, then we have last values available
++                if packets_last and pfc_rx_packets_last and pfc_duration_last then
++                    packets_last = tonumber(packets_last)
++                    pfc_rx_packets_last = tonumber(pfc_rx_packets_last)
++                    pfc_duration_last = tonumber(pfc_duration_last)
++
++                    -- Check actual condition of queue being in PFC storm
++                    if (occupancy_bytes > 0 and packets - packets_last == 0 and pfc_rx_packets - pfc_rx_packets_last > 0) or
++                        -- DEBUG CODE START. Uncomment to enable
++                        (debug_storm == "enabled") or
++                        -- DEBUG CODE END.
++                        (occupancy_bytes == 0 and packets - packets_last == 0 and (pfc_duration - pfc_duration_last) > poll_time * 0.8) then
++                        if time_left <= poll_time then
++                            redis.call('PUBLISH', 'PFC_WD_ACTION', '["' .. KEYS[i] .. '","storm"]')
++                            is_deadlock = true
++                            time_left = detection_time
++                        else
++                            time_left = time_left - poll_time
++                        end
++                    else
++                        if pfc_wd_action == 'alert' and pfc_wd_status ~= 'operational' then
++                            redis.call('PUBLISH', 'PFC_WD_ACTION', '["' .. KEYS[i] .. '","restore"]')
++                        end
++                        time_left = detection_time
++                    end
++                end
++
++            -- Save values for next run
++                redis.call('HSET', counters_table_name .. ':' .. KEYS[i], 'SAI_QUEUE_STAT_PACKETS_last', packets)
++                redis.call('HSET', counters_table_name .. ':' .. KEYS[i], 'PFC_WD_DETECTION_TIME_LEFT', time_left)
++                redis.call('HSET', counters_table_name .. ':' .. port_id, pfc_rx_pkt_key .. '_last', pfc_rx_packets)
++                redis.call('HDEL', counters_table_name .. ':' .. port_id, pfc_duration_key .. '_last')
++                redis.call('HSET', counters_table_name .. ':' .. port_id, pfc_duration_key .. '_last', pfc_duration)
++            end
++        end
++    end
++end
++
++return rets
++
+-- 
+2.17.1
+

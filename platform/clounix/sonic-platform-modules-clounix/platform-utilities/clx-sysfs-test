@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+import os
+import stat
+from tabulate import tabulate
+#  from sonic_platform.common import read_sysfs_file
+
+# file mode type
+common_dict = {
+    'debug'     : ['RW' , 'STRING'],
+    'loglevel'  : ['RW', 'STRING']
+}
+
+eeprom_dict = {
+    'eeprom'    : ['RW','BINARY'],
+    'bsp_version': ['RW','STRING']
+}
+
+cpld_num_dict = {
+    'num'           : ['RO','INT']
+}
+
+cpld_dict = {
+    'alias'         : ['RO','STRING'],
+    'type'           : ['RO','STRING'],
+    'hw_version'    : ['RO','STRING'],
+    'board_version': ['RO','STRING']
+}
+
+sysled_dict = {
+    'sys_led_status' : ['RW', 'INT'],
+    'bmc_led_status' : ['RO', 'INT'],
+    'fan_led_status' : ['RO', 'INT'],
+    'psu_led_status' : ['RO', 'INT'],
+    'id_led_status'  : ['RW', 'INT']
+}
+
+transceiver_common_dict = {
+    'power_on' : ['RO', 'INT'],
+    'present' : ['RO', 'INT'],
+}
+
+transceiver_dict = {
+    'power_on' : ['RW', 'INT'],
+    'present' : ['RO', 'INT'],
+    'reset' : ['RW', 'INT'],
+    'lpmode' : ['RW', 'INT'],
+    'interrupt' : ['RW', 'INT'],
+    'eeprom' : ['RW', 'BINARY'],
+}
+
+fan_dict = {
+    'model_name' : ['RO', 'STRING'],
+    'serial_number' : ['RO', 'STRING'],
+    'vendor' : ['RO', 'STRING'],
+    'part_number' : ['RO', 'STRING'],
+    'hardware_version' : ['RO', 'STRING'],
+    'status' : ['RO', 'INT'],
+    'led_status' : ['RO', 'INT'],
+    'num_motors' : ['RO', 'INT'],
+}
+
+# motor
+fan_motor_dict = {
+    'speed' : ['RO', 'INT'],
+    'speed_tolerance' : ['RO', 'INT'],
+    'speed_target' : ['RO', 'INT'],
+    'ratio' : ['RW', 'INT'],
+    'direction' : ['RO', 'INT'],
+}
+
+psu_dict = {
+    'model_name' : ['RO', 'STRING'],
+    'serial_number' : ['RO', 'STRING'],
+    'date' : ['RO', 'STRING'],
+    'vendor' : ['RO', 'STRING'],
+    'part_number' : ['RO', 'STRING'],
+    'hardware_version' : ['RO', 'STRING'],
+    'alarm' : ['RO', 'INT'],
+    'alarm_threshold_curr' : ['RO', 'INT'],
+    'alarm_threshold_vol' : ['RO', 'INT'],
+    'max_output_power' : ['RO', 'INT'],
+    'in_curr' : ['RO', 'INT'],
+    'in_vol' : ['RO', 'INT'],
+    'in_power' : ['RO', 'INT'],
+    'out_curr' : ['RO', 'INT'],
+    'out_vol' : ['RO', 'INT'],
+    'out_power' : ['RO', 'INT'],
+    'status' : ['RO', 'INT'],
+    'led_status' : ['RO', 'INT'],
+    'type' : ['RO', 'INT'],
+    'fan_speed' : ['RO', 'INT'],
+    'num_temp_sensors' : ['RO', 'INT'],
+}
+
+
+#  num_curr_sensors  num_in_sensors  num_temp_sensors
+
+sensor_dict = {
+    'num_temp_sensors' : ['RO', 'INT'],
+    'num_in_sensors' : ['RO', 'INT'],
+    'num_curr_sensors' : ['RO', 'INT'],
+}
+
+sensor_temp_dict = {
+    'temp_alias' : ['RO', 'STRING'],
+    'temp_type' : ['RO', 'STRING'],
+    'temp_max' : ['RO', 'INT'],
+    'temp_max_hyst' : ['RW', 'INT'],
+    'temp_min' : ['RO', 'INT'],
+    'temp_input' : ['RO', 'INT'],
+}
+
+sensor_in_dict = {
+    'in_alias' : ['RO', 'STRING'],
+    'in_type' : ['RO', 'STRING'],
+    'in_max' : ['RO', 'INT'],
+    'in_crit' : ['RW', 'INT'],
+    'in_input' : ['RO', 'INT'],
+}
+
+sensor_curr_dict = {
+    'curr_alias' : ['RO', 'STRING'],
+    'curr_type' : ['RO', 'STRING'],
+    'curr_max' : ['RO', 'INT'],
+    'curr_crit' : ['RW', 'INT'],
+    'curr_average' : ['RO', 'INT'],
+}
+
+watchdog_dict = {
+    'identify' : ['RO', 'STRING'],
+    'state' : ['RO', 'STRING'],
+    'timeleft' : ['RO', 'INT'],
+    'timeout' : ['RW', 'INT'],
+    'reset' : ['WO', 'INT'],
+    'enable' : ['RW', 'INT']
+}
+
+def get_user_mode(mode):
+    value = ''
+    if mode & stat.S_IRUSR:
+        value += 'r'
+    else:
+        value += '-'
+
+    if mode & stat.S_IWUSR:
+        value += 'w'
+    else:
+        value += '-'
+
+    if mode & stat.S_IXUSR:
+        value += 'x'
+    else:
+        value += '-'
+
+    return value
+
+
+def get_group_mode(mode):
+    value = ''
+    if mode & stat.S_IRGRP:
+        value += 'r'
+    else:
+        value += '-'
+
+    if mode & stat.S_IWGRP:
+        value += 'w'
+    else:
+        value += '-'
+
+    if mode & stat.S_IXGRP:
+        value += 'x'
+    else:
+        value += '-'
+
+    return value
+
+def get_other_mode(mode):
+    value = ''
+    if mode & stat.S_IROTH:
+        value += 'r'
+    else:
+        value += '-'
+
+    if mode & stat.S_IWOTH:
+        value += 'w'
+    else:
+        value += '-'
+
+    if mode & stat.S_IXOTH:
+        value += 'x'
+    else:
+        value += '-'
+
+    return value
+
+def get_file_mode(file):
+    try:
+        s = os.stat(file)
+        mode = s[stat.ST_MODE]
+
+        user_mode = get_user_mode(mode)
+        group_mode = get_group_mode(mode)
+        other_mode = get_other_mode(mode)
+    except Exception as e:
+        return f"{str(e)}"
+
+    return user_mode + group_mode + other_mode
+
+def read_sysfs_file(sysfs_file_path):
+    """
+    Retrieves the sysfs file content.
+
+    Args :
+        sysfs_file_path: A sysfs file to be read, e.g. '/sys/switch/fan/xxx'
+
+    Returns:
+        On successful read, returns the value read from given sysfs file.
+        On failure returns:
+            'No Such File' : Not Implemented
+            'N/A' : Not support
+            'ERR' : Read error
+    """
+    _rv = 'ERR'
+    if not os.path.isfile(sysfs_file_path):
+        return 'N/A'
+
+    try:
+        with open(sysfs_file_path, 'r') as fd:
+            _rv = fd.read()
+    #  except IOError as e:
+    except Exception:
+        # logger.log_error('open file_path %s error' % file_path, True)
+        _rv = 'ERR'
+    _rv = _rv.strip('\r\n').lstrip(" ")
+
+    if _rv == 'NA' or _rv == 'not_support' or _rv == 'N/A':
+        return 'N/A'
+
+    return _rv
+
+
+def read_sysfs_file_float(file, divisor=1.0):
+    """
+    Retrieves the sysfs file content(float).
+
+    Returns:
+        On successful read, returns the value read from given sysfs file.
+        On failure returns:
+            -1.0  : Default value(Read failed value)
+            -2.0 : Not support
+    """
+    temp = -1.0
+    attr_val = read_sysfs_file(file)
+    if attr_val == 'N/A':
+        return -2.0
+
+    if attr_val != 'ERR':
+        temp = float(attr_val) / divisor
+
+    return temp
+
+def read_sysfs_file_int(file):
+    """
+    Retrieves the sysfs file content(int).
+
+    Returns:
+        On successful read, returns the value read from given sysfs file.
+        On failure returns:
+            -1  : Default value(Read failed value)
+            -2  : Not support
+    """
+    temp = -1
+    attr_val = read_sysfs_file(file)
+    if attr_val == 'N/A':
+        return -2
+
+    if attr_val != 'ERR':
+        temp = int(attr_val)
+
+    return temp
+def get_file_context(file, ftype):
+    ret = 'OK'
+    try:
+        if ftype == 'INT':
+            ret = read_sysfs_file_int(file)
+        elif ftype == 'STRING' :
+            ret = read_sysfs_file(file)
+        elif ftype == 'BINARY':
+            ret = "USE 'hexdump' command"
+            #  ret = read_sysfs_file(file)
+    except Exception as e:
+        ret = str(e)
+
+    return ret
+
+def check_dict_content(module_name, dictionary, status_table):
+    file_path = '/sys/switch/' + module_name + '/'
+    for key in dictionary:
+        mode = dictionary[key][0]
+        ftype = dictionary[key][1]
+        if mode == "RW":
+            text_mode = 'rw-r--r--'
+        elif mode == "RO":
+            text_mode = 'r--r--r--'
+        elif mode == "WO":
+            text_mode = '-w-------'
+        else:
+            text_mode = 'N/A'
+
+        file = file_path + key
+        # assert get_file_mode(file) == text_mode, f'File {file} mode invalid'
+
+        # Check file mode
+        #  if get_file_mode(file) != text_mode:
+        mode_result = 'PASS'
+        ret = get_file_mode(file)
+        if ret != text_mode:
+            mode_result = ret
+
+        # Check file content
+        if mode == "WO":
+            ftype_result = "N/A"
+        else:
+            ftype_result = get_file_context(file, ftype)
+
+        #  if get_file_context(file, ftype):
+            #  ftype_result = f'ERR({ftype_result})'
+
+        #  file_name = module_name + '/' + key
+        status_table.append([file, text_mode, mode_result, ftype, ftype_result])
+
+def test_fpga():
+    module_name = 'fpga'
+    header = ['FPGA: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, cpld_num_dict, status_table)
+    # read fpga num
+    num = read_sysfs_file_int('/sys/switch/fpga/num')
+    for index in range(1, num + 1):
+        check_dict_content(module_name + f'/fpga{index}', cpld_dict, status_table)
+
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_cpld():
+    module_name = 'cpld'
+    header = ['CPLD : File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, cpld_num_dict, status_table)
+    # read cpld num
+    num = read_sysfs_file_int('/sys/switch/cpld/num')
+    for index in range(1, num + 1):
+        check_dict_content(module_name + f'/cpld{index}', cpld_dict, status_table)
+
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_syseeprom():
+    module_name = 'syseeprom'
+    header = ['SYSEEPROM: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, eeprom_dict, status_table)
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_sysled():
+    module_name = 'sysled'
+    header = ['SYSLED: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, sysled_dict, status_table)
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_transceiver():
+    module_name = 'transceiver'
+    header = ['transceiver: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, transceiver_common_dict, status_table)
+    # read eth num
+    present = read_sysfs_file('/sys/switch/transceiver/present')
+    for index in range(1, len(present) + 1):
+        if present[index - 1] == '1':
+            check_dict_content(module_name + f'/eth{index}', transceiver_dict, status_table)
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_fan():
+    module_name = 'fan'
+    header = ['FAN: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    # read fan num
+    num = read_sysfs_file_int('/sys/switch/fan/num')
+    for index in range(1, num + 1):
+        check_dict_content(module_name + f'/fan{index}', fan_dict, status_table)
+        m_num = read_sysfs_file_int(f'/sys/switch/fan/fan{index}/num_motors')
+        for m_index in range(m_num):
+            check_dict_content(module_name + f'/fan{index}/motor{m_index}', fan_motor_dict, status_table)
+
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_psu():
+    module_name = 'psu'
+    header = ['PSU: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    # read psu num
+    num = read_sysfs_file_int('/sys/switch/psu/num')
+    for index in range(1, num + 1):
+        check_dict_content(module_name + f'/psu{index}', psu_dict, status_table)
+        # read temp num
+        temp_num = read_sysfs_file_int(f'/sys/switch/psu/psu{index}/num_temp_sensors')
+        for temp_index in range(temp_num):
+            check_dict_content(module_name + f'/psu{index}/temp{temp_index}', sensor_temp_dict, status_table)
+
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_temp(module_name, status_table):
+    num = read_sysfs_file_int('/sys/switch/sensor/num_temp_sensors')
+    for index in range(num):
+        check_dict_content(module_name + f'/temp{index}', sensor_temp_dict, status_table)
+
+def test_in(module_name, status_table):
+    num = read_sysfs_file_int('/sys/switch/sensor/num_in_sensors')
+    for index in range(num):
+        check_dict_content(module_name + f'/in{index}', sensor_in_dict, status_table)
+
+def test_curr(module_name, status_table):
+    num = read_sysfs_file_int('/sys/switch/sensor/num_curr_sensors')
+    for index in range(num):
+        check_dict_content(module_name + f'/curr{index}', sensor_curr_dict, status_table)
+
+def test_sensor():
+    module_name = 'sensor'
+
+    header = ['Sensor: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    test_temp(module_name, status_table)
+    test_in(module_name, status_table)
+    test_curr(module_name, status_table)
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def test_watchdog():
+    module_name = 'watchdog'
+    header = ['Watchdog: File Path', 'Mode', 'Mode Result','Ftype', 'Ftype Result']
+    status_table = []
+    check_dict_content(module_name, common_dict, status_table)
+    check_dict_content(module_name, watchdog_dict, status_table)
+    print(tabulate(status_table, header, tablefmt="psql"))
+
+def main():
+    test_fpga()
+    test_cpld()
+    test_syseeprom()
+    test_sysled()
+    test_transceiver()
+    test_fan()
+    test_psu()
+    test_sensor()
+    test_watchdog()
+    return 0
+
+if __name__ == '__main__':
+    main()

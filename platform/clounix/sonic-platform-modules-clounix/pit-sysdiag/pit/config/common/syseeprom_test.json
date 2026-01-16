@@ -1,0 +1,17 @@
+{
+    "Product Name":         "CLOUNIX25600",
+    "Part Number":          "PIBC-TEST",
+    "Serial Number":        "CLX888-TEST",
+    "Base MAC Address":     "02:88:22:03:80:AA",
+    "Manufacture Date":     "08/28/2023 01:01:01",
+    "Device Version":       "8",
+    "Label Revision":       "R01",
+    "Platform Name":        "clounix_clx25600_48d8e",
+    "ONIE Version":         "2023.08-dirty",
+    "MAC Addresses":        "5",
+    "Manufacturer":         "Clounix-test",
+    "Manufacture Country":  "CHN",
+    "Vendor Name":          "Clounix",
+    "Diag Version":         "1.0.0",
+    "Service Tag":          "6"
+}

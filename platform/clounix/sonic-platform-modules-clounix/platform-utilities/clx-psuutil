@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with PSU Controller in kddf mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+SYSLOG_IDENTIFIER = "psuutil"
+PLATFORM_SPECIFIC_MODULE_NAME = "psuutil"
+PLATFORM_SPECIFIC_CLASS_NAME = "PsuUtil"
+
+# Global platform-specific psuutil class instance
+platform_chassis = None
+
+# Wrapper APIs so that this util is suited to 2.0 platform APIs
+def _wrapper_get_num_psus():
+    try:
+        return platform_chassis.get_num_psus()
+    except NotImplementedError:
+        pass
+    return None
+
+def _wrapper_get_psu_name(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_name()
+    except NotImplementedError:
+        pass
+    return "PSU {}".format(idx)
+
+def _wrapper_get_psu_presence(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_presence()
+    except NotImplementedError:
+        pass
+    return False
+
+def _wrapper_get_psu_model(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_model()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_serial(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_serial()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_status(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_status()
+    except NotImplementedError:
+        pass
+    return False
+
+def _wrapper_get_psu_part_number(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_part_number()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_date(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_date()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_vendor(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_vendor()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_hw_version(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_hw_version()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_alarm(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_alarm()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_psu_type(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_type()
+    except NotImplementedError:
+        pass
+    return "N/A"
+
+def _wrapper_get_output_voltage(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_voltage()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_output_current(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_current()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_output_power(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_power()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_input_voltage(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_in_voltage()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_input_current(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_in_current()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_input_power(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_in_power()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_powergood_status(idx):
+    try:
+        return platform_chassis.get_psu(idx-1).get_powergood_status()
+    except NotImplementedError:
+        pass
+    return 0.0
+
+def _wrapper_get_status_led():
+    if platform_chassis is not None:
+        outputs = platform_chassis.get_psu(idx-1).get_status_led()
+    else:
+        outputs = "Not Support"
+    click.echo(outputs)
+
+def _wrapper_set_status_led(color):
+    return platform_chassis.get_psu(idx - 1).set_powergood_status(color)
+
+def _wrapper_debug_sysfs():
+    return platform_chassis.get_debug_info('psu')
+
+## Dump sysfs
+# def _wrapper_dump_sysfs(idx):
+#     try:
+#         return platform_chassis.get_psu(idx).dump_sysfs()
+#     except NotImplementedError:
+#         pass
+#     return platform_psuutil.dump_sysfs()
+
+# ==================== CLI commands and groups ====================
+
+# This is our main entrypoint - the main 'psuutil' command
+@click.group()
+def cli():
+    """psuutil - Command line utility for providing PSU status"""
+
+    global platform_chassis
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        import sonic_platform.platform
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        click.echo("Failed to load chassis due to {}".format(str(e)))
+
+    # Load platform-specific psuutil class if 2.0 implementation is not present
+    if platform_chassis is None:
+        click.echo("Failed to load chassis..")
+        sys.exit(2)
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("kddf psuutil version {0}".format(VERSION))
+
+# 'numpsus' subcommand
+@cli.command()
+def numpsus():
+    """Display number of supported PSUs on device"""
+    click.echo(_wrapper_get_num_psus())
+
+# 'status' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of PSU")
+def status(index):
+    """Display PSU status"""
+    supported_psu = list(range(1, _wrapper_get_num_psus() + 1))
+    psu_ids = []
+    if (index < 0):
+        psu_ids = supported_psu
+    else:
+        psu_ids = [index]
+
+    header = ['PSU', 'Status']
+    status_table = []
+
+    for psu in psu_ids:
+        msg = ""
+        psu_name = _wrapper_get_psu_name(psu)
+        if psu not in supported_psu:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported PSU - {}.".format(psu_name, len(supported_psu)))
+            continue
+        presence = _wrapper_get_psu_presence(psu)
+        if presence:
+            oper_status = _wrapper_get_psu_status(psu)
+            msg = 'OK' if oper_status else "NOT OK"
+        else:
+            msg = 'NOT PRESENT'
+        status_table.append([psu_name, msg])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'mfrinfo' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of PSU")
+def mfrinfo(index):
+    """Display PSU manufacturer info"""
+    supported_psu = list(range(1, _wrapper_get_num_psus() + 1))
+    psu_ids = []
+    if (index < 0):
+        psu_ids = supported_psu
+    else:
+        psu_ids = [index]
+
+    header = ['PSU', 'PSU Type', 'Vendor Name', 'Part Number', 'Model', 'Serial Number', 'Date', 'HW Version', 'PSU Alarm']
+    status_table = []
+    for psu in psu_ids:
+        psu_name = _wrapper_get_psu_name(psu)
+        if psu not in supported_psu:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported PSU - {}.".format(psu_name, len(supported_psu)))
+            continue
+        status = _wrapper_get_psu_status(psu)
+        if not status:
+            click.echo("{} is Not OK {}\n".format(psu_name, status))
+            continue
+
+        psu_type = _wrapper_get_psu_type(psu)
+        vendor = _wrapper_get_psu_vendor(psu)
+        part_number = _wrapper_get_psu_part_number(psu)
+        model_name = _wrapper_get_psu_model(psu)
+        serial_num = _wrapper_get_psu_serial(psu)
+        date = _wrapper_get_psu_date(psu)
+        hw_version = _wrapper_get_psu_hw_version(psu)
+        alarm = _wrapper_get_psu_alarm(psu)
+
+        status_table.append([psu_name, psu_type, vendor, part_number, model_name, serial_num, date, hw_version, alarm])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'seninfo' subcommand
+@cli.command('seninfo', short_help='Sensor information of PSU')
+@click.option('-i', '--index', default=-1, type=int, help="the index of PSU")
+def seninfo(index):
+    """Display PSU sensor info"""
+    supported_psu = list(range(1, _wrapper_get_num_psus() + 1))
+    psu_ids = []
+    if (index < 0):
+        psu_ids = supported_psu
+    else:
+        psu_ids = [index]
+
+    header = ['PSU', 'Output Voltage', 'Output Current', 'Output Power', 'Input Voltage', 'Input Current', 'Input Power']
+    status_table = []
+    for psu in psu_ids:
+        psu_name = _wrapper_get_psu_name(psu)
+        if psu not in supported_psu:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported PSU - {}.".format(psu_name, len(supported_psu)))
+            continue
+        oper_status = _wrapper_get_psu_status(psu)
+
+        if not oper_status:
+            click.echo(f"{psu_name} is Not OK\n")
+            continue
+
+        v_out = _wrapper_get_output_voltage(psu)
+        i_out = _wrapper_get_output_current(psu)
+        p_out = _wrapper_get_output_power(psu)
+
+        v_in = _wrapper_get_input_voltage(psu)
+        i_in = _wrapper_get_input_current(psu)
+        p_in = _wrapper_get_input_power(psu)
+
+        status_table.append([psu_name, v_out, i_out, p_out, v_in, i_in, p_in])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'debug' subcommand
+@cli.command('debug', short_help='Show psu debug info')
+def debug():
+    """kddf_fanutil debug commands"""
+    debug = _wrapper_debug_sysfs()
+    if debug is None:
+        debug = 'N/A'
+    click.echo(debug)
+
+if __name__ == '__main__':
+    cli()

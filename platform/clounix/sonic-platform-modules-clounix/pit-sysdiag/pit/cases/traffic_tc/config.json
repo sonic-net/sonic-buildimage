@@ -1,0 +1,6 @@
+{
+    "name": "traffic-test",
+    "description": "Centec traffic test",
+    "type": "manual",
+    "tags": ["manufacture", "delivery", "smoke"]
+}

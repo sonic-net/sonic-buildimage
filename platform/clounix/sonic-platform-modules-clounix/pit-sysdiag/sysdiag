@@ -1,0 +1,5 @@
+#!/bin/bash
+PIT_DIR="/usr/local/pit/src"
+pushd $PIT_DIR >/dev/null
+python sysdiag.py $*
+popd >/dev/null

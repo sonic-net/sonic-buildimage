@@ -1,0 +1,6 @@
+{
+    "name": "optical_pin_tc",
+    "description": "Check optical pin info",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

@@ -1,0 +1,193 @@
+pkt set sequence verify
+
+netif destroy profile profile-id=0
+netif destroy profile profile-id=1
+netif destroy profile profile-id=2
+netif destroy profile profile-id=3
+
+pkt set rx deinit
+pkt set monitor disable
+
+tm set shaper  portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 max-bw=0 max-burst=64000000
+tm set shaper  portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 queue=0 max-bw=0 max-burst=64000000
+
+l2 del mac-table mac=00:00:00:00:00:01 vid=100 
+l2 del mac-table mac=00:00:00:00:00:01 vid=104 
+l2 del mac-table mac=00:00:00:00:00:01 vid=108 
+l2 del mac-table mac=00:00:00:00:00:01 vid=112 
+l2 del mac-table mac=00:00:00:00:00:01 vid=116 
+l2 del mac-table mac=00:00:00:00:00:01 vid=120 
+l2 del mac-table mac=00:00:00:00:00:01 vid=124 
+l2 del mac-table mac=00:00:00:00:00:01 vid=128 
+l2 del mac-table mac=00:00:00:00:00:01 vid=132 
+l2 del mac-table mac=00:00:00:00:00:01 vid=136 
+l2 del mac-table mac=00:00:00:00:00:01 vid=140 
+l2 del mac-table mac=00:00:00:00:00:01 vid=144 
+l2 del mac-table mac=00:00:00:00:00:01 vid=148 
+l2 del mac-table mac=00:00:00:00:00:01 vid=152 
+l2 del mac-table mac=00:00:00:00:00:01 vid=156 
+l2 del mac-table mac=00:00:00:00:00:01 vid=160 
+l2 del mac-table mac=00:00:00:00:00:01 vid=164 
+l2 del mac-table mac=00:00:00:00:00:01 vid=168 
+l2 del mac-table mac=00:00:00:00:00:01 vid=172 
+l2 del mac-table mac=00:00:00:00:00:01 vid=176 
+l2 del mac-table mac=00:00:00:00:00:01 vid=180 
+l2 del mac-table mac=00:00:00:00:00:01 vid=184 
+l2 del mac-table mac=00:00:00:00:00:01 vid=188 
+l2 del mac-table mac=00:00:00:00:00:01 vid=192 
+l2 del mac-table mac=00:00:00:00:00:01 vid=196 
+l2 del mac-table mac=00:00:00:00:00:01 vid=1100
+l2 del mac-table mac=00:00:00:00:00:01 vid=1104
+l2 del mac-table mac=00:00:00:00:00:01 vid=1108
+l2 del mac-table mac=00:00:00:00:00:01 vid=1112
+l2 del mac-table mac=00:00:00:00:00:01 vid=1116
+l2 del mac-table mac=00:00:00:00:00:01 vid=1120
+l2 del mac-table mac=00:00:00:00:00:01 vid=1124
+l2 del mac-table mac=00:00:00:00:00:01 vid=1128
+l2 del mac-table mac=00:00:00:00:00:01 vid=1132
+l2 del mac-table mac=00:00:00:00:00:01 vid=1136
+l2 del mac-table mac=00:00:00:00:00:01 vid=1140
+l2 del mac-table mac=00:00:00:00:00:01 vid=1144
+l2 del mac-table mac=00:00:00:00:00:01 vid=1148
+l2 del mac-table mac=00:00:00:00:00:01 vid=1152
+l2 del mac-table mac=00:00:00:00:00:01 vid=1156
+l2 del mac-table mac=00:00:00:00:00:01 vid=1160
+l2 del mac-table mac=00:00:00:00:00:01 vid=1164
+l2 del mac-table mac=00:00:00:00:00:01 vid=1168
+l2 del mac-table mac=00:00:00:00:00:01 vid=1172
+l2 del mac-table mac=00:00:00:00:00:01 vid=1176
+l2 del mac-table mac=00:00:00:00:00:01 vid=1180
+l2 del mac-table mac=00:00:00:00:00:01 vid=1184
+l2 del mac-table mac=00:00:00:00:00:01 vid=1188
+
+l2 del mac-table mac=00:00:00:00:00:02 vid=1192
+l2 del mac-table mac=00:00:00:00:00:02 vid=1200
+l2 del mac-table mac=00:00:00:00:00:02 vid=1208
+l2 del mac-table mac=00:00:00:00:00:02 vid=1216
+l2 del mac-table mac=00:00:00:00:00:02 vid=1224
+l2 del mac-table mac=00:00:00:00:00:02 vid=1232
+l2 del mac-table mac=00:00:00:00:00:02 vid=1240
+l2 del mac-table mac=00:00:00:00:00:02 vid=1248
+
+l2 del mac-table mac=00:00:00:00:00:03 vid=100 
+l2 del mac-table mac=00:00:00:00:00:03 vid=104 
+l2 del mac-table mac=00:00:00:00:00:03 vid=108 
+l2 del mac-table mac=00:00:00:00:00:03 vid=112 
+l2 del mac-table mac=00:00:00:00:00:03 vid=116 
+l2 del mac-table mac=00:00:00:00:00:03 vid=120 
+l2 del mac-table mac=00:00:00:00:00:03 vid=124 
+l2 del mac-table mac=00:00:00:00:00:03 vid=128 
+l2 del mac-table mac=00:00:00:00:00:03 vid=132 
+l2 del mac-table mac=00:00:00:00:00:03 vid=136 
+l2 del mac-table mac=00:00:00:00:00:03 vid=140 
+l2 del mac-table mac=00:00:00:00:00:03 vid=144 
+l2 del mac-table mac=00:00:00:00:00:03 vid=148 
+l2 del mac-table mac=00:00:00:00:00:03 vid=152 
+l2 del mac-table mac=00:00:00:00:00:03 vid=156 
+l2 del mac-table mac=00:00:00:00:00:03 vid=160 
+l2 del mac-table mac=00:00:00:00:00:03 vid=164 
+l2 del mac-table mac=00:00:00:00:00:03 vid=168 
+l2 del mac-table mac=00:00:00:00:00:03 vid=172 
+l2 del mac-table mac=00:00:00:00:00:03 vid=176 
+l2 del mac-table mac=00:00:00:00:00:03 vid=180 
+l2 del mac-table mac=00:00:00:00:00:03 vid=184 
+l2 del mac-table mac=00:00:00:00:00:03 vid=188 
+l2 del mac-table mac=00:00:00:00:00:03 vid=192 
+l2 del mac-table mac=00:00:00:00:00:03 vid=196 
+l2 del mac-table mac=00:00:00:00:00:03 vid=1100
+l2 del mac-table mac=00:00:00:00:00:03 vid=1104
+l2 del mac-table mac=00:00:00:00:00:03 vid=1108
+l2 del mac-table mac=00:00:00:00:00:03 vid=1112
+l2 del mac-table mac=00:00:00:00:00:03 vid=1116
+l2 del mac-table mac=00:00:00:00:00:03 vid=1120
+l2 del mac-table mac=00:00:00:00:00:03 vid=1124
+l2 del mac-table mac=00:00:00:00:00:03 vid=1128
+l2 del mac-table mac=00:00:00:00:00:03 vid=1132
+l2 del mac-table mac=00:00:00:00:00:03 vid=1136
+l2 del mac-table mac=00:00:00:00:00:03 vid=1140
+l2 del mac-table mac=00:00:00:00:00:03 vid=1144
+l2 del mac-table mac=00:00:00:00:00:03 vid=1148
+l2 del mac-table mac=00:00:00:00:00:03 vid=1152
+l2 del mac-table mac=00:00:00:00:00:03 vid=1156
+l2 del mac-table mac=00:00:00:00:00:03 vid=1160
+l2 del mac-table mac=00:00:00:00:00:03 vid=1164
+l2 del mac-table mac=00:00:00:00:00:03 vid=1168
+l2 del mac-table mac=00:00:00:00:00:03 vid=1172
+l2 del mac-table mac=00:00:00:00:00:03 vid=1176
+l2 del mac-table mac=00:00:00:00:00:03 vid=1180
+l2 del mac-table mac=00:00:00:00:00:03 vid=1184
+l2 del mac-table mac=00:00:00:00:00:03 vid=1188
+
+l2 del mac-table mac=00:00:00:00:00:04 vid=1192
+l2 del mac-table mac=00:00:00:00:00:04 vid=1200
+l2 del mac-table mac=00:00:00:00:00:04 vid=1208
+l2 del mac-table mac=00:00:00:00:00:04 vid=1216
+l2 del mac-table mac=00:00:00:00:00:04 vid=1224
+l2 del mac-table mac=00:00:00:00:00:04 vid=1232
+l2 del mac-table mac=00:00:00:00:00:04 vid=1240
+l2 del mac-table mac=00:00:00:00:00:04 vid=1248
+
+vlan del member vid=100  portlist=188,0,4     untag-portlist=188,0,4     
+vlan del member vid=104  portlist=0,4,8       untag-portlist=0,4,8       
+vlan del member vid=108  portlist=4,8,12      untag-portlist=4,8,12      
+vlan del member vid=112  portlist=8,12,16     untag-portlist=8,12,16     
+vlan del member vid=116  portlist=12,16,20    untag-portlist=12,16,20    
+vlan del member vid=120  portlist=16,20,24    untag-portlist=16,20,24    
+vlan del member vid=124  portlist=20,24,28    untag-portlist=20,24,28    
+vlan del member vid=128  portlist=24,28,32    untag-portlist=24,28,32    
+vlan del member vid=132  portlist=28,32,36    untag-portlist=28,32,36    
+vlan del member vid=136  portlist=32,36,40    untag-portlist=32,36,40    
+vlan del member vid=140  portlist=36,40,44    untag-portlist=36,40,44    
+vlan del member vid=144  portlist=40,44,48    untag-portlist=40,44,48    
+vlan del member vid=148  portlist=44,48,52    untag-portlist=44,48,52    
+vlan del member vid=152  portlist=48,52,56    untag-portlist=48,52,56    
+vlan del member vid=156  portlist=52,56,60    untag-portlist=52,56,60    
+vlan del member vid=160  portlist=56,60,64    untag-portlist=56,60,64    
+vlan del member vid=164  portlist=60,64,68    untag-portlist=60,64,68    
+vlan del member vid=168  portlist=64,68,72    untag-portlist=64,68,72    
+vlan del member vid=172  portlist=68,72,76    untag-portlist=68,72,76    
+vlan del member vid=176  portlist=72,76,80    untag-portlist=72,76,80    
+vlan del member vid=180  portlist=76,80,84    untag-portlist=76,80,84    
+vlan del member vid=184  portlist=80,84,88    untag-portlist=80,84,88    
+vlan del member vid=188  portlist=84,88,92    untag-portlist=84,88,92    
+vlan del member vid=192  portlist=88,92,96    untag-portlist=88,92,96    
+vlan del member vid=196  portlist=92,96,100   untag-portlist=92,96,100   
+vlan del member vid=1100 portlist=96,100,104  untag-portlist=96,100,104  
+vlan del member vid=1104 portlist=100,104,108 untag-portlist=100,104,108 
+vlan del member vid=1108 portlist=104,108,112 untag-portlist=104,108,112 
+vlan del member vid=1112 portlist=108,112,116 untag-portlist=108,112,116 
+vlan del member vid=1116 portlist=112,116,120 untag-portlist=112,116,120 
+vlan del member vid=1120 portlist=116,120,124 untag-portlist=116,120,124 
+vlan del member vid=1124 portlist=120,124,128 untag-portlist=120,124,128 
+vlan del member vid=1128 portlist=124,128,132 untag-portlist=124,128,132 
+vlan del member vid=1132 portlist=128,132,136 untag-portlist=128,132,136 
+vlan del member vid=1136 portlist=132,136,140 untag-portlist=132,136,140 
+vlan del member vid=1140 portlist=136,140,144 untag-portlist=136,140,144 
+vlan del member vid=1144 portlist=140,144,148 untag-portlist=140,144,148 
+vlan del member vid=1148 portlist=144,148,152 untag-portlist=144,148,152 
+vlan del member vid=1152 portlist=148,152,156 untag-portlist=148,152,156 
+vlan del member vid=1156 portlist=152,156,160 untag-portlist=152,156,160 
+vlan del member vid=1160 portlist=156,160,164 untag-portlist=156,160,164 
+vlan del member vid=1164 portlist=160,164,168 untag-portlist=160,164,168 
+vlan del member vid=1168 portlist=164,168,172 untag-portlist=164,168,172 
+vlan del member vid=1172 portlist=168,172,176 untag-portlist=168,172,176 
+vlan del member vid=1176 portlist=172,176,180 untag-portlist=172,176,180 
+vlan del member vid=1180 portlist=176,180,184 untag-portlist=176,180,184 
+vlan del member vid=1184 portlist=180,184,188 untag-portlist=180,184,188 
+vlan del member vid=1188 portlist=184,188,0   untag-portlist=184,188,0   
+
+vlan del member vid=1192 portlist=248,192,200 untag-portlist=248,192,200 
+vlan del member vid=1200 portlist=192,200,208 untag-portlist=192,200,208 
+vlan del member vid=1208 portlist=200,208,216 untag-portlist=200,208,216 
+vlan del member vid=1216 portlist=208,216,224 untag-portlist=208,216,224 
+vlan del member vid=1224 portlist=216,224,232 untag-portlist=216,224,232 
+vlan del member vid=1232 portlist=224,232,240 untag-portlist=224,232,240 
+vlan del member vid=1240 portlist=232,240,248 untag-portlist=232,240,248 
+vlan del member vid=1248 portlist=240,248,192 untag-portlist=240,248,192 
+
+port set intf-property portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 mtu=1536
+
+port set intf-property portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 pvid=1
+
+vlan add member vid=1 portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248 untag-portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248
+

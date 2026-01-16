@@ -1,0 +1,32 @@
+{
+    "test_cases":[
+        "tlv_eeprom_read_tc",
+        "tlv_eeprom_write_tc",
+        "replaceable_eeprom_read_tc",
+        "rtc_tc",
+        "mgmt_tc",
+        "mac_address_tc",
+        "memory_tc",
+        "memstress_tc",
+        "software_system_tc",
+        "ssd_tc",
+        "ssdstress_tc",
+        "sensor_tc",
+        "pcie_tc",
+        "usb_tc",
+        "usbstress_tc",
+        "sfp_tc",
+        "firmware_version_tc",
+        "fpga_firmware_program_tc",
+        "cpld_firmware_program_tc",
+        "fan_tc",
+        "watchdog_tc",
+        "psu_tc",
+        "cpu_tc",
+        "snake_tc",
+        "dac_pin_tc",
+        "svid_tc",
+        "slt_tc",
+        "led_tc"
+    ]
+}

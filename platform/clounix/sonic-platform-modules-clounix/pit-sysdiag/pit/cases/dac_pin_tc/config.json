@@ -1,0 +1,6 @@
+{
+    "name": "dac_pin_tc",
+    "description": "Check dac pin info",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

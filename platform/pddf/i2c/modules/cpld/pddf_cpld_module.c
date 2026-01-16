@@ -103,6 +103,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 	if (strncmp(buf, "add", strlen(buf)-1)==0)
 	{
 		adapter = i2c_get_adapter(device_ptr->parent_bus);
+		if (!adapter) {
+                    printk(KERN_ERR "Parent adapter (%d) not found\n", device_ptr->parent_bus);
+                    return -ENODEV;
+                }
 		
 		if (strncmp(device_ptr->dev_type, "i2c_cpld", strlen("i2c_cpld"))==0)
 		{

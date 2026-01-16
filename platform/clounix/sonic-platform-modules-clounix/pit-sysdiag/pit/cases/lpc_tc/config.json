@@ -1,0 +1,6 @@
+{
+    "name": "lpc-test",
+    "description": "Check lpc devices under LPC bus",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

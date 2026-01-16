@@ -1,0 +1,6 @@
+{
+    "name": "gpio-test",
+    "description": "Check gpios function and test jtag",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

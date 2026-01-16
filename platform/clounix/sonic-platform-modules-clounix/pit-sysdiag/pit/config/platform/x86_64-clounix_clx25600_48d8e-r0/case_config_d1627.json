@@ -1,0 +1,287 @@
+{
+    "asic": "clounix",
+    "arch": "x86_64",
+    "cpu_info": {
+        "model_cmd": "cat /proc/cpuinfo",
+        "cores_cmd": "cat /proc/cpuinfo | grep \"cpu cores\" | wc -l",
+        "MHz_cmd": "cat /proc/cpuinfo | grep \"cpu MHz\" | awk '{print $4}'",
+        "pattern": "model name\\s*:(\\s*.*)",
+        "model_name": "Intel(R) Xeon(R) CPU D-1627 @ 2.90GHz",
+        "CPU(s)": "8",
+        "cpu_MHz": "2.90GHz"
+    },
+    "rtc_info":{
+        "delay_time": 5,
+        "max_time_diff": 1
+    },
+    "server_ip": "10.19.1.1",
+    "mac_address": {
+        "offset":{
+            "cpu_offset": 0
+        },
+        "check_list":["cpu"]
+    },
+    "memstress_info":{
+        "mem_test_count": "1",
+        "mem_run_size_percentage": "90%",
+        "memstress_test_time": 1
+    },
+    "software_system":{
+        "sysdiag_version":"1.1",
+        "timezone":"Etc/UTC",
+        "sonic_version":"SONiC.cuos.202211"
+    },
+    "pcie":{
+        "X552":{
+            "width":"x1",
+            "speed":"2.5GT/s",
+            "num":4
+        },
+        "I210": {
+                "width":"x1",
+                "speed": "2.5GT/s",
+                "num":1
+        },
+        "1d9f:8579": {
+            "width":"x4",
+            "speed": "8GT/s",
+            "num":1
+        },
+        "Xilinx": {
+            "width":"x1",
+            "speed": "5GT/s",
+            "num":1
+        }
+    },
+    "ssdstress_info":{
+        "dev_path": "/stress.txt",
+        "rw_mode": "randread",
+        "io_size": "4k",
+        "num_jobs": "1",
+        "iop_pattern" : "IOPS=([0-9]+\\.?[0-9]*[k]?)",
+        "dev_pattern" : "root-overlay",
+        "ssd_run_size_percentage": "10%",
+        "iops_value_standard": "3000",
+        "ssd_test_count": 1,
+        "total_ssd_value": "32G"
+    },
+    "fan_info":{
+        "position" : "main board",
+        "count" :3,
+        "direction":"out",
+        "ratio_target": [10,80,20],
+        "speed_tolerance": 2820,
+        "speed_max":28200,
+        "speed_min":2820
+    },
+    "psu_info":{
+        "position" : "main board",
+        "count" :2,
+        "in_power_min":0, 
+        "in_power_max":1815000000,
+        "in_vol_min":198000,
+        "in_vol_max":242000,
+        "in_curr_min":0,
+        "in_curr_max":7500,
+
+        "out_power_min":0, 
+        "out_power_max":1260000000,
+        "out_vol_min":11400,
+        "out_vol_max":12600,
+        "out_curr_min":0,
+        "out_curr_max":100000
+    },
+    "usbstress_info":{
+        "stress_test_time": 1
+    },
+    "dac_info":{
+        "dac_type":"QSFP",
+        "QSFP":{
+            "dac_port":["400G","800G"],
+            "total_portnum":56,
+            "400G":{
+                "port_num":[0,192,4],
+                "Identifier":["QSFP28 or later"],
+                "Vendor_Name":["BizLink","LUXSHARE-TECH"],
+                "Vendor_PN_len":[5,40],
+                "Vendor_SN_len":[0,40]
+            },
+            "800G":{
+                "port_num":[192,256,8],
+                "Identifier":["QSFP-DD Double Density 8X Pluggable Transceiver"],
+                "Vendor_Name":["MULTILANE"],
+                "Vendor_Part_Number_len":[5,30],
+                "Vendor_Serial_Number_len":[0,40]
+            }
+        },
+        "SFP":{
+            "400G":{},
+            "800G":{}
+        }
+
+    },
+
+    "firmware_version":["bios","fpga","cpld"],
+    "cpld_version":{        
+        "CPLD1": "0xb",
+        "CPLD2": "0xb"
+    },
+    "bios_version":"0.0.0",
+    "sdk_version":"1.7.3",
+    "fpga_version":"0xf",
+
+    "fpga_firmware_type":["FPGA"],
+    "fpga_firmware_baseline":{
+        "FPGA":  {
+            "absolute_path":false,
+            "file_path": "nb_evb_231225_v0e.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+    },
+    "fpga_firmware_test":{
+        "FPGA":  {
+            "absolute_path":false,
+            "file_path": "nb_evb_231225_v0e.bin",
+            "version": "0xe",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":"",
+            "slave_version":""
+        }
+    },
+
+    "cpld_firmware_type":["CPLD-1","CPLD-2"],
+    "cpld_firmware_baseline":{
+        "CPLD-1":  {
+            "absolute_path":false,
+            "file_path": "mb_cpld0_impl1_1229_vb.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-2":  {
+            "absolute_path":false,
+            "file_path": "mb_cpld1_impl1_1229_vb.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+
+    },
+    "cpld_firmware_test":{
+        "CPLD-1":  {
+            "absolute_path":false,
+            "file_path": "mb_cpld0_impl1_1229_vb.bin",
+            "version": "0xb",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-2":  {
+            "absolute_path":false,
+            "file_path": "mb_cpld1_impl1_1229_vb.bin",
+            "version": "0xb",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+    },
+    "power_cycle_cmd":"sleep 10; busybox devmem 0xf8000100 32 0x2 &",
+    "voltage_margin_device":["P1V2_DVDD", "P0V75_VDDK", "P1V2_AVDDH", "P0V75_AVDDL", "P3V3_SFP"],
+    "svid_info":{
+        "P1V2_DVDD":{
+                 "high_voltage": 1256,
+                 "low_voltage": 1150,
+                 "normal_voltage": 1200,
+                 "high_margin_val": 4.7,
+                 "low_margin_val": -4.2
+         },
+        "P0V75_VDDK":{
+                 "high_voltage": 772,
+                 "low_voltage": 728,
+                 "normal_voltage": 750,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "P1V2_AVDDH":{
+                 "high_voltage": 1236,
+                 "low_voltage": 1164,
+                 "normal_voltage": 1200,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "P0V75_AVDDL":{
+                 "high_voltage": 772,
+                 "low_voltage": 728,
+                 "normal_voltage": 750,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "P3V3_SFP":{
+                 "high_voltage": 3465,
+                 "low_voltage": 3135,
+                 "normal_voltage": 3300,
+                 "high_margin_val": 5,
+                 "low_margin_val": -5
+         }
+     },
+    "memory_free_size": 100,
+    "snake_info":{
+        "script_filename" : "/usr/share/sonic/device/x86_64-clounix_clx25600_48d8e-r0/clx25600-48d8e/lightning-clx25600_48d8e.dsh",
+        "led_cfg_filename" : "/usr/share/sonic/device/x86_64-clounix_clx25600_48d8e-r0/clx25600-48d8e/lightning-clx25600_48d8e.led",
+        "port_list" : "0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248",
+        "sdk_traffic_test_dsh" :[
+            "test_mac_loopback_1_sendPkt.dsh",
+            "test_mac_loopback_2_reduceRate.dsh",
+            "test_mac_loopback_3_ctrl2cpu_rx.dsh",
+            "test_mac_loopback_4_ctrl2cpu_tx.dsh",
+            "test_mac_loopback_5_recover.dsh"
+        ],
+        "total_portnum" : 56,
+        "qsfp_portnum" : 48,
+        "port_step" : 4,
+        "test_loop_times" : 10
+    },
+    "sensor_info":{
+        "dcdc_sensor_type" : [
+            "P1V2_DVDD",
+            "P0V75_VDDK",
+            "P1V2_AVDDH",
+            "P0V75_AVDDL",
+            "P3V3_SFP",
+            "P12V_MAIN"
+        ],
+        "dcdc_sensor_node_name" : {
+            "P1V2_DVDD"     : ["NA","vx3","NA"],
+            "P0V75_VDDK"    : ["curr1_input","in1_input","power1_input"],
+            "P1V2_AVDDH"    : ["curr2_input","in2_input","power2_input"],
+            "P0V75_AVDDL"   : ["curr1_input","in1_input","power1_input"],
+            "P3V3_SFP"      : ["curr2_input","in2_input","power2_input"],
+            "P12V_MAIN"     : ["curr1_input","in2_input","power1_input"]
+        },
+        "dcdc_sensor_node" : {
+            "P1V2_DVDD"     : "/sys/bus/i2c/drivers/adm1166/101-0036/",
+            "P0V75_VDDK"    : "/sys/bus/i2c/devices/102-0040/hwmon/hwmon*/",
+            "P1V2_AVDDH"    : "/sys/bus/i2c/devices/102-0040/hwmon/hwmon*/",
+            "P0V75_AVDDL"   : "/sys/bus/i2c/devices/102-0041/hwmon/hwmon*/",
+            "P3V3_SFP"      : "/sys/bus/i2c/devices/102-0041/hwmon/hwmon*/",
+            "P12V_MAIN"     : "/sys/bus/i2c/devices/i2c-104/104-0010/hwmon/hwmon*/"
+        },
+        "dcdc_sensor_factor": {
+            "P3V3_SFP"      : [1, 2, 1]
+        }
+    },
+    "cpi_port_info":{
+        "script_filename" : "/usr/share/sonic/device/x86_64-clounix_clx25600_48d8e-r0/clx25600-48d8e/lightning-clx25600_48d8e.dsh",
+        "led_cfg_filename" : "/usr/share/sonic/device/x86_64-clounix_clx25600_48d8e-r0/clx25600-48d8e/lightning-clx25600_48d8e.led",
+        "port_list" : "0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248",
+        "cpi_port" : {
+            "eth1":"257"
+        },
+        "asic_send_pkt_num":1000,
+        "cpu_send_pkt_num":1,
+        "test_loop_times" : 1
+    }
+}

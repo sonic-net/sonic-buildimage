@@ -1,5 +1,5 @@
 # PDDF Generic Platform modules
-####################################################
+#####################################################
 PDDF_PLATFORM_MODULE_VERSION = 1.1
 
 export PDDF_PLATFORM_MODULE_VERSION

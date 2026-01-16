@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  *
- * A pddf kernel module driver for PSU 
+ * A pddf kernel module driver for PSU
  */
 
 #include <linux/kernel.h>
@@ -53,45 +53,80 @@ struct pddf_ops_t pddf_psu_ops = {
 EXPORT_SYMBOL(pddf_psu_ops);
 
 
-PSU_SYSFS_ATTR_DATA access_psu_present = {PSU_PRESENT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_present_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_present = {PSU_PRESENT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_byte_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_present);
 
-PSU_SYSFS_ATTR_DATA access_psu_model_name = {PSU_MODEL_NAME, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_model_name_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_model_name = {PSU_MODEL_NAME, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_model_name);
 
-PSU_SYSFS_ATTR_DATA access_psu_power_good = {PSU_POWER_GOOD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_power_good_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_power_good = {PSU_POWER_GOOD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_byte_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_power_good);
 
-PSU_SYSFS_ATTR_DATA access_psu_mfr_id = {PSU_MFR_ID, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_mfr_id_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_mfr_id = {PSU_MFR_ID, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_mfr_id);
 
-PSU_SYSFS_ATTR_DATA access_psu_serial_num = {PSU_SERIAL_NUM, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_serial_num_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_serial_num = {PSU_SERIAL_NUM, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_serial_num);
 
-PSU_SYSFS_ATTR_DATA access_psu_fan_dir = {PSU_FAN_DIR, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_fan_dir_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_fan_dir = {PSU_FAN_DIR, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_block_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_fan_dir);
 
-PSU_SYSFS_ATTR_DATA access_psu_v_out = {PSU_V_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_v_out_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_v_out = {PSU_V_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_v_out);
 
-PSU_SYSFS_ATTR_DATA access_psu_i_out = {PSU_I_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_i_out_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_v_out_min = {PSU_V_OUT_MIN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_v_out_min);
+
+PSU_SYSFS_ATTR_DATA access_psu_v_out_max = {PSU_V_OUT_MAX, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_v_out_max);
+
+PSU_SYSFS_ATTR_DATA access_psu_i_out = {PSU_I_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_i_out);
 
-PSU_SYSFS_ATTR_DATA access_psu_p_out = {PSU_P_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_p_out_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_p_out = {PSU_P_OUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_p_out);
 
-PSU_SYSFS_ATTR_DATA access_psu_fan1_speed_rpm = {PSU_FAN1_SPEED, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_fan1_speed_rpm_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_p_out_max = {PSU_P_OUT_MAX, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_p_out_max);
+
+PSU_SYSFS_ATTR_DATA access_psu_fan1_speed_rpm = {PSU_FAN1_SPEED, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_fan1_speed_rpm);
 
-PSU_SYSFS_ATTR_DATA access_psu_temp1_input = {PSU_TEMP1_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_temp1_input_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_temp1_input = {PSU_TEMP1_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_temp1_input);
 
-PSU_SYSFS_ATTR_DATA access_psu_v_in = {PSU_V_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_v_in_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_temp2_input = {PSU_TEMP2_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp2_input);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp3_input = {PSU_TEMP3_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp3_input);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp1_high_threshold = {PSU_TEMP1_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp1_high_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp2_high_threshold = {PSU_TEMP2_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp2_high_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp3_high_threshold = {PSU_TEMP3_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp3_high_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp1_high_crit_threshold = {PSU_TEMP1_HIGH_CRIT_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp1_high_crit_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp2_high_crit_threshold = {PSU_TEMP2_HIGH_CRIT_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp2_high_crit_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp3_high_crit_threshold = {PSU_TEMP3_HIGH_CRIT_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp3_high_crit_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_v_in = {PSU_V_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_v_in);
 
-PSU_SYSFS_ATTR_DATA access_psu_i_in = {PSU_I_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_i_in_default, NULL, NULL, NULL, NULL, NULL};
+PSU_SYSFS_ATTR_DATA access_psu_i_in = {PSU_I_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_i_in);
 
+PSU_SYSFS_ATTR_DATA access_psu_p_in = {PSU_P_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_p_in);
 
 PSU_SYSFS_ATTR_DATA_ENTRY psu_sysfs_attr_data_tbl[]=
 {
@@ -102,12 +137,24 @@ PSU_SYSFS_ATTR_DATA_ENTRY psu_sysfs_attr_data_tbl[]=
 	{ "psu_serial_num" , &access_psu_serial_num},
 	{ "psu_fan_dir" , &access_psu_fan_dir},
 	{ "psu_v_out" , &access_psu_v_out},
+	{ "psu_v_out_min" , &access_psu_v_out_min},
+	{ "psu_v_out_max" , &access_psu_v_out_max},
 	{ "psu_i_out" , &access_psu_i_out},
 	{ "psu_p_out" , &access_psu_p_out},
+	{ "psu_p_out_max" , &access_psu_p_out_max},
 	{ "psu_fan1_speed_rpm" , &access_psu_fan1_speed_rpm},
 	{ "psu_temp1_input" , &access_psu_temp1_input},
-    { "psu_v_in" , &access_psu_v_in},
-    { "psu_i_in" , &access_psu_i_in}
+	{ "psu_temp2_input" , &access_psu_temp2_input},
+	{ "psu_temp3_input" , &access_psu_temp3_input},
+	{ "psu_temp1_high_threshold" , &access_psu_temp1_high_threshold},
+	{ "psu_temp2_high_threshold" , &access_psu_temp2_high_threshold},
+	{ "psu_temp3_high_threshold" , &access_psu_temp3_high_threshold},
+	{ "psu_temp1_high_crit_threshold" , &access_psu_temp1_high_crit_threshold},
+	{ "psu_temp2_high_crit_threshold" , &access_psu_temp2_high_crit_threshold},
+	{ "psu_temp3_high_crit_threshold" , &access_psu_temp3_high_crit_threshold},
+	{ "psu_v_in" , &access_psu_v_in},
+	{ "psu_i_in" , &access_psu_i_in},
+	{ "psu_p_in" , &access_psu_p_in}
 };
 
 void *get_psu_access_data(char *name)
@@ -149,7 +196,7 @@ static int psu_probe(struct i2c_client *client,
             goto exit;
     }
 
-    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
+    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BLOCK_DATA)) {
         status = -EIO;
         goto exit;
     }
@@ -232,7 +279,7 @@ static int psu_probe(struct i2c_client *client,
 
     dev_info(&client->dev, "%s: psu '%s'\n",
          dev_name(data->hwmon_dev), client->name);
-    
+
 	/* Add a support for post probe function */
     if (pddf_psu_ops.post_probe)
     {
@@ -293,7 +340,7 @@ static int psu_remove(struct i2c_client *client)
 		printk(KERN_DEBUG "%s: Freeing platform data\n", __FUNCTION__);
 		kfree(platdata);
 	}
-    
+
 	if (pddf_psu_ops.post_remove)
     {
         ret = (pddf_psu_ops.post_remove)(client);
@@ -364,7 +411,7 @@ int psu_init(void)
 }
 EXPORT_SYMBOL(psu_init);
 
-void __exit psu_exit(void)
+void psu_exit(void)
 {
 	pddf_dbg(PSU, "GENERIC_PSU_DRIVER.. exit\n");
 	if (pddf_psu_ops.pre_exit) (pddf_psu_ops.pre_exit)();

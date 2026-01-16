@@ -1,0 +1,6 @@
+{
+    "name": "memstress-test",
+    "description": " Memory Stress Test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "stress"]
+}

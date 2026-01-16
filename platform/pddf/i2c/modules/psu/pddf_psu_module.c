@@ -157,6 +157,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     if (strncmp(buf, "add", strlen(buf)-1)==0)
     {
         adapter = i2c_get_adapter(cdata->parent_bus);
+        if (!adapter) {
+            printk(KERN_ERR "Parent adapter (%d) not found\n", cdata->parent_bus);
+            return -ENODEV;
+        }
         board_info = i2c_get_psu_board_info(pdata, cdata);
 
         /* Populate the platform data for psu */

@@ -1,0 +1,1590 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with SFP transceivers within SONiC
+#
+
+import ast
+import os
+import sys
+import binascii
+
+import click
+from sonic_platform.sfp import Sfp
+import sonic_platform_base.sonic_sfp.sfputilhelper
+from natsort import natsorted
+from tabulate import tabulate
+from sonic_py_common import device_info, multi_asic
+
+VERSION = '3.0'
+
+SYSLOG_IDENTIFIER = "sfputil"
+
+ERROR_PERMISSIONS = 1
+ERROR_CHASSIS_LOAD = 2
+ERROR_SFPUTILHELPER_LOAD = 3
+ERROR_PORT_CONFIG_LOAD = 4
+ERROR_NOT_IMPLEMENTED = 5
+ERROR_INVALID_PORT = 6
+
+VDM_DATA_MAP = {
+    -9 : 'VDM Value',
+    -8 : 'VDM Threshold High Alarm',
+    -7 : 'VDM Threshold Low Alarm',
+    -6 : 'VDM Threshold High Warn',
+    -5 : 'VDM Threshold Low Warn',
+    -4 : 'VDM High Alarm Flag',
+    -3 : 'VDM Low Alarm Flag',
+    -2 : 'VDM High Warn Flag',
+    -1 : 'VDM Low Warn Flag',
+}
+
+# TODO: We should share these maps and the formatting functions between sfputil and sfpshow
+QSFP_DATA_MAP = {
+    'model': 'Vendor PN',
+    'vendor_oui': 'Vendor OUI',
+    'vendor_date': 'Vendor Date Code(YYYY-MM-DD Lot)',
+    'manufacturer': 'Vendor Name',
+    'vendor_rev': 'Vendor Rev',
+    'hardware_rev': 'Hardware Rev',
+    'firmware_rev': 'Firmware Rev',
+    'serial': 'Vendor SN',
+    'type': 'Identifier',
+    'ext_identifier': 'Extended Identifier',
+    'ext_rateselect_compliance': 'Extended RateSelect Compliance',
+    'cable_length': 'cable_length',
+    'cable_type': 'Length',
+    'nominal_bit_rate': 'Nominal Bit Rate(100Mbs)',
+    'specification_compliance': 'Specification compliance',
+    'encoding': 'Encoding',
+    'connector': 'Connector',
+    'application_advertisement': 'Application Advertisement'
+}
+
+SFP_DOM_CHANNEL_MONITOR_MAP = {
+    'rx1power': 'RXPower',
+    'tx1bias': 'TXBias',
+    'tx1power': 'TXPower'
+}
+
+SFP_DOM_CHANNEL_THRESHOLD_MAP = {
+    'txpowerhighalarm':   'TxPowerHighAlarm',
+    'txpowerlowalarm':    'TxPowerLowAlarm',
+    'txpowerhighwarning': 'TxPowerHighWarning',
+    'txpowerlowwarning':  'TxPowerLowWarning',
+    'rxpowerhighalarm':   'RxPowerHighAlarm',
+    'rxpowerlowalarm':    'RxPowerLowAlarm',
+    'rxpowerhighwarning': 'RxPowerHighWarning',
+    'rxpowerlowwarning':  'RxPowerLowWarning',
+    'txbiashighalarm':    'TxBiasHighAlarm',
+    'txbiaslowalarm':     'TxBiasLowAlarm',
+    'txbiashighwarning':  'TxBiasHighWarning',
+    'txbiaslowwarning':   'TxBiasLowWarning'
+}
+
+QSFP_DOM_CHANNEL_THRESHOLD_MAP = {
+    'rxpowerhighalarm':   'RxPowerHighAlarm',
+    'rxpowerlowalarm':    'RxPowerLowAlarm',
+    'rxpowerhighwarning': 'RxPowerHighWarning',
+    'rxpowerlowwarning':  'RxPowerLowWarning',
+    'txbiashighalarm':    'TxBiasHighAlarm',
+    'txbiaslowalarm':     'TxBiasLowAlarm',
+    'txbiashighwarning':  'TxBiasHighWarning',
+    'txbiaslowwarning':   'TxBiasLowWarning'
+}
+
+DOM_MODULE_THRESHOLD_MAP = {
+    'temphighalarm':  'TempHighAlarm',
+    'templowalarm':   'TempLowAlarm',
+    'temphighwarning': 'TempHighWarning',
+    'templowwarning': 'TempLowWarning',
+    'vcchighalarm':   'VccHighAlarm',
+    'vcclowalarm':    'VccLowAlarm',
+    'vcchighwarning': 'VccHighWarning',
+    'vcclowwarning':  'VccLowWarning'
+}
+
+QSFP_DOM_CHANNEL_MONITOR_MAP = {
+    'rx1power': 'RX1Power',
+    'rx2power': 'RX2Power',
+    'rx3power': 'RX3Power',
+    'rx4power': 'RX4Power',
+    'tx1bias':  'TX1Bias',
+    'tx2bias':  'TX2Bias',
+    'tx3bias':  'TX3Bias',
+    'tx4bias':  'TX4Bias',
+    'tx1power': 'TX1Power',
+    'tx2power': 'TX2Power',
+    'tx3power': 'TX3Power',
+    'tx4power': 'TX4Power'
+}
+
+QSFP_DD_DOM_CHANNEL_MONITOR_MAP = {
+    'rx1power': 'RX1Power',
+    'rx2power': 'RX2Power',
+    'rx3power': 'RX3Power',
+    'rx4power': 'RX4Power',
+    'rx5power': 'RX5Power',
+    'rx6power': 'RX6Power',
+    'rx7power': 'RX7Power',
+    'rx8power': 'RX8Power',
+    'tx1bias':  'TX1Bias',
+    'tx2bias':  'TX2Bias',
+    'tx3bias':  'TX3Bias',
+    'tx4bias':  'TX4Bias',
+    'tx5bias':  'TX5Bias',
+    'tx6bias':  'TX6Bias',
+    'tx7bias':  'TX7Bias',
+    'tx8bias':  'TX8Bias',
+    'tx1power': 'TX1Power',
+    'tx2power': 'TX2Power',
+    'tx3power': 'TX3Power',
+    'tx4power': 'TX4Power',
+    'tx5power': 'TX5Power',
+    'tx6power': 'TX6Power',
+    'tx7power': 'TX7Power',
+    'tx8power': 'TX8Power'
+}
+
+DSFP_DOM_CHANNEL_MONITOR_MAP = {
+    'rx1power': 'RX1Power',
+    'rx2power': 'RX2Power',
+    'tx1bias':  'TX1Bias',
+    'tx2bias':  'TX2Bias',
+    'tx1power': 'TX1Power',
+    'tx2power': 'TX2Power'
+}
+
+# 3. Lane Specific State Change Flags
+SFP_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP = {
+    'tx_fault_flag'              : 'TXFault',
+    'temp_high_alarm_flag'       : 'TemperatureHighAlarmFlag',
+    'temp_low_alarm_flag'        : 'TemperatureLowAlarmFlag',
+    'temp_high_warning_flag'     : 'TemperatureHighWarningFlag',
+    'temp_low_warning_flag'      : 'TemperatureLowWarningFlag',
+    'vcc_high_alarm_flag'        : 'VCCHighAlarmFlag',
+    'vcc_low_alarm_flag'         : 'VCCLowAlarmFlag',
+    'vcc_high_warning_flag'      : 'VCCHighWarningFlag',
+    'vcc_low_warning_flag'       : 'VCCLowWarningFlag',
+    'tx_power_high_alarm_flag'   : 'TXPowerHighAlarmFlag',
+    'tx_power_low_alarm_flag'    : 'TXPowerLowAlarmFlag',
+    'tx_power_high_warning_flag' : 'TXPowerHighWarningFlag',
+    'tx_power_low_warning_flag'  : 'TXPowerLowWarningFlag',
+    'tx_bias_high_alarm_flag'    : 'TXBiasHighAlarmFlag',
+    'tx_bias_low_alarm_flag'     : 'TXBiasLowAlarmFlag',
+    'tx_bias_high_warning_flag'  : 'TXBiasHighWarningFlag',
+    'tx_bias_low_warning_flag'   : 'TXBiasLowWarningFlag',
+    'rx_los_flag'                : 'RxLos',
+    'rx_power_high_alarm_flag'   : 'RXPowerHighAlarmFlag',
+    'rx_power_low_alarm_flag'    : 'RXPowerLowAlarmFlag',
+    'rx_power_high_warning_flag' : 'RXPowerHighWarningFlag',
+    'rx_power_low_warning_flag'  : 'RXPowerLowWarningFlag'
+}
+
+QSFP_DD_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP = {
+    'data_path_state_changed'    : 'DataPathStateChanged',
+    'tx_fault_flag'                   : 'TXFault',
+    'tx_los_flag'                     : 'TXLOS',
+    'tx_cdr_lol_flag'                 : 'TX_CDR_LOL',
+    'tx_adaptive_input_eq_fault_flag' : 'TXAdaptiveInputEqFault',
+    'tx_power_high_alarm_flag'        : 'TXPowerHighAlarmFlag',
+    'tx_power_low_alarm_flag'         : 'TXPowerLowAlarmFlag',
+    'tx_power_high_warning_flag'      : 'TXPowerHighWarningFlag',
+    'tx_power_low_warning_flag'       : 'TXPowerLowWarningFlag',
+    'tx_bias_high_alarm_flag'         : 'TXBiasHighAlarmFlag',
+    'tx_bias_low_alarm_flag'          : 'TXBiasLowAlarmFlag',
+    'tx_bias_high_warning_flag'       : 'TXBiasHighWarningFlag',
+    'tx_bias_low_warning_flag'        : 'TXBiasLowWarningFlag',
+    'rx_los_flag'                     : 'RxLos',
+    'rx_cdr_lol_flag'                 : 'Rx_CDR_LOL',
+    'rx_power_high_alarm_flag'        : 'RXPowerHighAlarmFlag',
+    'rx_power_low_alarm_flag'         : 'RXPowerLowAlarmFlag',
+    'rx_power_high_warning_flag'      : 'RXPowerHighWarningFlag',
+    'rx_power_low_warning_flag'       : 'RXPowerLowWarningFlag',
+    'rx_output_status_change_flag'    : 'RXOutputStatusChangeFlag',
+    'temp_high_alarm_flag'       : 'TemperatureHighAlarmFlag',
+    'temp_high_warning_flag'     : 'TemperatureHighWarningFlag',
+}
+
+# 4. Module State
+QSFP_DD_DOM_CHANNEL_STATE_MAP = {
+    'module_state': 'ModuleState',
+}
+
+# 5. CLI show optical module TX/RX configure arguments
+QSFP_DD_DOM_CHANNEL_TX_RX_CONFIG_MAP = {
+    'tx_input_eq_control': 'TXInputEqControl',
+    'rx_output_eq_precursor': 'RxOutputEqPrecursor',
+    'rx_output_eq_postcursor': 'RxOutputEqPostcursor',
+    'rx_output_amplitude': 'RxOutputAmplitude',
+}
+
+# 6. Optical Module VDM info
+QSFP_DD_DOM_VDM_MAP = {
+    'laser_temperature': 'LaserTemperature',
+    'laser_operating_timer': 'LaserOperatingTimer',
+}
+
+# 7. PRBS Debug mode
+QSFP_DD_DOM_CHANNEL_PRBS_MAP = {
+    'media_generator_enable': 'MediaGeneratorEnable',
+    'media_generator_pattern_select': 'MediaGeneratorPatternSelect',
+    'media_checker_pattern_select': 'MediaCheckerPatternSelect',
+    'media_prbs_generator_clock_source': 'MediaPrbsGeneratorClockSource',
+    'media_ber': 'MediaBER',
+    'media_snr': 'MediaSNR',
+}
+
+# 8. MISC
+SFP_DOM_CHANNEL_MISC_MAP = {
+    'tx_disable': 'TxDisable'
+}
+
+QSFP_DD_DOM_CHANNEL_MISC_MAP = {
+    'lp_mode': 'LowPowerMode',
+    'reset_status': 'ResetStatus',
+    'tx_disable': 'TxDisable',
+}
+
+QSFP_DD_MODULE_LEVEL_MONITOR_MAP = {
+    'laser_grid_spacing'   : 'GridSpacingTx1',
+    'laser_channel_number' : 'ChannelNumberTx1',
+    'laser_config_freq'    : 'ConfigLaserFrequencyTx1',
+    'laser_curr_freq'      : 'CurrentLaserFrequencyTx1',
+    'tx_config_power'      : 'TargetOutputPowerTx1'
+}
+
+QSFP_DD_LOOPBACK_CONTROL_MAP = {
+    'media_output_loopback'       : 'Media side output loopback enable',
+    'media_input_loopback'        : 'Media side input loopback enable',
+    'host_output_loopback'        : 'Host side output loopback enable',
+    'host_input_loopback'         : 'Host side input loopback enable'
+}
+
+DOM_MODULE_MONITOR_MAP = {
+    'temperature': 'Temperature',
+    'voltage': 'Vcc'
+}
+
+DOM_CHANNEL_THRESHOLD_UNIT_MAP = {
+    'txpowerhighalarm':   'dBm',
+    'txpowerlowalarm':    'dBm',
+    'txpowerhighwarning': 'dBm',
+    'txpowerlowwarning':  'dBm',
+    'rxpowerhighalarm':   'dBm',
+    'rxpowerlowalarm':    'dBm',
+    'rxpowerhighwarning': 'dBm',
+    'rxpowerlowwarning':  'dBm',
+    'txbiashighalarm':    'mA',
+    'txbiaslowalarm':     'mA',
+    'txbiashighwarning':  'mA',
+    'txbiaslowwarning':   'mA'
+}
+
+DOM_MODULE_THRESHOLD_UNIT_MAP = {
+    'temphighalarm':   'C',
+    'templowalarm':    'C',
+    'temphighwarning': 'C',
+    'templowwarning':  'C',
+    'vcchighalarm':    'Volts',
+    'vcclowalarm':     'Volts',
+    'vcchighwarning':  'Volts',
+    'vcclowwarning':   'Volts'
+}
+
+DOM_VALUE_UNIT_MAP = {
+    'rx1power': 'dBm',
+    'rx2power': 'dBm',
+    'rx3power': 'dBm',
+    'rx4power': 'dBm',
+    'tx1bias': 'mA',
+    'tx2bias': 'mA',
+    'tx3bias': 'mA',
+    'tx4bias': 'mA',
+    'tx1power': 'dBm',
+    'tx2power': 'dBm',
+    'tx3power': 'dBm',
+    'tx4power': 'dBm',
+    'temperature': 'C',
+    'voltage': 'Volts'
+}
+
+QSFP_DD_DOM_VALUE_UNIT_MAP = {
+    'rx1power': 'dBm',
+    'rx2power': 'dBm',
+    'rx3power': 'dBm',
+    'rx4power': 'dBm',
+    'rx5power': 'dBm',
+    'rx6power': 'dBm',
+    'rx7power': 'dBm',
+    'rx8power': 'dBm',
+    'tx1bias': 'mA',
+    'tx2bias': 'mA',
+    'tx3bias': 'mA',
+    'tx4bias': 'mA',
+    'tx5bias': 'mA',
+    'tx6bias': 'mA',
+    'tx7bias': 'mA',
+    'tx8bias': 'mA',
+    'tx1power': 'dBm',
+    'tx2power': 'dBm',
+    'tx3power': 'dBm',
+    'tx4power': 'dBm',
+    'tx5power': 'dBm',
+    'tx6power': 'dBm',
+    'tx7power': 'dBm',
+    'tx8power': 'dBm',
+    'temperature': 'C',
+    'voltage': 'Volts'
+}
+
+DSFP_DOM_VALUE_UNIT_MAP = {
+    'rx1power': 'dBm',
+    'rx2power': 'dBm',
+    'tx1bias': 'mA',
+    'tx2bias': 'mA',
+    'tx1power': 'dBm',
+    'tx2power': 'dBm',
+    'temperature': 'C',
+    'voltage': 'Volts'
+}
+
+
+# Global platform-specific sfputil class instance
+platform_sfputil = None
+
+# Global platform-specific sfp class instance
+sfp_list = []
+
+
+# ========================== Methods for formatting output ==========================
+
+# Convert dict values to cli output string
+def format_dict_value_to_string(sorted_key_table,
+                                dom_info_dict, dom_value_map,
+                                dom_unit_map, alignment=0):
+    output = ''
+    indent = ' ' * 8
+    separator = ": "
+    for key in sorted_key_table:
+        if dom_info_dict is not None and key in dom_info_dict and dom_info_dict[key] != 'N/A':
+            value = dom_info_dict[key]
+            units = ''
+            if dom_unit_map is not None:
+                if type(value) != str or (value != 'Unknown' and not value.endswith(dom_unit_map[key])):
+                    units = dom_unit_map[key]
+            output += '{}{}{}{}{}\n'.format((indent * 2),
+                                            dom_value_map[key],
+                                            separator.rjust(len(separator) + alignment - len(dom_value_map[key])),
+                                            value,
+                                            units)
+    return output
+
+# Convert list values to cli output string
+def format_list_value_to_string(sorted_key_table,
+                                dom_info_list, dom_value_map,
+                                dom_unit_map, alignment=0):
+    output = ''
+    indent = ' ' * 8
+    separator = ": "
+    for key in sorted_key_table:
+        if dom_info_list is not None and dom_info_list[key] != 'N/A':
+            value = dom_info_list[key]
+            units = ''
+            if dom_unit_map is not None:
+                if type(value) != str or (value != 'Unknown' and not value.endswith(dom_unit_map[key])):
+                    units = dom_unit_map[key]
+            output += '{}{}{}{}{}\n'.format((indent * 2),
+                                            dom_value_map[key],
+                                            separator.rjust(len(separator) + alignment - len(dom_value_map[key])),
+                                            value,
+                                            units)
+    return output
+
+
+def convert_sfp_info_to_output_string(sfp_info_dict):
+    indent = ' ' * 8
+    output = ''
+
+    sorted_qsfp_data_map_keys = sorted(QSFP_DATA_MAP, key=QSFP_DATA_MAP.get)
+    for key in sorted_qsfp_data_map_keys:
+        if key == 'cable_type':
+            output += '{}{}: {}\n'.format(indent, sfp_info_dict['cable_type'], sfp_info_dict['cable_length'])
+        elif key == 'cable_length':
+            pass
+        elif key == 'specification_compliance':
+            if sfp_info_dict['type'] == "QSFP-DD Double Density 8X Pluggable Transceiver":
+                output += '{}{}: {}\n'.format(indent, QSFP_DATA_MAP[key], sfp_info_dict[key])
+            elif 'DSFP' in sfp_info_dict['type']:
+                output += '{}{}: {}\n'.format(indent, QSFP_DATA_MAP[key], sfp_info_dict[key])
+            else:
+                output += '{}{}:\n'.format(indent, QSFP_DATA_MAP['specification_compliance'])
+                spec_compliance_dict = {}
+                try:
+                    spec_compliance_dict = ast.literal_eval(sfp_info_dict['specification_compliance'])
+                    sorted_compliance_key_table = natsorted(spec_compliance_dict)
+                    for compliance_key in sorted_compliance_key_table:
+                        output += '{}{}: {}\n'.format((indent * 2), compliance_key, spec_compliance_dict[compliance_key])
+                except ValueError as e:
+                    output += '{}N/A\n'.format((indent * 2))
+        else:
+            output += '{}{}: {}\n'.format(indent, QSFP_DATA_MAP[key], sfp_info_dict[key])
+
+    return output
+
+
+# Convert Loopback info in DB to CLI output string
+def convert_loopback_to_output_string(dom_info_dict):
+    output_dom = ''
+
+    output_dom += 'Module Loopback controls:\n'
+    sorted_key_table = natsorted(QSFP_DD_LOOPBACK_CONTROL_MAP)
+    output_module_threshold = format_dict_value_to_string(
+        sorted_key_table, dom_info_dict, QSFP_DD_LOOPBACK_CONTROL_MAP, None)
+    output_dom += output_module_threshold
+    return output_dom
+
+
+# Convert DOM sensor info in DB to CLI output string
+def convert_dom_to_output_string(sfp_type, media_lane_count, dom_info_dict):
+    indent = ' ' * 8
+    output_dom = ''
+    channel_threshold_align = 18
+    module_threshold_align = 15
+
+    if sfp_type.startswith('QSFP') or sfp_type.startswith('DSFP'):
+        # Channel Monitor
+        if sfp_type.startswith('QSFP-DD'):
+            if media_lane_count == 8: # QSFP-dd SR8
+                output_dom += (indent + 'ChannelMonitorValues:\n')
+                sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_MONITOR_MAP)
+                output_channel = format_dict_value_to_string(
+                    sorted_key_table, dom_info_dict,
+                    QSFP_DD_DOM_CHANNEL_MONITOR_MAP,
+                    QSFP_DD_DOM_VALUE_UNIT_MAP)
+                output_dom += output_channel
+            elif media_lane_count == 4: # QSFP-DD fr4
+                output_dom += (indent + 'ChannelMonitorValues:\n')
+                sorted_key_table = natsorted(QSFP_DOM_CHANNEL_MONITOR_MAP)
+                output_channel = format_dict_value_to_string(
+                    sorted_key_table, dom_info_dict,
+                    QSFP_DOM_CHANNEL_MONITOR_MAP,
+                    DOM_VALUE_UNIT_MAP)
+                output_dom += output_channel
+            else: # ZR module
+                output_dom += (indent + 'ChannelMonitorValues:\n')
+                sorted_key_table = natsorted(SFP_DOM_CHANNEL_MONITOR_MAP)
+                output_channel = format_dict_value_to_string(
+                    sorted_key_table, dom_info_dict,
+                    SFP_DOM_CHANNEL_MONITOR_MAP,
+                    DOM_VALUE_UNIT_MAP)
+                output_dom += output_channel
+
+        elif sfp_type.startswith('DSFP'):
+            output_dom += (indent + 'ChannelMonitorValues:\n')
+            sorted_key_table = natsorted(DSFP_DOM_CHANNEL_MONITOR_MAP)
+            output_channel = format_dict_value_to_string(
+                sorted_key_table, dom_info_dict,
+                DSFP_DOM_CHANNEL_MONITOR_MAP,
+                DSFP_DOM_VALUE_UNIT_MAP)
+            output_dom += output_channel
+        else:
+            output_dom += (indent + 'ChannelMonitorValues:\n')
+            sorted_key_table = natsorted(QSFP_DOM_CHANNEL_MONITOR_MAP)
+            output_channel = format_dict_value_to_string(
+                sorted_key_table, dom_info_dict,
+                QSFP_DOM_CHANNEL_MONITOR_MAP,
+                DOM_VALUE_UNIT_MAP)
+            output_dom += output_channel
+
+        # Channel Threshold
+        if sfp_type.startswith('QSFP-DD') or sfp_type.startswith('DSFP') or sfp_type.startswith('QSFP'):
+            dom_map = SFP_DOM_CHANNEL_THRESHOLD_MAP
+        else:
+            dom_map = QSFP_DOM_CHANNEL_THRESHOLD_MAP
+
+        output_dom += (indent + 'ChannelThresholdValues:\n')
+        sorted_key_table = natsorted(dom_map)
+        output_channel_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            dom_map,
+            DOM_CHANNEL_THRESHOLD_UNIT_MAP,
+            channel_threshold_align)
+        output_dom += output_channel_threshold
+
+        # Module Monitor
+        output_dom += (indent + 'ModuleMonitorValues:\n')
+        sorted_key_table = natsorted(DOM_MODULE_MONITOR_MAP)
+        output_module = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            DOM_MODULE_MONITOR_MAP,
+            DOM_VALUE_UNIT_MAP)
+        output_dom += output_module
+
+        # Module Threshold
+        output_dom += (indent + 'ModuleThresholdValues:\n')
+        sorted_key_table = natsorted(DOM_MODULE_THRESHOLD_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            DOM_MODULE_THRESHOLD_MAP,
+            DOM_MODULE_THRESHOLD_UNIT_MAP,
+            module_threshold_align)
+        output_dom += output_module_threshold
+
+        # 3. Lane Specific State Change Flags
+        output_dom += (indent + 'Module Lane Specific State Change Flags Values:\n')
+        sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            QSFP_DD_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP,
+            None)
+        output_dom += output_module_threshold
+
+        # 4. Module State
+        output_dom += (indent + 'Module State:\n')
+        sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_STATE_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            QSFP_DD_DOM_CHANNEL_STATE_MAP,
+            None)
+        output_dom += output_module_threshold
+
+        # 5. CLI show optical module TX/RX configure arguments
+        output_dom += (indent + 'Module Lane TX/TX Configure Values:\n')
+        sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_TX_RX_CONFIG_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            QSFP_DD_DOM_CHANNEL_TX_RX_CONFIG_MAP,
+            None)
+        output_dom += output_module_threshold
+
+        if sfp_type.startswith('QSFP-DD') or sfp_type.startswith('DSFP'):
+            # 6. Optical Module VDM info
+            output_dom += (indent + 'Module VDM INFO Values:\n')
+            sorted_key_table = natsorted(QSFP_DD_DOM_VDM_MAP)
+            output_module_threshold = format_dict_value_to_string(
+                sorted_key_table, dom_info_dict,
+                QSFP_DD_DOM_VDM_MAP,
+                None)
+            output_dom += output_module_threshold
+
+            # 7. PRBS Debug mode
+            output_dom += (indent + 'Module PRBS Debug Values:\n')
+            sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_PRBS_MAP)
+            output_module_threshold = format_dict_value_to_string(
+                sorted_key_table, dom_info_dict,
+                QSFP_DD_DOM_CHANNEL_PRBS_MAP,
+                None)
+            output_dom += output_module_threshold
+            if dom_info_dict is not None and 'vdm_dict' in dom_info_dict and bool(dom_info_dict['vdm_dict']):
+                output_dom += (indent + 'Module VDM Values:\n')
+                sorted_key_table = natsorted(VDM_DATA_MAP)
+                for key, item in dom_info_dict['vdm_dict'].items():
+                    vdm_indent = ' ' * 12
+                    output_dom += (vdm_indent + '{}:\n'.format(key))
+                    # for lane, vdm_list in item.items():
+                    output_module_threshold = format_list_value_to_string(
+                        sorted_key_table, item, VDM_DATA_MAP, None)
+                    output_dom += output_module_threshold
+
+                output_dom += (indent + 'Module Tunable Laser Control and Status:\n')
+                sorted_key_table = natsorted(QSFP_DD_MODULE_LEVEL_MONITOR_MAP)
+                output_module_threshold = format_dict_value_to_string(
+                    sorted_key_table, dom_info_dict, QSFP_DD_MODULE_LEVEL_MONITOR_MAP, None)
+                output_dom += output_module_threshold
+
+                output_dom += (indent + 'Module Loopback controls:\n')
+                sorted_key_table = natsorted(QSFP_DD_LOOPBACK_CONTROL_MAP)
+                output_module_threshold = format_dict_value_to_string(
+                    sorted_key_table, dom_info_dict, QSFP_DD_LOOPBACK_CONTROL_MAP, None)
+                output_dom += output_module_threshold
+
+        # 8. MISC
+        output_dom += (indent + 'Module PRBS Debug Values:\n')
+        sorted_key_table = natsorted(QSFP_DD_DOM_CHANNEL_MISC_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            QSFP_DD_DOM_CHANNEL_MISC_MAP,
+            None)
+        output_dom += output_module_threshold
+    else:
+        output_dom += (indent + 'MonitorData:\n')
+        sorted_key_table = natsorted(SFP_DOM_CHANNEL_MONITOR_MAP)
+        output_channel = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            SFP_DOM_CHANNEL_MONITOR_MAP,
+            DOM_VALUE_UNIT_MAP)
+        output_dom += output_channel
+
+        sorted_key_table = natsorted(DOM_MODULE_MONITOR_MAP)
+        output_module = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            DOM_MODULE_MONITOR_MAP,
+            DOM_VALUE_UNIT_MAP)
+        output_dom += output_module
+
+        output_dom += (indent + 'ThresholdData:\n')
+
+        # Module Threshold
+        sorted_key_table = natsorted(DOM_MODULE_THRESHOLD_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            DOM_MODULE_THRESHOLD_MAP,
+            DOM_MODULE_THRESHOLD_UNIT_MAP,
+            module_threshold_align)
+        output_dom += output_module_threshold
+
+        # Channel Threshold
+        sorted_key_table = natsorted(SFP_DOM_CHANNEL_THRESHOLD_MAP)
+        output_channel_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            SFP_DOM_CHANNEL_THRESHOLD_MAP,
+            DOM_CHANNEL_THRESHOLD_UNIT_MAP,
+            channel_threshold_align)
+        output_dom += output_channel_threshold
+
+        # Lane Specific State Change Flags
+        output_dom += (indent + 'Module Lane Specific State Change Flags Values:\n')
+        sorted_key_table = natsorted(SFP_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            SFP_DOM_CHANNEL_LANE_TX_RX_FLAG_MAP,
+            None)
+        output_dom += output_module_threshold
+
+        # MISC
+        output_dom += (indent + 'Module MISC Values:\n')
+        sorted_key_table = natsorted(SFP_DOM_CHANNEL_MISC_MAP)
+        output_module_threshold = format_dict_value_to_string(
+            sorted_key_table, dom_info_dict,
+            SFP_DOM_CHANNEL_MISC_MAP,
+            None)
+        output_dom += output_module_threshold
+
+    return output_dom
+
+
+# =============== Getting and printing SFP data ===============
+
+def print_all_valid_port_values():
+    click.echo("Valid values for port: {}\n".format(str(platform_sfputil.logical)))
+
+# ==================== Methods for initialization ====================
+
+def load_sfp():
+    global sfp_list
+    try:
+        with open("/sys/switch/transceiver/num", mode='rb', buffering=0) as f:
+            sfp_num = int(f.read())
+    except (OSError, IOError):
+        click.echo("Read /sys/switch/transceiver/num error...")
+        return None
+
+    for index in range(0, sfp_num):
+        sfp = Sfp(index + 1)
+        sfp_list.append(sfp)
+
+    return sfp_list
+
+# Instantiate SfpUtilHelper class
+def load_sfputilhelper():
+    global platform_sfputil
+
+    # we have to make use of sfputil for some features
+    # even though when new platform api is used for all vendors.
+    # in this sense, we treat it as a part of new platform api.
+    # we have already moved sfputil to sonic_platform_base
+    # which is the root of new platform api.
+    platform_sfputil = sonic_platform_base.sonic_sfp.sfputilhelper.SfpUtilHelper()
+
+    if not platform_sfputil:
+        return False
+
+    return True
+
+
+def load_port_config():
+    try:
+        if multi_asic.is_multi_asic():
+            # For multi ASIC platforms we pass DIR of port_config_file_path and the number of asics
+            (platform_path, hwsku_path) = device_info.get_paths_to_platform_and_hwsku_dirs()
+
+            # Load platform module from source
+            platform_sfputil.read_all_porttab_mappings(hwsku_path, multi_asic.get_num_asics())
+        else:
+            # For single ASIC platforms we pass port_config_file_path and the asic_inst as 0
+            port_config_file_path = device_info.get_path_to_port_config_file()
+            platform_sfputil.read_porttab_mappings(port_config_file_path, 0)
+    except Exception as e:
+        click.echo("Error reading port info ({})".format(str(e)), True)
+        return False
+
+    return True
+
+# ==================== CLI commands and groups ====================
+
+
+# This is our main entrypoint - the main 'sfputil' command
+@click.group()
+def cli():
+    """sfputil - Command line utility for managing SFP transceivers"""
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(ERROR_PERMISSIONS)
+
+    # Load SfpUtilHelper class
+    if not load_sfputilhelper():
+        sys.exit(ERROR_SFPUTILHELPER_LOAD)
+
+    # Load port info
+    if not load_port_config():
+        sys.exit(ERROR_PORT_CONFIG_LOAD)
+
+# 'show' subgroup
+@cli.group()
+def show():
+    """Display status of SFP transceivers"""
+    pass
+
+
+# 'eeprom' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP EEPROM data for port <port_name> only")
+@click.option('-d', '--dom', 'dump_dom', is_flag=True, help="Also display Digital Optical Monitoring (DOM) data")
+@click.option('-n', '--namespace', default=None, help="Display interfaces for specific namespace")
+def eeprom(port, dump_dom, namespace):
+    """Display EEPROM data of SFP transceiver(s)"""
+    output = ""
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            # physical_to_logical
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            output += "{}: SFP EEPROM not detected\n".format(port_name)
+        else:
+            output += "{}: SFP EEPROM detected\n".format(port_name)
+
+            try:
+                xcvr_info = sfp.get_transceiver_info()
+            except NotImplementedError:
+                click.echo("Sfp.get_transceiver_info() is currently not implemented for this platform")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+
+            output += convert_sfp_info_to_output_string(xcvr_info)
+
+            if dump_dom:
+                try:
+                    xcvr_dom_info = sfp.get_transceiver_bulk_status()
+                except NotImplementedError:
+                    click.echo("Sfp.get_transceiver_bulk_status() is currently not implemented for this platform")
+                    sys.exit(ERROR_NOT_IMPLEMENTED)
+
+                try:
+                    xcvr_dom_threshold_info = sfp.get_transceiver_threshold_info()
+                    if xcvr_dom_threshold_info:
+                        xcvr_dom_info.update(xcvr_dom_threshold_info)
+                except NotImplementedError:
+                    click.echo("Sfp.get_transceiver_threshold_info() is currently not implemented for this platform")
+                    sys.exit(ERROR_NOT_IMPLEMENTED)
+
+                try:
+                    if sfp.is_zr_module():
+                        xcvr_dom_loopback_info = sfp.get_transceiver_loopback()
+                        if xcvr_dom_threshold_info:
+                            xcvr_dom_info.update(xcvr_dom_loopback_info)
+                except NotImplementedError:
+                    click.echo("Sfp.get_transceiver_loopback() is currently not implemented for this platform")
+                    sys.exit(ERROR_NOT_IMPLEMENTED)
+
+                output += convert_dom_to_output_string(xcvr_info['type'], xcvr_info['media_lane_count'], xcvr_dom_info)
+
+        output += '\n'
+
+    click.echo(output)
+
+
+# 'presence' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP presence for port <port_name> only")
+def presence(port):
+    """Display presence of SFP transceiver(s)"""
+    output_table = []
+    table_header = ["Port", "Presence"]
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        status_string = "Present" if presence else "Not present"
+        port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+        output_table.append([port_name, status_string])
+
+    click.echo(tabulate(output_table, table_header, tablefmt="simple"))
+
+# 'tx_disable' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP tx_disable for port <port_name> only")
+def tx_disable(port):
+    """Display tx_disable of SFP transceiver(s)"""
+    logical_port_list = []
+    output_table = []
+    table_header = ["Port", "Tx Disable"]
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+
+        try:
+            tx_disable = sfp.get_tx_disable()
+            if tx_disable is None:
+                continue
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        output_table.append([port_name, tx_disable])
+
+    click.echo(tabulate(output_table, table_header, tablefmt="simple"))
+
+# 'lpmode' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP low-power mode status for port <port_name> only")
+def lpmode(port):
+    """Display low-power mode status of SFP transceiver(s)"""
+    output_table = []
+    table_header = ["Port", "Low-power Mode"]
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+
+        if sfp.sfp_type == 'SFP':
+            click.echo("Error: Low Power Mode not support for logical port '{}'".format(port_name))
+            return
+
+        try:
+            lpmode = sfp.get_lpmode()
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if lpmode:
+            output_table.append([port_name, "On"])
+        else:
+            output_table.append([port_name, "Off"])
+
+    click.echo(tabulate(output_table, table_header, tablefmt='simple'))
+
+
+# 'lpmode' subgroup
+@cli.group()
+def lpmode():
+    """Enable or disable low-power mode for SFP transceiver"""
+    pass
+
+
+# Helper method for setting low-power mode
+def set_lpmode(port, enable):
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+
+        if sfp.sfp_type == 'SFP':
+            click.echo("Error: Low Power Mode not support for logical port '{}'".format(port_name))
+            return
+
+        click.echo("{} low-power mode for port {} ... ".format(
+            "Enabling" if enable else "Disabling", port_name), nl=False)
+
+        try:
+            result = sfp.set_lpmode(enable)
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if result:
+            click.echo("OK")
+        else:
+            click.echo("Failed")
+
+
+# 'off' subcommand
+@lpmode.command()
+@click.argument('port_name', metavar='<port_name>')
+def off(port_name):
+    """Disable low-power mode for SFP transceiver"""
+    set_lpmode(port_name, False)
+
+
+# 'on' subcommand
+@lpmode.command()
+@click.argument('port_name', metavar='<port_name>')
+def on(port_name):
+    """Enable low-power mode for SFP transceiver"""
+    set_lpmode(port_name, True)
+
+
+# 'reset' subcommand
+@cli.command()
+@click.argument('port', metavar='<port_name>')
+def reset(port):
+    """Reset SFP transceiver"""
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+
+        if sfp.sfp_type == 'SFP':
+            click.echo("Error: RESET not support for logical port '{}'".format(port_name))
+            return
+
+        click.echo("Resetting port {} ... ".format(port_name), nl=False)
+
+        try:
+            result = sfp.reset()
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if result:
+            click.echo("OK")
+        else:
+            click.echo("Failed")
+
+
+# 'tx_disable' subgroup
+@cli.group()
+def tx_disable():
+    """Enable or disable tx_disable for SFP transceiver"""
+    pass
+
+# Helper method for setting tx_disable
+def set_tx_disable(port, start, end, enable):
+    # Create a list containing the logical port names of all ports we're interested in
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            if start == 0 and end == 0:
+                presence = sfp.get_presence()
+            elif start == 0 and end != 0:
+                if sfp._port_num > end:
+                    continue
+                presence = sfp.get_presence()
+            elif start != 0 and end == 0:
+                if sfp._port_num < start:
+                    continue
+                presence = sfp.get_presence()
+            elif start <=sfp._port_num and sfp._port_num <= end:
+                presence = sfp.get_presence()
+            else:
+                continue
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if presence:
+            try:
+                click.echo("{} tx_disable mode for port {} ... ".format(
+                    "Enabling" if enable else "Disabling", port_name), nl=False)
+
+                result = sfp.tx_disable(enable)
+            except NotImplementedError:
+                click.echo("This functionality is currently not implemented for this platform")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+
+            if result:
+                click.echo("OK")
+            else:
+                click.echo("Failed")
+
+
+# 'off' subcommand
+@tx_disable.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Disable SFP tx-disable mode status for port <port_name> only")
+@click.option('-s','--start', type=int, required=False, default=0, show_default=True, help='Disable start of Ethernet')
+@click.option('-e','--end', type=int, required=False, default=0, show_default=True, help='Disable end of Ethernet')
+def off(port, start, end):
+    """Disable tx_disable for SFP transceiver"""
+    set_tx_disable(port, start, end, False)
+
+# 'on' subcommand
+@tx_disable.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Enable SFP tx-disable mode status for port <port_name> only")
+@click.option('-s','--start', type=int, required=False, default=0, show_default=True, help='Enable start of Ethernet')
+@click.option('-e','--end', type=int, required=False, default=0, show_default=True, help='Enable end of Ethernet')
+def on(port, start, end):
+    """Enable tx_disable for SFP transceiver"""
+    set_tx_disable(port, start, end, True)
+
+# 'tx_power' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP config tx power for port <port_name> only")
+def tx_power(port):
+    """Display Config Tx Power of SFP transceiver(s)"""
+    output_table = []
+    table_header = ["Port", "Config Tx Power(dBm)"]
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if presence:
+            if not sfp.is_zr_module():
+                continue
+
+            try:
+                tx_power = sfp.get_tx_config_power()
+            except NotImplementedError:
+                click.echo("This functionality is currently not implemented for this platform")
+                sys.exit(ERROR_NOT_IMPLEMENTED)
+
+            output_table.append([port_name, tx_power])
+
+    click.echo(tabulate(output_table, table_header, tablefmt='simple'))
+
+# 'tx_power' subcommand
+@cli.command(short_help="Sets the TX output power")
+@click.argument('port', metavar='<port_name>', required=True)
+@click.argument('power', metavar='<tx_power>', required=True)
+def tx_power(port, power):
+    """
+    Sets the TX output power - Unit in dBm
+
+    kddf-sfputil tx-power  Ethernet33 -- -9
+    """
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            return
+
+        if not sfp.is_zr_module():
+            click.echo("{}: Tx output power not support".format(port_name))
+            return
+
+        click.echo("Config tx output power ({} dBm) for port {} ... ".format(
+            power, port_name), nl=False)
+
+        try:
+            result = sfp.set_tx_power(float(power))
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if result:
+            click.echo("OK")
+        else:
+            click.echo("Failed")
+
+# 'tx_laser_freq' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP config Tx Frequency for port <port_name> only")
+def tx_laser_freq(port):
+    """Display Config Tx Frequency of SFP transceiver(s)"""
+    output_table = []
+    table_header = ["Port", "Config Tx Frequency(GHz)"]
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+        if not sfp.is_zr_module():
+            click.echo("{}: Tx laser frequency not support".format(port_name))
+            continue
+
+        try:
+            laser_config_freq = sfp.get_laser_config_freq()
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        output_table.append([port_name, laser_config_freq])
+
+    click.echo(tabulate(output_table, table_header, tablefmt='simple'))
+
+# 'tx_laser_freq' subcommand
+@cli.command(short_help="Sets the tx laser frequency")
+@click.argument('port', metavar='<port_name>', required=True)
+@click.argument('freq', metavar='<frequency>', required=True)
+def tx_laser_freq(port, freq):
+    """
+    Set the Tx laser frequency
+
+    kddf-sfputil tx-laser-freq Ethernet33 193100
+    """
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            return
+
+        if not sfp.is_zr_module():
+            click.echo("Error: Config Tx laser frequency not support for logical port '{}'".format(port_name))
+            return
+
+        click.echo("Config tx laser frequency ({} GHz) for port {} ... ".format(
+            freq, port_name), nl=False)
+
+        try:
+            result = sfp.set_laser_freq(int(freq))
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if result:
+            click.echo("OK")
+        else:
+            click.echo("Failed")
+
+# 'loopback_mode' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP config Tx Frequency for port <port_name> only")
+def loopback_mode(port):
+    """Display Config Tx Frequency of SFP transceiver(s)"""
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    output = ''
+    for sfp in sfp_list:
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            continue
+
+        if not sfp.is_zr_module():
+            click.echo("{}: Loopback Mode not support".format(port_name))
+            continue
+
+        output += "{} ".format(port_name)
+        try:
+            loopback_mode_info = sfp.get_transceiver_loopback()
+            if loopback_mode_info is None:
+                click.echo("Cannot get loopback mode information")
+                sys.exit(ERROR_PERMISSIONS)
+
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        output += convert_loopback_to_output_string(loopback_mode_info)
+        output += '\n'
+
+    click.echo(output)
+
+# 'loopback_mode' subcommand
+@cli.command(short_help="Set loopback mode")
+@click.argument('port', metavar='<port_name>', required=True)
+@click.argument('loopback_mode', metavar='<loopback_mode>', type=click.Choice(['none', 'host-side-input', 'host-side-output', 'media-side-input', 'media-side-output']), required=True)
+def loopback_mode(port, loopback_mode):
+    """
+    Set the loopback mode
+
+    \b
+    Loopback mode has to be one of the five:
+    1. "none" (default)
+    2. "host-side-input"
+    3. "host-side-output"
+    4. "media-side-input"
+    5. "media-side-output"
+    """
+    global sfp_list
+
+    # Create a list containing the port of all ports we're interested in
+    if port is None:
+        load_sfp()
+    else:
+        if platform_sfputil.is_logical_port(port):
+            port_num = platform_sfputil.logical_to_physical[port][0]
+            sfp_list = [Sfp(int(port_num))]
+        else:
+            click.echo("Error: invalid port '{}'\n".format(port))
+            print_all_valid_port_values()
+            sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            port_name = platform_sfputil.physical_to_logical[sfp._port_num][0]
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            sys.exit(1)
+
+        if not sfp.is_zr_module():
+            click.echo("{}: Loopback Mode not support".format(port_name))
+            return
+
+        click.echo("Config Loopback Mode({}) for port {} ... ".format(
+            loopback_mode, port_name), nl=False)
+
+        try:
+            result = sfp.set_loopback_mode(loopback_mode)
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if result:
+            click.echo("OK")
+        else:
+            click.echo("Failed")
+
+########### eeprom function ###################
+def operate_eeprom(port, offset, size, operation, data=None):
+    if port.startswith("Ethernet"):
+        port_num = port.strip("Ethernet")
+        sfp_list = [Sfp(int(port_num))]
+    else:
+        click.echo("Error: invalid port '{}'\n".format(port))
+        sys.exit(ERROR_INVALID_PORT)
+
+    for sfp in sfp_list:
+        try:
+            port_name = "Ethernet{}".format(sfp._port_num)
+            presence = sfp.get_presence()
+        except NotImplementedError:
+            click.echo("Sfp.get_presence() is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+        if not presence:
+            click.echo("{}: SFP not detected\n".format(port_name))
+            return None
+
+        # sfp is presence
+        try:
+            if 'read' in operation:
+                return sfp.read_eeprom_specific_bytes(offset, size)
+            else:
+                return sfp.write_eeprom_specific_bytes(offset, data[0:size], size)
+        except NotImplementedError:
+            click.echo("This functionality is currently not implemented for this platform")
+            sys.exit(ERROR_NOT_IMPLEMENTED)
+
+def eeprom_page_read_dump(page, offset, data):
+    click.echo('read page data:')
+    for idx, data_ele in list(enumerate(data)):
+        click.echo('page[{}].Byte[{}] = 0x{}'.format(page, offset + idx, data_ele))
+
+def string_to_bytes(data):
+    try:
+        if data.startswith('0x'):
+            data = data[len('0x'):]
+        convert_data = binascii.a2b_hex(data)
+    except Exception as e:
+        click.echo('Wrong format, %s' % e)
+        raise click.Abort()
+
+    return convert_data
+
+def hexdump(src, length = 16):
+    result = []
+    digits = 4 if isinstance(src, str) else 2
+    for i in range(0, len(src), length):
+        s = src[i:i + length]
+        hexa = ' '.join([x.upper().zfill(digits) for x in s])
+        text = ''.join([chr(int(x, 16)) if 0x20 <= int(x, 16) < 0x7F else '.' for x in s])
+        result.append("{0:04X}".format(i) + ' '*3 + hexa.ljust(length * (digits + 1)) + ' '*3 + "{0}".format(text))
+
+    return '\n'.join(result)
+
+############ PAGE CONTROL ######################
+PAGE_SELECT_TYPES = 127
+SFP_PAGE_SIZE = 128
+
+# 'eeprom' subcommand
+@cli.command(short_help='Read/Write/Dump eeprom binary from SFP transceiver')
+@click.argument('operation', metavar='(write|read|dump)', type=click.Choice(['write', 'read', 'dump']), required=True)
+@click.argument('port_name', metavar='<port_name>')
+@click.option('--page', type=int, required=False, default=0, show_default=True, help='Transceiver page')
+@click.option('--offset', type=int, required=False, default=0, show_default=True, help='Page {offset}')
+@click.option('--length', type=int, required=False, default=1, show_default=True, help='{length} bytes')
+@click.option('--data', type=str, required=False, help='Data string for writing, such as 0x112233')
+def eeprom(operation, port_name, page, offset, length, data):
+    """
+    Read/Write/Dump eeprom binary from SFP transceiver
+
+    \b
+    SFF 8472:                                  offset
+      PAGE 00 Lower page - A0 Lower page      0-127
+           00 Upper page - A0 Upper page      128-255
+      PAGE 01            - A2 00 Lower page   128-255
+           02            - A2 00 Upper page   ...
+           03            - A2 01 page         ...
+           04            - A2 02 page         ...
+           05            - A2 03 page         ...
+    SFF 8636/CMIS4.0/5.0:
+        PAGE 00 Lower page  offset 0-127
+             00 Upper page         128-255
+        PAGE 01                    128-255
+        PAGE 02                    128-255
+        ...
+    """
+
+    if operation == 'read':
+        eeprom_raw = operate_eeprom(port_name, SFP_PAGE_SIZE * page + offset, length, 'read')
+        # display eeprom data
+        if eeprom_raw:
+            eeprom_page_read_dump(page, offset, eeprom_raw)
+    elif operation == 'write':
+        convert_data = string_to_bytes(data)
+        return operate_eeprom(port_name, SFP_PAGE_SIZE * page + offset, length, 'write', convert_data)
+    elif operation == 'dump':
+        # get low bytes
+        eeprom_raw = operate_eeprom(port_name, 0, 128, 'read')
+        if eeprom_raw is None:
+            click.echo('read eeprom low page failed')
+            return
+        # update page num;
+        eeprom_raw[PAGE_SELECT_TYPES] = hex(page)[2:]
+        # get high bytes
+        eeprom_raw.extend(operate_eeprom(port_name, SFP_PAGE_SIZE * (page + 1), 128, 'read'))
+        if eeprom_raw:
+            click.echo('Eeprom data:\n%s' % (hexdump(eeprom_raw)))
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("sfputil version {0}".format(VERSION))
+
+
+if __name__ == '__main__':
+    cli()

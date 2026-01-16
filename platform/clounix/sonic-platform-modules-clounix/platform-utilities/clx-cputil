@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with cpld Controller in PDDF mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+# Global cpu class instance
+cpu_info = None
+
+def _wrapper_get_name():
+    return cpu_info.get_name()
+
+def _wrapper_get_type():
+    return cpu_info.get_type()
+
+# This is our main entrypoint - the main 'cputil' command
+@click.group()
+def cli():
+    """pddf_cputil - Command line utility for providing cpld information"""
+
+    global cpu_info
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        from sonic_platform.cpu import CPU
+        cpu_info = CPU()
+    except Exception as e:
+        click.echo("Failed to load CPU class due to {}".format(str(e)))
+
+    if cpu_info is None:
+        click.echo("Failed to load CPU class ...")
+        sys.exit(2)
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("PDDF cputil version {0}".format(VERSION))
+
+# 'info' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of cpld")
+def info(index):
+    """Display CPLD manufacturer info"""
+
+    status_table = []
+    cpu_info_dict = cpu_info.get_status_info()
+    for attr_name, value in cpu_info_dict.items():
+        status_table.append([attr_name, value[0]])
+
+    click.echo('CPU Type : {}'.format(_wrapper_get_type()))
+    click.echo('CPU Brand: {}'.format(_wrapper_get_name()))
+    click.echo('-----------------------------------------')
+    header = ['Attribute Name', 'Status Value']
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+if __name__ == '__main__':
+    cli()

@@ -10,6 +10,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+QSFP_PWR_CTRL_ADDR = 93
+
 
 class PddfSfp(SfpOptoeBase):
     """
@@ -38,6 +40,7 @@ class PddfSfp(SfpOptoeBase):
             print("Invalid port index %d" % index)
             return
 
+	# 1-based port index
         self.port_index = index+1
         self.device = 'PORT{}'.format(self.port_index)
         self.sfp_type = self.pddf_obj.get_device_type(self.device)
@@ -194,8 +197,20 @@ class PddfSfp(SfpOptoeBase):
             else:
                 lpmode = False
         else:
-            # Use common SfpOptoeBase implementation for get_lpmode
-            lpmode = super().get_lpmode()
+            xcvr_id = self._xcvr_api_factory._get_id()
+            if xcvr_id is not None:
+                if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
+                    # QSFP-DD or OSFP
+                    # Use common SfpOptoeBase implementation for get_lpmode
+                    lpmode = super().get_lpmode()
+                elif xcvr_id == 0x11 or xcvr_id == 0x0d or xcvr_id == 0x0c:
+                    # QSFP28, QSFP+, QSFP
+                    # get_power_set() is not defined in the optoe_base class
+                    api = self.get_xcvr_api()
+                    power_set = api.get_power_set()
+                    power_override = self.get_power_override()
+                    # By default the lpmode pin is pulled high as mentioned in the sff community
+                    return power_set if power_override else True
 
         return lpmode
 
@@ -321,10 +336,37 @@ class PddfSfp(SfpOptoeBase):
             except IOError as e:
                 status = False
         else:
-            # Use common SfpOptoeBase implementation for set_lpmode
-            status = super().set_lpmode(lpmode)
+            xcvr_id = self._xcvr_api_factory._get_id()
+            if xcvr_id is not None:
+                if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
+                    # QSFP-DD or OSFP
+                    # Use common SfpOptoeBase implementation for set_lpmode
+                    status = super().set_lpmode(lpmode)
+                elif xcvr_id == 0x11 or xcvr_id == 0x0d or xcvr_id == 0x0c:
+                    # QSFP28, QSFP+, QSFP
+                    if lpmode is True:
+                        status = self.set_power_override(True, True)
+                    else:
+                        status = self.set_power_override(True, False)
 
         return status
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.port_index
+
+    def is_replaceable(self):
+        """
+        Indicate whether the SFP is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
 
     def dump_sysfs(self):
         return self.pddf_obj.cli_dump_dsysfs('xcvr')

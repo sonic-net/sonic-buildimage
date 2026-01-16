@@ -1,0 +1,3 @@
+
+$(CLOUNIX_SAI)_CACHE_MODE  := none
+

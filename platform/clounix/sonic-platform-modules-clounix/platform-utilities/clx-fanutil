@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+#
+# main.py
+#
+# Command-line utility for interacting with FAN Controller in PDDF mode in SONiC
+#
+
+try:
+    import sys
+    import os
+    import click
+    from tabulate import tabulate
+except ImportError as e:
+    raise ImportError("%s - required module not found" % str(e))
+
+VERSION = '2.0'
+
+# Global platform-specific fanutil class instance
+platform_chassis = None
+
+def _wrapper_get_num_fans():
+    try:
+        return platform_chassis.get_num_fan_drawers()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_info(func):
+    temp = 'N/A'
+    try:
+        temp = func()
+        if temp is None:
+            temp = 'N/A'
+    except NotImplementedError:
+        click.echo("FAN {} is not implemented.".format(func))
+        pass
+    return temp
+
+def _wrapper_get_fan_drawer_name(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_name)
+
+def _wrapper_get_fan_drawer_model(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_model)
+
+def _wrapper_get_fan_drawer_serial(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_serial)
+
+def _wrapper_get_fan_drawer_vendor(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_vendor)
+
+def _wrapper_get_fan_drawer_part_number(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_part_number)
+
+def _wrapper_get_fan_drawer_hw_version(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_hw_version)
+
+def _wrapper_get_fan_drawer_presence(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx - 1).get_presence()
+    except NotImplementedError:
+        pass
+    return False
+
+def _wrapper_get_fan_drawer_status(idx):
+    return _wrapper_get_fan_drawer_info(platform_chassis.get_fan_drawer(idx - 1).get_status)
+
+def _wrapper_get_fan_drawer_led_status(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_status_led()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_direction(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_direction()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_is_replaceable(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).is_replaceable()
+    except NotImplementedError:
+        pass
+    return True
+
+def _wrapper_get_all_fans(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_all_fans()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_rpm(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_rpm()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_speed(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_speed()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_speed_target(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_target_speed()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_get_fan_drawer_speed_tolerance(idx):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).get_speed_tolerance()
+    except NotImplementedError:
+        pass
+    return 0
+
+def _wrapper_set_fan_speed(idx, percent):
+    try:
+        return platform_chassis.get_fan_drawer(idx-1).set_speed(percent)
+    except NotImplementedError:
+        pass
+    return True
+
+def _wrapper_debug_sysfs():
+    try:
+        return platform_chassis.get_debug_info('fan')
+    except NotImplementedError:
+        pass
+    return None
+
+
+# This is our main entrypoint - the main 'fanutil' command
+@click.group()
+def cli():
+    """pddf_fanutil - Command line utility for providing FAN information"""
+
+    global platform_chassis
+
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(1)
+
+    # Load new platform api class
+    try:
+        import sonic_platform.platform
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        click.echo("Failed to load chassis due to {}".format(str(e)))
+
+    # Load platform-specific fanutil class if new platform object class is not found
+    if platform_chassis is None:
+        click.echo("Failed to load chassis...")
+        sys.exit(2)
+
+# 'version' subcommand
+@cli.command()
+def version():
+    """Display version info"""
+    click.echo("PDDF fanutil version {0}".format(VERSION))
+
+# 'numfans' subcommand
+@cli.command()
+def numfans():
+    """Display number of FANs installed on device"""
+    click.echo(_wrapper_get_num_fans())
+
+# 'status' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of FAN")
+def status(index):
+    """Display FAN status"""
+    supported_fan = list(range(1, _wrapper_get_num_fans()+1))
+    fan_ids = []
+    if (index < 0):
+        fan_ids = supported_fan
+    else:
+        fan_ids = [index]
+
+    header = ['FAN', 'Status', 'LED Status', 'Direction', 'REPLACEABLE']
+    status_table = []
+
+    for fan in fan_ids:
+        msg = ""
+        fan_name = _wrapper_get_fan_drawer_name(fan)
+        if fan not in supported_fan:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported FAN - {}.".format(fan_name, len(supported_fan)))
+            continue
+        presence = _wrapper_get_fan_drawer_presence(fan)
+        if presence:
+            oper_status = _wrapper_get_fan_drawer_status(fan)
+            msg = 'OK' if oper_status else "NOT OK"
+        else:
+            msg = 'NOT PRESENT'
+
+        led_status = _wrapper_get_fan_drawer_led_status(fan)
+        direction = _wrapper_get_fan_drawer_direction(fan)
+        is_replaceable = _wrapper_get_fan_drawer_is_replaceable(fan)
+        status_table.append([fan_name, msg, led_status, direction.capitalize(), str(is_replaceable)])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'speed' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of FAN")
+def getspeed(index):
+    """Display FAN speed in RPM"""
+    supported_fan = list(range(1, _wrapper_get_num_fans() + 1))
+    fan_ids = []
+    if (index < 0):
+        fan_ids = supported_fan
+    else:
+        fan_ids = [index]
+
+    header = ['FAN', 'PWM', 'SPEED', 'FAN SPEED TARGET', 'FAN SPEED TOLERANCE']
+    status_table = []
+
+    for fan_drawer in fan_ids:
+        fan_drawer_name = _wrapper_get_fan_drawer_name(fan_drawer)
+        if fan_drawer not in supported_fan:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported FAN - {}.".format(fan_drawer_name, len(supported_fan)))
+            continue
+
+        fans = _wrapper_get_all_fans(fan_drawer)
+        for fan in fans:
+            fan_name = fan.get_name()
+            ratio = fan.get_ratio()
+            speed = fan.get_speed()
+            speed_target = fan.get_target_speed()
+            speed_tolerance = fan.get_speed_tolerance()
+            status_table.append([fan_name, ratio, speed, speed_target, speed_tolerance])
+
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'setspeed' subcommand
+@cli.command()
+@click.argument('speed', type=int)
+def setspeed(speed):
+    """Set FAN speed in percentage"""
+    if speed is None:
+        click.echo("speed value is required")
+        raise click.Abort()
+
+    supported_fan = list(range(1, _wrapper_get_num_fans() + 1))
+    fan_ids = []
+    if (index < 0):
+        fan_ids = supported_fan
+    else:
+        fan_ids = [index]
+
+    for fan_drawer in fan_ids:
+        fan_drawer_name = _wrapper_get_fan_drawer_name(fan_drawer)
+        if fan_drawer not in supported_fan:
+            click.echo("Error! The {} is not available on the platform.\n" \
+            "Number of supported FAN - {}.".format(fan_drawer_name, len(supported_fan)))
+            continue
+
+        fans = _wrapper_get_all_fans(fan_drawer)
+        for fan in fans:
+            status = fan.set_speed(speed)
+            if not status:
+                click.echo("Failed")
+                sys.exit(1)
+
+    click.echo("Successful")
+
+# 'mfrinfo' subcommand
+@cli.command()
+@click.option('-i', '--index', default=-1, type=int, help="the index of FAN")
+def mfrinfo(index):
+    """Display FAN manufacturer info"""
+    supported_fan = list(range(1, _wrapper_get_num_fans() + 1))
+    fan_ids = []
+    if (index < 0):
+        fan_ids = supported_fan
+    else:
+        fan_ids = [index]
+
+    status_table = []
+    for fan in fan_ids:
+        fan_name = _wrapper_get_fan_drawer_name(fan)
+        if fan not in supported_fan:
+            click.echo("Error! The {} is not available on the platform.\n" \
+                       "Number of supported fan - {}.".format(fan_name, len(supported_fan)))
+            continue
+        status = _wrapper_get_fan_drawer_status(fan)
+        if not status:
+            click.echo("{} is Not OK\n".format(fan_name))
+            continue
+
+        model = _wrapper_get_fan_drawer_model(fan)
+        serial_num = _wrapper_get_fan_drawer_serial(fan)
+        vendor = _wrapper_get_fan_drawer_vendor(fan)
+        hw_version = _wrapper_get_fan_drawer_hw_version(fan)
+        part_number = _wrapper_get_fan_drawer_part_number(fan)
+        status_table.append([fan_name, model, part_number, serial_num, vendor, hw_version])
+
+    header = ['FAN', 'Product Name', 'Part Number', 'Serial Number', 'Vendor', 'HW Version']
+    if status_table:
+        click.echo(tabulate(status_table, header, tablefmt="simple"))
+
+# 'debug' subcommand
+@cli.command('debug', short_help='Show fan debug info')
+def debug():
+    """kddf_fanutil debug commands"""
+    debug = _wrapper_debug_sysfs()
+    if debug is None:
+        debug = 'N/A'
+    click.echo(debug)
+
+if __name__ == '__main__':
+    cli()

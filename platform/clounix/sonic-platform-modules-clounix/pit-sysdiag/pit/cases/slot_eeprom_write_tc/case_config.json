@@ -1,0 +1,6 @@
+{
+    "name": "slot_eeprom_write-test",
+    "description": "Check eeprom write function",
+    "type": "auto",
+    "tags": ["manufacture", "development", "pa", "smoke"]
+}

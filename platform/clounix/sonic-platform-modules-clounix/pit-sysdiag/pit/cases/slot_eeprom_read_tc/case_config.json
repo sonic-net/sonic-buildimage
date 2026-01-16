@@ -1,0 +1,6 @@
+{
+    "name": "slot_eeprom_read-test",
+    "description": "Check fru eeprom's key&value",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "development", "pa", "smoke"]
+}
