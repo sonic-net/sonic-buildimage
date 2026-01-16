@@ -1231,7 +1231,7 @@ install_deb_package $debs_path/syslog-counter_*.deb
 # Aspeed BMC platform: Filter services for BMC use case
 if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
     # Show original service count
-    ORIGINAL_COUNT=$(wc -l < $GENERATED_SERVICE_FILE)
+    ORIGINAL_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE")
 
     # Use filter script to remove unwanted services and add BMC services
     sudo cp $BUILD_SCRIPTS_DIR/aspeed_bmc_filter_services.py $FILESYSTEM_ROOT/tmp/
@@ -1244,7 +1244,7 @@ if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
         $FILESYSTEM_ROOT
 
     # Show filtered service count
-    FILTERED_COUNT=$(wc -l < $GENERATED_SERVICE_FILE.filtered)
+    FILTERED_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE.filtered")
 
     # Replace with filtered version
     sudo mv $GENERATED_SERVICE_FILE.filtered $GENERATED_SERVICE_FILE
