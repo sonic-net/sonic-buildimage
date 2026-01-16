@@ -1093,6 +1093,7 @@ class Chassis(ChassisBase):
 
         for reset_file, reset_cause in self.reboot_major_cause_dict.items():
             if self._verify_reboot_cause(reset_file):
+                logger.log_info("Hardware reboot cause: {}".format(reset_file))
                 return reset_cause, ''
 
         for reset_file, reset_cause in self.reboot_minor_cause_dict.items():
