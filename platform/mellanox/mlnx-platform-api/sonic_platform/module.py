@@ -262,6 +262,8 @@ class DpuModule(ModuleBase):
         self.dpu_id = dpu_id
         self._name = f"DPU{self.dpu_id}"
         self.dpuctl_obj = DpuCtlPlat(self._name.lower())
+        self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
@@ -280,6 +282,9 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_pwr_off':
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
+        self.MLX_DPU_REBOOT_CAUSE_WARM = 0
+        self.MLX_DPU_REBOOT_CAUSE_COLD = 1
+        self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
 
@@ -334,8 +339,11 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
         # no_wait=True is not supported at this point, because of race conditions with other drivers
-        return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
 
     def set_admin_state(self, up):
         """
@@ -352,12 +360,16 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Setting the admin state for {self._name} to {up}")
         if up:
             if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
+                logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        return_value = self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+        return return_value
 
     def get_type(self):
         """
@@ -425,8 +437,27 @@ class DpuModule(ModuleBase):
             REBOOT_CAUSE_HOST_POWERCYCLED_DPU, REBOOT_CAUSE_SW_THERMAL,
             REBOOT_CAUSE_DPU_SELF_REBOOT
         """
+        # Check for Watchdog reboot first
+        pcie_path = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+        try:
+            op = subprocess.check_output(['mlxreg', '-d', pcie_path, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+        except subprocess.CalledProcessError as e:
+            logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+            op = b''
+        reset_reason_value = None
+        for line in op.decode().split('\n'):
+            if 'reset_reason' in line:
+                # Extract the value after the '|'
+                reset_reason_value = line.split('|')[1].strip()
+                break
+        if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+            logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
+            return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 

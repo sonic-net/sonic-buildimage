@@ -5,7 +5,7 @@ ds2000/scripts/pre_pddf_init.sh usr/local/bin
 ds2000/scripts/sensors usr/bin
 ds2000/scripts/platform_sensors.py usr/local/bin
 ds2000/systemd/pddf-platform-init.service etc/systemd/system
-ds2000/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds2000-r0/pddf
+build-ds2000/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds2000-r0/pddf
 ds2000/scripts/pddf_pre_driver_install.sh usr/local/bin
 ds2000/systemd/ds2000-pddf-platform-monitor.service lib/systemd/system
 ds2000/utils/pddf_fan_control_sensor_refresh.py usr/local/bin
