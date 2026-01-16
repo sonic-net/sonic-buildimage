@@ -1,22 +1,22 @@
-From 18ba004837dc4becc5294ca427d567d788687e98 Mon Sep 17 00:00:00 2001
-From: Fanqi Lu <lufq@clounix.com>
-Date: Mon, 5 Dec 2022 21:34:10 +0800
-Subject: [PATCH] Support clounix
+From 7ef74e412cbfa4a34334f087678a29fa9d45c831 Mon Sep 17 00:00:00 2001
+From: Long Wu <wulong@clounix.com>
+Date: Fri, 16 Jan 2026 11:32:25 +0800
+Subject: [PATCH] Support clounix for sonic swss
 
 ---
  orchagent/Makefile.am            |  1 +
  orchagent/aclorch.cpp            |  2 +
  orchagent/orch.h                 |  1 +
  orchagent/orchdaemon.cpp         |  5 +-
- orchagent/pfc_detect_clounix.lua | 99 ++++++++++++++++++++++++++++++++
- 5 files changed, 107 insertions(+), 1 deletion(-)
+ orchagent/pfc_detect_clounix.lua | 98 ++++++++++++++++++++++++++++++++
+ 5 files changed, 106 insertions(+), 1 deletion(-)
  create mode 100644 orchagent/pfc_detect_clounix.lua
 
 diff --git a/orchagent/Makefile.am b/orchagent/Makefile.am
-index 5e3cd741..c706806a 100644
+index 9524a61a..aed5e1b5 100644
 --- a/orchagent/Makefile.am
 +++ b/orchagent/Makefile.am
-@@ -18,6 +18,7 @@ dist_swss_DATA = \
+@@ -14,6 +14,7 @@ dist_swss_DATA = \
  		 rif_rates.lua \
  		 pfc_detect_innovium.lua  \
  		 pfc_detect_mellanox.lua  \
@@ -25,66 +25,66 @@ index 5e3cd741..c706806a 100644
  		 pfc_detect_barefoot.lua \
  		 pfc_detect_nephos.lua \
 diff --git a/orchagent/aclorch.cpp b/orchagent/aclorch.cpp
-index c6644b3b..a31563b2 100644
+index 497c0a94..d7485e58 100644
 --- a/orchagent/aclorch.cpp
 +++ b/orchagent/aclorch.cpp
-@@ -2914,6 +2914,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+@@ -2947,6 +2947,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+             platform == MRVL_PLATFORM_SUBSTRING ||
              platform == INVM_PLATFORM_SUBSTRING ||
              platform == NPS_PLATFORM_SUBSTRING ||
-             platform == XS_PLATFORM_SUBSTRING ||
-+            platform == CLX_PLATFORM_SUBSTRING ||
++	    platform == CLX_PLATFORM_SUBSTRING ||
              platform == VS_PLATFORM_SUBSTRING)
      {
          m_mirrorTableCapabilities =
-@@ -2943,6 +2944,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+@@ -2974,6 +2975,7 @@ void AclOrch::init(vector<TableConnector>& connectors, PortsOrch *portOrch, Mirr
+     // In Broadcom DNX platform also, V4 and V6 rules are stored in different tables
+     if (platform == MLNX_PLATFORM_SUBSTRING ||
          platform == CISCO_8000_PLATFORM_SUBSTRING ||
++	platform == CLX_PLATFORM_SUBSTRING ||
          platform == MRVL_PLATFORM_SUBSTRING ||
-         platform == XS_PLATFORM_SUBSTRING ||
-+        platform == CLX_PLATFORM_SUBSTRING ||
          (platform == BRCM_PLATFORM_SUBSTRING && sub_platform == BRCM_DNX_PLATFORM_SUBSTRING))
      {
-         m_isCombinedMirrorV6Table = false;
 diff --git a/orchagent/orch.h b/orchagent/orch.h
-index 6c620a3e..b44d15d5 100644
+index 3b2e9cda..2c3ebb98 100644
 --- a/orchagent/orch.h
 +++ b/orchagent/orch.h
-@@ -41,6 +41,7 @@ const char state_db_key_delimiter  = '|';
+@@ -40,6 +40,7 @@ const char state_db_key_delimiter  = '|';
+ #define NPS_PLATFORM_SUBSTRING  "nephos"
  #define MRVL_PLATFORM_SUBSTRING "marvell"
  #define CISCO_8000_PLATFORM_SUBSTRING "cisco-8000"
- #define XS_PLATFORM_SUBSTRING   "xsight"
 +#define CLX_PLATFORM_SUBSTRING  "clounix"
  
  #define CONFIGDB_KEY_SEPARATOR "|"
  #define DEFAULT_KEY_SEPARATOR  ":"
 diff --git a/orchagent/orchdaemon.cpp b/orchagent/orchdaemon.cpp
-index af0f598a..40e36c63 100644
+index 0d5c18e3..916acecb 100644
 --- a/orchagent/orchdaemon.cpp
 +++ b/orchagent/orchdaemon.cpp
-@@ -518,6 +518,7 @@ bool OrchDaemon::init()
-                     PFC_WD_POLL_MSECS));
+@@ -517,6 +517,7 @@ bool OrchDaemon::init()
      }
      else if ((platform == INVM_PLATFORM_SUBSTRING)
-+             || (platform == CLX_PLATFORM_SUBSTRING)
               || (platform == BFN_PLATFORM_SUBSTRING)
++	     || (platform == CLX_PLATFORM_SUBSTRING)
               || (platform == NPS_PLATFORM_SUBSTRING))
      {
-@@ -550,7 +551,9 @@ bool OrchDaemon::init()
+ 
+@@ -548,7 +549,9 @@ bool OrchDaemon::init()
  
          static const vector<sai_queue_attr_t> queueAttrIds;
  
 -        if ((platform == INVM_PLATFORM_SUBSTRING) || (platform == NPS_PLATFORM_SUBSTRING))
-+        if ((platform == INVM_PLATFORM_SUBSTRING) 
-+			|| (platform == CLX_PLATFORM_SUBSTRING)
-+			|| (platform == NPS_PLATFORM_SUBSTRING))
++        if ((platform == INVM_PLATFORM_SUBSTRING)
++	   || (platform == CLX_PLATFORM_SUBSTRING)
++	   || (platform == NPS_PLATFORM_SUBSTRING))
          {
              m_orchList.push_back(new PfcWdSwOrch<PfcWdZeroBufferHandler, PfcWdLossyHandler>(
                          m_configDb,
 diff --git a/orchagent/pfc_detect_clounix.lua b/orchagent/pfc_detect_clounix.lua
 new file mode 100644
-index 00000000..72f1cbea
+index 00000000..2ad2d31d
 --- /dev/null
 +++ b/orchagent/pfc_detect_clounix.lua
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,98 @@
 +-- KEYS - queue IDs
 +-- ARGV[1] - counters db index
 +-- ARGV[2] - counters table name
@@ -183,7 +183,6 @@ index 00000000..72f1cbea
 +end
 +
 +return rets
-+
 -- 
-2.17.1
+2.25.1
 

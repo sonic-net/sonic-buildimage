@@ -1,17 +1,17 @@
-From ca2a02c9db61446a01ae7b8510e180ec905e4497 Mon Sep 17 00:00:00 2001
-From: Fanqi Lu <lufq@clounix.com>
-Date: Mon, 5 Dec 2022 20:57:37 +0800
-Subject: [PATCH 1/2] Support clounix
+From 450ac35e2775482b7edc2d4f8b17c226501ec806 Mon Sep 17 00:00:00 2001
+From: Long Wu <wulong@clounix.com>
+Date: Fri, 16 Jan 2026 11:33:56 +0800
+Subject: [PATCH] Support clounix for sonic utilities
 
 ---
  scripts/fast-reboot | 5 +++++
  1 file changed, 5 insertions(+)
 
 diff --git a/scripts/fast-reboot b/scripts/fast-reboot
-index e2ddfb75..13d3a5a0 100755
+index 30b0c787..64d00d8f 100755
 --- a/scripts/fast-reboot
 +++ b/scripts/fast-reboot
-@@ -746,6 +746,11 @@ then
+@@ -777,6 +777,11 @@ then
    systemctl stop nps-modules-`uname -r`.service || debug "Ignore stopping nps service error $?"
  fi
  
@@ -24,5 +24,5 @@ index e2ddfb75..13d3a5a0 100755
  if [[ "$sonic_asic_type" = 'broadcom' ]];
  then
 -- 
-2.17.1
+2.25.1
 
