@@ -136,6 +136,15 @@ build:sonic:aarch64:
     BUILD_ARCH: aarch64
     TARGET_BIN: sonic-marvell-prestera-arm64.bin
 
+build:sonic:aarch64:vs-hw:
+  extends: .build:sonic
+  needs:
+    - configure:sonic:aarch64
+  variables:
+    BUILD_ARCH: aarch64
+    TARGET_BIN: sonic-vs-hw-arm64.bin
+    BUILD_SH_OPTIONS: " --platform vs-hw"
+
 build:sonic:features:x86_64:
   extends: .build:sonic
   when: manual
@@ -601,6 +610,11 @@ post:sonic:aarch64:
   extends: .post
   needs:
     - build:sonic:aarch64
+
+post:sonic:aarch64:vs-hw:
+  extends: .post
+  needs:
+    - build:sonic:aarch64:vs-hw
 
 post:sonic:features:x86_64:
   extends: .post
