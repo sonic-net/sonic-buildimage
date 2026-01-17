@@ -1,5 +1,8 @@
 {
     "skip_fancontrol": true,
-    "enable_xcvrd_sff_mgr": true
+    "enable_xcvrd_sff_mgr": true,
+    "xcvrd": {
+        "dom_temperature_poll_interval": 10
+    }
 }
 
