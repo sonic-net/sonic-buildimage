@@ -250,3 +250,64 @@ def test_main_once_exits_zero_and_disables_post_actions(monkeypatch):
     assert rc == 0
     # Post-actions should be cleared (no-op check)
     assert not ss.POST_COPY_ACTIONS
+
+
+def test_is_v1_enabled_false_uses_restapi_sh(monkeypatch):
+    """Test that when IS_V1_ENABLED=false, restapi.sh is used as the source."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    monkeypatch.setenv("IS_V1_ENABLED", "false")
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify the source is restapi.sh
+    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
+    
+    # Verify SYNC_ITEMS contains the correct source
+    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/local/bin/restapi.sh"), None)
+    assert restapi_sync_item is not None
+    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi.sh"
+
+
+def test_is_v1_enabled_true_uses_restapi_v1_sh(monkeypatch):
+    """Test that when IS_V1_ENABLED=true, restapi_v1.sh is used as the source."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    monkeypatch.setenv("IS_V1_ENABLED", "true")
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify the source is restapi_v1.sh
+    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
+    
+    # Verify SYNC_ITEMS contains the correct source
+    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/local/bin/restapi.sh"), None)
+    assert restapi_sync_item is not None
+    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
+
+
+def test_is_v1_enabled_various_truthy_values(monkeypatch):
+    """Test that IS_V1_ENABLED recognizes various truthy string values."""
+    truthy_values = ["1", "true", "True", "TRUE", "yes", "Yes", "YES"]
+    
+    for value in truthy_values:
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        
+        monkeypatch.setenv("IS_V1_ENABLED", value)
+        ss = importlib.import_module("systemd_stub")
+        
+        assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi_v1.sh", \
+            f"Failed for IS_V1_ENABLED={value}"
+
+
+def test_is_v1_enabled_default_when_not_set(monkeypatch):
+    """Test that when IS_V1_ENABLED is not set, it defaults to false (restapi.sh)."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    monkeypatch.delenv("IS_V1_ENABLED", raising=False)
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify the default is restapi.sh (not v1)
+    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
