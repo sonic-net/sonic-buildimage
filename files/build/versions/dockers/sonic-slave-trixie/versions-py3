@@ -44,7 +44,7 @@ executing==2.2.0
 fastentrypoints==0.12
 fonttools==4.57.0
 fs==2.4.16
-fsspec==2025.12.0
+fsspec==2026.1.0
 gbp==0.9.38
 gcovr==7.2
 gpg==1.24.2
@@ -127,7 +127,7 @@ pyasn1_modules==0.4.1
 pycparser==2.22
 pycryptodomex==3.20.0
 pyelftools==0.32
-pyfakefs==5.10.2
+pyfakefs==6.0.0
 pygments==2.18.0
 pygobject==3.50.0
 pyhamcrest==2.1.0
