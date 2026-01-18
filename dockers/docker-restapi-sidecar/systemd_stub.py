@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
 import time
 import argparse
 from typing import List
 
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem,
-    db_hget, db_hgetall, db_hset, db_del, sync_items, SYNC_INTERVAL_S
+    sync_items, SYNC_INTERVAL_S
 )
 
 # ───────────── restapi.service sync paths ─────────────
@@ -84,7 +83,7 @@ def main() -> int:
         return 0 if ok else 1
     while True:
         time.sleep(args.interval)
-        ok = ensure_sync()
+        ensure_sync()
 
 
 if __name__ == "__main__":

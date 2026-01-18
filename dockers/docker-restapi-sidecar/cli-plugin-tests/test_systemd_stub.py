@@ -7,7 +7,7 @@ import importlib
 import pytest
 
 # Add docker-restapi-sidecar directory to path so we can import systemd_stub
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Add sonic-py-common to path so we can import the real sidecar_common
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../src/sonic-py-common")))

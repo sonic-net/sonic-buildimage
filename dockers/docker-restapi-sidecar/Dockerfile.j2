@@ -35,4 +35,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
+# K8s will override this
+ENV IS_V1_ENABLED=false
+
 ENTRYPOINT ["/usr/local/bin/supervisord"]
