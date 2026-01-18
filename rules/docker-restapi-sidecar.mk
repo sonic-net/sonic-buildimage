@@ -26,6 +26,10 @@ $(DOCKER_RESTAPI_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                          $(LIBYANG_PY3)
 
 $(DOCKER_RESTAPI_SIDECAR)_CONTAINER_NAME = restapi-sidecar
+# NOTE: This container must run in privileged mode with host PID namespace so that
+# nsenter can access host namespaces and systemd-related scripts/files can be
+# synchronized with the host system. This grants broad host access and should be
+# restricted to environments where this level of privilege is acceptable.
 $(DOCKER_RESTAPI_SIDECAR)_RUN_OPT += -t --privileged --pid=host
 $(DOCKER_RESTAPI_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_RESTAPI_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
