@@ -2,34 +2,82 @@
 
 . /usr/local/bin/syncd_common.sh
 
+function remove_ethernet_interfaces() {
+    debug "remove_ethernet_interfaces: Removing all Ethernet interfaces (NET_NS: $NET_NS)..."
+
+    local start_time=$(date +%s)
+    local ethernet_interfaces
+    if [[ -n "$NET_NS" ]]; then
+        ethernet_interfaces=$(ip netns exec "$NET_NS" ip link show | grep -o 'Ethernet[0-9]*' | sort -u)
+    else
+        ethernet_interfaces=$(ip link show | grep -o 'Ethernet[0-9]*' | sort -u)
+    fi
+
+    if [[ -n "$ethernet_interfaces" ]]; then
+        local interface_count=$(echo "$ethernet_interfaces" | wc -w)
+        debug "remove_ethernet_interfaces: Found $interface_count Ethernet interfaces to remove"
+
+        for interface in $ethernet_interfaces; do
+            if [[ -n "$NET_NS" ]]; then
+                ip netns exec "$NET_NS" ip link del "$interface" 2>/dev/null || debug "Failed to remove interface: $interface"
+            else
+                ip link del "$interface" 2>/dev/null || debug "Failed to remove interface: $interface"
+            fi
+        done
+        debug "remove_ethernet_interfaces: Finished removing $interface_count Ethernet interfaces"
+    else
+        debug "remove_ethernet_interfaces: No Ethernet interfaces found to remove"
+    fi
+
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    debug "remove_ethernet_interfaces: Execution time: ${duration}s (NET_NS: $NET_NS)"
+}
+
+function reset_mellanox_drivers() {
+    local mlx_dev="/proc/mlx_sx/sx_core"
+    if [[ $DEV != "" ]]; then
+        mlx_dev="/proc/mlx_sx/asic$DEV/sx_core"
+    fi
+
+    if [[ -f /var/run/mlx_sx_core_restart_required$DEV ]]; then
+        debug "Restarting Mellanox drivers for ASIC $DEV"
+        echo "pcidrv_restart" > $mlx_dev
+        rm -f /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null || debug "Warning: Could not remove restart flag"
+        debug "Mellanox drivers restarted for ASIC $DEV"
+    fi
+
+    remove_ethernet_interfaces
+}
+
 function startplatform() {
 
     # platform specific tasks
 
-    # start mellanox drivers regardless of
-    # boot type
     if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
         BOOT_TYPE=`getBootType`
         if [[ x"$WARM_BOOT" == x"true" || x"$BOOT_TYPE" == x"fast" ]]; then
             export FAST_BOOT=1
         fi
 
-        if [[ x"$WARM_BOOT" != x"true" ]]; then
-            if [[ x"$(/bin/systemctl is-active pmon)" == x"active" ]]; then
-                /bin/systemctl stop pmon
-                debug "pmon is active while syncd starting, stop it first"
-            fi
+        # Clear container's temporary directory before starting
+        rm -rf /tmp/nv-syncd-shared/$DEV/* 2>/dev/null
+
+        local fw_upgrade_args="--status=all"
+        if [[ $DEV != "" ]]; then
+            fw_upgrade_args="--status=$DEV"
         fi
-
-        debug "Starting Firmware update procedure"
-
-        /usr/bin/mlnx-fw-upgrade.sh -c -v
-        if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
-            debug "Failed to upgrade fw. " "$?" "Restart syncd"
+        mlnx-fw-manager $fw_upgrade_args
+        if [[ $? != "0" ]]; then
+            debug "ASIC$DEV firmware upgrade status check failed. Please check the firmware upgrade status manually."
             exit 1
         fi
-        /etc/init.d/sxdkernel restart
-        debug "Firmware update procedure ended"
+
+        reset_mellanox_drivers
+
+        if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then
+            debug "Warning: Could not create restart flag file"
+        fi
     fi
 
     if [[ x"$sonic_asic_platform" == x"broadcom" ]]; then
@@ -89,13 +137,6 @@ function waitplatform() {
 }
 
 function stopplatform1() {
-
-    if [[ x$sonic_asic_platform == x"mellanox" ]] && [[ x$TYPE == x"cold" ]]; then
-        debug "Stopping pmon service ahead of syncd..."
-        /bin/systemctl stop pmon
-        debug "Stopped pmon service"
-    fi
-
     if [[ x$sonic_asic_platform == x"mellanox" ]]; then
         echo "health_check_trigger del_dev 1" > /proc/mlx_sx/sx_core
     fi
@@ -133,13 +174,11 @@ function stopplatform1() {
 function stopplatform2() {
     # platform specific tasks
 
-    if [[ x"$WARM_BOOT" != x"true" ]]; then
-        if [ x$sonic_asic_platform == x'mellanox' ]; then
-            /etc/init.d/sxdkernel stop
-        elif [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
-            /usr/bin/bfnet.sh stop
-        fi
-    fi
+     if [[ x"$WARM_BOOT" != x"true" ]]; then
+         if [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
+             /usr/bin/bfnet.sh stop
+         fi
+     fi
 }
 
 OP=$1
