@@ -14,9 +14,10 @@ MIRROR_VERSION_FILE=
 # - bullseye: use deb.debian.org (security仍在线)
 # - 其他/EOL发行版：使用 archive
 if [ "$DISTRIBUTION" = "bullseye" ]; then
-    DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/
-    DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
-    DEFAULT_MIRROR_BACKPORTS_URLS=http://deb.debian.org/debian/
+    DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
+   # DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
+   DEFAULT_MIRROR_SECURITY_URLS=http://security.debian.org/debian-security/
+    DEFAULT_MIRROR_BACKPORTS_URLS=http://archive.debian.org/debian/
 else
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
     DEFAULT_MIRROR_SECURITY_URLS=http://archive.debian.org/debian-security/
@@ -36,8 +37,9 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
     fi
 
     if [ "$DISTRIBUTION" = "bullseye" ]; then
-        DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
-        DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+        DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
+	DEFAULT_MIRROR_SECURITY_URLS=http://security.debian.org/debian-security/$DEBIAN_TIMESTAMP/
+       # DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
     else
         DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
         DEFAULT_MIRROR_SECURITY_URLS=http://archive.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
