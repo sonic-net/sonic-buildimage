@@ -256,10 +256,8 @@ SLAVE_BASE_TAG = $(shell \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
-echo "debug"
-echo $(USER)
-echo $(PWD)
-echo $(CONFIGURED_PLATFORM)
+$(info debug)
+$(info User:$(USER) pwd:$(PWD) configured_platform:$(CONFIGURED_PLATFORM))
 # Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_PLATFORM) to get unique SHA ID
 SLAVE_TAG = $(shell \
 	(cat $(SLAVE_DIR)/Dockerfile.user \
