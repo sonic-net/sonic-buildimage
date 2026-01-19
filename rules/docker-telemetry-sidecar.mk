@@ -34,4 +34,12 @@ $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(TELEMETRY_SYSTEMD)
+$(DOCKER_TELEMETRY_SIDECAR)_FILES += $(K8S_POD_CONTROL)
 
+.PHONY: docker-telemetry-sidecar-ut
+docker-telemetry-sidecar-ut: $(PYTHON_WHEELS_PATH)/sonic_py_common-1.0-py3-none-any.whl-install
+	@echo "Running unit tests for systemd_stub.py..."
+	@PYTHONPATH=dockers/docker-telemetry-sidecar \
+		python3 -m pytest -q dockers/docker-telemetry-sidecar/cli-plugin-tests
+
+target/docker-telemetry-sidecar.gz: docker-telemetry-sidecar-ut
