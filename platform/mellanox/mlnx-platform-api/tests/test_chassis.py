@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
+sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
 
 class TestChassis:
     """Test class to test chassis.py. The test cases covers:
@@ -87,10 +88,12 @@ class TestChassis:
         chassis._psu_list = []
         assert chassis.get_num_psus() == 3
 
-    def test_fan(self):
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_sysfs_count')
+    def test_fan(self, mock_sysfs_count):
         from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
 
         # Test creating fixed fan
+        mock_sysfs_count.return_value = 4
         DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=False)
         assert DeviceDataManager.get_fan_drawer_count() == 1
         DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
@@ -127,6 +130,7 @@ class TestChassis:
         assert chassis.get_num_fan_drawers() == 2
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
     def test_sfp(self):
         # Test get_num_sfps, it should not create any SFP objects
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
@@ -134,36 +138,12 @@ class TestChassis:
         assert chassis.get_num_sfps() == 3
         assert len(chassis._sfp_list) == 0
 
-        # Index out of bound, return None
-        sfp = chassis.get_sfp(4)
-        assert sfp is None
-        assert len(chassis._sfp_list) == 0
-
-        # Get one SFP, other SFP list should be initialized to None
-        sfp = chassis.get_sfp(1)
-        assert sfp is not None
-        assert len(chassis._sfp_list) == 3
-        assert chassis._sfp_list[1] is None
-        assert chassis._sfp_list[2] is None
-        assert chassis.sfp_initialized_count == 1
-
-        # Get the SFP again, no new SFP created
-        sfp1 = chassis.get_sfp(1)
-        assert id(sfp) == id(sfp1)
-
-        # Get another SFP, sfp_initialized_count increase
-        sfp2 = chassis.get_sfp(2)
-        assert sfp2 is not None
-        assert chassis._sfp_list[2] is None
-        assert chassis.sfp_initialized_count == 2
 
         # Get all SFPs, but there are SFP already created, only None SFP created
         sfp_list = chassis.get_all_sfps()
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
         assert list(filter(lambda x: x is not None, sfp_list))
-        assert id(sfp1) == id(sfp_list[0])
-        assert id(sfp2) == id(sfp_list[1])
 
         # Get all SFPs, no SFP yet, all SFP created
         chassis._sfp_list = []
@@ -179,7 +159,15 @@ class TestChassis:
         assert chassis.get_num_sfps() == 6
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 
+        # Get all SFPs, with CPO ports
+        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[3, 4])
+        DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
+        chassis = Chassis()
+        assert chassis.get_num_sfps() == 5
+        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
+
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
     def test_create_sfp_in_multi_thread(self):
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
 

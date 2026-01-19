@@ -19,6 +19,12 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_TELEMETRY_SIDECAR_DBG)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_TELEMETRY_SIDECAR_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_TELEMETRY_SIDECAR_DBG)
 
+
+$(DOCKER_TELEMETRY_SIDECAR)_DEPENDS += $(LIBSWSSCOMMON)
+$(DOCKER_TELEMETRY_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
+                                           $(PYTHON3_SWSSCOMMON) \
+                                           $(LIBYANG_PY3)
+
 $(DOCKER_TELEMETRY_SIDECAR)_CONTAINER_NAME = telemetry-sidecar
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -t --privileged --pid=host
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
@@ -28,11 +34,12 @@ $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(TELEMETRY_SYSTEMD)
+$(DOCKER_TELEMETRY_SIDECAR)_FILES += $(K8S_POD_CONTROL)
 
 .PHONY: docker-telemetry-sidecar-ut
-docker-telemetry-sidecar-ut:
+docker-telemetry-sidecar-ut: $(PYTHON_WHEELS_PATH)/sonic_py_common-1.0-py3-none-any.whl-install
 	@echo "Running unit tests for systemd_stub.py..."
 	@PYTHONPATH=dockers/docker-telemetry-sidecar \
-		python3 -m pytest -q dockers/docker-telemetry-sidecar/systemd_scripts/tests
+		python3 -m pytest -q dockers/docker-telemetry-sidecar/cli-plugin-tests
 
 target/docker-telemetry-sidecar.gz: docker-telemetry-sidecar-ut

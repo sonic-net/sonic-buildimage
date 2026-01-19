@@ -30,6 +30,9 @@ $SystemLogRateLimitBurst {{ rate_limit_burst }}
 {% endif %}
 
 $ModLoad imklog   # provides kernel logging support
+$KlogParseKernelTimestamp off
+$KlogKeepKernelTimestamp on
+
 #$ModLoad immark  # provides --MARK-- message capability
 
 # provides UDP syslog reception
@@ -58,10 +61,10 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
-$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
-$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME%  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }}  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 
 {% if forward_with_osversion and forward_with_osversion == "true" %}
 $ActionForwardDefaultTemplate SONiCForwardFormatWithOsVersion

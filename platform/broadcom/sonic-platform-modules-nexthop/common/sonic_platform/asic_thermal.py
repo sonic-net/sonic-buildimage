@@ -12,9 +12,10 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
     def __init__(
         self,
         index,
+        position_offset,
         pddf_data=None,
     ):
-        super().__init__(index, pddf_data)
+        super().__init__(index, position_offset, pddf_data)
         MinMaxTempMixin.__init__(self)
 
         # Get PID configuration from PDDF data
@@ -28,3 +29,13 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
         temp = super().get_temperature()
         self._update_min_max_temp(temp)
         return temp
+
+    def get_minimum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_minimum_recorded(self)
+
+    def get_maximum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_maximum_recorded(self)

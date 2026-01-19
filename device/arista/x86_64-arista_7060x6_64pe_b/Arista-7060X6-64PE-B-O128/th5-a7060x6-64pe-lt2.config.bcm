@@ -43,6 +43,7 @@ bcm_device:
             l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
             stat_custom_receive0_management_mode: 1
+            sai_pfc_dlr_init_capability: 2
 ...
 ---
 device:
@@ -1383,7 +1384,7 @@ bcm_device:
         global:
             ftem_mem_entries: 65536
             #enable port queue drop stats
-            sai_stats_support_mask: 0x880
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -1405,9 +1406,6 @@ device:
             CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
-
-        TM_SCHEDULER_CONFIG:
-            DYNAMIC_VOQ: 0
 
         # IFP mode
         FP_CONFIG:

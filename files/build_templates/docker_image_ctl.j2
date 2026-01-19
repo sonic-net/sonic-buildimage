@@ -173,10 +173,14 @@ function postStartAction()
 {%- if docker_container_name == "database" %}
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
+    if [[ -f $CHASSISDB_CONF && $DATABASE_TYPE != "dpudb" ]]; then
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+    fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
-        SYSCTL_NET_CONFIG="/etc/sysctl.d/sysctl-net.conf"
+        SYSCTL_NET_CONFIG="/usr/lib/sysctl.d/90-sonic.conf"
         docker exec -i database$DEV sed -i -e "s/^net.ipv4.conf.eth0.forwarding=0/net.ipv4.conf.eth0.forwarding=1/;
                                                s/^net.ipv6.conf.eth0.forwarding=0/net.ipv6.conf.eth0.forwarding=1/" $SYSCTL_NET_CONFIG
         docker exec -i database$DEV sysctl --system -e
@@ -187,9 +191,6 @@ function postStartAction()
            # Use /16 for loopback interface
            ip netns exec "$NET_NS" ip addr add 127.0.0.1/16 dev lo
            ip netns exec "$NET_NS" ip addr del 127.0.0.1/8 dev lo
-
-           slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-           supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
 
            # Create eth1 in database instance
            if [[ "${slot_id}" == "${supervisor_slot_id}" ]]; then
@@ -235,6 +236,12 @@ function postStartAction()
            fi
        fi
     fi
+
+    # midplane ip for the Linecard database container
+    if [[ -z "$DEV" && "$DATABASE_TYPE" != "dpudb"  && -f $CHASSISDB_CONF && "${slot_id}" != "${supervisor_slot_id}" ]]; then
+        midplane_ip=$(docker exec -i ${DOCKERNAME} ip addr show eth1-midplane | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+    fi
+
     # Setup ebtables configuration
 {%- if sonic_asic_platform != "vs" %}
     ebtables_config
@@ -330,8 +337,8 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
-
-    if [[ $DEV && $midplane_ip ]]; then
+    # Binding the midplane ip to the redisdb
+    if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
         bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
         redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
@@ -652,7 +659,16 @@ start() {
     fi
 
 {%- if sonic_asic_platform == "mellanox" %}
-    # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
+{%- if docker_container_name == "syncd" %}
+    if [[ $DEV != "" ]]; then
+        mkdir -p /dev/shm/asic$DEV
+        ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
+            -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
+            -v /dev/shm/asic$DEV:/dev/shm/:rw"
+    else
+        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+    fi
+{%- endif %}
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
         SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
@@ -677,24 +693,20 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-	-v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
-        -v /tmp/nv-syncd-shared/:/tmp \
-        -v /dev/shm:/dev/shm:rw \
+        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
+        -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
+        $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
-        -v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw \
+        $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
-        -v /dev/shm:/dev/shm:rw \
-        -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
-        -v /dev/shm:/dev/shm:rw \
 {%- else %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
@@ -702,6 +714,9 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "pmon" %}
+        $(if [ -e "/dev/mmcblk0" ]; then echo "--device=/dev/mmcblk0:/dev/mmcblk0"; fi) \
+{%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}

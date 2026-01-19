@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import click
+import json
 
 from nexthop.fpga_lib import (
     find_xilinx_fpgas,
@@ -13,10 +14,13 @@ from nexthop.fpga_lib import (
     max_value_for_bit_range,
     get_field,
     overwrite_field,
+    bdf_to_name,
+    name_to_bdf,
 )
-
+from  nexthop.pddf_config_parser import load_pddf_device_config
 
 def check_root_privileges():
+    """Check if the current user has root privileges and exit if not."""
     if os.getuid() != 0:
         click.secho("Root privileges required for this operation", fg="red")
         sys.exit(1)
@@ -24,9 +28,17 @@ def check_root_privileges():
 
 def echo_available_fpgas():
     xilinx_fpgas = find_xilinx_fpgas()
-    click.secho("Use one of the following:", fg="cyan")
-    for xilinx_fpga in xilinx_fpgas:
-        click.secho(f"{xilinx_fpga}", fg="green")
+    pddf_config = load_pddf_device_config()
+    click.secho("Available FPGAs (you can use either NAME or PCIe ADDRESS):", fg="cyan")
+    click.secho(f"{'NAME':<32} PCIe ADDRESS", fg="cyan")
+    click.secho(f"{'-' * 32} {'-' * 13}", fg="cyan")
+
+    for fpga_bdf in xilinx_fpgas:
+        device_name = bdf_to_name(fpga_bdf, pddf_config)
+        if device_name:
+            click.secho(f"{device_name:<32} {fpga_bdf}", fg="green")
+        else:
+            click.secho(f"{'UNKNOWN':<32} {fpga_bdf}", fg="yellow")
 
 
 def check_valid_pci_address(pci_address):
@@ -50,6 +62,9 @@ class AlignedOffset(click.ParamType):
     name = "aligned_offset"
 
     def convert(self, value, param, ctx) -> int:
+        if isinstance(value, int):
+            return value
+
         try:
             offset = int(value, 16)
         except ValueError:
@@ -67,6 +82,9 @@ class BitRange(click.ParamType):
 
         Validates that the start and end are within [0, 31] and that start <= end.
         """
+        if isinstance(value, tuple):
+            return value
+
         match = re.search(pattern=r"^(\d+):(\d+)$", string=value)
         if match is None:
             self.fail(
@@ -105,18 +123,50 @@ def cli():
     check_root_privileges()
 
 
-def click_argument_pci_address():
-    "Returns a click.argument with shell autocomplete to hint available FPGAs on the system."
+def complete_available_fpga_names(ctx, args, incomplete):
+    xilinx_fpgas = find_xilinx_fpgas()
+    pddf_config = load_pddf_device_config()
+    fpga_names = []
+    
+    for fpga_bdf in xilinx_fpgas:
+        device_name = bdf_to_name(fpga_bdf, pddf_config)
+        if device_name:
+            fpga_names.append(device_name)
+    
+    incomplete_lower = incomplete.lower()
+    return [name for name in fpga_names if name.lower().startswith(incomplete_lower)]
+
+
+class FpgaNameOrAddress(click.ParamType):
+    name = "fpga_name_or_address"
+
+    def convert(self, value, param, ctx) -> str:
+        # First check if it's already a valid PCI address
+        xilinx_fpgas = find_xilinx_fpgas()
+        if value in xilinx_fpgas:
+            return value
+        
+        # Try to convert from name to BDF
+        pci_address = name_to_bdf(value)
+        if pci_address:
+            return pci_address
+        
+        # If neither works, show error with available options
+        self.fail(f"FPGA '{value}' not found. Use 'fpga list' to see available FPGAs.", param, ctx)
+
+
+def click_argument_target_fpga():
+    "Returns a click.argument with shell autocomplete to hint available FPGA names on the system."
     # click version 8.0 renamed `autocompletion` to `shell_complete`.
     # This is to support both old versions and new versions.
     if hasattr(click.Parameter, "shell_complete"):
-        return click.argument("pci_address", shell_complete=complete_available_fpgas)
+        return click.argument("pci_address", type=FpgaNameOrAddress(), shell_complete=complete_available_fpga_names)
     else:
-        return click.argument("pci_address", autocompletion=complete_available_fpgas)
-
+        return click.argument("pci_address", type=FpgaNameOrAddress(), autocompletion=complete_available_fpga_names)
+    
 
 @cli.command("write32")
-@click_argument_pci_address()
+@click_argument_target_fpga()
 @click.argument("offset", type=AlignedOffset())
 @click.argument("value")
 @click.option(
@@ -126,6 +176,11 @@ def click_argument_pci_address():
     help="Inclusive range of bits to write to (e.g., '0:31').",
 )
 def write32(pci_address, offset, value, bits):
+    """Write 32-bit value to FPGA register.
+    
+    TARGET_FPGA can be either the FPGA name (e.g., 'SWITCHCARD_FPGA') or 
+    PCIe address (e.g., '0000:e4:00.0'). Use 'fpga list' to see available options.
+    """
     value = int(value, 16)
     check_value_fits_in_bit_range(value, bits)
     check_valid_pci_address(pci_address)
@@ -137,7 +192,7 @@ def write32(pci_address, offset, value, bits):
 
 
 @cli.command("read32")
-@click_argument_pci_address()
+@click_argument_target_fpga()
 @click.argument("offset", type=AlignedOffset())
 @click.option(
     "--bits",
@@ -145,7 +200,12 @@ def write32(pci_address, offset, value, bits):
     default="0:31",
     help="Inclusive range of bits to read from (e.g., '0:31').",
 )
-def read32(offset, pci_address, bits):
+def read32(pci_address, offset, bits):
+    """Read 32-bit value from FPGA register.
+    
+    TARGET_FPGA can be either the FPGA name (e.g., 'CPU_CARD_FPGA') or 
+    PCIe address (e.g., '0000:e3:00.0'). Use 'fpga list' to see available options.
+    """ 
     check_valid_pci_address(pci_address)
     val = read_32(pci_address, offset)
     val = get_field(val, bits)
