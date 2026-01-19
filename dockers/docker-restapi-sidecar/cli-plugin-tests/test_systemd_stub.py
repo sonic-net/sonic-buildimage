@@ -230,7 +230,7 @@ def test_sync_updates_and_post_actions(ss):
 
 def test_sync_missing_src_returns_false(ss):
     ss, container_fs, host_fs, commands, config_db = ss
-    item = ss.SyncItem("/container/missing.sh", "/usr/local/bin/restapi.sh", 0o755)
+    item = ss.SyncItem("/container/missing.sh", "/usr/bin/restapi.sh", 0o755)
     ss.SYNC_ITEMS[:] = [item]
     ok = ss.ensure_sync()
     assert ok is False
@@ -264,7 +264,7 @@ def test_is_v1_enabled_false_uses_restapi_sh(monkeypatch):
     assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
     
     # Verify SYNC_ITEMS contains the correct source
-    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/local/bin/restapi.sh"), None)
+    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/bin/restapi.sh"), None)
     assert restapi_sync_item is not None
     assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi.sh"
 
@@ -281,7 +281,7 @@ def test_is_v1_enabled_true_uses_restapi_v1_sh(monkeypatch):
     assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
     
     # Verify SYNC_ITEMS contains the correct source
-    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/local/bin/restapi.sh"), None)
+    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/bin/restapi.sh"), None)
     assert restapi_sync_item is not None
     assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
 

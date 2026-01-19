@@ -26,7 +26,7 @@ _RESTAPI_SRC = (
 logger.log_notice(f"restapi source set to {_RESTAPI_SRC}")
 
 SYNC_ITEMS: List[SyncItem] = [
-    SyncItem(_RESTAPI_SRC, "/usr/local/bin/restapi.sh"),
+    SyncItem(_RESTAPI_SRC, "/usr/bin/restapi.sh"),
     SyncItem("/usr/share/sonic/systemd_scripts/container_checker", "/bin/container_checker"),
     SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"),
     SyncItem(CONTAINER_RESTAPI_SERVICE, HOST_RESTAPI_SERVICE, mode=0o644),
