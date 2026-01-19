@@ -22,27 +22,9 @@ LIBNUMA := $(shell apt-get download --print-uris libnuma1 | cut -d " " -f2)
 $(LIBNUMA)_URL := $(shell apt-get download --print-uris libnuma1 | cut -d " " -f1)
 SONIC_ONLINE_DEBS += $(LIBNUMA)
 
-LIBMBEDCRYPTO3 := $(shell apt-get download --print-uris libmbedcrypto3 | cut -d " " -f2)
-$(LIBMBEDCRYPTO3)_URL := $(shell apt-get download --print-uris libmbedcrypto3 | cut -d " " -f1)
-SONIC_ONLINE_DEBS += $(LIBMBEDCRYPTO3)
-
-
-LIBMBEDX509 := $(shell apt-get download --print-uris libmbedx509-0 | cut -d " " -f2)
-$(LIBMBEDX509)_URL := $(shell apt-get download --print-uris libmbedx509-0 | cut -d " " -f1)
-SONIC_ONLINE_DEBS += $(LIBMBEDX509)
-$(LIBMBEDX509)_DEPENDS += $(LIBMBEDCRYPTO3)
-$(LIBMBEDX509)_RDEPENDS += $(LIBMBEDCRYPTO3)
-
-
-LIBMBEDTLS12 := $(shell apt-get download --print-uris libmbedtls12 | cut -d " " -f2)
-$(LIBMBEDTLS12)_URL := $(shell apt-get download --print-uris libmbedtls12 | cut -d " " -f1)
-SONIC_ONLINE_DEBS += $(LIBMBEDTLS12)
-$(LIBMBEDTLS12)_DEPENDS += $(LIBMBEDCRYPTO3) $(LIBMBEDX509)
-$(LIBMBEDTLS12)_RDEPENDS += $(LIBMBEDCRYPTO3) $(LIBMBEDX509)
-
 VPP_PLUGIN_CORE = vpp-plugin-core_$(VPP_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
-$(VPP_PLUGIN_CORE)_DEPENDS += $(LIBMBEDCRYPTO3) $(LIBMBEDX509) $(LIBMBEDTLS12) $(VPP_MAIN)
-$(VPP_PLUGIN_CORE)_RDEPENDS += $(LIBMBEDCRYPTO3) $(LIBMBEDX509) $(LIBMBEDTLS12) $(VPP_MAIN)
+$(VPP_PLUGIN_CORE)_DEPENDS += $(VPP_MAIN)
+$(VPP_PLUGIN_CORE)_RDEPENDS += $(VPP_MAIN)
 $(eval $(call add_derived_package,$(VPPINFRA),$(VPP_PLUGIN_CORE)))
 
 VPP_PLUGIN_DPDK = vpp-plugin-dpdk_$(VPP_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
