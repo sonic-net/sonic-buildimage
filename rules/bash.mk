@@ -6,7 +6,7 @@
 # Bash major release-number corresponding to Debian-11 (Bullseye)
 BASH_VERSION_MAJOR = 5.1
 # Bash complete release-number. This image contains all 5.1 fixes  up to patch '2'.
-BASH_VERSION_FULL = $(BASH_VERSION_MAJOR)-2
+BASH_VERSION_FULL = $(BASH_VERSION_MAJOR)-2+deb11u1
 
 export BASH_VERSION_MAJOR BASH_VERSION_FULL
 

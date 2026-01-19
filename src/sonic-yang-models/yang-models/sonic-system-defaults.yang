@@ -24,7 +24,7 @@ module sonic-system-defaults{
                 leaf name {
                     description "feature name in SYSTEM_DEFAULTS table";
                     type string {
-                        length 1..32;
+                        length "1..32";
                     }
                 }
 
