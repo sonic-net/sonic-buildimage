@@ -101,6 +101,10 @@ stages:
           PLATFORM_NAME: marvell-prestera
           PLATFORM_ARCH: armhf
           INCLUDE_RESTAPI: y
+      - name: nvidia-bluefield
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_ARCH: arm64
 
 - stage: Test
   dependsOn: BuildVS
