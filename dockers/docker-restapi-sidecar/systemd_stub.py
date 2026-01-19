@@ -37,7 +37,7 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "restapi"],
     ],
-    "/usr/local/bin/restapi.sh": [
+    "/usr/bin/restapi.sh": [
         ["sudo", "docker", "stop", "restapi"],
         ["sudo", "docker", "rm", "restapi"],
         ["sudo", "systemctl", "daemon-reload"],

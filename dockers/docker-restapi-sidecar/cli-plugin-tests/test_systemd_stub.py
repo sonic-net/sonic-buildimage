@@ -311,3 +311,20 @@ def test_is_v1_enabled_default_when_not_set(monkeypatch):
     
     # Verify the default is restapi.sh (not v1)
     assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
+
+
+def test_post_copy_actions_match_sync_items():
+    """Test that all POST_COPY_ACTIONS keys correspond to destination paths in SYNC_ITEMS."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    ss = importlib.import_module("systemd_stub")
+    
+    # Get all destination paths from SYNC_ITEMS
+    sync_destinations = {item.dst_on_host for item in ss.SYNC_ITEMS}
+    
+    # Verify all POST_COPY_ACTIONS keys are in SYNC_ITEMS destinations
+    for action_path in ss.POST_COPY_ACTIONS.keys():
+        assert action_path in sync_destinations, \
+            f"POST_COPY_ACTIONS key '{action_path}' does not match any destination in SYNC_ITEMS. " \
+            f"Available destinations: {sorted(sync_destinations)}"

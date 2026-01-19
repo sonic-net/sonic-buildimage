@@ -7,9 +7,9 @@ After=sonic.target
 
 [Service]
 User=root
-ExecStartPre=/usr/local/bin/restapi.sh start
-ExecStart=/usr/local/bin/restapi.sh wait
-ExecStop=/usr/local/bin/restapi.sh stop
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+ExecStop=/usr/bin/restapi.sh stop
 RestartSec=30
 
 [Install]
