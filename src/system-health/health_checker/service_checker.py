@@ -48,13 +48,9 @@ class ServiceChecker(HealthChecker):
     CHECK_CMD = 'monit summary -B'
     MIN_CHECK_CMD_LINES = 3
 
-    # Expect status for different system service category.
-    EXPECT_STATUS_DICT = {
-        'System': 'Running',
-        'Process': 'Running',
-        'Filesystem': 'Accessible',
-        'Program': 'Status ok'
-    }
+    # Expect status for all system service categories.
+    # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
+    EXPECTED_STATUS = 'OK'
 
     def __init__(self):
         HealthChecker.__init__(self)
@@ -113,6 +109,12 @@ class ServiceChecker(HealthChecker):
                     else:
                         container_list.append("gnmi")
                     continue
+            # Some platforms may not include the OTEL container; skip expecting it when image absent
+            if container_name == "otel":
+                if not check_docker_image("docker-sonic-otel"):
+                    logger.log_debug("Ignoring otel container check on image which has no corresponding docker image")
+                    continue
+
             container_list.append(container_name)
 
         for container_name in container_list:
@@ -288,11 +290,8 @@ class ServiceChecker(HealthChecker):
                 continue
             status = line[status_begin:type_begin].strip()
             service_type = line[type_begin:].strip()
-            if service_type not in ServiceChecker.EXPECT_STATUS_DICT:
-                continue
-            expect_status = ServiceChecker.EXPECT_STATUS_DICT[service_type]
-            if expect_status != status:
-                self.set_object_not_ok(service_type, name, '{} is not {}'.format(name, expect_status))
+            if status != ServiceChecker.EXPECTED_STATUS:
+                self.set_object_not_ok(service_type, name, '{} status is {}, expected {}'.format(name, status, ServiceChecker.EXPECTED_STATUS))
             else:
                 self.set_object_ok(service_type, name)
         return

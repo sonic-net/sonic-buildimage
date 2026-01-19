@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -139,16 +140,20 @@ endif
 	
 	# Commit the changes in linux kernel and and log the diff
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel
-	git add -- patch/
+	git add -- patches-sonic/
+	git add -- config.local/ 
 
 	echo -en "\n###-> series file changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- patch/series >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- patches-sonic/series >> ${HWMGMT_USER_OUTFILE}
 
-	echo -en "\n###-> kconfig-inclusions file changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- patch/kconfig-inclusions >> ${HWMGMT_USER_OUTFILE}
+	echo -en "\n###-> Common config changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- config.local/featureset-sonic/config >> ${HWMGMT_USER_OUTFILE}
 
-	echo -en "\n###-> kconfig-exclusions file changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- patch/kconfig-exclusions >> ${HWMGMT_USER_OUTFILE}
+	echo -en "\n###-> AMD64 config changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- config.local/amd64/config.sonic >> ${HWMGMT_USER_OUTFILE}
+
+	echo -en "\n###-> ARM64 config changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- config.local/arm64/config.sonic-mellanox >> ${HWMGMT_USER_OUTFILE}
 
 	echo -en '\n###-> Summary of files updated in sonic-linux-kernel <-###\n' >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged --stat --output=${TMPFILE_OUT}
@@ -193,11 +198,15 @@ integrate-mlnx-sdk:
 ifeq ($(SDK_FROM_SRC),y)
 	wget $(MLNX_SDK_SOURCE_BASE_URL)/sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz $(LOG_SIMPLE)
 	tar -xf sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) $(LOG_SIMPLE)
-else
-	# Download from upstream repository
+else ifeq ($(MLNX_SDK_SOURCE_BASE_URL),)
+	# Download from upstream repository (no source URL available)
 	wget $(MLNX_SDK_DRIVERS_GITHUB_URL)/archive/refs/heads/$(MLNX_SDK_VERSION).zip $(LOG_SIMPLE)
 	unzip $(MLNX_SDK_VERSION).zip -d $(SDK_TMPDIR) $(LOG_SIMPLE)
 	mv $(SDK_TMPDIR)/Spectrum-SDK-Drivers-$(MLNX_SDK_VERSION)/* $(SDK_TMPDIR) $(LOG_SIMPLE)
+else
+	# Use provided source URL
+	wget $(MLNX_SDK_SOURCE_BASE_URL)/sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz $(LOG_SIMPLE)
+	tar -xf sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) $(LOG_SIMPLE)
 endif
 
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/; git stash -- patch/
@@ -223,10 +232,10 @@ endif
 
     # Commit the changes in linux kernel and and log the diff
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel
-	git add -- patch/
+	git add -- patches-sonic/
 
 	echo -en "\n###-> series file changes in sonic-linux-kernel <-###\n" >> ${SDK_USER_OUTFILE}
-	git diff --no-color --staged -- patch/series >> ${SDK_USER_OUTFILE}
+	git diff --no-color --staged -- patches-sonic/series >> ${SDK_USER_OUTFILE}
 
 	echo -en "\n###-> summary of files updated in sonic-linux-kernel <-###\n" >> ${SDK_USER_OUTFILE}
 	git diff --no-color --staged --stat >> ${SDK_USER_OUTFILE}

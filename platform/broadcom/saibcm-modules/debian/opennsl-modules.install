@@ -1,8 +1,8 @@
-systems/linux/user/x86-smp_generic_64-2_6/linux-bcm-knet.ko lib/modules/6.1.0-29-2-amd64/extra
-systems/linux/user/x86-smp_generic_64-2_6/linux-kernel-bde.ko lib/modules/6.1.0-29-2-amd64/extra
-systems/linux/user/x86-smp_generic_64-2_6/linux-user-bde.ko lib/modules/6.1.0-29-2-amd64/extra
-systems/linux/user/x86-smp_generic_64-2_6/linux-knet-cb.ko lib/modules/6.1.0-29-2-amd64/extra
+systems/linux/user/x86-smp_generic_64-2_6/linux-bcm-knet.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+systems/linux/user/x86-smp_generic_64-2_6/linux-kernel-bde.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+systems/linux/user/x86-smp_generic_64-2_6/linux-user-bde.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+systems/linux/user/x86-smp_generic_64-2_6/linux-knet-cb.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
 systemd/opennsl-modules.service lib/systemd/system
-sdklt/build/bde/linux_ngbde.ko lib/modules/6.1.0-29-2-amd64/extra
-sdklt/build/knet/linux_ngknet.ko lib/modules/6.1.0-29-2-amd64/extra
-sdklt/build/knetcb/linux_ngknetcb.ko lib/modules/6.1.0-29-2-amd64/extra
+sdklt/build/bde/linux_ngbde.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+sdklt/build/knet/linux_ngknet.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+sdklt/build/knetcb/linux_ngknetcb.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
