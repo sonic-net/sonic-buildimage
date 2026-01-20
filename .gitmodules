@@ -145,3 +145,6 @@
 [submodule "src/supervisor"]
 	path = src/supervisor
 	url = https://github.com/Supervisor/supervisor
+[submodule "platform/alpinevs"]
+	path = platform/alpinevs
+	url = https://github.com/sonic-net/sonic-alpine/

@@ -160,10 +160,10 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 		done
             done
         fi
-        # Delay a second to allow all instance database_config.json files to be completely generated and fully accessible.
+        # Delay 5 seconds to allow all instance database_config.json files to be completely generated and fully accessible.
         # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template
-        # files ( renderning takes some time )
-        sleep 1
+        # files ( rendering takes some time )
+        sleep 5
     fi
 }
 {%- endif %}
@@ -659,7 +659,16 @@ start() {
     fi
 
 {%- if sonic_asic_platform == "mellanox" %}
-    # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
+{%- if docker_container_name == "syncd" %}
+    if [[ $DEV != "" ]]; then
+        mkdir -p /dev/shm/asic$DEV
+        ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
+            -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
+            -v /dev/shm/asic$DEV:/dev/shm/:rw"
+    else
+        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+    fi
+{%- endif %}
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
         SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
@@ -684,24 +693,20 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-	-v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
-        -v /tmp/nv-syncd-shared/:/tmp \
-        -v /dev/shm:/dev/shm:rw \
+        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
+        -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
+        $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
-        -v /dev/shm:/dev/shm:rw \
-        -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
-        -v /dev/shm:/dev/shm:rw \
 {%- else %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
