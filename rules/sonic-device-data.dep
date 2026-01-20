@@ -4,7 +4,9 @@ DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-device-data.mk rules/sonic
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(SPATH)) $(SONIC_DEVICE_FILES_LIST)
 
-$(SONIC_DEVICE_DATA)_CACHE_MODE := GIT_CONTENT_SHA
+# disable cache for device-data, because before PR24967 rcache can't match wcache.
+# After PR24967, when building vs image and rcache triggered, build will fail.
+$(SONIC_DEVICE_DATA)_CACHE_MODE := none
 $(SONIC_DEVICE_DATA)_DEP_FLAGS  := $(SONIC_COMMON_FLAGS_LIST)
 $(SONIC_DEVICE_DATA)_DEP_FILES  := $(DEP_FILES)
 
