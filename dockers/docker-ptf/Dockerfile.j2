@@ -14,8 +14,6 @@ FROM {{ prefix }}debian:bookworm
 USER root
 WORKDIR /root
 
-LABEL maintainer="Pavel Shirshov"
-
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
@@ -51,7 +49,7 @@ RUN apt-get update          \
 {% if PTF_ENV_PY_VER == "mixed" %}
         libboost-atomic1.71.0 \
 {% else %}
-        libboost-atomic1.74.0 \
+        libboost-atomic1.81.0 \
         flex                  \
         bison                 \
         tcpd                  \
@@ -163,7 +161,7 @@ RUN rm -rf /debs \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
-    && git checkout v6.04 \
+    && git checkout v6.09 \
     && ./boot.sh \
     && ./configure \
     && make \
@@ -179,17 +177,17 @@ RUN rm -rf /debs \
     && make install \
     && cd  .. \
     && rm -fr OpenBFDD \
-    && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
-    && tar xvfz 1.0.0.tar.gz \
-    && cd nanomsg-1.0.0    \
+    && wget https://github.com/nanomsg/nanomsg/archive/1.2.2.tar.gz \
+    && tar xvfz 1.2.2.tar.gz \
+    && cd nanomsg-1.2.2    \
     && mkdir -p build      \
     && cd build            \
     && cmake ..            \
     && make install        \
     && ldconfig            \
     && cd ../..            \
-    && rm -fr nanomsg-1.0.0 \
-    && rm -f 1.0.0.tar.gz  \
+    && rm -fr nanomsg-1.2.2 \
+    && rm -f 1.2.2.tar.gz  \
 {% if PTF_ENV_PY_VER == "mixed" %}
     && pip install cffi    \
     && pip install nnpy    \
@@ -227,7 +225,7 @@ COPY ["tacacs+", "/etc/default"]
 # Workaround: Tornado installed outside of the
 # virtualenv as the call to the process API
 # Ansible -> Supervisor -> ExaBGP -> Process API
-# causes the process API to have a restricted 
+# causes the process API to have a restricted
 # environment without access to the virtualenv.
 {% if PTF_ENV_PY_VER == "py3" %}
     RUN pip3 install --break-system-packages tornado
@@ -245,34 +243,29 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
 RUN python3 -m pip install --upgrade --ignore-installed pip
 {% endif %}
 
-# For py3 image the following offending packages below do not use the updated 
-# setuptools on Python 3.9. The packages downgrade setuptools 
+# For py3 image the following offending packages below do not use the updated
+# setuptools on Python 3.9. The packages downgrade setuptools
 # to 40.x causing further installations to fail
 {% if PTF_ENV_PY_VER == "py3" %}
-{% set offending_packages = ["supervisor", "ipython==5.4.1", "exabgp==4.2.25", "grpcio-tools", "pybrctl", "pyrasite", "scapy==2.5.0", "thrift"] %}
+{% set offending_packages = ["supervisor", "ipython", "exabgp==4.2.25", "grpcio-tools", "pybrctl", "pyrasite", "scapy", "thrift"] %}
 {{ install_offending_packages(offending_packages) }}
 {% else %}
 RUN pip3 install setuptools \
         && pip3 install supervisor \
-        && pip3 install ipython==5.4.1 \
+        && pip3 install ipython \
         && pip3 install exabgp==4.2.25 \
         && pip3 install grpcio-tools \
         && pip3 install pybrctl \
         && pip3 install pyrasite \
-        && pip3 install scapy==2.5.0 \
+        && pip3 install scapy \
         && pip3 install thrift
 {% endif %}
 
-# Install all python modules from pypi. python3-scapy is exception, 
+# Install all python modules from pypi. python3-scapy is exception,
 # ptf debian package requires python3-scapy
+RUN pip3 install Flask   \
 {% if PTF_ENV_PY_VER == "py3" %}
-# Werkzeug 3.1.3 has a bug and causes announce routes to fail
-# by returning 413 Request Entity Too Large though request buffers
-# have been increased.
-RUN pip3 install Flask==3.0.3   \
-    && pip3 install Werkzeug==3.1.2 \
-{% else %}
-RUN pip3 install Flask \
+    && pip3 install Werkzeug \
 {% endif %}
     && pip3 install Cython \
     && pip3 install cffi    \
@@ -282,15 +275,13 @@ RUN pip3 install Flask \
     && pip3 install pysubnettree \
     && pip3 install paramiko \
     && pip3 install tornado \
-    && pip3 install Flask   \
-    && pip3 install exabgp \
     && pip3 install pyaml   \
     && pip3 install pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
     && pip3 install python-libpcap \
     && pip3 install enum34 \
     && pip3 install grpcio \
-    && pip3 install six==1.16.0 \
+    && pip3 install six \
     && pip3 install itsdangerous \
     && pip3 install retrying \
     && pip3 install jinja2
@@ -367,7 +358,7 @@ RUN git clone https://github.com/karimra/gnoic.git \
     && cd gnoic \
     && git checkout 57aac3d \
     && chmod +x install.sh \
-    && ./install.sh --version 0.1.0 \
+    && ./install.sh --version 0.2.0 \
     && cd .. \
     && rm -rf gnoic
 
