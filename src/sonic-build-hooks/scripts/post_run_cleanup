@@ -27,7 +27,7 @@ fi
 rm -rf /sonic/target /ssh
 rm -rf /tmp/*
 rm -rf /debs /python-wheels  ~/.cache
-find / | grep -E "__pycache__" | xargs rm -rf
+find / -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 rm -rf $BUILD_VERSION_PATH/*
 
