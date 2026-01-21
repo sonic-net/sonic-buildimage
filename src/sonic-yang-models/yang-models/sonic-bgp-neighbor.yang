@@ -36,6 +36,10 @@ module sonic-bgp-neighbor {
         prefix bgppg;
     }
 
+    import sonic-vnet { 
+        prefix svnet; 
+    }
+
     organization
         "SONiC";
 
@@ -163,8 +167,8 @@ module sonic-bgp-neighbor {
                     }
 
                     description "BGP Neighbor, it will be neighbor address or interface name";
-                    uses bgpcmn:sonic-bgp-cmn;
                 }
+                uses bgpcmn:sonic-bgp-cmn;
             }
         }
     }
