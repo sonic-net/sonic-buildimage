@@ -81,7 +81,7 @@ class Thermal(ThermalBase):
         else:
             if self.board_rev == self._api_helper.mtfuji_rev_v1:
                 self.sensor_mapping = self.SENSOR_MAPPING_MTFUJI_V1
-            if self.board_rev == self._api_helper.mtfuji_rev_v2:
+            elif self.board_rev == self._api_helper.mtfuji_rev_v2:
                 self.sensor_mapping = self.SENSOR_MAPPING_MTFUJI_V2
 
     def get_name(self):

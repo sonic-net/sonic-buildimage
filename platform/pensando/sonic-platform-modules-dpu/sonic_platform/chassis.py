@@ -21,9 +21,6 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-NUM_THERMAL = 2
-NUM_VOLTAGE_SENSORS = 0
-NUM_CURRENT_SENSORS = 0
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 HOST_CHK_CMD = "docker > /dev/null 2>&1"
@@ -138,14 +135,14 @@ class Chassis(ChassisBase):
 
     def __initialize_thermals(self):
         from sonic_platform.thermal import Thermal
-        global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
+        num_thermal = 2
         if board_id == self._api_helper.mtfuji_board_id:
-            NUM_THERMAL = 8
+            num_thermal = 8
             if self.get_revision() == self._api_helper.mtfuji_rev_v2:
-                NUM_THERMAL = 6
+                num_thermal = 6
         if Thermal._thermals_available():
-            for index in range(0, NUM_THERMAL):
+            for index in range(0, num_thermal):
                 thermal = Thermal(index)
                 self._thermal_list.append(thermal)
             self._thermals_initialized = True
@@ -178,12 +175,13 @@ class Chassis(ChassisBase):
     def __initialize_voltage_sensors(self):
         from sonic_platform.sensor import VoltageSensor
         board_id = self._api_helper.get_board_id()
+        num_voltage_sensors = 0
         if board_id == self._api_helper.mtfuji_board_id:
-            NUM_VOLTAGE_SENSORS = 6
+            num_voltage_sensors = 6
             if self.get_revision() == self._api_helper.mtfuji_rev_v2:
-                NUM_VOLTAGE_SENSORS = 4
+                num_voltage_sensors = 4
         if VoltageSensor._validate_voltage_sensors():
-            for index in range(0, NUM_VOLTAGE_SENSORS):
+            for index in range(0, num_voltage_sensors):
                 voltage = VoltageSensor(index)
                 self._voltage_sensor_list.append(voltage)
             self._voltage_sensor_initialized = True
@@ -216,12 +214,13 @@ class Chassis(ChassisBase):
     def __initialize_current_sensors(self):
         from sonic_platform.sensor import CurrentSensor
         board_id = self._api_helper.get_board_id()
+        num_current_sensors = 0
         if board_id == self._api_helper.mtfuji_board_id:
-            NUM_CURRENT_SENSORS = 6
+            num_current_sensors = 6
             if self.get_revision() == self._api_helper.mtfuji_rev_v2:
-                NUM_CURRENT_SENSORS = 4
+                num_current_sensors = 4
         if CurrentSensor._validate_current_sensors():
-            for index in range(0, NUM_CURRENT_SENSORS):
+            for index in range(0, num_current_sensors):
                 current = CurrentSensor(index)
                 self._current_sensor_list.append(current)
             self._current_sensor_initialized = True
