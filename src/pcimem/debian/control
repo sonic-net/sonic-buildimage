@@ -1,0 +1,13 @@
+Source: pcimem
+Section: devel
+Priority: optional
+Maintainer: Ashwin H <Ashwin.H@amd.com>
+Build-Depends: debhelper (>= 8.0.0),
+Standards-Version: 3.9.3
+Homepage: https://github.com/sonic-net/sonic-buildimage
+XS-Go-Import-Path: github.com/sonic-net/sonic-buildimage
+
+Package: pcimem
+Architecture: any
+Built-Using: ${misc:Built-Using}
+description: program to read/write from/to a pci device. 
