@@ -15,3 +15,6 @@ class Sfp(PddfSfp):
         PddfSfp.__init__(self, index, pddf_data, pddf_plugin_data)
 
     # Provide the functions/variables below for which implementation is to be overwritten
+    def get_position_in_parent(self):
+        """Retrieves 1-based relative physical position in parent device."""
+        return self.port_index
