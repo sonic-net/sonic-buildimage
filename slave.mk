@@ -957,6 +957,9 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 	# Load the target deb from DPKG cache
 	$(call LOAD_CACHE,$*,$@)
 
+	# unset PLATFORM Flag for python wheel generation
+	PLATFORM=
+	export PLATFORM
 	# Skip building the target if it is already loaded from cache
 	if [ -z '$($*_CACHE_LOADED)' ] ; then
 
