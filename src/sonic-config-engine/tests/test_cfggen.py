@@ -321,6 +321,20 @@ class TestCfgGen(TestCase):
                                          " '200:200:200:200::2', '200:200:200:200::3', '200:200:200:200::4', '200:200:200:200::5', '200:200:200:200::6',"
                                          " '200:200:200:200::7', '200:200:200:200::8', '200:200:200:200::9']")
 
+    def test_minigraph_ecmp_members_values(self):
+        argument = '-m "' + self.ecmp_graph + '" -p "' + self.mlnx_port_config + '" -v \"FG_NHG_MEMBER.values()|list\"'
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), "[{'link': 'Ethernet52', 'bank': 0, 'FG_NHG': 'fgnhg_v4'}, {'link': 'Ethernet48', 'bank': 1, 'FG_NHG': 'fgnhg_v4'},"
+                                         " {'link': 'Ethernet60', 'bank': 0, 'FG_NHG': 'fgnhg_v4'}, {'link': 'Ethernet56', 'bank': 1, 'FG_NHG': 'fgnhg_v4'},"
+                                         " {'link': 'Ethernet36', 'bank': 0, 'FG_NHG': 'fgnhg_v4'}, {'link': 'Ethernet72', 'bank': 1, 'FG_NHG': 'fgnhg_v4'},"
+                                         " {'link': 'Ethernet44', 'bank': 0, 'FG_NHG': 'fgnhg_v4'}, {'link': 'Ethernet40', 'bank': 1, 'FG_NHG': 'fgnhg_v4'},"
+                                         " {'link': 'Ethernet68', 'bank': 0, 'FG_NHG': 'fgnhg_v4'}, {'link': 'Ethernet64', 'bank': 1, 'FG_NHG': 'fgnhg_v4'},"
+                                         " {'link': 'Ethernet72', 'bank': 1, 'FG_NHG': 'fgnhg_v6'}, {'link': 'Ethernet64', 'bank': 1, 'FG_NHG': 'fgnhg_v6'},"
+                                         " {'link': 'Ethernet68', 'bank': 0, 'FG_NHG': 'fgnhg_v6'}, {'link': 'Ethernet48', 'bank': 1, 'FG_NHG': 'fgnhg_v6'},"
+                                         " {'link': 'Ethernet52', 'bank': 0, 'FG_NHG': 'fgnhg_v6'}, {'link': 'Ethernet56', 'bank': 1, 'FG_NHG': 'fgnhg_v6'},"
+                                         " {'link': 'Ethernet60', 'bank': 0, 'FG_NHG': 'fgnhg_v6'}, {'link': 'Ethernet36', 'bank': 0, 'FG_NHG': 'fgnhg_v6'},"
+                                         " {'link': 'Ethernet40', 'bank': 1, 'FG_NHG': 'fgnhg_v6'}, {'link': 'Ethernet44', 'bank': 0, 'FG_NHG': 'fgnhg_v6'}]")
+
     def test_minigraph_ecmp_neighbors(self):
         argument = ['-m', self.ecmp_graph, '-p', self.mlnx_port_config, '-v', "NEIGH.keys()|list|sort"]
         output = self.run_script(argument)
