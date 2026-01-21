@@ -1,6 +1,7 @@
 import os
 import signal
 import sys
+import time
 import syslog
 import threading
 import traceback
@@ -22,6 +23,7 @@ INTERFACE_TABLE_NAME = "INTERFACE"
 PORTCHANNEL_INTERFACE_TABLE_NAME = "PORTCHANNEL_INTERFACE"
 STATIC_ROUTE_TABLE_NAME = "STATIC_ROUTE"
 BFD_SESSION_TABLE_NAME = "BFD_SESSION_TABLE"
+SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE = "BFD_NEXT_HOP_CAPABLE"
 
 LOCAL_CONFIG_TABLE = "config"
 LOCAL_NEXTHOP_TABLE = "nexthop"
@@ -29,6 +31,13 @@ LOCAL_SRT_TABLE = "srt"
 LOCAL_BFD_TABLE = "bfd"
 LOCAL_BFD_PENDING_TABLE = "bfd_pending"
 LOCAL_INTERFACE_TABLE = "interface"
+
+def slen(obj):
+    try:
+        l=len(obj)
+    except (TypeError):
+        return 0
+    return l
 
 def log_debug(msg):
     """ Send a message msg to the syslog as DEBUG """
@@ -66,18 +75,18 @@ def static_route_split_key(key):
     :param key: key to split
     :return: valid, vrf name extracted from the key, ip prefix extracted from the key
     """
-    if key is None or len(key) == 0:
+    if key is None or slen(key) == 0:
         return False, "", ""
 
     l = tuple(key.split('|'))
 
-    if len(l) == 1:
+    if slen(l) == 1:
         return True, 'default', l[0]
 
     return True, l[0], l[1]
 
 def check_ip(ip):
-    if len(ip) == 0:
+    if slen(ip) == 0:
         return False, False, ""
 
     value = ip.split('/',1)
@@ -99,6 +108,7 @@ class StaticRouteBfd(object):
 
     SELECT_TIMEOUT = 1000
     BFD_DEFAULT_CFG = {"multihop": "false", "rx_interval": "50", "tx_interval": "50"}
+    inject_next_hop_capable = False
 
     def __init__(self):
         self.local_db = defaultdict(dict)
@@ -124,6 +134,12 @@ class StaticRouteBfd(object):
         self.subscribers = set()
         self.first_time = True
 
+    def gen_bfd_key(self, vrf, if_name, ip):
+        if self.inject_next_hop_capable:
+            return vrf + ":" + if_name + ":" + ip
+        else:
+            return vrf + ":" + "default" + ":" + ip
+
     def get_ip_from_key(self, key):
         """
         Get ip address from key for LOOPBACK/INTERFACE/PORTCHANNEL_INTERFACE table
@@ -134,7 +150,7 @@ class StaticRouteBfd(object):
             return False, False, "", ""
         else:
             if_ip = key.split('|')
-            if len(if_ip) < 2:
+            if slen(if_ip) < 2:
                 return False, False, "", ""
             if_name = if_ip[0]
             value = if_ip[1]
@@ -170,7 +186,7 @@ class StaticRouteBfd(object):
         entry = self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)
         if ip_prefix in entry:
             entry.remove(ip_prefix)
-            if len(entry) == 0:
+            if slen(entry) == 0:
                 self.remove_from_local_db(LOCAL_NEXTHOP_TABLE, nh_key)
 
     def set_bfd_session_into_appl_db(self, key, data):
@@ -186,7 +202,7 @@ class StaticRouteBfd(object):
         if not valid:
             return True
         value = self.get_local_db(LOCAL_INTERFACE_TABLE, if_name)
-        if len(value) == 0:
+        if slen(value) == 0:
             value = {is_ipv4: ip}
         else:
             value[is_ipv4] = ip
@@ -199,7 +215,7 @@ class StaticRouteBfd(object):
         if not valid:
             return True
         value = self.get_local_db(LOCAL_INTERFACE_TABLE, if_name)
-        if len(value) == 0:
+        if slen(value) == 0:
             return
         else:
             value[is_ipv4] = ""  #remove the IP address for the interface
@@ -212,7 +228,7 @@ class StaticRouteBfd(object):
 
         value = self.get_local_db(LOCAL_INTERFACE_TABLE, if_name)
         ip = value.get(is_ipv4, "")
-        if len(ip)>0: #ip should be verified when add to local_db
+        if slen(ip)>0: #ip should be verified when add to local_db
             return True, ip
 
         return False, ""
@@ -220,7 +236,7 @@ class StaticRouteBfd(object):
     def update_bfd_pending(self, if_name):
         del_list=[]
         for k, v in self.local_db[LOCAL_BFD_PENDING_TABLE].items():
-            if len(v) == 3 and v[0] == if_name:
+            if slen(v) == 3 and v[0] == if_name:
                 intf, nh_ip, bfd_key = v[0], v[1], v[2]
                 valid, local_addr = self.find_interface_ip(intf, nh_ip)
                 if not valid: #IP address might not be available for this type of nh_ip (IPv4 or IPv6) yet
@@ -244,6 +260,28 @@ class StaticRouteBfd(object):
 
     def strip_table_name(self, key, splitter):
         return key.split(splitter, 1)[1]
+
+    def check_inject_next_hop(self):
+        #to use SonicV2Connector get_all method, DBConnector doesn't have get_all
+        db = swsscommon.SonicV2Connector()
+        db.connect(db.STATE_DB)
+
+        #check bfd inject to next hop capability in a state_db. this capability is set by swss, 
+        #wait max 4 mins for swss to be UP. default is false if swss not set this capability
+        log_info("Checking SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE flag ...")
+        for i in range(240):
+            data = db.get_all(db.STATE_DB, "SWITCH_CAPABILITY|switch")
+            if SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE in data:
+                if data[SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE].lower() == "true":
+                    self.inject_next_hop_capable = True 
+                    log_info("SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE flag is set to true")
+                else:
+                    self.inject_next_hop_capable = False 
+                    log_info("SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE flag is set to false")
+                return
+            else:
+                time.sleep(1)
+        log_info("SWITCH_CAPABILITY_TABLE_BFD_NEXT_HOP_CAPABLE flag not found in SWITCH_CAPABILITY table, use default value false")
 
     def reconciliation(self):
         #to use SonicV2Connector get_all method, DBConnector doesn't have get_all
@@ -310,7 +348,7 @@ class StaticRouteBfd(object):
 
     def isFieldTrue(self, bfd_field):
         if isinstance(bfd_field, list):
-            if len(bfd_field) == 1:
+            if slen(bfd_field) == 1:
                 if isinstance(bfd_field[0], str):
                     if bfd_field[0].lower() == "true":
                         return True
@@ -319,19 +357,24 @@ class StaticRouteBfd(object):
     def refresh_active_nh(self, route_cfg_key):
         data = self.get_local_db(LOCAL_CONFIG_TABLE, route_cfg_key)
 
-        arg_list    = lambda v: [x.strip() for x in v.split(',')] if len(v.strip()) != 0 else None
+        arg_list    = lambda v: [x.strip() for x in v.split(',')] if slen(v.strip()) != 0 else None
         nh_list     = arg_list(data['nexthop']) if 'nexthop' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
+        nh_intf_list = arg_list(data['ifname']) if 'ifname' in data else None
         nh_cnt      = 0
 
-        for index in range(len(nh_list)):
+        if (slen(nh_vrf_list) != slen(nh_list)) or (slen(nh_intf_list) != slen(nh_list)):
+            return
+        for index in range(slen(nh_list)):
             nh_ip = nh_list[index]
             nh_vrf = nh_vrf_list[index]
+            nh_intf = nh_intf_list[index]
             nh_key = nh_vrf + "|" + nh_ip
-            bfd_key = nh_vrf + ":default:" + nh_ip
+            bfd_key = self.gen_bfd_key(nh_vrf, nh_intf, nh_ip)
+            log_info("SRT_BFD: refresh_active_nh interface: %s, key %s"%(nh_intf, bfd_key))
 
             bfd_session = self.get_local_db(LOCAL_BFD_TABLE, bfd_key)
-            if len(bfd_session) == 0:
+            if slen(bfd_session) == 0:
                 continue
             if "state" in bfd_session and bfd_session["state"].upper() == "UP":
                 self.append_to_srt_table_entry(route_cfg_key, (nh_vrf, nh_ip))
@@ -366,7 +409,7 @@ class StaticRouteBfd(object):
     def static_route_set_handler(self, key, data):
 
         #sanity checking
-        if len(data) == 0:
+        if slen(data) == 0:
             return True
 
         valid, vrf, ip_prefix = static_route_split_key(key)
@@ -384,7 +427,7 @@ class StaticRouteBfd(object):
             nh = data['nexthop']
             data['nexthop'] = nh.lower()
 
-        arg_list  = lambda v: [x.strip() for x in v.split(',')] if len(v.strip()) != 0 else None
+        arg_list  = lambda v: [x.strip() for x in v.split(',')] if slen(v.strip()) != 0 else None
         bfd_field = arg_list(data['bfd']) if 'bfd' in data else ["false"]
 
         cur_data = self.get_local_db(LOCAL_CONFIG_TABLE, route_cfg_key)
@@ -412,11 +455,11 @@ class StaticRouteBfd(object):
         nh_list     = arg_list(data['nexthop']) if 'nexthop' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
         if nh_vrf_list is None and nh_list is not None:
-            nh_vrf_list = [vrf] * len(nh_list) if len(nh_list) > 0 else None
+            nh_vrf_list = [vrf] * slen(nh_list) if slen(nh_list) > 0 else None
             data['nexthop-vrf'] = ','.join(nh_vrf_list) if nh_vrf_list else ''
         elif nh_vrf_list is not None: # preprocess empty nexthop-vrf member
-            for index in range(len(nh_vrf_list)):
-                if len(nh_vrf_list[index]) == 0:
+            for index in range(slen(nh_vrf_list)):
+                if slen(nh_vrf_list[index]) == 0:
                     nh_vrf_list[index] = vrf
             data['nexthop-vrf'] = ','.join(nh_vrf_list)
 
@@ -452,29 +495,30 @@ class StaticRouteBfd(object):
             for nh in nh_key_list_exist:
                 if nh not in nh_key_list_new:
                     nh_vrf = nh[0]
+                    nh_intf = nh[1]
                     nh_ip = nh[2]
                     nh_key = nh_vrf + "|" + nh_ip
                     self.remove_from_srt_table_entry(route_cfg_key, (nh_vrf, nh_ip))
                     self.remove_from_nh_table_entry(nh_key, route_cfg_key)
-                    if len(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0:
-                        bfd_key = nh_vrf + ":default:" + nh_ip
+                    if slen(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0:
+                        bfd_key = self.gen_bfd_key(nh_vrf, nh_intf, nh_ip)
                         self.remove_from_local_db(LOCAL_BFD_TABLE, bfd_key)
                         self.del_bfd_session_from_appl_db(bfd_key)
 
         self.set_local_db(LOCAL_CONFIG_TABLE, route_cfg_key, data)
-        for index in range(len(nh_list)):
+        for index in range(slen(nh_list)):
             nh_ip = nh_list[index]
             intf = intf_list[index]
             nh_vrf = nh_vrf_list[index]
             nh_key = nh_vrf + "|" + nh_ip
 
             #check if the bfd session is already created
-            bfd_key = nh_vrf  + ":default:" + nh_ip
+            bfd_key = self.gen_bfd_key(nh_vrf, intf, nh_ip)
             bfd_session = self.get_local_db(LOCAL_BFD_TABLE, bfd_key)
-            if len(bfd_session)>0:
+            if slen(bfd_session)>0:
                 self.local_db[LOCAL_BFD_TABLE][bfd_key]["static_route"] = "true"
 
-            if len(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0 and len(bfd_session) == 0:
+            if slen(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0 and slen(bfd_session) == 0:
                 valid, local_addr = self.find_interface_ip(intf, nh_ip)
                 if not valid:
                     #interface IP is not available yet, put this request to cache
@@ -512,26 +556,29 @@ class StaticRouteBfd(object):
             return True
 
         data = self.get_local_db(LOCAL_CONFIG_TABLE, route_cfg_key)
-        if len(data) == 0:
+        if slen(data) == 0:
             # this route is not handled by StaticRouteBfd, skip
             return True
 
-        arg_list    = lambda v: [x.strip() for x in v.split(',')] if len(v.strip()) != 0 else None
+        arg_list    = lambda v: [x.strip() for x in v.split(',')] if slen(v.strip()) != 0 else None
         nh_list     = arg_list(data['nexthop']) if 'nexthop' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
+        nh_intf_list = arg_list(data['ifname']) if 'ifname' in data else None
         bfd_field   = arg_list(data['bfd']) if 'bfd' in data else ["false"]
         bfd_enabled = self.isFieldTrue(bfd_field)
 
         # for a bfd_enabled static route, the nh_vrf_list was processed, has same length with nh_list
-        if bfd_enabled and nh_list and nh_vrf_list and len(nh_list) == len(nh_vrf_list):
-            for index in range(len(nh_list)):
+        if bfd_enabled and nh_list and nh_vrf_list and slen(nh_list) == slen(nh_vrf_list) and slen(nh_list) == slen(nh_intf_list):
+            for index in range(slen(nh_list)):
                 nh_ip = nh_list[index]
                 nh_vrf = nh_vrf_list[index]
+                nh_intf = nh_intf_list[index]
                 nh_key = nh_vrf + "|" + nh_ip
                 self.remove_from_nh_table_entry(nh_key, route_cfg_key)
 
-                if len(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0:
-                    bfd_key = nh_vrf + ":default:" + nh_ip
+                if slen(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0:
+                    bfd_key = self.gen_bfd_key(nh_vrf, nh_intf, nh_ip)
+                    log_info("SRT_BFD: sr del, interface: %s, key %s"%(nh_intf, bfd_key))
                     self.remove_from_local_db(LOCAL_BFD_TABLE, bfd_key)
                     self.del_bfd_session_from_appl_db(bfd_key)
 
@@ -581,7 +628,7 @@ class StaticRouteBfd(object):
         entry = self.get_local_db(LOCAL_SRT_TABLE, srt_key)
         if nh_info in entry:
             entry.remove(nh_info)
-            if len(entry) == 0:
+            if slen(entry) == 0:
                 self.remove_from_local_db(LOCAL_SRT_TABLE, srt_key)
 
     def set_static_route_into_appl_db(self, key, data):
@@ -593,7 +640,7 @@ class StaticRouteBfd(object):
         self.static_route_appl_tbl.delete(key)
 
     def reconstruct_static_route_config(self, original_config, reachable_nexthops):
-        arg_list    = lambda v: [x.strip() for x in v.split(',')] if len(v.strip()) != 0 else None
+        arg_list    = lambda v: [x.strip() for x in v.split(',')] if slen(v.strip()) != 0 else None
         bkh_list    = arg_list(original_config['blackhole']) if 'blackhole' in original_config else None
         nh_list     = arg_list(original_config['nexthop']) if 'nexthop' in original_config else None
         intf_list   = arg_list(original_config['ifname']) if 'ifname' in original_config else None
@@ -607,7 +654,7 @@ class StaticRouteBfd(object):
         nh_vrf_candidate = ""
 
 
-        for i in range(len(nh_list)):
+        for i in range(slen(nh_list)):
             if (nh_vrf_list[i], nh_list[i]) in reachable_nexthops:
                 bkh_candidate += "," + (bkh_list[i] if bkh_list else "")
                 nh_candidate += "," + (nh_list[i] if nh_list else "")
@@ -642,11 +689,12 @@ class StaticRouteBfd(object):
         #key are diff in state db and appl_db,
         #intf is always default for multihop bfd
         vrf, intf, peer_ip = self.bfd_state_split_key(key)
-        bfd_key = vrf + ":" + intf + ":" + peer_ip
+        bfd_key = self.gen_bfd_key(vrf, intf, peer_ip)
+        log_info("SRT_BFD: bfd_state set, interface: %s, key %s"%(intf, bfd_key))
 
         #check if the BFD session is in local table
         bfd_session = self.get_local_db(LOCAL_BFD_TABLE, bfd_key)
-        if len(bfd_session) == 0:
+        if slen(bfd_session) == 0:
             return True
 
         nh_key = vrf + "|" + peer_ip
@@ -678,7 +726,7 @@ class StaticRouteBfd(object):
                 if config_data['bfd_nh_hold'] == "true":
                     continue
                 self.remove_from_srt_table_entry(srt_key, (vrf, peer_ip))
-                if len(self.get_local_db(LOCAL_SRT_TABLE, srt_key)) == 0:
+                if slen(self.get_local_db(LOCAL_SRT_TABLE, srt_key)) == 0:
                     log_debug("SRT_BFD: bfd_state DOWN. nh_list is empty, delete static route from appl_db, key %s"%(srt_key.replace("|", ":")))
                     self.del_static_route_from_appl_db(srt_key.replace("|", ":"))
                 else:
@@ -689,7 +737,8 @@ class StaticRouteBfd(object):
 
     def bfd_state_del_handler(self, key):
         vrf, intf, peer_ip = self.bfd_state_split_key(key)
-        bfd_key = vrf + ":" + intf + ":" + peer_ip
+        bfd_key = self.gen_bfd_key(vrf, intf, peer_ip)
+        log_info("SRT_BFD: bfd_state del, interface: %s, key %s"%(intf, bfd_key))
 
         nh_key = vrf + "|" + peer_ip
 
@@ -697,7 +746,7 @@ class StaticRouteBfd(object):
             srt_key =  prefix
             config_key = prefix
             self.remove_from_srt_table_entry(srt_key, (vrf, peer_ip))
-            if len(self.get_local_db(LOCAL_SRT_TABLE, srt_key)) == 0:
+            if slen(self.get_local_db(LOCAL_SRT_TABLE, srt_key)) == 0:
                 log_debug("SRT_BFD: bfd_state deletion. nh_list is empty, delete static route from appl_db, key %s"%(srt_key.replace("|", ":")))
                 self.del_static_route_from_appl_db(srt_key.replace("|", ":"))
             else:
@@ -746,12 +795,13 @@ class StaticRouteBfd(object):
 
             if self.first_time:
                 self.first_time = False
+                self.check_inject_next_hop()
                 self.reconciliation()
 
             for sub in self.subscribers:
                 while True:
                     key, op, fvs = sub.pop()
-                    if len(key) == 0:
+                    if slen(key) == 0:
                         break
                     log_debug("Received message : '%s'" % str((key, op, fvs)))
                     for callback in self.callbacks[sub.getDbConnector().getDbId()][sub.getTableName()]:

@@ -171,6 +171,34 @@ def test_set_del_ipv6():
         {'del_default:2603:10e2:400::4/128': { }}
     )
 
+    #test BFD session with nexthop, put interface name in the BFD session key
+    dut.inject_next_hop_capable = True
+    set_del_test(dut, "srt",
+        "SET",
+        ("2603:10e2:400::4/128", {
+            "bfd": "true",
+            "ifname": "if1, if2, if3",
+            "nexthop": "2603:10E2:400:1::2,2603:10E2:400:2::2,2603:10e2:400:3::2"
+        }),
+        {
+            "set_default:if1:2603:10e2:400:1::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:1::1'},
+            "set_default:if2:2603:10e2:400:2::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:2::1'},
+            "set_default:if3:2603:10e2:400:3::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:3::1'}
+        },
+        {}
+    )
+    set_del_test(dut, "srt",
+        "DEL",
+        ("2603:10e2:400::4/128", { }),
+        {
+            "del_default:if1:2603:10e2:400:1::2" : {},
+            "del_default:if2:2603:10e2:400:2::2" : {},
+            "del_default:if3:2603:10e2:400:3::2" : {}
+        },
+        {'del_default:2603:10e2:400::4/128': { }}
+    )
+    dut.inject_next_hop_capable = False
+
 @patch('staticroutebfd.main.log_err')
 def test_invalid_key(mocked_log_err):
     dut = constructor()
@@ -280,6 +308,38 @@ def test_set_del():
         {},
         {}
     )
+
+    #test BFD session with nexthop, put interface name in the BFD session key
+    dut.inject_next_hop_capable = True
+    set_del_test(dut, "srt",
+        "SET",
+        ("2.2.2.0/24", {
+            "bfd": "true",
+            "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
+            "ifname": "if1, if2, if3",
+        }),
+        {
+            "set_default:if1:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
+            "set_default:if2:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
+            "set_default:if3:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
+        },
+        {}
+    )
+    set_del_test(dut, "srt",
+        "DEL",
+        ("2.2.2.0/24", {
+            "bfd": "true",
+            "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
+            "ifname": "if1, if2, if3",
+        }),
+        {
+            "del_default:if1:192.168.1.2" : {},
+            "del_default:if2:192.168.2.2" : {}
+            "del_default:if3:192.168.3.2" : {}
+        },
+        {'del_default:2.2.2.0/24': {}}
+    )
+    dut.inject_next_hop_capable = False
 
 def test_set_del_vrf():
     dut = constructor()
