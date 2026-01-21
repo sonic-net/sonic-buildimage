@@ -54,7 +54,7 @@ get_swpdev_by_name(char *name){
     struct device *dev = class_find_device(swp_class_p,
                                            NULL,
                                            name,
-                                           __swp_match);
+                                           (const void *)  __swp_match);
     return dev;
 }
 
