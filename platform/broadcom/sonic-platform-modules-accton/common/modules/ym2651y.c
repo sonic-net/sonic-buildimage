@@ -31,29 +31,87 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
+#include "accton_psu_defs.h"
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <linux/string.h>
 
 #define MAX_FAN_DUTY_CYCLE 100
+#define ACCESS_INTERVAL_MAX 120
+#define ACCESS_INTERVAL_YM1151D_DEFAULT 60
+#define REFRESH_INTERVAL_SECOND 3
+#define REFRESH_INTERVAL_MSEC (REFRESH_INTERVAL_SECOND * 1000)
+#define REFRESH_INTERVAL_HZ (REFRESH_INTERVAL_SECOND * HZ)
+
+/* STATUS WORD BIT MAP
+ *
+ * BIT 0(Low Byte): NONE OF THE ABOVE
+ * BIT 1(Low Byte): COMM, MEMORY, LOGIC EVENT
+ * BIT 2(Low Byte): TEMPERATURE FAULT OR WARNING
+ * BIT 3(Low Byte): VIN_UV_FAULT
+ * BIT 4(Low Byte): IOUT_OC_FAULT
+ * BIT 5(Low Byte): VOUT_OV_FAULT
+ * BIT 6(Low Byte): UNIT IS OFF
+ * BIT 7(Low Byte): UNIT WAS BUSY
+ *
+ * BIT 8(High Byte): UNKNOWN FAULT OR WARNING
+ * BIT 9(High Byte): OTHER
+ * BIT10(High Byte): FAN FAULT OR WARNING
+ * BIT11(High Byte): POWER_GOOD Negated
+ * BIT12(High Byte): MFR_SPECIFIC
+ * BIT13(High Byte): INPUT FAULT OR WARNING
+ * BIT14(High Byte): IOUT/POUT FAULT OR WARNING
+ * BIT15(High Byte): VOUT FAULT OR WARNING
+ */
+#define STATUS_WORD_CHECKER_INPUT (BIT(3) | BIT(6) | BIT(11) | BIT(13))
+#define STATUS_WORD_CHECKER_VOUT (BIT(5) | BIT(15) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_IOUT (BIT(4) | BIT(14) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_POUT (BIT(14) | STATUS_WORD_CHECKER_INPUT)
+
+#define EXIT_IF_POWER_FAILED(c) \
+    do { \
+        if (ym2651y_is_powergood(c) != 1) \
+            goto exit; \
+    } while (0)
+
+#define SLEEP_IF_INTERVAL(pInterval) \
+    do { \
+        int interval = atomic_read(pInterval); \
+        if (interval > 0) \
+            msleep(interval); \
+    } while (0)
+
+/* SLEEP_IF_INTERVAL should be called before EXIT_IF_POWER_FAILED.
+ * It is known that accessing PSU when power failed might cause problems.
+ * So it is better to do sleep before checking power status because it avoids
+ * the risk that power status changes to failed during the sleep period.
+ */
+#define VALIDATE_POWERGOOD_AND_INTERVAL(client, pInterval) \
+    do { \
+        SLEEP_IF_INTERVAL(pInterval); \
+        EXIT_IF_POWER_FAILED(client); \
+    } while (0)
+
+struct mutex entry_lock;
+PSU_STATUS_ENTRY access_psu_status = { NULL, NULL };
 
 /* Addresses scanned
  */
-static const unsigned short normal_i2c[] = { 0x58, 0x5b, I2C_CLIENT_END };
+static const unsigned short normal_i2c[] = { 0x58, 0x59, 0x5b, I2C_CLIENT_END };
 
 enum chips {
-	YM2651,
-	YM2401,
-	YM2851,
-	YM1401A,
-	YPEB1200AM
+    YM2651,
+    YM2401,
+    YM2851,
+    YM1401A,
+    YPEB1200AM,
+    YM1151D,
+    UMEC_UPD150SA,
+    UMEC_UP1K21R
 };
 
-/* Each client has this additional data
- */
-struct ym2651y_data {
-    struct device      *hwmon_dev;
-    struct mutex        update_lock;
-    char                valid;           /* !=0 if registers are valid */
-    unsigned long       last_updated;    /* In jiffies */
-    u8   chip;           /* chip id */
+struct pmbus_register_value {
     u8   capability;     /* Register value */
     u16  status_word;    /* Register value */
     u8   fan_fault;      /* Register value */
@@ -62,15 +120,15 @@ struct ym2651y_data {
     u16  i_out;          /* Register value */
     u16  p_out;          /* Register value */
     u8   vout_mode;      /* Register value */
-    u16  temp;           /* Register value */
+    u16  temp_input[3];  /* Register value */
     u16  fan_speed;      /* Register value */
     u16  fan_duty_cycle[2];  /* Register value */
     u8   fan_dir[4];     /* Register value */
     u8   pmbus_revision; /* Register value */
     u8   mfr_serial[21]; /* Register value */
     u8   mfr_id[10];     /* Register value */
-    u8   mfr_model[16];  /* Register value */
-    u8   mfr_revsion[3]; /* Register value */
+    u8   mfr_model[18];  /* Register value */
+    u8   mfr_revsion[10]; /* Register value */
     u16  mfr_vin_min;    /* Register value */
     u16  mfr_vin_max;    /* Register value */
     u16  mfr_iin_max;    /* Register value */
@@ -79,6 +137,23 @@ struct ym2651y_data {
     u16  mfr_pout_max;   /* Register value */
     u16  mfr_vout_min;   /* Register value */
     u16  mfr_vout_max;   /* Register value */
+};
+
+typedef int (*range_checker_t)(u16 reg_val, struct pmbus_register_value*);
+
+/* Each client has this additional data
+ */
+struct ym2651y_data {
+    struct device      *hwmon_dev;
+    struct mutex        update_lock;
+    struct task_struct *update_task;
+    struct completion   update_stop;
+    atomic_t            access_interval;
+    char                valid;           /* !=0 if registers are valid */
+    unsigned long       last_updated;    /* In jiffies */
+    u8   chip;           /* chip id */
+    u8   mfr_serial_supported;
+    struct pmbus_register_value reg_val;
 };
 
 static ssize_t show_vout(struct device *dev, struct device_attribute *da,
@@ -95,7 +170,14 @@ static ssize_t show_over_temp(struct device *dev, struct device_attribute *da,
                               char *buf);
 static ssize_t show_ascii(struct device *dev, struct device_attribute *da,
                           char *buf);
-static struct ym2651y_data *ym2651y_update_device(struct device *dev);
+static ssize_t show_interval(struct device *dev, struct device_attribute *da,
+                         char *buf);
+static ssize_t set_interval(struct device *dev, struct device_attribute *da,
+            const char *buf, size_t count);
+static int mfr_serial_supported(u8 chip);
+static int ym2651y_update_device(struct i2c_client *client,
+                                 struct pmbus_register_value *data);
+static int ym2651y_update_thread(void *arg);
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da,
                                   const char *buf, size_t count);
 static int ym2651y_write_word(struct i2c_client *client, u8 reg, u16 value);
@@ -112,6 +194,8 @@ enum ym2651y_sysfs_attributes {
     PSU_P_OUT,
     PSU_P_OUT_UV,     /*In Unit of microVolt, instead of mini.*/
     PSU_TEMP1_INPUT,
+    PSU_TEMP2_INPUT,
+    PSU_TEMP3_INPUT,
     PSU_FAN1_SPEED,
     PSU_FAN1_DUTY_CYCLE,
     PSU_PMBUS_REVISION,
@@ -127,7 +211,8 @@ enum ym2651y_sysfs_attributes {
     PSU_MFR_IIN_MAX,
     PSU_MFR_IOUT_MAX,
     PSU_MFR_PIN_MAX,
-    PSU_MFR_POUT_MAX
+    PSU_MFR_POUT_MAX,
+    PSU_ACCESS_INTERVAL
 };
 
 /* sysfs attributes for hwmon
@@ -141,6 +226,8 @@ static SENSOR_DEVICE_ATTR(psu_v_out,       S_IRUGO, show_vout,    NULL, PSU_V_OU
 static SENSOR_DEVICE_ATTR(psu_i_out,       S_IRUGO, show_linear,    NULL, PSU_I_OUT);
 static SENSOR_DEVICE_ATTR(psu_p_out,       S_IRUGO, show_linear,    NULL, PSU_P_OUT);
 static SENSOR_DEVICE_ATTR(psu_temp1_input, S_IRUGO, show_linear,    NULL, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(psu_temp2_input, S_IRUGO, show_linear,    NULL, PSU_TEMP2_INPUT);
+static SENSOR_DEVICE_ATTR(psu_temp3_input, S_IRUGO, show_linear,    NULL, PSU_TEMP3_INPUT);
 static SENSOR_DEVICE_ATTR(psu_fan1_speed_rpm, S_IRUGO, show_linear, NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(psu_fan1_duty_cycle_percentage, S_IWUSR | S_IRUGO, show_linear, set_fan_duty_cycle, PSU_FAN1_DUTY_CYCLE);
 static SENSOR_DEVICE_ATTR(psu_fan_dir,     S_IRUGO, show_ascii,     NULL, PSU_FAN_DIRECTION);
@@ -152,20 +239,25 @@ static SENSOR_DEVICE_ATTR(psu_mfr_revision,    S_IRUGO, show_ascii, NULL, PSU_MF
 static SENSOR_DEVICE_ATTR(psu_mfr_serial,     S_IRUGO, show_ascii,  NULL, PSU_MFR_SERIAL);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_min,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MIN);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_max,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MAX);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MIN);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MAX);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MIN);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IIN_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_PIN_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_POUT_MAX);
+static SENSOR_DEVICE_ATTR(psu_access_interval, S_IWUSR | S_IRUGO, show_interval, set_interval, PSU_ACCESS_INTERVAL);
 
 /*Duplicate nodes for lm-sensors.*/
 static SENSOR_DEVICE_ATTR(in3_input, S_IRUGO, show_vout,    NULL, PSU_V_OUT);
 static SENSOR_DEVICE_ATTR(curr2_input, S_IRUGO, show_linear,    NULL, PSU_I_OUT);
 static SENSOR_DEVICE_ATTR(power2_input, S_IRUGO, show_linear,    NULL, PSU_P_OUT_UV);
 static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, show_linear,    NULL, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, show_linear,    NULL, PSU_TEMP2_INPUT);
+static SENSOR_DEVICE_ATTR(temp3_input, S_IRUGO, show_linear,    NULL, PSU_TEMP3_INPUT);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, show_linear, NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(temp1_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
+static SENSOR_DEVICE_ATTR(temp2_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
+static SENSOR_DEVICE_ATTR(temp3_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
 
 static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_power_on.dev_attr.attr,
@@ -177,6 +269,8 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_i_out.dev_attr.attr,
     &sensor_dev_attr_psu_p_out.dev_attr.attr,
     &sensor_dev_attr_psu_temp1_input.dev_attr.attr,
+    &sensor_dev_attr_psu_temp2_input.dev_attr.attr,
+    &sensor_dev_attr_psu_temp3_input.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_speed_rpm.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_duty_cycle_percentage.dev_attr.attr,
     &sensor_dev_attr_psu_fan_dir.dev_attr.attr,
@@ -194,13 +288,18 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_mfr_vout_min.dev_attr.attr,
     &sensor_dev_attr_psu_mfr_vout_max.dev_attr.attr,
     &sensor_dev_attr_psu_mfr_iout_max.dev_attr.attr,
+    &sensor_dev_attr_psu_access_interval.dev_attr.attr,
     /*Duplicate nodes for lm-sensors.*/
     &sensor_dev_attr_curr2_input.dev_attr.attr,
     &sensor_dev_attr_in3_input.dev_attr.attr,
     &sensor_dev_attr_power2_input.dev_attr.attr,
     &sensor_dev_attr_temp1_input.dev_attr.attr,
+    &sensor_dev_attr_temp2_input.dev_attr.attr,
+    &sensor_dev_attr_temp3_input.dev_attr.attr,
     &sensor_dev_attr_fan1_input.dev_attr.attr,
     &sensor_dev_attr_temp1_fault.dev_attr.attr,
+    &sensor_dev_attr_temp2_fault.dev_attr.attr,
+    &sensor_dev_attr_temp3_fault.dev_attr.attr,
     NULL
 };
 
@@ -208,32 +307,59 @@ static ssize_t show_byte(struct device *dev, struct device_attribute *da,
                          char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+    u8 status = 0;
 
-    return (attr->index == PSU_PMBUS_REVISION) ? sprintf(buf, "%d\n", data->pmbus_revision) :
-           sprintf(buf, "0\n");
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
+
+    if (attr->index == PSU_PMBUS_REVISION)
+        status = data->reg_val.pmbus_revision;
+
+    mutex_unlock(&data->update_lock);
+    return sprintf(buf, "%d\n", status);
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static ssize_t show_word(struct device *dev, struct device_attribute *da,
                          char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
     u16 status = 0;
+
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
 
     switch (attr->index) {
     case PSU_POWER_ON: /* psu_power_on, low byte bit 6 of status_word, 0=>ON, 1=>OFF */
-        status = (data->status_word & 0x40) ? 0 : 1;
+        status = (data->reg_val.status_word & 0x40) ? 0 : 1;
         break;
     case PSU_TEMP_FAULT: /* psu_temp_fault, low byte bit 2 of status_word, 0=>Normal, 1=>temp fault */
-        status = (data->status_word & 0x4) >> 2;
+        status = (data->reg_val.status_word & 0x4) >> 2;
         break;
     case PSU_POWER_GOOD: /* psu_power_good, high byte bit 3 of status_word, 0=>OK, 1=>FAIL */
-        status = (data->status_word & 0x800) ? 0 : 1;
+        status = (data->reg_val.status_word & 0x800) ? 0 : 1;
         break;
+    default:
+        goto exit;
     }
 
+    mutex_unlock(&data->update_lock);
     return sprintf(buf, "%d\n", status);
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static int two_complement_to_int(u16 data, u8 valid_bit, int mask)
@@ -242,6 +368,87 @@ static int two_complement_to_int(u16 data, u8 valid_bit, int mask)
     bool is_negative = valid_data >> (valid_bit - 1);
 
     return is_negative ? (-(((~valid_data) & mask) + 1)) : valid_data;
+}
+
+int pmbus_linear_format_to_int(u16 reg_val, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(reg_val >> 11, 5, 0x1f);
+    mantissa = two_complement_to_int(reg_val & 0x7ff, 11, 0x7ff);
+
+    return (exponent >= 0) ? ((mantissa << exponent) * multiplier) :
+                             ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int pmbus_vout_data_to_int(u16 reg_val, u8 vout_mode, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(vout_mode, 5, 0x1f);
+    mantissa = reg_val;
+
+    return (exponent > 0) ? ((mantissa << exponent) * multiplier) :
+                            ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int vout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int vout = 0;
+    int vout_max = 0;
+    int vout_min = 0;
+
+    if ((data->vout_mode & 0xE0) == 0) { /* ULINEAR16 Format */
+        vout = pmbus_vout_data_to_int(reg_val, data->vout_mode, 1000);
+        vout_max = pmbus_vout_data_to_int(data->mfr_vout_max, data->vout_mode, 1000);
+        vout_min = pmbus_vout_data_to_int(data->mfr_vout_min, data->vout_mode, 1000);
+    }
+    else {
+        vout = pmbus_linear_format_to_int(reg_val, 1000);
+        vout_max = pmbus_linear_format_to_int(data->mfr_vout_max, 1000);
+        vout_min = pmbus_linear_format_to_int(data->mfr_vout_min, 1000);
+    }
+
+    return ((vout <= vout_max) && (vout >= vout_min)) ? 0 : -EINVAL;;
+}
+
+int iout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int iout = pmbus_linear_format_to_int(reg_val, 1000);
+    int iout_max = pmbus_linear_format_to_int(data->mfr_iout_max, 1000);
+
+    return ((iout > 0) && (iout <= iout_max)) ? 0 : -EINVAL;
+}
+
+int pout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int pout = pmbus_linear_format_to_int(reg_val, 1000);
+    int pout_max = pmbus_linear_format_to_int(data->mfr_pout_max, 1000);
+
+    return ((pout > 0) && (pout <= pout_max)) ? 0 : -EINVAL;
+}
+
+int enable_status_range_checker(struct pmbus_register_value *data)
+{
+    int i;
+    char *model_list[] = {
+        "YM-2651Y", "YM-1151D", "YM-1151E",
+        "YM-1401A", "YM-2401H", "YM-2651V",
+        "YM-2851F", "YM-2851J", "YM-1151F", "YPEB1200AM"
+    };
+
+    if (!data) {
+        return 0;
+    }
+
+    for (i = 0; i < ARRAY_SIZE(model_list); i++) {
+        if (strncmp(model_list[i], data->mfr_model+1, strlen(model_list[i])) != 0) {
+            continue;
+        }
+        return 1;
+    }
+
+    return 0;
 }
 
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da,
@@ -262,8 +469,8 @@ static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *d
         return -EINVAL;
 
     mutex_lock(&data->update_lock);
-    data->fan_duty_cycle[nr] = speed;
-    ym2651y_write_word(client, 0x3B + nr, data->fan_duty_cycle[nr]);
+    data->reg_val.fan_duty_cycle[nr] = speed;
+    ym2651y_write_word(client, 0x3B + nr, data->reg_val.fan_duty_cycle[nr]);
     mutex_unlock(&data->update_lock);
 
     return count;
@@ -273,151 +480,214 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
                            char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
-
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
     u16 value = 0;
     int exponent, mantissa;
     int multiplier = 1000;
 
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
+
     switch (attr->index) {
     case PSU_V_OUT:
-        value = data->v_out;
+        value = data->reg_val.v_out;
         break;
     case PSU_I_OUT:
-        value = data->i_out;
+        value = data->reg_val.i_out;
         break;
     case PSU_P_OUT_UV:
         multiplier = 1000000;  /*For lm-sensors, unit is micro-Volt.*/
     /*Passing through*/
     case PSU_P_OUT:
-        value = data->p_out;
+        value = data->reg_val.p_out;
         break;
     case PSU_TEMP1_INPUT:
-        value = data->temp;
+    case PSU_TEMP2_INPUT:
+    case PSU_TEMP3_INPUT:
+        value = data->reg_val.temp_input[attr->index - PSU_TEMP1_INPUT];
         break;
     case PSU_FAN1_SPEED:
-        value = data->fan_speed;
+        value = data->reg_val.fan_speed;
         multiplier = 1;
         break;
     case PSU_FAN1_DUTY_CYCLE:
-        value = data->fan_duty_cycle[0];
+        value = data->reg_val.fan_duty_cycle[0];
         multiplier = 1;
         break;
     case PSU_MFR_VIN_MIN:
-        value = data->mfr_vin_min;
+        value = data->reg_val.mfr_vin_min;
         break;
     case PSU_MFR_VIN_MAX:
-        value = data->mfr_vin_max;
+        value = data->reg_val.mfr_vin_max;
         break;
     case PSU_MFR_VOUT_MIN:
-        value = data->mfr_vout_min;
+        value = data->reg_val.mfr_vout_min;
         break;
     case PSU_MFR_VOUT_MAX:
-        value = data->mfr_vout_max;
+        value = data->reg_val.mfr_vout_max;
         break;
     case PSU_MFR_PIN_MAX:
-        value = data->mfr_pin_max;
+        value = data->reg_val.mfr_pin_max;
         break;
     case PSU_MFR_POUT_MAX:
-        value = data->mfr_pout_max;
+        value = data->reg_val.mfr_pout_max;
         break;
     case PSU_MFR_IOUT_MAX:
-        value = data->mfr_iout_max;
+        value = data->reg_val.mfr_iout_max;
         break;
     case PSU_MFR_IIN_MAX:
-        value = data->mfr_iin_max;
+        value = data->reg_val.mfr_iin_max;
         break;
+    default:
+        goto exit;
     }
+    mutex_unlock(&data->update_lock);
 
     exponent = two_complement_to_int(value >> 11, 5, 0x1f);
     mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
     return (exponent >= 0) ? sprintf(buf, "%d\n", (mantissa << exponent) * multiplier) :
-           sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
+                    sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static ssize_t show_fan_fault(struct device *dev, struct device_attribute *da,
                               char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+    u8 shift = 0;
+    u8 fan_fault = 0;
 
-    u8 shift = (attr->index == PSU_FAN1_FAULT) ? 7 : 6;
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
 
-    return sprintf(buf, "%d\n", data->fan_fault >> shift);
+    fan_fault = data->reg_val.fan_fault;
+    mutex_unlock(&data->update_lock);
+
+    shift = (attr->index == PSU_FAN1_FAULT) ? 7 : 6;
+    return sprintf(buf, "%d\n", fan_fault >> shift);
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static ssize_t show_over_temp(struct device *dev, struct device_attribute *da,
                               char *buf)
 {
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+    u8 over_temp = 0;
 
-    return sprintf(buf, "%d\n", data->over_temp >> 7);
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
+
+    over_temp = data->reg_val.over_temp;
+    mutex_unlock(&data->update_lock);
+    return sprintf(buf, "%d\n", over_temp >> 7);
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static ssize_t show_ascii(struct device *dev, struct device_attribute *da,
                           char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+    ssize_t ret = 0;
     u8 *ptr = NULL;
+
+    mutex_lock(&data->update_lock);
+    if (!data->valid) {
+        goto exit;
+    }
 
     switch (attr->index) {
     case PSU_FAN_DIRECTION: /* psu_fan_dir */
         if (data->chip==YPEB1200AM)
         {
-            memcpy(data->fan_dir, "F2B", 3);
-            data->fan_dir[3]='\0';
+            #ifdef __STDC_LIB_EXT1__
+            memcpy_s(data->reg_val.fan_dir, 3, "F2B", 3);
+            #else
+            memcpy(data->reg_val.fan_dir, "F2B", 3);
+            #endif
+            data->reg_val.fan_dir[3]='\0';
         }
-        ptr = data->fan_dir;
+        ptr = data->reg_val.fan_dir;
         break;
     case PSU_MFR_SERIAL: /* psu_mfr_serial */
-        ptr = data->mfr_serial+1; /* The first byte is the count byte of string. */
+        ptr = data->reg_val.mfr_serial+1; /* The first byte is the count byte of string. */
         break;
     case PSU_MFR_ID: /* psu_mfr_id */
-        ptr = data->mfr_id+1; /* The first byte is the count byte of string. */
+        ptr = data->reg_val.mfr_id+1; /* The first byte is the count byte of string. */
         break;
     case PSU_MFR_MODEL: /* psu_mfr_model */
-        ptr = data->mfr_model+1; /* The first byte is the count byte of string. */
+        ptr = data->reg_val.mfr_model+1; /* The first byte is the count byte of string. */
         break;
     case PSU_MFR_REVISION: /* psu_mfr_revision */
-        ptr = data->mfr_revsion+1;
+        ptr = data->reg_val.mfr_revsion+1;
         break;
     default:
-        return 0;
+        goto exit;
     }
 
-    return sprintf(buf, "%s\n", ptr);
+    ret = sprintf(buf, "%s\n", ptr);
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return ret;
 }
 
 static ssize_t show_vout_by_mode(struct device *dev, struct device_attribute *da,
              char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-    struct ym2651y_data *data = ym2651y_update_device(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
     int exponent, mantissa;
     int multiplier = 1000;
 
+    mutex_lock(&data->update_lock);
     if (!data->valid) {
-        return 0;
+        goto exit;
     }
 
-    exponent = two_complement_to_int(data->vout_mode, 5, 0x1f);
+    exponent = two_complement_to_int(data->reg_val.vout_mode, 5, 0x1f);
     switch (attr->index) {
     case PSU_MFR_VOUT_MIN:
-        mantissa = data->mfr_vout_min;
+        mantissa = data->reg_val.mfr_vout_min;
         break;
     case PSU_MFR_VOUT_MAX:
-        mantissa = data->mfr_vout_max;
+        mantissa = data->reg_val.mfr_vout_max;
         break;
     case PSU_V_OUT:
-        mantissa = data->v_out;
+        mantissa = data->reg_val.v_out;
         break;
     default:
-        return 0;
+        goto exit;
     }
+    mutex_unlock(&data->update_lock);
 
     return (exponent > 0) ? sprintf(buf, "%d\n", (mantissa << exponent) * multiplier) :
-                            sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
+                    sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return 0;
 }
 
 static ssize_t show_vout(struct device *dev, struct device_attribute *da,
@@ -426,12 +696,48 @@ static ssize_t show_vout(struct device *dev, struct device_attribute *da,
     struct i2c_client *client = to_i2c_client(dev);
     struct ym2651y_data *data = i2c_get_clientdata(client);
 
-    if (data->chip == YM2401 || data->chip==YM1401A) {
-        return show_vout_by_mode(dev, da, buf);
+    if ( (!strncmp("SPAACTN-01", data->reg_val.mfr_model+1, strlen("SPAACTN-01"))) ||
+         (!strncmp("SPAACTN-02", data->reg_val.mfr_model+1, strlen("SPAACTN-02"))) )
+    {
+        return show_linear(dev, da, buf);
+    }
+    else if (data->chip == YM2401 || data->chip==YM1401A ||
+        (!strncmp("UPD1501SA-1190G", data->reg_val.mfr_model + 1, strlen("UPD1501SA-1190G"))) ||
+        (!strncmp("UPD1501SA-1290G", data->reg_val.mfr_model + 1, strlen("UPD1501SA-1290G"))) ||
+        (!strncmp("UP1K21R-1085G",   data->reg_val.mfr_model + 1, strlen("UP1K21R-1085G")))) {
+        return show_vout_by_mode(dev, da, buf); /*format: linear16*/
     }
     else {
         return show_linear(dev, da, buf);
     }
+}
+
+static ssize_t show_interval(struct device *dev, struct device_attribute *da,
+                         char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+
+    return sprintf(buf, "%d\n", atomic_read(&data->access_interval));
+}
+
+static ssize_t set_interval(struct device *dev, struct device_attribute *da,
+            const char *buf, size_t count)
+{
+    int status;
+    long interval;
+    struct i2c_client *client = to_i2c_client(dev);
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+
+    status = kstrtol(buf, 10, &interval);
+    if (status)
+        return status;
+
+    if (interval < 0 || interval > ACCESS_INTERVAL_MAX)
+        return -EINVAL;
+
+    atomic_set(&data->access_interval, (int)interval);
+    return count;
 }
 
 static const struct attribute_group ym2651y_group = {
@@ -461,6 +767,7 @@ static int ym2651y_probe(struct i2c_client *client)
     i2c_set_clientdata(client, data);
     mutex_init(&data->update_lock);
     data->chip = dev_id->driver_data;
+    data->mfr_serial_supported = mfr_serial_supported(data->chip);
     dev_info(&client->dev, "chip found\n");
 
     /* Register sysfs hooks */
@@ -475,11 +782,26 @@ static int ym2651y_probe(struct i2c_client *client)
         goto exit_remove;
     }
 
+    /* create update thread */
+    if (data->chip == YM1151D)
+        atomic_set(&data->access_interval, ACCESS_INTERVAL_YM1151D_DEFAULT);
+    else
+        atomic_set(&data->access_interval, 0);
+
+    init_completion(&data->update_stop);
+    data->update_task = kthread_run(ym2651y_update_thread, client, "ym2651y_update_task");
+    if (IS_ERR(data->update_task)) {
+        dev_dbg(&client->dev, "Failed to create ym2651y update task!\n");
+        goto exit_hwmon;
+    }
+
     dev_info(&client->dev, "%s: psu '%s'\n",
              dev_name(data->hwmon_dev), client->name);
 
     return 0;
 
+exit_hwmon:
+    hwmon_device_unregister(data->hwmon_dev);
 exit_remove:
     sysfs_remove_group(&client->dev.kobj, &ym2651y_group);
 exit_free:
@@ -493,10 +815,13 @@ static void ym2651y_remove(struct i2c_client *client)
 {
     struct ym2651y_data *data = i2c_get_clientdata(client);
 
+    /* Stop update task */
+    kthread_stop(data->update_task);
+    wait_for_completion(&data->update_stop);
+
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &ym2651y_group);
     kfree(data);
-
 }
 
 static const struct i2c_device_id ym2651y_id[] = {
@@ -505,6 +830,9 @@ static const struct i2c_device_id ym2651y_id[] = {
     { "ym2851", YM2851 },
     { "ym1401a",YM1401A},
     { "ype1200am", YPEB1200AM },
+    { "ym1151d", YM1151D },
+    { "umec_upd150sa", UMEC_UPD150SA },
+    { "umec_up1k21r", UMEC_UP1K21R },
     {}
 };
 MODULE_DEVICE_TABLE(i2c, ym2651y_id);
@@ -519,6 +847,23 @@ static struct i2c_driver ym2651y_driver = {
     .id_table = ym2651y_id,
     .address_list = normal_i2c,
 };
+
+static int ym2651y_is_powergood(struct i2c_client *client)
+{
+    int powergood = 0;
+
+    mutex_lock(&entry_lock);
+    if (access_psu_status.get_powergood == NULL) {
+        powergood = 1; /* skip powergood validation if API is not registered */
+        goto exit;
+    }
+
+    powergood = access_psu_status.get_powergood(client);
+
+exit:
+    mutex_unlock(&entry_lock);
+    return powergood;
+}
 
 static int ym2651y_read_byte(struct i2c_client *client, u8 reg)
 {
@@ -538,8 +883,9 @@ static int ym2651y_write_word(struct i2c_client *client, u8 reg, u16 value)
 static int ym2651y_read_block(struct i2c_client *client, u8 command, u8 *data,
                               int data_len)
 {
-    int result = i2c_smbus_read_i2c_block_data(client, command, data_len, data);
+    int result;
 
+    result = i2c_smbus_read_i2c_block_data(client, command, data_len, data);
     if (unlikely(result < 0))
         goto abort;
     if (unlikely(result != data_len)) {
@@ -561,183 +907,362 @@ struct reg_data_byte {
 struct reg_data_word {
     u8   reg;
     u16 *value;
+    u16  old_value;
+    u16  status_checker;
+    range_checker_t range_checker;
 };
 
-static struct ym2651y_data *ym2651y_update_device(struct device *dev)
+static char *get_fan_dir_by_model_name(struct i2c_client *client, char *ptr_model, char *fan_dir, int command)
 {
-    struct i2c_client *client = to_i2c_client(dev);
-    struct ym2651y_data *data = i2c_get_clientdata(client);
+    int status;
+    char *ptr_fan;
 
-    mutex_lock(&data->update_lock);
+    ptr_fan = fan_dir;
 
-    if (time_after(jiffies, data->last_updated + HZ + HZ / 2)
-            || !data->valid) {
-        int i, status, length;
-        u8 command, buf;
-        u8 fan_dir[5] = {0};
-        struct reg_data_byte regs_byte[] = { {0x19, &data->capability},
-            {0x20, &data->vout_mode},
-            {0x7d, &data->over_temp},
-            {0x81, &data->fan_fault},
-            {0x98, &data->pmbus_revision}
-        };
-        struct reg_data_word regs_word[] = { {0x79, &data->status_word},
-            {0x8b, &data->v_out},
-            {0x8c, &data->i_out},
-            {0x96, &data->p_out},
-            {0x8d, &data->temp},
-            {0x3b, &(data->fan_duty_cycle[0])},
-            {0x3c, &(data->fan_duty_cycle[1])},
-            {0x90, &data->fan_speed},
-            {0xa0, &data->mfr_vin_min},
-            {0xa1, &data->mfr_vin_max},
-            {0xa2, &data->mfr_iin_max},
-            {0xa3, &data->mfr_pin_max},
-            {0xa4, &data->mfr_vout_min},
-            {0xa5, &data->mfr_vout_max},
-            {0xa6, &data->mfr_iout_max},
-            {0xa7, &data->mfr_pout_max}
-        };
-
-        dev_dbg(&client->dev, "Starting ym2651 update\n");
-
-        /* Read byte data */
-        for (i = 0; i < ARRAY_SIZE(regs_byte); i++) {
-            status = ym2651y_read_byte(client, regs_byte[i].reg);
-
-            if (status < 0)
-            {
-                dev_dbg(&client->dev, "reg %d, err %d\n",
-                        regs_byte[i].reg, status);
-                *(regs_byte[i].value) = 0;
-                goto exit;
-            }
-            else {
-                *(regs_byte[i].value) = status;
-            }
-        }
-
-        /* Read word data */
-        for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
-            status = ym2651y_read_word(client, regs_word[i].reg);
-
-            if (status < 0)
-            {
-                dev_dbg(&client->dev, "reg %d, err %d\n",
-                        regs_word[i].reg, status);
-                *(regs_word[i].value) = 0;
-                goto exit;
-            }
-            else {
-                *(regs_word[i].value) = status;
-            }
-        }
-
-        /* Read fan_direction */
-        command = 0xC3;
-        status = ym2651y_read_block(client, command, fan_dir, ARRAY_SIZE(fan_dir)-1);
-
-        if (status < 0) {
-            dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-            goto exit;
-        }
-
-        strncpy(data->fan_dir, fan_dir+1, ARRAY_SIZE(data->fan_dir)-1);
-        data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
-
-        /* Read mfr_id */
-        command = 0x99;
-        status = ym2651y_read_block(client, command, data->mfr_id,
-                                    ARRAY_SIZE(data->mfr_id)-1);
-        data->mfr_id[ARRAY_SIZE(data->mfr_id)-1] = '\0';
-
-        if (status < 0)
-            dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-
-        /* Read mfr_model */
-        command = 0x9a;
-        length  = 1;
-        /* Read first byte to determine the length of data */
-        status = ym2651y_read_block(client, command, &buf, length);
-        if (status < 0) {
-            dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-            goto exit;
-        }
-        status = ym2651y_read_block(client, command, data->mfr_model, buf+1);
-
-        if ((buf+1) >= (ARRAY_SIZE(data->mfr_model)-1))
-        {            
-            data->mfr_model[ARRAY_SIZE(data->mfr_model)-1] = '\0';
-        }
-        else
-            data->mfr_model[buf+1] = '\0';
+    if ( (!strncmp("FSJ001", ptr_model+1, strlen("FSJ001"))) ||
+         (!strncmp("FSJ004", ptr_model+1, strlen("FSJ004"))) ||
+         (!strncmp("SPAACTN-01", ptr_model+1, strlen("SPAACTN-01"))) ||
+         (!strncmp("SPAACTN-02", ptr_model+1, strlen("SPAACTN-02"))) ||
+         (!strncmp("UPD1501SA-1279G", ptr_model+1, strlen("UPD1501SA-1279G"))) ||
+         (!strncmp("UP1K21R-1085G", ptr_model+1, strlen("UP1K21R-1085G"))) )
+    {
+        /* Not add function: VALIDATE_POWERGOOD_AND_INTERVAL() because,
+         * when these PSU modules power_good are fail,
+         * they did not have any error happen on it when accessed them. */
+        status = ym2651y_read_byte(client, command);
 
         if (status < 0)
         {
             dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-            goto exit;
-        }
-
-        /*YM-1401A PSU doens't support to get serial_num, so ignore it.
-         *It's vout doesn't support linear, so let it use show_vout_by_mode().
-         */
-        if(!strncmp("YM-1401A", data->mfr_model+1, strlen("YM-1401A")))
-        {
-            data->chip=YM1401A;
+            ptr_fan = NULL;
         }
         else
         {
-             /* Read mfr_serial */
-            command = 0x9e;
-            length  = 1;
-            /* Read first byte to determine the length of data */
-            status = ym2651y_read_block(client, command, &buf, length);
-            if (status < 0) {
-                dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-                goto exit;
-            }
-            status = ym2651y_read_block(client, command, data->mfr_serial, buf+1);
-
-            if ((buf+1) >= (ARRAY_SIZE(data->mfr_serial)-1))
+            u16 B2F_flag = 0x01; /*BIT[4:3]=01: AFI*/
+            u16 F2B_flag = 0x02; /*BIT[4:3]=10: AFO*/
+            if( (status >> 3)& B2F_flag)
             {
-                 data->mfr_serial[ARRAY_SIZE(data->mfr_serial)-1] = '\0';
+                memcpy(fan_dir, "B2F", 3);
             }
-            else
-                data->mfr_serial[buf+1] = '\0';
-
-            if (status < 0)
+            else if( (status >> 3)& F2B_flag)
             {
-                dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-                goto exit;
+                memcpy(fan_dir, "F2B", 3);
+            }
+            else {
+                ptr_fan = NULL;
             }
         }
-
-        /* Read mfr_revsion */
-        command = 0x9b;
-        status = ym2651y_read_block(client, command, data->mfr_revsion,
-                                    ARRAY_SIZE(data->mfr_revsion)-1);
-        data->mfr_revsion[ARRAY_SIZE(data->mfr_revsion)-1] = '\0';
-
-        if (status < 0)
-        {
-            dev_dbg(&client->dev, "reg %d, err %d\n", command, status);
-            goto exit;
-        }
-
-        data->last_updated = jiffies;
-        data->valid = 1;
+    }
+    else if (!strncmp("FSJ035", ptr_model+1, strlen("FSJ035")) ||
+             !strncmp("UPD1501SA-1190G", ptr_model+1, strlen("UPD1501SA-1190G"))) /*hard code: spec do not define*/
+    {
+        memcpy(fan_dir, "F2B", 3);
+    }
+    else if (!strncmp("FSJ036", ptr_model+1, strlen("FSJ036")) ||
+	     !strncmp("UPD1501SA-1290G", ptr_model+1, strlen("UPD1501SA-1290G"))) /*hard code: spec do not define*/
+    {
+        memcpy(fan_dir, "B2F", 3);
+    }
+    else
+    {
+        ptr_fan = NULL;
     }
 
- exit:
-    mutex_unlock(&data->update_lock);
+    dev_dbg(&client->dev, "Model name is %s, get by read_word is (%s)\n",
+            ptr_model+1, ptr_fan ? ptr_fan : "NULL");
+    return ptr_fan;
+}
+static int ym2651y_update_device(struct i2c_client *client,
+                                 struct pmbus_register_value *data)
+{
+    struct ym2651y_data *driver_data = i2c_get_clientdata(client);
+    int i, status, length;
+    u8 command, buf;
+    u8 fan_dir[5] = {0};
+    int enable_checker = 0;
+    struct reg_data_byte regs_byte[] = { {0x19, &data->capability},
+        {0x20, &data->vout_mode},
+        {0x7d, &data->over_temp},
+        {0x81, &data->fan_fault},
+        {0x98, &data->pmbus_revision}
+    };
+    struct reg_data_word regs_word[] = {
+        /* The mfr_* and status_word should be read
+         * before reading the data with a status/range checker
+         */
+        {0x79, &data->status_word, 0, 0, NULL},
+        {0x8d, &(data->temp_input[0]), 0, 0, NULL},
+        {0x8e, &(data->temp_input[1]), 0, 0, NULL},
+        {0x8f, &(data->temp_input[2]), 0, 0, NULL},
+        {0x3b, &(data->fan_duty_cycle[0]), 0, 0, NULL},
+        {0x3c, &(data->fan_duty_cycle[1]), 0, 0, NULL},
+        {0x90, &data->fan_speed, 0, 0, NULL},
+        {0xa0, &data->mfr_vin_min, 0, 0, NULL},
+        {0xa1, &data->mfr_vin_max, 0, 0, NULL},
+        {0xa2, &data->mfr_iin_max, 0, 0, NULL},
+        {0xa3, &data->mfr_pin_max, 0, 0, NULL},
+        {0xa4, &data->mfr_vout_min, 0, 0, NULL},
+        {0xa5, &data->mfr_vout_max, 0, 0, NULL},
+        {0xa6, &data->mfr_iout_max, 0, 0, NULL},
+        {0xa7, &data->mfr_pout_max, 0, 0, NULL},
+        {0x8b, &data->v_out, driver_data->reg_val.v_out, STATUS_WORD_CHECKER_VOUT, vout_range_checker},
+        {0x8c, &data->i_out, driver_data->reg_val.i_out, STATUS_WORD_CHECKER_IOUT, iout_range_checker},
+        {0x96, &data->p_out, driver_data->reg_val.p_out, STATUS_WORD_CHECKER_POUT, pout_range_checker}
+    };
 
-    return data;
+    dev_dbg(&client->dev, "Starting ym2651 update\n");
+
+    /* Read byte data */
+    for (i = 0; i < ARRAY_SIZE(regs_byte); i++) {
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+
+        status = ym2651y_read_byte(client, regs_byte[i].reg);
+        if (status < 0)
+        {
+            dev_dbg(&client->dev, "reg %d, err %d\n",
+                    regs_byte[i].reg, status);
+            *(regs_byte[i].value) = 0;
+            goto exit;
+        }
+        else {
+            *(regs_byte[i].value) = status;
+        }
+    }
+
+    /* Read mfr_model */
+    command = 0x9a;
+    length  = 1;
+    /* Read first byte to determine the length of data */
+    VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+    status = ym2651y_read_block(client, command, &buf, length);
+    if (status == 0 && buf != 0xFF) {
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+        status = ym2651y_read_block(client, command, data->mfr_model, buf+1);
+        if (status == 0) {
+            if ((buf+1) >= (ARRAY_SIZE(data->mfr_model)-1))
+                data->mfr_model[ARRAY_SIZE(data->mfr_model)-1] = '\0';
+            else
+                data->mfr_model[buf+1] = '\0';
+        }
+    }
+
+    /* Read word data */
+    enable_checker = enable_status_range_checker(data);
+    for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+
+        /* To prevent hardware errors,
+           access to temp2_input and temp3_input should be skipped
+           if the chip ID is not in the following list.  */
+        if (regs_word[i].reg == 0x8e || regs_word[i].reg == 0x8f) {
+            if (driver_data->chip != UMEC_UPD150SA &&
+                driver_data->chip != UMEC_UP1K21R) {
+                continue;
+            }
+        }
+
+        status = ym2651y_read_word(client, regs_word[i].reg);
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n",
+                    regs_word[i].reg, status);
+            *(regs_word[i].value) = 0;
+            goto exit;
+        }
+        else {
+            if ((enable_checker == 0) || (regs_word[i].status_checker == 0)) {
+                *(regs_word[i].value) = status;
+                continue;
+            }
+
+            /* Validate data range */
+            if (regs_word[i].range_checker &&
+                regs_word[i].range_checker(status, data) < 0) {
+                if (!(data->status_word & regs_word[i].status_checker)) {
+                    /* Drop the data because it is out of the
+                     * expected range and the status bit is not set.
+                     * Keep old_value instead.
+                     */
+                    *(regs_word[i].value) = regs_word[i].old_value;
+                    continue;
+                }
+            }
+            *(regs_word[i].value) = status;
+        }
+    }
+
+    /* Read mfr_id */
+    command = 0x99;
+    VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+    status = ym2651y_read_block(client, command, data->mfr_id,
+                                ARRAY_SIZE(data->mfr_id)-1);
+    if (status == 0)
+    {
+        length = data->mfr_id[0];
+        data->mfr_id[length+1] = '\0';
+    }
+
+    /* Read fan_direction */
+    command = 0xC3;
+    char *fan_ptr;
+    fan_ptr = get_fan_dir_by_model_name(client, data->mfr_model, fan_dir, command);
+    if( fan_ptr != NULL )
+    {
+        snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
+        data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
+    }
+    else
+    {
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+        status = ym2651y_read_block(client, command, fan_dir, ARRAY_SIZE(fan_dir)-1);
+        if (status == 0) {
+            snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
+            data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
+        }
+    }
+
+    /*YM-1401A PSU doens't support to get serial_num, so ignore it.
+        *It's vout doesn't support linear, so let it use show_vout_by_mode().
+        */
+    if (!strncmp("YM-1401A", data->mfr_model+1, strlen("YM-1401A"))) {
+        driver_data->chip=YM1401A;
+    }
+    else if (driver_data->mfr_serial_supported) {
+        /* Read mfr_serial */
+        command = 0x9e;
+        length  = 1;
+        /* Read first byte to determine the length of data */
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+        status = ym2651y_read_block(client, command, &buf, length);
+        if (status == 0 && buf != 0xFF) {
+            VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+            status = ym2651y_read_block(client, command, data->mfr_serial, buf+1);
+            if (status == 0) {
+                if ((buf+1) >= (ARRAY_SIZE(data->mfr_serial)-1))
+                    data->mfr_serial[ARRAY_SIZE(data->mfr_serial)-1] = '\0';
+                else
+                    data->mfr_serial[buf+1] = '\0';
+            }
+        }
+    }
+
+    /* Read mfr_revsion */
+    command = 0x9b;
+    VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+    status = ym2651y_read_block(client, command, data->mfr_revsion,
+                                ARRAY_SIZE(data->mfr_revsion)-1);
+    if (status == 0)
+    {
+        length = data->mfr_revsion[0];
+        data->mfr_revsion[length+1] = '\0';
+    }
+
+    return 1; /* Return 1 for valid data, 0 for invalid */
+
+exit:
+    return 0;
 }
 
-module_i2c_driver(ym2651y_driver);
+static int ym2651y_update_thread(void *arg)
+{
+    int valid = 0;
+    unsigned long start_time = 0;
+    unsigned long next_start_time = 0; /* expected next start time */
+    struct i2c_client *client = arg;
+    struct ym2651y_data *data = i2c_get_clientdata(client);
+
+    if (data == NULL)
+        return -EINVAL;
+
+    while (!kthread_should_stop()) {
+        struct pmbus_register_value reg_val = { 0 };
+
+        start_time = jiffies;
+        valid = ym2651y_update_device(client, &reg_val);
+
+        mutex_lock(&data->update_lock);
+        data->valid = 1;
+        if (valid) {
+            #ifdef __STDC_LIB_EXT1__
+            memcpy_s(&data->reg_val, sizeof(reg_val), &reg_val, sizeof(reg_val));
+            #else
+            memcpy(&data->reg_val, &reg_val, sizeof(reg_val));
+            #endif
+        } else {
+            #ifdef __STDC_LIB_EXT1__
+            memset_s(&data->reg_val, sizeof(reg_val), 0, sizeof(reg_val));
+            #else
+            memset(&data->reg_val, 0, sizeof(reg_val));
+            #endif
+
+            /* PMBus STATUS_WORD(0x79): psu_power_on, low byte bit 6, 0=>ON, 1=>OFF */
+            data->reg_val.status_word |= 0x40;
+
+            /* PMBus STATUS_WORD(0x79): psu_power_good, high byte bit 3, 0=>OK, 1=>FAIL */
+            data->reg_val.status_word |= 0x800;
+
+            /* psu_power_good = failed, modified to return 1023 degree for python used. */
+            data->reg_val.temp_input[0] = 0x3ff;
+            data->reg_val.temp_input[1] = 0x3ff;
+            data->reg_val.temp_input[2] = 0x3ff;
+        }
+        mutex_unlock(&data->update_lock);
+
+        next_start_time = start_time + REFRESH_INTERVAL_HZ;
+        if (time_before(jiffies, next_start_time)) {
+            /* Sleep if time consumed is less than REFRESH_INTERVAL_SECOND */
+            msleep(min(jiffies_to_msecs(next_start_time - jiffies), REFRESH_INTERVAL_MSEC));
+        }
+    }
+
+    complete_all(&data->update_stop);
+    return 0;
+}
+
+int register_psu_status_entry(PSU_STATUS_ENTRY *entry)
+{
+    mutex_lock(&entry_lock);
+
+    if (entry) {
+        access_psu_status.get_presence = entry->get_presence;
+        access_psu_status.get_powergood = entry->get_powergood;
+    }
+    else {
+        access_psu_status.get_presence = NULL;
+        access_psu_status.get_powergood = NULL;
+    }
+
+    mutex_unlock(&entry_lock);
+    return 0;
+}
+EXPORT_SYMBOL(register_psu_status_entry);
+
+static int __init ym2651y_init(void)
+{
+    mutex_init(&entry_lock);
+    return i2c_add_driver(&ym2651y_driver);
+}
+
+static void __exit ym2651y_exit(void)
+{
+    i2c_del_driver(&ym2651y_driver);
+}
+
+static int mfr_serial_supported(u8 chip)
+{
+    int i = 0;
+    u8 supported_chips[] = {UMEC_UPD150SA, UMEC_UP1K21R};
+
+    for (i = 0; i < ARRAY_SIZE(supported_chips); i++) {
+        if (chip == supported_chips[i])
+            return 1;
+    }
+
+    return 0;
+}
 
 MODULE_AUTHOR("Brandon Chuang <brandon_chuang@accton.com.tw>");
 MODULE_DESCRIPTION("3Y Power YM-2651Y driver");
 MODULE_LICENSE("GPL");
 
-
+module_init(ym2651y_init);
+module_exit(ym2651y_exit);
