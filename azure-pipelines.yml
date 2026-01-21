@@ -59,6 +59,18 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
+- stage: Linters
+  pool: sonicbld
+  jobs:
+  - job: tox
+    steps:
+      - checkout: none
+        clean: true
+        displayName: 'Checkout code'
+      - script: |
+          ./scripts/tox_entry_point.sh
+        displayName: 'Install and run tox'
+
 - stage: BuildVS
   pool: sonicso1ES-amd64
   jobs:

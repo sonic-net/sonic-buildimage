@@ -1,0 +1,8 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.patch$|^src/.*\.conf$|^files/.*\.j2$'
+        #TODO fix the few files in ./files and ./src folders whose clean-up makes build fail
