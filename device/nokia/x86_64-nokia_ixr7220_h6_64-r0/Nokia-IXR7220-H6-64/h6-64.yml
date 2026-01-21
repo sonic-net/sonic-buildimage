@@ -39,8 +39,9 @@ bcm_device:
             sai_tunnel_support: 1
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 32768
-            #enable port queue drop stats
-            sai_stats_support_mask: 0
+            default_cpu_tx_queue: 7
+            #enable srv6 stats, egr queue drop stats, exclude PFC/pause from in-if discards
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -55,6 +56,9 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 8192
             stat_custom_receive0_management_mode: 1
+            sai_pkt_trim_queue_index: 4
+            # disable DSCP modification for TCs not present in TC_TO_DSCP_MAP
+            sai_pkt_dscp_modification_disable: 1
 ---
 device:
   0:
@@ -1197,6 +1201,17 @@ device:
     0:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
+...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            MIRROR_ON_DROP_RESERVATION: 0
+            SKIP_BUFFER_RESERVATION: 1
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_4
 ...
 ---
 device:
