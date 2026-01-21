@@ -1021,10 +1021,10 @@ static ssize_t set_mode_reset(struct device *dev, struct device_attribute *da,
 
     /* Update tx_disable status */
     if (on) {
-        status |= mask;
+        status &= ~mask; // 0: reset
     }
     else {
-        status &= ~mask;
+        status |= mask; // 1: normal
     }
 
     status = as5812_54x_cpld_write_internal(client, reg, status);

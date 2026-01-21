@@ -53,6 +53,8 @@ class accton_as5812_monitor(object):
     def __init__(self, log_console, log_file):
         """Needs a logger and a logger level."""
 
+        self.thermal = ThermalUtil()
+        self.fan = FanUtil()
         formatter = logging.Formatter('%(name)s %(message)s')
         sys_handler  = logging.handlers.SysLogHandler(address = '/dev/log')
         sys_handler.setFormatter(formatter)
@@ -94,8 +96,8 @@ class accton_as5812_monitor(object):
         FAN_LEV4_SPEED_PERC = 40
 
 
-        thermal = ThermalUtil()
-        fan = FanUtil()
+        thermal = self.thermal
+        fan = self.fan
 
         temp1 = thermal.get_thermal_1_val()
         if temp1 is None:

@@ -1,0 +1,88 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 1f0c
+  name: 'Host bridge: Intel Corporation Atom processor C2000 SoC Transaction Router
+    (rev 03)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 1f10
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 1 (rev
+    03)'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 1f11
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 2 (rev
+    03)'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 1f12
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 3 (rev
+    03)'
+- bus: '00'
+  dev: 0e
+  fn: '0'
+  id: 1f14
+  name: 'Host bridge: Intel Corporation Atom processor C2000 RAS (rev 03)'
+- bus: '00'
+  dev: 0f
+  fn: '0'
+  id: 1f16
+  name: 'IOMMU: Intel Corporation Atom processor C2000 RCEC (rev 03)'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: 1f15
+  name: 'System peripheral: Intel Corporation Atom processor C2000 SMBus 2.0 (rev
+    03)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354 (rev 03)'
+- bus: '00'
+  dev: '14'
+  fn: '1'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354 (rev 03)'
+- bus: '00'
+  dev: '14'
+  fn: '2'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354 (rev 03)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: 1f2c
+  name: 'USB controller: Intel Corporation Atom processor C2000 USB Enhanced Host
+    Controller (rev 03)'
+- bus: '00'
+  dev: '17'
+  fn: '0'
+  id: 1f22
+  name: 'SATA controller: Intel Corporation Atom processor C2000 AHCI SATA2 Controller
+    (rev 03)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: 1f32
+  name: 'SATA controller: Intel Corporation Atom processor C2000 AHCI SATA3 Controller
+    (rev 03)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: 1f38
+  name: 'ISA bridge: Intel Corporation Atom processor C2000 PCU (rev 03)'
+- bus: '00'
+  dev: 1f
+  fn: '3'
+  id: 1f3c
+  name: 'SMBus: Intel Corporation Atom processor C2000 PCU SMBus (rev 03)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b864
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device b864 (rev 02)'
