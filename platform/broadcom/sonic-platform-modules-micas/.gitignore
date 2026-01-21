@@ -1,0 +1,4 @@
+*/modules/**/*.mod
+**/Module.symvers
+common/app/**/tmp
+
