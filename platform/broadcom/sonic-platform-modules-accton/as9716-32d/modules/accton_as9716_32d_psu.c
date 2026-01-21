@@ -35,7 +35,7 @@
 #include <linux/dmi.h>
 
 #define MAX_MODEL_NAME          16
-#define MAX_SERIAL_NUMBER       19
+#define MAX_SERIAL_NUMBER       20
 
 static ssize_t show_status(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_string(struct device *dev, struct device_attribute *da, char *buf);
@@ -279,18 +279,45 @@ static struct as9716_32d_psu_data *as9716_32d_psu_update_device(struct device *d
                 data->model_name[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
             }
-            else {
-                data->model_name[ARRAY_SIZE(data->model_name)-1] = '\0';
+            else
+            {
+                if (!strncmp(data->model_name, "FSH082", strlen("FSH082")))
+                {
+                    data->model_name[strlen("FSH082")]='\0';
+                }    
+                else if (!strncmp(data->model_name, "YESM1300", strlen("YESM1300")))
+                {                
+                    if (data->model_name[9]=='A' && data->model_name[10]=='M')
+                    {
+                       data->model_name[8]='A';
+                       data->model_name[9]='M';
+                       data->model_name[strlen("YESM1300AM")]='\0';
+                    }
+                    else  
+                        data->model_name[strlen("YESM1300")]='\0';
+                }
+                else if (!strncmp(data->model_name, "YM-2651Y", strlen("YM-2651Y")))
+                {
+                    data->model_name[strlen("YM-2651Y")]='\0';
+                }                
+                else
+                    data->model_name[ARRAY_SIZE(data->model_name)-1] = '\0';
                 
             }
-             /* Read from offset 0x2e ~ 0x3d (16 bytes) */
-            status = as9716_32d_psu_read_block(client, 0x2e,data->serial_number, MAX_SERIAL_NUMBER);
+             /* Read from offset 0x35 ~ 0x47 */
+            status = as9716_32d_psu_read_block(client, 0x35,data->serial_number, MAX_SERIAL_NUMBER);
             if (status < 0)
             {
                 data->serial_number[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
             }
-            data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
+            if (!strncmp(data->model_name, "YESM1300AM", strlen("YESM1300AM"))) /*for YESM1300AM, SN length=19*/
+            {
+                data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
+            }
+            else /*for FSH082, SN length=18*/
+                data->serial_number[MAX_SERIAL_NUMBER-2]='\0';
+
         }
 
         data->last_updated = jiffies;
@@ -307,4 +334,3 @@ module_i2c_driver(as9716_32d_psu_driver);
 MODULE_AUTHOR("Jostar Yang <jostar_yang@accton.com.tw>");
 MODULE_DESCRIPTION("as9716_32d_psu driver");
 MODULE_LICENSE("GPL");
-
