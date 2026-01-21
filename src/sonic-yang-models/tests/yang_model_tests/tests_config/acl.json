@@ -2171,5 +2171,50 @@
                 ]
             }
         }
+    },
+    "ACL_PACKET_ACTION_VALIDATE_VALUE_COPY": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "MIRROR_ACL",
+                        "DST_IP": "10.186.72.0/26",
+                        "IP_TYPE": "IPv4ANY",
+                        "PACKET_ACTION": "COPY",
+                        "PRIORITY": 999980,
+                        "RULE_NAME": "Rule_Copy",
+                        "SRC_IP": "10.176.0.0/15"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "MIRROR_ACL",
+                        "policy_desc": "MIRROR_ACL",
+                        "ports": [
+                            "Ethernet0"
+                        ],
+                        "stage": "ingress",
+                        "type": "MIRROR"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
     }
 }
