@@ -67,6 +67,7 @@
 # Common files and FLAGS
 # Run the 'touch cache.skip.common' command in the base directory to exclude the common files from caching
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform slave.mk rules/functions Makefile.cache)
+SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 SONIC_COMMON_FLAGS_LIST :=  $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
@@ -255,7 +256,7 @@ define LOAD_FROM_CACHE
 
 	# Load the cache if cache is enabled and cache file is present in the cache
 	# Update the cache_loaded variable
-	$(if $(and $(CACHE_FILE_SELECT),$(filter $(RCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD))),
+	$(if $(and $(CACHE_FILE_SELECT),$(call CHECK_RCACHE_ENABLED,$(1))),
 		$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo );
 		echo "File $(CACHE_FILE_SELECT) is loaded from cache into $($(1)_BASE_PATH)" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_LOADED := Yes)
@@ -310,13 +311,17 @@ endef
 # Read from the cache
 RCACHE_OPTIONS := cache rcache rwcache
 define CHECK_RCACHE_ENABLED
-$(if $(and $(filter $(RCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)),$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+$(if $(and $(filter $(RCACHE_OPTIONS), \
+					$(or $($(1)_CACHE_OVERRIDE),$(SONIC_DPKG_CACHE_METHOD))), \
+			$(filter-out none,$($(1)_CACHE_MODE))),enabled)
 endef
 
 # Write into the cache
 WCACHE_OPTIONS := cache wcache rwcache
 define CHECK_WCACHE_ENABLED
-$(if $(and $(filter $(WCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)),$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+$(if $(and $(filter $(WCACHE_OPTIONS), \
+					$(or $($(1)_CACHE_OVERRIDE),$(SONIC_DPKG_CACHE_METHOD))), \
+			$(filter-out none,$($(1)_CACHE_MODE))),enabled)
 endef
 
 # It logs the reason why the target is getting built/rebuilt

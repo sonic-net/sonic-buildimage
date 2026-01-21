@@ -32,7 +32,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
     EEPROM_DECODE_HEADLINES = 6
 
     def __init__(self):
-        self._eeprom_path = "/sys/class/i2c-adapter/i2c-2/2-0050/eeprom"
+        self._eeprom_path = "/sys/bus/i2c/devices/i2c-2/2-0050/eeprom"
         self._eeprom = None
         super(Tlv, self).__init__(self._eeprom_path, 0, '', True)
 

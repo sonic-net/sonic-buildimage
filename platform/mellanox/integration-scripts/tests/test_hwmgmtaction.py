@@ -121,8 +121,9 @@ def check_file_content(path):
 
 @mock.patch('helper.SLK_PATCH_LOC', REL_INPUTS_DIR)
 @mock.patch('helper.SLK_SERIES', REL_INPUTS_DIR+"series")
-@mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"kconfig-inclusions")
-@mock.patch('hwmgmt_helper.SLK_KCONFIG_EXCLUDE', REL_INPUTS_DIR+"kconfig-exclusions")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"common_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_AMD64', REL_INPUTS_DIR+"amd64_kconfig")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_ARM64', REL_INPUTS_DIR+"arm64-mellanox_kconfig")
 class TestHwMgmtPostAction(TestCase):
     def setUp(self):
         self.action = HwMgmtAction.get(mock_hwmgmt_args())
@@ -163,7 +164,7 @@ class TestHwMgmtPostAction(TestCase):
         self.action.write_final_slk_series()
         self.action.construct_series_with_non_up()
         series_diff = self.action.get_series_diff()
-        kcfg_diff = self._get_kcfg_incl_diff()
+        kcfg_diff = self._get_kcfg_diff()
         final_diff = self.action.get_merged_diff(series_diff, kcfg_diff)
         self.action.write_non_up_diff(series_diff, kcfg_diff)
         print("".join(final_diff))
@@ -191,13 +192,13 @@ class TestHwMgmtPostAction(TestCase):
         self._parse_inc_excl()
         self.kcfgaction.parse_noarch_inc_exc()
     
-    def _get_kcfg_incl_raw(self):
+    def _get_kcfg_upstream(self):
         self._parse_noarch_inc_excl()
-        return self.kcfgaction.get_kconfig_inc()
+        return self.kcfgaction.get_upstream_kconfig()
 
-    def _get_kcfg_incl_diff(self):
-        kcfg_raw = self._get_kcfg_incl_raw()
-        return self.kcfgaction.get_downstream_kconfig_inc(kcfg_raw)
+    def _get_kcfg_diff(self):
+        common, amd64, arm64 = self._get_kcfg_upstream()
+        return self.kcfgaction.get_downstream_kconfig_diff(common, amd64, arm64)
 
     def test_parse_inc_excl(self):
         self._parse_inc_excl()
@@ -254,13 +255,10 @@ class TestHwMgmtPostAction(TestCase):
 
     @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
     def test_kcfg_incl_file(self, mock_write_lines_mock):
-        kcfg_raw = self._get_kcfg_incl_raw()
-        FileHandler.write_lines("", kcfg_raw, True)
-        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-inclusions")
-    
-    @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
-    def test_kcfg_excl(self, mock_write_lines_mock):
-        self._parse_noarch_inc_excl()
-        kcfg_excl = self.kcfgaction.get_kconfig_excl()
-        FileHandler.write_lines("", kcfg_excl, True)
-        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-exclusions")
+        common, amd64, arm64 = self._get_kcfg_upstream()
+        FileHandler.write_lines("", common, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/common_kconfig")
+        FileHandler.write_lines("", amd64, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/amd64_kconfig")
+        FileHandler.write_lines("", arm64, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/arm64-mellanox_kconfig")

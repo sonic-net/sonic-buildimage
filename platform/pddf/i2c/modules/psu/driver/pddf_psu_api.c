@@ -502,10 +502,35 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
     char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
     int data_len = adata->len;
+    bool is_pmbus = strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0;
+    uint8_t pmbus_data_len = 0;
+    bool read_pmbus_data_len = false;
 
     while (retry)
     {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
+        if (is_pmbus)
+        {
+            /* For PMBus - first read 1 byte to get the data length */
+            if (!read_pmbus_data_len)
+            {
+                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, 1, buf);
+
+                if (likely(status>=0))
+                {
+                    pmbus_data_len = buf[0];
+                    if (pmbus_data_len > sizeof(buf) - 2)
+                        pmbus_data_len = sizeof(buf) - 2;
+                    read_pmbus_data_len = true;
+                }
+            }
+            if (likely(read_pmbus_data_len))
+                status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, pmbus_data_len+1, buf);
+        }
+        else
+        {
+            status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
+        }
+
         if (unlikely(status<0))
         {
             msleep(60);
@@ -522,13 +547,17 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
     }
     else
     {
-        buf[data_len-1] = '\0';
+        if (is_pmbus)
+        {
+            buf[pmbus_data_len+1] = '\0';
+            strscpy(padata->val.strval, buf+1, sizeof(padata->val.strval));
+        }
+        else
+        {
+            buf[data_len-1] = '\0';
+            strscpy(padata->val.strval, buf, sizeof(padata->val.strval));
+        }
     }
-
-    if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, buf+1, data_len-1);
-    else
-        strncpy(padata->val.strval, buf, data_len);
 
     psu_dbg(KERN_ERR "%s: status = %d, buf block: %s\n", __FUNCTION__, status, padata->val.strval);
     return 0;
