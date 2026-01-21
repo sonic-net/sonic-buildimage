@@ -142,6 +142,9 @@ iface eth0 inet dhcp
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
     vrf mgmt
 {% endif %}
+    ########## management network policy routing rules
+    # management port down rules
+    pre-down ip route delete default dev eth0
 iface eth0 inet6 dhcp
     up sysctl net.ipv6.conf.eth0.accept_ra=1
     down sysctl net.ipv6.conf.eth0.accept_ra=0
