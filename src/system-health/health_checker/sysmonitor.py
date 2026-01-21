@@ -311,7 +311,7 @@ class Sysmonitor(ProcessTaskBase):
         try:
             service_status = "Down"
             service_up_status = "Down"
-            service_name,last_name = event.split('.')
+            service_name = event.rsplit('.', 1)[0]
 
             sysctl_show = self.run_systemctl_show(event)
 
