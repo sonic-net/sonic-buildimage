@@ -77,6 +77,8 @@ db_cfg_file_tmp="/var/run/redis/sonic-db/database_config.json.tmp"
 cp $db_cfg_file $db_cfg_file_tmp
 
 if [[ $DATABASE_TYPE == "chassisdb" ]]; then
+    REDIS_CHASSIS_DIR=/var/run/redis-chassis
+    REDIS_CHASSIS_LIB_DIR=/var/lib/redis_chassis
     # Docker init for database-chassis
     echo "Init docker-database-chassis..."
     VAR_LIB_REDIS_CHASSIS_DIR="/var/lib/redis_chassis"
@@ -88,6 +90,9 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     sonic-cfggen -j $db_cfg_file_tmp -a "$additional_data_json" \
     -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
+    echo "Create directories and set ownership recursively..."
+    mkdir -p $REDIS_CHASSIS_DIR/sonic-db $REDIS_CHASSIS_LIB_DIR
+    chown -R redis:redis $REDIS_CHASSIS_DIR $REDIS_CHASSIS_LIB_DIR
     rm $db_cfg_file_tmp
     chown -R redis:redis $VAR_LIB_REDIS_CHASSIS_DIR
     chown -R redis:redis $REDIS_DIR
