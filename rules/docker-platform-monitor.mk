@@ -54,6 +54,8 @@ $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --cap-add=SYS_RAWIO --cap-add=SYS_ADMIN -t
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:rw
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/gnoi_reboot.pipe:/host/gnoi_reboot.pipe:rw
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/gnoi_reboot_response.pipe:/host/gnoi_reboot_response.pipe:rw
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/pmon/stormond:/usr/share/stormond:rw
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/platform_cache:/var/run/platform_cache:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/device/pddf:/usr/share/sonic/device/pddf:ro
