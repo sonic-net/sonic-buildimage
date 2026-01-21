@@ -133,5 +133,39 @@ module sonic-bgp-neighbor {
                 uses bgpcmn:sonic-bgp-cmn-af;
             }
         }
+
+        container BGP_VNET_NEIGHBOR {
+            description "BGP neighbors associated with SONiC VNETs";
+
+            list BGP_VNET_NEIGHBOR_LIST {
+                key "vnet_name neighbor";
+
+                leaf vnet_name {
+                    type leafref {
+                        path "svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                    }
+
+                    description "VNET name (from sonic-vnet)";
+                }
+
+                leaf neighbor {
+                    type union {
+                        type inet:ip-address;
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                    }
+
+                    description "BGP Neighbor, it will be neighbor address or interface name";
+                    uses bgpcmn:sonic-bgp-cmn;
+                }
+            }
+        }
     }
 }
