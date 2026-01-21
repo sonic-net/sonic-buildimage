@@ -170,7 +170,11 @@ ENABLE_NATIVE_WRITE = y
 INCLUDE_MACSEC = y
 
 # INCLUDE_GBSYNCD - build docker-gbsyncd-* for gearbox support
+ifneq ($(filter broadcom vs,$(CONFIGURED_PLATFORM)),)
 INCLUDE_GBSYNCD ?= y
+else
+INCLUDE_GBSYNCD ?= n
+endif
 
 # INCLUDE_TEAMD - build docker-teamd for LAG protocol support
 INCLUDE_TEAMD ?= y
