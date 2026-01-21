@@ -338,7 +338,7 @@ static void set_l3_itf_state(struct CSM *csm,
     return;
 }
 
-static int peer_po_is_alive(struct CSM *csm, int po_ifindex)
+static int peer_po_is_alive(struct CSM *csm, int po_id)
 {
     struct PeerInterface *pif = NULL;
     int pif_active = 0;
@@ -350,7 +350,7 @@ static int peer_po_is_alive(struct CSM *csm, int po_ifindex)
     {
         if (pif->type != IF_T_PORT_CHANNEL)
             continue;
-        if (pif->po_id != po_ifindex)
+        if (pif->po_id != po_id)
             continue;
 
         if (pif->po_active)
@@ -1393,7 +1393,7 @@ static void update_l2_po_state(struct CSM *csm,
             else if (po_state == 0
                      && MLACP(csm).current_state == MLACP_STATE_EXCHANGE)
             {
-                if (peer_po_is_alive(csm, lif->ifindex) == 1)
+                if (peer_po_is_alive(csm, lif->po_id) == 1)
                     route_type = ROUTE_ADD;
             }
         }
