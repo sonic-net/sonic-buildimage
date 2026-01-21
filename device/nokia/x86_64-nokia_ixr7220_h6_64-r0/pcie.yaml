@@ -157,13 +157,7 @@
   dev: '00'
   fn: '2'
   id: '1649'
-  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] VanGogh PSP/CCP'
-- bus: '04'
-  dev: '00'
-  fn: '3'
-  id: 161d
-  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
-    #3'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 19h PSP/CCP'
 - bus: '04'
   dev: '00'
   fn: '4'
@@ -174,13 +168,13 @@
   dev: '00'
   fn: '5'
   id: 15e2
-  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] ACP/ACP3X/ACP6x
-    Audio Coprocessor (rev 60)'
+  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] Audio Coprocessor
+    (rev 60)'
 - bus: '04'
   dev: '00'
   fn: '6'
   id: 15e3
-  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h/19h HD Audio
+  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h/19h/1ah HD Audio
     Controller'
 - bus: '04'
   dev: '00'
@@ -207,9 +201,9 @@
 - bus: '06'
   dev: '00'
   fn: '0'
-  id: 161f
-  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
-    #8'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function'
 - bus: '06'
   dev: '00'
   fn: '3'
