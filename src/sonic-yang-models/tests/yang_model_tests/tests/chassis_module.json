@@ -9,5 +9,13 @@
         "desc": "Load chassis module table with admin_status set to invalid value",
         "eStrKey": "InvalidValue",
         "eStr": ["admin_status"]
+    },
+    "CHASSIS_MODULE_WITH_DPU_ADMIN_DOWN": {
+        "desc": "Load chassis module table with dpu admin_status set to down"
+    },
+    "CHASSIS_MODULE_WITH_DPU_ADMIN_INVALID_VALUE": {
+        "desc": "Load chassis module table with dpu admin_status set to down",
+        "eStrKey": "InvalidValue",
+        "eStr": ["admin_status"]
     }
 }
