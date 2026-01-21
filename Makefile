@@ -130,3 +130,6 @@ clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h
 freeze:
 	@scripts/versions_manager.py freeze $(FREEZE_VERSION_OPTIONS)
+
+clean_docker_images:
+	@scripts/clean_docker_images.sh
