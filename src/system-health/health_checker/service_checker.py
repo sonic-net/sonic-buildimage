@@ -379,6 +379,10 @@ class ServiceChecker(HealthChecker):
         """
         feature_name = self.container_feature_dict[container_name]
         if feature_name in feature_table:
+            # We check the feature ignore list. 
+            # If the feature is in that list, we skip its health check. 
+            if (config and config.ignore_features and feature_name in config.ignore_features):
+                return
             # We look into the 'FEATURE' table to verify whether the container is disabled or not.
             # If the container is diabled, we exit.
             if ("state" in feature_table[feature_name]
