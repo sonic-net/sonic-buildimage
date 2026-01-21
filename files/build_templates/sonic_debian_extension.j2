@@ -744,6 +744,10 @@ sudo cp $IMAGE_CONFIGS/pcie-check/pcie-check.service $FILESYSTEM_ROOT_USR_LIB_SY
 echo "pcie-check.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/pcie-check/pcie-check.sh $FILESYSTEM_ROOT/usr/bin/
 
+## Increase the systemd service startup timeout
+sudo sed -i "s/.*DefaultTimeoutStartSec.*/DefaultTimeoutStartSec=180s/g" $FILESYSTEM_ROOT/etc/systemd/system.conf
+sudo sed -i "s/.*DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=180s/g" $FILESYSTEM_ROOT/etc/systemd/system.conf
+
 ## Install package without starting service
 ## ref: https://wiki.debian.org/chroot
 sudo tee -a $FILESYSTEM_ROOT/usr/sbin/policy-rc.d > /dev/null <<EOF
