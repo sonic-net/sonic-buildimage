@@ -452,6 +452,14 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
 
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKG=grub-pc-bin
+        # GRUB images and modules for grub-install
+        sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install \
+            grub-pc-bin \
+            grub-efi-amd64-bin
+        sudo rm -rf $FILESYSTEM_ROOT/boot/grub
+        sudo mkdir -p $FILESYSTEM_ROOT/boot/grub
+        sudo cp -r $FILESYSTEM_ROOT/usr/lib/grub/i386-pc $FILESYSTEM_ROOT/boot/grub
+        sudo cp -r $FILESYSTEM_ROOT/usr/lib/grub/x86_64-efi $FILESYSTEM_ROOT/boot/grub
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         GRUB_PKG=grub-efi-arm64-bin
     fi
