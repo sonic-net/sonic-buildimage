@@ -1,0 +1,9 @@
+# Disable pddf-platform-init, monitor, monitor-fan, monitor-psu
+
+systemctl stop pddf-platform-init.service
+systemctl disable pddf-platform-init.service
+systemctl stop as7326-56x-pddf-platform-monitor.service
+systemctl disable as7326-56x-pddf-platform-monitor.service
+systemctl stop as7326-platform-handle_mac.service
+systemctl disable as7326-platform-handle_mac.service
+
