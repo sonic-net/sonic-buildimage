@@ -328,6 +328,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For initramfs
         shellcheck \
         bash-completion \
+# For HAM
+        libdbus-c++-dev \
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
