@@ -1,4 +1,4 @@
-*master builds*:
+*master builds* test:
 
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=master&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=master)
 [![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=master&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=master)
