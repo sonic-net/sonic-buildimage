@@ -32,11 +32,11 @@
         {
             "i2c":
             {
-                "valmap": { "F2B":"EXHAUST", "B2F":"INTAKE" }
+                "valmap": { "F2B":"exhaust", "B2F":"intake" }
             }
         },
 
-        "PSU_FAN_MAX_SPEED":"18000"
+        "PSU_FAN_MAX_SPEED":"26688"
     },
 
     "FAN":
@@ -45,7 +45,7 @@
         {
             "i2c":
             {
-                "valmap": {"1":"INTAKE", "0":"EXHAUST"}
+                "valmap": {"1":"intake", "0":"exhaust"}
             }
         },
 
