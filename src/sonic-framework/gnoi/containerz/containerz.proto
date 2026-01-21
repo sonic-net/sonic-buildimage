@@ -1,0 +1,630 @@
+//
+// Copyright 2023 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// This file defines the gNOI APIs used to perform container operations on a
+// network device. In addition to the container operations specified in this
+// file, any implementation of the containerz service is expected to clean or
+// remove images and containers that are either no longer used or that have been
+// orphaned either by upgrading containers or by containers that have been
+// stopped not removed.
+//
+// This specification is still under design and subject to
+// change.
+syntax = "proto3";
+
+package gnoi.containerz;
+
+import "github.com/openconfig/gnoi/common/common.proto";
+import "github.com/openconfig/gnoi/types/types.proto";
+import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
+
+option go_package = "github.com/openconfig/gnoi/containerz";
+option (types.gnoi_version) = "0.1.2";
+
+service Containerz {
+  // Deploy sets a container image on the target. The container is sent as
+  // a sequential stream of messages containing up to 4MB of data (max default
+  // gRPC message size). Upon reception of a valid container, the target must
+  // load it into its registry. Whether the registry is local or remote is
+  // target and deployment specific. A valid container is one that has passed
+  // its checksum.
+  rpc Deploy(stream DeployRequest) returns (stream DeployResponse) {}
+
+  // ListImage returns all images that the spec defined in the request.
+  rpc ListImage(ListImageRequest) returns (stream ListImageResponse) {}
+
+  // RemoveImage deletes images that match the spec defined in the
+  // request. If the image is associated to a running container then an error
+  // is returned. If the specified container image does not exist, this
+  // operation is a no-op.
+  rpc RemoveImage(RemoveImageRequest)
+    returns (RemoveImageResponse) {}
+
+  // RemoveContainer deletes images that match the spec defined in the
+  // request. If the image is associated to a running container then an error
+  // is returned. If the specified container image does not exist, this
+  // operation is a no-op.
+  //
+  // Deprecated - use RemoveImage instead.
+  rpc RemoveContainer(RemoveContainerRequest)
+    returns (RemoveContainerResponse) {}
+
+  // ListContainer returns all containers that match the spec defined in the
+  // request.
+  rpc ListContainer(ListContainerRequest)
+    returns (stream ListContainerResponse) {}
+
+  // Start starts a container. If the image does not exist on the target,
+  // Start returns an error. A started container is identified by an instance
+  // name, which  can optionally be supplied by the caller otherwise the target
+  // should provide one. If the instance name already exists, the target should
+  // return an error.
+  rpc StartContainer(StartContainerRequest) returns (StartContainerResponse) {}
+
+  // Stop stops a container. If the container does not exist or is not running
+  // this operation returns an error. This operation can, optionally, force
+  // (i.e. kill) a container.
+  rpc StopContainer(StopContainerRequest) returns (StopContainerResponse) {}
+
+  // UpdateContainer updates a running container to the image specified in the
+  // request. By default the operation is synchronous which means that the
+  // request will only return once the container has either been successfully
+  // updated or the update has failed. If the client requests an asynchronous
+  // update then the server must perform all validations (e.g. does the
+  // requested image exist on the system or does the instance name exist) and
+  // return to the client and the update happens asynchronously. It is up to the
+  // client to check if the update actually updates the container to the
+  // requested version or not.
+  // In both synchronous and asynchronous mode, the update process is a
+  // break-before-make process as resources bound to the old container must be
+  // released prior to launching the new container.
+  // If the update fails, the server must restore the previous version of the
+  // container. This can either be a start of the previous container or by
+  // starting a new container with the old image.
+  // It must use the provided StartContainerRequest provided in the
+  // params field.
+  // If a container exists but is not running should still upgrade the container
+  // and start it.
+  // The client should only depend on the client being restarted. Any ephemeral
+  // state (date written to memory or the filesystem) cannot be depended upon.
+  // In particular, the contents of the filesystem are not guaranteed during a
+  // rollback.
+  rpc UpdateContainer(UpdateContainerRequest)
+    returns (UpdateContainerResponse) {}
+
+  // Log streams the logs of a running container. If the container if no longer
+  // running this operation streams the latest logs and returns.
+  rpc Log(LogRequest) returns (stream LogResponse) {}
+
+  // Creates a volume. If the volume already exists, this operation returns an
+  // error. A volume is expected to be backed by persistent datastore and is
+  // expected exist across device reboots along with the data it contained.
+  rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse) {}
+
+  // Removes a volume. If the volume does not exist, this operation is a noop.
+  rpc RemoveVolume(RemoveVolumeRequest) returns (RemoveVolumeResponse) {}
+
+  // ListVolume returns all volumes that match the spec defined in the filter.
+  rpc ListVolume(ListVolumeRequest) returns (stream ListVolumeResponse) {}
+}
+
+message DeployRequest {
+  oneof request {
+    ImageTransfer image_transfer = 1;
+    bytes content = 2;
+    ImageTransferEnd image_transfer_end = 3;
+  }
+}
+
+message ImageTransfer {
+  // The image name. This is the name the container image must have after the
+  // is completed.
+  string name = 1;
+
+  // The tag is a version identifier for this container image. After the
+  // transfer successfully completes, the tag must be applied to the
+  // container image.
+  string tag = 2;
+
+  // Optional. Indicates the size (in bytes) of the container image.
+  uint64 image_size = 3;
+
+  // Optional. Instructs the target to fetch the image from a remote location.
+  // The above name and tag must be applied to the container once downloaded.
+  common.RemoteDownload remote_download = 4;
+}
+
+// ImageTransferEnd indicates to the target that the client is finished sending
+// and therefore no more content will be sent. Any content sent after this
+// message should be discarded. This message serves as a signal to the target
+// to begin integrity verifications on the received data.
+message ImageTransferEnd {
+}
+
+message DeployResponse {
+  oneof response {
+    ImageTransferReady image_transfer_ready = 1;
+    ImageTransferProgress image_transfer_progress = 2;
+    ImageTransferSuccess image_transfer_success = 3;
+    google.rpc.Status image_transfer_error = 4;
+  }
+}
+
+// ImageTransferReady indicates to the client that the target is ready to
+// receive the container image content.
+message ImageTransferReady {
+  // Indicates the size of the chunks that the client should break the
+  // container into as it is transferred.
+  int32 chunk_size = 1;
+}
+
+// ImageTransferProgress is sent periodically to the client during the transfer.
+message ImageTransferProgress {
+  // The number of bytes transferred so far.
+  uint64 bytes_received = 1;
+}
+
+// ImageTransferSuccess indicates to the client that the container image
+// transfer was successful.
+message ImageTransferSuccess {
+  // The name of the container image.
+  string name = 1;
+
+  // The tag of the container image.
+  string tag = 2;
+
+  // The total size of the image.
+  uint64 image_size = 3;
+}
+
+message RemoveImageRequest {
+  // The container image name to be removed.
+  string name = 1;
+
+  // The container tag to be removed.
+  string tag = 2;
+
+  // If force is set, the target should attempt to forcibly remove the
+  // container.
+  bool force = 3;
+}
+
+message RemoveImageResponse {
+  enum Code {
+    UNSPECIFIED = 0;
+
+    // An unknown error. Must use the detail value to describe the issue.
+    UNKNOWN = 1;
+
+    // Indicates the image was not found in the remote location.
+    NOT_FOUND = 2;
+
+    // Indicates that a container using this image is running.
+    RUNNING = 3;
+
+    // The container image was successfully removed.
+    SUCCESS = 4;
+  }
+
+  Code code = 1;
+  string detail = 2;
+}
+
+message RemoveContainerRequest {
+  // The container image name to be removed.
+  string name = 1;
+
+  // The container tag to be removed.
+  string tag = 2;
+
+  // If force is set, the target should attempt to forcibly remove the
+  // container.
+  bool force = 3;
+}
+
+message RemoveContainerResponse {
+  enum Code {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+
+    // Indicates the image was not found in the remote location.
+    NOT_FOUND = 1;
+
+    // Indicates that a container using this image is running.
+    RUNNING = 2;
+
+    // The container image was successfully removed.
+    SUCCESS = 3;
+  }
+
+  Code code = 1;
+  string detail = 2;
+}
+
+message ListImageRequest {
+  int32 limit = 1;
+
+  // A filter is a mapping from a key to a list of values.
+  // TODO(alshabib) document possible keys
+  message Filter {
+    string key = 1;
+    repeated string value = 2;
+  }
+
+  repeated Filter filter = 3;
+}
+
+message ListImageResponse {
+  string id = 1;
+  string image_name = 2;
+  string tag = 3;
+}
+
+message ListContainerRequest {
+  // List all containers, by default only running ones are returned.
+  bool all = 1;
+
+  // Only return limit number of containers.
+  int32 limit = 2;
+
+  // A filter is a mapping from a key to a list of values.
+  // TODO(alshabib) document possible keys
+  message Filter {
+    string key = 1;
+    repeated string value = 2;
+  }
+
+  repeated Filter filter = 3;
+}
+
+message ListContainerResponse {
+  string id = 1;
+  string name = 2;
+  string image_name = 3;
+
+  enum Status {
+    // An unspecified state.
+    UNSPECIFIED = 0;
+
+    // Container was running and is now stopped.
+    STOPPED = 1;
+
+    // Container is running.
+    RUNNING = 2;
+
+    // Container has never been run but exists on the target.
+    PRESENT = 3;
+
+    // The container does not exist on the target.
+    NOT_FOUND = 4;
+  }
+
+  Status status = 4;
+}
+
+// A volume can be passed to a container such that it can persist data.
+message Volume {
+  string name = 1;
+
+  // The mount_point is location with the container where the volume should be
+  // attached within the container.
+  string mount_point = 2;
+
+  // If read_only is set, the volume is mounted in readonly mode.
+  bool read_only = 3;
+}
+
+message StartContainerRequest {
+  // The name and tag of the container to start.
+  string image_name = 1;
+  string tag = 2;
+  string cmd = 3;
+
+  // Optional. The name to give the running container. If none is specified,
+  // the target should assign one.
+  string instance_name = 4;
+  message Port {
+    uint32 internal = 1;
+    uint32 external = 2;
+  }
+
+  // List of internal ports to expose outside the container.
+  repeated Port ports = 5;
+
+  // Environment to set in the container.
+  map<string, string> environment = 6;
+
+  // List of volumes that should be attached to the container.
+  repeated Volume volumes = 7;
+
+  // The network to attach this container to. This could be 'host', 'bridged',
+  // or any other network available in the runtime.
+  string network = 8;
+
+  // Capabilities to be added or removed. Capabilities are first removed then
+  // added.
+  message Capabilities {
+    repeated string add = 1;
+    repeated string remove = 2;
+  }
+
+  // Add or remove capabilities to this container. The list of valid
+  // capabilities can be found in
+  // https://man7.org/linux/man-pages/man7/capabilities.7.html.
+  // This is default set of capabilities:
+  // AUDIT_WRITE, CHOWN, DAC_OVERRIDE, FOWNER, FSETID, KILL, MKNOD,
+  // NET_BIND_SERVICE, NET_RAW, SETFCAP, SETGID, SETPCAP, SETUID, SYS_CHROOT.
+  Capabilities cap = 9;
+
+  message Restart {
+    enum Policy {
+      // Never restart a container.
+      NONE = 0;
+
+      // Always restart a container unless explicitly stopped. This includes
+      // when the container runtime is restarted, i.e. any container with this
+      // policy prior to the runtime being stopped must be restarted when the
+      // runtime is started again.
+      ALWAYS = 1;
+
+      // Same as ALWAYS but not across container runtime restarts.
+      UNLESS_STOPPED = 2;
+
+      // Restart for max attempts if the container fails.
+      ON_FAILURE = 3;
+    }
+
+    Policy policy = 1;
+
+    // Only applies for the ON_FAILURE policy.
+    uint32 attempts = 2;
+  }
+
+  // restart defines the restart policy to use for this container. All policies
+  // affect the behaviour when the container fails. Only the ALWAYS policy will
+  // affect the behaviour across system reboots.
+  Restart restart = 10;
+
+  message RunAs {
+    // The user to run as.
+    string user = 1;
+
+    // Optional. The group to run as.
+    string group = 2;
+  }
+
+  // run_as defines what user and group this container should run as. If it is
+  // not specified then the container will be run as the docker user and group.
+  RunAs run_as = 11;
+
+  // Other container properties will be added as it becomes necessary.
+}
+
+message StartContainerResponse {
+  oneof response {
+    StartOK start_ok = 1;
+    StartError start_error = 2;
+  }
+}
+
+message StartOK {
+  // The running containers name.
+  string instance_name = 1;
+}
+
+message StartError {
+  enum Code {
+    UNSPECIFIED = 0;
+
+    // An unknown error. The details field should provide more information.
+    UNKNOWN = 1;
+
+    // The container image was not found.
+    NOT_FOUND = 2;
+
+    // Exposed port is already used by another container.
+    PORT_USED = 3;
+  }
+
+  Code error_code = 1;
+  string details = 2;
+}
+
+message StopContainerRequest {
+  string instance_name = 1;
+
+  // If force is set, the target should attempt to forcibly kill the container.
+  bool force = 2;
+
+  // If restart is set, the target should start the container immediately
+  // after stopping it.
+  bool restart = 3;
+}
+
+message StopContainerResponse {
+  enum Code {
+    // An unspecified error. The details field should provide more information.
+    UNSPECIFIED = 0;
+
+    // Container is busy.
+    BUSY = 1;
+
+    // Instance was not found on the target.
+    NOT_FOUND = 2;
+
+    // The container was removed.
+    SUCCESS = 3;
+  }
+
+  Code code = 1;
+  string details = 2;
+}
+
+message UpdateContainerRequest {
+
+  // The name of the running container to update.
+  string instance_name = 1;
+
+  // The image and tag to update the container to.
+  string image_name = 2;
+  string image_tag = 3;
+
+  // The set of parameters to run the container with.
+  StartContainerRequest params = 4;
+
+  // Run this operation asynchronously or not.
+  bool async = 5;
+}
+
+message UpdateContainerResponse {
+  oneof response {
+    UpdateOK update_ok = 1;
+    UpdateError update_error = 2;
+  }
+}
+
+message UpdateOK {
+  // The running containers name.
+  string instance_name = 1;
+
+  // Indicates if this is an async update.
+  bool is_async = 2;
+}
+
+message UpdateError {
+  enum Code {
+    // An unspecified error. The details field should provide more information.
+    UNSPECIFIED = 0;
+
+    // The container image was not found.
+    NOT_FOUND = 1;
+
+    // Exposed port is already used by another container.
+    PORT_USED = 2;
+
+    // The container was found but was not running.
+    NOT_RUNNING = 3;
+
+    // The update failed and the previous version was restored.
+    NOT_UPDATED = 4;
+
+    // The update operation or rollback failed.
+    FAILURE = 5;
+  }
+
+  Code error_code = 1;
+  string details = 2;
+}
+
+message LogRequest {
+  string instance_name = 1;
+
+  // If set, the stream remains open until the client cancels it.
+  bool follow = 2;
+}
+
+message LogResponse {
+  string msg = 1;
+}
+
+// Driver enum defines which volume driver should be used when creating the
+// volume
+enum Driver {
+  DS_UNSPECIFIED = 0;
+  DS_LOCAL = 1;
+}
+
+message LocalDriverOptions {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_NONE = 1;
+  }
+
+  // Mount type to use. If this is not specified it default to `none`.
+  Type type = 1;
+
+  // List of mount options as specified by `options` in
+  // http://man7.org/linux/man-pages/man8/mount.8.html.
+  repeated string options = 2;
+
+  string mountpoint = 3;
+}
+
+message CreateVolumeRequest {
+  // name of the volume. If present, this system must create the volume with
+  // this name otherwise it must allocate a name.
+  string name = 1;
+
+  // The volume driver. If not specified, this defaults to the the standard
+  // linux mount operation (http://man7.org/linux/man-pages/man8/mount.8.html)
+  // and associated options.
+  Driver driver = 2;
+
+  // Options for the driver. The actual option keys and values are driver
+  // specific.
+  oneof options {
+    LocalDriverOptions local_mount_options = 3;
+  }
+
+  // Labels to apply to the volume. Labels are metadata for the the volume.
+  map<string, string> labels = 4;
+}
+
+message CreateVolumeResponse {
+  // The name of the created volume.
+  string name = 1;
+}
+
+message RemoveVolumeRequest {
+  // The volume to remove.
+  string name = 1;
+
+  // force the volume removal.
+  bool force = 2;
+}
+
+message RemoveVolumeResponse {
+}
+
+message ListVolumeRequest {
+  // A filter is a mapping from a key to a list of values.
+  // TODO(alshabib) document possible keys
+  message Filter {
+    string key = 1;
+    repeated string value = 2;
+  }
+
+  repeated Filter filter = 1;
+}
+
+message ListVolumeResponse {
+  string name = 1;
+
+  // The timestamp when the volume was created.
+  google.protobuf.Timestamp created = 2;
+
+  // The volume driver
+  string driver = 3;
+
+  // Options for the driver. The actual option keys and values are driver
+  // specific.
+  map<string, string> options = 4;
+
+  // Volume labels.
+  map<string, string> labels = 5;
+
+}
