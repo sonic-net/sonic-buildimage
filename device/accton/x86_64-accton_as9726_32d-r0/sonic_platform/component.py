@@ -14,12 +14,20 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 CPLD_ADDR_MAPPING = {
-    "CPLD1": "3-0060"
+    "CPLD1": "1-0060",
+    "CPLD2": "10-0061",
+    "CPLD3": "10-0062",
+    "CPLD4": "14-0066",
+    "CPLD5": "1-0065"
 }
 SYSFS_PATH = "/sys/bus/i2c/devices/"
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
 COMPONENT_LIST= [
    ("CPLD1", "CPLD 1"),
+   ("CPLD2", "CPLD 2"),
+   ("CPLD3", "CPLD 3"),
+   ("CPLD4", "CPLD FAN"),
+   ("CPLD5", "CPLD CPU"),
    ("BIOS", "Basic Input/Output System")
 
 ]
@@ -100,3 +108,55 @@ class Component(ComponentBase):
             A boolean, True if install successfully, False if not
         """
         raise NotImplementedError
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the device
+        Returns:
+            bool: True if device is present, False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return 'N/A'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return 'N/A'
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the device
+        Returns:
+            A boolean value, True if device is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False

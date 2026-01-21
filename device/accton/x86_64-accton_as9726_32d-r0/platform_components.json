@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "9726-32DB-O-AC-F": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { },
+                "CPLD5": { },
+                "BIOS": { }
+            }
+        }
+    }
+}

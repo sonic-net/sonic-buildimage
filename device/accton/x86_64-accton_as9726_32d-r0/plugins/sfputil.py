@@ -5,7 +5,6 @@
 
 try:
     import time
-    from ctypes import create_string_buffer
     from sonic_sfp.sfputilbase import SfpUtilBase
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -125,61 +124,45 @@ class SfpUtil(SfpUtilBase):
     def get_low_power_mode(self, port_num):
         if port_num > self.QSFP_PORT_END: #sfp not support lpmode
             return False
+
+        if port_num <= 16:
+            lpmode_path = self.BASE_CPLD2_PATH + "module_lpmode_" + str(port_num)
+        else:
+            lpmode_path = self.BASE_CPLD3_PATH + "module_lpmode_" + str(port_num)
         try:
-            eeprom = None
-
-            if not self.get_presence(port_num):
-                return False
-
-            eeprom = open(self.port_to_eeprom_mapping[port_num], "rb")
-            eeprom.seek(93)
-            lpmode = ord(eeprom.read(1))
-
-            if ((lpmode & 0x3) == 0x3):
-                return True  # Low Power Mode if "Power override" bit is 1 and "Power set" bit is 1
-            else:
-                # High Power Mode if one of the following conditions is matched:
-                # 1. "Power override" bit is 0
-                # 2. "Power override" bit is 1 and "Power set" bit is 0
-                return False
+            val_file = open(lpmode_path)
+            content = val_file.readline().rstrip()
+            val_file.close()
         except IOError as e:
             print("Error: unable to open file: %s" % str(e))
             return False
-        finally:
-            if eeprom is not None:
-                eeprom.close()
-                time.sleep(0.01)
+        if content == "0":
+            return True
+
+        return False
+
 
     def set_low_power_mode(self, port_num, lpmode):
         # Check for invalid port_num
         if port_num > self.QSFP_PORT_END: #sfp not support lpmode:
             return False
+        if not self.get_presence(port_num):
+            return False  # Port is not present, unable to set lpmode
 
-        try:
-            eeprom = None
-            if not self.get_presence(port_num):
-                return False  # Port is not present, unable to set the eeprom
+        if port_num <= 16:
+            lpmode_path = self.BASE_CPLD2_PATH + "module_lpmode_" + str(port_num)
+        else:
+            lpmode_path = self.BASE_CPLD3_PATH + "module_lpmode_" + str(port_num)
 
-            # Fill in write buffer
-            # 0x3:Low Power Mode. "Power override" bit is 1 and "Power set" bit is 1
-            # 0x9:High Power Mode. "Power override" bit is 1 ,"Power set" bit is 0 and "High Power Class Enable" bit is 1
-            regval = 0x3 if lpmode else 0x9
+        self.__port_to_mod_lpmode = lpmode_path
 
-            buffer = create_string_buffer(1)
-            buffer[0] = regval
+        if lpmode is True:
+            ret = self.__write_txt_file(self.__port_to_mod_lpmode, 0) #sysfs 1: enable lpmode
+        else:
+            ret = self.__write_txt_file(self.__port_to_mod_lpmode, 1) #sysfs 1: disable lpmode
 
-            # Write to eeprom
-            eeprom = open(self.port_to_eeprom_mapping[port_num], "r+b")
-            eeprom.seek(93)
-            eeprom.write(buffer[0])
-            return True
-        except IOError as e:
-            print("Error: unable to open file: %s" % str(e))
-            return False
-        finally:
-            if eeprom is not None:
-                eeprom.close()
-                time.sleep(0.01)
+        return ret
+
 
     def reset(self, port_num):
         if port_num > self.QSFP_PORT_END: #sfp not support lpmode:

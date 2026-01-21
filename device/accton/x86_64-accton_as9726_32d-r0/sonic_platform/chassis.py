@@ -11,24 +11,25 @@ import subprocess
 try:
     from sonic_platform_base.chassis_base import ChassisBase
     from .helper import APIHelper
+    from .event import SfpEvent
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 NUM_FAN_TRAY = 6
 NUM_FAN = 2
 NUM_PSU = 2
-NUM_THERMAL = 3
+NUM_THERMAL = 11
 NUM_QSFP = 32
 PORT_START = 1
 PORT_END = 34
 QSFP_PORT_START = 0
 QSFP_PORT_END = 31
-NUM_COMPONENT = 2
+NUM_COMPONENT = 6
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
-HOST_CHK_CMD = ["docker"]
+HOST_CHK_CMD = "docker > /dev/null 2>&1"
 
 
 class Chassis(ChassisBase):
@@ -62,11 +63,11 @@ class Chassis(ChassisBase):
         self.sfp_module_initialized = True
 
     def __initialize_fan(self):
-        from sonic_platform.fan import Fan
-        for fant_index in range(0, NUM_FAN_TRAY):
-            for fan_index in range(0, NUM_FAN):
-                fan = Fan(fant_index, fan_index)
-                self._fan_list.append(fan)
+        from sonic_platform.fan_drawer import FanDrawer
+        for fant_index in range(NUM_FAN_TRAY):
+            fandrawer = FanDrawer(fant_index)
+            self._fan_drawer_list.append(fandrawer)
+            self._fan_list.extend(fandrawer._fan_list)
 
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
@@ -114,7 +115,7 @@ class Chassis(ChassisBase):
             string: The name of the device
         """
 
-        return self._api_helper.hwsku
+        return self._eeprom.get_name()
 
     def get_presence(self):
         """
@@ -141,7 +142,15 @@ class Chassis(ChassisBase):
         """
         return self._eeprom.get_mac()
 
-    def get_serial_number(self):
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return self._eeprom.get_pn()
+
+    def get_serial(self):
         """
         Retrieves the hardware serial number for the chassis
         Returns:
@@ -158,6 +167,9 @@ class Chassis(ChassisBase):
             values.
         """
         return self._eeprom.get_eeprom()
+
+    def get_revision(self):
+        return self._eeprom.get_revision()
 
     def get_reboot_cause(self):
         """
@@ -176,6 +188,15 @@ class Chassis(ChassisBase):
 
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
+
+    def get_change_event(self, timeout=0):
+        # SFP event
+        if not self.sfp_module_initialized:
+            self.__initialize_sfp()
+
+        status, sfp_event = SfpEvent(self._sfp_list).get_sfp_event(timeout)
+
+        return status, sfp_event
 
     def get_sfp(self, index):
         """
@@ -199,3 +220,29 @@ class Chassis(ChassisBase):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def initizalize_system_led(self):
+        return True
+
+    def get_status_led(self):
+        return "ControlledByFPGA"
+
+    def set_status_led(self, color):
+        return True
