@@ -40,7 +40,7 @@ rm -f $VERSION_DEB_PREFERENCE
 rm -f /etc/apt/preferences.d/01-versions-deb
 
 # Remove all doc files
-find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
+find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright -exec rm {} + 2>/dev/null || true
 
 # Clean doc directories that are empty or only contain empty directories
 while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
