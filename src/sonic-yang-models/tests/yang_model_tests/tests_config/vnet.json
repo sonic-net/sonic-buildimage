@@ -382,7 +382,7 @@
                 "VXLAN_TUNNEL_LIST": [
                     {
                         "name": "vtep1",
-                        "src_ip": "256.256.256.256"
+                        "src_ip": "1.2.3.4"
                     }
                 ]
             }
