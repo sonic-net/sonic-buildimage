@@ -210,6 +210,9 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     generate_device_list ".platforms_asic"
     zip -g $OUTPUT_ABOOT_IMAGE .platforms_asic
 
+    # create kernel cmdline argument file, any argument added to this file must
+    # first be allowed in the boot0.j2 file
+    echo -n > kernel-cmdline-append
     if [ "$ENABLE_FIPS" = "y" ]; then
         echo "sonic_fips=1" >> kernel-cmdline-append
     else
