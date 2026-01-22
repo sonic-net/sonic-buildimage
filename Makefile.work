@@ -72,6 +72,9 @@
 
 SHELL = /bin/bash
 
+# Default SONIC_IMAGE_VERSION to 1.0.0 if not set, to avoid invalid .0- tag inside container
+SONIC_IMAGE_VERSION ?= 1.0.0
+
 USER := $(shell id -un)
 PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)

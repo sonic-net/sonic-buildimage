@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     swtpm \
     swtpm-tools \
     python3-virt-firmware \
+    grub-efi-amd64-signed \
+    shim-signed \
     && rm -rf /var/lib/apt/lists/*
 
 COPY qemu_runner.sh /usr/local/bin/

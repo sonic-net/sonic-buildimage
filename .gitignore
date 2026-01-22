@@ -1,4 +1,7 @@
-# OS-generated files
+# build-generated files
+src/
+platform/
+
 .DS_Store
 
 # Build system related
@@ -98,6 +101,8 @@ platform/broadcom/sonic-platform-modules-dell/z9100/modules/dell_mailbox.c
 platform/broadcom/sonic-platform-modules-dell/z9264f/sonic_platform/ipmihelper.py
 platform/cisco-8000
 platform/pensando/pensando-sonic-artifacts
+platform/barefoot
+platform/broadcom
 
 # buildinfo
 files/build/buildinfo

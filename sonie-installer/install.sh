@@ -285,7 +285,11 @@ install_esp_bootloader() {
     esp_dev="$(make_partition_dev "${blk_dev}" 1)"
 
     local esp_mnt
-    esp_mnt="$(mktemp -d)"
+    esp_mnt="$(mktemp -d)" || { log_error "Failed to create temp dir for ESP"; exit 1; }
+    
+    # Ensure cleanup on exit
+    _trap_push "umount \"${esp_mnt}\" >/dev/null 2>&1; rmdir \"${esp_mnt}\" >/dev/null 2>&1"
+    
     mount "${esp_dev}" "${esp_mnt}" || { log_error "Failed to mount ESP ${esp_dev}"; exit 1; }
 
     install_grub_to_esp "${blk_dev}" "${esp_mnt}" "${demo_mnt}"

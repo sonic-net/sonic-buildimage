@@ -19,7 +19,7 @@ secureboot=false
 bootloader=generic
 in_kdump=false
 varlog_size=0
-
+overlay_use_tmpfs=false
 # Extract kernel parameters
 for x in $(cat /proc/cmdline); do
     case "$x" in
@@ -50,6 +50,9 @@ for x in $(cat /proc/cmdline); do
             ;;
         systemd.unit=kdump-tools.service)
             in_kdump=true
+            ;;
+        overlay_tmpfs=on|overlay_tmpfs=yes|overlay_tmpfs=true)
+            overlay_use_tmpfs=true
             ;;
     esac
 done
@@ -168,8 +171,17 @@ mount_docker()
 
 ## Mount the overlay file system: rw layer over squashfs
 image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
-rw_dir=${rootmnt}/host/$image_dir/rw
-work_dir=${rootmnt}/host/$image_dir/work
+
+if [ "$overlay_use_tmpfs" = "true" ]; then
+    mkdir -p /run/root-overlay
+    mount -t tmpfs -o rw,mode=0755 tmpfs /run/root-overlay
+    rw_dir=/run/root-overlay/rw
+    work_dir=/run/root-overlay/work
+else
+    rw_dir=${rootmnt}/host/$image_dir/rw
+    work_dir=${rootmnt}/host/$image_dir/work
+fi
+# End Fix
 mkdir -p "$rw_dir"
 mkdir -p "$work_dir"
 

@@ -180,7 +180,7 @@ build_docker_image() {
 #   Command line arguments.
 #######################################
 main() {
-  local secure_boot=1
+  local secure_boot=0
 
   while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -196,11 +196,13 @@ main() {
   check_requirements
   resolve_ovmf_paths
 
-  trap cleanup EXIT
+  # trap cleanup EXIT
 
   build_docker_image
 
   cp "$OVMF_VARS_FILE" "$CLIENT_OVMF_VARS"
+  
+
 
 
 
@@ -249,7 +251,8 @@ EOF
 
   # --- 3. RUN TEST CONTAINER ---
   echo "Starting Test Container (IPv6=$use_ipv6)..."
-  docker run -i --rm --name "$TEST_CONTAINER_NAME" \
+  docker rm -f "$TEST_CONTAINER_NAME" 2>/dev/null || true
+  docker run -i --name "$TEST_CONTAINER_NAME" \
       --cap-add=NET_ADMIN \
       --device /dev/kvm \
       -v "$(pwd):/data" \

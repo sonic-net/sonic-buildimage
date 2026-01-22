@@ -7,10 +7,13 @@
 # disk image, and launches QEMU.
 #
 
-set -eu
+set -e
 set -o pipefail
 
 # --- Defaults ---
+: "${secure_boot:=0}"
+exec > /data/qemu_runner.log 2>&1
+echo "Starting qemu_runner.sh..."
 # Usage of "readonly" where appropriate for constants
 readonly DISK_IMG_SIZE="${DISK_IMG_SIZE:-128G}"
 readonly HTTP_PORT="${HTTP_PORT:-8000}"
@@ -133,76 +136,101 @@ setup_network() {
 #######################################
 generate_disk() {
   if [[ "${INSTALL_DISK:-0}" -eq 1 ]]; then
-    echo "Generating Client Disk Image (${CLIENT_DISK_IMG}) with ESP..."
-
-    local -r esp_part_image="esp_part.img"
-    local -r grub_config_file="grub.cfg"
-    local -r uki_boot_name="linux.efi"
-
-    if [[ ! -f "${UKI_FILE}" ]]; then
-      echo "Error: UKI File ${UKI_FILE} not found inside container."
-      exit 1
-    fi
+    echo "Generating Client Disk Image (${CLIENT_DISK_IMG}) as Superfloppy ESP..."
 
     local uki_size_bytes
     uki_size_bytes=$(stat -c%s "${UKI_FILE}")
     local uki_size_mb=$(( (uki_size_bytes + 1024 * 1024 - 1) / (1024 * 1024) ))
     local esp_size_mb=$((uki_size_mb + 64))
     local esp_blocks=$((esp_size_mb * 1024))
+    local grub_config_file="grub.cfg"
+    local uki_boot_name="linux.efi"
 
-    echo "Creating ESP (${esp_size_mb}MB)..."
-    mkfs.vfat -C "${esp_part_image}" -F 32 -n "ESP" "${esp_blocks}"
-    mmd -i "${esp_part_image}" ::/EFI ::/EFI/BOOT ::/boot ::/boot/grub
+    # Create the disk image as a raw ESP filesystem (Superfloppy)
+    rm -f "${CLIENT_DISK_IMG}"
+    # Use calculated blocks. -C creates the file.
+    mkfs.vfat -C "${CLIENT_DISK_IMG}" -F 32 -n "ESP" "${esp_blocks}"
+    
+    mmd -i "${CLIENT_DISK_IMG}" ::/EFI ::/EFI/BOOT ::/boot ::/boot/grub
 
     # Locate Grub
     local platform
     platform=$([[ -f .platform ]] && cat .platform || echo vs)
     local grub_efi_file=""
+    local shim_efi_file=""
 
-    if [[ -f "fsroot-${platform}-recovery/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi" ]]; then
-      grub_efi_file="fsroot-${platform}-recovery/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    elif [[ -f "fsroot-${platform}/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi" ]]; then
-      grub_efi_file="fsroot-${platform}/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    elif [[ -f "/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed" ]]; then
+    # Check for Shim+Signed Grub
+    if [[ -f "/usr/lib/shim/shimx64.efi.signed" && -f "/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed" ]]; then
+      shim_efi_file="/usr/lib/shim/shimx64.efi.signed"
       grub_efi_file="/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
+      echo "Using Shim: ${shim_efi_file} + Grub: ${grub_efi_file}"
     elif [[ -f "/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi" ]]; then
       grub_efi_file="/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    elif [[ -f "/usr/lib/grub/x86_64-efi/grubx64.efi" ]]; then
-      grub_efi_file="/usr/lib/grub/x86_64-efi/grubx64.efi"
+      echo "Using Monolithic Grub: ${grub_efi_file}"
     else
       echo "Warning: Grub EFI not found. Will copy UKI as BOOTX64.EFI for Direct Boot."
     fi
 
-    if [[ -n "${grub_efi_file}" ]]; then
-      echo "Using Grub: ${grub_efi_file}"
-      mcopy -i "${esp_part_image}" "${grub_efi_file}" ::/EFI/BOOT/BOOTX64.EFI
+    if [[ -n "${shim_efi_file}" ]]; then
+        mcopy -i "${CLIENT_DISK_IMG}" "${shim_efi_file}" ::/EFI/BOOT/BOOTX64.EFI
+        mcopy -i "${CLIENT_DISK_IMG}" "${grub_efi_file}" ::/EFI/BOOT/grubx64.efi
+    elif [[ -n "${grub_efi_file}" ]]; then
+        mcopy -i "${CLIENT_DISK_IMG}" "${grub_efi_file}" ::/EFI/BOOT/BOOTX64.EFI
     else
-      mcopy -i "${esp_part_image}" "${UKI_FILE}" ::/EFI/BOOT/BOOTX64.EFI
+        mcopy -i "${CLIENT_DISK_IMG}" "${UKI_FILE}" ::/EFI/BOOT/BOOTX64.EFI
     fi
 
-    # Copy UKI
-    mcopy -i "${esp_part_image}" "${UKI_FILE}" "::/EFI/BOOT/${uki_boot_name}"
+    mcopy -i "${CLIENT_DISK_IMG}" "${UKI_FILE}" "::/EFI/BOOT/${uki_boot_name}"
+    
+    # startup.nsh fallback
+    echo "fs0:\\EFI\\BOOT\\BOOTX64.EFI" > startup.nsh
+    mcopy -i "${CLIENT_DISK_IMG}" startup.nsh ::/startup.nsh
+    rm startup.nsh
 
     if [[ -n "${grub_efi_file}" ]]; then
-      # Create Grub Config
+      # Grub Config
+      # Use chainloader. Arguments are passed via SystemdOptions EFI variable injected separately.
+      # Sidecar files proved unreliable with chainloader in this environment.
       printf "console=ttyS0,115200n8\nset timeout=2\nset default=0\nmenuentry \"Boot UKI\" {\n    chainloader /EFI/BOOT/%s\n}\n" "${uki_boot_name}" > "${grub_config_file}"
-      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/EFI/BOOT/grub.cfg
-      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/boot/grub/grub.cfg
+      mcopy -i "${CLIENT_DISK_IMG}" "${grub_config_file}" ::/EFI/BOOT/grub.cfg
+      mcopy -i "${CLIENT_DISK_IMG}" "${grub_config_file}" ::/boot/grub/grub.cfg
       rm "${grub_config_file}"
     fi
 
-    # Create final disk image
-    rm -f "${CLIENT_DISK_IMG}"
-    truncate -s "${DISK_IMG_SIZE}" "${CLIENT_DISK_IMG}"
-    dd if="${esp_part_image}" of="${CLIENT_DISK_IMG}" bs=1M seek=1 conv=notrunc status=none
-    sgdisk --resize-table=128 -n "1:2048:+${esp_size_mb}M" -t 1:ef00 "${CLIENT_DISK_IMG}"
-
-    rm "${esp_part_image}"
   else
     echo "Generating Blank Client Disk Image (${CLIENT_DISK_IMG})..."
     rm -f "${CLIENT_DISK_IMG}"
     truncate -s "${DISK_IMG_SIZE}" "${CLIENT_DISK_IMG}"
   fi
+}
+
+inject_uefi_vars() {
+  echo "Injecting SystemdOptions into OVMF Variables..."
+  local options="overlay_tmpfs=on console=ttyS0,115200n8"
+  # Python to encode UTF-16LE hex
+  local hex_data
+  hex_data=$(python3 -c "print('${options}'.encode('utf-16le').hex())")
+
+  cat > systemd_options.json <<EOF
+{
+    "version": 2,
+    "variables": [
+        {
+            "name": "SystemdOptions",
+            "guid": "4a67b082-0a4c-41cf-b6c7-440b29bb8c4f",
+            "attr": 7,
+            "data": "${hex_data}"
+        }
+    ]
+}
+EOF
+  
+  if [[ -f "${CLIENT_OVMF_VARS}" ]]; then
+      virt-fw-vars -i "${CLIENT_OVMF_VARS}" --set-json systemd_options.json -o "${CLIENT_OVMF_VARS}"
+  else
+      echo "Warning: ${CLIENT_OVMF_VARS} not found. Skipping variable injection."
+  fi
+  rm systemd_options.json
 }
 
 #######################################
@@ -349,19 +377,24 @@ launch_qemu() {
 
   echo 'Launching QEMU connected to tap0...'
   local qemu_args=(
-    -nographic -m 16G "${cpu_opts[@]}"
+    -nographic -m 8G "${cpu_opts[@]}"
     -machine q35,smm=on,accel=kvm -global driver=cfi.pflash01,property=secure,value=on
     -drive if=pflash,format=raw,readonly=on,file=/ovmf_code.fd
     -drive if=pflash,format=raw,file="${CLIENT_OVMF_VARS}"
-    -drive file="${CLIENT_DISK_IMG}",format=raw
-    -netdev tap,id=net0,ifname=tap0,script=no,downscript=no
-    -device "virtio-net-pci,netdev=net0,mac=${CLIENT_MAC},csum=off"
+    -device virtio-net-pci,netdev=n1,mac="${CLIENT_MAC}"
+    -netdev tap,id=n1,ifname=tap0,script=no,downscript=no
+    -object rng-random,filename=/dev/urandom,id=rng0
+    -device virtio-rng-pci,rng=rng0
+    -device virtio-blk-pci,drive=d0
+    -drive file="${CLIENT_DISK_IMG}",if=none,id=d0,format=raw
     -chardev "socket,id=chrtpm,path=${TPM_DIR}/swtpm-sock"
     -tpmdev "emulator,id=tpm0,chardev=chrtpm"
     -device "tpm-tis,tpmdev=tpm0"
     -debugcon file:/data/ovmf_debug.log -global isa-debugcon.iobase=0x402
-    -boot n
+    # -boot n
   )
+
+
 
   qemu-system-x86_64 "${qemu_args[@]}"
 }
@@ -463,7 +496,8 @@ main() {
   configure_services
   setup_tpm
   enroll_secure_boot_keys
-  configure_boot
+  inject_uefi_vars
+  # configure_boot
   launch_qemu
 }
 
