@@ -29,23 +29,35 @@
         "desc": "Valid VNET Route Configuration."
     },
     "VNET_ROUTE_MULTI_TEST": {
-        "desc": "Multiple VNET route configurations for different VNETs in VNET_ROUTE table."
+        "desc": "Multiple VNET route configurations for different VNETs in VNET_ROUTE_LIST table."
     },
     "VNET_ROUTE_TEST_DUPLICATE_NAME": {
-        "desc": "VNET route configuration with duplicate name keys in VNET_ROUTE table.",
-        "eStr": "Duplicated instance of \"VNET_ROUTE\" list."
+        "desc": "VNET route configuration with duplicate name keys in VNET_ROUTE_LIST table.",
+        "eStr": "Duplicated instance of \"VNET_ROUTE_LIST\" list."
     },
     "VNET_ROUTE_TEST_INVALID_NEXTHOP": {
-        "desc": "VNET route configuration with invalid nexthop IP value (256.256.256.256) in VNET_ROUTE table.",
+        "desc": "VNET route configuration with invalid nexthop IP value (256.256.256.256) in VNET_ROUTE_LIST table.",
+        "eStrKey": "Pattern"
+    },
+    "VNET_ROUTE_TEST_INVALID_NAME_FORMAT": {
+        "desc": "VNET route configuration with invalid name format (missing prefix) in VNET_ROUTE_LIST table.",
+        "eStrKey": "ListKey"
+    },
+    "VNET_ROUTE_TEST_INVALID_PREFIX": {
+        "desc": "VNET route configuration with invalid prefix format (300.168.1.0/24) in name field.",
         "eStrKey": "Pattern"
     },
     "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
-        "desc": "VNET route configuration with missing mandatory attribute (nexthop) in VNET_ROUTE table.",
+        "desc": "VNET route configuration with missing mandatory attribute (nexthop) in VNET_ROUTE_LIST table.",
         "eStrKey": "Mandatory"
     },
     "VNET_ROUTE_TEST_MISSING_INTERFACE": {
-        "desc": "VNET route configuration with missing mandatory attribute (interface) in VNET_ROUTE table.",
+        "desc": "VNET route configuration with missing mandatory attribute (interface) in VNET_ROUTE_LIST table.",
         "eStrKey": "Mandatory"
+    },
+    "VNET_ROUTE_TEST_NONEXISTENT_VNET": {
+        "desc": "VNET route configuration referencing a non-existent VNET name, violating the must condition.",
+        "eStrKey" : "LeafRef"
     },
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
         "desc": "Basic VNET route tunnel configuration with minimal required field - endpoint in VNET_ROUTE_TUNNEL_LIST table."
