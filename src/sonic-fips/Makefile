@@ -2,7 +2,7 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-SONIC_FIPS_BUILD_FROM_SOURCE =? n
+SONIC_FIPS_BUILD_FROM_SOURCE ?= n
 
 include ../../rules/sonic-fips.mk
 
