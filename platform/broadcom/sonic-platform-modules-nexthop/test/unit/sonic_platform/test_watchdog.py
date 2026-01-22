@@ -195,6 +195,7 @@ class TestWatchdogAPI:
 
     def test_arm_should_update_counter(
         self,
+        watchdog_module,
         mock_update_watchdog_countdown_value,
         mock_toggle_watchdog_reboot,
         mock_toggle_watchdog_counter_enable,
@@ -211,7 +212,9 @@ class TestWatchdogAPI:
         )
 
         # Act
-        actual_return_value = self.watchdog.arm(timeout_seconds)
+        # TODO: workaround: arm watchdog 2 to trigger watchdog 1
+        with patch.object(watchdog_module.fpga_lib, "write_32", autospec=True):
+            actual_return_value = self.watchdog.arm(timeout_seconds)
 
         # Assert
         assert (
