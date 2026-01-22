@@ -26,6 +26,9 @@ $(CONTAINER_CHECKER)_PATH = files/image_config/monit
 TELEMETRY_SYSTEMD = telemetry.sh
 $(TELEMETRY_SYSTEMD)_PATH = files/scripts
 
+GNMI_SYSTEMD = gnmi.sh
+$(GNMI_SYSTEMD)_PATH = files/scripts
+
 K8S_POD_CONTROL = k8s_pod_control.sh
 $(K8S_POD_CONTROL)_PATH = files/scripts
 
@@ -53,6 +56,7 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(SYSCTL_NET_CONFIG) \
                     $(CONTAINER_CHECKER) \
                     $(TELEMETRY_SYSTEMD) \
+                    $(GNMI_SYSTEMD) \
                     $(K8S_POD_CONTROL) \
                     $(UPDATE_CHASSISDB_CONFIG_SCRIPT) \
                     $(SWSS_VARS_TEMPLATE) \
