@@ -73,23 +73,6 @@ stages:
           docker_syncd_rpc_image: yes
           platform_rpc: brcm
           INCLUDE_RESTAPI: y
-      - name: mellanox
-        variables:
-          dbg_image: yes
-          docker_syncd_rpc_image: yes
-          platform_rpc: mlnx
-      - name: marvell-arm64
-        pool: sonicso1ES-arm64
-        variables:
-           PLATFORM_NAME: marvell
-           PLATFORM_ARCH: arm64
-      - name: marvell-armhf
-        pool: sonicso1ES-armhf
-        timeoutInMinutes: 1200
-        variables:
-          PLATFORM_NAME: marvell
-          PLATFORM_ARCH: armhf
-          INCLUDE_RESTAPI: y
 
 - stage: Test
   dependsOn: BuildVS
