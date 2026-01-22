@@ -2805,7 +2805,7 @@ VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the 
     "Vnet_3000|100.100.4.0/24": {
         "nexthop": "100.100.4.1",
         "ifname": "Ethernet2"
-    },
+    }
   }
 }
 ```

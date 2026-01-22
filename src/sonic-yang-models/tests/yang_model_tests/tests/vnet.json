@@ -44,7 +44,7 @@
         "eStrKey": "ListKey"
     },
     "VNET_ROUTE_TEST_INVALID_PREFIX": {
-        "desc": "VNET route configuration with invalid prefix format (300.168.1.0/24) in name field.",
+        "desc": "VNET route configuration with invalid prefix format (300.100.4.0/24) in name field.",
         "eStrKey": "Pattern"
     },
     "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
