@@ -502,6 +502,7 @@ write_platform_specific_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
 
     local varlog_size=0
+    local pmem_enable=false
 
     # sonic_mode is set to fixed by default.
     sonic_mode="fixed"
@@ -525,6 +526,7 @@ write_platform_specific_cmdline() {
     if in_array "$sid" "Upperlake" "UpperlakeES" "UpperlakeElite"; then
         aboot_machine=arista_7060_cx32s
         flash_size=3700
+        pmem_enable=true
     fi
     if [ "$sid" = "UpperlakePlus" ]; then
         aboot_machine=arista_7060cx2_32s
@@ -767,6 +769,10 @@ write_platform_specific_cmdline() {
                varlog_size=128
            fi
        fi
+    fi
+
+    if $pmem_enable; then
+       cmdline_add "memmap=1G!4G"
     fi
 
     cmdline_add "varlog_size=$varlog_size"
