@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 include $(PLATFORM_PATH)/sdk.mk
 include $(PLATFORM_PATH)/cpld.mk
 include $(PLATFORM_PATH)/fw.mk
@@ -56,6 +58,7 @@ $(SYNCD)_RDEPENDS += $(MLNX_SAI)
 
 # Inject mlnx sdk libs to platform monitor
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(APPLIBS) $(SX_COMPLIB) $(SXD_LIBS) $(SX_GEN_UTILS) $(PYTHON_SDK_API) $(APPLIBS_DEV) $(SX_COMPLIB_DEV) $(SXD_LIBS_DEV) $(SX_GEN_UTILS_DEV)
+$(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MFT)
 
 # Force the target bootloader for mellanox platforms to grub regardless of arch
 TARGET_BOOTLOADER = grub
