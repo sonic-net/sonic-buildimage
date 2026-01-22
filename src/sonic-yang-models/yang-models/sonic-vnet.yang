@@ -107,7 +107,7 @@ module sonic-vnet {
         container VNET_ROUTE {
 
             description "ConfigDB VNET_ROUTE table";
-            
+
             list VNET_ROUTE_LIST {
                 key "vnet_name prefix";
 
@@ -117,12 +117,12 @@ module sonic-vnet {
                         path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                     }
                 }
-                
+
                 leaf prefix {
                     description "IPv4 prefix in CIDR format";
                     type stypes:sonic-ip4-prefix;
                 }
-                
+
                 leaf nexthop {
                     description "Nexthop IP address";
                     type inet:ipv4-address;
