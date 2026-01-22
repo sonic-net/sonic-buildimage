@@ -207,6 +207,7 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
                         "nexthop":"100.100.1.1",
                         "ifname":"Ethernet0"
                     }
@@ -247,11 +248,13 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.3.0/24",
                         "nexthop":"100.100.1.1",
                         "ifname":"Ethernet0"
                     },
                     {
                         "vnet_name": "Vnet2",
+                        "prefix":"100.100.4.0/24",
                         "nexthop":"100.100.2.1",
                         "ifname":"Ethernet4"
                     }
@@ -279,11 +282,6 @@
                         "name": "Vnet1",
                         "vxlan_tunnel": "vtep1",
                         "vni": "10001"
-                    },
-                    {
-                        "name": "Vnet1",
-                        "vxlan_tunnel": "vtep1",
-                        "vni": "10002"
                     }
                 ]
             },
@@ -292,11 +290,13 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.3.0/24",
                         "nexthop":"100.100.1.1",
                         "ifname":"Ethernet0"
                     },
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
                         "nexthop":"100.100.2.1",
                         "ifname":"Ethernet4"
                     }
@@ -332,6 +332,7 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
                         "nexthop":"256.256.256.256",
                         "ifname":"Ethernet0"
                     }
@@ -367,6 +368,7 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
                         "ifname":"Ethernet0"
                     }
                 ]
@@ -401,6 +403,7 @@
                 "VNET_ROUTE_LIST": [
                     {
                         "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
                         "nexthop":"100.100.1.1"
                     }
                 ]
