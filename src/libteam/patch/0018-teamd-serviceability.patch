@@ -1,0 +1,407 @@
+diff --git a/include/teamdctl.h b/include/teamdctl.h
+index b2bc79e..e9ea198 100644
+--- a/include/teamdctl.h
++++ b/include/teamdctl.h
+@@ -64,6 +64,8 @@ int teamdctl_state_item_value_get(struct teamdctl *tdc, const char *item_path,
+ 				  char **p_value);
+ int teamdctl_state_item_value_set(struct teamdctl *tdc, const char *item_path,
+ 				  const char *value);
++int teamdctl_portchannel_clear_statistics(struct teamdctl *tdc);
++int teamdctl_portchannel_member_port_clear_statistics(struct teamdctl *tdc, const char *port_devname);
+ 
+ #ifdef __cplusplus
+ } /* extern "C" */
+diff --git a/libteamdctl/libteamdctl.c b/libteamdctl/libteamdctl.c
+index 3cb4a47..6d49466 100644
+--- a/libteamdctl/libteamdctl.c
++++ b/libteamdctl/libteamdctl.c
+@@ -632,6 +632,33 @@ int teamdctl_state_item_value_set(struct teamdctl *tdc, const char *item_path,
+ 			       "ss", item_path, value);
+ }
+ 
++/**
++ * @param tdc           libteamdctl library context
++ *
++ * @details clear portchannel lacp statistics.
++ *
++ * @return Zero on success or negative number in case of an error.
++ **/
++TEAMDCTL_EXPORT
++int teamdctl_portchannel_clear_statistics(struct teamdctl *tdc)
++{
++        return cli_method_call(tdc, "PortChannelClearStats", NULL,
++                               "");
++}
++
++/**
++ * @param tdc           libteamdctl library context
++ *
++ * @details clear portchannel member port lacp statistics.
++ *
++ * @return Zero on success or negative number in case of an error.
++ **/
++TEAMDCTL_EXPORT
++int teamdctl_portchannel_member_port_clear_statistics(struct teamdctl *tdc, const char *port_devname)
++{
++        return cli_method_call(tdc, "PortChannelMemberClearStats", NULL,
++                               "s", port_devname);
++}
+ /**
+  * @}
+  */
+diff --git a/teamd/teamd.h b/teamd/teamd.h
+index d1d0f7f..374ded5 100644
+--- a/teamd/teamd.h
++++ b/teamd/teamd.h
+@@ -389,6 +389,8 @@ int teamd_sendto(int sockfd, const void *buf, size_t len, int flags,
+ int teamd_send(int sockfd, const void *buf, size_t len, int flags);
+ int teamd_recvfrom(int sockfd, void *buf, size_t len, int flags,
+ 		   struct sockaddr *src_addr, socklen_t addrlen);
++void get_current_time_str(char *buf, size_t buf_size);
++void lacp_clear_statistics(struct teamd_context *ctx, const char *port_devname);
+ 
+ /* Various helpers */
+ static inline void ms_to_timespec(struct timespec *ts, int ms)
+diff --git a/teamd/teamd_ctl.c b/teamd/teamd_ctl.c
+index b30b273..cce6048 100644
+--- a/teamd/teamd_ctl.c
++++ b/teamd/teamd_ctl.c
+@@ -247,6 +247,31 @@ static int teamd_ctl_method_state_item_value_set(struct teamd_context *ctx,
+ 	return ops->reply_succ(ops_priv, NULL);
+ }
+ 
++static int teamd_ctl_method_portchannel_clear_statistics(struct teamd_context *ctx,
++							 const struct teamd_ctl_method_ops *ops,
++							 void *ops_priv)
++{
++	const char *team_devname;
++
++	lacp_clear_statistics(ctx, NULL);
++	return ops->reply_succ(ops_priv, NULL);
++}
++
++static int teamd_ctl_method_portchannel_member_port_clear_statistics(struct teamd_context *ctx,
++								     const struct teamd_ctl_method_ops *ops,
++								     void *ops_priv)
++{
++	const char *team_devname, *port_devname;
++	int err;
++
++	err = ops->get_args(ops_priv, "s",&port_devname);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++	lacp_clear_statistics(ctx, port_devname);
++	return ops->reply_succ(ops_priv, NULL);
++}
++
+ typedef int (*teamd_ctl_method_func_t)(struct teamd_context *ctx,
+ 				       const struct teamd_ctl_method_ops *ops,
+ 				       void *ops_priv);
+@@ -301,6 +326,14 @@ static const struct teamd_ctl_method teamd_ctl_method_list[] = {
+ 		.func = teamd_ctl_method_state_item_value_set,
+ 
+ 	},
++	{
++		.name = "PortChannelClearStats",
++		.func = teamd_ctl_method_portchannel_clear_statistics,
++	},
++	{
++		.name = "PortChannelMemberClearStats",
++		.func = teamd_ctl_method_portchannel_member_port_clear_statistics,
++	},
+ };
+ 
+ #define TEAMD_CTL_METHOD_LIST_SIZE ARRAY_SIZE(teamd_ctl_method_list)
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index a3be384..7c467c4 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -263,6 +263,11 @@ struct lacp_port {
+ 		bool sticky;
+ #define		LACP_PORT_CFG_DFLT_STICKY false
+ 	} cfg;
++	uint64_t lacpdu_rx_stats;
++	uint64_t lacpdu_tx_stats;
++	uint64_t lacpdu_illegal_pkts;
++	char last_lacpdu_tx_time[64];
++	char last_lacpdu_rx_time[64];
+ };
+ 
+ static void generate_path(struct teamd_context *ctx, char path[PATH_MAX], const char* filename)
+@@ -1495,6 +1500,10 @@ static int lacpdu_send(struct lacp_port *lacp_port)
+ 	}
+ 
+ 	err = teamd_send(lacp_port->sock, &lacpdu, sizeof(lacpdu), 0);
++	if (!err) {
++		lacp_port->lacpdu_tx_stats++;
++		get_current_time_str(lacp_port->last_lacpdu_tx_time, sizeof(lacp_port->last_lacpdu_tx_time));
++	}
+ 	return err;
+ }
+ 
+@@ -1505,8 +1514,13 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ 	int err;
+ 	struct timespec monotonic_time = {0};
+ 
+-	if (!lacpdu_check(lacpdu))
++	if (!lacpdu_check(lacpdu)) {
++		lacp_port->lacpdu_illegal_pkts++;
+ 		return 0;
++	}
++
++	lacp_port->lacpdu_rx_stats++;
++	get_current_time_str(lacp_port->last_lacpdu_rx_time, sizeof(lacp_port->last_lacpdu_rx_time));
+ 
+ 	/* save received lacp pdu frame */
+ 	(void)memcpy(&lacp_port->last_pdu, lacpdu, sizeof(struct lacpdu));
+@@ -2211,6 +2225,16 @@ static int lacp_state_retry_count_get(struct teamd_context *ctx,
+ 	return 0;
+ }
+ 
++static int lacp_state_min_ports_get(struct teamd_context *ctx,
++                                    struct team_state_gsc *gsc,
++                                    void *priv)
++{
++        struct lacp *lacp = priv;
++
++        gsc->data.int_val = lacp->cfg.min_ports;
++        return 0;
++}
++
+ struct lacp_state_retry_count_info {
+ 	struct teamd_workq workq;
+ 	struct lacp *lacp;
+@@ -2329,6 +2353,11 @@ static const struct teamd_state_val lacp_state_vals[] = {
+ 		.getter = lacp_state_retry_count_get,
+ 		.setter = lacp_state_retry_count_set,
+ 	},
++	{
++                .subpath = "min_ports",
++                .type = TEAMD_STATE_ITEM_TYPE_INT,
++                .getter = lacp_state_min_ports_get,
++        },
+ };
+ 
+ static struct lacp_port *lacp_port_gsc(struct team_state_gsc *gsc,
+@@ -2531,6 +2560,77 @@ static const struct teamd_state_val lacp_port_partner_state_vals[] = {
+ 	},
+ };
+ 
++static int lacp_port_statistics_state_lacpdu_rx_stats_get(struct teamd_context *ctx,
++							  struct team_state_gsc *gsc,
++							  void *priv)
++{
++	gsc->data.uint64_val = lacp_port_gsc(gsc, priv)->lacpdu_rx_stats;
++	return 0;
++}
++
++static int lacp_port_statistics_state_lacpdu_tx_stats_get(struct teamd_context *ctx,
++							  struct team_state_gsc *gsc,
++							  void *priv)
++{
++	gsc->data.uint64_val = lacp_port_gsc(gsc, priv)->lacpdu_tx_stats;
++	return 0;
++}
++
++static int lacp_port_statistics_state_lacpdu_illegal_pkts_get(struct teamd_context *ctx,
++							      struct team_state_gsc *gsc,
++							      void *priv)
++{
++	gsc->data.uint64_val = lacp_port_gsc(gsc, priv)->lacpdu_illegal_pkts;
++	return 0;
++}
++
++static int lacp_port_statistics_state_last_lacpdu_rx_time_get(struct teamd_context *ctx,
++							      struct team_state_gsc *gsc,
++							      void *priv)
++{
++	const char *rx_time = lacp_port_gsc(gsc, priv)->last_lacpdu_rx_time;
++	gsc->data.str_val.ptr = *rx_time ? strdup(rx_time) : strdup("N/A");
++	gsc->data.str_val.free = true;
++	return 0;
++}
++
++static int lacp_port_statistics_state_last_lacpdu_tx_time_get(struct teamd_context *ctx,
++							      struct team_state_gsc *gsc,
++							      void *priv)
++{
++	const char *tx_time = lacp_port_gsc(gsc, priv)->last_lacpdu_tx_time;
++	gsc->data.str_val.ptr = *tx_time ? strdup(tx_time) : strdup("N/A");
++	gsc->data.str_val.free = true;
++	return 0;
++}
++
++static const struct teamd_state_val lacp_port_statistics_state_vals[] = {
++	{
++		.subpath = "lacpdu_rx_stats",
++		.type = TEAMD_STATE_ITEM_TYPE_UINT64,
++		.getter = lacp_port_statistics_state_lacpdu_rx_stats_get,
++	},
++	{
++		.subpath = "lacpdu_tx_stats",
++		.type = TEAMD_STATE_ITEM_TYPE_UINT64,
++		.getter = lacp_port_statistics_state_lacpdu_tx_stats_get,
++	},
++	{
++		.subpath = "lacpdu_illegal_pkts",
++		.type = TEAMD_STATE_ITEM_TYPE_UINT64,
++		.getter = lacp_port_statistics_state_lacpdu_illegal_pkts_get,
++	},
++	{
++		.subpath = "last_lacpdu_rx_time",
++		.type = TEAMD_STATE_ITEM_TYPE_STRING,
++		.getter = lacp_port_statistics_state_last_lacpdu_rx_time_get,
++	},
++	{
++		.subpath = "last_lacpdu_tx_time",
++		.type = TEAMD_STATE_ITEM_TYPE_STRING,
++		.getter = lacp_port_statistics_state_last_lacpdu_tx_time_get,
++	},
++};
+ static int lacp_port_state_selected_get(struct teamd_context *ctx,
+ 					struct team_state_gsc *gsc,
+ 					void *priv)
+@@ -2678,6 +2778,11 @@ static const struct teamd_state_val lacp_port_state_vals[] = {
+ 		.vals = lacp_port_partner_state_vals,
+ 		.vals_count = ARRAY_SIZE(lacp_port_partner_state_vals),
+ 	},
++	{
++                .subpath = "statistics",
++                .vals = lacp_port_statistics_state_vals,
++                .vals_count = ARRAY_SIZE(lacp_port_statistics_state_vals),
++        },
+ 	{
+ 		.subpath = "partner_retry_count",
+ 		.type = TEAMD_STATE_ITEM_TYPE_INT,
+@@ -2778,6 +2883,40 @@ static void lacp_fini(struct teamd_context *ctx, void *priv)
+ 		lacp_carrier_fini(ctx, lacp);
+ }
+ 
++void get_current_time_str(char *buf, size_t buf_size) {
++    struct timespec ts;
++    struct tm *tm_info;
++
++    if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
++        snprintf(buf, buf_size, "TIME_ERR");
++        return;
++    }
++
++    tm_info = localtime(&ts.tv_sec);
++    strftime(buf, buf_size, "%Y-%m-%dT%H:%M:%S", tm_info);
++    snprintf(buf + strlen(buf), buf_size - strlen(buf), ".%09ldZ", ts.tv_nsec);
++}
++
++void lacp_clear_statistics(struct teamd_context *ctx, const char * port_devname)
++{
++       struct lacp *lacp = (struct lacp *)ctx->runner_priv;
++       struct teamd_port *tdport;
++       struct lacp_port *lacp_port;
++
++       teamd_for_each_tdport(tdport, ctx) {
++               if (port_devname) {
++                       if (strncmp(tdport->ifname, port_devname, IFNAMSIZ))
++                               continue;
++               }
++               lacp_port = lacp_port_get(lacp, tdport);
++               lacp_port->lacpdu_rx_stats = 0;
++               lacp_port->lacpdu_tx_stats = 0;
++               lacp_port->lacpdu_illegal_pkts = 0;
++	       if (port_devname)
++		       break;
++       }
++}
++
+ const struct teamd_runner teamd_runner_lacp = {
+ 	.name			= "lacp",
+ 	.team_mode_name		= "loadbalance",
+diff --git a/teamd/teamd_state.c b/teamd/teamd_state.c
+index 0714880..5a93877 100644
+--- a/teamd/teamd_state.c
++++ b/teamd/teamd_state.c
+@@ -241,6 +241,9 @@ static int teamd_state_val_dump(struct teamd_context *ctx,
+ 	case TEAMD_STATE_ITEM_TYPE_INT:
+ 		val_json_obj = json_integer(gsc.data.int_val);
+ 		break;
++	case TEAMD_STATE_ITEM_TYPE_UINT64:
++		val_json_obj = json_integer(gsc.data.uint64_val);
++		break;
+ 	case TEAMD_STATE_ITEM_TYPE_STRING:
+ 		val_json_obj = json_string(gsc.data.str_val.ptr);
+ 		if (gsc.data.str_val.free)
+diff --git a/teamd/teamd_state.h b/teamd/teamd_state.h
+index d1877d0..696af6b 100644
+--- a/teamd/teamd_state.h
++++ b/teamd/teamd_state.h
+@@ -25,6 +25,7 @@
+ enum teamd_state_val_type {
+ 	TEAMD_STATE_ITEM_TYPE_NODE = 0,
+ 	TEAMD_STATE_ITEM_TYPE_INT,
++	TEAMD_STATE_ITEM_TYPE_UINT64,
+ 	TEAMD_STATE_ITEM_TYPE_STRING,
+ 	TEAMD_STATE_ITEM_TYPE_BOOL,
+ };
+@@ -32,6 +33,7 @@ enum teamd_state_val_type {
+ struct team_state_gsc {
+ 	union {
+ 		int int_val;
++		uint64_t uint64_val;
+ 		struct {
+ 			const char *ptr;
+ 			bool free;
+diff --git a/utils/teamdctl.c b/utils/teamdctl.c
+index 7fcbfff..e6ed7a8 100644
+--- a/utils/teamdctl.c
++++ b/utils/teamdctl.c
+@@ -649,6 +649,17 @@ static int call_method_state_item_set(struct teamdctl *tdc,
+ 	return teamdctl_state_item_value_set(tdc, argv[0], argv[1]);
+ }
+ 
++static int call_method_portchannel_clear_statistics(struct teamdctl *tdc,
++		                                    int argc, char **argv)
++{
++	return teamdctl_portchannel_clear_statistics(tdc);
++}
++
++static int call_method_port_clear_statistics(struct teamdctl *tdc,
++                                             int argc, char **argv)
++{
++        return teamdctl_portchannel_member_port_clear_statistics(tdc, argv[0]);
++}
+ 
+ enum id_command_type {
+ 	ID_CMDTYPE_NONE = 0,
+@@ -669,6 +680,9 @@ enum id_command_type {
+ 	ID_CMDTYPE_P_C,
+ 	ID_CMDTYPE_P_C_U,
+ 	ID_CMDTYPE_P_C_D,
++	ID_CMDTYPE_CLR,
++	ID_CMDTYPE_CLR_ST,
++	ID_CMDTYPE_CLR_ST_P,
+ };
+ 
+ typedef int (*process_reply_t)(int argc, char **argv, char *reply);
+@@ -789,6 +803,23 @@ static struct command_type command_types[] = {
+ 		.call_method = call_method_port_config_dump,
+ 		.params = {"PORTDEV"},
+ 	},
++	{
++		.id = ID_CMDTYPE_CLR,
++		.name = "clear",
++	},
++	{
++		.id = ID_CMDTYPE_CLR_ST,
++		.parent_id = ID_CMDTYPE_CLR,
++		.name = "statistics",
++		.call_method = call_method_portchannel_clear_statistics,
++	},
++	{
++		.id = ID_CMDTYPE_CLR_ST_P,
++		.parent_id = ID_CMDTYPE_CLR_ST,
++		.name = "port",
++		.call_method = call_method_port_clear_statistics,
++		.params = {"PORTDEV"},
++	},
+ };
+ 
+ #define COMMAND_TYPE_COUNT ARRAY_SIZE(command_types)
