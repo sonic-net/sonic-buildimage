@@ -124,7 +124,7 @@ module sonic-vnet {
                 }
                 
                 leaf nexthop {
-                    description "nexthop tunnel";
+                    description "Nexthop IP address";
                     type inet:ipv4-address;
                     mandatory true;
                 }
