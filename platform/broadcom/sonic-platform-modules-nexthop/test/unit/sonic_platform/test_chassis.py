@@ -9,12 +9,11 @@ These tests run in isolation from the SONiC environment and can be executed dire
 python -m pytest test/unit/sonic_platform/test_chassis.py -v
 """
 
-import os
+import datetime
 import pytest
 import sys
-import tempfile
 
-from fixtures.test_helpers_common import mock_pddf_data
+from fixtures.test_helpers_common import mock_pddf_data, temp_file
 from unittest.mock import patch, Mock
 
 
@@ -43,19 +42,12 @@ def chassis_module(mock_pddf_chassis):
     yield chassis
 
 
-def _create_temp_file(content: str) -> str:
-    """
-    Creates a temporary file, under a temporary directory.
-    Args:
-        content: content to write to the temporary file.
-    Returns:
-        Path to the created file
-    """
-    root = tempfile.mkdtemp()
-    filepath = os.path.join(root, 'reboot-cause.txt')
-    with open(filepath, 'w+') as file:
-        file.write(content)
-    return filepath
+@pytest.fixture
+def reboot_cause_manager_module():
+    """Loads the module before each test. This is to let conftest.py run first."""
+    from sonic_platform import reboot_cause_manager
+
+    yield reboot_cause_manager
 
 
 class TestChassis:
@@ -73,18 +65,20 @@ class TestChassis:
 
     def test_chassis_get_watchdog(self, chassis_module):
         chassis = chassis_module.Chassis(
-            pddf_data=mock_pddf_data({
-                "WATCHDOG": {
-                    "dev_info": {"device_parent": "FAKE_MULTIFPGAPCIE1"},
-                    "dev_attr": {
-                        "event_driven_power_cycle_control_reg_offset": "0x28",
-                        "watchdog_counter_reg_offset": "0x1E0",
+            pddf_data=mock_pddf_data(
+                {
+                    "WATCHDOG": {
+                        "dev_info": {"device_parent": "FAKE_MULTIFPGAPCIE1"},
+                        "dev_attr": {
+                            "event_driven_power_cycle_control_reg_offset": "0x28",
+                            "watchdog_counter_reg_offset": "0x1E0",
+                        },
                     },
-                },
-                "FAKE_MULTIFPGAPCIE1": {
-                    "dev_info": {"device_bdf": "FAKE_ADDR"},
-                },
-            })
+                    "FAKE_MULTIFPGAPCIE1": {
+                        "dev_info": {"device_bdf": "FAKE_ADDR"},
+                    },
+                }
+            )
         )
         actual_watchdog = chassis.get_watchdog()
         assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
@@ -103,87 +97,223 @@ class TestChassis:
 
         assert chassis.get_watchdog() is None
 
-    def test_chassis_get_reboot_cause_sw_reboot(self, chassis_module):
+    def test_chassis_get_reboot_cause_sw(self, chassis_module):
         EXPECTED_SW_REBOOT_CAUSE = "reboot"
-        EXPECTED_MINOR_CAUSES = "System powered off due to software disabling data plane power, System powered off due to software disabling data plane power, System powered off due to software disabling data plane power"
+
+        from sonic_platform import reboot_cause_manager
 
         # Given
-        reboot_cause_filepath = _create_temp_file(
-            f"User issued '{EXPECTED_SW_REBOOT_CAUSE}' command [User: admin, Time: Thu Oct  2 11:22:56 PM UTC 2025]"
-        )
-        chassis_module.adm1266.get_reboot_cause = Mock(
-            return_value=("Power Loss", EXPECTED_MINOR_CAUSES)
-        )
-
-        # When
-        chassis = chassis_module.Chassis(
-            pddf_plugin_data={
-                "REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}
-            },
-        )
-        # Then
-        assert chassis.get_reboot_cause() == (
-            EXPECTED_SW_REBOOT_CAUSE,
-            EXPECTED_MINOR_CAUSES,
-        )
-
-    def test_chassis_get_reboot_cause_sw_kernel_panic(self, chassis_module):
-        # Given
-        reboot_cause_filepath = _create_temp_file(
-            f"Kernel Panic [Time: Thu Oct  2 11:22:56 PM UTC 2025]"
-        )
-        chassis_module.adm1266.get_reboot_cause = Mock(return_value=None)
-
-        # When
-        chassis = chassis_module.Chassis(
-            pddf_plugin_data={
-                "REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}
-            },
-        )
-
-        # Then
-        assert chassis.get_reboot_cause() == (
-            "Kernel Panic",
-            "",
-        )
+        with (
+            patch.object(
+                chassis_module.Chassis, "REBOOT_CAUSE_NON_HARDWARE", "Non-Hardware", create=True
+            ),
+            patch.object(
+                reboot_cause_manager.RebootCauseManager,
+                "summarize_reboot_causes",
+                Mock(
+                    return_value=[
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.SOFTWARE,
+                            source="SW",
+                            timestamp=datetime.datetime(
+                                2025, 10, 2, 23, 22, 56, tzinfo=datetime.timezone.utc
+                            ),
+                            cause=EXPECTED_SW_REBOOT_CAUSE,
+                            description="User issued 'reboot' command [User: admin, Time: Thu Oct  2 11:22:56 PM UTC 2025]",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_NON_HARDWARE",
+                        )
+                    ]
+                ),
+            ),
+        ):
+            # When
+            chassis = chassis_module.Chassis(pddf_plugin_data={"DUMMY": "dummy"})
+            # Then
+            assert chassis.get_reboot_cause() == ("Non-Hardware", "")
 
     def test_chassis_get_reboot_cause_hw(self, chassis_module):
-        EXPECTED_HW_CAUSE = "Power Loss"
-        EXPECTED_HW_MINOR_CAUSE = "System powered off due to loss of input power on both PSUs, System powered off due to software disabling data plane power"
+        from sonic_platform import reboot_cause_manager
 
         # Given
-        reboot_cause_filepath = _create_temp_file("")
-        chassis_module.adm1266.get_reboot_cause = Mock(
-            return_value=(
-                EXPECTED_HW_CAUSE,
-                EXPECTED_HW_MINOR_CAUSE,
+        with (
+            patch.object(
+                chassis_module.Chassis, "REBOOT_CAUSE_POWER_LOSS", "Power Loss", create=True
+            ),
+            patch.object(
+                reboot_cause_manager.RebootCauseManager,
+                "summarize_reboot_causes",
+                Mock(
+                    return_value=[
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.HARDWARE,
+                            source="test-dpm",
+                            timestamp=datetime.timedelta(seconds=70),
+                            cause="PSU_VIN_LOSS",
+                            description="Both PSUs lost input power",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_POWER_LOSS",
+                        )
+                    ]
+                ),
+            ),
+            temp_file(content="") as sw_reboot_cause_filepath,
+        ):
+            # When
+            chassis = chassis_module.Chassis(
+                pddf_plugin_data={
+                    "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
+                }
             )
-        )
+            # Then
+            assert chassis.get_reboot_cause() == (
+                "Power Loss",
+                "Both PSUs lost input power, time: 70.000000s after power-on, src: test-dpm",
+            )
+            with open(sw_reboot_cause_filepath, "r") as file:
+                assert file.read() == ""
 
-        # When
-        chassis = chassis_module.Chassis(
-            pddf_plugin_data={
-                "REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}
-            },
-        )
+    def test_chassis_get_reboot_cause_hw_reboot_one_more_time(self, chassis_module):
+        from sonic_platform import reboot_cause_manager
 
-        # Then
-        assert chassis.get_reboot_cause() == (
-            EXPECTED_HW_CAUSE,
-            EXPECTED_HW_MINOR_CAUSE,
-        )
+        # Given
+        with (
+            patch.object(
+                chassis_module.Chassis, "REBOOT_CAUSE_POWER_LOSS", "Power Loss", create=True
+            ),
+            patch.object(chassis_module.Chassis, "REBOOT_CAUSE_WATCHDOG", "Watchdog", create=True),
+            patch.object(
+                reboot_cause_manager.RebootCauseManager,
+                "summarize_reboot_causes",
+                Mock(
+                    return_value=[
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.HARDWARE,
+                            source="test-dpm",
+                            timestamp=datetime.timedelta(seconds=70),
+                            cause="PSU_VIN_LOSS",
+                            description="Both PSUs lost input power",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_POWER_LOSS",
+                        ),
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.HARDWARE,
+                            source="test-dpm",
+                            timestamp=datetime.datetime(
+                                2025, 10, 2, 23, 22, 56, tzinfo=datetime.timezone.utc
+                            ),
+                            cause="WATCHDOG",
+                            description="FPGA watchdog expired",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_WATCHDOG",
+                        ),
+                    ]
+                ),
+            ),
+            temp_file(content="") as sw_reboot_cause_filepath,
+        ):
+            # When
+            chassis = chassis_module.Chassis(
+                pddf_plugin_data={
+                    "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
+                }
+            )
+            # Then
+            assert chassis.get_reboot_cause() == (
+                "Power Loss",
+                "Both PSUs lost input power, time: 70.000000s after power-on, src: test-dpm",
+            )
+            with open(sw_reboot_cause_filepath, "r") as file:
+                assert (
+                    file.read()
+                    == "System rebooted 1 more time: Watchdog (FPGA watchdog expired, time: 2025-10-02 23:22:56 UTC, src: test-dpm)"
+                )
+
+    def test_chassis_get_reboot_cause_sw_and_hw(self, chassis_module):
+        from sonic_platform import reboot_cause_manager
+
+        # Given
+        with (
+            patch.object(chassis_module.Chassis, "REBOOT_CAUSE_WATCHDOG", "Watchdog", create=True),
+            patch.object(
+                chassis_module.Chassis,
+                "REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER",
+                "Thermal Overload: Other",
+                create=True,
+            ),
+            patch.object(
+                reboot_cause_manager.RebootCauseManager,
+                "summarize_reboot_causes",
+                Mock(
+                    return_value=[
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.SOFTWARE,
+                            source="SW",
+                            timestamp=datetime.datetime(
+                                2025, 10, 2, 23, 22, 56, tzinfo=datetime.timezone.utc
+                            ),
+                            cause="Kernel Panic",
+                            description="Kernel Panic [Time: Thu Oct  2 11:22:56 PM UTC 2025]",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_NON_HARDWARE",
+                        ),
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.HARDWARE,
+                            source="test-dpm",
+                            timestamp=datetime.datetime(
+                                2025, 10, 3, 23, 22, 56, tzinfo=datetime.timezone.utc
+                            ),
+                            cause="WATCHDOG",
+                            description="FPGA watchdog expired",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_WATCHDOG",
+                        ),
+                        reboot_cause_manager.RebootCause(
+                            type=reboot_cause_manager.RebootCause.Type.HARDWARE,
+                            source="test-dpm",
+                            timestamp=datetime.datetime(
+                                2025, 10, 4, 23, 22, 56, tzinfo=datetime.timezone.utc
+                            ),
+                            cause="OVER_TEMP",
+                            description="Switch card exceeded overtemperature",
+                            chassis_reboot_cause_category="REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER",
+                        ),
+                    ]
+                ),
+            ),
+            temp_file(content="") as sw_reboot_cause_filepath,
+        ):
+            # When
+            chassis = chassis_module.Chassis(
+                pddf_plugin_data={
+                    "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
+                }
+            )
+            # Then
+            assert chassis.get_reboot_cause() == (
+                "Kernel Panic",
+                "time: 2025-10-02 23:22:56 UTC, src: SW",
+            )
+            with open(sw_reboot_cause_filepath, "r") as file:
+                assert (
+                    file.read()
+                    == "System rebooted 2 more times: Watchdog (FPGA watchdog expired, time: 2025-10-03 23:22:56 UTC, src: test-dpm); Thermal Overload: Other (Switch card exceeded overtemperature, time: 2025-10-04 23:22:56 UTC, src: test-dpm)"
+                )
 
     def test_chassis_get_reboot_cause_unknown(self, chassis_module):
         # Given
-        reboot_cause_filepath = _create_temp_file("unknown")
-        chassis_module.adm1266.get_reboot_cause = Mock(return_value=None)
+        with patch.object(
+            chassis_module.RebootCauseManager,
+            "summarize_reboot_causes",
+            Mock(return_value=[]),
+        ):
+            # When
+            chassis = chassis_module.Chassis(pddf_plugin_data={"DUMMY": "dummy"})
+            # Then
+            assert chassis.get_reboot_cause() == ("Unknown", "")
 
-        # When
-        chassis = chassis_module.Chassis(
-            pddf_plugin_data={
-                "REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}
-            },
-        )
-
-        # Then
-        assert chassis.get_reboot_cause() == ("Unknown", "Unknown")
+    def test_chassis_get_reboot_cause_unknown_hw(self, chassis_module, reboot_cause_manager_module):
+        # Given
+        with patch.object(
+            chassis_module.RebootCauseManager,
+            "summarize_reboot_causes",
+            Mock(return_value=[reboot_cause_manager_module.UNKNOWN_HW_REBOOT_CAUSE]),
+        ):
+            # When
+            chassis = chassis_module.Chassis(pddf_plugin_data={"DUMMY": "dummy"})
+            # Then
+            assert chassis.get_reboot_cause() == ("REBOOT_CAUSE_HARDWARE_OTHER", "unknown, time: unknown, src: unknown")

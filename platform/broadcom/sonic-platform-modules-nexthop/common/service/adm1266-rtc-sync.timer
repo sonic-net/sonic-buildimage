@@ -1,0 +1,16 @@
+[Unit]
+Description=Synchronize ADM1266 RTC every 24 hours
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Timer]
+Unit=adm1266-rtc-sync.service
+
+# Run every 24 hours
+OnUnitActiveSec=24h
+
+# Run immediately after system boot (but still wait for pddf-platform-init.service)
+OnBootSec=0
+
+[Install]
+WantedBy=timers.target

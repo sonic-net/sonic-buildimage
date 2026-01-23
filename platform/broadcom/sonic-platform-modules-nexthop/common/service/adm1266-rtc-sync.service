@@ -1,0 +1,11 @@
+[Unit]
+Description=ADM1266 RTC synchronization service
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/adm1266_rtc_sync
+
+[Install]
+WantedBy=multi-user.target

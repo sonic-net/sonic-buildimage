@@ -9,12 +9,11 @@
 #
 #############################################################################
 
-import os
-import re
 import sys
 import time
 
-from sonic_platform import adm1266
+from sonic_platform.dpm_base import timestamp_as_string
+from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause
 from sonic_platform.thermal import NexthopFpgaAsicThermal
 from sonic_platform.watchdog import Watchdog
 
@@ -54,6 +53,10 @@ class Chassis(PddfChassis):
         for index in range(num_asic_thermals):
             thermal = NexthopFpgaAsicThermal(index, position_offset, pddf_data)
             self._thermal_list.append(thermal)
+
+        self._reboot_cause_manager = (
+            RebootCauseManager(pddf_plugin_data) if pddf_plugin_data else None
+        )
 
     # Provide the functions/variables below for which implementation is to be overwritten
 
@@ -157,58 +160,64 @@ class Chassis(PddfChassis):
     def get_status_led(self):
         return self.get_system_led("SYS_LED")
 
-    def _get_sw_reboot_cause(self) -> str | None:
-        # The presence of reboot-cause.txt with valid content indicates that reboot
-        # was triggered by software at some point before the current boot. We trust that
-        # determine-reboot-cause.service will clear the content in this file after
-        # calling this function.
-        reboot_cause_path = self.plugin_data.get("REBOOT_CAUSE", {}).get(
-            "reboot_cause_file", None
-        )
-        if not reboot_cause_path or not os.path.exists(reboot_cause_path):
-            return None
+    def _attach_reboot_cause_comment(self, majors_and_minors: list[tuple[str, str]]):
+        if not majors_and_minors:
+            return
 
-        with open(reboot_cause_path, "r", errors="replace") as file:
-            sw_reboot_cause = file.read().strip()
+        reboot_cause_path = self.plugin_data.get("REBOOT_CAUSE", {}).get("reboot_cause_file", None)
+        if not reboot_cause_path:
+            return
 
-            # We parse the SW cause here, so we can attach the HW events as a minor cause.
-            # Note: This logic is taken from `determine-reboot-cause`.
-            if match := re.search(r"User issued '(.*)' command", sw_reboot_cause):
-                # Normally, it is from one of the reboot scripts, e.g. 'reboot', 'warm-reboot'.
-                return match.group(1)
-            elif re.search(r"Kernel Panic", sw_reboot_cause):
-                return "Kernel Panic"
-            elif re.search(r"Heartbeat with the Supervisor card lost", sw_reboot_cause):
-                return "Heartbeat with the Supervisor card lost"
+        with open(reboot_cause_path, "w") as file:
+            if len(majors_and_minors) == 1:
+                file.write("System rebooted 1 more time: ")
             else:
-                return None
+                file.write(f"System rebooted {len(majors_and_minors)} more times: ")
+            causes_str = "; ".join([f"{m[0]} ({m[1]})" for m in majors_and_minors])
+            file.write(causes_str)
+
+    def _convert_to_majors_and_minors(self, reboot_causes: list[RebootCause]) -> list[tuple[str, str]]:
+        majors_and_minors: list[tuple[str, str]] = []
+        for cause in reboot_causes:
+            if cause.type == RebootCause.Type.SOFTWARE:
+                major_cause = cause.cause
+                minor_cause = f"time: {timestamp_as_string(cause.timestamp)}, src: {cause.source}"
+            else:
+                major_cause = getattr(
+                    self,
+                    cause.chassis_reboot_cause_category,
+                    cause.chassis_reboot_cause_category,
+                )
+                minor_cause = f"{cause.description}, time: {timestamp_as_string(cause.timestamp)}, src: {cause.source}"
+            majors_and_minors.append((major_cause, minor_cause))
+        return majors_and_minors
 
     def get_reboot_cause(self):
         """
-        Retrieves the cause of the previous reboot
+        Retrieves the cause of the previous reboot.
+
+        If there were multiple reboots, the initial (oldest) reboot cause is returned,
+        and the other causes are written to the reboot cause file, which
+        should be processed as a comment by determine-reboot-cause.service.
 
         Returns:
-            (string, string):
-                (major reboot cause, minor reboot cause).
-                - major cause can be from either SW or HW.
-                - minor cause contains all of the HW fault
-                  events from ADM1266 blackbox records since
-                  the last successful boot.
+            (major reboot cause, minor reboot cause).
                 - determine-reboot-cause.service will display
                   the cause as "<major_cause> (<minor_cause>)"
         """
-        # Always show hardware events for diagnostics, regardless of SW or HW.
-        # TODO: currently, when SW reboot cause is present, we assume it is
-        # the major cause. However, we should check based on the timestamp
-        # whether SW cause or HW cause came first.
-        sw_cause = self._get_sw_reboot_cause()
-        hw_cause, all_hw_fault_events = adm1266.get_reboot_cause() or (None, "")
-        if sw_cause:
-            return (sw_cause, all_hw_fault_events)
-        elif hw_cause:
-            return (hw_cause, all_hw_fault_events)
-        else:
-            return ("Unknown", "Unknown")
+        if self._reboot_cause_manager is None:
+            return ("Unknown", "")
+
+        reboot_causes = self._reboot_cause_manager.summarize_reboot_causes()
+        if not reboot_causes:
+            return ("Unknown", "")
+
+        if len(reboot_causes) == 1 and reboot_causes[0].type == RebootCause.Type.SOFTWARE:
+            return self.REBOOT_CAUSE_NON_HARDWARE, ""
+
+        majors_and_minors: list[tuple[str, str]] = self._convert_to_majors_and_minors(reboot_causes)
+        self._attach_reboot_cause_comment(majors_and_minors[1:])
+        return majors_and_minors[0]
 
     def get_watchdog(self) -> Watchdog | None:
         """
