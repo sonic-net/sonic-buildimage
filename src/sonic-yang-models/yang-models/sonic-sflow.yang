@@ -170,7 +170,7 @@ module sonic-sflow{
                         }
                     }
                     description
-                        "Configures the maximum number of packet drops to monitor for sFlow. 
+                        "Configures the maximum number of packet drops to monitor for sFlow.
                          A value of 0 disables drop monitoring. Valid values are 1 to 500.";
                 }
 
