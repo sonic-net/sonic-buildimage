@@ -38,7 +38,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf net-snmp-$(SNMPD_VERSION)
 
 	# download debian net-snmp
-	dget -u https://packages.trafficmanager.net/public/debian/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	if curl -s https://security.debian.org/debian-security/dists/$(BLDENV)-security/main/source/Sources.xz | xz -dc | grep -n "Package: net-snmp" > /dev/null; then \
+	    dget -u https://security.debian.org/debian-security/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc; \
+	else \
+	    dget -u https://deb.debian.org/debian/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc; \
+	fi
 
 	pushd net-snmp-$(SNMPD_VERSION)
 	git init
