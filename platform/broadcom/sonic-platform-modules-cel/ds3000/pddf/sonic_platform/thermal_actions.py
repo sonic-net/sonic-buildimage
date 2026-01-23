@@ -284,7 +284,7 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
         import time
         time.sleep(30)
         # Power off COMe through CPLD
-        CPLD_POWRE_OFF_CMD = "echo 0xa120 0xfc > /sys/bus/platform/devices/baseboard/setreg"
+        CPLD_POWER_OFF_CMD = "echo 0xa120 0xfc > /sys/bus/platform/devices/baseboard/setreg"
         api_helper = APIHelper()
         api_helper.get_cmd_output(CPLD_POWER_OFF_CMD)
 
