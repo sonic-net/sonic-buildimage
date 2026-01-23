@@ -31,7 +31,6 @@
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
 	url = https://github.com/wiperi/sonic-utilities.git
-	branch = cliffchen/submit/console_monitor_commands
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
@@ -104,7 +103,6 @@
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
 	url = https://github.com/wiperi/sonic-host-services.git
-	branch = cliffchen/submit/console-monitor
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
