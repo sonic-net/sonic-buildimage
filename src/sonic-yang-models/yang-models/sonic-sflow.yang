@@ -166,7 +166,7 @@ module sonic-sflow{
                 leaf drop_monitor_limit {
                     type uint16 {
                         range "0|1..500" {
-                            error-message "sFlow packet drop monitor limit must be 0 or in range 1-500"
+                            error-message "sFlow packet drop monitor limit must be 0 or in range 1-500";
                         }
                     }
                     description
