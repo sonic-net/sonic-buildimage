@@ -1,12 +1,13 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
 [Unit]
 Description=BGP container
-Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service
-After=database{% if multi_instance == 'true' %}@%i{% endif %}.service
+Requires=database{% if use_instance_deps %}@%i{% endif %}.service
+After=database{% if use_instance_deps %}@%i{% endif %}.service
 Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
-After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=swss{% if use_instance_deps %}@%i{% endif %}.service
 After=interfaces-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3

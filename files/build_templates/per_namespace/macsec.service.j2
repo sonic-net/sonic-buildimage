@@ -1,8 +1,9 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
 [Unit]
 Description=MACsec container
-Requires=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
-After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
-After=syncd{% if multi_instance == 'true' %}@%i{% endif %}.service
+Requires=swss{% if use_instance_deps %}@%i{% endif %}.service
+After=swss{% if use_instance_deps %}@%i{% endif %}.service
+After=syncd{% if use_instance_deps %}@%i{% endif %}.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
