@@ -84,6 +84,7 @@
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE](#vnet_route)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
@@ -2784,6 +2785,27 @@ monitoring sessions for the vnet routes and is optional.
 		"scope": "default",
 		"vni": "10011",
 	}
+  }
+}
+```
+
+### VNET_ROUTE
+
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: The nexthop IP (mandatory). It is used to identify the nexthop of the vnet route.
+- IFNAME: The interface name (mandatory), such as "Ethernet1". It identifies the outgoing interface for the vnet route.
+
+```
+{
+  "VNET_ROUTE": {
+    "Vnet_2000|100.100.3.0/24": {
+        "nexthop": "100.100.3.1",
+        "ifname": "Ethernet1"
+    },
+    "Vnet_3000|100.100.4.0/24": {
+        "nexthop": "100.100.4.1",
+        "ifname": "Ethernet2"
+    }
   }
 }
 ```

@@ -180,6 +180,344 @@
         }
     },
 
+    "VNET_ROUTE_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_MULTI_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    },
+                    {
+                        "name": "Vnet2",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10002"
+                    }
+                ]
+            },
+    
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.3.0/24",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    },
+                    {
+                        "vnet_name": "Vnet2",
+                        "prefix":"100.100.4.0/24",
+                        "nexthop":"100.100.2.1",
+                        "ifname":"Ethernet4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_DUPLICATE_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.3.0/24",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    },
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.3.0/24",
+                        "nexthop":"100.100.2.1",
+                        "ifname":"Ethernet4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_INVALID_NAME_FORMAT": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_INVALID_PREFIX": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"300.100.4.0/24",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_INVALID_NEXTHOP": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
+                        "nexthop":"256.256.256.256",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_MISSING_INTERFACE": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"100.100.4.0/24",
+                        "nexthop":"100.100.1.1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TEST_NONEXISTENT_VNET": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE": {
+                "VNET_ROUTE_LIST": [
+                    {
+                        "vnet_name": "Vnet2",
+                        "prefix":"100.100.4.0/24",
+                        "nexthop":"100.100.1.1",
+                        "ifname":"Ethernet0"
+                    }
+                ]
+            }
+        }
+    },
+
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
         "sonic-vxlan:sonic-vxlan": {
             "sonic-vxlan:VXLAN_TUNNEL": {
