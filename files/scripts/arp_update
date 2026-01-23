@@ -110,7 +110,7 @@ while /bin/true; do
       ping6cmd="timeout 0.2 ping6 -I $intf -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
       intf_up=$(ip link show $intf | grep "state UP")
       if [[ -n "$intf_up" ]]; then
-        eval $ping6cmd
+          eval $ping6cmd
       fi
   done
 
