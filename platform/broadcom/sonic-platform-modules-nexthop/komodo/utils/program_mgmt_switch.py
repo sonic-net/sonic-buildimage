@@ -193,6 +193,9 @@ class FpgaController:
         self.write_eeprom_word(0x25, 0x2F, 0x01)
         self.write_eeprom_word(0x26, 0x00, 0x00)
 
+        # Disable reg read/write filtering
+        self.write_reg(0x00080, 0x0)
+
         print("EEPROM programming complete!")
 
     def mdio_write(self, addr, data):
