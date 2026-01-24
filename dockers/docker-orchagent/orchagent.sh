@@ -91,6 +91,12 @@ elif [ "$platform" == "marvell-prestera" ]; then
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
         ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
     fi
+elif [ "$platform" == "cisco-8000" ]; then
+    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+    CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
+    if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
+        ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
+    fi
 else
     # Should we use the fallback MAC in case it is not found in Device.Metadata
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
