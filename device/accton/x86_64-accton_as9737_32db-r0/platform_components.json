@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "AS9737-32DB-O-AC-F": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
