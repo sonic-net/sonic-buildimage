@@ -1,0 +1,14 @@
+diff --git a/debian/rules b/debian/rules
+index 0eeaeda..674950b 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -31,7 +31,8 @@ endif
+ ifeq (hurd,$(DEB_BUILD_ARCH_OS))
+ EXCL_MIB_MODULES += mibII
+ else
+-MIB_MODULES += host
++#MIB_MODULES += host
++EXCL_MIB_MODULES += host
+ endif
+
+ %:
