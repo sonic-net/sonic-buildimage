@@ -1,5 +1,5 @@
 {% macro install_debian_packages(packages) -%}
-RUN apt install -y --reinstall --no-remove \
+RUN apt install -y --reinstall --no-remove --allow-downgrades \
 {%- for deb in packages %}
     /debs/{{ deb }} {%- if not loop.last %} \ {%- endif %}
 {%- endfor %}
