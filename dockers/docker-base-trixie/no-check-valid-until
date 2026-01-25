@@ -1,0 +1,4 @@
+# Instruct apt-get to NOT check the "Valid Until" date in Release files
+# Once the Debian team archives a repo, they stop updating this date
+
+Acquire::Check-Valid-Until "false";
