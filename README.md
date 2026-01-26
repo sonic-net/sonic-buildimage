@@ -228,7 +228,7 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
   to more than 1.
 * If Docker's workspace folder, `/var/lib/docker`,
   resides on a partition without sufficient free space,
-  you may encounter an error like the following during a Docker container build job:
+  you may     encounter an error like the following during a Docker container build job:
 
     `/usr/bin/tar: /path/to/sonic-buildimage/<some_file>:
      Cannot write: No space left on device`
