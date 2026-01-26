@@ -303,6 +303,11 @@ module sonic-route-map {
                     description "Set metric value";
                 }
 
+                leaf set_src{
+                    type string;
+                    description "Set route source address";
+                }
+
                 leaf set_next_hop{
                     type string;
                     description "Set IP nexthop";
