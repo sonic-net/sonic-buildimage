@@ -409,7 +409,8 @@ start() {
         clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*', 'HIGH_FREQUENCY_TELEMETRY_SESSION_TABLE*' "
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         # Flush DPU remote databases on DPU device
-        if [[ $(python3 -c "from utilities_common.chassis import is_dpu; print(is_dpu())" 2>/dev/null) == "True" ]]; then
+        # Check if DPU_APPL_DB exists in the database config (indicates this is a DPU)
+        if $SONIC_DB_CLI DPU_APPL_DB PING >/dev/null 2>&1; then
             debug "Flushing DPU remote databases (DPU_APPL_DB, DPU_STATE_DB) ..."
             $SONIC_DB_CLI DPU_APPL_DB FLUSHDB
             $SONIC_DB_CLI DPU_STATE_DB FLUSHDB
