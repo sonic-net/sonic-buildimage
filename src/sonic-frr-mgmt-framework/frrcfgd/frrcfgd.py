@@ -1863,7 +1863,7 @@ class BGPConfigDaemon:
                    ('local_addr',                           '{no:no-prefix}neighbor {} update-source {}'),
                    ('name',                                 '{no:no-prefix}neighbor {} description {}'),
                    (['ebgp_multihop', '+ebgp_multihop_ttl'],'{no:no-prefix}neighbor {} ebgp-multihop {}', ['true', 'false']),
-                   ('auth_password',                        '{no:no-prefix}neighbor {} password {} encrypted'),
+                   ('auth_password',                        '{no:no-prefix}neighbor {} password {}'),
                    (['keepalive', 'holdtime'],              '{no:no-prefix}neighbor {} timers {} {}'),
                    ('conn_retry',                           '{no:no-prefix}neighbor {} timers connect {}'),
                    ('min_adv_interval',                     '{no:no-prefix}neighbor {} advertisement-interval {}'),
