@@ -27,6 +27,20 @@ link_namespace() {
 }
 {%- endif %}
 
+{%- if docker_container_name == "pmon" %}
+get_pmon_device_mounts() {
+    local devregex='i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
+    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+        if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            echo "--device=$device"
+        else
+            echo "--mount=type=bind,source=$device,destination=$device"
+        fi
+    done
+}
+{%- endif %}
+
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -160,10 +174,10 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 		done
             done
         fi
-        # Delay a second to allow all instance database_config.json files to be completely generated and fully accessible.
+        # Delay 5 seconds to allow all instance database_config.json files to be completely generated and fully accessible.
         # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template
-        # files ( renderning takes some time )
-        sleep 1
+        # files ( rendering takes some time )
+        sleep 5
     fi
 }
 {%- endif %}
@@ -659,7 +673,16 @@ start() {
     fi
 
 {%- if sonic_asic_platform == "mellanox" %}
-    # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
+{%- if docker_container_name == "syncd" %}
+    if [[ $DEV != "" ]]; then
+        mkdir -p /dev/shm/asic$DEV
+        ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
+            -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
+            -v /dev/shm/asic$DEV:/dev/shm/:rw"
+    else
+        ASIC_MNT="-v /dev/shm:/dev/shm:rw "
+    fi
+{%- endif %}
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
         SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
@@ -684,24 +707,20 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-	-v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
-        -v /tmp/nv-syncd-shared/:/tmp \
-        -v /dev/shm:/dev/shm:rw \
+        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
+        -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
+        $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
-        -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
-        -v /dev/shm:/dev/shm:rw \
-        -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
-        -v /dev/shm:/dev/shm:rw \
 {%- else %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
@@ -709,6 +728,9 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "pmon" %}
+        $(if [ -e "/dev/mmcblk0" ]; then echo "--device=/dev/mmcblk0:/dev/mmcblk0"; fi) \
+{%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}
@@ -721,14 +743,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-    $(if [ -e "/dev/i2c-0" ]; then echo "--device=/dev/i2c-0:/dev/i2c-0"; fi) \
-    $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
-    $(if [ -e "/dev/sda" ]; then echo "--device=/dev/sda:/dev/sda"; fi) \
-    $(if [ -e "/dev/sdb" ]; then echo "--device=/dev/sdb:/dev/sdb"; fi) \
-    $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
-    $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
-    $(for blockdev in /sys/block/*; do if [ -d "$blockdev" ]; then device_name=$(basename "$blockdev"); if [[ "$device_name" =~ ^(sd[a-z]+|nvme[0-9]+n[0-9]+)$ ]] && [[ ! "$device_name" =~ (boot|loop) ]]; then dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; fi; done) \
-    $(for dev_file in /dev/nvme*; do if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; done) \
+    $(get_pmon_device_mounts) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \

@@ -262,7 +262,7 @@ SLAVE_TAG = $(shell \
 		 $(SLAVE_DIR)/Dockerfile \
 		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-	&& echo $(USER)/$(PWD)/$(CONFIGURED_PLATFORM)) \
+	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
@@ -452,6 +452,8 @@ DOCKER_USER_BUILD = docker build --no-cache \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
+DOCKER_USER_PULL = docker pull \
+			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG)
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -491,8 +493,24 @@ DOCKER_SLAVE_USER_INSPECT = \
 		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
 	}
 
+DOCKER_SLAVE_USER_PULL_REGISTRY = \
+	[ $(ENABLE_DOCKER_BASE_PULL) == y ] && \
+	{ \
+		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
+		$(DOCKER_USER_PULL); \
+	} && \
+	{ \
+		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG) $(SLAVE_IMAGE):$(SLAVE_TAG) && \
+		$(COLLECT_DOCKER); \
+	}\
+
 SONIC_SLAVE_USER_BUILD = \
-	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
+	{ \
+		$(DOCKER_SLAVE_USER_INSPECT); \
+	} || \
+	{ \
+		$(DOCKER_SLAVE_USER_PULL_REGISTRY); \
+	} || \
 	{ \
 		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
@@ -546,6 +564,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
                            SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
                            SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
+                           SONIC_INCLUDE_SYSTEM_OTEL=$(INCLUDE_SYSTEM_OTEL) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
