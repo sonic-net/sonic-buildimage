@@ -38,8 +38,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf net-snmp-$(SNMPD_VERSION)
 
 	# download net-snmp source package
-	DOWNLOAD_URL=$(apt-cache policy libsnmp-dev | grep -F -A1 "$SNMPD_VERSION_FULL" | grep http | grep -Eo 'http[^ ]+')
-	dget -u $(DOWNLOAD_URL)/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	download_url=$$(apt-cache policy libsnmp-dev | grep -F -A1 "$$SNMPD_VERSION_FULL" | grep http | grep -Eo 'http[^ ]+'); \
+	dget -u $$download_url/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
 
 	pushd net-snmp-$(SNMPD_VERSION)
 	git init
