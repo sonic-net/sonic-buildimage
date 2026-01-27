@@ -1,0 +1,23 @@
+From 53a4bf4324752b7e9e246a7f8a53db189cc938d0 Mon Sep 17 00:00:00 2001
+From: Liu Shilong <shilongliu@microsoft.com>
+Date: Wed, 10 Dec 2025 13:27:33 +0800
+Subject: [PATCH] [build] use relative path when building cargo dependency
+ swss-common.
+
+---
+ Cargo.toml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index a2db894e..7484110a 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -64,7 +64,7 @@ itertools = "0.13"
+ uuid = { version = "1.15", features = ["v4"] }
+ 
+ # SONiC specific dependencies
+-swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
++swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+ 
+ # Development dependencies
+ tempfile = "3.12"
