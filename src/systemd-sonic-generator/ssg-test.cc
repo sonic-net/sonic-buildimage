@@ -481,8 +481,9 @@ class SsgMainTest : public SsgFunctionTest {
     }
 
     /*
-     * Validates masked services for non-smart-switch platforms.
-     */
+    * Masks systemd-networkd-persistent-storage.service on non-smart-switch platforms.
+    * This prevents "Dependency failed" messages during warm-reboot.
+    */
     void validate_masked_services(const SsgMainConfig &cfg) {
         fs::path service_path{TEST_OUTPUT_DIR + "systemd-networkd-persistent-storage.service"};
         bool should_be_masked = !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu;
