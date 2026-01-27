@@ -413,7 +413,8 @@
                 "bgp_router_id": "8.8.8.8",
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
-                "nexthop_group": "disabled"
+                "nexthop_group": "disabled",
+                "zebra_nexthop": "disabled"
             }
         },
         "VLAN": {
@@ -2478,7 +2479,8 @@
                 "endpoint": "192.168.1.1,192.168.1.2",
                 "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
                 "vni": "10011,10012",
-                "consistent_hashing_buckets": "10"
+                "consistent_hashing_buckets": "10",
+                "metric": "0"
             }
         },
         "PORT_QOS_MAP": {
