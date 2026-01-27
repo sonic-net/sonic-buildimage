@@ -87,7 +87,7 @@ def main() -> int:
         return 0 if ok else 1
     while True:
         time.sleep(args.interval)
-        ok = ensure_sync()
+        ensure_sync()
 
 
 if __name__ == "__main__":
