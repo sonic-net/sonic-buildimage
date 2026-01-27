@@ -27,20 +27,6 @@ link_namespace() {
 }
 {%- endif %}
 
-{%- if docker_container_name == "pmon" %}
-get_pmon_device_mounts() {
-    local devregex='i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
-    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
-    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
-        if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
-            echo "--device=$device"
-        else
-            echo "--mount=type=bind,source=$device,destination=$device"
-        fi
-    done
-}
-{%- endif %}
-
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -728,9 +714,6 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "nvidia-bluefield" %}
-{%- if docker_container_name == "pmon" %}
-        $(if [ -e "/dev/mmcblk0" ]; then echo "--device=/dev/mmcblk0:/dev/mmcblk0"; fi) \
-{%- endif %}
 {%- if docker_container_name == "syncd" %}
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}
@@ -743,7 +726,9 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-    $(get_pmon_device_mounts) \
+	# Provide PMON broad access/permissions to devices on the host for monitoring and management
+    -v /dev:/dev \
+	--device-cgroup-rule='a *:* rwm' \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
