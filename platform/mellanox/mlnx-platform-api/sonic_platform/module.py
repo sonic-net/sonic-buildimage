@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,9 @@ import threading
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
 from sonic_py_common.syslogger import SysLogger
-from .dpuctlplat import DpuCtlPlat, BootProgEnum
+from .dpuctlplat import DpuCtlPlat, BootProgEnum, PCI_DEV_BASE
 import subprocess
+import os
 
 from . import utils
 from .device_data import DeviceDataManager, DpuInterfaceEnum
@@ -438,22 +439,24 @@ class DpuModule(ModuleBase):
             REBOOT_CAUSE_DPU_SELF_REBOOT
         """
         # Check for Watchdog reboot first
-        pcie_path = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
-        # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
-        try:
-            op = subprocess.check_output(['mlxreg', '-d', pcie_path, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
-        except subprocess.CalledProcessError as e:
-            logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
-            op = b''
-        reset_reason_value = None
-        for line in op.decode().split('\n'):
-            if 'reset_reason' in line:
-                # Extract the value after the '|'
-                reset_reason_value = line.split('|')[1].strip()
-                break
-        if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
-            logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
-            return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        pcie_dev_id = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        pcie_path = os.path.join(PCI_DEV_BASE, pcie_dev_id)
+        if os.path.exists(pcie_path):
+            try:
+                # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+                op = subprocess.check_output(['mlxreg', '-d', pcie_dev_id, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+            except subprocess.CalledProcessError as e:
+                logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+                op = b''
+            reset_reason_value = None
+            for line in op.decode().split('\n'):
+                if 'reset_reason' in line:
+                    # Extract the value after the '|'
+                    reset_reason_value = line.split('|')[1].strip()
+                    break
+            if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+                logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
+                return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
         # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
