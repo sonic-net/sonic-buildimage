@@ -144,7 +144,7 @@ class TestAdm1266Basic:
 
     def test_get_reboot_cause_type(self):
         """Test get_reboot_cause_type function."""
-        from fixtures_unit_test import Adm1266Mock
+        from fixtures.fixtures_unit_test import Adm1266Mock
         adm = Adm1266Mock()
         # Import the function from the loaded module
         get_reboot_cause_type = adm.adm_get_reboot_cause.__globals__['get_reboot_cause_type']
@@ -156,7 +156,7 @@ class TestAdm1266Basic:
 
     def test_time_since(self):
         """Test time_since function converts timestamp to readable format."""
-        from fixtures_unit_test import Adm1266Mock
+        from fixtures.fixtures_unit_test import Adm1266Mock
         adm = Adm1266Mock()
         time_since = adm.adm_get_reboot_cause.__globals__['time_since']
 
@@ -168,7 +168,7 @@ class TestAdm1266Basic:
 
     def test_channel_names(self):
         """Test channel_names function formats GPIO/PDIO bits."""
-        from fixtures_unit_test import Adm1266Mock
+        from fixtures.fixtures_unit_test import Adm1266Mock
         adm = Adm1266Mock()
         channel_names = adm.adm_get_reboot_cause.__globals__['channel_names']
 
@@ -263,7 +263,7 @@ class TestAdm1266Basic:
     ])
     def test_reboot_cause_str_to_type(self, reboot_cause_str):
         """Test reboot_cause_str_to_type handles single and comma-separated causes."""
-        from fixtures_unit_test import Adm1266Mock
+        from fixtures.fixtures_unit_test import Adm1266Mock
         adm = Adm1266Mock()
         reboot_cause_str_to_type = adm.adm_get_reboot_cause.__globals__['reboot_cause_str_to_type']
         ChassisBase = adm.adm_get_reboot_cause.__globals__['ChassisBase']
