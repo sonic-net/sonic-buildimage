@@ -1239,8 +1239,10 @@ install_deb_package $debs_path/syslog-counter_*.deb
 
 
 ## Copy over  set-vrf-strict-mode.service
+{% if ENABLE_VRF_STRICT == "y" %}
 sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYSTEM_ROOT/etc/systemd/system/set-vrf-strict-mode.service
 
 # Install set-vrf-strict-mode service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
+{% endif %}
 
