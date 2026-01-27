@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ mock_tc_config = """
 
 class TestSmartSwitchThermalUpdater:
     @mock.patch('sonic_platform.utils.write_file')
+    @mock.patch('sonic_platform.smartswitch_thermal_updater.SmartswitchThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     def test_configuration(self, mock_write):
         dpu = mock.MagicMock()
         mock_sfp = mock.MagicMock()

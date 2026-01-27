@@ -123,25 +123,30 @@ module sonic-vnet {
                     type stypes:sonic-ip4-prefix;
                 }
                 
-                leaf-list endpoint {
+                leaf endpoint {
                     description "Endpoint/nexthop tunnel IPs";
-                    type inet:ipv4-address;
-                    min-elements 1;
+                    type stypes:ipv4-address-list;
+                    mandatory true;
                 }
 
-                leaf-list mac_address {
+                leaf mac_address {
                     description "Inner dest macs in encapsulated packet";
-                    type yang:mac-address;
+                    type stypes:mac-address-list;
                 }
 
-                leaf-list vni {
+                leaf vni {
                     description "Valid and active vni values in encapsulated packet";
-                    type stypes:vnid_type;
+                    type stypes:vnid-list;
                 }
 
                 leaf consistent_hashing_buckets {
                     description "Number of consistent hashing buckets to use, if consistent hashing is desired";
                     type uint16;
+                }
+
+                leaf metric {
+                    description "Value that can be set to categorize or determine the type of route. This value does not affect route behavior.";
+                    type uint8;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */

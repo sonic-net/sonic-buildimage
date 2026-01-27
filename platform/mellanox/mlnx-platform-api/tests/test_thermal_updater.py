@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,7 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.write_file')
     def test_start_stop(self, mock_write):
         mock_sfp = mock.MagicMock()
@@ -109,3 +110,48 @@ class TestThermalUpdater:
         hw_management_independent_mode_update.reset_mock()
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
+
+    # ---- SFP.get_temperature_info publishes vendor info on module change ----
+    def _make_sfp_for_publish(self, sn_changed=True, vendor=('Innolight', 'TR-iQ13L-NVS')):
+        # Import locally to avoid any potential name resolution issues in test scope
+        from sonic_platform.sfp import SFP as _SFP
+        sfp = object.__new__(_SFP)
+        sfp.sdk_index = 10
+        sfp.retry_read_vendor = 5 if sn_changed else 0
+        sfp.is_sw_control = mock.MagicMock(return_value=True)
+        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=sn_changed)
+        if vendor is None:
+            sfp.get_vendor_info = mock.MagicMock(return_value=(None, None))
+        else:
+            sfp.get_vendor_info = mock.MagicMock(return_value=vendor)
+        api = mock.MagicMock()
+        api.get_transceiver_thresholds_support = mock.MagicMock(return_value=False)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=api)
+        return sfp
+
+    def test_sfp_get_temperature_info_publishes_vendor_on_sn_change(self):
+        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
+        sfp = self._make_sfp_for_publish(sn_changed=True, vendor=('Innolight', 'TR-iQ13L-NVS'))
+        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
+            sfp_hw_management_independent_mode_update.reset_mock()
+            sfp.get_temperature_info()
+            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_called_once_with(
+                0, 11, {'manufacturer': 'Innolight', 'part_number': 'TR-iQ13L-NVS'}
+            )
+
+    def test_sfp_get_temperature_info_no_publish_when_no_change(self):
+        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
+        sfp = self._make_sfp_for_publish(sn_changed=False, vendor=('Innolight', 'TR-iQ13L-NVS'))
+        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
+            sfp_hw_management_independent_mode_update.reset_mock()
+            sfp.get_temperature_info()
+            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_not_called()
+
+    def test_sfp_get_temperature_info_no_publish_when_vendor_missing(self):
+        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
+        sfp = self._make_sfp_for_publish(sn_changed=True, vendor=None)
+        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
+            sfp_hw_management_independent_mode_update.reset_mock()
+            sfp.get_temperature_info()
+            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_not_called()
+

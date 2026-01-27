@@ -3,8 +3,8 @@ azure.archive.ubuntu.com_ubuntu_dists_focal-backports==2025-12-11T16:47:23Z
 azure.archive.ubuntu.com_ubuntu_dists_focal-security==2025-12-11T16:38:54Z
 azure.archive.ubuntu.com_ubuntu_dists_focal-updates==2025-12-11T16:42:50Z
 deb.nodesource.com_node%5f14.x_dists_bookworm==2023-02-17T00:35:29Z
-debian==20251211T001456Z
-debian-security==20251211T001340Z
+debian==20260113T001449Z
+debian-security==20260113T001531Z
 download.docker.com_linux_debian_dists_bookworm==2025-12-11T16:15:25Z
 download.docker.com_linux_debian_dists_trixie==2025-12-11T16:15:25Z
 packages.trafficmanager.net_snapshot_debian-security_20251211T001340Z_dists_bookworm-security==2025-12-10T22:29:44Z

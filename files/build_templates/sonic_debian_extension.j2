@@ -647,6 +647,13 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable dash-engine
 
 {%- endif %}
 
+{%- if include_system_otel == "y" %}
+
+# Copy OTEL configuration files
+sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
+
+{%- endif %}
+
 # Copy platform topology configuration scripts
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
@@ -1041,6 +1048,7 @@ sudo LANG=C cp $SCRIPTS_DIR/database.sh $FILESYSTEM_ROOT/usr/local/bin/database.
 sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
+sudo LANG=C cp $SCRIPTS_DIR/otel.sh $FILESYSTEM_ROOT/usr/local/bin/otel.sh
 sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
@@ -1115,10 +1123,19 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
-j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
 sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+
+sudo cp platform/mellanox/files/sx-kernel.sh $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+
+sudo cp platform/mellanox/files/sx-kernel.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/sx-kernel.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sx-kernel.service
+
+sudo cp platform/mellanox/files/mlnx-fw-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/mlnx-fw-manager.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable mlnx-fw-manager.service
 
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
@@ -1158,8 +1175,6 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platfo
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
-SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
 sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 

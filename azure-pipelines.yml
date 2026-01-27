@@ -80,12 +80,14 @@ stages:
         variables:
           swi_image: yes
           docker_syncd_rpc_image: yes
+          dbg_image: yes
           platform_rpc: brcm
           INCLUDE_RESTAPI: y
       - name: mellanox
         variables:
           dbg_image: yes
           docker_syncd_rpc_image: yes
+          session_monitor: yes
           platform_rpc: mlnx
       - name: marvell-prestera-arm64
         pool: sonicso1ES-arm64
@@ -99,6 +101,10 @@ stages:
           PLATFORM_NAME: marvell-prestera
           PLATFORM_ARCH: armhf
           INCLUDE_RESTAPI: y
+      - name: nvidia-bluefield
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_ARCH: arm64
 
 - stage: Test
   dependsOn: BuildVS
