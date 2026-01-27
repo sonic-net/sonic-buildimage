@@ -340,6 +340,31 @@ module sonic-device_metadata {
                 }
             }
             /* end of container localhost */
+
+            container x509 {
+
+                leaf ca_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+)\.(cer|crt|pem)';
+                    }
+                    description "Local path for ca_crt.";
+                }
+
+                leaf server_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+)\.(cer|crt|pem)';
+                    }
+                    description "Local path for server_crt.";
+                }
+
+                leaf server_key {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).key';
+                    }
+                    description "Local path for server_key.";
+                }
+
+            }
         }
         /* end of container DEVICE_METADATA */
     }
