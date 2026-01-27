@@ -1092,9 +1092,13 @@ class Chassis(ChassisBase):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_comex_pwr_fail'      :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_main_51v'            :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_mgmt_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_asic_thermal'        :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
+            'reset_cpu_thermal'         :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_comex_thermal'       :   self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU,
             'reset_hotswap_or_wd'       :   self.REBOOT_CAUSE_WATCHDOG,
             'reset_comex_wd'            :   self.REBOOT_CAUSE_WATCHDOG,
@@ -1102,6 +1106,8 @@ class Chassis(ChassisBase):
             'reset_sff_wd'              :   self.REBOOT_CAUSE_WATCHDOG,
             'reset_hotswap_or_halt'     :   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_voltmon_upgrade_fail':   self.REBOOT_CAUSE_HARDWARE_OTHER,
+            'reset_pwr_converter_fail'  :   self.REBOOT_CAUSE_HARDWARE_OTHER,
+            'reset_swb_dc_dc_pwr_fail'  :   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_reload_bios'         :   self.REBOOT_CAUSE_HARDWARE_BIOS,
             'reset_fw_reset'            :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
             'reset_from_asic'           :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
@@ -1163,6 +1169,7 @@ class Chassis(ChassisBase):
 
         for reset_file, reset_cause in self.reboot_major_cause_dict.items():
             if self._verify_reboot_cause(reset_file):
+                logger.log_info("Hardware reboot cause: {}".format(reset_file))
                 return reset_cause, ''
 
         for reset_file, reset_cause in self.reboot_minor_cause_dict.items():
