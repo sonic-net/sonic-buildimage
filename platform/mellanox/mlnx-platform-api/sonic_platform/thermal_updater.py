@@ -20,8 +20,9 @@ from .device_data import DeviceDataManager
 from . import utils
 from sonic_py_common import logger
 
+import atexit
+import functools
 import sys
-import time
 import glob
 import os
 
@@ -55,7 +56,10 @@ logger = logger.Logger('thermal-updater')
 
 # Register a clean-up routine that will run when the process exits
 def clean_thermal_data(sfp_list):
-    hw_management_independent_mode_update.thermal_data_clean_asic(0)
+    asic_count = DeviceDataManager.get_asic_count()
+    for asic_index in range(asic_count):
+        hw_management_independent_mode_update.thermal_data_clean_asic(asic_index)
+
     if not sfp_list:
         return
     hw_management_independent_mode_update.module_data_set_module_counter(len(sfp_list))
@@ -73,34 +77,7 @@ class ThermalUpdater:
         self._sfp_list = sfp_list
         self._sfp_status = {}
         self._timer = utils.Timer()
-
-    def wait_for_sysfs_nodes(self):
-        """
-        Wait for temperature sysfs nodes to be present before proceeding.
-        Returns:
-            bool: True if wait success else timeout
-        """
-        start_time = time.time()
-        logger.log_notice('Waiting for temperature sysfs nodes to be present...')
-        conditions = []
-
-        # ASIC temperature sysfs node
-        asic_count = DeviceDataManager.get_asic_count()
-        for asic_index in range(asic_count):
-            conditions.append(lambda idx=asic_index: os.path.exists(f'/sys/module/sx_core/asic{idx}/temperature/input'))
-
-        # Module temperature sysfs nodes
-        sfp_count = len(self._sfp_list) if self._sfp_list else 0
-        result = DeviceDataManager.wait_sysfs_ready(sfp_count)
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-
-        if result:
-            logger.log_notice(f'Temperature sysfs nodes are ready. Wait time: {elapsed_time:.4f} seconds')
-        else:
-            logger.log_error(f'Timeout waiting for temperature sysfs nodes. Wait time: {elapsed_time:.4f} seconds')
-
-        return result
+        atexit.register(functools.partial(clean_thermal_data, self._sfp_list))
 
     def load_tc_config(self):
         asic_poll_interval = 1
@@ -129,7 +106,6 @@ class ThermalUpdater:
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
     def start(self):
-        self.clean_thermal_data()
         self.control_tc(False)
         self.load_tc_config()
         self.unlink_hw_mgmt_thermal_files()
@@ -142,15 +118,6 @@ class ThermalUpdater:
     def control_tc(self, suspend):
         logger.log_notice(f'Set hw-management-tc to {"suspend" if suspend else "resume"}')
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
-
-    def clean_thermal_data(self):
-        hw_management_independent_mode_update.module_data_set_module_counter(len(self._sfp_list))
-        hw_management_independent_mode_update.thermal_data_clean_asic(0)
-        for sfp in self._sfp_list:
-            hw_management_independent_mode_update.thermal_data_clean_module(
-                0,
-                sfp.sdk_index + 1
-            )
 
     def get_asic_temp(self, asic_index=0):
         temperature = utils.read_int_from_file(f'/sys/module/sx_core/asic{asic_index}/temperature/input', default=None)

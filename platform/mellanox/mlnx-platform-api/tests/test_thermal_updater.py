@@ -20,7 +20,7 @@ import time
 from unittest import mock
 
 from sonic_platform import utils
-from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update
+from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update, clean_thermal_data
 from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD, \
                                            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
@@ -62,7 +62,6 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
-    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.write_file')
     def test_start_stop(self, mock_write):
         mock_sfp = mock.MagicMock()

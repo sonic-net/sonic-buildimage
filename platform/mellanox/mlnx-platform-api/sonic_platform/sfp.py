@@ -1523,7 +1523,6 @@ class SFP(NvidiaSFPCommon):
 
     @classmethod
     def get_port_config_done(cls, namespace):
-        print(f"db_table_helper: {db_table_helper}")
         app_db = db_table_helper.get_appl_db(namespace)
         return app_db.exists(PORT_CONFIG_DONE)
 
@@ -1889,16 +1888,3 @@ class CpoPort(SFP):
         :return:
         """
         return
-
-    def _get_page_and_page_offset(self, overall_offset):
-        """Get EEPROM page and page offset according to overall offset.
-
-        Args:
-            overall_offset (int): Overall read offset
-
-        Returns:
-            tuple: (<page_num>, <page_path>, <page_offset>)
-        """
-        # Currently, CPO only supports page 0 and page 1 and page 2.
-        page_number, page, page_offset = super()._get_page_and_page_offset(overall_offset)
-        return (None, None, None) if page_number > 2 else (page_number, page, page_offset)
