@@ -1,0 +1,25 @@
+From 3402023e04bcfce7b94127a287c02b9a53b37d2a Mon Sep 17 00:00:00 2001
+From: Liu Shilong <shilongliu@microsoft.com>
+Date: Wed, 10 Dec 2025 13:44:52 +0800
+Subject: [PATCH] [build] use relative path when building cargo dependency
+ swss-common.
+
+---
+ Cargo.toml | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 3fc3f23..1bbfe4d 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -97,8 +97,8 @@ swss-serde = { version = "0.1.0", path = "crates/swss-serde" }
+ swbus-actor = { version = "0.1.0", path = "crates/swbus-actor" }
+ sonicdb-derive = { version = "0.1.0", path = "crates/sonicdb-derive" }
+ sonic-dash-api-proto = { version = "0.1.0", path = "crates/sonic-dash-api-proto" }
+-swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
+-swss-common-testing = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
++swss-common = { path = "../sonic-swss-common/crates/swss-common" }
++swss-common-testing = { path = "../sonic-swss-common/crates/swss-common-testing" }
+ 
+ # Dev dependencies
+ criterion = "0.5"
