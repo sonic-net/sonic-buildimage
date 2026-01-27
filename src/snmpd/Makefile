@@ -37,9 +37,13 @@ endif
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf net-snmp-$(SNMPD_VERSION)
 
-	# download net-snmp source package
-	download_url=$$(apt-cache policy libsnmp-dev | grep -F -A1 "$$SNMPD_VERSION_FULL" | grep http | grep -Eo 'http[^ ]+'); \
-	dget -u $$download_url/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	# download net-snmp source package from debian
+	debian_repo=$$(apt-cache policy libsnmp-dev | grep -F -A1 "$$SNMPD_VERSION_FULL" | grep http)
+	if echo "$$debian_repo" | grep -q 'debian-security'; then
+		dget -u https://security.debian.org/debian-security/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	else
+		dget -u https://deb.debian.org/debian/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	fi
 
 	pushd net-snmp-$(SNMPD_VERSION)
 	git init
