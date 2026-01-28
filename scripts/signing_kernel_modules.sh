@@ -36,26 +36,27 @@ while getopts 'l:c:p:k:s:e:hv' flag; do
 done
 if [ $OPTIND -eq 1 ]; then echo "no options were pass"; usage; exit 1 ;fi
 
-if [ -z ${LINUX_KERNEL_VERSION} ]; then
+if [ -z "${LINUX_KERNEL_VERSION}" ]; then
     echo "ERROR: LINUX_KERNEL_VERSION arg1 is empty"
     usage
     exit 1
 fi
 
-if [ ! -f ${PEM_CERT} ]; then
+if [ ! -f "${PEM_CERT}" ]; then
     echo "ERROR: arg2 PEM_CERT=${PEM_CERT} file does not exist"
     usage
     exit 1
 fi
 
-if [ ! -f ${PEM_PRIVATE_KEY} ]; then
-    echo "ERROR: arg3 PEM_PRIVATE_KEY=${PEM_PRIVATE_KEY} file does not exist"
+if [ -z "${PEM_PRIVATE_KEY}" ]; then
+    echo "ERROR: arg3 PEM_PRIVATE_KEY=${PEM_PRIVATE_KEY} is empty"
     usage
     exit 1
 fi
 
+kbuild_ver_major="$(cut -d '.' -f 1 <<< "$LINUX_KERNEL_VERSION")"."$(cut -d '.' -f 2 <<< "$LINUX_KERNEL_VERSION")"
 if [ -z ${LOCAL_SIGN_FILE} ]; then
-    LOCAL_SIGN_FILE="/usr/lib/linux-kbuild-${LINUX_KERNEL_VERSION}/scripts/sign-file"
+    LOCAL_SIGN_FILE="/usr/lib/linux-kbuild-${kbuild_ver_major}/scripts/sign-file"
 fi
 
 if [ ! -f ${LOCAL_SIGN_FILE} ]; then
@@ -65,7 +66,7 @@ if [ ! -f ${LOCAL_SIGN_FILE} ]; then
 fi
 
 if [ -z ${LOCAL_EXTRACT_CERT} ]; then
-    LOCAL_EXTRACT_CERT="/usr/lib/linux-kbuild-${LINUX_KERNEL_VERSION}/certs/extract-cert"
+    LOCAL_EXTRACT_CERT="/usr/lib/linux-kbuild-${kbuild_ver_major}/certs/extract-cert"
 fi
 
 if [ ! -f ${LOCAL_EXTRACT_CERT} ]; then
@@ -90,33 +91,56 @@ if [ -d ${dev_certs_tmp_folder} ]; then
     rm -r ${dev_certs_tmp_folder}
 fi
 
-mkdir -p ${dev_certs_tmp_folder}
-local_sign_key="${dev_certs_tmp_folder}/$(basename $PEM_PRIVATE_KEY)"
-local_sign_cert="${dev_certs_tmp_folder}/$(basename $PEM_CERT)"
+# Extract x509 cert if the signing key is local
+if [ -f "${PEM_PRIVATE_KEY}" ]; then
+    mkdir -p ${dev_certs_tmp_folder}
+    local_sign_key="${dev_certs_tmp_folder}/$(basename "${PEM_PRIVATE_KEY}")"
+    local_sign_cert="${dev_certs_tmp_folder}/$(basename "${PEM_CERT}")"
 
-# Combine cert for module signing
-echo "keys concat: cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}"
-cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}
+    # Combine cert for module signing
+    echo "keys concat: cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}"
+    cat ${PEM_PRIVATE_KEY} ${PEM_CERT} > ${local_sign_key}
 
-# Extract x509 cert in corect format
-echo "create x509 cert: ${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}"
-${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}
+    # Extract x509 cert in corect format
+    echo "create x509 cert: ${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}"
+    ${LOCAL_EXTRACT_CERT} ${local_sign_key} ${local_sign_cert}
+else
+    local_sign_key=${PEM_PRIVATE_KEY}
+    local_sign_cert=${PEM_CERT}
+fi
 
 # Do sign for each found module
-kernel_modules_cnt=0
-for mod in $modules_list
-do
-    echo "signing module named: ${mod} .."
-    echo "${LOCAL_SIGN_FILE} sha512 ${local_sign_key} ${local_sign_cert} ${mod}"
-    kernel_modules_cnt=$((kernel_modules_cnt+1))
-    ${LOCAL_SIGN_FILE} sha512 ${local_sign_key} ${local_sign_cert} ${mod}
 
-    # check Kernel module is signed.
-    if ! grep -q "~Module signature appended~" "${mod}"; then
-        echo "Error: Kernel module=${mod} have no signature appened."
-        exit 1
+# Sign modules in parallel
+echo "Signing modules in parallel using $(nproc) threads..."
+find "${KERNEL_MODULES_DIR}" -name "*.ko" -print0 | xargs -0 -n 1 -P $(nproc) sh -c '
+    LOCAL_SIGN_FILE="$1"
+    local_sign_key="$2"
+    local_sign_cert="$3"
+    mod="$4"
+
+    # echo "Signing $mod"
+    "$LOCAL_SIGN_FILE" sha256 "$local_sign_key" "$local_sign_cert" "$mod"
+
+    # Verify signature
+    # Optimization: grep might be slow on large binaries, but necessary for verification
+    if ! grep -q "~Module signature appended~" "$mod"; then
+         echo "Error: Failed to sign $mod"
+         exit 255
     fi
-done
+' _ "${LOCAL_SIGN_FILE}" "${local_sign_key}" "${local_sign_cert}"
+
+if [ $? -ne 0 ]; then
+    echo "Error: Parallel signing failed."
+    if [ "$SECURE_UPGRADE_MODE" = "no_sign" ]; then
+         echo "Warning: Ignoring failure in no_sign mode."
+    else
+         exit 1
+    fi
+fi
+
+# Count signed modules (approximation for reporting)
+kernel_modules_cnt=$(find "${KERNEL_MODULES_DIR}" -name "*.ko" | wc -l)
 
 echo "Num of kernel modules signed: kernel_modules_cnt=$kernel_modules_cnt"
 echo "$0: All Kernel Modules SIGNED OK."
