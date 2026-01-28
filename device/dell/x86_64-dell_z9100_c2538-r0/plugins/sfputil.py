@@ -26,7 +26,7 @@ class SfpUtil(SfpUtilBase):
     IOM_3_PORT_START = 23
     IOM_3_PORT_END = 32
 
-    BASE_VAL_PATH = "/sys/class/i2c-adapter/i2c-{0}/{0}-003e/"
+    BASE_VAL_PATH = "/sys/bus/i2c/devices/i2c-{0}/{0}-003e/"
     OIR_FD_PATH = "/sys/devices/platform/dell_ich.0/sci_int_gpio_sus6"
 
     oir_fd = -1
@@ -113,12 +113,15 @@ class SfpUtil(SfpUtilBase):
         return self._port_to_i2c_mapping
 
     def __init__(self):
-        eeprom_path = "/sys/class/i2c-adapter/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
+        eeprom_path = "/sys/bus/i2c/devices/i2c-{0}/i2c-{1}/{1}-0050/eeprom"
 
         for x in range(0, self.port_end+1):
             self.port_to_eeprom_mapping[x] = eeprom_path.format(
                 self.port_to_i2c_mapping[x][0],
                 self.port_to_i2c_mapping[x][1])
+        
+        self.port_to_eeprom_mapping[33] = "/sys/bus/i2c/devices/i2c-11/11-0050/eeprom"
+        self.port_to_eeprom_mapping[34] = "/sys/bus/i2c/devices/i2c-12/12-0050/eeprom"
 
         SfpUtilBase.__init__(self)
 
@@ -329,17 +332,17 @@ class SfpUtil(SfpUtilBase):
         is_port_dict_updated = False
         # Read the QSFP ABS interrupt & status registers
         cpld2_abs_int = self.get_register(
-            "/sys/class/i2c-adapter/i2c-14/14-003e/qsfp_abs_int")
+            "/sys/bus/i2c/devices/i2c-14/14-003e/qsfp_abs_int")
         cpld2_abs_sta = self.get_register(
-            "/sys/class/i2c-adapter/i2c-14/14-003e/qsfp_abs_sta")
+            "/sys/bus/i2c/devices/i2c-14/14-003e/qsfp_abs_sta")
         cpld3_abs_int = self.get_register(
-            "/sys/class/i2c-adapter/i2c-15/15-003e/qsfp_abs_int")
+            "/sys/bus/i2c/devices/i2c-15/15-003e/qsfp_abs_int")
         cpld3_abs_sta = self.get_register(
-            "/sys/class/i2c-adapter/i2c-15/15-003e/qsfp_abs_sta")
+            "/sys/bus/i2c/devices/i2c-15/15-003e/qsfp_abs_sta")
         cpld4_abs_int = self.get_register(
-            "/sys/class/i2c-adapter/i2c-16/16-003e/qsfp_abs_int")
+            "/sys/bus/i2c/devices/i2c-16/16-003e/qsfp_abs_int")
         cpld4_abs_sta = self.get_register(
-            "/sys/class/i2c-adapter/i2c-16/16-003e/qsfp_abs_sta")
+            "/sys/bus/i2c/devices/i2c-16/16-003e/qsfp_abs_sta")
 
         if (cpld2_abs_int == 'ERR' or cpld2_abs_sta == 'ERR' or
                 cpld3_abs_int == 'ERR' or cpld3_abs_sta == 'ERR' or
