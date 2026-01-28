@@ -1481,7 +1481,11 @@
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "th5",
+{%- if 'x86_64-nexthop_4010-r' in platform %}
+      "value_type": "th5-320",
+{%- else %}
+      "value_type": "th5-512",
+{%- endif %}
       "reg_addr": "0x24",
       "field_range": "12:0"
     }
@@ -1499,7 +1503,11 @@
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "th5",
+{%- if 'x86_64-nexthop_4010-r' in platform %}
+      "value_type": "th5-320",
+{%- else %}
+      "value_type": "th5-512",
+{%- endif %}
       "reg_addr": "0x24",
       "field_range": "28:16"
     }
