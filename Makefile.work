@@ -103,6 +103,8 @@ ifeq ($(J2_VER),)
 $(error Please install j2 (sudo pip install jinjanator))
 endif
 
+GCLOUD_AUTH_PATH ?= $(HOME)/.config/gcloud
+
 # Check for minimum Docker version on build host
 # Note: Using the greater of CE (17.05.0) and EE (17.06.1) versions that support ARG before FROM
 docker_min := 17.06.1
@@ -164,6 +166,10 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
+ifeq ($(ENABLE_ARTIFACT_REGISTRY_APT),y)
+override DEFAULT_CONTAINER_REGISTRY =
+endif
+
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -223,11 +229,14 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	FIPS_VERSION=$(FIPS_VERSION) \
 	FIPS_GOLANG_MAIN_VERSION=$(FIPS_GOLANG_MAIN_VERSION) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
+	ENABLE_ARTIFACT_REGISTRY_APT=$(ENABLE_ARTIFACT_REGISTRY_APT) \
+	ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
 	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
+	ARTIFACT_REGISTRY_URL_DEFAULT=$(ARTIFACT_REGISTRY_URL_DEFAULT) \
 	j2 $(SLAVE_DIR)/Dockerfile.user.j2 > $(SLAVE_DIR)/Dockerfile.user)
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
@@ -350,15 +359,23 @@ ifneq ($(SECURE_UPGRADE_DEV_SIGNING_KEY),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_DEV_SIGNING_KEY):$(SECURE_UPGRADE_DEV_SIGNING_KEY):ro
 endif
 ifneq ($(SECURE_UPGRADE_SIGNING_CERT),)
-    DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
-endif
-ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
-    DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
+    ifneq ($(wildcard $(SECURE_UPGRADE_SIGNING_CERT)),)
+        DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
+    endif
+    DOCKER_RUN += -e "SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT)"
 endif
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
 	DOCKER_RUN += -v $(SECURE_UPGRADE_PROD_SIGNING_TOOL):/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)):ro
+endif
+ifneq ($(SECURE_UPGRADE_PROD_TOOL_CONFIG),)
+	DOCKER_RUN += -v $(SECURE_UPGRADE_PROD_TOOL_CONFIG):$(SECURE_UPGRADE_PROD_TOOL_CONFIG):ro
+endif
+
+ifeq ($(ENABLE_GCLOUD_AUTH),y)
+	DOCKER_RUN += -v $(GCLOUD_AUTH_PATH):/var/$(USER)/.config/gcloud:ro
+	DOCKER_RUN += -v /tmp/gcloud_access_token:/tmp/gcloud_access_token:ro
 endif
 
 ifneq ($(SONIC_DPKG_CACHE_SOURCE),)
@@ -369,6 +386,16 @@ ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
+ifeq ($(SONIC_ENABLE_SECUREBOOT_SIGNATURE), y)
+ifneq ($(SIGNING_KEY),)
+	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_KEY))
+	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
+endif
+ifneq ($(SIGNING_CERT),)
+	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_CERT))
+	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
+endif
+endif
 # User name and tag for "docker-*" images created by native dockerd mode.
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_USERNAME = $(USER_LC)
@@ -459,14 +486,20 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
+GOOGLE_CREDS_ARG = 
+ifeq ($(ENABLE_ARTIFACT_REGISTRY_APT),y)
+    GOOGLE_CREDS_ARG = --secret id=google_creds,src=$(GCLOUD_AUTH_PATH)/application_default_credentials.json
+endif
+
 DOCKER_USER_BUILD = docker build --no-cache \
 	       --build-arg user=$(USER) \
 	       --build-arg uid=$(shell id -u) \
 	       --build-arg guid=$(shell id -g) \
 	       --build-arg hostname=$(shell echo $$HOSTNAME) \
-               --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
+         --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
 	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
+	       $(GOOGLE_CREDS_ARG) \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
 DOCKER_USER_PULL = docker pull \
@@ -594,6 +627,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
+                           SONIC_ENABLE_SECUREBOOT_SIGNATURE=$(SONIC_ENABLE_SECUREBOOT_SIGNATURE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
@@ -616,6 +650,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+                           XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \

@@ -287,7 +287,26 @@ PDDF_SUPPORT = n
 endif
 export PDDF_SUPPORT
 
+<<<<<<< HEAD
 include $(RULES_PATH)/*.mk
+=======
+ifneq ($(GCP_ADC_CREDS_FILE),)
+DOCKER_SECRET_ARGS += --secret id=google_application_credentials,src=$(GCP_ADC_CREDS_FILE)
+DOCKER_BUILD_ENV += DOCKER_BUILDKIT=1
+endif
+
+# Explicitly include sonie-uki.mk first to ensure its targets are defined before
+# any rules that might depend on them.
+include $(RULES_PATH)/sonie-uki.mk
+
+# Include all other .mk files from the rules directory, excluding the sonie-specific
+# ones which are handled explicitly.
+include $(filter-out %/sonie-uki.mk %/sonie-image.mk, $(wildcard $(RULES_PATH)/*.mk))
+
+# Explicitly include sonie-image.mk last to ensure it is processed after its
+# dependencies have been defined.
+include $(RULES_PATH)/sonie-image.mk
+>>>>>>> 7f1ccfb85 (Enable SONiE recovery image and testing infrastructure)
 ifneq ($(CONFIGURED_PLATFORM), undefined)
 ifeq ($(PDDF_SUPPORT), y)
 PDDF_DIR = pddf
@@ -922,7 +941,7 @@ $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install
 		# put a lock here because dpkg does not allow installing packages in parallel
 		if mkdir $(DEBS_PATH)/dpkg_lock &> /dev/null; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
-			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
+			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; cat target/debs/bookworm/$*.log; ps aux; exit 1 ; }
 else
 			# Relocate debian packages python libraries to the cross python virtual env location
 			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
