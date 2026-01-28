@@ -352,7 +352,7 @@ class Sysmonitor(ProcessTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if srv_type == "oneshot" or service_name in spl_srv_list:
+                        if srv_type == "oneshot" or service_name in spl_srv_list or fail_reason == "exec-condition":
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
