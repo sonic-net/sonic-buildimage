@@ -398,7 +398,8 @@ start() {
 
     # Don't flush DB during warm boot
     if [[ x"$WARM_BOOT" != x"true" ]]; then
-        debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial STATE databases ..."
+        debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial APPL and STATE databases ..."
+        clean_up_tables APPL_DB "'PROC_INFO*'"
         $SONIC_DB_CLI APPL_DB FLUSHDB
         $SONIC_DB_CLI ASIC_DB FLUSHDB
         $SONIC_DB_CLI COUNTERS_DB FLUSHDB
