@@ -246,6 +246,9 @@ if [ "$install_env" = "onie" ]; then
     else
         cp /etc/machine.conf $demo_mnt
     fi
+    # Store H/W revision in target file system
+    onie-syseeprom  | grep "Label Revision"  | awk '{print $NF}' > $demo_mnt/hw_rev
+
 fi
 
 echo "ONIE_IMAGE_PART_SIZE=$demo_part_size"
