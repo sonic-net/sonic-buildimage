@@ -6,7 +6,12 @@ TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
 extract_field() {
-    echo $(echo $1 | jq -r $2)
+    res=$(echo $1 | jq -e -r $2)
+    if [ $? == 0 ]; then 
+        echo $res
+    else
+        echo 
+    fi
 }
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -102,7 +107,7 @@ THRESHOLD_CONNECTIONS=$(extract_field "$GNMI" '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --threshold $THRESHOLD_CONNECTIONS"
 else
-    if [ -z "$GNMI" ] || [[ $THRESHOLD_CONNECTIONS == "null" ]]; then
+    if [ -z "$GNMI" ] || [[ -z $THRESHOLD_CONNECTIONS ]]; then
         TELEMETRY_ARGS+=" --threshold 100"
     else
         echo "Incorrect threshold value, expecting positive integers" >&2
@@ -115,7 +120,7 @@ IDLE_CONN_DURATION=$(extract_field "$GNMI" '.idle_conn_duration')
 if [[ $IDLE_CONN_DURATION =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --idle_conn_duration $IDLE_CONN_DURATION"
 else
-    if [ -z "$GNMI" ] || [[ $IDLE_CONN_DURATION == "null" ]]; then
+    if [ -z "$GNMI" ] || [[ -z $IDLE_CONN_DURATION ]]; then
         TELEMETRY_ARGS+=" --idle_conn_duration 5"
     else
         echo "Incorrect idle_conn_duration value, expecting positive integers" >&2
@@ -125,10 +130,10 @@ fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 # If user_auth is not set, default to certs
-if [ $USER_AUTH == "null" ]; then
+if [ -z $USER_AUTH ]; then
     USER_AUTH="cert"
 fi
-if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ] && [  $USER_AUTH != "none" ]; then
+if [  $USER_AUTH != "none" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
     if [ $USER_AUTH == "cert" ]; then
@@ -140,7 +145,7 @@ if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ] && [  $USER_AUTH != "none"
         fi
 
         CRL_EXPIRE_DURATION=$(extract_field "$GNMI" '.crl_expire_duration')
-        if [ ! -z "$CRL_EXPIRE_DURATION" ] && [ $CRL_EXPIRE_DURATION != "null" ]; then
+        if [ ! -z "$CRL_EXPIRE_DURATION" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
         fi
     fi
