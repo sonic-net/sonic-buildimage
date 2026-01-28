@@ -1,0 +1,42 @@
+From 29d27b5a0a4385b0e0c27fbf6673863eadb463a0 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 25 Jun 2025 11:51:26 +0200
+Subject: [PATCH] lib: fix display vrf name in srv6 context
+
+Improve the following debug information, display the vrf name. Before:
+
+> 2025/06/25 11:43:22 BGP: [ZTNY5-FVP05] bgp_zebra_srv6_sid_notify: received SRv6 SID notify: ctx End.DT4 vrf_id 6 sid_value 2001:db8:1:1:1:: ZAPI_SRV6_SID_ALLOCATED
+> 2025/06/25 11:43:22 BGP: [HQ104-5H94Q] SRv6 SID 2001:db8:1:1:2:: End.DT6 vrf_id 6 : ALLOCATED
+
+After:
+
+> 2025/06/25 11:50:22 BGP: [ZTNY5-FVP05] bgp_zebra_srv6_sid_notify: received SRv6 SID notify: ctx End.DT4 vrf_id 6 (vrf10) sid_value 2001:db8:1:1:1:: ZAPI_SRV6_SID_ALLOCATED
+> 2025/06/25 11:50:22 BGP: [HQ104-5H94Q] SRv6 SID 2001:db8:1:1:1:: End.DT6 vrf_id 6 (vrf10): ALLOCATED
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ lib/srv6.h | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/lib/srv6.h b/lib/srv6.h
+index 7e5e3abaadd5..804885e5c2bf 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -10,6 +10,7 @@
+ #include <zebra.h>
+ #include "prefix.h"
+ #include "json.h"
++#include "vrf.h"
+ 
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+@@ -496,7 +497,8 @@ static inline const char *srv6_sid_ctx2str(char *str, size_t size,
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+-		snprintf(str + len, size - len, " vrf_id %u", ctx->vrf_id);
++		snprintf(str + len, size - len, " vrf_id %u (%s)", ctx->vrf_id,
++			 vrf_id_to_name(ctx->vrf_id));
+ 		break;
+ 
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
