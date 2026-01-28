@@ -1,0 +1,154 @@
+opennsl (13.2.1.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 13.2.1.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Wed, 25 Jun 2025 05:46:10 +0000
+
+opennsl (13.2.0.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 13.2.0.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Wed, 21 May 2025 01:43:59 +0000
+
+opennsl (12.1.0.2) unstable; urgency=medium
+
+  * Update to Broadcom SAI 12.1.0.2
+
+ -- Ziting Guo <zitingguo@microsoft.com> Wed, 18 Dec 2024 02:33:59 +0000
+
+opennsl (11.2.4.1) unstable; urgency=medium
+
+  * Update to Broadcom SAI 11.2.4.1
+
+ -- Ziting Guo <zitingguo@microsoft.com> Mon, 2 Sep 2024 02:53:09 +0000
+
+opennsl (10.1.0.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 10.1.0.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Mon Jun 17 05:18:47 2024 +0000
+
+opennsl (8.4.0.2) unstable; urgency=medium
+
+  * Update to Broadcom SAI 8.4.0.2
+
+ -- Ziting Guo <zitingguo@microsoft.com> Tue, Sep 5 02:25:03 2023 +0000
+
+opennsl (7.1.0.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 7.1.0.0.
+
+ -- Vineet Mittal <vineetmittal@microsoft.com>  Tue, 19 APR 2022 12:30:00 +0000
+
+opennsl (6.1.0.3) unstable; urgency=medium
+
+  * Update to Broadcom SAI 6.1.0.3
+
+ -- Tejaswini Chadaga <tchadaga@microsoft.com>  Fri, 24 MAR 2022 12:30:00 +0000
+
+opennsl (6.0.0.13) unstable; urgency=medium
+
+  * Update to Broadcom SAI 6.0.0.13
+
+ -- Judy Joseph <jujoseph@microsoft.com>  Fri, 14 Jan 2022 18:36:38 +0000
+
+opennsl (6.0.0.10) unstable; urgency=medium
+
+  * Update to Broadcom SAI 6.0.0.10
+
+ -- Vineet Mittal <vineetmittal@microsoft.com>  Fri, 21 Oct 2021 18:36:38 +0000
+
+opennsl (5.0.0.4) unstable; urgency=medium
+
+  * Update to Broadcom SAI 5.0.0.4
+
+ -- Judy Joseph <jujoseph@microsoft.com>  Fri, 12 July 2021 18:36:38 +0000
+
+opennsl (5.0.0.1) unstable; urgency=medium
+
+  * Update to Broadcom SAI 5.0.0.1
+
+ -- Abhishek Dosi <abdosi@microsoft.com>  Fri, 11 June 2021 18:36:38 +0000
+
+opennsl (4.3.0.10-2) unstable; urgency=medium
+
+  * Update to Broadcom SAI 4.3.0.10
+  * Added SDKLT modules 4.3.0.10-2
+
+ -- Mahesh Maddikayala <samaddik@microsoft.com>  Thu, 21 Jan 2021 18:36:38 +0000
+
+opennsl (4.2.1.3-1) unstable; urgency=medium
+
+  * Update to Broadcom SAI 4.2.1.3
+
+ -- Mahesh Maddikayala <samaddik@microsoft.com>  Fri, 18 Sep 2029 10:57:47 +0000
+
+opennsl (3.7.3.3-1) unstable; urgency=medium
+
+  * Port Broadcom SAI 3.7.3.3
+  * Cherry-pick change from master branch, 3.7.3.3-1
+
+ -- Judy Joseph <jujoseph@microsoft.com>  Fri, 2 Dec 2019 15:32:47 +0000
+
+opennsl (3.7.3.2-1) unstable; urgency=medium
+
+  * Port Broadcom SAI 3.7.3.2
+  * Cherry-pick change from master branch, 3.7.3.2-1
+
+ -- Judy Joseph <jujoseph@microsoft.com>  Fri, 12 Nov 2019 15:22:47 +0000
+
+opennsl (3.7.3.1-1) unstable; urgency=medium
+
+  * Port Broadcom SAI 3.7.3.1
+  * Cherry-pick change from master branch, 3.7.3.1-1
+
+ -- Judy Joseph <jujoseph@microsoft.com>  Fri, 19 Sep 2019 13:11:47 +0000
+
+opennsl (3.4.1.11-1) unstable; urgency=medium
+
+  * Port Broadcom SAI 3.4.1.11
+  * Cherry-pick change from master branch, 3.4.1.11-1
+
+ -- Ying Xie <yinxi@microsoft.com>  Fri, 05 Jan 2018 23:21:47 +0000
+
+opennsl (3.4.1.10-1) unstable; urgency=medium
+
+  * Upgrade to 3.4.1.10-1
+
+ -- Ying Xie <yinxi@microsoft.com>  Tue, 19 Dec 2017 21:33:48 +0000
+
+opennsl (3.4.1.9-1) unstable; urgency=medium
+
+  * Upgrade to 3.4.1.9-1
+
+ -- Ying Xie <yinxi@microsoft.com>  Thu, 14 Dec 2017 22:04:11 +0000
+
+opennsl (3.4.1.7-2) unstable; urgency=medium
+
+  * Add Arista 7260cx3 Rev2 hardware support
+
+ -- Ying Xie <yinxi@microsoft.com>  Mon, 27 Nov 2017 18:13:50 +0000
+
+opennsl (3.4.1.7-1) unstable; urgency=medium
+
+  * Importing opennsl 3.4.1.7
+
+ -- Ying Xie <yinxi@microsoft.com>  Mon, 23 Oct 2017 23:47:25 +0000
+
+opennsl (3.4.1.5-2) unstable; urgency=medium
+
+  * Importing TD2 changes from opennsl 3.2.2.2
+
+ -- Ying Xie <yinxi@microsoft.com>  Tue, 26 Sep 2017 01:28:44 +0000
+
+opennsl (3.4.1.5-1) unstable; urgency=medium
+
+  * Importing opennsl 3.4.1.5
+
+ -- Ying Xie <yinxi@microsoft.com>  Wed, 20 Sep 2017 16:42:12 +0000
+
+opennsl (3.4.1.3-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Guohan Lu <gulv@microsoft.com>  Fri, 17 Jul 2015 04:46:01 -0700

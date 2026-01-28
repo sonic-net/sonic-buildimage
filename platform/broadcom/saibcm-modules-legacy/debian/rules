@@ -1,0 +1,218 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+#
+# This version is for a hypothetical package that can build a kernel modules
+# architecture-dependant package via make-kpkg, as well as an
+# architecture-independent module source package, and other packages
+# either dep/indep for things like common files or userspace components
+# needed for the kernel modules.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+
+
+
+# some default definitions, important!
+#
+# Name of the source package
+psource:=opennsl-source
+
+# The short upstream name, used for the module source directory
+sname:=opennsl
+
+### KERNEL SETUP
+### Setup the stuff needed for making kernel module packages
+### taken from /usr/share/kernel-package/sample.module.rules
+
+# prefix of the target package name
+PACKAGE=opennsl-modules
+# modifieable for experiments or debugging m-a
+MA_DIR ?= /usr/share/modass
+KVERSION ?= 6.1.0-29-2-amd64
+KERNVERSION ?= 6.1.0-29-2
+
+# load generic variable handling
+-include $(MA_DIR)/include/generic.make
+# load default rules, including kdist, kdist_image, ...
+-include $(MA_DIR)/include/common-rules.make
+
+
+
+# module assistant calculates all needed things for us and sets
+# following variables:
+# KSRC (kernel source directory), KVERS (kernel version string), KDREV
+# (revision of the Debian kernel-image package), CC (the correct
+# compiler), VERSION (the final package version string), PKGNAME (full
+# package name with KVERS included), DEB_DESTDIR (path to store DEBs)
+
+# The kdist_config target is called by make-kpkg modules_config and
+# by kdist* rules by dependency. It should configure the module so it is
+# ready for compilation (mostly useful for calling configure).
+# prep-deb-files from module-assistant creates the neccessary debian/ files
+kdist_config: prep-deb-files
+
+# the kdist_clean target is called by make-kpkg modules_clean and from
+# kdist* rules. It is responsible for cleaning up any changes that have
+# been made by the other kdist_commands (except for the .deb files created)
+kdist_clean: clean
+	dh_testdir
+	dh_clean
+	SDK=$(realpath .) LINUX_UAPI_SPLIT=1 DEBIAN_LINUX_HEADER=1 BUILD_KNET_CB=1 \
+	    KERNDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    KERNEL_SRC=/usr/src/linux-headers-$(KERNVERSION)-amd64 \
+	    $(MAKE) -C systems/linux/user/x86-smp_generic_64-2_6 clean
+	SDK=$(realpath .) BUILD_KNET_CB=1 \
+	    KDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    $(MAKE) -C sdklt/ clean
+#	rm -f driver/*.o driver/*.ko
+#
+### end  KERNEL SETUP
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	# Add here commands to configure the package.
+
+	touch configure-stamp
+
+
+build-arch: configure-stamp  build-arch-stamp
+build-arch-stamp:
+	dh_testdir
+
+	# create links
+	cd /; sudo mkdir -p /lib/modules/$(KERNVERSION)-amd64
+	cd /; sudo rm /lib/modules/$(KERNVERSION)-amd64/build
+	cd /; sudo rm /lib/modules/$(KERNVERSION)-amd64/source
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-common/ /lib/modules/$(KERNVERSION)-amd64/source
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-amd64/ /lib/modules/$(KERNVERSION)-amd64/build
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-amd64/include/generated/ /usr/src/linux-headers-$(KERNVERSION)-common/include/generated
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-amd64/arch/x86/include/generated/ /usr/src/linux-headers-$(KERNVERSION)-common/arch/x86/include/generated
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-amd64/arch/x86/module.lds /usr/src/linux-headers-$(KERNVERSION)-common/arch/x86/module.lds
+	cd /; sudo ln -s /usr/src/linux-headers-$(KERNVERSION)-amd64/include/config/ /usr/src/linux-headers-$(KERNVERSION)-common/include/config
+	cd /; sudo cp /usr/src/linux-headers-$(KERNVERSION)-amd64/Module.symvers /usr/src/linux-headers-$(KERNVERSION)-common/Module.symvers
+
+	# Add here command to compile/build the package.
+	SDK=$(realpath .) LINUX_UAPI_SPLIT=1 DEBIAN_LINUX_HEADER=1 BUILD_KNET_CB=1 \
+	    KERNDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    KERNEL_SRC=/usr/src/linux-headers-$(KERNVERSION)-amd64 \
+	    $(MAKE) -C systems/linux/user/x86-smp_generic_64-2_6
+
+	SDK=$(realpath .) BUILD_KNET_CB=1 \
+	    KDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    $(MAKE) -C sdklt/ kmod
+
+	touch $@
+
+#k = $(shell echo $(KVERS) | grep -q ^2.6 && echo k)
+
+build-indep:  configure-stamp build-indep-stamp
+build-indep-stamp:
+	dh_testdir
+
+	# Add here command to compile/build the arch indep package.
+	# It's ok not to do anything here, if you don't need to build
+	#  anything for this package.
+	#docbook-to-man debian/opennsl.sgml > opennsl.1
+
+	touch $@
+
+build: build-arch
+
+clean:
+	dh_testdir
+	#dh_testroot
+	rm -f build-arch-stamp build-indep-stamp configure-stamp
+
+	# Add here commands to clean up after the build process.
+	SDK=$(realpath .) LINUX_UAPI_SPLIT=1 DEBIAN_LINUX_HEADER=1 BUILD_KNET_CB=1 \
+	    KERNDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    KERNEL_SRC=/usr/src/linux-headers-$(KERNVERSION)-amd64 \
+	    $(MAKE) -C systems/linux/user/x86-smp_generic_64-2_6 clean
+
+	SDK=$(realpath .) BUILD_KNET_CB=1 \
+	    KDIR=/usr/src/linux-headers-$(KERNVERSION)-common \
+	    $(MAKE) -C sdklt/ clean
+
+	dh_clean
+
+install: DH_OPTIONS=
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	dh_install
+
+# Build architecture-independent files here.
+# Pass -i to all debhelper commands in this target to reduce clutter.
+binary-indep: build install
+	dh_testdir -i
+	dh_testroot -i
+	dh_installchangelogs  -i
+	dh_installdocs -i
+	dh_installexamples -i
+#	dh_install -i
+#	dh_installmenu -i
+#	dh_installdebconf -i
+#	dh_installlogrotate -i
+#	dh_installemacsen -i
+#	dh_installpam -i
+#	dh_installmime -i
+#	dh_installinit -i
+#	dh_installcron -i
+#	dh_installinfo -i
+	dh_installman -i
+	dh_link -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
+#	dh_perl -i
+#	dh_makeshlibs -i
+	dh_installdeb -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i --filename $(PKG_NAME)
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir -s
+	dh_testroot -s
+#	dh_installdebconf -s
+
+	dh_installdocs -s
+	dh_installexamples -s
+	dh_installmenu -s
+#	dh_installlogrotate -s
+#	dh_installemacsen -s
+#	dh_installpam -s
+#	dh_installmime -s
+	dh_installmodules -s
+	dh_systemd_enable -s
+	dh_installinit -s
+	dh_systemd_start -s
+	dh_installcron -s
+#	dh_installman -s
+	dh_installinfo -s
+	dh_installchangelogs  -s
+	dh_strip -s
+	dh_link -s
+	dh_compress -s
+	dh_fixperms -s
+	dh_makeshlibs -s
+	dh_installdeb -s
+#	dh_perl -s
+	dh_shlibdeps -s
+	dh_gencontrol -s -- -n"$(PKG_NAME)"
+	dh_md5sums -s
+	dh_builddeb -s --filename $(PKG_NAME)
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure binary-modules kdist kdist_configure kdist_image kdist_clean
