@@ -45,11 +45,13 @@ read_conf_file() {
 
 set -e
 
-if [ -d "/etc/sonic" ]; then
+if grep -q 'root=/dev/ram0' /proc/cmdline; then
+    echo "Installing SONiC in SONIE"
+    install_env="sonie"
+elif [ -d "/etc/sonic" ]; then
     echo "Installing SONiC in SONiC"
     install_env="sonic"
-elif grep -Fxqs "DISTRIB_ID=onie" /etc/lsb-release > /dev/null
-then
+elif grep -Fxqs "DISTRIB_ID=onie" /etc/lsb-release > /dev/null; then
     echo "Installing SONiC in ONIE"
     install_env="onie"
 else
@@ -109,7 +111,7 @@ VAR_LOG_SIZE=4096
 [ -r platforms/$onie_platform ] && . platforms/$onie_platform
 
 # Verify image platform is inside devices list
-if [ "$install_env" = "onie" ]; then
+if [ "$install_env" = "onie" ] || [ "$install_env" = "sonie" ]; then
     if ! grep -Fxq "$onie_platform" platforms_asic; then
         echo "The image you're trying to install is of a different ASIC type as the running platform's ASIC"
         while true; do
@@ -158,7 +160,7 @@ timestamp="$(date -u +%Y%m%d)"
 demo_volume_label="SONiC-${demo_type}"
 demo_volume_revision_label="SONiC-${demo_type}-${image_version}"
 
-
+bootloader_state_machine="./bootloader_state_machine.sh"
 . ./default_platform.conf
 
 if [ -r ./platform.conf ]; then
@@ -169,6 +171,10 @@ fi
 image_dir="image-$image_version"
 
 if [ "$install_env" = "onie" ]; then
+    # Create/format the flash
+    create_partition
+    mount_partition
+elif [ "$install_env" = "sonie" ]; then
     # Create/format the flash
     create_partition
     mount_partition
@@ -236,7 +242,7 @@ fi
 mkdir -p $demo_mnt/$image_dir/platform
 unzip -op $INSTALLER_PAYLOAD "platform.tar.gz" | tar xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/platform
 
-if [ "$install_env" = "onie" ]; then
+if [ "$install_env" = "onie" ] || [ "$install_env" = "sonie" ]; then
     # Store machine description in target file system
     if [ -f /etc/machine-build.conf ]; then
         # onie_ variable are generate at runtime.
@@ -259,7 +265,10 @@ fi
 echo "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 
 # Update Bootloader Menu with installed image
-bootloader_menu_config
+# SONIE handles this step, skip in SONIC
+if [ "$install_env" != "sonie" ]; then
+    bootloader_menu_config
+fi
 
 # Set NOS mode if available.  For manufacturing diag installers, you
 # probably want to skip this step so that the system remains in ONIE
