@@ -1,0 +1,16 @@
+[Unit]
+Description=Arm watchdog for 6 minutes
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+
+[Service]
+Type=oneshot
+ExecStart=bash -c '\
+  PAUSE_FILE=/var/lock/pddf-locks/watchdog.pause ; \
+  if [[ ! -f "$PAUSE_FILE" ]]; then \
+    python -c "import sonic_platform; sonic_platform.platform.Platform().get_chassis().get_watchdog().arm_from_daemon()"; \
+  fi \
+'
+
+[Install]
+WantedBy=multi-user.target
