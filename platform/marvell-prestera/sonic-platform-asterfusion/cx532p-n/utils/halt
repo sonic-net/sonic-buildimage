@@ -1,0 +1,14 @@
+#!/bin/sh
+
+mr_reboot() {
+    sudo /sbin/reboot
+}
+
+if [ $# -eq 0 ] || [ $@ = "--halt" ] || [ $@ = "-f" ] || [ $@ = "--force" ]; then
+    sudo /sbin/halt
+elif [ $@ = "-p" ] || [ $@ = "--reboot" ] || [ $@ = "--poweroff" ]; then
+    mr_reboot
+else
+    echo "unsupported option"
+fi
+

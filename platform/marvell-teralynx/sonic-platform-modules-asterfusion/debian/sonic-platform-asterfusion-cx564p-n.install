@@ -1,0 +1,4 @@
+cx564p-n/scripts/* usr/bin
+cx564p-n/utils/* usr/local/bin
+cx564p-n/service/*.service lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx564p_n-r0

@@ -1,0 +1,100 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2021 Asterfusion Network, Inc.
+
+import sys
+import json
+import subprocess
+import re
+import logging
+
+def main():
+
+    # get input parameters:
+    if len(sys.argv)<3:
+        sys.exit(1)
+
+    cfg_file = sys.argv[1]
+    falcon_2T_48x25_8x100_port_file = sys.argv[2]#new falcon_2T_...
+    platform_ini_file = sys.argv[3]#falocon_2T...
+
+    with open(cfg_file) as cfg:
+        old_cfg = json.load(cfg)
+
+    #rewrite falcon_2T_... and plamform.ini from old_config/config_db
+    port_mac_dict = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 32, '6': 112, '7': 113, '8': 114, '9': 115, '10': 116,
+                     '11': 117, '12': 118, '13': 119, '14': 127, '15': 126, '16': 125, '17': 124, '18': 123, '19': 122,
+                     '20': 121, '21': 120, '22': 5, '23': 6, '24': 7, '25': 15, '26': 14, '27': 13, '28': 12, '29': 11,
+                     '30': 10, '31': 9, '32': 8, '33': 33, '34': 34, '35': 35, '36': 37, '37': 36, '38': 39, '39': 38,
+                     '40': 47, '41': 46, '42': 43, '43': 42, '44': 44, '45': 45, '46': 41, '47': 40, '48': 68, '49': 69,
+                     '50': 70, '51': 71, '52': 64, '53': 65, '54': 66, '55': 67, '56': 72, '57': 73, '58': 74, '59': 75,
+                     '64': 76, '65': 77, '66': 78, '67': 79, '68': 80, '69': 81, '70': 82, '71': 83, '72': 84, '73': 85,
+                     '74': 86, '75': 87, '76': 88, '77': 89, '78': 90, '79': 91, '80': 92, '81': 93, '82': 94, '83': 95}
+
+    with open(falcon_2T_48x25_8x100_port_file, 'w') as To_C:
+        for key, value in old_cfg['PORT'].items():
+            if value['speed'] == '100000' or value['speed'] == '40000':
+                port_speed = 1000
+            else:
+                port_speed = 250
+            port_num = int(key[8:])
+            if port_num < 60:
+                To_C.write(key[8:] + '    ' + str(port_mac_dict[str(port_num)]) + '   ' + str(port_speed) + '\n')
+            else:
+                To_C.write(
+                    str(port_num + 4) + '    ' + str(port_mac_dict[str(port_num + 4)]) + '   ' + str(port_speed) + '\n')
+    To_C.close()
+
+    with open(platform_ini_file, 'r') as pt:
+        platform_list = []
+        for line in pt.readlines():
+            l = line.split()
+            platform_list.append(l)
+        platform_list = platform_list[1:]
+        for k, v in old_cfg['PORT'].items():
+            k = int(k[8:])
+            if k >= 48 and k < 60 and k % 4 == 0:
+                if v['speed'] == '100000' or v['speed'] == '40000':
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k), str(k), str(k), str(k))
+                    platform_list[k][1], platform_list[k + 1][1], platform_list[k + 2][1], platform_list[k + 3][1] = (
+                        '0', '1', '2', '3')
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        v['speed'], v['speed'], v['speed'], v['speed'])
+                else:
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k), str(k + 1), str(k + 2), str(k + 3))
+                    platform_list[k][1], platform_list[k + 1][1], platform_list[k + 2][1], platform_list[k + 3][1] = (
+                        '0', '0', '0', '0')
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        v['speed'], v['speed'], v['speed'], v['speed'])
+            elif k >= 60 and k % 4 == 0:
+                if v['speed'] == '100000' or v['speed'] == '40000':
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k + 4), str(k + 4), str(k + 4), str(k + 4))
+                    platform_list[k][1], platform_list[k + 1][1], platform_list[k + 2][1], platform_list[k + 3][1] = (
+                        '0', '1', '2', '3')
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        v['speed'], v['speed'], v['speed'], v['speed'])
+                else:
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k + 4), str(k + 5), str(k + 6), str(k + 7))
+                    platform_list[k][1], platform_list[k + 1][1], platform_list[k + 2][1], platform_list[k + 3][1] = (
+                        '0', '0', '0', '0')
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        v['speed'], v['speed'], v['speed'], v['speed'])
+            else:
+                continue
+        with open(platform_ini_file, 'w') as pt_tmp:
+            pt_tmp.write("# Port  lane    speed   DC  BW  HF  LF  sqlch   minLf   maxLf   minHf   maxHf" + '\n')
+            for d in platform_list:
+                st = '   '.join(d)
+                pt_tmp.write('  ' + st + '\n')
+    pt.close()
+    pt_tmp.close()
+
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
+

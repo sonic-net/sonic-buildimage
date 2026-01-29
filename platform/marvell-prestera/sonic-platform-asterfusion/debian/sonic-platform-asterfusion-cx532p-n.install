@@ -1,0 +1,4 @@
+cx532p-n/scripts/* usr/bin
+cx532p-n/utils/* usr/local/bin
+cx532p-n/service/* lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx532p_n-r0

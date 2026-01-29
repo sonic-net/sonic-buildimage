@@ -1,0 +1,72 @@
+#!/bin/bash
+export HW_CFG_PATH=/usr/share/sonic/device/x86_64-asterfusion_cx564p_n-r0/CX564P-N
+
+start() {
+    platform=$(grep "onie_platform=" /host/machine.conf | cut -d '=' -f 2)
+    /bin/bash /usr/local/bin/sku_setup ${platform}
+
+    SONIC_VERSION=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
+    FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
+
+    # load platform driver, native drivers
+    #get platform detail
+    count=0
+    while [ ! -e $HW_CFG_PATH ];
+    do
+        sleep 1
+        let count+=1
+        if [ ${count} -ge 30 ]; then
+            break;
+        fi
+    done
+    platform_suffix=$(readlink $HW_CFG_PATH | cut -d '/' -f 1 | rev | cut -d '_' -f 1 | rev)
+    if [[ "$platform_suffix" == "TL07E02" || "$platform_suffix" == "TL07E03" ]]; then
+        source_file="/usr/share/sonic/device/x86_64-asterfusion_cx564p_n-r0/sonic_platform-1.0-py3-none-any.whl"
+        target_dir="/usr/share/sonic/device/x86_64-asterfusion_cx564p_n-r0/pddf/"
+        cp "$source_file" "${source_file}.orig"
+        cp "$source_file" "$target_dir"
+        
+        /usr/local/bin/pddf_util.py install
+    elif [ -n ${platform_suffix} ]; then
+        lowercase_platform_suffix=$(echo ${platform_suffix,,})
+        /usr/local/bin/asterfusion_cx564p-n_util_${lowercase_platform_suffix}.py -f install
+    else
+        /usr/local/bin/asterfusion_cx564p-n_util.py -f install
+    fi
+
+    if [ -f $FIRST_BOOT_FILE ]; then
+        echo "firsttime boot with old_config"
+        if [ -e /etc/sonic/old_config/config_db.json ]; then
+            /usr/local/bin/switch_profile $HW_CFG_PATH/config_64x100G_asterfusion-cx564p-n.yaml /etc/sonic/old_config/config_db.json
+            /usr/local/bin/cx564p_n_yaml_update /tmp/config_64x100G_asterfusion-cx564p-n.yaml /etc/sonic/old_config/config_db.json $HW_CFG_PATH/config_64x100G_asterfusion-cx564p-n.yaml
+            portcfg_result=$?
+            if [ $portcfg_result -eq 0 ]; then
+                mv /tmp/config_64x100G_asterfusion-cx564p-n.yaml $HW_CFG_PATH/config_64x100G_asterfusion-cx564p-n.yaml
+            fi
+        fi
+    fi
+
+}
+
+stop() {
+    platform_suffix=$(readlink $HW_CFG_PATH | cut -d '/' -f 1 | rev | cut -d '_' -f 1 | rev)
+    if [[ "$platform_suffix" == "TL07E02" || "$platform_suffix" == "TL07E03" ]]; then
+        target_file="/usr/share/sonic/device/x86_64-asterfusion_cx564p_n-r0/pddf/sonic_platform-1.0-py3-none-any.whl"
+        if [ -f "$target_file" ]; then
+            rm -f "$target_file"
+        fi
+
+        /usr/local/bin/pddf_util.py clean
+    elif [ -n ${platform_suffix} ]; then
+        lowercase_platform_suffix=$(echo ${platform_suffix,,})
+        /usr/local/bin/asterfusion_cx564p-n_util_${lowercase_platform_suffix}.py -f clean
+    else
+        /usr/local/bin/asterfusion_cx564p-n_util.py -f clean
+    fi
+}
+
+
+case $1 in 
+  start|stop) "$1" ;;
+esac
+

@@ -189,17 +189,75 @@ class PddfParse():
                 return create_ret.append(ret)
 
         return create_ret.append(ret)
+    
+    def create_psu_uart_device(self, dev, ops):
+        create_ret = []
+        ret = 0
+
+        ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_psu/psu", ops) 
+        if ret != 0:
+            return create_ret.append(ret)
+        cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_psu/psu/i2c_name" % (dev['dev_info']['device_name'])
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+        cmd = "echo '%s'  > /sys/kernel/pddf/devices/uart_psu/psu/psu_idx" % (self.get_dev_idx(dev, ops))
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+        for attr in dev['uart']['attr_list']:
+            ret = self.create_device(attr, "pddf/devices/uart_psu/psu", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_psu/psu/attr_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+
+        cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_psu/psu/dev_ops"
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+        return create_ret.append(ret)
 
     def create_psu_bmc_device(self, dev, ops):
         return [0]
 
     def create_psu_device(self, dev, ops):
-        return self.create_psu_i2c_device(dev, ops)
+        if ('i2c' in dev):
+            return self.create_psu_i2c_device(dev, ops)
+        else:
+            return self.create_psu_uart_device(dev, ops)
 
     def create_fan_device(self, dev, ops):
         create_ret = []
         ret = 0
-        if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
+        if 'uart' in dev:
+            ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_fan/fan", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_fan/fan/i2c_name" % (dev['dev_info']['device_name']) 
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            ret = self.create_device(dev['uart']['dev_attr'], "pddf/devices/uart_fan/fan", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            for attr in dev['uart']['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/uart_fan/fan", ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+                cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_fan/fan/attr_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_fan/fan/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            
+        elif dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
             ret = self.create_device(dev['i2c']['topo_info'], "pddf/devices/fan/i2c", ops)
             if ret != 0:
                 return create_ret.append(ret)
@@ -231,11 +289,98 @@ class PddfParse():
                 return create_ret.append(ret)
 
         return create_ret.append(ret)
-
-    def create_non_pddf_i2c_device(self, dev, ops):
-        # Create i2c devices for which a PDDF specific driver is not needed
+    
+    def create_sys_device(self, dev, ops):
         create_ret = []
         ret = 0
+        if 'uart' in dev:
+            ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_sys/sys", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_sys/sys/i2c_name" % (dev['dev_info']['device_name']) 
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            ret = self.create_device(dev['uart']['dev_attr'], "pddf/devices/uart_sys/sys", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            for attr in dev['uart']['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/uart_sys/sys", ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+                cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_sys/sys/attr_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_sys/sys/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+        return create_ret.append(ret)
+    
+    def create_thermal_device(self, dev, ops):
+        create_ret = []
+        ret = 0
+        if 'uart' in dev:
+            ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_thermal/thermal", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_thermal/thermal/i2c_name" % (dev['dev_info']['device_name']) 
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            ret = self.create_device(dev['uart']['dev_attr'], "pddf/devices/uart_thermal/thermal", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            for attr in dev['uart']['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/uart_thermal/thermal", ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+                cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_thermal/thermal/attr_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_thermal/thermal/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+        return create_ret.append(ret)
+    
+    def create_payload_device(self, dev, ops):
+        create_ret = []
+        ret = 0
+        if 'uart' in dev:
+            ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_payload/payload", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_payload/payload/i2c_name" % (dev['dev_info']['device_name']) 
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            ret = self.create_device(dev['uart']['dev_attr'], "pddf/devices/uart_payload/payload", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            for attr in dev['uart']['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/uart_payload/payload", ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+                cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_payload/payload/attr_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_payload/payload/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+        return create_ret.append(ret)
+
+    def create_temp_sensor_device(self, dev, ops):
+        create_ret = []
+        ret = 0
+        # NO PDDF driver for temp_sensors device
         cmd = "echo %s 0x%x > /sys/bus/i2c/devices/i2c-%d/new_device" % (dev['i2c']['topo_info']['dev_type'],
                 int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
         ret = self.runcmd(cmd)
@@ -464,7 +609,32 @@ class PddfParse():
     def create_eeprom_device(self, dev, ops):
         create_ret = []
         ret = 0
-        if "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
+        if 'uart' in dev:
+            ret = self.create_device(dev['uart']['topo_info'], "pddf/devices/uart_eeprom/eeprom", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_eeprom/eeprom/i2c_name" % (dev['dev_info']['device_name']) 
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            ret = self.create_device(dev['uart']['dev_attr'], "pddf/devices/uart_eeprom/eeprom", ops)
+            if ret != 0:
+                return create_ret.append(ret)
+            for attr in dev['uart']['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/uart_eeprom/eeprom", ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+                cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_eeprom/eeprom/attr_ops"
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'add' > /sys/kernel/pddf/devices/uart_eeprom/eeprom/dev_ops"
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+        
+        elif "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
                 dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['EEPROM']:
             self.create_device(dev['i2c']['topo_info'], "pddf/devices/eeprom/i2c", ops)
             cmd = "echo '%s' > /sys/kernel/pddf/devices/eeprom/i2c/i2c_name" % (dev['dev_info']['device_name'])
@@ -597,7 +767,12 @@ class PddfParse():
     #   DELETE DEFS
     ###################################################################################################################
     def delete_eeprom_device(self, dev, ops):
-        if "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
+        if 'uart' in dev:
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_eeprom/eeprom/i2c_name" % (dev['dev_info']['device_name'])
+            self.runcmd(cmd)
+            cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_eeprom/eeprom/dev_ops"
+            self.runcmd(cmd)
+        elif "EEPROM" in self.data['PLATFORM']['pddf_dev_types'] and \
                 dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['EEPROM']:
             cmd = "echo '%s' > /sys/kernel/pddf/devices/eeprom/i2c/i2c_name" % (dev['dev_info']['device_name'])
             self.runcmd(cmd)
@@ -668,14 +843,25 @@ class PddfParse():
             cmd = "echo 'delete' > /sys/kernel/pddf/devices/cpldmux/dev_ops"
             self.runcmd(cmd)
 
-    def delete_non_pddf_i2c_device(self, dev, ops):
-        # Delete i2c devices for which a PDDF specific driver is not needed
+    def delete_temp_sensor_device(self, dev, ops):
+        # NO PDDF driver for temp_sensors device
         cmd = "echo 0x%x > /sys/bus/i2c/devices/i2c-%d/delete_device" % (
                 int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
         self.runcmd(cmd)
 
-    def delete_temp_sensor_device(self, dev, ops):
-        return self.delete_non_pddf_i2c_device(dev, ops)
+    def delete_thermal_device(self, dev, ops):
+        if 'uart' in dev:
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_thermal/thermal/i2c_name" % (dev['dev_info']['device_name'])
+            self.runcmd(cmd)
+            cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_thermal/thermal/dev_ops"
+            self.runcmd(cmd)
+
+    def delete_payload_device(self, dev, ops):
+        if 'uart' in dev:
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_payload/payload/i2c_name" % (dev['dev_info']['device_name'])
+            self.runcmd(cmd)
+            cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_payload/payload/dev_ops"
+            self.runcmd(cmd)
 
     def delete_asic_temp_sensor_device(self, dev, ops):
         # NO-OP
@@ -683,12 +869,24 @@ class PddfParse():
 
     def delete_dpm_device(self, dev, ops):
         return self.delete_non_pddf_i2c_device(dev, ops)
-
+    
     def delete_dcdc_device(self, dev, ops):
         return self.delete_non_pddf_i2c_device(dev, ops)
 
+    def delete_sys_device(self, dev, ops):
+        if 'uart' in dev:
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_sys/sys/i2c_name" % (dev['dev_info']['device_name'])
+            self.runcmd(cmd)
+            cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_sys/sys/dev_ops"
+            self.runcmd(cmd)
+
     def delete_fan_device(self, dev, ops):
-        if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
+        if 'uart' in dev:
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_fan/fan/i2c_name" % (dev['dev_info']['device_name'])
+            self.runcmd(cmd)
+            cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_fan/fan/dev_ops"
+            self.runcmd(cmd)
+        elif dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
             cmd = "echo '%s' > /sys/kernel/pddf/devices/fan/i2c/i2c_name" % (dev['dev_info']['device_name'])
             self.runcmd(cmd)
             cmd = "echo 'delete' > /sys/kernel/pddf/devices/fan/i2c/dev_ops"
@@ -710,8 +908,17 @@ class PddfParse():
                     int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
             self.runcmd(cmd)
 
+    def delete_psu_uart_device(self, dev, ops):
+        cmd = "echo '%s' > /sys/kernel/pddf/devices/uart_psu/psu/i2c_name" % (dev['dev_info']['device_name'])
+        self.runcmd(cmd)
+        cmd = "echo 'delete' > /sys/kernel/pddf/devices/uart_psu/psu/dev_ops"
+        self.runcmd(cmd)
+
     def delete_psu_device(self, dev, ops):
-        self.delete_psu_i2c_device(dev, ops)
+        if 'i2c' in dev:
+            self.delete_psu_i2c_device(dev, ops)
+        else:
+            self.delete_psu_uart_device(dev, ops)
         return
 
     def delete_fpgapci_device(self, dev, ops):
@@ -741,10 +948,16 @@ class PddfParse():
         parent = dev['dev_info']['device_parent']
         pdev = self.data[parent]
         if pdev['dev_info']['device_parent'] == 'SYSTEM':
-            if 'topo_info' in pdev['i2c']:
-                return "/sys/bus/i2c/devices/"+"i2c-%d"%int(pdev['i2c']['topo_info']['dev_addr'], 0)
+            if 'i2c' in pdev:
+                if 'topo_info' in pdev['i2c']: 
+                    return "/sys/bus/i2c/devices/"+"i2c-%d"%int(pdev['i2c']['topo_info']['dev_addr'], 0)
+                else: 
+                    return "/sys/bus/i2c/devices"
             else:
-                return "/sys/bus/i2c/devices"
+                if 'topo_info' in pdev['uart']: 
+                    return "/sys/bus/i2c/devices/"+"i2c-%d"%int(pdev['uart']['topo_info']['dev_addr'], 0)
+                else: 
+                    return "/sys/bus/i2c/devices"
         if 'topo_info' in dev['i2c'] and 'parent_bus' in dev['i2c']['topo_info']:
             return self.show_device_sysfs(pdev, ops) + "/" + "i2c-%d" % int(dev['i2c']['topo_info']['parent_bus'], 0)
         else:
@@ -761,7 +974,7 @@ class PddfParse():
     def show_attr_eeprom_device(self, dev, ops):
         ret = []
         attr_name = ops['attr']
-        attr_list = dev['i2c']['attr_list']
+        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else dev['uart']['attr_list'] if 'uart' in dev else []
         KEY = "eeprom"
         dsysfs_path = ""
 
@@ -774,11 +987,16 @@ class PddfParse():
                     real_name = attr['drv_attr_name']
                 else:
                     real_name = attr['attr_name']
-
-                dsysfs_path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%02x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
-                                  int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
-                    "/%s" % real_name
+                if 'i2c' in dev:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%02x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                                    int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                else:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['uart']['topo_info']['parent_bus'], 0),
+                                    int(dev['uart']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
                     self.data_sysfs_obj[KEY].append(dsysfs_path)
                 ret.append(dsysfs_path)
@@ -842,15 +1060,61 @@ class PddfParse():
                             self.data_sysfs_obj[KEY].append(dsysfs_path)
                             ret.append(dsysfs_path)
         return ret
+    
+    def show_attr_psu_uart_device(self, dev, ops):
+        target = ops['target']
+        attr_name = ops['attr']
+        ret = []
+        KEY = "psu"
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        if target == 'all' or target == dev['dev_info']['virt_parent']:
+            attr_list = dev['uart']['attr_list'] if 'uart' in dev else []
+            for attr in attr_list:
+                if attr_name == attr['attr_name'] or attr_name == 'all':
+                    if 'attr_devtype' in attr.keys() and attr['attr_devtype'] == "gpio":
+                        # Check and enable the gpio from class
+                        attr_path = self.get_gpio_attr_path(self.data[attr['attr_devname']], attr['attr_offset'])
+                        if (os.path.exists(attr_path)):
+                            if attr_path not in self.data_sysfs_obj[KEY]:
+                                self.data_sysfs_obj[KEY].append(attr_path)
+                            ret.append(attr_path)
+                    else:
+                        if 'drv_attr_name' in attr.keys():
+                            real_name = attr['drv_attr_name']
+                            real_dev = dev
+                        elif 'attr_devattr' in attr.keys():
+                            real_name = attr['attr_devattr']
+                            real_devname = attr['attr_devname'] if 'attr_devname' in attr.keys() else ''
+                            real_dev = self.data[real_devname]
+                        else:
+                            real_name = attr['attr_name']
+                            real_dev = dev
+
+                        dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
+                            "/%d-00%x" % (int(real_dev['uart']['topo_info']['parent_bus'], 0),
+                                          int(real_dev['uart']['topo_info']['dev_addr'], 0)) + \
+                            "/%s" % real_name
+                        if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                            self.data_sysfs_obj[KEY].append(dsysfs_path)
+                            ret.append(dsysfs_path)
+        return ret
 
 
     def show_attr_psu_device(self, dev, ops):
-        return self.show_attr_psu_i2c_device(dev, ops)
+        if 'i2c' in dev:
+            return self.show_attr_psu_i2c_device(dev, ops)
+        else:
+            return self.show_attr_psu_uart_device(dev, ops)
+        
 
     def show_attr_fan_device(self, dev, ops):
         ret = []
         attr_name = ops['attr']
-        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
+        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else dev['uart']['attr_list'] if 'uart' in dev else [] 
         KEY = "fan"
         dsysfs_path = ""
 
@@ -877,11 +1141,16 @@ class PddfParse():
                     else:
                         real_name = attr['attr_name']
                         real_dev = dev
-
-                    dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                        "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
-                                      int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
-                        "/%s" % real_name
+                    if 'i2c' in dev:
+                        dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                                        int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
+                            "/%s" % real_name
+                    else:
+                        dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
+                            "/%d-00%02x" % (int(real_dev['uart']['topo_info']['parent_bus'], 0),
+                                        int(real_dev['uart']['topo_info']['dev_addr'], 0)) + \
+                            "/%s" % real_name
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
                         self.data_sysfs_obj[KEY].append(dsysfs_path)
                     ret.append(dsysfs_path)
@@ -1016,6 +1285,99 @@ class PddfParse():
             self.data_sysfs_obj[KEY]=[]
 
         return ret
+    
+    def show_attr_sys_device(self, dev, ops):
+        ret = []
+        attr_name = ops['attr']
+        attr_list = attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else dev['uart']['attr_list'] if 'uart' in dev else []
+        KEY = "sys"
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = attr['attr_name']
+                if 'i2c' in dev:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                                    int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                else:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['uart']['topo_info']['parent_bus'], 0),
+                                    int(dev['uart']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(dsysfs_path)
+        return ret
+    
+    def show_attr_thermal_device(self, dev, ops):
+        ret = []
+        attr_name = ops['attr']
+        attr_list = attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else dev['uart']['attr_list'] if 'uart' in dev else []
+        KEY = "thermal"
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = attr['attr_name']
+                if 'i2c' in dev:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                                    int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                else:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['uart']['topo_info']['parent_bus'], 0),
+                                    int(dev['uart']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(dsysfs_path)
+        return ret
+    
+    def show_attr_payload_device(self, dev, ops):
+        ret = []
+        attr_name = ops['attr']
+        attr_list = attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else dev['uart']['attr_list'] if 'uart' in dev else []
+        KEY = "payload"
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = attr['attr_name']
+                if 'i2c' in dev:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                                    int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                else:
+                    dsysfs_path = self.show_device_sysfs(dev, ops) + \
+                        "/%d-00%x" % (int(dev['uart']['topo_info']['parent_bus'], 0),
+                                    int(dev['uart']['topo_info']['dev_addr'], 0)) + \
+                        "/%s" % real_name
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(dsysfs_path)
+        return ret
 
     def show_attr_multifpgapci_device(self, dev, ops):
         ret = []
@@ -1068,7 +1430,76 @@ class PddfParse():
                     obj[obj_key].append(sysfs_path)
 
     def show_eeprom_device(self, dev, ops):
-        return
+        KEY = 'eeprom'
+        if 'uart' in dev:
+            path = 'pddf/devices/uart_eeprom/eeprom'
+            if not KEY in self.sysfs_obj:
+                self.sysfs_obj[KEY] = []
+
+                self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+                self.sysfs_device(dev['uart']['dev_attr'], path, self.sysfs_obj, KEY)
+                for attr in dev['uart']['attr_list']:
+                    self.sysfs_device(attr, path, self.sysfs_obj, KEY)
+                extra_list = ['/sys/kernel/pddf/devices/uart_eeprom/eeprom/i2c_type',
+                        '/sys/kernel/pddf/devices/uart_eeprom/eeprom/i2c_name',
+                        '/sys/kernel/pddf/devices/uart_eeprom/eeprom/error',
+                        '/sys/kernel/pddf/devices/uart_eeprom/eeprom/attr_ops',
+                        '/sys/kernel/pddf/devices/uart_eeprom/eeprom/dev_ops']
+                self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
+
+    def show_sys_device(self, dev, ops):
+        KEY = 'sys'
+        if 'uart' in dev:
+            path = 'pddf/devices/uart_sys/sys'
+            if not KEY in self.sysfs_obj:
+                self.sysfs_obj[KEY] = []
+
+                self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+                self.sysfs_device(dev['uart']['dev_attr'], path, self.sysfs_obj, KEY)
+                for attr in dev['uart']['attr_list']:
+                    self.sysfs_device(attr, path, self.sysfs_obj, KEY)
+                extra_list = ['/sys/kernel/pddf/devices/uart_sys/sys/i2c_type',
+                        '/sys/kernel/pddf/devices/uart_sys/sys/i2c_name',
+                        '/sys/kernel/pddf/devices/uart_sys/sys/error',
+                        '/sys/kernel/pddf/devices/uart_sys/sys/attr_ops',
+                        '/sys/kernel/pddf/devices/uart_sys/sys/dev_ops']
+                self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
+
+    def show_thermal_device(self, dev, ops):
+        KEY = 'thermal'
+        if 'uart' in dev:
+            path = 'pddf/devices/uart_thermal/thermal'
+            if not KEY in self.sysfs_obj:
+                self.sysfs_obj[KEY] = []
+
+                self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+                self.sysfs_device(dev['uart']['dev_attr'], path, self.sysfs_obj, KEY)
+                for attr in dev['uart']['attr_list']:
+                    self.sysfs_device(attr, path, self.sysfs_obj, KEY)
+                extra_list = ['/sys/kernel/pddf/devices/uart_thermal/thermal/i2c_type',
+                        '/sys/kernel/pddf/devices/uart_thermal/thermal/i2c_name',
+                        '/sys/kernel/pddf/devices/uart_thermal/thermal/error',
+                        '/sys/kernel/pddf/devices/uart_thermal/thermal/attr_ops',
+                        '/sys/kernel/pddf/devices/uart_thermal/thermal/dev_ops']
+                self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
+
+    def show_payload_device(self, dev, ops):
+        KEY = 'payload'
+        if 'uart' in dev:
+            path = 'pddf/devices/uart_payload/payload'
+            if not KEY in self.sysfs_obj:
+                self.sysfs_obj[KEY] = []
+
+                self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+                self.sysfs_device(dev['uart']['dev_attr'], path, self.sysfs_obj, KEY)
+                for attr in dev['uart']['attr_list']:
+                    self.sysfs_device(attr, path, self.sysfs_obj, KEY)
+                extra_list = ['/sys/kernel/pddf/devices/uart_payload/payload/i2c_type',
+                        '/sys/kernel/pddf/devices/uart_payload/payload/i2c_name',
+                        '/sys/kernel/pddf/devices/uart_payload/payload/error',
+                        '/sys/kernel/pddf/devices/uart_payload/payload/attr_ops',
+                        '/sys/kernel/pddf/devices/uart_payload/payload/dev_ops']
+                self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
 
     def show_mux_device(self, dev, ops):
         KEY = 'mux'
@@ -1119,8 +1550,32 @@ class PddfParse():
                         '/sys/kernel/pddf/devices/psu/i2c/attr_ops']
                 self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
 
+    def show_psu_uart_device(self, dev, ops):
+        KEY = 'psu'
+        path = 'pddf/devices/uart_psu/psu'
+        if not KEY in self.sysfs_obj:
+            self.sysfs_obj[KEY] = []
+            self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+            sysfs_path = "/sys/kernel/pddf/devices/uart_psu/psu/psu_idx"
+            self.sysfs_obj[KEY].append(sysfs_path)
+
+            for attr in dev['uart']['attr_list']:
+                self.sysfs_device(attr, "pddf/devices/uart_psu/psu", self.sysfs_obj, KEY)
+                sysfs_path = "/sys/kernel/pddf/devices/uart_psu/psu/dev_ops"
+                if not sysfs_path in self.sysfs_obj[KEY]:
+                    self.sysfs_obj[KEY].append(sysfs_path)
+            extra_list = ['/sys/kernel/pddf/devices/uart_psu/psu/i2c_type',
+                    '/sys/kernel/pddf/devices/uart_psu/psu/i2c_name',
+                    '/sys/kernel/pddf/devices/uart_psu/psu/error',
+                    '/sys/kernel/pddf/devices/uart_psu/psu/attr_ops']
+            self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
+
+
     def show_psu_device(self, dev, ops):
-        self.show_psu_i2c_device(dev, ops)
+        if 'i2c' in dev:
+            self.show_psu_i2c_device(dev, ops)
+        else:
+            self.show_psu_uart_device(dev, ops)
         return
 
     def show_client_device(self):
@@ -1132,20 +1587,36 @@ class PddfParse():
 
     def show_fan_device(self, dev, ops):
         KEY = 'fan'
-        path = 'pddf/devices/fan/i2c'
-        if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
+        if 'i2c' in dev:
+            path = 'pddf/devices/fan/i2c'
+            if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
+                if not KEY in self.sysfs_obj:
+                    self.sysfs_obj[KEY] = []
+
+                    self.sysfs_device(dev['i2c']['topo_info'], path, self.sysfs_obj, KEY, ['client_type'])
+                    self.sysfs_device(dev['i2c']['dev_attr'], path, self.sysfs_obj, KEY)
+                    for attr in dev['i2c']['attr_list']:
+                        self.sysfs_device(attr, path, self.sysfs_obj, KEY)
+                    extra_list = ['/sys/kernel/pddf/devices/fan/i2c/i2c_type',
+                            '/sys/kernel/pddf/devices/fan/i2c/i2c_name',
+                            '/sys/kernel/pddf/devices/fan/i2c/error',
+                            '/sys/kernel/pddf/devices/fan/i2c/attr_ops',
+                            '/sys/kernel/pddf/devices/fan/i2c/dev_ops']
+                    self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
+        elif 'uart' in dev:
+            path = 'pddf/devices/uart_fan/fan'
             if not KEY in self.sysfs_obj:
                 self.sysfs_obj[KEY] = []
 
-                self.sysfs_device(dev['i2c']['topo_info'], path, self.sysfs_obj, KEY, ['client_type'])
-                self.sysfs_device(dev['i2c']['dev_attr'], path, self.sysfs_obj, KEY)
-                for attr in dev['i2c']['attr_list']:
+                self.sysfs_device(dev['uart']['topo_info'], path, self.sysfs_obj, KEY)
+                self.sysfs_device(dev['uart']['dev_attr'], path, self.sysfs_obj, KEY)
+                for attr in dev['uart']['attr_list']:
                     self.sysfs_device(attr, path, self.sysfs_obj, KEY)
-                extra_list = ['/sys/kernel/pddf/devices/fan/i2c/i2c_type',
-                        '/sys/kernel/pddf/devices/fan/i2c/i2c_name',
-                        '/sys/kernel/pddf/devices/fan/i2c/error',
-                        '/sys/kernel/pddf/devices/fan/i2c/attr_ops',
-                        '/sys/kernel/pddf/devices/fan/i2c/dev_ops']
+                extra_list = ['/sys/kernel/pddf/devices/uart_fan/fan/i2c_type',
+                        '/sys/kernel/pddf/devices/uart_fan/fan/i2c_name',
+                        '/sys/kernel/pddf/devices/uart_fan/fan/error',
+                        '/sys/kernel/pddf/devices/uart_fan/fan/attr_ops',
+                        '/sys/kernel/pddf/devices/uart_fan/fan/dev_ops']
                 self.add_list_sysfs_obj(self.sysfs_obj, KEY, extra_list)
 
     def show_temp_sensor_device(self, dev, ops):
@@ -1553,8 +2024,8 @@ class PddfParse():
     ###################################################################################################################
     def psu_parse(self, dev, ops):
         ret = []
-        for ifce in (dev['i2c']['interface'] if 'i2c' in dev else []):
-            val = getattr(self, ops['cmd']+"_psu_device")(self.data[ifce['dev']], ops)
+        for ifce in (dev['i2c']['interface'] if 'i2c' in dev else dev['uart']['interface'] if 'uart' in dev else []):
+            val = getattr(self, ops['cmd']+"_psu_device")(self.data[ifce['dev']], ops) 
             if val:
                 if str(val[0]).isdigit():
                     if val[0] != 0:
@@ -1574,6 +2045,39 @@ class PddfParse():
                 if ret[0] != 0:
                     # in case if 'create' functions
                     print("{}_fan_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+    
+    def sys_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_sys_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_sys_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+    
+    def thermal_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_thermal_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_thermal_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+    
+    def payload_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_payload_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_payload_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -1804,6 +2308,18 @@ class PddfParse():
                             return ret
                     else:
                         val.extend(ret)
+
+        for dev in bus['uart']['CONTROLLERS']: 
+            dev1 = self.data[dev['dev']] 
+            for d in dev1['uart']['DEVICES']: 
+                ret = self.dev_parse(self.data[d['dev']], ops) 
+                if ret:
+                    if str(ret[0]).isdigit():
+                        if ret[0] != 0:
+                            # in case if 'create' functions
+                            return ret
+                    else:
+                        val.extend(ret)
         return val
 
     def cpu_parse_reverse(self, bus, ops):
@@ -1811,6 +2327,18 @@ class PddfParse():
         for dev in reversed(bus['i2c']['CONTROLLERS']):
             dev1 = self.data[dev['dev']]
             for d in reversed(dev1['i2c']['DEVICES']):
+                ret = self.dev_parse(self.data[d['dev']], ops)
+                if ret:
+                    if str(ret[0]).isdigit():
+                        if ret[0] != 0:
+                            # in case if 'create' functions
+                            return ret
+                    else:
+                        val.extend(ret)
+
+        for dev in reversed(bus['uart']['CONTROLLERS']): 
+            dev1 = self.data[dev['dev']] 
+            for d in reversed(dev1['uart']['DEVICES']): 
                 ret = self.dev_parse(self.data[d['dev']], ops)
                 if ret:
                     if str(ret[0]).isdigit():
@@ -1945,6 +2473,15 @@ class PddfParse():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
+        
+        if attr['device_type'] == 'SYS': 
+            return self.sys_parse(dev, ops)
+        
+        if attr['device_type'] == 'THERMAL': 
+            return self.thermal_parse(dev, ops)
+        
+        if attr['device_type'] == 'PAYLOAD': 
+            return self.payload_parse(dev, ops)
 
         if attr['device_type'] == 'MULTIFPGAPCIE':
             return self.multifpgapci_parse(dev, ops)

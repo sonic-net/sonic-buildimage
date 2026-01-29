@@ -1,0 +1,57 @@
+#!/bin/bash
+export HW_CFG_PATH=/usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0/CX308P-48Y-N
+start() {
+    platform=$(grep "onie_platform=" /host/machine.conf | cut -d '=' -f 2)
+    /bin/bash /usr/local/bin/sku_setup ${platform}
+
+    SONIC_VERSION=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
+    FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
+    # load platform driver, native drivers
+    # wait for device directory
+    count=0
+    while [ ! -e $HW_CFG_PATH ];
+    do
+        sleep 1
+        let count+=1
+        if [ ${count} -ge 30 ]; then
+            break;
+        fi
+    done
+    # create symbol link for sku-specific file(s)
+    platform_suffix=$(readlink $HW_CFG_PATH | cut -d '/' -f 1 | rev | cut -d '_' -f 1 | rev)
+    if [[ "$platform_suffix" == "FL00E02" || "$platform_suffix" == "FL00E03" ]]; then
+        source_file="/usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0/sonic_platform-1.0-py3-none-any.whl"
+        target_dir="/usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0/pddf/"
+        cp "$source_file" "${source_file}.orig"
+        cp "$source_file" "$target_dir"
+
+        /usr/local/bin/pddf_util.py install
+    elif [ -n ${platform_suffix} ]; then
+        lowercase_platform_suffix=$(echo ${platform_suffix,,})
+        rm -f /usr/local/bin/asterfusion_cx308p_util.py
+        ln -s /usr/local/bin/asterfusion_cx308p_util_${lowercase_platform_suffix}.py /usr/local/bin/asterfusion_cx308p_util.py
+    fi
+    /usr/local/bin/asterfusion_cx308p_util.py install
+
+}
+
+stop() {
+    platform_suffix=$(readlink $HW_CFG_PATH | cut -d '/' -f 1 | rev | cut -d '_' -f 1 | rev)
+    if [[ "$platform_suffix" == "FL00E02" || "$platform_suffix" == "FL00E03" ]]; then
+        target_file="/usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0/pddf/sonic_platform-1.0-py3-none-any.whl"
+        if [ -f "$target_file" ]; then
+            rm -f "$target_file"
+        fi
+
+        /usr/local/bin/pddf_util.py clean
+    else
+        /usr/local/bin/asterfusion_cx308p_util.py clean
+        rm -f /usr/local/bin/asterfusion_cx308p_util.py
+    fi
+}
+
+
+case $1 in 
+  start|stop) "$1" ;;
+esac
+

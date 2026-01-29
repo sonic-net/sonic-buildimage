@@ -1,0 +1,13 @@
+[Unit]
+Description=Asterfusion CX308P-48Y-N Platform initialization service
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/asterfusion_cx308p_startup start
+ExecStop=/usr/local/bin/asterfusion_cx308p_startup stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

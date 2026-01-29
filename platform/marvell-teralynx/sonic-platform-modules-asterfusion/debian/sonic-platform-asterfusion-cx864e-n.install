@@ -1,0 +1,4 @@
+cx864e-n/scripts/* usr/bin
+cx864e-n/utils/* usr/local/bin
+cx864e-n/service/*.service lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx864e_n-r0

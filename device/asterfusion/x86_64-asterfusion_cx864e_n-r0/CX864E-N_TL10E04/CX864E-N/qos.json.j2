@@ -1,0 +1,143 @@
+{% set port_names_list = [] %}
+{% for port in PORT %}
+    {%- if port_names_list.append(port) %}{% endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+
+{
+   "TC_TO_QUEUE_MAP":{
+        "default":{
+            "0":"0",
+            "1":"1",
+            "2":"2",
+            "3":"3",
+            "4":"4",
+            "5":"5",
+            "6":"6",
+            "7":"7"
+        }
+    },
+    "TC_TO_PRIORITY_GROUP_MAP": {
+    "default": {
+        "0": "0",
+        "1": "0",
+        "2": "0",
+        "3": "3",
+        "4": "4",
+        "5": "0",
+        "6": "0",
+        "7": "0"
+    }
+    },
+       "DSCP_TO_TC_MAP": {
+        "default": {
+            "0":"0",
+            "1":"0",
+            "2":"0",
+            "3":"0",
+            "4":"0",
+            "5":"0",
+            "6":"0",
+            "7":"0",
+            "8":"1",
+            "9":"1",
+            "10":"1",
+            "11":"1",
+            "12":"1",
+            "13":"1",
+            "14":"1",
+            "15":"1",
+            "16":"2",
+            "17":"2",
+            "18":"2",
+            "19":"2",
+            "20":"2",
+            "21":"2",
+            "22":"2",
+            "23":"2",
+            "24":"3",
+            "25":"3",
+            "26":"3",
+            "27":"3",
+            "28":"3",
+            "29":"3",
+            "30":"3",
+            "31":"3",
+            "32":"4",
+            "33":"4",
+            "34":"4",
+            "35":"4",
+            "36":"4",
+            "37":"4",
+            "38":"4",
+            "39":"4",
+            "40":"5",
+            "41":"5",
+            "42":"5",
+            "43":"5",
+            "44":"5",
+            "45":"5",
+            "46":"5",
+            "47":"5",
+            "48":"6",
+            "49":"6",
+            "50":"6",
+            "51":"6",
+            "52":"6",
+            "53":"6",
+            "54":"6",
+            "55":"6",
+            "56":"7",
+            "57":"7",
+            "58":"7",
+            "59":"7",
+            "60":"7",
+            "61":"7",
+            "62":"7",
+            "63":"7"
+        }
+    },
+    "PORT_QOS_MAP": {
+    {% for port in PORT %}
+       "{{ port }}": {
+            "tc_to_pg_map": "default",
+            "tc_to_queue_map": "default",
+            "dscp_to_tc_map": "default",
+            "pfc_enable": "3,4"
+       }{% if not loop.last %},{% endif %}
+    {% endfor %}
+    },
+    "WRED_PROFILE": {
+        "default_ecn": {
+            "ecn": "ecn_all",
+            "green_drop_probability": "10",
+            "green_max_threshold": "2097152",
+            "green_min_threshold": "1048576",
+            "wred_green_enable": "true",
+            "yellow_drop_probability": "10",
+            "yellow_max_threshold": "2097152",
+            "yellow_min_threshold": "1048576",
+            "wred_yellow_enable": "true",
+            "red_drop_probability": "10",
+            "red_max_threshold": "2097152",
+            "red_min_threshold": "1048576",
+            "wred_red_enable": "true"
+        },
+        "default_drop": {
+            "ecn": "ecn_none",
+            "green_drop_probability": "10",
+            "green_max_threshold": "2097152",
+            "green_min_threshold": "1048576",
+            "wred_green_enable": "true",
+            "yellow_drop_probability": "10",
+            "yellow_max_threshold": "2097152",
+            "yellow_min_threshold": "1048576",
+            "wred_yellow_enable": "true",
+            "red_drop_probability": "10",
+            "red_max_threshold": "2097152",
+            "red_min_threshold": "1048576",
+            "wred_red_enable": "true"
+        }
+    }
+}
