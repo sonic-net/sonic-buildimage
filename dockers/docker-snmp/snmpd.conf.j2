@@ -91,7 +91,7 @@ sysLocation    {{ SNMP.LOCATION.Location }}
 sysLocation    public
 {% endif %}
 {% if SNMP is defined and SNMP.CONTACT is defined %}
-sysContact     {{ SNMP.CONTACT.keys() | first }} {{ SNMP.CONTACT.values() | first }}
+sysContact     {{ SNMP.CONTACT.Contact }}
 {% else %}
 sysContact     Azure Cloud Switch vteam <linuxnetdev@microsoft.com>
 {% endif %}
