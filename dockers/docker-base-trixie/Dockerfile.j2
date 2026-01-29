@@ -1,0 +1,95 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+{% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+ARG BASE=--platform=linux/arm/v7 {{ prefix }}debian:trixie
+{% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+ARG BASE=--platform=linux/arm64 {{ prefix }}debian:trixie
+{% else %}
+ARG BASE={{ prefix }}debian:trixie
+{% endif %}
+
+FROM $BASE AS base
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure data sources for apt/dpkg
+COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+
+# Update apt cache and
+# pre-install fundamental packages
+RUN apt update &&            \
+    apt -y install           \
+        curl                 \
+        less                 \
+        perl                 \
+        procps               \
+        python3              \
+        python3-pip          \
+        python3-setuptools   \
+        python3-wheel        \
+        python-is-python3    \
+        vim-tiny             \
+        rsyslog              \
+# Install rsync for copying over only changes between layers
+        rsync                \
+# Install redis-tools
+        redis-tools          \
+# common dependencies
+        libdaemon0           \
+        libdbus-1-3          \
+        libjansson4          \
+# ip and ifconfig utility missing in docker for arm arch
+        iproute2             \
+        net-tools            \
+# for processing/handling json files in bash environment
+        jq                   \
+# for sairedis zmq rpc channel
+        libzmq5              \
+        libwrap0            \
+        libatomic1
+
+# Add a config file to allow pip to install packages outside of apt/the Debian repos
+COPY ["pip.conf", "/etc/pip.conf"]
+
+{% if docker_base_trixie_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_base_trixie_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_base_trixie_whls.split(' ')) }}
+{% endif %}
+
+# For templating
+RUN pip3 install j2cli
+
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
+
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+
+# Uninstall unused dependencies
+RUN apt autoremove -y --purge
+
+{% if docker_base_trixie_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_base_trixie_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_base_trixie_debs.split(' ')) }}
+{%- endif %}
+
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
+COPY ["root/.vimrc", "/root/.vimrc"]
+
+RUN ln /usr/bin/vim.tiny /usr/bin/vim
+
+COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+
+FROM scratch
+
+COPY --from=base / /
