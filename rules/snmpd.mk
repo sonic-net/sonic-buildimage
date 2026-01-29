@@ -3,10 +3,10 @@
 # TODO(trixie): Update version to version in Trixie
 ifeq ($(BLDENV),trixie)
 SNMPD_VERSION = 5.9.4+dfsg
-SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2
+SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb13u1
 else ifeq ($(BLDENV),bookworm)
 SNMPD_VERSION = 5.9.3+dfsg
-SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2
+SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb12u1
 else ifeq ($(BLDENV),bullseye)
 SNMPD_VERSION = 5.9+dfsg
 SNMPD_VERSION_FULL = $(SNMPD_VERSION)-4+deb11u1

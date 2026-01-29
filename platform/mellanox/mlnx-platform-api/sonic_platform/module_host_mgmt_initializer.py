@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +61,14 @@ class ModuleHostMgmtInitializer:
                 if not self.initialized:
                     with self.lock:
                         if not self.initialized:
+                            from sonic_platform.device_data import DeviceDataManager
+                            logger.log_notice('Waiting for modules to be ready...')
+                            sfp_count = chassis.get_num_sfps()
+                            if not DeviceDataManager.wait_sysfs_ready(sfp_count):
+                                logger.log_error('Modules are not ready')
+                            else:
+                                logger.log_notice('Modules are ready')
+
                             logger.log_notice('Starting module initialization for module host management...')
                             initialization_owner = True
                             self.remove_module_ready_file()

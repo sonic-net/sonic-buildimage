@@ -208,7 +208,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix": "10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"]
+                        "endpoint": "192.168.1.1"
                     }
                 ]
             }
@@ -248,14 +248,14 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011"
                     },
                     {
                         "vnet_name": "Vnet2",
                         "prefix":"10.0.1.0/24",
-                        "endpoint": ["192.168.1.2"],
-                        "vni": ["10012"]
+                        "endpoint": "192.168.1.2",
+                        "vni": "10012"
                     }
                 ]
             }
@@ -290,9 +290,10 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "mac_address": ["00:aa:bb:cc:dd:ee"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "00:aa:bb:cc:dd:ee",
+                        "vni": "10011",
+                        "metric": 1
                     }
                 ]
             }
@@ -327,14 +328,14 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011"
                     },
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.2"],
-                        "vni": ["10012"]
+                        "endpoint": "192.168.1.2",
+                        "vni": "10012"
                     }
                 ]
             }
@@ -369,8 +370,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["256.256.256.256"],
-                        "vni": ["10011"]
+                        "endpoint": "256.256.256.256",
+                        "vni": "10011"
                     }
                 ]
             }
@@ -405,9 +406,9 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "mac_address": ["GG:HH:II:JJ:KK:LL"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "GG:HH:II:JJ:KK:LL",
+                        "vni": "10011"
                     }
                 ]
             }
@@ -442,8 +443,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["16777216"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "16777216"
                     }
                 ]
             }
@@ -477,8 +478,8 @@
                 "VNET_ROUTE_TUNNEL_LIST": [
                     {
                         "vnet_name": "Vnet1",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011"
                     }
                 ]
             }
@@ -513,8 +514,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"300.168.1.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011"
                     }
                 ]
             }
@@ -549,7 +550,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "vni": ["10011"]
+                        "vni": "10011"
                     }
                 ]
             }
@@ -584,8 +585,8 @@
                     {
                         "vnet_name": "NonexistentVnet",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011"
                     }
                 ]
             }
@@ -620,7 +621,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1", "192.168.1.2", "192.168.1.3"]
+                        "endpoint": "192.168.1.1,192.168.1.2,192.168.1.3"
                     }
                 ]
             }
@@ -655,8 +656,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "mac_address": ["00:aa:bb:cc:dd:ee", "11:22:33:44:55:66", "aa:bb:cc:dd:ee:ff"]
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "00:aa:bb:cc:dd:ee,11:22:33:44:55:66,aa:bb:cc:dd:ee:ff"
                     }
                 ]
             }
@@ -691,8 +692,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011", "10012", "10013"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011,10012,10013"
                     }
                 ]
             }
@@ -727,9 +728,9 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1", "192.168.1.2"],
-                        "mac_address": ["00:aa:bb:cc:dd:ee", "11:22:33:44:55:66"],
-                        "vni": ["10011", "10012"]
+                        "endpoint": "192.168.1.1,192.168.1.2",
+                        "mac_address": "00:aa:bb:cc:dd:ee,11:22:33:44:55:66",
+                        "vni": "10011,10012"
                     }
                 ]
             }
@@ -764,7 +765,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1", "256.256.256.256", "192.168.1.3"]
+                        "endpoint": "192.168.1.1,256.256.256.256,192.168.1.3"
                     }
                 ]
             }
@@ -799,8 +800,8 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "mac_address": ["00:aa:bb:cc:dd:ee", "ZZ:YY:XX:WW:VV:UU", "11:22:33:44:55:66"]
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "00:aa:bb:cc:dd:ee,ZZ:YY:XX:WW:VV:UU,11:22:33:44:55:66"
                     }
                 ]
             }
@@ -835,8 +836,44 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
-                        "vni": ["10011", "16777216", "10013"]
+                        "endpoint": "192.168.1.1",
+                        "vni": "10011,00013"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VNI": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1,192.168.1.2,192.168.1.3,192.168.1.4",
+                        "vni": "10011,10012,10011,10013"
                     }
                 ]
             }
@@ -871,7 +908,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
+                        "endpoint": "192.168.1.1",
                         "consistent_hashing_buckets": 128
                     }
                 ]
@@ -907,7 +944,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
+                        "endpoint": "192.168.1.1",
                         "consistent_hashing_buckets": 65535
                     }
                 ]
@@ -943,9 +980,9 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1", "192.168.1.2", "192.168.1.3"],
-                        "mac_address": ["00:aa:bb:cc:dd:ee", "11:22:33:44:55:66", "aa:bb:cc:dd:ee:ff"],
-                        "vni": ["10011", "10012", "10013"],
+                        "endpoint": "192.168.1.1,192.168.1.2,192.168.1.3",
+                        "mac_address": "00:aa:bb:cc:dd:ee,11:22:33:44:55:66,aa:bb:cc:dd:ee:ff",
+                        "vni": "10011,10012,10013",
                         "consistent_hashing_buckets": 256
                     }
                 ]
@@ -981,7 +1018,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "endpoint": ["192.168.1.1"],
+                        "endpoint": "192.168.1.1",
                         "consistent_hashing_buckets": 99999
                     }
                 ]
