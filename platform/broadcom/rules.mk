@@ -23,6 +23,7 @@ include $(PLATFORM_PATH)/platform-modules-supermicro.mk
 #include $(PLATFORM_PATH)/platform-modules-tencent.mk
 include $(PLATFORM_PATH)/platform-modules-ufispace.mk
 #include $(PLATFORM_PATH)/platform-modules-micas.mk
+include $(PLATFORM_PATH)/platform-modules-netberg.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-brcm.mk
