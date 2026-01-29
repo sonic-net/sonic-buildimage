@@ -340,3 +340,15 @@ dependent_startup_wait_for=swssconfig:exited
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 {%- endif %}
+
+[program:countersyncd]
+command=/usr/bin/countersyncd --enable-otel
+priority=18
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
