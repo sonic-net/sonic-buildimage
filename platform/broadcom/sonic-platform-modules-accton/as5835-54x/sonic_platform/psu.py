@@ -129,6 +129,25 @@ class Psu(PddfPsu):
 
         return super().get_power()
 
+    def get_temperature_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of PSU
+        Returns:
+            A float number, the high threshold temperature of PSU in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        threshold = super().get_temperature_high_threshold()
+
+        for psu_thermal_idx in range(self.num_psu_thermals):
+            try:
+                tmp = self._thermal_list[psu_thermal_idx].get_high_threshold()
+                if threshold > tmp or threshold == 0.0:
+                    threshold = tmp
+            except Exception:
+                pass
+
+        return threshold
+
     def get_revision(self):
         """
         Retrieves the hardware revision of the device
