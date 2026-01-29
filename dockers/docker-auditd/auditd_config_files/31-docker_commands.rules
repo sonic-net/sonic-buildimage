@@ -1,1 +1,0 @@
--a always,exit -F arch=b64 -S execve -F path=/usr/bin/docker -F auid>=1000 -F auid!=4294967295 -k docker_commands
