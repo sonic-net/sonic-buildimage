@@ -146,13 +146,13 @@ xcvr_presence_interrupts() {
         "enable")
                       for ((i=14;i<=16;i++));
                       do
-                          echo 0x0 > /sys/class/i2c-adapter/i2c-$i/$i-003e/qsfp_abs_mask
+                          echo 0x0 > /sys/bus/i2c/devices/i2c-$i/$i-003e/qsfp_abs_mask
                       done
                       ;;
         "disable")
                       for ((i=14;i<=16;i++));
                       do
-                          echo 0xffff > /sys/class/i2c-adapter/i2c-$i/$i-003e/qsfp_abs_mask
+                          echo 0xffff > /sys/bus/i2c/devices/i2c-$i/$i-003e/qsfp_abs_mask
                       done
                       ;;
         *)            echo "z9100_platform: xcvr_presence_interrupts: invalid command !"
@@ -236,9 +236,9 @@ if [[ "$1" == "init" ]]; then
     install_python_api_package
 
     value=0x0
-    echo $value > /sys/class/i2c-adapter/i2c-14/14-003e/qsfp_lpmode
-    echo $value > /sys/class/i2c-adapter/i2c-15/15-003e/qsfp_lpmode
-    echo $value > /sys/class/i2c-adapter/i2c-16/16-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-14/14-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-15/15-003e/qsfp_lpmode
+    echo $value > /sys/bus/i2c/devices/i2c-16/16-003e/qsfp_lpmode
 
 elif [[ "$1" == "deinit" ]]; then
     xcvr_presence_interrupts "disable"

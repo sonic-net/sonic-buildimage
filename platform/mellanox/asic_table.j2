@@ -54,6 +54,7 @@
         'x86_64-nvidia_sn4280-r0':'MELLANOX-SPECTRUM-3',
         'x86_64-nvidia_sn5640-r0':'MELLANOX-SPECTRUM-5',
         'x86_64-nvidia_sn5640_simx-r0':'MELLANOX-SPECTRUM-5',
+        'x86_64-nvidia_sn6600_simx-r0':'MELLANOX-SPECTRUM-6',
         'vs-platform':'vs'
     }
 %}
@@ -113,6 +114,18 @@
             "pipeline_latency": "19",
             "mac_phy_delay": "0.8",
             "peer_response_time": "3.8"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-6' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-6": {
+            "cell_size": "256",
+            "pipeline_latency": "42",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "6144"
         },
         "OP": "SET"
     }

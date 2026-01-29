@@ -72,8 +72,8 @@ class Chassis(ChassisBase):
 
         PORTS_IN_BLOCK = (self.PORT_END + 1)
         _sfp_port = range(1, self.SFP28_PORT_END + 1)
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
-        mux_channel = "/sys/class/i2c-adapter/i2c-{0}/{0}-0074/channel-0"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
+        mux_channel = "/sys/bus/i2c/devices/i2c-{0}/{0}-0074/channel-0"
 
         for index in range(self.PORT_START, PORTS_IN_BLOCK):
             eeprom_path = ""

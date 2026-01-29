@@ -1,0 +1,20 @@
+Index: audisp-tacplus/Makefile.am
+===================================================================
+--- audisp-tacplus.orig/Makefile.am
++++ audisp-tacplus/Makefile.am
+@@ -5,7 +5,7 @@ EXTRA_DIST = ChangeLog README audisp_tac
+ 	audisp-tac_plus.conf audisp-tacplus.conf
+ 
+ audisp_tacplus_SOURCES = audisp-tacplus.c password.c regex_helper.c trace.c local_accounting.c sudoers_helper.c
+-audisp_tacplus_CFLAGS = -O
++audisp_tacplus_CFLAGS = -O  -Wno-stringop-truncation
+ audisp_tacplus_LDADD = -lauparse -ltacsupport -ltac
+ sbin_PROGRAMS = audisp-tacplus
+ man_MANS = audisp-tacplus.8
+@@ -28,5 +28,5 @@ install-data-hook:
+ 	${INSTALL} -d $(DESTDIR)$(sysconfdir)/audit/plugins.d
+ 	${INSTALL} -d $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 	${INSTALL} -m 644 audisp-tacplus.conf $(DESTDIR)$(sysconfdir)/audit/plugins.d
+-	${INSTALL} -m 644 -o 0 audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
++	${INSTALL} -m 644 audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 

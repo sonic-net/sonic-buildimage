@@ -95,8 +95,7 @@ class MPFAManager(object):
             raise RuntimeError("MPFA metadata doesn't exist: path={}".format(metadata_path))
 
         cp = configparser.ConfigParser()
-        with io.open(metadata_path, 'r') as metadata_ini:
-            cp.readfp(metadata_ini)
+        cp.read(metadata_path)
 
         self.__metadata = cp
 
@@ -133,8 +132,8 @@ class ONIEUpdater(object):
     ONIE_FW_UPDATE_CMD_INSTALL = ['/usr/bin/mlnx-onie-fw-update.sh', 'update', '--no-reboot']
     ONIE_FW_UPDATE_CMD_SHOW_PENDING = ['/usr/bin/mlnx-onie-fw-update.sh', 'show-pending']
 
-    ONIE_VERSION_PARSE_PATTERN = '([0-9]{4})\.([0-9]{2})-([0-9]+)\.([0-9]+)\.([0-9]+)-?(rc[0-9]+)?-?(dev)?-([0-9]+)'
-    ONIE_VERSION_BASE_PARSE_PATTERN = '([0-9]+)\.([0-9]+)\.([0-9]+)'
+    ONIE_VERSION_PARSE_PATTERN = r'([0-9]{4})\.([0-9]{2})-([0-9]+)\.([0-9]+)\.([0-9]+)-?(rc[0-9]+)?-?(dev)?-([0-9]+)'
+    ONIE_VERSION_BASE_PARSE_PATTERN = r'([0-9]+)\.([0-9]+)\.([0-9]+)'
     ONIE_VERSION_REQUIRED = '5.2.0016'
 
     ONIE_VERSION_ATTR = 'onie_version'

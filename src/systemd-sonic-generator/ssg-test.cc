@@ -6,6 +6,7 @@
  * Copyright (c) 2021 by Cisco Systems, Inc.
  *------------------------------------------------------------------
  */
+#include <fstream>
 #include <mutex>
 #include <string>
 #include <sys/stat.h>
@@ -71,8 +72,6 @@ const std::vector<std::string> generated_services = {
     "test.service",                 /* A single instance test service
                                        to test dependency creation */
     "test.timer",                   /* A timer service */
-    "midplane-network-npu.service", /* A midplane network service for smart switch NPU*/
-    "midplane-network-dpu.service", /* A midplane network service for smart switch DPU*/
     "database.service",             /* A database service*/
     "database@.service",            /* A database service for multi instances */
 };
@@ -225,15 +224,15 @@ class SsgMainTest : public SsgFunctionTest {
     bool find_string_in_file(std::string str,
                              std::string file_name) {
         bool found = false;
-            std::string line;
+        std::string line;
 
-            std::ifstream file(TEST_UNIT_FILE_PREFIX + file_name);
-            while (getline(file, line) && !found) {
-                if (str == line) {
-                    found = true;
-                    break;
-                }
+        std::ifstream file(TEST_OUTPUT_DIR + file_name);
+        while (getline(file, line) && !found) {
+            if (str == line) {
+                found = true;
+                break;
             }
+        }
         return found;
     }
 
@@ -260,6 +259,18 @@ class SsgMainTest : public SsgFunctionTest {
                         expected_result)
                         << "Error validating " + str_t + " in " + target;
             }
+        }
+    }
+
+    void validate_output_dependency_list_ignore_multi_instance(
+            std::vector<std::string> strs,
+            std::string target,
+            bool expected_result) {
+        for (std::string str : strs) {
+            bool finished = false;
+            EXPECT_EQ(find_string_in_file(str, target),
+                    expected_result)
+                    << "Error validating " + str + " in " + target;
         }
     }
 
@@ -302,7 +313,16 @@ class SsgMainTest : public SsgFunctionTest {
      * This function validates the generated dependencies in a Unit File.
      */
     void validate_depedency_in_unit_file(const SsgMainConfig &cfg) {
-        std::string test_service = "test.service";
+        std::string test_service = "test.service.d/multi-asic-dependencies.conf";
+
+        if (IS_SINGLE_ASIC(cfg.num_asics) && cfg.num_dpus == 0) {
+            /* Nothing in this section will apply to single asic, as the file
+             * won't be created at all.
+             */
+            validate_output_dependency_list(common_dependency_list,
+                test_service, false, cfg.num_asics);
+            return;
+        }
 
         /* Validate Unit file dependency creation for multi instance
          * services. These entries should be present for multi asic
@@ -317,21 +337,10 @@ class SsgMainTest : public SsgFunctionTest {
          * Despite the split, the final result remains equivalent.
          */
         if (cfg.num_dpus > 0) {
-            /* Validate Unit file dependency creation for single instance
-            * services. These entries should not be present for multi asic
-            * system but present for single asic system.
-            */
-            validate_output_dependency_list(single_asic_dependency_list_split,
-                test_service, IS_SINGLE_ASIC(cfg.num_asics), cfg.num_asics);
-            validate_output_dependency_list(npu_dependency_list,
-                "midplane-network-npu.service", true, cfg.num_dpus);
-        } else {
-            /* Validate Unit file dependency creation for single instance
-            * services. These entries should not be present for multi asic
-            * system but present for single asic system.
-            */
-            validate_output_dependency_list(single_asic_dependency_list,
-                test_service, IS_SINGLE_ASIC(cfg.num_asics), cfg.num_asics);
+            for (int i = 0; i < cfg.num_dpus; i++) {
+                validate_output_dependency_list_ignore_multi_instance(npu_dependency_list,
+                    "database@dpu" + std::to_string(i) + ".service.d/ordering.conf", true);
+            }
         }
 
         /* Validate Unit file dependency creation for single instance
@@ -355,8 +364,6 @@ class SsgMainTest : public SsgFunctionTest {
             test_target, true, cfg.num_asics);
         validate_output_unit_files(npu_service_list,
             test_target, cfg.is_smart_switch_npu, cfg.num_dpus);
-        validate_output_unit_files(npu_network_service_list,
-            "network", cfg.is_smart_switch_npu, cfg.num_dpus);
         validate_output_unit_files(dpu_service_list,
             test_target, cfg.is_smart_switch_dpu, cfg.num_dpus);
         validate_output_unit_files(dpu_network_service_list,
@@ -374,19 +381,26 @@ class SsgMainTest : public SsgFunctionTest {
 
         checked_service_list.insert(checked_service_list.end(), common_service_list.begin(), common_service_list.end());
         if (cfg.num_dpus > 0) {
-            checked_service_list.insert(checked_service_list.end(), npu_service_list.begin(), npu_service_list.end());
+            checked_service_list.insert(checked_service_list.end(), npu_service_list_for_environment_variables.begin(), npu_service_list_for_environment_variables.end());
         }
         if (cfg.num_asics > 1) {
             checked_service_list.insert(checked_service_list.end(), multi_asic_service_list.begin(), multi_asic_service_list.end());
         }
 
         for (const auto &target: checked_service_list) {
-            if (find_string_in_file("[Service]", target)) {
-                for (const auto& item : env_vars) {
-                    std::string str = "Environment=\"" + item.first + "=" + item.second + "\"";
-                    EXPECT_EQ(find_string_in_file(str, target), true)
-                        << "Error validating " + str + " in " + target;
+            if (!target.ends_with(".service")) {
+                continue;
+            }
+
+            for (const auto& item : env_vars) {
+                std::string str = "Environment=\"" + item.first + "=" + item.second + "\"";
+                auto target_unit = target;
+                if (is_multi_instance(target)) {
+                    /* insert instance id in string */
+                    target_unit = (boost::format{target_unit} % "").str();
                 }
+                EXPECT_EQ(find_string_in_file(str, target_unit + ".d/environment.conf"), true)
+                    << "Error validating " + str + " in " + target_unit;
             }
         }
     }
@@ -466,14 +480,6 @@ class SsgMainTest : public SsgFunctionTest {
     /* Save global variables before running tests */
     virtual void SetUp() {
         SsgFunctionTest::SetUp();
-        // Create /dev/null symlink for simulation disabled service
-        std::vector<std::string> disabled_service;
-        disabled_service.insert(disabled_service.end(), npu_network_service_list.begin(), npu_network_service_list.end());
-        disabled_service.insert(disabled_service.end(), dpu_network_service_list.begin(), dpu_network_service_list.end());
-        for (const auto &service : disabled_service) {
-            fs::create_symlink("/dev/null", TEST_ETC_NETWORK + service);
-        }
-        fs::create_symlink("/dev/null", TEST_ETC_SYSTEM + "systemd-networkd.service");
     }
 
     /* Restore global vars */
@@ -488,7 +494,7 @@ class SsgMainTest : public SsgFunctionTest {
     static const std::vector<std::string> common_service_list;
     static const std::vector<std::string> non_smart_switch_service_list;
     static const std::vector<std::string> npu_service_list;
-    static const std::vector<std::string> npu_network_service_list;
+    static const std::vector<std::string> npu_service_list_for_environment_variables;
     static const std::vector<std::string> dpu_service_list;
     static const std::vector<std::string> dpu_network_service_list;
     static const std::vector<std::string> single_asic_dependency_list;
@@ -541,17 +547,11 @@ SsgMainTest::non_smart_switch_service_list = {
 const std::vector<std::string>
 SsgMainTest::npu_service_list = {
     "database@dpu%1%.service",
-    "midplane-network-npu.service",
 };
 
-/* Systemd service Unit file list for Smart Switch NPU. */
 const std::vector<std::string>
-SsgMainTest::npu_network_service_list = {
-    "bridge-midplane.netdev",
-    "bridge-midplane.network",
-    "dummy-midplane.netdev",
-    "dummy-midplane.network",
-    "midplane-network-npu.network",
+SsgMainTest::npu_service_list_for_environment_variables = {
+    "database@%1%.service",
 };
 
 /* Systemd service Unit file list for Smart Switch DPU. */
@@ -609,7 +609,8 @@ SsgMainTest::common_dependency_list = {
 
 const std::vector<std::string>
 SsgMainTest::npu_dependency_list = {
-    "Before=database@dpu%1%.service",
+    "Requires=systemd-networkd-wait-online@bridge-midplane.service",
+    "After=systemd-networkd-wait-online@bridge-midplane.service",
 };
 
 /* Test get functions for global vasr*/

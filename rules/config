@@ -122,6 +122,9 @@ INCLUDE_SYSTEM_EVENTD = y
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = n
 
+# INCLUDE_SYSTEM_OTEL - build docker-sonic-otel for High Frequency Telemetry (HFT) support
+INCLUDE_SYSTEM_OTEL = y
+
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
 
@@ -312,7 +315,7 @@ ENABLE_FIPS ?= n
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
-SONIC_OS_VERSION ?= 12
+SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60

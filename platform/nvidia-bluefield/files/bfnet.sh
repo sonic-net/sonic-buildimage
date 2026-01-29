@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +23,9 @@ start()
 {
     /usr/bin/mst start
 
-    /usr/bin/mlnx-fw-upgrade.sh --dry-run -v
+    /usr/local/bin/mlnx-fw-manager --status
     if [[ $? != "0" ]]; then
+        echo "BF3 DPU firmware upgrade status check failed. Please check the firmware upgrade status manually."
         exit 1
     fi
 }

@@ -16,7 +16,7 @@ readonly X509=$(echo ${P4RT_VARS} | jq -r '.x509')
 readonly P4RT=$(echo ${P4RT_VARS} | jq -r '.p4rt')
 readonly CERTS=$(echo ${P4RT_VARS} | jq -r '.certs')
 
-P4RT_ARGS=" --alsologtostderr --logbuflevel=-1"
+P4RT_ARGS=""
 
 if [ -n "${CERTS}" ]; then
     readonly SERVER_CRT=$(echo ${CERTS} | jq -r '.server_crt // empty')
