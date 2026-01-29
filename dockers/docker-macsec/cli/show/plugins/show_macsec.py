@@ -4,13 +4,14 @@ import datetime
 import pickle
 import os
 import copy
-
+import json
 import click
 from tabulate import tabulate
 
 import utilities_common.multi_asic as multi_asic_util
 from swsscommon.swsscommon import CounterTable, MacsecCounter, SonicV2Connector
 from utilities_common.cli import UserCache
+from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
 CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
@@ -267,15 +268,21 @@ def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
 @click.option('--profile', is_flag=True, required=False, default=False, help="show all macsec profiles")
 @click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
 @click.option('--post-status', is_flag=True, required=False, default=False, help="show macsec FIPS POST(Pre-Operational Self-Test) status")
+@click.option('--fips-module', is_flag=True, required=False, default=False, help="show macsec FIPS module")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display, profile, post_status):
+def macsec(interface_name, dump_file, namespace, display, profile, post_status, fips_module):
     if post_status:
-        if interface_name is not None or profile or dump_file:
+        if interface_name is not None or profile or dump_file or fips_module:
             click.echo('POST status is not valid with other options/arguments')
             return
         MacsecContext(namespace, display).show_post_status()
         return
-
+    if fips_module:
+        if interface_name is not None or profile or dump_file or post_status:
+            click.echo('fips-module is not valid with other options/arguments')
+            return
+        MacsecContext(namespace, display).show_fips_module()
+        return
     if interface_name is not None and profile:
         click.echo('Interface name is not valid with profile option')
         return
@@ -398,6 +405,18 @@ class MacsecContext(object):
 
         if display_output:
             click.echo("\n".join(display_output))
+
+    def show_fips_module(self):
+        json_file = device_info.get_path_to_platform_dir() + '/' + device_info.PLATFORM_JSON_FILE
+        if not os.path.exists(json_file):
+            return
+        try:
+            with open(json_file, 'r') as file:
+                platform_data = json.load(file)
+        except (json.JSONDecodeError, IOError, TypeError, ValueError):
+            return
+        if 'fips_module' in platform_data:
+            click.echo(platform_data['fips_module'])
 
 def register(cli):
     cli.add_command(macsec)
