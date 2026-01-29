@@ -45,8 +45,8 @@ https://deb.nodesource.com/node_14.x/dists/bookworm/Release==249bac8daff55b81a1b
 https://deb.nodesource.com/setup_14.x==c30873f4a513bb935afaf8f65e7de9e1
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/aristanetworks/sonic-firmware/raw/24716c4e03f223d8e18afff786ac427f6ac77fe0/phy/phy-credo_1.0_amd64.deb==14e233cd68bc5db22eb8c9e177242851
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==89248680f7d19c124f9c093873f8ed59
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==b696a1c0e36abe8768d6bfe35d187e75
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
 https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58fbc11625336846cea7420
 https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz==a263191ce012be65578b74613c688a3c
 https://github.com/karimra/gnoic/releases/download/v0.1.0/checksums.txt==596e4993493864bf7c58711d5b4c09a1
