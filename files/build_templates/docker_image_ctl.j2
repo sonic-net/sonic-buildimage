@@ -27,6 +27,20 @@ link_namespace() {
 }
 {%- endif %}
 
+{%- if docker_container_name == "pmon" %}
+get_pmon_device_mounts() {
+    local devregex='i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
+    local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
+    for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+        if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            echo "--device=$device"
+        else
+            echo "--mount=type=bind,source=$device,destination=$device"
+        fi
+    done
+}
+{%- endif %}
+
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -717,14 +731,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-    $(if [ -e "/dev/i2c-0" ]; then echo "--device=/dev/i2c-0:/dev/i2c-0"; fi) \
-    $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
-    $(if [ -e "/dev/sda" ]; then echo "--device=/dev/sda:/dev/sda"; fi) \
-    $(if [ -e "/dev/sdb" ]; then echo "--device=/dev/sdb:/dev/sdb"; fi) \
-    $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
-    $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
-    $(for blockdev in /sys/block/*; do if [ -d "$blockdev" ]; then device_name=$(basename "$blockdev"); if [[ "$device_name" =~ ^(sd[a-z]+|nvme[0-9]+n[0-9]+)$ ]] && [[ ! "$device_name" =~ (boot|loop) ]]; then dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; fi; done) \
-    $(for dev_file in /dev/nvme*; do if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; done) \
+    $(get_pmon_device_mounts) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
