@@ -500,6 +500,27 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable resolvconf.service
 sudo mkdir -p $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 
+# Create memory statistics directories
+sudo mkdir -p $FILESYSTEM_ROOT/etc/memory_statistics/
+sudo mkdir -p $FILESYSTEM_ROOT/var/log/memory_statistics/ 
+
+# Copy and set permissions for systemd service file
+sudo install -m 0600 $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+
+# Copy and set executable permissions for daemon
+sudo install -m 0755 $IMAGE_CONFIGS/memory_statistics/memory_statistics_service.py $FILESYSTEM_ROOT/usr/bin/
+
+# Copy configuration file
+sudo install -m 0644 $IMAGE_CONFIGS/memory_statistics/memory_statistics.conf $FILESYSTEM_ROOT/etc/memory_statistics/
+
+# Register the service
+echo "memory_statistics.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
+# Set proper ownership for log directory (recommended)
+sudo chown -R root:root $FILESYSTEM_ROOT/var/log/memory_statistics/
+sudo chmod 755 $FILESYSTEM_ROOT/var/log/memory_statistics/
+
+
 # Copy initial interfaces configuration file, will be overwritten on first boot
 sudo cp $IMAGE_CONFIGS/interfaces/init_interfaces $FILESYSTEM_ROOT/etc/network/interfaces
 sudo mkdir -p $FILESYSTEM_ROOT/etc/network/interfaces.d
