@@ -37,7 +37,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
 
         for line in lines:
             try:
-                match = re.search('(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)',
+                match = re.search('(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)(.+)',
                                   line)
                 if match is not None:
                     idx = match.group(1)
