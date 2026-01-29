@@ -6,22 +6,22 @@ SHELL = /bin/bash
 # Debug build targets
 #
 build:
-       cargo build --all
+	cargo build --all
 
 test:
-       cargo test --all
+	cargo test --all
 
 clean:
-       cargo clean
+	cargo clean
 
 #
 # Release build targets
 #
 build-release:
-       cargo build --release --all
+	cargo build --release --all
 
 test-release:
-       cargo test --release --all
+	cargo test --release --all
 
 clean-release:
-       cargo clean --release
+	cargo clean --release
