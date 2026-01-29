@@ -421,6 +421,7 @@ dependencies = [
  "mockall",
  "serial_test",
  "sonic-rs-common",
+ "swss-common",
  "syslog-tracing",
  "thiserror",
  "tokio",
