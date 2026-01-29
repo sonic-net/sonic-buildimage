@@ -410,13 +410,20 @@ static ssize_t show_version(struct device *dev, struct device_attribute *attr, c
 /*
  * I2C init/probing/exit functions
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as5835_54t_cpld_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
+#else
+static int as5835_54t_cpld_probe(struct i2c_client *client)
+#endif
 {
 	struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
 	struct as5835_54t_cpld_data *data;
 	int ret = -ENODEV;
 	const struct attribute_group *group = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+#endif
 
 	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
 		goto exit;

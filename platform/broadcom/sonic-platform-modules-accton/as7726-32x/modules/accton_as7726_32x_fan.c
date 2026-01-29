@@ -31,6 +31,7 @@
 #include <linux/dmi.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
+#include <linux/version.h>
 
 #define DRVNAME "as7726_32x_fan"
 
@@ -407,8 +408,12 @@ static struct as7726_32x_fan_data *as7726_32x_fan_update_device(struct device *d
     return data;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7726_32x_fan_probe(struct i2c_client *client,
                                 const struct i2c_device_id *dev_id)
+#else
+static int as7726_32x_fan_probe(struct i2c_client *client)
+#endif
 {
     struct as7726_32x_fan_data *data;
     int status;

@@ -1178,12 +1178,18 @@ exit:
     return status;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int minipack_remove(struct platform_device *pdev)
+#else
+static void minipack_remove(struct platform_device *pdev)
+#endif
 {
     hwmon_device_unregister(mp_data->hwmon_dev);
     sysfs_remove_group(&pdev->dev.kobj, &mp_data->group);
     kfree(mp_data->group.attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver minipack_driver = {
