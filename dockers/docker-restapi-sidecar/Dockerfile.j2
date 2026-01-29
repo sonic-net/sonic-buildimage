@@ -13,9 +13,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-# K8s will override this
-ENV IS_V1_ENABLED=false
-
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
@@ -49,5 +46,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
+
+# K8s will override this
+ENV IS_V1_ENABLED=false
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
