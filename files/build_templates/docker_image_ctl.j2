@@ -304,7 +304,7 @@ function postStartAction()
             fi
         fi
 
-        if [ -e /tmp/pending_config_migration ] || [ -e /tmp/pending_config_initialization ]; then
+        if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
             # this is first boot to a new image, config-setup execution is pending.
             # for warmboot case, DB is loaded but migration is still pending
             # For firstbboot/fast/cold reboot case, DB contains nothing at this point
