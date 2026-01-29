@@ -184,6 +184,9 @@ INCLUDE_DASH_HA ?= y
 # run as worker node in kubernetes cluster.
 INCLUDE_KUBERNETES ?= n
 
+# INCLUDE_STP - build docker-stp for stp support
+INCLUDE_STP = y
+
 KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 
 # KUBERNETES_VERSION - Set to the required version.
