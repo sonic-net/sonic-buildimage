@@ -459,7 +459,7 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
 It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
@@ -473,7 +473,7 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 }
 ```
 
-When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.
 Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
 
 ```json
@@ -1740,8 +1740,9 @@ instead of data network.
 {
 "MGMT_VRF_CONFIG": {
     "vrf_global": {
-        "mgmtVrfEnabled": "true"
-     }
+        "mgmtVrfEnabled": "true",
+        "in_band_mgmt_enabled": "false"
+    }
   }
 }
 ```
