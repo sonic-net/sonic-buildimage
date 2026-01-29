@@ -1,10 +1,12 @@
 import sys
+import subprocess
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
 sys.path.append('../cli/show/plugins/')
 import show_macsec
+
 
 
 class TestShowMACsec(object):
@@ -274,3 +276,41 @@ class TestShowMACsec(object):
             assert "Module      : sai" in result.output
             assert "Status      : pass" in result.output
             assert "Namespace (asic1)" in result.output
+
+    @patch('sonic_py_common.device_info.get_path_to_platform_dir', MagicMock(return_value='.'))
+    def test_show_fips_module(self):
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec,["--fips-module"])
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert "SONiC-MACsec-Version 1.0" in result.output
+
+        # remove fips-module from platform.json. Re-test. This is to test scenario that some vendors
+        # do not have fips_module defined in platform file yet.
+        cmd = ['sed', '-i.bak', '/fips_module/d', './platform.json']
+        subprocess.run(cmd, capture_output=True)
+        result = runner.invoke(show_macsec.macsec,["--fips-module"])
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.output == ""
+        # put original platform.json back
+        cmd = ['mv', './platform.json.bak', './platform.json']
+        subprocess.run(cmd, stdout=subprocess.DEVNULL)
+
+    def test_fips_module_mutual_exclusivity(self):
+        """Test that --fips-module and other option/argument are mutually exclusive"""
+        runner = CliRunner()
+        
+        result = runner.invoke(show_macsec.macsec, ["--fips-module", "--post-status"])
+        assert result.exit_code == 0
+        assert "POST status is not valid with other options/arguments" in result.output
+
+        result = runner.invoke(show_macsec.macsec, ["--fips-module", "--profile"])
+        assert result.exit_code == 0
+        assert "fips-module is not valid with other options/arguments" in result.output
+
+        result = runner.invoke(show_macsec.macsec, ["--fips-module", "Ethernet1"])
+        assert result.exit_code == 0
+        assert "fips-module is not valid with other options/arguments" in result.output
+
+        result = runner.invoke(show_macsec.macsec, ["--fips-module", "--dump-file"])
+        assert result.exit_code == 0
+        assert "fips-module is not valid with other options/arguments" in result.output

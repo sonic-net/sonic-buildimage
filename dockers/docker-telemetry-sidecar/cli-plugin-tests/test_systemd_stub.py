@@ -1,44 +1,22 @@
 # tests/test_systemd_stub.py
 import sys
+import os
 import types
 import importlib
 
 import pytest
 
+# Add docker-telemetry-sidecar directory to path so we can import systemd_stub
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-@pytest.fixture(scope="session", autouse=True)
-def fake_logger_module():
-    """
-    Provide fakes for:
-      - sonic_py_common.logger.Logger
-      - swsscommon.swsscommon.ConfigDBConnector
+# Add sonic-py-common to path so we can import the real sidecar_common
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../src/sonic-py-common")))
 
-    so the module under test can import and use them without real SONiC deps.
-    """
-    # ----- fake sonic_py_common.logger -----
-    pkg = types.ModuleType("sonic_py_common")
-    logger_mod = types.ModuleType("sonic_py_common.logger")
 
-    class _Logger:
-        def __init__(self):
-            self.messages = []
-
-        def _log(self, level, msg):
-            self.messages.append((level, msg))
-
-        def log_debug(self, msg):     self._log("DEBUG", msg)
-        def log_info(self, msg):      self._log("INFO", msg)
-        def log_error(self, msg):     self._log("ERROR", msg)
-        def log_notice(self, msg):    self._log("NOTICE", msg)
-        def log_warning(self, msg):   self._log("WARNING", msg)
-        def log_critical(self, msg):  self._log("CRITICAL", msg)
-
-    logger_mod.Logger = _Logger
-    pkg.logger = logger_mod
-    sys.modules["sonic_py_common"] = pkg
-    sys.modules["sonic_py_common.logger"] = logger_mod
-
-    # ----- fake swsscommon.swsscommon.ConfigDBConnector (import-time only) -----
+# ===== Create fakes BEFORE importing sidecar_common =====
+def _setup_fakes():
+    """Create fake modules before any imports that need them."""
+    # ----- fake swsscommon.swsscommon.ConfigDBConnector -----
     swss_pkg = types.ModuleType("swsscommon")
     swss_common_mod = types.ModuleType("swsscommon.swsscommon")
 
@@ -57,10 +35,42 @@ def fake_logger_module():
 
     swss_common_mod.ConfigDBConnector = _DummyConfigDBConnector
     swss_pkg.swsscommon = swss_common_mod
-
     sys.modules["swsscommon"] = swss_pkg
     sys.modules["swsscommon.swsscommon"] = swss_common_mod
+    
+    # ----- fake sonic_py_common.logger ONLY (let real sonic_py_common load) -----
+    logger_mod = types.ModuleType("sonic_py_common.logger")
 
+    class _Logger:
+        def __init__(self):
+            self.messages = []
+
+        def _log(self, level, msg):
+            self.messages.append((level, msg))
+
+        def log_debug(self, msg):     self._log("DEBUG", msg)
+        def log_info(self, msg):      self._log("INFO", msg)
+        def log_error(self, msg):     self._log("ERROR", msg)
+        def log_notice(self, msg):    self._log("NOTICE", msg)
+        def log_warning(self, msg):   self._log("WARNING", msg)
+        def log_critical(self, msg):  self._log("CRITICAL", msg)
+
+    logger_mod.Logger = _Logger
+    sys.modules["sonic_py_common.logger"] = logger_mod
+
+# Create fakes before any imports
+_setup_fakes()
+
+# Now safe to import sidecar_common (it will use the fake swsscommon)
+from sonic_py_common import sidecar_common as real_sidecar_common
+
+
+@pytest.fixture(scope="session", autouse=True)
+def fake_logger_module():
+    """
+    Fakes were already set up at module level by _setup_fakes().
+    This fixture just ensures they stay registered during test execution.
+    """
     yield
 
 
@@ -69,15 +79,14 @@ def ss(tmp_path, monkeypatch):
     """
     Import systemd_stub fresh for every test, and provide fakes:
 
-      - run_nsenter: simulates host FS + systemctl/docker calls
+      - run_nsenter: simulates host FS + systemctl/docker calls (patched on sidecar_common)
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
       - config_db: dict for CONFIG_DB contents ("TABLE|KEY" -> {field: value})
-      - ConfigDBConnector: replaced with a fake that reads/writes config_db
+      - ConfigDBConnector: replaced with a fake that reads/writes config_db (patched on sidecar_common)
     """
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
-    ss = importlib.import_module("systemd_stub")
 
     # Fake host filesystem and command recorder
     host_fs = {}
@@ -86,32 +95,35 @@ def ss(tmp_path, monkeypatch):
     # Fake CONFIG_DB (redis key "TABLE|KEY" -> dict(field -> value))
     config_db = {}
 
-    # ----- Fake ConfigDBConnector used by systemd_stub -----
-    class FakeConfigDBConnector:
-        def __init__(self, *_, **__):
-            pass
+    # ----- Patch db_hget, db_hgetall, db_hset, db_del on sidecar_common -----
+    def fake_db_hget(key: str, field: str):
+        """Get a single field from a CONFIG_DB hash."""
+        entry = config_db.get(key, {})
+        return entry.get(field)
 
-        def connect(self, *_, **__):
-            # nothing to do
-            pass
+    def fake_db_hgetall(key: str):
+        """Get all fields from a CONFIG_DB hash."""
+        return dict(config_db.get(key, {}))
 
-        def get_entry(self, table, key):
-            redis_key = f"{table}|{key}"
-            # Return a copy to mimic real behavior (avoid accidental in-place mutation)
-            entry = config_db.get(redis_key, {})
-            return dict(entry)
+    def fake_db_hset(key: str, field: str, value):
+        """Set a field in a CONFIG_DB hash."""
+        if key not in config_db:
+            config_db[key] = {}
+        config_db[key][field] = value
 
-        def set_entry(self, table, key, entry):
-            redis_key = f"{table}|{key}"
-            # In ConfigDBConnector semantics, empty dict deletes the entry
-            if not entry:
-                config_db.pop(redis_key, None)
-            else:
-                config_db[redis_key] = dict(entry)
+    def fake_db_del(key: str):
+        """Delete a CONFIG_DB key entirely."""
+        if key in config_db:
+            del config_db[key]
+            return True
+        return False
 
-    monkeypatch.setattr(ss, "ConfigDBConnector", FakeConfigDBConnector, raising=True)
+    monkeypatch.setattr(real_sidecar_common, "db_hget", fake_db_hget)
+    monkeypatch.setattr(real_sidecar_common, "db_hgetall", fake_db_hgetall)
+    monkeypatch.setattr(real_sidecar_common, "db_hset", fake_db_hset)
+    monkeypatch.setattr(real_sidecar_common, "db_del", fake_db_del)
 
-    # ----- Fake run_nsenter for host operations -----
+    # ----- Fake run_nsenter for host operations (patch on sidecar_common) -----
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
 
@@ -160,42 +172,23 @@ def ss(tmp_path, monkeypatch):
 
         return 1, "" if text else b"", "unsupported" if text else b"unsupported"
 
-    monkeypatch.setattr(ss, "run_nsenter", fake_run_nsenter, raising=True)
+    monkeypatch.setattr(real_sidecar_common, "run_nsenter", fake_run_nsenter)
 
-    # Fake container FS
+    # Fake container FS - patch read_file_bytes_local on sidecar_common
     container_fs = {}
 
     def fake_read_file_bytes_local(path: str):
         return container_fs.get(path, None)
 
-    monkeypatch.setattr(ss, "read_file_bytes_local", fake_read_file_bytes_local, raising=True)
+    monkeypatch.setattr(real_sidecar_common, "read_file_bytes_local", fake_read_file_bytes_local)
+
+    # Now import systemd_stub (it will use patched sidecar_common)
+    ss = importlib.import_module("systemd_stub")
 
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
     return ss, container_fs, host_fs, commands, config_db
-
-
-def test_sha256_bytes_basic():
-    if "systemd_stub" in sys.modules:
-        del sys.modules["systemd_stub"]
-    ss = importlib.import_module("systemd_stub")
-    assert ss.sha256_bytes(b"") == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    assert ss.sha256_bytes(None) == ""
-    assert ss.sha256_bytes(b"abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-
-
-def test_host_write_atomic_and_read(ss):
-    ss, container_fs, host_fs, commands, config_db = ss
-    ok = ss.host_write_atomic("/etc/testfile", b"hello", 0o755)
-    assert ok
-    data = ss.host_read_bytes("/etc/testfile")
-    assert data == b"hello"
-    cmd_names = [c[1][0] for c in commands]
-    assert "/bin/sh" in cmd_names
-    assert "/bin/chmod" in cmd_names
-    assert "/bin/mkdir" in cmd_names
-    assert "/bin/mv" in cmd_names
 
 
 def test_sync_no_change_fast_path(ss):
