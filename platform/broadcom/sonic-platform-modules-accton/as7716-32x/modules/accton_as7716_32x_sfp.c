@@ -31,6 +31,7 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define BIT_INDEX(i) (1UL << (i))
 #define I2C_ADDR_CPLD1	0x60
@@ -167,11 +168,18 @@ static const struct attribute_group as7716_32x_sfp_group = {
 	.attrs = as7716_32x_sfp_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32x_sfp_probe(struct i2c_client *client,
 			const struct i2c_device_id *dev_id)
+#else
+static int as7716_32x_sfp_probe(struct i2c_client *client)
+#endif
 {
 	struct as7716_32x_sfp_data *data;
 	int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
 		status = -EIO;
