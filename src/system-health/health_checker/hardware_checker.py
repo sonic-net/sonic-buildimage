@@ -279,7 +279,6 @@ class HardwareChecker(HealthChecker):
 
     def reset(self):
         self._info = {}
-        self.leaking_sensors = []
 
     @classmethod
     def _ignore_check(cls, ignore_set, category, object_name, check_point):
