@@ -984,3 +984,4 @@ xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=2
 sai_pfc_dlr_init_capability=0
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
+sai_lag_default_crc_hash=1
