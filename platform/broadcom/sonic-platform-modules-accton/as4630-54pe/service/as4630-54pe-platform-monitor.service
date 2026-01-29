@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS4630-54PE Platform Monitoring service
-Before=pmon.service
+Before=pmon.service system-health.service
 After=sysinit.target
 DefaultDependencies=no
 
