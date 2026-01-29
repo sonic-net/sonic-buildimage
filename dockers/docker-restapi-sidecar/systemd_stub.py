@@ -32,10 +32,6 @@ def _get_branch_name() -> str:
     3. Official feature branch: [SONiC.]YYYYMMDD.XX -> returns YYYYMM (e.g., 202505)
     4. Private/unmatched: returns "private"
     """
-    import os
-    import re
-    import subprocess
-    
     version = ""
     try:
         # Try reading from sonic_version.yml
