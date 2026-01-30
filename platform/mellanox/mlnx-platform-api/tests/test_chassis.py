@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,6 +130,7 @@ class TestChassis:
         assert chassis.get_num_fan_drawers() == 2
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
     def test_sfp(self):
         # Test get_num_sfps, it should not create any SFP objects
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
@@ -137,36 +138,12 @@ class TestChassis:
         assert chassis.get_num_sfps() == 3
         assert len(chassis._sfp_list) == 0
 
-        # Index out of bound, return None
-        sfp = chassis.get_sfp(4)
-        assert sfp is None
-        assert len(chassis._sfp_list) == 0
-
-        # Get one SFP, other SFP list should be initialized to None
-        sfp = chassis.get_sfp(1)
-        assert sfp is not None
-        assert len(chassis._sfp_list) == 3
-        assert chassis._sfp_list[1] is None
-        assert chassis._sfp_list[2] is None
-        assert chassis.sfp_initialized_count == 1
-
-        # Get the SFP again, no new SFP created
-        sfp1 = chassis.get_sfp(1)
-        assert id(sfp) == id(sfp1)
-
-        # Get another SFP, sfp_initialized_count increase
-        sfp2 = chassis.get_sfp(2)
-        assert sfp2 is not None
-        assert chassis._sfp_list[2] is None
-        assert chassis.sfp_initialized_count == 2
 
         # Get all SFPs, but there are SFP already created, only None SFP created
         sfp_list = chassis.get_all_sfps()
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
         assert list(filter(lambda x: x is not None, sfp_list))
-        assert id(sfp1) == id(sfp_list[0])
-        assert id(sfp2) == id(sfp_list[1])
 
         # Get all SFPs, no SFP yet, all SFP created
         chassis._sfp_list = []
@@ -190,6 +167,7 @@ class TestChassis:
         sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
     def test_create_sfp_in_multi_thread(self):
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
 

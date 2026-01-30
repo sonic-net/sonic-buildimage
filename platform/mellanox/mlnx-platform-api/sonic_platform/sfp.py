@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -323,10 +323,11 @@ class NvidiaSFPCommon(SfpOptoeBase):
         0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
     }
 
-    def __init__(self, sfp_index):
+    def __init__(self, sfp_index, asic_id='asic0'):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
         self.sdk_index = sfp_index
+        self.asic_id = asic_id
 
     @classmethod
     def _get_module_info(self, sdk_index):
@@ -345,7 +346,11 @@ class NvidiaSFPCommon(SfpOptoeBase):
         return oper_state, error_type
 
     def get_fd(self, fd_type):
-        return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+        try:
+            return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+        except FileNotFoundError as e:
+            logger.log_warning(f'Trying to access /sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type} file which does not exist')
+            return None
 
     def get_fd_for_polling_legacy(self):
         """Get polling fds for when module host management is disabled
@@ -394,6 +399,8 @@ class NvidiaSFPCommon(SfpOptoeBase):
         sfp_state = str(sfp_state_bits)
         return sfp_state, error_description
     
+    def get_asic_id(self):
+        return self.asic_id
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
@@ -410,8 +417,8 @@ class SFP(NvidiaSFPCommon):
     # only applicable for module host management
     action_table = None
 
-    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None):
-        super(SFP, self).__init__(sfp_index)
+    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None, asic_id='asic0'):
+        super(SFP, self).__init__(sfp_index, asic_id=asic_id)
         self._sfp_type = sfp_type
 
         if slot_id == 0: # For non-modular chassis
@@ -461,12 +468,17 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-        presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
-        if utils.read_int_from_file(presence_sysfs) != 1:
+
+        try:
+            presence_file =  'hw_present' if self.is_sw_control() else 'present'
+            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+                return False
+            eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
+            return eeprom_raw is not None
+        except Exception as e:
+            logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
             return False
-        eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
-        return eeprom_raw is not None
-    
+
     @classmethod
     def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
         not_ready_list = sfp_list
@@ -481,6 +493,18 @@ class SFP(NvidiaSFPCommon):
         
         for s in not_ready_list:
             logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
+
+    def check_eeprom_ready_if_present(self):
+        """
+        Check if the eeprom is ready for a present SFP
+
+        Returns:
+            bool: False if the SFP is present and the eeprom is not ready, True otherwise
+        """
+        presence_file =  'hw_present' if self.is_sw_control() else 'present'
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+            return True
+        return self._read_eeprom(0, 1, log_on_error=False) is not None
 
     # read eeprom specfic bytes beginning from offset with size as num_bytes
     def read_eeprom(self, offset, num_bytes):
@@ -1662,8 +1686,8 @@ class SFP(NvidiaSFPCommon):
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
-    def __init__(self, sfp_index):
-        super(RJ45Port, self).__init__(sfp_index)
+    def __init__(self, sfp_index, asic_id='asic0'):
+        super(RJ45Port, self).__init__(sfp_index, asic_id=asic_id)
         self.sfp_type = RJ45_TYPE
 
     def get_presence(self):
@@ -1916,8 +1940,8 @@ class RJ45Port(NvidiaSFPCommon):
 class CpoPort(SFP):
     """class derived from SFP, representing CPO ports"""
 
-    def __init__(self, sfp_index):
-        super(CpoPort, self).__init__(sfp_index)
+    def __init__(self, sfp_index, asic_id='asic0'):
+        super(CpoPort, self).__init__(sfp_index, asic_id=asic_id)
         self._sfp_type_str = None
         self.sfp_type = CPO_TYPE
 
