@@ -55,6 +55,9 @@ RUN pip3 install thrift==0.13.0
 # Ragile platform vendors' sonic_platform packages import these Python libraries
 RUN pip3 install requests
 
+# Nexthop platform vendors' sonic_platform packages import these Python libraries
+RUN pip3 install python-dateutil
+
 # We install the libpci module in order to be able to do PCI transactions
 RUN pip3 install libpci
 

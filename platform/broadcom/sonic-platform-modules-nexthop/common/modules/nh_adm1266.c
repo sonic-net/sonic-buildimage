@@ -27,12 +27,31 @@
  * The Nexthop driver uses the following command sequence to clear blackbox entries:
  *   - Command: [0xDE, 0xFE, 0x00] sent via I2C transaction
  * The userspace access is provided via the same nvmem sysfs interface.
- *   - Usage: echo "anything" > /sys/bus/nvmem/devices/7-00410/nvmem
+ *   - Usage: echo "anything" > /sys/bus/nvmem/devices/<bus>-<device><cell>/nvmem
+ * 
+ * RTC setting:
+ * ------------
+ * The ADM1266 RTC is configured to count time from a custom epoch (2024-01-01 00:00:00 UTC).
+ * This is necessary because the ADM1266 RTC only uses 4 bytes to store seconds, which
+ * rollover every ~136 years. Using a custom epoch maximizes the usable time range.
  *
- * Lastly, the Nexthop driver enables 'cyclic' recording in the configuration register
- * of the blackbox. This is useful when the DPM log buffer is full as new logs continue
- * to be recorded. In the userspace, we need to save this setting to flash to make
- * the changes permanent.
+ * The custom epoch is hardcoded in this driver (ADM1266_CUSTOM_EPOCH_OFFSET) and
+ * is automatically applied during the device probe.
+ *
+ * For flexibility, userspace can override the epoch offset via sysfs:
+ *   - Usage: echo "<epoch_offset_sec>" > /sys/bus/i2c/devices/<bus>-<device>/rtc_epoch_offset
+ *   - <epoch_offset_sec> must be a non-negative integer seconds since 1970.
+ *   - A daemon can periodically write to this to sync RTC with the system time to avoid
+ *     clocks' drift.
+ * If the ADM1266 is power cycled, the RTC resets to zero and will be reconfigured on next
+ * device probe.
+ *
+ * Extra sysfs attributes:
+ * ------------------------
+ * - rtc_epoch_offset: Read-write attribute to get/set the epoch offset (since 1970) in seconds.
+ * - powerup_counter: Read-only attribute to get the current powerup counter.
+ * - firmware_revision: Read-only attribute to get the firmware revision.
+ * - mfr_revision: Read-only attribute to get the manufacturer revision.
  */
 
 #include <linux/bitfield.h>
@@ -51,12 +70,21 @@
 #include <linux/timekeeping.h>
 #include <linux/version.h>
 
+/*
+ * Nexthop's custom epoch: 2024-01-01 00:00:00 UTC
+ * This is represented as the elapsed seconds since the UNIX epoch (1970-01-01 00:00:00 UTC).
+ */
+#define ADM1266_NH_CUSTOM_EPOCH_OFFSET 1704067200ULL
+
+#define ADM1266_MFR_REVISION   0x9B
+#define ADM1266_IC_DEVICE_REV  0xAE
 #define ADM1266_BLACKBOX_CONFIG	0xD3
 #define ADM1266_PDIO_CONFIG	0xD4
 #define ADM1266_READ_STATE	0xD9
 #define ADM1266_READ_BLACKBOX	0xDE
 #define ADM1266_SET_RTC		0xDF
 #define ADM1266_GPIO_CONFIG	0xE1
+#define ADM1266_POWERUP_COUNTER 0xE4
 #define ADM1266_BLACKBOX_INFO	0xE6
 #define ADM1266_PDIO_STATUS	0xE9
 #define ADM1266_GPIO_STATUS	0xEA
@@ -76,7 +104,7 @@
 
 #define ADM1266_BLACKBOX_OFFSET		0
 #define ADM1266_BLACKBOX_SIZE		64
-#define ADM1266_BLACKBOX_MAX_RECORDS    64
+#define ADM1266_BLACKBOX_MAX_RECORDS	32
 
 #define ADM1266_PMBUS_BLOCK_MAX		255
 
@@ -92,6 +120,7 @@ struct nh_adm1266_data {
 	struct mutex buf_mutex;
 	u8 write_buf[ADM1266_PMBUS_BLOCK_MAX + 1] ____cacheline_aligned;
 	u8 read_buf[ADM1266_PMBUS_BLOCK_MAX + 1] ____cacheline_aligned;
+	u64 rtc_epoch_offset;  // User-provided offset from the UNIX epoch (Jan 1st, 1970) in seconds.
 };
 
 static const struct nvmem_cell_info nh_adm1266_nvmem_cells[] = {
@@ -376,96 +405,115 @@ static void nh_adm1266_init_debugfs(struct nh_adm1266_data *data)
 				    nh_adm1266_state_read);
 }
 
-static int nh_adm1266_nvmem_read_blackbox(struct nh_adm1266_data *data, u8 *read_buff)
+/*
+ * Performs an atomic write-then-read transaction, by bundling
+ * a write of the PMBus command (with optional write data) and
+ * a subsequent read of the response data, into a single I2C transaction.
+ *
+ * This is Nexthop-specific change, which works for blackbox reading. The original
+ * driver used `nh_adm1266_pmbus_block_xfer()`, which was not working.
+ */
+static int nh_adm1266_i2c_atomic_write_then_read(
+	struct nh_adm1266_data *data,
+	u8 cmd,
+	u16 w_len,
+	u8 *w_data,
+	u16 r_len,
+	u8 *r_data)
 {
-	int record_count;
-	u8 index;
-	u8 buf[32];
+	u8 response_len;
 	int ret;
-	struct i2c_msg msgs[2];
-	u8 write_buf[3];
+	struct i2c_msg msgs[2] = {
+		{
+			.addr = data->client->addr,
+			.flags = 0,
+			.buf = data->write_buf,
+			.len = w_len ? w_len + 2 : 1,
+		},
+		{
+			.addr = data->client->addr,
+			.flags = I2C_M_RD,
+			.buf = data->read_buf,
+			.len = r_len + 1,
+		}
+	};
 
-	/*
-	 * Step 1: Read blackbox info to get record count
-	 * Reference: i2c_block_write_block_read(addr, 1, [0xE6], 4, buf)
-     	 */
-	write_buf[0] = ADM1266_BLACKBOX_INFO;
+	if (msgs[0].len > sizeof(data->write_buf) || msgs[1].len > sizeof(data->read_buf))
+		return -EMSGSIZE;
 
-	msgs[0].addr = data->client->addr;
-	msgs[0].flags = 0;
-	msgs[0].len = 1;
-	msgs[0].buf = write_buf;
+	mutex_lock(&data->buf_mutex);
 
-	msgs[1].addr = data->client->addr;
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].len = 5;
-	msgs[1].buf = buf;
+	// Prepare Write message with command and optional write data.
+	msgs[0].buf[0] = cmd;
+	if (w_len > 0) {
+		msgs[0].buf[1] = w_len;
+		memcpy(&msgs[0].buf[2], w_data, w_len);
+	}
 
+	// Send messages.
 	ret = i2c_transfer(data->client->adapter, msgs, 2);
 	if (ret != 2) {
-		dev_err(&data->client->dev, "Failed to read blackbox info: %d",
-			ret);
+		mutex_unlock(&data->buf_mutex);
 		return ret < 0 ? ret : -EIO;
 	}
 
-	/* buf[0] is length, must be 0x04 per spec */
-	if (buf[0] != 0x04) {
-		dev_warn(&data->client->dev,
-			 "Unexpected blackbox info len: 0x%02x", buf[0]);
-		return -1;
+	// Verify response length.
+	response_len = msgs[1].buf[0];
+	if (response_len != r_len) {
+		mutex_unlock(&data->buf_mutex);
+		return -EIO;
 	}
 
-	index = buf[3];
-	record_count = buf[4];
+	// Return the response data via the output param.
+	memcpy(r_data, &msgs[1].buf[1], response_len);
 
-	for (int count = 0; count < record_count; count++) {
-		u8 r_data[ADM1266_BLACKBOX_SIZE + 1];
+	mutex_unlock(&data->buf_mutex);
 
-		write_buf[0] = ADM1266_READ_BLACKBOX;
-		write_buf[1] = 0x01;
-		write_buf[2] = index;
+	return 0;
+}
 
-		msgs[0].addr = data->client->addr;
-		msgs[0].flags = 0;
-		msgs[0].len = 3;
-		msgs[0].buf = write_buf;
 
-		msgs[1].addr = data->client->addr;
-		msgs[1].flags = I2C_M_RD;
-		msgs[1].len = sizeof(r_data);
-		msgs[1].buf = r_data;
+static int nh_adm1266_nvmem_read_blackbox(struct nh_adm1266_data *data, u8 *read_buff)
+{
+	u8 blackbox_info_buf[4];
+	u8 first_index;
+	u8 latest_index;
+	u8 record_count;
+	int ret;
+	int i;
 
-		ret = i2c_transfer(data->client->adapter, msgs, 2);
-		if (ret != 2) {
-			dev_err(&data->client->dev,
-				"Failed to read record %d: %d", index, ret);
-			return ret < 0 ? ret : -EIO;
+	// Step 1: Read blackbox info.
+	ret = nh_adm1266_i2c_atomic_write_then_read(
+		data,
+		ADM1266_BLACKBOX_INFO,
+		/*w_len=*/0,
+		/*w_data=*/NULL,
+		/*r_len=*/sizeof(blackbox_info_buf),
+		/*r_data=*/blackbox_info_buf);
+	if (ret) {
+		dev_err(&data->client->dev, "Failed to read BLACKBOX_INFORMATION: ret=%d", ret);
+		return ret;
+	}
+	latest_index = blackbox_info_buf[2];
+	record_count = blackbox_info_buf[3];
+	first_index = (latest_index - record_count + 1 + ADM1266_BLACKBOX_MAX_RECORDS) % ADM1266_BLACKBOX_MAX_RECORDS;
+
+	// Step 2: Iterate over and read all blackbox records.
+	for (i = 0; i < record_count; i++) {
+		u8 index = (first_index + i) % ADM1266_BLACKBOX_MAX_RECORDS;
+
+		ret = nh_adm1266_i2c_atomic_write_then_read(
+			data,
+			ADM1266_READ_BLACKBOX,
+			/*w_len=*/1,
+			/*w_data=*/&index,
+			/*r_len=*/ADM1266_BLACKBOX_SIZE,
+			/*r_data=*/read_buff);
+		if (ret) {
+			dev_err(&data->client->dev, "Failed to read blackbox record index=%d: ret=%d", index, ret);
+			return ret;
 		}
-
-		if (r_data[0] != ADM1266_BLACKBOX_SIZE) {
-			dev_err(&data->client->dev,
-				"Invalid data length for blackbox record index=%d, len=%d", index, r_data[0]);
-		} else {
-			/* skip the first byte which is the length */
-			memcpy(read_buff, r_data + 1, ADM1266_BLACKBOX_SIZE);
-			/* Clear unused/reserved bits */
-			u8 vpx_hi_reserved = 0xE0;
-
-			read_buff[11] &= ~vpx_hi_reserved;
-			read_buff[13] &= ~vpx_hi_reserved;
-
-			u8 gpio_low_reserved = 0x38;
-			u8 gpio_hi_reserved = 0xf0;
-
-			read_buff[14] &= ~gpio_low_reserved;
-			read_buff[15] &= ~gpio_hi_reserved;
-
-			read_buff[16] &= ~gpio_low_reserved;
-			read_buff[17] &= ~gpio_hi_reserved;
-
-			read_buff += ADM1266_BLACKBOX_SIZE;
-		}
-		index = (index - 1) & (ADM1266_BLACKBOX_MAX_RECORDS - 1);
+		read_buff += ADM1266_BLACKBOX_SIZE;
 	}
 
 	return 0;
@@ -557,22 +605,164 @@ static int nh_adm1266_config_nvmem(struct nh_adm1266_data *data)
 	return 0;
 }
 
-static int nh_adm1266_set_rtc(struct nh_adm1266_data *data)
+static int nh_adm1266_set_rtc(struct nh_adm1266_data *data, u64 sec, u64 nsec)
 {
-	time64_t kt;
 	char write_buf[6];
+	u16 fraction;
 	int i;
-
-	kt = ktime_get_seconds();
 
 	memset(write_buf, 0, sizeof(write_buf));
 
-	for (i = 0; i < 4; i++)
-		write_buf[2 + i] = (kt >> (i * 8)) & 0xFF;
+	// Transform nanoseconds to 16-bit data (LSB of ADM1266 timestamp represents 1/2^16 second).
+	fraction = (u16)((nsec * 65536) / 1000000000);
 
-	return i2c_smbus_write_block_data(data->client, ADM1266_SET_RTC, sizeof(write_buf),
-					  write_buf);
+	if (sec > 0xFFFFFFFF) {
+		dev_warn(&data->client->dev,
+				 "sec=%llu is too large. ADM1266 uses 32-bit to store secs and will report incorrect timestamps.\n",
+				 sec);
+	}
+
+	for (i = 0; i < 4; i++)
+		write_buf[2 + i] = (sec >> (i * 8)) & 0xFF;
+	for (i = 0; i < 2; i++)
+		write_buf[i] = (fraction >> (i * 8)) & 0xFF;
+
+	return i2c_smbus_write_block_data(data->client, ADM1266_SET_RTC, sizeof(write_buf), write_buf);
 }
+
+static int nh_adm1266_set_rtc_relative_to_epoch(struct nh_adm1266_data *data, u64 epoch_offset_sec)
+{
+	struct timespec64 now;
+	u64 rtc_sec;
+	int ret;
+
+	ktime_get_real_ts64(&now);
+
+	if (epoch_offset_sec > (u64)now.tv_sec) {
+		dev_warn(&data->client->dev,
+				 "User-provided epoch_offset_sec=%llu is in the future.\n",
+				 epoch_offset_sec);
+		return -EINVAL;
+	}
+	rtc_sec = (u64)now.tv_sec - epoch_offset_sec;
+
+	ret = nh_adm1266_set_rtc(data, rtc_sec, now.tv_nsec);
+	if (ret) {
+		dev_err(&data->client->dev, "Failed to set RTC: ret=%d\n", ret);
+		return ret;
+	}
+
+	data->rtc_epoch_offset = epoch_offset_sec;
+	return 0;
+}
+
+/*
+ * Returns a pointer to the nh_adm1266_data struct, given a device.
+ *
+ * nh_pmbus_do_probe() set i2c clientdata with pmbus_driver_info*.
+ * Since pmbus_driver_info is stored in nh_adm1266_data, this function
+ * uses the container_of() to get the nh_adm1266_data*.
+ */
+static struct nh_adm1266_data *to_nh_adm1266_data(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	const struct pmbus_driver_info *info = nh_pmbus_get_driver_info(client);
+	return container_of(info, struct nh_adm1266_data, info);
+}
+
+static ssize_t rtc_epoch_offset_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct nh_adm1266_data *data = to_nh_adm1266_data(dev);
+	u64 epoch_offset_sec;
+	int ret;
+
+	ret = kstrtoull(buf, 10, &epoch_offset_sec);
+	if (ret) {
+		dev_warn(dev, "Failed to convert '%s' to u64, ret=%d\n", buf, ret);
+		return -EINVAL;
+	}
+
+	ret = nh_adm1266_set_rtc_relative_to_epoch(data, epoch_offset_sec);
+	if (ret)
+		return ret;
+
+	return count;
+}
+
+static ssize_t rtc_epoch_offset_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct nh_adm1266_data *data = to_nh_adm1266_data(dev);
+	return sprintf(buf, "%llu\n", data->rtc_epoch_offset);
+}
+
+static DEVICE_ATTR_RW(rtc_epoch_offset);
+
+static ssize_t powerup_counter_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	struct nh_adm1266_data *data = to_nh_adm1266_data(dev);
+	u8 read_buf[3];
+	int ret;
+	u16 powerup_counter;
+
+	ret = i2c_smbus_read_i2c_block_data(data->client, ADM1266_POWERUP_COUNTER, 3, read_buf);
+	if (ret < 0)
+		return ret;
+
+	if (ret != 3)
+		return -EIO;
+
+	// Byte 0: Length of the powerup counter data.
+	// Byte [2:1]: Powerup counter value (in little-endian format).
+	powerup_counter = read_buf[1] | (read_buf[2] << 8);
+	return sprintf(buf, "%u\n", powerup_counter);
+}
+
+static DEVICE_ATTR_RO(powerup_counter);
+
+static ssize_t firmware_revision_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	struct nh_adm1266_data *data = to_nh_adm1266_data(dev);
+	u8 read_buf[9];
+	int ret;
+
+	ret = i2c_smbus_read_i2c_block_data(data->client, ADM1266_IC_DEVICE_REV, 9, read_buf);
+	if (ret < 0)
+		return ret;
+
+	if (ret != 9)
+		return -EIO;
+
+	// Byte 0: Length of the IC_DEVICE_REV data.
+	// Byte [3:1]: Firmware revision in the format of "major.minor.patch".
+	// Byte [6:4]: Bootloader revision in the format of "major.minor.patch".
+	// Byte [8:7]: Chip revision in the format of 2 ASCII characters.
+	return sprintf(buf, "%d.%d.%d\n", read_buf[1], read_buf[2], read_buf[3]);
+}
+
+static DEVICE_ATTR_RO(firmware_revision);
+
+static ssize_t mfr_revision_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	struct nh_adm1266_data *data = to_nh_adm1266_data(dev);
+
+	int ret;
+	u8 mfr_revision_buf[8];
+	u8 mfr_revision_length_to_read = sizeof(mfr_revision_buf);
+
+	ret = nh_adm1266_i2c_atomic_write_then_read(
+		data,
+		ADM1266_MFR_REVISION,
+		/*w_len=*/1,
+		/*w_data=*/&mfr_revision_length_to_read,
+		/*r_len=*/mfr_revision_length_to_read,
+		/*r_data=*/mfr_revision_buf);
+	if (ret) {
+		dev_err(&data->client->dev, "Failed to read MFR_REVISION: ret=%d", ret);
+		return ret;
+	}
+
+	// Print up to 8 ASCII characters or up to the first null character, whichever comes first.
+	return sprintf(buf, "%.*s\n", mfr_revision_length_to_read, mfr_revision_buf);
+}
+
+static DEVICE_ATTR_RO(mfr_revision);
 
 static int nh_adm1266_probe(struct i2c_client *client)
 {
@@ -597,7 +787,7 @@ static int nh_adm1266_probe(struct i2c_client *client)
 	if (ret < 0)
 		return ret;
 
-	ret = nh_adm1266_set_rtc(data);
+	ret = nh_adm1266_set_rtc_relative_to_epoch(data, ADM1266_NH_CUSTOM_EPOCH_OFFSET);
 	if (ret < 0)
 		return ret;
 
@@ -609,9 +799,38 @@ static int nh_adm1266_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+	ret = device_create_file(&client->dev, &dev_attr_rtc_epoch_offset);
+	if (ret) {
+		dev_err(&client->dev, "Failed to create rtc_epoch_offset attribute: ret=%d\n", ret);
+		return ret;
+	}
+	ret = device_create_file(&client->dev, &dev_attr_powerup_counter);
+	if (ret) {
+		dev_err(&client->dev, "Failed to create powerup_counter attribute: ret=%d\n", ret);
+		return ret;
+	}
+	ret = device_create_file(&client->dev, &dev_attr_firmware_revision);
+	if (ret) {
+		dev_err(&client->dev, "Failed to create firmware_revision attribute: ret=%d\n", ret);
+		return ret;
+	}
+	ret = device_create_file(&client->dev, &dev_attr_mfr_revision);
+	if (ret) {
+		dev_err(&client->dev, "Failed to create mfr_revision attribute: ret=%d\n", ret);
+		return ret;
+	}
+
 	nh_adm1266_init_debugfs(data);
 
 	return 0;
+}
+
+static void nh_adm1266_remove(struct i2c_client *client)
+{
+	device_remove_file(&client->dev, &dev_attr_mfr_revision);
+	device_remove_file(&client->dev, &dev_attr_firmware_revision);
+	device_remove_file(&client->dev, &dev_attr_rtc_epoch_offset);
+	device_remove_file(&client->dev, &dev_attr_powerup_counter);
 }
 
 static const struct of_device_id nh_adm1266_of_match[] = {
@@ -636,6 +855,7 @@ static struct i2c_driver nh_adm1266_driver = {
 #else
 	.probe = nh_adm1266_probe,
 #endif
+	.remove = nh_adm1266_remove,
 	.id_table = nh_adm1266_id,
 };
 
