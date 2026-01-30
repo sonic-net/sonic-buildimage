@@ -2900,6 +2900,9 @@
         "CONSOLE_SWITCH": {
             "console_mgmt": {
                 "enabled": "yes"
+            },
+            "controlled_device": {
+                "enabled": "yes"
             }
         },
 	"STATIC_ROUTE": {
