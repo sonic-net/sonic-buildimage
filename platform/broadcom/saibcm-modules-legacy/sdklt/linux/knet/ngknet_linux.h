@@ -256,6 +256,7 @@ sal_memcpy(void *dest, const void *src, size_t cnt)
 static inline char *
 sal_strncpy(char *dest, const char *src, size_t cnt)
 {
+    /* nosemgrep: c.lang.security.insecure-use-string-copy-fn.insecure-use-string-copy-fn */
     return strncpy(dest, src, cnt);
 }
 
