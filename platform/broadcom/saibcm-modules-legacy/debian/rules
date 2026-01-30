@@ -89,15 +89,15 @@ build-arch-stamp:
 
 	# create links
 	cd /; sudo mkdir -p /lib/modules/$(KVER_ARCH)
-	cd /; sudo rm -f /lib/modules/$(KVER_ARCH)/build
-	cd /; sudo rm -f /lib/modules/$(KVER_ARCH)/source
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_COMMON)/ /lib/modules/$(KVER_ARCH)/source
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_ARCH)/ /lib/modules/$(KVER_ARCH)/build
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_ARCH)/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/include/generated
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/include/generated
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/module.lds /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/module.lds
-	cd /; sudo ln -sf /usr/src/linux-headers-$(KVER_ARCH)/include/config/ /usr/src/linux-headers-$(KVER_COMMON)/include/config
-	cd /; sudo cp -f /usr/src/linux-headers-$(KVER_ARCH)/Module.symvers /usr/src/linux-headers-$(KVER_COMMON)/Module.symvers
+	cd /; sudo rm /lib/modules/$(KVER_ARCH)/build
+	cd /; sudo rm /lib/modules/$(KVER_ARCH)/source
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_COMMON)/ /lib/modules/$(KVER_ARCH)/source
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/ /lib/modules/$(KVER_ARCH)/build
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/include/generated
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/include/generated
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/module.lds /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/module.lds
+	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/config/ /usr/src/linux-headers-$(KVER_COMMON)/include/config
+	cd /; sudo cp /usr/src/linux-headers-$(KVER_ARCH)/Module.symvers /usr/src/linux-headers-$(KVER_COMMON)/Module.symvers
 
 	# Add here command to compile/build the package.
 	SDK=$(realpath .) LINUX_UAPI_SPLIT=1 DEBIAN_LINUX_HEADER=1 BUILD_KNET_CB=1 \
