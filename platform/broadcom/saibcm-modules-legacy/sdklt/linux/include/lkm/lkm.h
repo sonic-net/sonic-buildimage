@@ -177,6 +177,7 @@ pci_irq_vector(struct pci_dev *dev, unsigned int nr)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+/* nosemgrep: c.lang.security.insecure-use-string-copy-fn.insecure-use-string-copy-fn */
 #define strscpy strlcpy
 #endif
 
