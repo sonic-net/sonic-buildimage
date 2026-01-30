@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use serde::Serialize;
 
-#[derive(serde::Serialize, Clone)]
+#[derive(serde::Serialize)]
 struct HealthStatus {
     restapi_status: String,
 }
@@ -49,13 +49,13 @@ fn main() {
                     let restapi_result = check_restapi_status();
 
                     let status = HealthStatus {
-                        restapi_status: restapi_result.clone(),
+                        restapi_status: restapi_result,
                     };
 
                     // Build a JSON object
                     let json_body = serde_json::to_string(&status).unwrap();
 
-                    let (status_line, content_length) = if restapi_result == "OK" {
+                    let (status_line, content_length) = if status.restapi_status == "OK" {
                         ("HTTP/1.1 200 OK", json_body.len())
                     } else {
                         ("HTTP/1.1 500 Internal Server Error", json_body.len())
