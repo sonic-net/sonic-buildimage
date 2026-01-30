@@ -39,7 +39,7 @@ fn main() {
                     println!("Received request: {}", request_line.trim_end());
 
                     if !request_line.starts_with("GET /") {
-                        let response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
+                        let response = "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                         if let Err(e) = stream.write_all(response.as_bytes()) {
                             eprintln!("Failed to write response: {}", e);
                         }
