@@ -1,11 +1,21 @@
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
+use std::time::Duration;
+
+use serde::Serialize;
+
+#[derive(serde::Serialize, Clone)]
+struct HealthStatus {
+    restapi_status: String,
+}
 
 // Check restapi program status
 fn check_restapi_status() -> String {
     let restapi_https_port = 8081;
     let addr = format!("127.0.0.1:{}", restapi_https_port);
-    match TcpStream::connect(&addr) {
+    let timeout = Duration::from_secs(5);
+
+    match TcpStream::connect_timeout(&addr.parse().unwrap(), timeout) {
         Ok(_) => "OK".to_string(),
         Err(e) => format!("ERROR: {}", e),
     }
@@ -22,38 +32,43 @@ fn main() {
     for stream_result in listener.incoming() {
         match stream_result {
             Ok(mut stream) => {
-                let mut buffer = [0_u8; 512];
-                if let Ok(bytes_read) = stream.read(&mut buffer) {
-                    let req_str = String::from_utf8_lossy(&buffer[..bytes_read]);
-                    println!("Received request: {}", req_str);
-                }
+                let mut reader = BufReader::new(&stream);
+                let mut request_line = String::new();
 
-                let restapi_result = check_restapi_status();
+                if let Ok(_) = reader.read_line(&mut request_line) {
+                    println!("Received request: {}", request_line.trim_end());
 
-                // Build a JSON object
-                let json_body = format!(
-                    r#"{{"restapi_status":"{}"}}"#,
-                    restapi_result
-                );
+                    if !request_line.starts_with("GET /") {
+                        let response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
+                        if let Err(e) = stream.write_all(response.as_bytes()) {
+                            eprintln!("Failed to write response: {}", e);
+                        }
+                        continue;
+                    }
 
-                // Determine overall status
-                let all_results = vec![
-                    &restapi_result
-                ];
-                let all_passed = all_results.iter().all(|r| r.starts_with("OK"));
+                    let restapi_result = check_restapi_status();
 
-                let (status_line, content_length) = if all_passed {
-                    ("HTTP/1.1 200 OK", json_body.len())
-                } else {
-                    ("HTTP/1.1 500 Internal Server Error", json_body.len())
-                };
+                    let status = HealthStatus {
+                        restapi_status: restapi_result.clone(),
+                    };
 
-                let response = format!(
-                    "{status_line}\r\nContent-Type: application/json\r\nContent-Length: {content_length}\r\n\r\n{json_body}"
-                );
+                    // Build a JSON object
+                    let json_body = serde_json::to_string(&status).unwrap();
 
-                if let Err(e) = stream.write_all(response.as_bytes()) {
-                    eprintln!("Failed to write response: {}", e);
+                    let (status_line, content_length) = if restapi_result == "OK" {
+                        ("HTTP/1.1 200 OK", json_body.len())
+                    } else {
+                        ("HTTP/1.1 500 Internal Server Error", json_body.len())
+                    };
+
+                    let response = format!(
+                        "{status_line}\r\nContent-Type: application/json\r\nContent-Length: {content_length}\
+                        \r\nConnection: close\r\n\r\n{json_body}"
+                    );
+
+                    if let Err(e) = stream.write_all(response.as_bytes()) {
+                        eprintln!("Failed to write response: {}", e);
+                    }
                 }
             }
             Err(e) => {

@@ -23,7 +23,5 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_RESTAPI_WATCHDOG_DBG)
 endif
 
 $(DOCKER_RESTAPI_WATCHDOG)_CONTAINER_NAME = restapi_watchdog
-$(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -t --pid=host
-$(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
-$(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -t
 $(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
