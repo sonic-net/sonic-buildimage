@@ -36,8 +36,8 @@ include $(PLATFORM_PATH)/mlnx-ssd-fw-update.mk
 include $(PLATFORM_PATH)/iproute2.mk
 include $(PLATFORM_PATH)/install-pending-fw.mk
 include $(PLATFORM_PATH)/integration-scripts.mk
-include $(PLATFORM_PATH)/component-versions.mk
 include $(PLATFORM_PATH)/rshim.mk
+include $(PLATFORM_PATH)/component-versions.mk
 include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 include $(PLATFORM_PATH)/fw-manager/fw-manager.mk
 
