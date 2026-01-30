@@ -1,10 +1,11 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
 [Unit]
 Description={{docker_container_name}} service
-Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
+Requires=database{% if use_instance_deps %}@%i{% endif %}.service config-setup.service
 ConditionPathExists=!/usr/share/sonic/hwsku/gearbox_config.json
-After=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
+After=database{% if use_instance_deps %}@%i{% endif %}.service config-setup.service
 After=interfaces-config.service
-After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=swss{% if use_instance_deps %}@%i{% endif %}.service
 BindsTo=sonic.target
 After=sonic.target
 
