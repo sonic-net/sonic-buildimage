@@ -7619,15 +7619,15 @@ bkn_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *drvinfo)
         return;
     }
 
-    strlcpy(drvinfo->driver, "bcm-knet", sizeof(drvinfo->driver));
+    strscpy(drvinfo->driver, "bcm-knet", sizeof(drvinfo->driver));
     snprintf(drvinfo->version, sizeof(drvinfo->version), "%d", KCOM_VERSION);
-    strlcpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
-    strlcpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
+    strscpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
+    strscpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
 static int
-bkn_get_ts_info(struct net_device *dev, struct ethtool_ts_info *info)
+bkn_get_ts_info(struct net_device *dev, struct kernel_ethtool_ts_info *info)
 {
     bkn_priv_t *priv;
     bkn_switch_info_t *sinfo;
@@ -11099,7 +11099,7 @@ bkn_filter_cb_register_by_name(knet_filter_cb_f filter_cb, char *filter_name)
         return -1;
     }
     fcb->cb = filter_cb;
-    strlcpy(fcb->desc, filter_name, sizeof(fcb->desc));
+    strscpy(fcb->desc, filter_name, sizeof(fcb->desc));
     list_add_tail(&fcb->list, &filter_cb_list);
 
     /* Check if any existing filter matches the registered name */

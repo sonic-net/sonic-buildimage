@@ -858,8 +858,13 @@ iproc_cmicd_probe(struct platform_device *pldev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int
 iproc_cmicd_remove(struct platform_device *pldev)
+#else
+static void
+iproc_cmicd_remove(struct platform_device *pldev)
+#endif
 {
     int i;
     uint32 mask = BDE_SWITCH_DEV_TYPE | BDE_AXI_DEV_TYPE;
@@ -880,7 +885,9 @@ iproc_cmicd_remove(struct platform_device *pldev)
         }
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 #ifdef CONFIG_OF
 static const struct of_device_id iproc_cmicd_of_match[] = {
