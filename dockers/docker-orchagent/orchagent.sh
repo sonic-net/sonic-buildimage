@@ -97,21 +97,44 @@ else
 fi
 
 # Enable ZMQ
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
-    mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
-    if [[ $midplane_mgmt_state == "UP" ]]; then
-        # Enable ZMQ with eth0-midplane interface name
-        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane"
-    elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
-        # If eth0-midplane interface does not up, enable ZMQ with eth0 address
-        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}"
-    else
-        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
-    fi
+LOCALHOST_SUBTYPE=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype" 2>/dev/null)
+
+get_ipv4_local()
+{
+    local ifname="$1"
+    ip -json -4 addr show "${ifname}" 2>/dev/null | jq -r '.[0].addr_info[0].local // empty'
+}
+
+get_operstate()
+{
+    local ifname="$1"
+    ip -json -4 addr show "${ifname}" 2>/dev/null | jq -r '.[0].operstate // empty'
+}
+
+pick_bind_ip_from_if()
+{
+    local ifname="$1"
+    ip link show "${ifname}" &>/dev/null || return 1
+    [[ "$(get_operstate "${ifname}")" == "UP" ]] || return 1
+
+    local ip4
+    ip4="$(get_ipv4_local "${ifname}")"
+    [[ -n "${ip4}" ]] || return 1
+
+    echo "${ip4}"
+    return 0
+}
+
+bind_ip=""
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"dpu" ]]; then
+    bind_ip="$(pick_bind_ip_from_if eth0-midplane)"
+elif [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
+    bind_ip="$(pick_bind_ip_from_if bridge-midplane)"
+fi
+
+if [[ -n "${bind_ip}" ]]; then
+    ORCHAGENT_ARGS+=" -q tcp://${bind_ip}"
 else
-    # For other platforms, use the default ZMQ address
     ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
 fi
 
