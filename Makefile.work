@@ -262,7 +262,7 @@ SLAVE_TAG = $(shell \
 		 $(SLAVE_DIR)/Dockerfile \
 		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-	&& echo $(USER)/$(PWD)/$(CONFIGURED_PLATFORM)) \
+	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
