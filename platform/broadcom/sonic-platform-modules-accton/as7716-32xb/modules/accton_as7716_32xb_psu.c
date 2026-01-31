@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define MAX_MODEL_NAME          16
 #define DC12V_FAN_DIR_OFFSET    0x34
@@ -166,11 +167,18 @@ static const struct attribute_group as7716_32xb_psu_group = {
     .attrs = as7716_32xb_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7716_32xb_psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7716_32xb_psu_probe(struct i2c_client *client)
+#endif
 {
     struct as7716_32xb_psu_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     data = kzalloc(sizeof(struct as7716_32xb_psu_data), GFP_KERNEL);
     if (!data) {
