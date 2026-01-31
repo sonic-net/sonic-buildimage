@@ -1031,16 +1031,40 @@ class PddfApi():
         return str(value)
 
     def raw_ipmi_get_request(self, bmc_attr):
-        value = 'N/A'
+        value = None
         cmd = bmc_attr['bmc_cmd'] + " 2>/dev/null"
         if bmc_attr['type'] == 'raw':
             try:
                 value = subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+
+                if 'offset' in bmc_attr.keys():
+                    offset = int(bmc_attr['offset'])
+                    #Assuming value is a string of bytes seperated by space
+                    value = value[offset * 3 : (offset * 3) + 2]
+
+                value = int(value, 16)
+
+                if 'multiplier' in bmc_attr.keys():
+                    mult = float(bmc_attr['multiplier'])
+                    value = int(value * mult)
+
+                if 'decrementor' in bmc_attr.keys():
+                    decr = float(bmc_attr['decrementor'])
+                    value = int(value - decr)
+
+                if 'mask' in bmc_attr.keys():
+                    mask = int(bmc_attr['mask'], 16)
+                    value = value & mask
+
+
             except Exception as e:
                 pass
 
-            if value != 'N/A':
-                value = str(int(value, 16))
+            if value != None:
+                value = str(value)
+            else:
+                value = 'N/A'
+
             return value
 
         if bmc_attr['type'] == 'mask':
