@@ -338,7 +338,7 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
-            }
+			}
 
             container WRED_ECN_PORT {
                 /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP */
