@@ -314,7 +314,8 @@ class BgpdClientMgr(threading.Thread):
             self.proxy_running = False
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
-                sock.connect(self.PROXY_SERVER_ADDR)
+                if os.path.exists(self.PROXY_SERVER_ADDR):
+                    sock.connect(self.PROXY_SERVER_ADDR)
             finally:
                 sock.close()
             self.join()
