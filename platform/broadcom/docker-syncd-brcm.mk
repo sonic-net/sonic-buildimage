@@ -17,7 +17,6 @@ $(DOCKER_SYNCD_BASE)_VERSION = 1.0.0
 $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 $(DOCKER_SYNCD_BASE)_MACHINE = broadcom
 
-$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /usr/share/sonic/device/x86_64-broadcom_common:/usr/share/sonic/device/x86_64-broadcom_common:ro
 
 $(DOCKER_SYNCD_BASE)_BASE_IMAGE_FILES += bcmcmd:/usr/bin/bcmcmd
