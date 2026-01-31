@@ -214,8 +214,8 @@ request_dpu_midplane_ip()
         echo "dhclient -r $INTERFACE"
         /usr/sbin/dhclient -r "$INTERFACE"
         sleep 1
-        echo "dhclient $INTERFACE"
-        /usr/sbin/dhclient "$INTERFACE"
+        echo "timeout 5s dhclient $INTERFACE"
+        timeout 5s /usr/sbin/dhclient "$INTERFACE"
     fi
 }
 
