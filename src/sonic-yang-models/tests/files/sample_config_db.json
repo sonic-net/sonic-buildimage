@@ -414,7 +414,8 @@
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
-                "zebra_nexthop": "disabled"
+                "zebra_nexthop": "disabled",
+                "frr_mgmt_framework_cfg_template_restore": "true"
             }
         },
         "VLAN": {
@@ -2598,7 +2599,6 @@
         "MUX_CABLE": {
             "Ethernet4": {
                 "cable_type": "active-active",
-                "prober_type": "software",
                 "server_ipv4": "192.168.0.2/32",
                 "server_ipv6": "fc02:1000::30/128",
                 "soc_ipv4": "192.168.0.3/32",
