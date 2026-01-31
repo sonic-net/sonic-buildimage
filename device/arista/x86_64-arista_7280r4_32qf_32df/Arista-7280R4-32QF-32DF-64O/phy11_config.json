@@ -1,0 +1,59 @@
+{
+  "lanes": [
+    {
+      "index": 200,
+      "local_lane_id": 0,
+      "system_side": true,
+      "tx_polarity": 0,
+      "rx_polarity": 0,
+      "line_tx_lanemap": 0,
+      "line_rx_lanemap": 0,
+      "line_to_system_lanemap": 0,
+      "mdio_addr": ""
+    }
+  ],
+  "ports": [
+    {
+      "index": 51,
+      "mdio_addr": "",
+      "system_speed": 100000,
+      "system_fec": "rs",
+      "system_auto_neg": false,
+      "system_loopback": "none",
+      "system_training": false,
+      "line_speed": 50000,
+      "line_fec": "rs",
+      "line_auto_neg": false,
+      "line_loopback": "none",
+      "line_training": false,
+      "line_media_type": "fiber",
+      "line_intf_type": "none",
+      "line_adver_speed": [],
+      "line_adver_fec": [],
+      "line_adver_auto_neg": false,
+      "line_adver_asym_pause": false,
+      "line_adver_media_type": "fiber"
+    },
+    {
+      "index": 52,
+      "mdio_addr": "",
+      "system_speed": 100000,
+      "system_fec": "rs",
+      "system_auto_neg": false,
+      "system_loopback": "none",
+      "system_training": false,
+      "line_speed": 50000,
+      "line_fec": "rs",
+      "line_auto_neg": false,
+      "line_loopback": "none",
+      "line_training": false,
+      "line_media_type": "fiber",
+      "line_intf_type": "none",
+      "line_adver_speed": [],
+      "line_adver_fec": [],
+      "line_adver_auto_neg": false,
+      "line_adver_asym_pause": false,
+      "line_adver_media_type": "fiber"
+    }
+  ]
+}

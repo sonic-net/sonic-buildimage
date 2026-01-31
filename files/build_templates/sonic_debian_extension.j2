@@ -284,6 +284,10 @@ install_deb_package $debs_path/{{pkgname}}
 fi
 {% endfor %}
 
+{% for wheel in installer_python_wheels.strip().split(' ') -%}
+install_pip_package {{wheel}}
+{% endfor %}
+
 # Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-device-data_*.deb
 
