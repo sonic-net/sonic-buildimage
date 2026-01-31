@@ -496,6 +496,17 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
 }
 ```
 
+The received bandwidth for W-ECMP state **received_bandwidth** could be one of ignore, allow, skip_missing, or default_weight_for_missing.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "received_bandwidth": "ignore"
+    }
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
