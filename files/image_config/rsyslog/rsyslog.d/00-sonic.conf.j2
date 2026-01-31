@@ -47,6 +47,12 @@ if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
     stop
 }
 
+## otel rules
+if $msg startswith " otel" then {
+    /var/log/otel.log
+    stop
+}
+
 ## stpd rules
 if $programname contains "stp" then {
     if not ($msg contains "STP_SYSLOG") then {
@@ -54,3 +60,4 @@ if $programname contains "stp" then {
             stop
     }
 }
+
