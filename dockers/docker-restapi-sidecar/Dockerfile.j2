@@ -35,6 +35,7 @@ COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
 {%- endif %}
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor/"]
 RUN chmod +x /usr/bin/systemd_stub.py /usr/share/sonic/scripts/k8s_pod_control.sh
 
 FROM $BASE
