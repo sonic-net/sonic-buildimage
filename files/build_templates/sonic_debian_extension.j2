@@ -647,6 +647,13 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable dash-engine
 
 {%- endif %}
 
+{%- if include_system_otel == "y" %}
+
+# Copy OTEL configuration files
+sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
+
+{%- endif %}
+
 # Copy platform topology configuration scripts
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
@@ -1041,6 +1048,7 @@ sudo LANG=C cp $SCRIPTS_DIR/database.sh $FILESYSTEM_ROOT/usr/local/bin/database.
 sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
+sudo LANG=C cp $SCRIPTS_DIR/otel.sh $FILESYSTEM_ROOT/usr/local/bin/otel.sh
 sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
