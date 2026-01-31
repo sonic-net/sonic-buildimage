@@ -1,0 +1,326 @@
+{
+    "chassis": {
+        "name": "DCS-7280R4-32QF-32DF",
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:04:00.0)"
+            },
+            {
+                "name": "RedstartSysCpld(addr=13-0023)"
+            },
+            {
+                "name": "Adm1266(addr=14-0040)"
+            },
+            {
+                "name": "Scd(addr=0000:06:00.0)"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "slot1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan1",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan2",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot3",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan3",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot4",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan4",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu1",
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "status_led": {
+                    "controllable": false
+                }
+            },
+            {
+                "name": "psu2",
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "status_led": {
+                    "controllable": false
+                }
+            }
+        ],
+        "thermals": [
+            {
+                "name": "Cpu temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "Outlet",
+                "controllable": false
+            },
+            {
+                "name": "Management Card",
+                "controllable": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "osfp1"
+            },
+            {
+                "name": "osfp2"
+            },
+            {
+                "name": "osfp3"
+            },
+            {
+                "name": "osfp4"
+            },
+            {
+                "name": "osfp5"
+            },
+            {
+                "name": "osfp6"
+            },
+            {
+                "name": "osfp7"
+            },
+            {
+                "name": "osfp8"
+            },
+            {
+                "name": "osfp9"
+            },
+            {
+                "name": "osfp10"
+            },
+            {
+                "name": "osfp11"
+            },
+            {
+                "name": "osfp12"
+            },
+            {
+                "name": "osfp13"
+            },
+            {
+                "name": "osfp14"
+            },
+            {
+                "name": "osfp15"
+            },
+            {
+                "name": "osfp16"
+            },
+            {
+                "name": "qsfp17"
+            },
+            {
+                "name": "qsfp18"
+            },
+            {
+                "name": "qsfp19"
+            },
+            {
+                "name": "qsfp20"
+            },
+            {
+                "name": "qsfp21"
+            },
+            {
+                "name": "qsfp22"
+            },
+            {
+                "name": "qsfp23"
+            },
+            {
+                "name": "qsfp24"
+            },
+            {
+                "name": "qsfp25"
+            },
+            {
+                "name": "qsfp26"
+            },
+            {
+                "name": "qsfp27"
+            },
+            {
+                "name": "qsfp28"
+            },
+            {
+                "name": "qsfp29"
+            },
+            {
+                "name": "qsfp30"
+            },
+            {
+                "name": "qsfp31"
+            },
+            {
+                "name": "qsfp32"
+            },
+            {
+                "name": "qsfp33"
+            },
+            {
+                "name": "qsfp34"
+            },
+            {
+                "name": "qsfp35"
+            },
+            {
+                "name": "qsfp36"
+            },
+            {
+                "name": "qsfp37"
+            },
+            {
+                "name": "qsfp38"
+            },
+            {
+                "name": "qsfp39"
+            },
+            {
+                "name": "qsfp40"
+            },
+            {
+                "name": "qsfp41"
+            },
+            {
+                "name": "qsfp42"
+            },
+            {
+                "name": "qsfp43"
+            },
+            {
+                "name": "qsfp44"
+            },
+            {
+                "name": "qsfp45"
+            },
+            {
+                "name": "qsfp46"
+            },
+            {
+                "name": "qsfp47"
+            },
+            {
+                "name": "qsfp48"
+            },
+            {
+                "name": "osfp49"
+            },
+            {
+                "name": "osfp50"
+            },
+            {
+                "name": "osfp51"
+            },
+            {
+                "name": "osfp52"
+            },
+            {
+                "name": "osfp53"
+            },
+            {
+                "name": "osfp54"
+            },
+            {
+                "name": "osfp55"
+            },
+            {
+                "name": "osfp56"
+            },
+            {
+                "name": "osfp57"
+            },
+            {
+                "name": "osfp58"
+            },
+            {
+                "name": "osfp59"
+            },
+            {
+                "name": "osfp60"
+            },
+            {
+                "name": "osfp61"
+            },
+            {
+                "name": "osfp62"
+            },
+            {
+                "name": "osfp63"
+            },
+            {
+                "name": "osfp64"
+            }
+        ]
+    },
+    "interfaces": {}
+}
