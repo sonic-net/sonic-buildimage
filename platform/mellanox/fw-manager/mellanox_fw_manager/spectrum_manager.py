@@ -37,6 +37,7 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
         '15b3:cf70': 'SPC3',
         '15b3:cf80': 'SPC4',
         '15b3:cf82': 'SPC5',
+        '15b3:cf84': 'SPC6',
     }
 
     @classmethod
