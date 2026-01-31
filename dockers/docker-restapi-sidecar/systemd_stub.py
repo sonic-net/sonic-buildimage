@@ -113,6 +113,7 @@ logger.log_notice(f"container_checker source set to {_CONTAINER_CHECKER_SRC}")
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_RESTAPI_SRC, "/usr/bin/restapi.sh", mode=0o755),
     SyncItem(_CONTAINER_CHECKER_SRC, "/bin/container_checker", mode=0o755),
+    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"),
     SyncItem(_CONTAINER_RESTAPI_SERVICE, HOST_RESTAPI_SERVICE, mode=0o644),
 ]
 
