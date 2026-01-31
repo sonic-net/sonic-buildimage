@@ -29,6 +29,26 @@
 - name: "amd_soc_group_3_bus"
   lookup_command: "setpci -s 00:08.3 0x19.b"
 
+# Commands to retrieve ASIC device ID info
+
+- name: "asic_1_device_id"
+  lookup_command: >
+    ID=$(setpci -s $(setpci -s 00:01.2 0x19.b):00.0 0x02.W);
+    if [ "$ID" = "8870" ]; then
+      echo "8870";
+    else
+      echo "8872";
+    fi
+
+- name: "asic_2_device_id"
+  lookup_command: >
+    ID=$(setpci -s $(setpci -s 00:02.3 0x19.b):00.0 0x02.W);
+    if [ "$ID" = "8870" ]; then
+      echo "8870";
+    else
+      echo "8872";
+    fi
+
 # Commands to retrieve the PCIe address for each device.
 # Strings in pddf-device.json.j2 matching "{{<name>}}"" will be replaced with
 # the result of the lookup_command, to generate /usr/share/sonic/platform/pddf/pddf-device.json.
