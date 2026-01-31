@@ -209,6 +209,21 @@
         }
     },
     "VOQ_BUFFER_QUEUE_CONFIG": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": "9000",
+                        "name": "Ethernet4",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {

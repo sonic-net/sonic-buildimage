@@ -13,7 +13,7 @@ module sonic-cable-length {
     description "CABLE_LENGTH YANG module for SONiC OS";
 
     revision 2021-11-11 {
-        description "Initial version";
+        description "Initial version.";
     }
 
     container sonic-cable-length {
@@ -48,7 +48,7 @@ module sonic-cable-length {
 
                     leaf length {
                         type string {
-                            pattern '[0-9]+m' {
+                            pattern '[0-9]+m|None' {
                                 error-message "Invalid cable length.";
                                 error-app-tag cable-length-invalid-length;
                             }
