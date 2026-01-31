@@ -25,7 +25,6 @@ def check_docker_image(image_name):
         DOCKER_CLIENT.images.get(image_name)
         return True
     except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
-        logger.log_warning("Failed to get image '{}'. Error: '{}'".format(image_name, err))
         return False
 
 class ServiceChecker(HealthChecker):
