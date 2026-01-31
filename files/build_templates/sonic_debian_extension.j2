@@ -516,6 +516,9 @@ sudo cp $IMAGE_CONFIGS/corefile_uploader/core_uploader.py $FILESYSTEM_ROOT/usr/b
 sudo cp $IMAGE_CONFIGS/corefile_uploader/core_analyzer.rc.json $FILESYSTEM_ROOT_ETC_SONIC/
 sudo chmod og-rw $FILESYSTEM_ROOT_ETC_SONIC/core_analyzer.rc.json
 
+# Install tpm-tools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
+
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     # Install rasdaemon package
     # NOTE: Can be installed from debian directly when we move to trixie
@@ -1155,6 +1158,19 @@ sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-mana
 # Install dpu-udev-manager service
 sudo install -m 644 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu-udev-manager
+
+# SED password mgmt scripts
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_change.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_change.sh
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_recovery_service.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp platform/mellanox/sed-password-mgmt/sed-pw-recovery.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl enable sed-pw-recovery.service
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_util.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp platform/mellanox/sed-password-mgmt/sed_reset_factory.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_reset_factory.sh
+
+# Install sedutil
+install_deb_package $debs_path/sedutil_*.deb
 
 {% endif %}
 
