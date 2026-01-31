@@ -725,9 +725,10 @@ sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_
 sudo cp $IMAGE_CONFIGS/backend_acl/backend_acl.py $FILESYSTEM_ROOT/usr/bin/backend_acl.py
 echo "backend-acl.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
-# Copy RPS script file
+# Copy RPS script and service file
 sudo cp $IMAGE_CONFIGS/rps/rps.py $FILESYSTEM_ROOT/usr/bin/rps.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
+sudo cp $IMAGE_CONFIGS/rps/configure-rps@.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/configure-rps@.service
 
 # Copy SNMP configuration files
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
