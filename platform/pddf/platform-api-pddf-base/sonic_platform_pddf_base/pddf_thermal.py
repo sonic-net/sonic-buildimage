@@ -42,6 +42,9 @@ class PddfThermal(ThermalBase):
 
     def get_name(self):
         if self.is_psu_thermal:
+            if 'thermal_name' in self.plugin_data['PSU']:
+                return self.plugin_data['PSU']['thermal_name'][str(self.thermals_psu_index)]
+
             return "PSU{}_TEMP{}".format(self.thermals_psu_index, self.thermal_index)
         else:
             if 'dev_attr' in self.thermal_obj.keys():
