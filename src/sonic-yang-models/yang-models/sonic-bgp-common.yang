@@ -331,6 +331,11 @@ module sonic-bgp-common {
             type boolean;
             description "Do not prepend local-as to updates from ibgp peers";
         }
+
+        leaf v6only {
+            type boolean;
+            description "Always use IPv6 unnumbered BGP peering";
+        }
     }
 
 
