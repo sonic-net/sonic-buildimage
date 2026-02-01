@@ -1,6 +1,6 @@
 ##
 ## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,8 @@ RUN apt-get update && \
         python3-dev \
         python3-jsonschema \
         python-is-python3 \
-        pciutils
+        pciutils \
+        linuxptp
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python-pip
@@ -67,6 +68,7 @@ RUN apt-get purge -y         \
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
+COPY ["phcsync.sh", "/usr/bin/"]
 
 COPY ["files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/rdb-cli
