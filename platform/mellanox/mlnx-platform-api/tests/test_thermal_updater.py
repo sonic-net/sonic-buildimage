@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
 mock_tc_config = """
 {
     "dev_parameters": {
-        "asic": {
+        "asic\\\\d*": {
             "pwm_min": 20,
             "pwm_max": 100,
             "val_min": "!70000",
@@ -48,22 +48,58 @@ mock_tc_config = """
 
 
 class TestThermalUpdater:
-    def test_load_tc_config_non_exists(self):
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_load_tc_config_non_exists(self, mock_logger):
         updater = ThermalUpdater(None)
         updater.load_tc_config()
         assert updater._timer._timestamp_queue.qsize() == 2
 
-    def test_load_tc_config_mocked(self):
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_load_tc_config_mocked(self, mock_logger):
         updater = ThermalUpdater(None)
         mock_os_open = mock.mock_open(read_data=mock_tc_config)
         with mock.patch('sonic_platform.utils.open', mock_os_open):
             updater.load_tc_config()
         assert updater._timer._timestamp_queue.qsize() == 2
+        # Verify that debug logs were called with the correct parameters
+        assert mock_logger.log_notice.call_count >= 2  # At least ASIC and Module parameter logs
 
+    def test_find_matching_key(self):
+        """Test _find_matching_key method for regex pattern matching"""
+        updater = ThermalUpdater(None)
+
+        # Test with asic pattern - should match 'asic\d*' keys
+        dev_parameters = {
+            'asic\\d*': {'poll_time': 3},
+            'module\\d+': {'poll_time': 20},
+            'sensor_amb': {'poll_time': 30}
+        }
+
+        # Test matching asic pattern
+        key, value = updater._find_matching_key(dev_parameters, r'asic\\d*')
+        assert key == 'asic\\d*'
+        assert value == {'poll_time': 3}
+
+        # Test matching module pattern
+        key, value = updater._find_matching_key(dev_parameters, r'module\\d+')
+        assert key == 'module\\d+'
+        assert value == {'poll_time': 20}
+
+        # Test non-matching pattern
+        key, value = updater._find_matching_key(dev_parameters, r'nonexistent')
+        assert key is None
+        assert value is None
+
+        # Test with empty dict
+        key, value = updater._find_matching_key({}, r'asic\\d*')
+        assert key is None
+        assert value is None
+
+    @mock.patch('sonic_platform.thermal_updater.logger')
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
     @mock.patch('sonic_platform.utils.write_file')
-    def test_start_stop(self, mock_write):
+    def test_start_stop(self, mock_write, mock_logger):
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 1
         updater = ThermalUpdater([mock_sfp])
