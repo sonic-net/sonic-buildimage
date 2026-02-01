@@ -21,6 +21,8 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+BMC_DATA_FILE = 'bmc.json'
+BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -977,6 +979,35 @@ def is_warm_restart_enabled(container_name):
 
     state_db.close(state_db.STATE_DB)
     return wr_enable_state
+
+
+def get_bmc_data():
+    json_file = None
+    try:
+        platform_path = get_path_to_platform_dir()
+        json_file = os.path.join(platform_path, BMC_DATA_FILE)
+        if os.path.exists(json_file):
+            with open(json_file, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
+
+
+def get_bmc_build_config():
+    """
+    Get BMC build-time configuration
+    
+    Returns:
+        A dictionary containing the BMC build configuration, or empty dict if not available
+    """
+    try:
+        if os.path.exists(BMC_BUILD_CONFIG_FILE):
+            with open(BMC_BUILD_CONFIG_FILE, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
 
 
 # Check if System fast reboot is enabled.
