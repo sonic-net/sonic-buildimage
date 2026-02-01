@@ -584,15 +584,12 @@ function check_ports_present()
     return 1
 }
 
-function check_service_exists()
+function check_service_enabled()
 {
-    systemctl list-units --full -all 2>/dev/null | grep -Fq $1
-    if [[ $? -eq 0 ]]; then
+    if systemctl is-enabled "$1" >/dev/null 2>&1; then
         echo true
-        return
     else
         echo false
-        return
     fi
 }
 
@@ -601,7 +598,7 @@ function check_service_exists()
 DEPENDENT=""
 MULTI_INST_DEPENDENT=""
 
-if [[ $(check_service_exists radv) == "true" ]]; then
+if [[ $(check_service_enabled radv) == "true" ]]; then
     DEPENDENT="$DEPENDENT radv"
 fi
 
@@ -622,7 +619,7 @@ check_add_bgp_dependency
 check_ports_present
 PORTS_PRESENT=$?
 
-if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_exists teamd) == "true" ]]; then
+if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_enabled "teamd${DEV:+@$DEV}") == "true" ]]; then
     MULTI_INST_DEPENDENT="teamd"
 fi
 
