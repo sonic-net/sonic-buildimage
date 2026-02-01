@@ -1382,8 +1382,7 @@ class PddfParse():
                     if attr.get("attr_devaddr") is not None:
                         if attr.get("attr_offset") is not None:
                             if attr.get("attr_mask") is not None:
-                                if attr.get("attr_len") is not None:
-                                    ret_val = "psu success"
+                                ret_val = "psu success"
                 else:
                     ret_val = "psu failed"
 
