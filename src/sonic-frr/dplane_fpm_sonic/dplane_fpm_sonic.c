@@ -1153,7 +1153,6 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 {
 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
 	struct zebra_vrf *zvrf;
-	struct srv6_locator *l, *locator = NULL;
 	struct listnode *node;
 	struct rtattr *nest;
 	const struct seg6local_context *seg6local_ctx;
@@ -1165,6 +1164,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	uint32_t table_id;
 	uint32_t action;
 	uint32_t block_len, node_len, func_len, arg_len;
+	bool is_usid = false;
 
 	struct {
 		struct nlmsghdr n;
@@ -1294,23 +1294,18 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	if (cmd == RTM_DELSRV6LOCALSID)
 		return NLMSG_ALIGN(req->n.nlmsg_len);
 
-	for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, l)) {
-		if (prefix_match(&l->prefix, p)) {
-			locator = l;
-			break;
-		}
-	}
+	is_usid = CHECK_SRV6_FLV_OP(nexthop->nh_srv6->seg6local_ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
 
 	switch (nexthop->nh_srv6->seg6local_action) {
 	case ZEBRA_SEG6_LOCAL_ACTION_END:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1336,7 +1331,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1347,7 +1342,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1362,7 +1357,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1378,7 +1373,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1394,7 +1389,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
