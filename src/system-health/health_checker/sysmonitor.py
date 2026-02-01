@@ -311,7 +311,9 @@ class Sysmonitor(ProcessTaskBase):
         try:
             service_status = "Down"
             service_up_status = "Down"
-            service_name,last_name = event.split('.')
+            if not event.endswith('.service'):
+                return unit_status
+            service_name = event[:-8]  # Remove '.service' suffix
 
             sysctl_show = self.run_systemctl_show(event)
 
@@ -454,10 +456,10 @@ class Sysmonitor(ProcessTaskBase):
                 astate = "DOWN"
             self.publish_system_status(astate)
 
-            srv_name,last = event.split('.')
             # stop on service maybe propagated to timers and in that case,
             # the state_db entry for the service should not be deleted
-            if last == "service":
+            if event.endswith('.service'):
+                srv_name = event[:-8]  # Remove '.service' suffix
                 key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
                 key_exists = self.state_db.exists(self.state_db.STATE_DB, key)
                 if key_exists == 1:
