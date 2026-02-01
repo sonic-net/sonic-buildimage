@@ -44,20 +44,17 @@ dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
 {# Router advertiser should only run on ToR (T0) devices which have #}
-{# at least one VLAN interface which has an IPv6 address asigned #}
-{# But not for specific deployment_id #}
+{# at least one VLAN interface which has an IPv6 address assigned #}
 {%- set vlan_v6 = namespace(count=0) -%}
-{%- if DEVICE_METADATA.localhost.deployment_id != "8" -%}
-  {%- if DEVICE_METADATA.localhost.type -%}
-    {%- if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] -%}
-      {%- if VLAN_INTERFACE -%}
-        {%- for (name, prefix) in VLAN_INTERFACE|pfx_filter -%}
-          {# If this VLAN has an IPv6 address... #}
-          {%- if prefix | ipv6 -%}
-            {%- set vlan_v6.count = vlan_v6.count + 1 -%}
-          {%- endif -%}
-        {%- endfor -%}
-      {%- endif -%}
+{%- if DEVICE_METADATA.localhost.type -%}
+  {%- if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] -%}
+    {%- if VLAN_INTERFACE -%}
+      {%- for (name, prefix) in VLAN_INTERFACE|pfx_filter -%}
+        {# If this VLAN has an IPv6 address... #}
+        {%- if prefix | ipv6 -%}
+          {%- set vlan_v6.count = vlan_v6.count + 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
     {%- endif -%}
   {%- endif -%}
 {%- endif -%}
