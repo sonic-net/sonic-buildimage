@@ -16,7 +16,6 @@ COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
 
-
 {% if docker_restapi_sidecar_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_restapi_sidecar_debs.split(' '), "/debs/") }}
