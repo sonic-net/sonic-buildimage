@@ -1,0 +1,3 @@
+Package: *
+Pin: release o=Debian
+Pin-Priority: 90
