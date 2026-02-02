@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,9 @@ from sonic_platform.component import ComponentONIE,       \
                                      ComponenetFPGADPU,   \
                                      MPFAManager,         \
                                      ONIEUpdater,         \
+                                     ComponentBMC,        \
                                      Component
+
 from sonic_platform_base.component_base import FW_AUTO_INSTALLED,      \
                                                FW_AUTO_UPDATED,        \
                                                FW_AUTO_SCHEDULED,      \
@@ -564,3 +566,22 @@ class TestComponent:
         assert c._check_file_validity(os.path.abspath(__file__))
         c.image_ext_name = '.txt'
         assert not c._check_file_validity(os.path.abspath(__file__))
+
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', 
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', 
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity', 
+                mock.MagicMock(return_value=True))
+    def test_bmc_update_firmware(self, mock_check_call):
+        mock_check_call.return_value = None
+        component = ComponentBMC()
+        ret = component.install_firmware('fake_image.fwpkg')
+        mock_check_call.assert_called_once_with(
+            ["/usr/bin/bmc_fw_update.py", 'fake_image.fwpkg'],
+            universal_newlines=True,
+            start_new_session=True
+        )
+        assert ret == True
