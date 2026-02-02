@@ -671,8 +671,8 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 
 	stream_reset(fnc->ibuf);
 	stream_reset(fnc->obuf);
-	EVENT_OFF(fnc->t_read);
-	EVENT_OFF(fnc->t_write);
+	event_cancel(&fnc->t_read);
+	event_cancel(&fnc->t_write);
 
 	/* Reset the barrier value */
 	cleaning_p = true;
@@ -699,6 +699,10 @@ static void fpm_read(struct event *t)
 	size_t available_bytes;
 	size_t hdr_available_bytes;
 	int ival;
+	struct dplane_ctx_list_head batch_list;
+
+	/* Initialize the batch list */
+	dplane_ctx_q_init(&batch_list);
 
 	/* Let's ignore the input at the moment. */
 	rv = stream_read_try(fnc->ibuf, fnc->socket,
@@ -739,7 +743,7 @@ static void fpm_read(struct event *t)
 	while (available_bytes) {
 		if (available_bytes < (ssize_t)FPM_MSG_HDR_LEN) {
 			stream_pulldown(fnc->ibuf);
-			return;
+			goto send_batch;
 		}
 
 		fpm.version = stream_getc(fnc->ibuf);
@@ -754,7 +758,7 @@ static void fpm_read(struct event *t)
 				__func__, fpm.version, fpm.msg_type);
 
 			FPM_RECONNECT(fnc);
-			return;
+			goto send_batch;
 		}
 
 		/*
@@ -766,7 +770,7 @@ static void fpm_read(struct event *t)
 				"%s: Received message length: %u that does not even fill the FPM header",
 				__func__, fpm.msg_len);
 			FPM_RECONNECT(fnc);
-			return;
+			goto send_batch;
 		}
 
 		/*
@@ -777,7 +781,7 @@ static void fpm_read(struct event *t)
 		if (fpm.msg_len > available_bytes) {
 			stream_rewind_getp(fnc->ibuf, FPM_MSG_HDR_LEN);
 			stream_pulldown(fnc->ibuf);
-			return;
+			goto send_batch;
 		}
 
 		available_bytes -= FPM_MSG_HDR_LEN;
@@ -827,8 +831,9 @@ static void fpm_read(struct event *t)
 				break;
 			}
 
-			/* Parse the route data into a dplane ctx, then
- 			 * enqueue it to zebra for processing.
+			/*
+			 * Parse the route data into a dplane ctx, add to ctx list
+ 			 * and enqueue the batch of ctx to zebra for processing.
  			 */
 			ctx = dplane_ctx_alloc();
 			dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_NOTIFY, NULL,
@@ -840,8 +845,9 @@ static void fpm_read(struct event *t)
 				dplane_ctx_set_vrf(ctx, ival);
 				dplane_ctx_set_table(ctx,
 								ZEBRA_ROUTE_TABLE_UNKNOWN);
-	
-					dplane_provider_enqueue_to_zebra(ctx);
+
+				/* Add to the list for batching */
+				dplane_ctx_enqueue_tail(&batch_list, ctx);
 			} else {
 				/*
 				 * Let's continue to read other messages
@@ -861,6 +867,15 @@ static void fpm_read(struct event *t)
 	}
 
 	stream_reset(fnc->ibuf);
+
+send_batch:
+	/* Send all contexts to zebra in a single batch if we have any */
+	if (dplane_ctx_queue_count(&batch_list) > 0) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: Sending batch of %u contexts to zebra", __func__,
+				   dplane_ctx_queue_count(&batch_list));
+		dplane_provider_enqueue_ctx_list_to_zebra(&batch_list);
+	}
 }
 
 static void fpm_write(struct event *t)
@@ -1138,7 +1153,6 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 {
 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
 	struct zebra_vrf *zvrf;
-	struct srv6_locator *l, *locator = NULL;
 	struct listnode *node;
 	struct rtattr *nest;
 	const struct seg6local_context *seg6local_ctx;
@@ -1150,6 +1164,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	uint32_t table_id;
 	uint32_t action;
 	uint32_t block_len, node_len, func_len, arg_len;
+	bool is_usid = false;
 
 	struct {
 		struct nlmsghdr n;
@@ -1279,23 +1294,18 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	if (cmd == RTM_DELSRV6LOCALSID)
 		return NLMSG_ALIGN(req->n.nlmsg_len);
 
-	for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, l)) {
-		if (prefix_match(&l->prefix, p)) {
-			locator = l;
-			break;
-		}
-	}
+	is_usid = CHECK_SRV6_FLV_OP(nexthop->nh_srv6->seg6local_ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
 
 	switch (nexthop->nh_srv6->seg6local_action) {
 	case ZEBRA_SEG6_LOCAL_ACTION_END:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1321,7 +1331,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1332,7 +1342,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1347,7 +1357,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1363,7 +1373,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1379,7 +1389,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -2445,6 +2455,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	ssize_t rv;
 	uint64_t obytes, obytes_peak;
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
+	struct nexthop *nexthop;
 
 	/*
 	 * If we were configured to not use next hop groups, then quit as soon
@@ -2493,6 +2504,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_srv6_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		} else {
@@ -2503,6 +2515,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_route_multipath_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		}
@@ -2523,6 +2536,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_srv6_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		} else {
@@ -2534,6 +2548,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				zlog_err(
 					"%s: netlink_route_multipath_msg_encode failed",
 					__func__);
+				dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 				return 0;
 			}
 		}
@@ -2548,6 +2563,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_macfdb_update_ctx failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2560,6 +2576,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2572,6 +2589,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2584,6 +2602,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 			zlog_err(
 				"%s: netlink_srv6_msg_encode failed",
 				__func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 		nl_buf_len += (size_t)rv;
@@ -2596,6 +2615,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 			zlog_err(
 				"%s: netlink_srv6_msg_encode failed",
 				__func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 		nl_buf_len += (size_t)rv;
@@ -2607,6 +2627,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_nexthop_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2619,6 +2640,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_pic_context_msg_encode failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -2631,6 +2653,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		if (rv <= 0) {
 			zlog_err("%s: netlink_lsp_msg_encoder failed",
 				 __func__);
+			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
 			return 0;
 		}
 
@@ -3134,7 +3157,6 @@ static void fpm_process_queue(struct event *t)
 		/* Account the processed entries. */
 		processed_contexts++;
 
-		dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_SUCCESS);
 		dplane_provider_enqueue_out_ctx(fnc->prov, ctx);
 	}
 
@@ -3153,7 +3175,7 @@ static void fpm_process_queue(struct event *t)
 		event_add_timer(fnc->fthread->master, fpm_process_wedged, fnc,
 				DPLANE_FPM_NL_WEDGIE_TIME, &fnc->t_wedged);
 	} else
-		EVENT_OFF(fnc->t_wedged);
+		event_cancel(&fnc->t_wedged);
 
 	/*
 	 * Let the dataplane thread know if there are items in the
@@ -3266,16 +3288,16 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 		return 0;
 
 	/* Disable all events and close socket. */
-	EVENT_OFF(fnc->t_lspreset);
-	EVENT_OFF(fnc->t_lspwalk);
-	EVENT_OFF(fnc->t_nhgreset);
-	EVENT_OFF(fnc->t_nhgwalk);
-	EVENT_OFF(fnc->t_ribreset);
-	EVENT_OFF(fnc->t_ribwalk);
-	EVENT_OFF(fnc->t_rmacreset);
-	EVENT_OFF(fnc->t_rmacwalk);
-	EVENT_OFF(fnc->t_event);
-	EVENT_OFF(fnc->t_nhg);
+	event_cancel(&fnc->t_lspreset);
+	event_cancel(&fnc->t_lspwalk);
+	event_cancel(&fnc->t_nhgreset);
+	event_cancel(&fnc->t_nhgwalk);
+	event_cancel(&fnc->t_ribreset);
+	event_cancel(&fnc->t_ribwalk);
+	event_cancel(&fnc->t_rmacreset);
+	event_cancel(&fnc->t_rmacwalk);
+	event_cancel(&fnc->t_event);
+	event_cancel(&fnc->t_nhg);
 	event_cancel_async(fnc->fthread->master, &fnc->t_read, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_write, NULL);
 	event_cancel_async(fnc->fthread->master, &fnc->t_connect, NULL);

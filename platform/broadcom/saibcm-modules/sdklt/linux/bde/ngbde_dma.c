@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -91,7 +92,7 @@ ngbde_dmamem_kapi_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         dmamem->baddr = baddr;
 
         /* Write small signature for debug purposes */
-        strlcpy((char *)vaddr, "DMA_KAPI", dmactrl->size);
+        strscpy((char *)vaddr, "DMA_KAPI", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of KAPI memory at 0x%08lx\n",
@@ -138,7 +139,7 @@ ngbde_dmamem_pgmem_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         }
 
         /* Write small signature for debug purposes */
-        strlcpy((char *)vaddr, "DMA_PGMEM", dmactrl->size);
+        strscpy((char *)vaddr, "DMA_PGMEM", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of PGMEM memory at 0x%08lx\n",
@@ -177,7 +178,7 @@ ngbde_dmamem_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
     /* Always allow KAPI when CMA is available */
     kapi = 1;
 #else
-    if (dmactrl->size <= (1 << (MAX_ORDER - 1 + PAGE_SHIFT))) {
+    if (dmactrl->size <= (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))) {
         kapi = 1;
     }
 #endif

@@ -105,11 +105,11 @@ static const struct attribute_group as7712_32x_psu_group = {
     .attrs = as7712_32x_psu_attributes,
 };
 
-static int as7712_32x_psu_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int as7712_32x_psu_probe(struct i2c_client *client)
 {
     struct as7712_32x_psu_data *data;
     int status;
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
         status = -EIO;
