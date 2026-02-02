@@ -2474,6 +2474,12 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1",
+                "ifname": "Ethernet2"
+            }
+        },
         "VNET_ROUTE_TUNNEL" : {
             "vnet1|10.0.0.0/24" : {
                 "endpoint": "192.168.1.1,192.168.1.2",
