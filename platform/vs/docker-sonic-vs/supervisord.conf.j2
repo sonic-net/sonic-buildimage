@@ -204,7 +204,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic --asic-offload=notify_on_offload --kernel-mac-ext-learn
 priority=13
 autostart=false
 autorestart=false
