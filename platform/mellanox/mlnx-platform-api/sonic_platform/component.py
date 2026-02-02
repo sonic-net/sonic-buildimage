@@ -30,6 +30,7 @@ try:
     import glob
     import tempfile
     import subprocess
+    import traceback
     from sonic_py_common import device_info
     from sonic_py_common.logger import Logger
     from sonic_py_common.general import check_output_pipe
@@ -911,6 +912,92 @@ class ComponentCPLDSN2201(ComponentCPLD):
             return False
 
         return True
+
+
+class ComponentBMC(Component):
+    COMPONENT_NAME = 'BMC'
+    COMPONENT_DESCRIPTION = 'BMC - Baseboard Management Controller'
+    COMPONENT_FIRMWARE_EXTENSION = ['.fwpkg']
+    BMC_FW_UPDATE_CMD = ["/usr/bin/bmc_fw_update.py", ""]
+
+    def __init__(self):
+        super(ComponentBMC, self).__init__()
+        from .bmc import BMC
+        self.bmc = BMC.get_instance()
+        self.name = self.COMPONENT_NAME
+        self.description = self.COMPONENT_DESCRIPTION
+        self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
+
+    def get_firmware_version(self):
+        """
+        Retrieves the BMC firmware version
+
+        Returns:
+            A string containing the BMC firmware version.
+            Returns 'N/A' if the BMC firmware version cannot be retrieved.
+        """
+        if self.bmc is None:
+            return 'N/A'
+        return self.bmc.get_version()
+
+    def get_available_firmware_version(self, image_path):
+        raise NotImplementedError("BMC component doesn't support available firmware version query")
+
+    def get_firmware_update_notification(self, image_path):
+        return "BMC will be automatically restarted to complete BMC firmware update"
+
+    def auto_update_firmware(self, image_path, boot_action):
+        """
+        Default handling of attempted automatic update for a component of a Mellanox switch.
+        """
+        # Verify image path exists
+        if not os.path.exists(image_path):
+            # Invalid image path
+            return FW_AUTO_ERR_IMAGE
+        # Actually we perform a BMC restart, so the switch boot_action is not relevant
+        # boot_type did not match (skip)
+        if boot_action != "cold":
+            return FW_AUTO_ERR_BOOT_TYPE
+        # Install firmware and restart BMC
+        if not self.install_firmware(image_path):
+            return FW_AUTO_ERR_UNKNOWN
+        return FW_AUTO_INSTALLED
+
+    def install_firmware(self, image_path):
+        """
+        Installs the BMC firmware
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            A boolean, True if the BMC firmware is installed successfully, False otherwise.
+        """
+        if not self._check_file_validity(image_path):
+            print(f"Invalid firmware image path: {image_path}")
+            return False
+        print('Starting BMC firmware update, path={}'.format(image_path))
+        try:
+            self.BMC_FW_UPDATE_CMD[1] = image_path
+            cmd = self.BMC_FW_UPDATE_CMD
+            subprocess.check_call(
+                cmd, 
+                universal_newlines=True,
+                start_new_session=True
+            )
+            print("Successfully updated BMC firmware, and restarted BMC")
+            return True
+        except subprocess.CalledProcessError:
+            print("Failed to update BMC firmware")
+            return False
+        except Exception as e:
+            logger.log_error(f'Exception occurred during BMC firmware update: {str(e)}')
+            print(f'Exception occurred during BMC firmware update: {str(e)}')
+            return False
+
+    def update_firmware(self, image_path):
+        return self.install_firmware(image_path)
+
 
 class ComponentCPLDSN4280(ComponentCPLD):
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']
