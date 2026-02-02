@@ -1,0 +1,33 @@
+From 4118fdd19e01962269cde93b273c53b4fd262519 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Thu, 16 Oct 2025 13:59:44 -0700
+Subject: bgpd: EVPN fix auto derive rd when user cfg removed
+
+When a user unconfigures user provided RD value, ensure
+the flag BGP_VRF_RD_CFGD is unset first then call the
+auto derived RD to happen.
+
+Ticket: #4659442
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ bgpd/bgp_evpn_vty.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_evpn_vty.c b/bgpd/bgp_evpn_vty.c
+index a25e79b654..058ac34f1e 100644
+--- a/bgpd/bgp_evpn_vty.c
++++ b/bgpd/bgp_evpn_vty.c
+@@ -2322,8 +2322,8 @@ static void evpn_unconfigure_vrf_rd(struct bgp *bgp_vrf)
+ 	bgp_evpn_handle_vrf_rd_change(bgp_vrf, 1);
+ 
+ 	/* fall back to default RD */
+-	bgp_evpn_derive_auto_rd_for_vrf(bgp_vrf);
+ 	UNSET_FLAG(bgp_vrf->vrf_flags, BGP_VRF_RD_CFGD);
++	bgp_evpn_derive_auto_rd_for_vrf(bgp_vrf);
+ 	if (bgp_vrf->vrf_prd_pretty)
+ 		XFREE(MTYPE_BGP_NAME, bgp_vrf->vrf_prd_pretty);
+ 	/* We have a new RD for VRF.
+-- 
+2.48.1
+

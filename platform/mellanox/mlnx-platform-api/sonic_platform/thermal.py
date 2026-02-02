@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,12 +76,14 @@ THERMAL_NAMING_RULE = {
     },
     "chassis thermals": [
         {
-            "name": "ASIC",
+            "name": "ASIC{}",
             "temperature": "input",
             "high_threshold_default": 105,
             "high_critical_threshold_default": 120,
-            "sysfs_folder": "/sys/module/sx_core/asic0/temperature",
-            "scale": 8
+            "sysfs_folder": "/sys/module/sx_core/asic{}/temperature",
+            "scale": 8,
+            "type": "asic_indexable",
+            "start_index": 0
         },
         {
             "name": "Ambient Port Side Temp",
@@ -141,15 +143,6 @@ THERMAL_NAMING_RULE = {
             "search_pattern": '/run/hw-management/thermal/sodimm*_temp_input',
             'index_pattern': r'sodimm(\d+)_temp_input',
             "type": "discrete",
-        },
-        {
-            "name": "PMIC {} Temp",
-            "temperature": "voltmon{}_temp1_input",
-            "high_threshold": "voltmon{}_temp1_max",
-            "high_critical_threshold": "voltmon{}_temp1_crit",
-            "search_pattern": '/run/hw-management/thermal/voltmon*_temp1_input',
-            'index_pattern': r'voltmon(\d+)_temp1_input',
-            "type": "discrete",
         }
     ],
     'linecard thermals': {
@@ -188,12 +181,37 @@ def initialize_chassis_thermals():
             if discrete_thermals:
                 position += len(discrete_thermals)
                 thermal_list.extend(discrete_thermals)
+        elif thermal_type == 'asic_indexable':
+            is_multi_asic = DeviceDataManager.is_multi_asic_platform()
+            asic_count = DeviceDataManager.get_asic_count()
+            for asic_index in range(asic_count):
+                thermal_list.append(create_asic_thermal(rule, asic_index, position, is_multi_asic))
+                position += 1
         else:
             thermal_object = create_single_thermal(rule, CHASSIS_THERMAL_SYSFS_FOLDER, position)
             if thermal_object:
                 thermal_list.append(thermal_object)
                 position += 1
     return thermal_list
+
+
+def create_asic_thermal(rule, asic_index, position, is_multi_asic):
+    """Create thermal object for a specific ASIC
+
+    Args:
+        rule (dict): Thermal rule
+        asic_index (int): ASIC index (0-based)
+        position (int): Position in thermal list
+        is_multi_asic (bool): Whether the platform is multi ASIC
+
+    Returns:
+        Thermal: ASIC thermal object
+    """
+    rule = copy.deepcopy(rule)
+    name_format = asic_index if is_multi_asic else ''
+    rule['name'] = rule['name'].format(name_format)
+    rule['sysfs_folder'] = rule['sysfs_folder'].format(asic_index)
+    return create_single_thermal(rule, rule['sysfs_folder'], position, check_presence=False)
 
 
 def initialize_psu_thermal(psu_index, presence_cb):
@@ -260,7 +278,7 @@ def create_indexable_thermal(rule, index, sysfs_folder, position, presence_cb=No
         return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, high_th_default, high_crit_th_default, scale, position, presence_cb)
 
 
-def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
+def create_single_thermal(rule, sysfs_folder, position, presence_cb=None, check_presence=True):
     temp_file = rule['temperature']
     default_present = rule.get('default_present', True)
     thermal_capability = DeviceDataManager.get_thermal_capability()
@@ -273,15 +291,18 @@ def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
 
     sysfs_folder = rule.get('sysfs_folder', sysfs_folder)
     temp_file = os.path.join(sysfs_folder, temp_file)
-    _check_thermal_sysfs_existence(temp_file, presence_cb)
+    if check_presence:
+        _check_thermal_sysfs_existence(temp_file, presence_cb)
     if 'high_threshold' in rule:
         high_th_file = os.path.join(sysfs_folder, rule['high_threshold'])
-        _check_thermal_sysfs_existence(high_th_file, presence_cb)
+        if check_presence:
+            _check_thermal_sysfs_existence(high_th_file, presence_cb)
     else:
         high_th_file = None
     if 'high_critical_threshold' in rule:
         high_crit_th_file = os.path.join(sysfs_folder, rule['high_critical_threshold'])
-        _check_thermal_sysfs_existence(high_crit_th_file, presence_cb)
+        if check_presence:
+            _check_thermal_sysfs_existence(high_crit_th_file, presence_cb)
     else:
         high_crit_th_file = None
     high_th_default = rule.get('high_threshold_default')
