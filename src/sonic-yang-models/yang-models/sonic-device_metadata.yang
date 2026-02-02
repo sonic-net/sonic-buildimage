@@ -342,10 +342,37 @@ module sonic-device_metadata {
                         enum enabled;
                         enum disabled;
                     }
-                    default disabled;
+                    default enabled;
                 }
             }
             /* end of container localhost */
+
+            container bmc {
+                description "BMC configuration information";
+
+                leaf bmc_if_name {
+                    type string {
+                        length 1..64;
+                    }
+                    description "BMC interface name";
+                }
+
+                leaf bmc_if_addr {
+                    type inet:ipv4-address;
+                    description "BMC interface IP address";
+                }
+
+                leaf bmc_addr {
+                    type inet:ipv4-address;
+                    description "BMC IP address";
+                }
+
+                leaf bmc_net_mask {
+                    type inet:ipv4-address;
+                    description "BMC network mask";
+                }
+            }
+            /* end of container bmc */
         }
         /* end of container DEVICE_METADATA */
     }

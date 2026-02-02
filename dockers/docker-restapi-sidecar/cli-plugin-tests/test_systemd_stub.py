@@ -79,14 +79,33 @@ def ss(tmp_path, monkeypatch):
     """
     Import systemd_stub fresh for every test, and provide fakes:
 
-      - run_nsenter: simulates host FS + systemctl/docker calls (patched on sidecar_common)
+      - run_nsenter: simulates host FS + systemctl/docker calls
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
       - config_db: dict for CONFIG_DB contents ("TABLE|KEY" -> {field: value})
-      - ConfigDBConnector: replaced with a fake that reads/writes config_db (patched on sidecar_common)
     """
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
+
+    # Mock sonic_version.yml with a supported branch (default to 202311)
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'")
+    
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+    
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
 
     # Fake host filesystem and command recorder
     host_fs = {}
@@ -95,35 +114,23 @@ def ss(tmp_path, monkeypatch):
     # Fake CONFIG_DB (redis key "TABLE|KEY" -> dict(field -> value))
     config_db = {}
 
-    # ----- Patch db_hget, db_hgetall, db_hset, db_del on sidecar_common -----
+    # ----- Patch db_hget / db_hset to use our fake CONFIG_DB -----
     def fake_db_hget(key: str, field: str):
-        """Get a single field from a CONFIG_DB hash."""
+        """Get a field from CONFIG_DB"""
         entry = config_db.get(key, {})
         return entry.get(field)
-
-    def fake_db_hgetall(key: str):
-        """Get all fields from a CONFIG_DB hash."""
-        return dict(config_db.get(key, {}))
-
-    def fake_db_hset(key: str, field: str, value):
-        """Set a field in a CONFIG_DB hash."""
+    
+    def fake_db_hset(key: str, field: str, value: str) -> bool:
+        """Set a field in CONFIG_DB"""
         if key not in config_db:
             config_db[key] = {}
         config_db[key][field] = value
-
-    def fake_db_del(key: str):
-        """Delete a CONFIG_DB key entirely."""
-        if key in config_db:
-            del config_db[key]
-            return True
-        return False
-
+        return True
+    
     monkeypatch.setattr(real_sidecar_common, "db_hget", fake_db_hget)
-    monkeypatch.setattr(real_sidecar_common, "db_hgetall", fake_db_hgetall)
     monkeypatch.setattr(real_sidecar_common, "db_hset", fake_db_hset)
-    monkeypatch.setattr(real_sidecar_common, "db_del", fake_db_del)
 
-    # ----- Fake run_nsenter for host operations (patch on sidecar_common) -----
+    # ----- Patch run_nsenter for host operations -----
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
 
@@ -174,19 +181,20 @@ def ss(tmp_path, monkeypatch):
 
     monkeypatch.setattr(real_sidecar_common, "run_nsenter", fake_run_nsenter)
 
-    # Fake container FS - patch read_file_bytes_local on sidecar_common
+    # ----- Patch read_file_bytes_local to use container_fs -----
+    # Fake container FS
     container_fs = {}
-
+    
     def fake_read_file_bytes_local(path: str):
         return container_fs.get(path, None)
-
+    
     monkeypatch.setattr(real_sidecar_common, "read_file_bytes_local", fake_read_file_bytes_local)
 
-    # Now import systemd_stub (it will use patched sidecar_common)
+    # Now import systemd_stub after all patches are in place
     ss = importlib.import_module("systemd_stub")
 
     # Isolate POST_COPY_ACTIONS
-    monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
+    monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {})
 
     return ss, container_fs, host_fs, commands, config_db
 
@@ -236,31 +244,49 @@ def test_sync_missing_src_returns_false(ss):
     assert ok is False
 
 
-def test_main_once_exits_zero_and_disables_post_actions(monkeypatch):
+def test_main_once_exits_zero_and_disables_post_actions(ss, monkeypatch):
     # Default restapi has no reconcile logic; simple sync only.
-    if "systemd_stub" in sys.modules:
-        del sys.modules["systemd_stub"]
-    ss = importlib.import_module("systemd_stub")
+    systemd_stub, container_fs, host_fs, commands, config_db = ss
 
-    ss.POST_COPY_ACTIONS["/bin/container_checker"] = [["sudo", "echo", "hi"]]
-    monkeypatch.setattr(ss, "ensure_sync", lambda: True, raising=True)
+    systemd_stub.POST_COPY_ACTIONS["/bin/container_checker"] = [["sudo", "echo", "hi"]]
+    monkeypatch.setattr(systemd_stub, "ensure_sync", lambda: True, raising=True)
     monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--once", "--no-post-actions"])
 
-    rc = ss.main()
+    rc = systemd_stub.main()
     assert rc == 0
-    # Post-actions should be cleared (no-op check)
-    assert not ss.POST_COPY_ACTIONS
+    assert systemd_stub.POST_COPY_ACTIONS == {}
 
 
-def test_is_v1_enabled_false_uses_restapi_sh(monkeypatch):
+def test_env_controls_restapi_src_false(monkeypatch, tmp_path):
     """Test that when IS_V1_ENABLED=false, restapi.sh is used as the source."""
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     
+    # Create fake sonic_version.yml for branch 202311
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'\n")
+    
     monkeypatch.setenv("IS_V1_ENABLED", "false")
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
     ss = importlib.import_module("systemd_stub")
     
-    # Verify the source is restapi.sh
+    # Verify the source is restapi.sh (not per-branch)
     assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
     
     # Verify SYNC_ITEMS contains the correct source
@@ -269,42 +295,67 @@ def test_is_v1_enabled_false_uses_restapi_sh(monkeypatch):
     assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi.sh"
 
 
-def test_is_v1_enabled_true_uses_restapi_v1_sh(monkeypatch):
-    """Test that when IS_V1_ENABLED=true, restapi_v1.sh is used as the source."""
+def test_env_controls_restapi_src_true(monkeypatch, tmp_path):
+    """Test that when IS_V1_ENABLED=true, per-branch restapi.sh is used as the source."""
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     
+    # Create fake sonic_version.yml for branch 202311
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'\n")
+    
     monkeypatch.setenv("IS_V1_ENABLED", "true")
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
     ss = importlib.import_module("systemd_stub")
     
-    # Verify the source is restapi_v1.sh
-    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
+    # Verify the source is per-branch restapi.sh_202311
+    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/v1/restapi.sh_202311"
     
     # Verify SYNC_ITEMS contains the correct source
     restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/bin/restapi.sh"), None)
     assert restapi_sync_item is not None
-    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi_v1.sh"
+    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/v1/restapi.sh_202311"
 
 
-def test_is_v1_enabled_various_truthy_values(monkeypatch):
-    """Test that IS_V1_ENABLED recognizes various truthy string values."""
-    truthy_values = ["1", "true", "True", "TRUE", "yes", "Yes", "YES"]
-    
-    for value in truthy_values:
-        if "systemd_stub" in sys.modules:
-            del sys.modules["systemd_stub"]
-        
-        monkeypatch.setenv("IS_V1_ENABLED", value)
-        ss = importlib.import_module("systemd_stub")
-        
-        assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi_v1.sh", \
-            f"Failed for IS_V1_ENABLED={value}"
-
-
-def test_is_v1_enabled_default_when_not_set(monkeypatch):
+def test_env_controls_restapi_src_default(monkeypatch, tmp_path):
     """Test that when IS_V1_ENABLED is not set, it defaults to false (restapi.sh)."""
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
+    
+    # Mock sonic_version.yml
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'\n")
+    
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
     
     monkeypatch.delenv("IS_V1_ENABLED", raising=False)
     ss = importlib.import_module("systemd_stub")
@@ -313,10 +364,32 @@ def test_is_v1_enabled_default_when_not_set(monkeypatch):
     assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
 
 
-def test_post_copy_actions_match_sync_items():
+def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     """Test that all POST_COPY_ACTIONS keys correspond to destination paths in SYNC_ITEMS."""
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
+    
+    # Create fake sonic_version.yml for branch 202311
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20231110.19'\n")
+    
+    monkeypatch.delenv("IS_V1_ENABLED", raising=False)
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
     
     ss = importlib.import_module("systemd_stub")
     
@@ -328,3 +401,163 @@ def test_post_copy_actions_match_sync_items():
         assert action_path in sync_destinations, \
             f"POST_COPY_ACTIONS key '{action_path}' does not match any destination in SYNC_ITEMS. " \
             f"Available destinations: {sorted(sync_destinations)}"
+
+
+# ===== Per-branch detection tests =====
+
+@pytest.mark.parametrize("version,expected_branch", [
+    ("SONiC.20231110.19", "202311"),
+    ("SONiC.20240510.25", "202405"),
+    ("SONiC.20241110.22", "202411"),
+    ("SONiC.20250510.04", "202505"),
+    ("SONiC.20251110.01", "202511"),
+    ("20231110.19", "202311"),  # Without SONiC. prefix
+    ("20240510.25", "202405"),
+    ("20241110.22", "202411"),
+    ("20250510.04", "202505"),
+    ("20251110.01", "202511"),
+])
+def test_branch_detection_from_version(monkeypatch, tmp_path, version, expected_branch):
+    """Test branch detection from various SONiC version formats."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    # Create fake sonic_version.yml
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text(f"build_version: '{version}'\n")
+    
+    monkeypatch.setenv("IS_V1_ENABLED", "false")
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify correct branch detected
+    assert ss.branch_name == expected_branch
+    
+    # Verify per-branch files are used
+    assert ss._CONTAINER_RESTAPI_SERVICE == f"/usr/share/sonic/systemd_scripts/restapi.service_{expected_branch}"
+    assert ss._CONTAINER_CHECKER_SRC == f"/usr/share/sonic/systemd_scripts/container_checker_{expected_branch}"
+
+
+@pytest.mark.parametrize("version", [
+    "SONiC.master.921927-18199d73f",
+    "master.921927-18199d73f",
+    "SONiC.internal.135691748-dbb8d29985",
+    "internal.135691748-dbb8d29985",
+    "private-build-1.0",
+    "unknown-format",
+])
+def test_unsupported_branches_exit_with_error(monkeypatch, tmp_path, version):
+    """Test that unsupported branches (master/internal/private) exit with SystemExit(1)."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    # Create fake sonic_version.yml
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text(f"build_version: '{version}'\n")
+    
+    monkeypatch.setenv("IS_V1_ENABLED", "false")
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
+    # Should raise SystemExit(1) for unsupported branches
+    with pytest.raises(SystemExit) as exc_info:
+        ss = importlib.import_module("systemd_stub")
+    
+    assert exc_info.value.code == 1
+
+
+@pytest.mark.parametrize("branch,is_v1_enabled", [
+    ("202311", False),
+    ("202405", False),
+    ("202411", False),
+    ("202505", False),
+    ("202511", False),
+    ("202311", True),
+    ("202405", True),
+    ("202411", True),
+    ("202505", True),
+    ("202511", True),
+])
+def test_per_branch_files_with_v1_flag(monkeypatch, tmp_path, branch, is_v1_enabled):
+    """Test that per-branch files are correctly selected with IS_V1_ENABLED flag."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    # Map branch to version string
+    branch_to_version = {
+        "202311": "SONiC.20231110.19",
+        "202405": "SONiC.20240510.25",
+        "202411": "SONiC.20241110.22",
+        "202505": "SONiC.20250510.04",
+        "202511": "SONiC.20251110.01",
+    }
+    
+    version = branch_to_version[branch]
+    
+    # Create fake sonic_version.yml
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text(f"build_version: '{version}'\n")
+    
+    monkeypatch.setenv("IS_V1_ENABLED", "true" if is_v1_enabled else "false")
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify branch detected correctly
+    assert ss.branch_name == branch
+    
+    # Verify restapi source based on IS_V1_ENABLED
+    if is_v1_enabled:
+        assert ss._RESTAPI_SRC == f"/usr/share/sonic/systemd_scripts/v1/restapi.sh_{branch}"
+    else:
+        assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
+    
+    # Verify per-branch service and container_checker files
+    assert ss._CONTAINER_RESTAPI_SERVICE == f"/usr/share/sonic/systemd_scripts/restapi.service_{branch}"
+    assert ss._CONTAINER_CHECKER_SRC == f"/usr/share/sonic/systemd_scripts/container_checker_{branch}"
+
