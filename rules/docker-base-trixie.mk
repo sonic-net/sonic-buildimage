@@ -1,4 +1,4 @@
-# Docker base image (based on Debian Bookworm)
+# Docker base image (based on Debian Trixie)
 
 DOCKER_BASE_TRIXIE = docker-base-trixie.gz
 $(DOCKER_BASE_TRIXIE)_PATH = $(DOCKERS_PATH)/docker-base-trixie

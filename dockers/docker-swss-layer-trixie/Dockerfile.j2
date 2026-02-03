@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt update
 
-RUN apt install iputils-ping
+RUN apt install -y iputils-ping
 
 {% if docker_swss_layer_trixie_debs.strip() -%}
 # Copy locally-built Debian package dependencies
