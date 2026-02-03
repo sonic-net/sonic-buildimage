@@ -1,15 +1,18 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+	url = https://github.com/bdfriedman/sonic-swss-common
+    branch = evpn_mh
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
-	url = https://github.com/sonic-net/sonic-linux-kernel
+	url = https://github.com/bdfriedman/sonic-linux-kernel
+    branch = evpn_mh
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
 	url = https://github.com/sonic-net/sonic-sairedis
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/sonic-net/sonic-swss
+	url = https://github.com/bdfriedman/sonic-swss
+    branch = evpn_mh
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -30,7 +33,8 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/sonic-net/sonic-utilities
+	url = https://github.com/bdfriedman/sonic-utilities
+    branch = evpn_mh
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
@@ -45,7 +49,8 @@
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
-	url = https://github.com/FRRouting/frr.git
+	url = https://github.com/bdfriedman/frr
+    branch = evpn_mh
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
