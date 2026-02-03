@@ -27,7 +27,7 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: xwjinag-ms/sonic-mgmt
+    name: xwjiang-ms/sonic-mgmt
     ref: allow_self_defined_build
     endpoint: sonic-net
   - repository: buildimage
