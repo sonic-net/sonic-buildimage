@@ -1348,7 +1348,7 @@ lane_to_serdes_map_nif_lane261.BCM8887X=rx261:tx261
 lane_to_serdes_map_nif_lane262.BCM8887X=rx262:tx262
 lane_to_serdes_map_nif_lane263.BCM8887X=rx263:tx263
 
-rif_id_max=24576
+rif_id_max=8192
 sai_disable_srcmacqedstmac_ctrl=1
 trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
