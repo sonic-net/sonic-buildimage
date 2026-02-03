@@ -1813,6 +1813,7 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
 #endif
 #endif
 
+    dev_net_set(ndev, current->nsproxy->net_ns);
     /* Register the kernel network device */
     rv = register_netdev(ndev);
     if (rv < 0) {
@@ -2558,12 +2559,15 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
                                sizeof(*dev_cfg), ioc.op.data.len)) {
             return -EFAULT;
         }
-        if (!dev_cfg->name[0] || !dev_cfg->bm_grp ||
-            dev_cfg->bm_grp >= (1 << NUM_GRP_MAX)) {
+        if (!dev_cfg->bm_grp || dev_cfg->bm_grp >= (1 << NUM_GRP_MAX)) {
             DBG_WARN(("Invalid parameter: name=%s, bm_grp=0x%x\n",
                       dev_cfg->name, dev_cfg->bm_grp));
             ioc.rc = SHR_E_PARAM;
             break;
+        }
+        if (dev_cfg->name[0] == '\0') {
+            snprintf(dev_cfg->name, sizeof(dev_cfg->name), "%s%d",
+                     base_dev_name, ioc.unit);
         }
         memset(pdev, 0, sizeof(*pdev));
         strscpy(pdev->name, dev_cfg->name, sizeof(pdev->name));
