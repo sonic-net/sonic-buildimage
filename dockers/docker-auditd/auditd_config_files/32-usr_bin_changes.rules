@@ -1,2 +1,0 @@
--w /bin -p wa -F auid>=1000 -F auid!=4294967295 -k usr_bin_changes
--w /usr/bin -p wa -F auid>=1000 -F auid!=4294967295 -k usr_bin_changes
