@@ -20,7 +20,7 @@ import time
 from unittest import mock
 
 from sonic_platform import utils
-from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update
+from sonic_platform.thermal_updater import ThermalUpdater, clean_thermal_data, hw_management_independent_mode_update
 from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD, \
                                            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
@@ -114,6 +114,7 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_update_asic(self, mock_read):
+        hw_management_independent_mode_update.reset_mock()
         mock_read.return_value = 8
         updater = ThermalUpdater(None)
         assert updater.get_asic_temp() == 1000
@@ -128,6 +129,7 @@ class TestThermalUpdater:
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
     def test_update_module(self):
+        hw_management_independent_mode_update.reset_mock()
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
@@ -145,3 +147,36 @@ class TestThermalUpdater:
         hw_management_independent_mode_update.reset_mock()
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
+
+    @mock.patch('sonic_platform.thermal_updater.clean_thermal_data')
+    @mock.patch('sonic_platform.thermal_updater.atexit.register')
+    def test_registers_exit_cleanup(self, mock_register, mock_clean):
+        hw_management_independent_mode_update.reset_mock()
+        sfp = mock.MagicMock()
+        updater = ThermalUpdater([sfp])
+
+        mock_register.assert_called_once()
+        exit_callback = mock_register.call_args[0][0]
+
+        # Ensure clean routine is not run during construction/start
+        mock_clean.assert_not_called()
+
+        # Simulate process exit and confirm cleanup uses the bound SFP list
+        exit_callback()
+        mock_clean.assert_called_once_with([sfp])
+
+    def test_clean_thermal_data_only_sw_control_modules(self):
+        hw_management_independent_mode_update.reset_mock()
+
+        sfp_sw = mock.MagicMock()
+        sfp_sw.sdk_index = 3
+        sfp_sw.is_sw_control = mock.MagicMock(return_value=True)
+
+        sfp_no_sw = mock.MagicMock()
+        sfp_no_sw.sdk_index = 4
+        sfp_no_sw.is_sw_control = mock.MagicMock(return_value=False)
+
+        clean_thermal_data([sfp_sw, sfp_no_sw])
+
+        hw_management_independent_mode_update.module_data_set_module_counter.assert_called_once_with(2)
+        hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once_with(0, sfp_sw.sdk_index + 1)
