@@ -28,7 +28,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
-    ref: master
+    ref: 202511
     endpoint: sonic-net
   - repository: buildimage
     type: github
