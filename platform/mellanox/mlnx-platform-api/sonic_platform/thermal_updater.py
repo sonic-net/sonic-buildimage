@@ -19,6 +19,8 @@
 from . import utils
 from sonic_py_common import logger
 
+import atexit
+import functools
 import re
 import sys
 import time
@@ -48,6 +50,23 @@ ERROR_READ_THERMAL_DATA = 254000
 TC_CONFIG_FILE = '/run/hw-management/config/tc_config.json'
 logger = logger.Logger('thermal-updater')
 
+# Register a clean-up routine that will run when the process exits
+def clean_thermal_data(sfp_list):
+    if not sfp_list:
+        return
+    hw_management_independent_mode_update.module_data_set_module_counter(len(sfp_list))
+    for sfp in sfp_list:
+        try:
+            sw_control = sfp.is_sw_control()
+            if not sw_control:
+                continue
+
+            hw_management_independent_mode_update.thermal_data_clean_module(
+                0,
+                sfp.sdk_index + 1
+            )
+        except Exception as e:
+            logger.log_warning(f'Cleanup skipped for module {sfp.sdk_index + 1}: {e}')
 
 class ThermalUpdater:
     def __init__(self, sfp_list, update_asic=True):
@@ -55,6 +74,8 @@ class ThermalUpdater:
         self._sfp_status = {}
         self._timer = utils.Timer()
         self._update_asic = update_asic
+
+        atexit.register(functools.partial(clean_thermal_data, self._sfp_list))
 
     def wait_for_sysfs_nodes(self):
         """
@@ -136,7 +157,6 @@ class ThermalUpdater:
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
     def start(self):
-        self.clean_thermal_data()
         self.control_tc(False)
         self.load_tc_config()
         self._timer.start()
@@ -148,15 +168,6 @@ class ThermalUpdater:
     def control_tc(self, suspend):
         logger.log_notice(f'Set hw-management-tc to {"suspend" if suspend else "resume"}')
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
-
-    def clean_thermal_data(self):
-        hw_management_independent_mode_update.module_data_set_module_counter(len(self._sfp_list))
-        hw_management_independent_mode_update.thermal_data_clean_asic(0)
-        for sfp in self._sfp_list:
-            hw_management_independent_mode_update.thermal_data_clean_module(
-                0,
-                sfp.sdk_index + 1
-            )
 
     def get_asic_temp(self):
         temperature = utils.read_int_from_file('/sys/module/sx_core/asic0/temperature/input', default=None)
