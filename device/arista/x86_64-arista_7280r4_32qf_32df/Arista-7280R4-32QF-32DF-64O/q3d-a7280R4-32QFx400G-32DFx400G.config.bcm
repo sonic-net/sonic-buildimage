@@ -2,7 +2,6 @@ soc_family=BCM8887X
 system_ref_core_clock_khz=1600000
 
 dpp_db_path=/usr/share/bcm/db
-sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 ####################################################
 ##Reference applications related properties - Start
 ####################################################
