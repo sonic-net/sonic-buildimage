@@ -1886,6 +1886,20 @@
                 ],
                 "name": "BGPVac",
                 "src_address": "10.1.0.32"
+            },
+            "vnet1|BGPWithVnet": {
+                "ip_range": [
+                    "10.10.0.0/24"
+                ],
+                "name": "BGPWithVnet",
+                "src_address": "10.1.0.32"
+            },
+            "Vrf_blue|BGPWithVrf": {
+                "ip_range": [
+                    "10.11.0.0/24"
+                ],
+                "name": "BGPWithVrf",
+                "src_address": "10.1.0.32"
             }
         },
         "BGP_SENTINELS": {
