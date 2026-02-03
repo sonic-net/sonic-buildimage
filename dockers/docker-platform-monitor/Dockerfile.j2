@@ -46,8 +46,12 @@ RUN apt-get install -y -t bookworm-backports \
 # doesn't ensure all dependencies are installed in the container. So here we
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
-RUN pip3 install grpcio==1.51.1 \
-        grpcio-tools==1.51.1
+RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1 \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends binutils \
+ && find /usr/local/lib/python3.11/dist-packages \
+      \( -name "cygrpc*.so" -o -name "_protoc_compiler*.so" \) \
+      -exec strip --strip-unneeded {} +
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
 RUN pip3 install thrift==0.13.0
@@ -95,7 +99,8 @@ RUN pip3 install smbus2
 # Clean up
 RUN apt-get purge -y           \
         build-essential        \
-        python3-dev
+        python3-dev            \
+        binutils
 
 COPY ["lm-sensors.sh", "/usr/bin/"]
 COPY ["docker-pmon.supervisord.conf.j2", "docker_init.j2", "/usr/share/sonic/templates/"]
