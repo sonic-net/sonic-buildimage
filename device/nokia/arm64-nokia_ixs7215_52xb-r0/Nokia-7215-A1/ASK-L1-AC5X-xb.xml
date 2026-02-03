@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-02-13-1.11" profile="Askl1" sid="ddddc28e-5798-463b-9b23-60159595df8b">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-09-25-1.13" profile="Askl1" sid="4886bdeb-6402-4a08-9022-0f4ed3a77b94">
   <ASKL1plt:ASK-L1 xmlns:ASKL1plt="urn:marvell:ASKL1:yang">
     <ASKL1plt:typedefs>
       <ASKL1plt:typedef>
@@ -155,6 +155,11 @@
           <ASKL1plt:name>USX_20G_OXGMII</ASKL1plt:name>
           <ASKL1plt:description/>
           <ASKL1plt:value>54</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>2500BASE_X</ASKL1plt:name>
+          <ASKL1plt:description>2.5G</ASKL1plt:description>
+          <ASKL1plt:value>55</ASKL1plt:value>
         </ASKL1plt:enum>
         <ASKL1plt:enum>
           <ASKL1plt:name>NA</ASKL1plt:name>
