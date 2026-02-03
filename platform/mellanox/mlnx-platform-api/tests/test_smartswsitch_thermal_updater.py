@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ mock_tc_config = """
 
 class TestSmartSwitchThermalUpdater:
     @mock.patch('sonic_platform.utils.write_file')
+    @mock.patch('sonic_platform.smartswitch_thermal_updater.SmartswitchThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     def test_configuration(self, mock_write):
         dpu = mock.MagicMock()
         mock_sfp = mock.MagicMock()
@@ -68,8 +69,6 @@ class TestSmartSwitchThermalUpdater:
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_ddr_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_drive_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
-        hw_management_independent_mode_update.thermal_data_clean_asic.assert_called_once()
-        hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 0)
         assert updater._timer.schedule.call_count == 3
         # Called for DPU with time 24/2 = 12

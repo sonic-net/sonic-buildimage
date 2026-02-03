@@ -78,8 +78,9 @@ static const struct attribute_group wistron_syseeprom_group = {
 	.attrs = wistron_syseeprom_attributes,
 };
 
-static int wistron_syseeprom_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int wistron_syseeprom_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct wistron_syseeprom_data *data;
 	int status;
 

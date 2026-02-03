@@ -2,3 +2,4 @@
 0002-host_sflow_debian.patch
 0003-sflow-enabled-drop-monitor-support-for-SONiC.patch
 0004-When-interface-removed-just-as-we-discover-it-log-wi.patch
+0005-Use-close-range-syscall-over-blindly-looping-over-al.patch

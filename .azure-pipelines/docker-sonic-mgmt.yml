@@ -57,9 +57,7 @@ stages:
 
         make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic DOCKER_BUILDKIT=0
         make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y target/docker-sonic-mgmt.gz
-        cp target -r $(Build.ArtifactStagingDirectory)/target
-        docker load -i target/docker-sonic-mgmt.gz
-        docker tag docker-sonic-mgmt $REGISTRY_SERVER/docker-sonic-mgmt:latest
+        cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: Build docker-sonic-mgmt.gz
@@ -68,45 +66,62 @@ stages:
       artifact: 'docker-sonic-mgmt'
       displayName: "Archive docker image sonic-mgmt"
 
-  - job: validate_docker_image_and_upload
-    pool: sonicso1ES-amd64
-    timeoutInMinutes: 360
-    dependsOn: Build
-    steps:
-    - checkout: sonic-mgmt
-      clean: true
-      fetchDepth: 0
-      displayName: 'Checkout sonic-mgmt'
+    - bash: |
+        set -ex
+        docker load -i $(Build.ArtifactStagingDirectory)/target/docker-sonic-mgmt.gz
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:lastbuild
+        docker images
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Load and tag docker-sonic-mgmt as lastbuild'
 
+    - task: Docker@2
+      displayName: 'Push docker-sonic-mgmt:lastbuild to registry'
+      condition: succeeded()
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-sonic-mgmt
+        command: push
+        tags: lastbuild
+
+- stage: Test
+  dependsOn: Build
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded'))
+  variables:
+  - group: SONiC-Elastictest
+  - name: BUILD_BRANCH
+    value: $(Build.SourceBranchName)
+  jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        CHECKOUT_SONIC_MGMT: true
+        OVERRIDE_PARAMS:
+          REPO_NAME: "sonic-mgmt"
+          SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
+
+- stage: Publish
+  dependsOn: Test
+  condition: and(succeeded(), in(dependencies.Test.result, 'Succeeded'))
+  jobs:
+  - job: PublishAsLatest
+    pool: sonicso1ES-amd64
+    timeoutInMinutes: 60
+    steps:
     - download: current
       artifact: 'docker-sonic-mgmt'
-      displayName: "Download docker image sonic-mgmt"
-
-    - script: |
-        set -ex
-
-        docker load -i $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz
-
-        cd ansible
-        sudo ./setup-management-network.sh -d
-        cd ../
-        docker rm -f sonic-mgmt
-
-        ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
-
-        docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
-      displayName: 'Setup sonic-mgmt docker container and verify'
+      displayName: "Download docker-sonic-mgmt image"
 
     - bash: |
         set -ex
-
+        docker load -i $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz
         docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:latest
+        docker images
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
-      displayName: 'Tag docker-sonic-mgmt'
+      displayName: 'Load and tag docker-sonic-mgmt as latest'
 
     - task: Docker@2
-      displayName: Upload image
+      displayName: 'Push docker-sonic-mgmt:latest to registry'
       condition: succeeded()
       inputs:
         containerRegistry: ${{ parameters.registry_conn }}

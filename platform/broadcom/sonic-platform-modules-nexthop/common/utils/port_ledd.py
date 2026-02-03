@@ -6,11 +6,12 @@ Front-panel LED control daemon
 
 import sys
 
+from nexthop.graceful_exitter import GracefulExitter
 from sonic_py_common import daemon_base
 from sonic_py_common.interface import backplane_prefix, inband_prefix, recirc_prefix
 from swsscommon import swsscommon
 
-SYSLOG_IDENTIFIER = "port_ledd"
+SYSLOG_IDENTIFIER = "port-ledd"
 
 LED_MODULE_NAME = "led_control"
 LED_CLASS_NAME = "LedControl"
@@ -101,9 +102,10 @@ class PortLedd(daemon_base.DaemonBase):
 
 
 def main():
+    exitter = GracefulExitter(SYSLOG_IDENTIFIER)
     ledd = PortLedd()
 
-    while True:
+    while not exitter.should_exit():
         ledd.run()
 
 

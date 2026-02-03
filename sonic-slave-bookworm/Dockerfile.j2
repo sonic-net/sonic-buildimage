@@ -404,23 +404,23 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For kdump-tools
         libbz2-dev \
 # For linkmgrd
-        libboost-dev \
-        libboost-program-options-dev \
-        libboost-system-dev \
-        libboost-serialization1.74-dev \
-        libboost-thread-dev \
-        libboost-atomic-dev \
-        libboost-chrono-dev \
-        libboost-container-dev \
-        libboost-context-dev \
-        libboost-contract-dev \
-        libboost-coroutine-dev \
-        libboost-date-time-dev \
-        libboost-fiber-dev \
-        libboost-filesystem-dev \
-        libboost-graph-parallel-dev \
-        libboost-log-dev \
-        libboost-regex-dev \
+        libboost1.83-dev \
+        libboost-program-options1.83-dev \
+        libboost-system1.83-dev \
+        libboost-serialization1.83-dev \
+        libboost-thread1.83-dev \
+        libboost-atomic1.83-dev \
+        libboost-chrono1.83-dev \
+        libboost-container1.83-dev \
+        libboost-context1.83-dev \
+        libboost-contract1.83-dev \
+        libboost-coroutine1.83-dev \
+        libboost-date-time1.83-dev \
+        libboost-fiber1.83-dev \
+        libboost-filesystem1.83-dev \
+        libboost-graph-parallel1.83-dev \
+        libboost-log1.83-dev \
+        libboost-regex1.83-dev \
         googletest \
         libgtest-dev \
         libgmock-dev \
@@ -482,9 +482,9 @@ RUN eatmydata apt-get install -y \
         libopenmpi-dev \
         libthrift-0.17.0 \
         libthrift-dev \
-        libboost-all-dev \
-        libboost-graph-dev \
-        libboost-iostreams-dev \
+        libboost1.83-all-dev \
+        libboost-graph1.83-dev \
+        libboost-iostreams1.83-dev \
         libgc-dev \
         tcpdump \
         llvm \
@@ -666,7 +666,6 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
