@@ -211,8 +211,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Then immediately uninstall enum34, as enum34 should not be installed for Python >= 3.4, as it causes a
 # conflict with the new 'enum' module in the standard library
 # https://github.com/robshakir/pyangbind/issues/232
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.2
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 
 # Install SONiC config engine Python 3 package
 install_pip_package {{config_engine_py3_wheel_path}}
@@ -1219,7 +1218,7 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
 {% if installer_python_debs.strip() -%}
-# Install FIPS python package will break apt-get purge command, so install after all purge command finish 
+# Install FIPS python package will break apt-get purge command, so install after all purge command finish
 if [ "$INCLUDE_FIPS" == y ]; then
     install_deb_package {{installer_python_debs}}
 fi
