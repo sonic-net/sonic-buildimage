@@ -67,6 +67,12 @@ stages:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
+  - template: .azure-pipelines/azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+      - name: vpp
+        continueOnError: true
 
 - stage: Build
   pool: sonicso1ES-amd64
