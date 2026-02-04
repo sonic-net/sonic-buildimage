@@ -8,6 +8,8 @@
 #############################################################################
 
 try:
+    import os
+    import json
     from sonic_platform_base.component_base import ComponentBase
     from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
@@ -82,4 +84,85 @@ class Component(ComponentBase):
         Returns:
             A boolean, True if install successfully, False if not
         """
-        raise NotImplementedError
+        ret, output = getstatusoutput_noshell(["tar", "-C", "/tmp", "-xzf", image_path ] )
+        if ret != 0 :
+            print("Installation failed because of wrong image package")
+            return False
+
+        if os.path.exists("/tmp/install.json") is False:
+            print("Installation failed without jsonfile")
+            return False
+
+        input_file = open ('/tmp/install.json')
+        json_array = json.load(input_file)
+        ret = 1
+        for item in json_array:
+            if item.get('id')==None or item.get('path')==None:
+                continue
+            if self.name == item['id'] and item['path'] and item.get('cpu'):
+                print( "Find", item['id'], item['path'], item['cpu'] )
+                ret, output = getstatusoutput_noshell(["/tmp/run_install.sh", item['id'], item['path'], item['cpu'] ])
+                if ret==0:
+                    break
+            elif self.name == item['id'] and item['path']:
+                print( "Find", item['id'], item['path'] )
+                ret, output = getstatusoutput_noshell(["/tmp/run_install.sh", item['id'], item['path'] ])
+                if ret==0:
+                    break
+
+        if ret==0:
+            return True
+        else :
+            return False
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the device
+        Returns:
+            bool: True if device is present, False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return 'N/A'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return 'N/A'
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the device
+        Returns:
+            A boolean value, True if device is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
