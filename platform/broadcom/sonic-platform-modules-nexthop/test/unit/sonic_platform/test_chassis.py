@@ -92,13 +92,13 @@ class TestChassis:
         assert actual_watchdog.watchdog_counter_reg_offset == 0x1E0
 
     def test_chassis_get_watchdog_pddf_data_is_empty(self, chassis_module):
-        # Initiailize chasis with an empty pddf_data
+        # Initialize chasis with an empty pddf_data
         chassis = chassis_module.Chassis(pddf_data=mock_pddf_data({}))
 
         assert chassis.get_watchdog() is None
 
     def test_chassis_get_watchdog_no_watchdog_presence_in_pddf_data(self, chassis_module):
-        # Initiailize chasis with an empty pddf_data
+        # Initialize chasis with an empty pddf_data
         chassis = chassis_module.Chassis(pddf_data=mock_pddf_data({"device": {}}))
 
         assert chassis.get_watchdog() is None
