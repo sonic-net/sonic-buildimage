@@ -1,16 +1,28 @@
 import pytest
-from nexthop import fpga_lib
+import sys
+
 from unittest.mock import patch, ANY, Mock
 
-# Should match the watchdog mock in fixtures_unit_test.py
 _FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET = 0x28
 _FAKE_WATCHDOG_COUNTER_REG_OFFSET = 0x1E0
 
 
+@pytest.fixture
+def watchdog_module():
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from sonic_platform import watchdog
+
+    yield watchdog
+
+
 class TestWatchdog:
-    @pytest.fixture(autouse=True)
-    def setup(self, watchdog):
-        self.watchdog = watchdog
+    @pytest.fixture(scope="function", autouse=True)
+    def setup(self, watchdog_module):
+        self.watchdog = watchdog_module.Watchdog(
+            fpga_pci_addr="FAKE_FPGA_PCI_ADDR",
+            event_driven_power_cycle_control_reg_offset=_FAKE_EVENT_DRIVEN_POWER_CYCLE_CONTROL_REG_OFFSET,
+            watchdog_counter_reg_offset=_FAKE_WATCHDOG_COUNTER_REG_OFFSET,
+        )
 
     @pytest.fixture
     def mock_toggle_watchdog_reboot(self):
@@ -42,48 +54,53 @@ class TestWatchdog:
         """Mock for _read_watchdog_counter_register."""
         return Mock()
 
-    @patch.object(fpga_lib, "read_32", autospec=True)
-    def test_read_watchdog_counter_register(self, mock_read_32):
-        self.watchdog._read_watchdog_counter_register()
+    def test_read_watchdog_counter_register(self, watchdog_module):
+        # Set up
+        with patch.object(watchdog_module.fpga_lib, "read_32", autospec=True) as mock_read_32:
+            # Act
+            self.watchdog._read_watchdog_counter_register()
+            # Assert
+            mock_read_32.assert_called_once_with(
+                self.watchdog.fpga_pci_addr, _FAKE_WATCHDOG_COUNTER_REG_OFFSET
+            )
 
-        mock_read_32.assert_called_once_with(
-            self.watchdog.fpga_pci_addr, _FAKE_WATCHDOG_COUNTER_REG_OFFSET
-        )
-
-    def test_read_watchdog_counter_enable(self, mock_read_watchdog_counter_register):
+    def test_read_watchdog_counter_enable(self, watchdog_module, mock_read_watchdog_counter_register):
         self.watchdog._read_watchdog_counter_register = (
             mock_read_watchdog_counter_register
         )
-        with patch.object(fpga_lib, "get_field", autospec=True) as mock_get_field:
+        with patch.object(watchdog_module.fpga_lib, "get_field", autospec=True) as mock_get_field:
             mock_get_field.return_value = 1
             assert self.watchdog._read_watchdog_counter_enable()
 
-    @patch.object(fpga_lib, "read_32", autospec=True)
-    @patch.object(fpga_lib, "write_32", autospec=True)
-    @patch.object(fpga_lib, "overwrite_field", autospec=True)
-    def test_update_watchdog_countdown_value(
-        self, mock_overwrite_field, mock_write_32, mock_read_32
-    ):
-        # Act
-        self.watchdog._update_watchdog_countdown_value(10)
+    def test_update_watchdog_countdown_value(self, watchdog_module):
+        # Set up
+        with (
+            patch.object(watchdog_module.fpga_lib, "read_32", autospec=True) as mock_read_32,
+            patch.object(watchdog_module.fpga_lib, "write_32", autospec=True) as mock_write_32,
+            patch.object(
+                watchdog_module.fpga_lib, "overwrite_field", autospec=True
+            ) as mock_overwrite_field,
+        ):
+            # Act
+            self.watchdog._update_watchdog_countdown_value(10)
 
-        # Assert
-        mock_overwrite_field.assert_called_once_with(
-            mock_read_32.return_value, (0, 23), 10
-        )
-        mock_write_32.assert_called_once_with(
-            self.watchdog.fpga_pci_addr,
-            _FAKE_WATCHDOG_COUNTER_REG_OFFSET,
-            mock_overwrite_field.return_value,
-        )
+            # Assert
+            mock_overwrite_field.assert_called_once_with(
+                mock_read_32.return_value, (0, 23), 10
+            )
+            mock_write_32.assert_called_once_with(
+                self.watchdog.fpga_pci_addr,
+                _FAKE_WATCHDOG_COUNTER_REG_OFFSET,
+                mock_overwrite_field.return_value,
+            )
 
     @pytest.mark.parametrize("is_enable,expected_field_val", [(True, 1), (False, 0)])
-    def test_toggle_watchdog_counter_enable(self, is_enable, expected_field_val):
+    def test_toggle_watchdog_counter_enable(self, watchdog_module, is_enable, expected_field_val):
         with (
-            patch.object(fpga_lib, "read_32", autospec=True),
-            patch.object(fpga_lib, "write_32", autospec=True) as mock_write_32,
+            patch.object(watchdog_module.fpga_lib, "read_32", autospec=True),
+            patch.object(watchdog_module.fpga_lib, "write_32", autospec=True) as mock_write_32,
             patch.object(
-                fpga_lib, "overwrite_field", autospec=True
+                watchdog_module.fpga_lib, "overwrite_field", autospec=True
             ) as mock_overwrite_field,
         ):
             self.watchdog._toggle_watchdog_counter_enable(is_enable)
@@ -97,12 +114,12 @@ class TestWatchdog:
             )
 
     @pytest.mark.parametrize("is_enable,expected_field_val", [(True, 1), (False, 0)])
-    def test_toggle_watchdog_reboot(self, is_enable, expected_field_val):
+    def test_toggle_watchdog_reboot(self, watchdog_module, is_enable, expected_field_val):
         with (
-            patch.object(fpga_lib, "read_32", autospec=True),
-            patch.object(fpga_lib, "write_32", autospec=True) as mock_write_32,
+            patch.object(watchdog_module.fpga_lib, "read_32", autospec=True),
+            patch.object(watchdog_module.fpga_lib, "write_32", autospec=True) as mock_write_32,
             patch.object(
-                fpga_lib, "overwrite_field", autospec=True
+                watchdog_module.fpga_lib, "overwrite_field", autospec=True
             ) as mock_overwrite_field,
         ):
             self.watchdog._toggle_watchdog_reboot(is_enable)

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# Copyright 2025 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+ADM1266 RTC Synchronization Utility.
+
+This script synchronizes the RTC (Real-Time Counter) of all ADM1266 DPM devices,
+to avoid clocks' drift on a long-running system.
+
+Writing the epoch offset to the kernel driver's sysfs interface will trigger
+SET_RTC command on the ADM1266 DPM devices.
+"""
+
+import sys
+
+from nexthop.pddf_config_parser import load_pd_plugin_config
+from sonic_platform.adm1266 import Adm1266, EPOCH_OFFSET_SECONDS
+from sonic_platform.dpm_base import DpmType
+from sonic_py_common import syslogger
+
+SYSLOG_IDENTIFIER = "adm1266_rtc_sync"
+logger = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+
+def main():
+    """Synchronize RTC for all ADM1266 devices.
+
+    Returns:
+        int: 0 on success, 1 on error
+    """
+    try:
+        plugin_config = load_pd_plugin_config()
+    except Exception as e:
+        logger.log_error(f"Failed to load pd-plugin.json configuration: {e}")
+        return 1
+
+    dpm_config = plugin_config.get("DPM", {})
+    if not dpm_config:
+        return 0
+
+    success_count = 0
+    error_count = 0
+
+    for dpm_name, platform_spec in dpm_config.items():
+        dpm_type = platform_spec.get("type")
+        if dpm_type != DpmType.ADM1266.value:
+            continue
+
+        try:
+            adm1266 = Adm1266(dpm_name, platform_spec)
+            adm1266.set_rtc_epoch_offset(EPOCH_OFFSET_SECONDS)
+            success_count += 1
+
+        except Exception as e:
+            logger.log_error(f"Failed to synchronize RTC for {dpm_name}: {e}")
+            error_count += 1
+
+    if success_count > 0 or error_count > 0:
+        logger.log_info(
+            f"RTC synchronization with epoch_offset_secs={EPOCH_OFFSET_SECONDS} complete: {success_count} succeeded, {error_count} failed"
+        )
+
+    return 1 if error_count > 0 else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
