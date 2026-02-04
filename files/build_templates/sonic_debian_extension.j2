@@ -206,11 +206,6 @@ install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 # Install some dependencies for pyangbind
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
-# For sonic-config-engine Python 3 package
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# Then immediately uninstall enum34, as enum34 should not be installed for Python >= 3.4, as it causes a
-# conflict with the new 'enum' module in the standard library
-# https://github.com/robshakir/pyangbind/issues/232
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 
 # Install SONiC config engine Python 3 package
