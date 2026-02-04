@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+# Restore cipher_pass file from persistent storage
+if [ -f /host/security_cipher/cipher_pass.json ]; then
+    cp /host/security_cipher/cipher_pass.json /etc/cipher_pass.json
+    chmod 600 /etc/cipher_pass.json
+    echo "Restored /host/security_cipher/cipher_pass.json to /etc/"
+fi
+
