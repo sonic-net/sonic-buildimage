@@ -59,7 +59,7 @@ RUN apt-get purge -y build-essential python3-dev
 COPY ["files/arp_update", "/usr/bin"]
 COPY ["arp_update.conf", "files/arp_update_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["ndppd.conf", "tunnel_packet_handler.conf", "/usr/share/sonic/templates/"]
-COPY ["enable_counters.py", "tunnel_packet_handler.py", "/usr/bin/"]
+COPY ["enable_counters.py", "tunnel_packet_handler.py", "non_persistent_acl_mgrd", "/usr/bin/"]
 COPY ["orchagent.sh", "swssconfig.sh", "buffermgrd.sh", "/usr/bin/"]
 
 # Copy all Jinja2 template files into the templates folder
