@@ -921,7 +921,7 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT /usr/local/bin/ge
 {% if include_kubernetes == "y" %}
 ## Pull in kubernetes docker images
 echo "pulling universal k8s images ..."
-{% if DEFAULT_CONTAINER_REGISTRY == "publicmirror.azurecr.io/" %}
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${K8s_GCR_IO_PAUSE_VERSION}
 {% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${K8s_GCR_IO_PAUSE_VERSION}
@@ -932,7 +932,7 @@ echo "docker images pull complete"
 {% if include_kubernetes_master == "y" %}
 # Pull in kubernetes master docker images
 echo "pulling kubernetes master images ..."
-{% if DEFAULT_CONTAINER_REGISTRY == "publicmirror.azurecr.io/" %}
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${MASTER_PAUSE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-controller-manager:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
