@@ -41,7 +41,7 @@ module sonic-mgmt_interface {
                 }
 
                 leaf ip_prefix {
-                    must "(contains(current(), ':') and contains(../gwaddr, ':')) or (contains(current(), '.') and contains(../gwaddr, '.'))";
+                    must "(contains(current(), ':')) or (contains(current(), '.'))";
                     type stypes:sonic-ip-prefix;
                 }
 
