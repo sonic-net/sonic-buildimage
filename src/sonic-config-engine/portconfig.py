@@ -37,7 +37,7 @@ PORT_STR = "Ethernet"
 BRKOUT_MODE = "default_brkout_mode"
 CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
-OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role", "subport"]
+OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 
 BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
 BRKOUT_PATTERN_GROUPS = 6
@@ -375,22 +375,12 @@ class BreakoutCfg(object):
 
                 lanes = self._lanes[lane_id:lane_id + lanes_per_port]
 
-                alias = self._breakout_capabilities[alias_id]
-                # If alias follows new SONiC port naming convention (e.g. et[sX]pY[abcd]),
-                # we can derive subport directly based on the breakout mode. Otherwise,
-                # fallback to the old method.
-                if m := re.match(r"et(s\d+)?p\d+([a-l])?", alias):
-                    breakout = m.groups()[-1]
-                    subport = "0" if not breakout else str(ord(breakout) - ord('a') + 1)
-                else:
-                    subport = "0" if total_num_ports == 1 else str(alias_id + 1)
-
                 port_config = {
-                    'alias': alias,
+                    'alias': self._breakout_capabilities[alias_id],
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
                     'index': self._indexes[lane_id],
-                    'subport': subport
+                    'subport': "0" if total_num_ports == 1 else str(alias_id + 1)
                 }
                 
                 # If the lane speed is greater than 50G, enable FEC

@@ -655,7 +655,7 @@
                          "alias": "etp1a",
                          "lanes": "60, 61",
                          "speed": 100000,
-                         "subport": 13,
+                         "subport": 9,
                          "mode":"trunk"
                      }
                  ]
