@@ -20,6 +20,9 @@ from .device_data import DeviceDataManager
 from . import utils
 from sonic_py_common import logger
 
+import atexit
+import functools
+import re
 import sys
 import time
 import os
@@ -52,6 +55,23 @@ ERROR_READ_THERMAL_DATA = 254000
 TC_CONFIG_FILE = '/run/hw-management/config/tc_config.json'
 logger = logger.Logger('thermal-updater')
 
+# Register a clean-up routine that will run when the process exits
+def clean_thermal_data(sfp_list):
+    if not sfp_list:
+        return
+    hw_management_independent_mode_update.module_data_set_module_counter(len(sfp_list))
+    for sfp in sfp_list:
+        try:
+            sw_control = sfp.is_sw_control()
+            if not sw_control:
+                continue
+
+            hw_management_independent_mode_update.thermal_data_clean_module(
+                0,
+                sfp.sdk_index + 1
+            )
+        except Exception as e:
+            logger.log_warning(f'Cleanup skipped for module {sfp.sdk_index + 1}: {e}')
 
 class ThermalUpdater:
     def __init__(self, sfp_list, update_asic=True):
@@ -59,6 +79,8 @@ class ThermalUpdater:
         self._sfp_status = {}
         self._timer = utils.Timer()
         self._update_asic = update_asic
+
+        atexit.register(functools.partial(clean_thermal_data, self._sfp_list))
 
     def wait_for_sysfs_nodes(self):
         """
@@ -88,26 +110,50 @@ class ThermalUpdater:
 
         return result
 
+    def _find_matching_key(self, dev_parameters, pattern):
+        """
+        Find the first key in dev_parameters that matches the given regex pattern.
+        Returns the matching key and its value, or (None, None) if no match found.
+        """
+        for key in dev_parameters.keys():
+            if re.match(pattern, key):
+                return key, dev_parameters[key]
+        return None, None
+
     def load_tc_config(self):
         asic_poll_interval = 1
         sfp_poll_interval = 10
         data = utils.load_json_file(TC_CONFIG_FILE, log_func=None)
         if not data:
-            logger.log_notice(f'{TC_CONFIG_FILE} does not exist, use default polling interval')
+            logger.log_error(f'{TC_CONFIG_FILE} does not exist, use default polling interval')
 
         if data:
             dev_parameters = data.get('dev_parameters')
-            if dev_parameters is not None:
-                asic_parameter = dev_parameters.get('asic')
+            if not dev_parameters:
+                logger.log_error('dev_parameters not configured or empty, using default intervals')
+            else:
+                # Find ASIC parameter using regex pattern
+                asic_key, asic_parameter = self._find_matching_key(dev_parameters, r'asic\\d*')
                 if asic_parameter is not None:
                     asic_poll_interval_config = asic_parameter.get('poll_time')
                     if asic_poll_interval_config:
-                        asic_poll_interval = int(asic_poll_interval_config) / 2
-                module_parameter = dev_parameters.get('module\\d+')
+                        asic_poll_interval = int(asic_poll_interval_config)
+                        logger.log_notice(f'ASIC parameter found with key "{asic_key}", poll_time: {asic_poll_interval_config}, interval: {asic_poll_interval}')
+                    else:
+                        logger.log_error(f'ASIC poll_time not configured in "{asic_key}", using default interval: {asic_poll_interval}')
+                else:
+                    logger.log_error(f'ASIC parameter not found (pattern: asic\\d*), using default interval: {asic_poll_interval}')
+                # Find Module parameter using regex pattern
+                module_key, module_parameter = self._find_matching_key(dev_parameters, r'module\\d+')
                 if module_parameter is not None:
                     sfp_poll_interval_config = module_parameter.get('poll_time')
                     if sfp_poll_interval_config:
-                        sfp_poll_interval = int(sfp_poll_interval_config) / 2
+                        sfp_poll_interval = int(sfp_poll_interval_config)
+                        logger.log_notice(f'Module parameter found with key "{module_key}", poll_time: {sfp_poll_interval_config}, interval: {sfp_poll_interval}')
+                    else:
+                        logger.log_error(f'Module poll_time not configured in "{module_key}", using default interval: {sfp_poll_interval}')
+                else:
+                    logger.log_error(f'Module parameter not found (pattern: module\\d+), using default interval: {sfp_poll_interval}')
 
         if self._update_asic:
             logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
@@ -116,7 +162,6 @@ class ThermalUpdater:
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
     def start(self):
-        self.clean_thermal_data()
         self.control_tc(False)
         self.load_tc_config()
 
@@ -135,15 +180,6 @@ class ThermalUpdater:
     def control_tc(self, suspend):
         logger.log_notice(f'Set hw-management-tc to {"suspend" if suspend else "resume"}')
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
-
-    def clean_thermal_data(self):
-        hw_management_independent_mode_update.module_data_set_module_counter(len(self._sfp_list))
-        hw_management_independent_mode_update.thermal_data_clean_asic(0)
-        for sfp in self._sfp_list:
-            hw_management_independent_mode_update.thermal_data_clean_module(
-                0,
-                sfp.sdk_index + 1
-            )
 
     def get_asic_temp(self, asic_index=0):
         temperature = utils.read_int_from_file(f'/sys/module/sx_core/asic{asic_index}/temperature/input', default=None)
