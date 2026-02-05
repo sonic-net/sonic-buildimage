@@ -2479,7 +2479,8 @@
                 "endpoint": "192.168.1.1,192.168.1.2",
                 "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
                 "vni": "10011,10012",
-                "consistent_hashing_buckets": "10"
+                "consistent_hashing_buckets": "10",
+                "metric": "0"
             }
         },
         "PORT_QOS_MAP": {
