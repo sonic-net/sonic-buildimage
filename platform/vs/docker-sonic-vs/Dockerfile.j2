@@ -69,7 +69,7 @@ RUN apt-get install -y net-tools \
                        libgssrpc4 \
                        libkdb5-10
 
-RUN apt-get install -y -t bullseye-backports iproute2
+RUN apt-get install -y iproute2
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
