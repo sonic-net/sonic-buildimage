@@ -1,8 +1,8 @@
 {% macro install_debian_packages(packages) -%}
-RUN apt install -y --reinstall --no-remove --allow-downgrades \
+RUN dpkg -i \
 {%- for deb in packages %}
     /debs/{{ deb }} {%- if not loop.last %} \ {%- endif %}
-{%- endfor %}
+{%- endfor %} || apt-get -y install -f --no-remove
 {%- endmacro %}
 
 {% macro install_python2_wheels(packages) -%}
