@@ -52,6 +52,9 @@ RUN apt update &&            \
         libzmq5              \
         libwrap0            \
         libatomic1
+# for azure profiler
+        libcurl4-gnutls-dev
+        libxml2
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
