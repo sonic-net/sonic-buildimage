@@ -14,7 +14,7 @@ logger () {
     command logger -i "$$" -t "arp_update" "$@"
 }
 
-# Function to run a command with retries on failure (3 seconds interval, 1 try)
+# Function to run a command with retries on failure
 run_with_retry_cmd() {
     local desc="$1"; shift
     local max_tries=1
@@ -27,8 +27,10 @@ run_with_retry_cmd() {
         if [ $rc -eq 0 ]; then
             return 0
         fi
-        logger -p warning "command '${desc}' failed on attempt ${i} (rc=${rc}); retrying (next attempt $((i + 1)) of ${max_tries})"
-        sleep $interval
+        if [ $i -lt $max_tries ]; then
+            logger -p warning "command '${desc}' failed on attempt ${i} (rc=${rc}); retrying (next attempt $((i + 1)) of ${max_tries})"
+            sleep $interval
+        fi
         i=$((i + 1))
     done
 
@@ -162,7 +164,7 @@ while /bin/true; do
       while read -r ip ifname; do
           [ -z "$ip" ] && continue
           run_arping_with_retry "$ifname" "$ip"
-      done < <(ip -4 neigh show | grep $vlan | awk '{print $1, $3}')
+      done < <(ip -4 neigh show | grep "$vlan" | awk '{print $1, $3}')
 
       # send ipv6 multicast pings to Vlan interfaces to get/refresh link-local addrs
       ping6cmd="timeout 1 ping6 -I $vlan -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
