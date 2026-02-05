@@ -37,7 +37,7 @@ class Fan(PddfFan):
     """PDDF Platform-Specific Fan class"""
 
     # Default maximum speed if not specified in STATE_DB
-    _DEFAULT_MAX_SPEED = 75.0
+    default_max_speed = None
 
     def __init__(
         self,
@@ -53,6 +53,12 @@ class Fan(PddfFan):
             self, tray_idx, fan_idx, pddf_data, pddf_plugin_data, is_psu_fan, psu_index
         )
         self._state_fan_tbl = _try_get_state_db_table(_FAN_INFO_TABLE_NAME)
+        self.default_max_speed = float(pddf_plugin_data["FAN"]["default_max_speed"])
+        if self.default_max_speed < 0 or self.default_max_speed > 100:
+            raise ValueError(
+                "pddf_plugin_data fan default_max_speed not in valid range [0, 100], "
+                f"got {self.default_max_speed}"
+            )
 
     def get_model(self):
         if self.get_presence() and not self.is_psu_fan:
@@ -111,26 +117,26 @@ class Fan(PddfFan):
             if self._state_fan_tbl is None:
                 logger.log_error(
                     "Can't connect to 'STATE_DB:FAN_INFO' table; "
-                    f"fallback to default max_speed={self._DEFAULT_MAX_SPEED}%."
+                    f"fallback to default max_speed={self.default_max_speed}%."
                 )
-                return self._DEFAULT_MAX_SPEED
+                return self.default_max_speed
 
         fan_name = PddfFan.get_name(self)
         found, data = self._state_fan_tbl.get(fan_name)
         if not found:
             logger.log_error(
                 f"'STATE_DB:FAN_INFO|{fan_name}' not found; "
-                f"fallback to default max_speed={self._DEFAULT_MAX_SPEED}%"
+                f"fallback to default max_speed={self.default_max_speed}%"
             )
-            return self._DEFAULT_MAX_SPEED
+            return self.default_max_speed
 
         data_dict = dict(data)
         if _STATE_MAX_SPEED_KEY not in data_dict:
             logger.log_error(
                 f"max_speed not found in 'STATE_DB:FAN_INFO|{fan_name}'; "
-                f"fallback to default={self._DEFAULT_MAX_SPEED}%."
+                f"fallback to default={self.default_max_speed}%."
             )
-            return self._DEFAULT_MAX_SPEED
+            return self.default_max_speed
         return float(data_dict[_STATE_MAX_SPEED_KEY])
 
     def set_max_speed(self, max_speed):
@@ -150,7 +156,7 @@ class Fan(PddfFan):
             if self._state_fan_tbl is None:
                 logger.log_error(
                     "Can't connect to 'STATE_DB:FAN_INFO' table; "
-                    f"ignore writing max_speed={self._DEFAULT_MAX_SPEED}% "
+                    f"ignore writing max_speed={max_speed}% "
                     f"for {self.get_name()}."
                 )
                 return False

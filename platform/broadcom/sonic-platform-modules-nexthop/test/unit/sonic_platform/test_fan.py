@@ -61,12 +61,18 @@ def fan_module(mock_pddf_fan):
     yield fan
 
 
+@pytest.fixture
+def pddf_plugin_data():
+    """Mock plugin data for Fan"""
+    yield {"FAN": {"default_max_speed": 75}}
+
+
 class TestFan:
     """Test class for Fan functionality."""
 
-    def test_get_presence(self, mock_pddf_fan, fan_module):
+    def test_get_presence(self, mock_pddf_fan, fan_module, pddf_plugin_data):
         """Test get_presence."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
 
         mock_pddf_fan.get_presence.return_value = True
         assert fan.get_presence() is True
@@ -74,38 +80,38 @@ class TestFan:
         mock_pddf_fan.get_presence.return_value = False
         assert fan.get_presence() is False
 
-    def test_get_model_for_present_non_psu_fan(self, mock_pddf_fan, fan_module):
+    def test_get_model_for_present_non_psu_fan(self, mock_pddf_fan, fan_module, pddf_plugin_data):
         """Test get_model for present non-PSU fan."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
 
         mock_pddf_fan.get_presence.return_value = True
         assert fan.get_model() == "FAN-80G1-F"
 
-    def test_get_model_for_non_present_fan(self, mock_pddf_fan, fan_module):
+    def test_get_model_for_non_present_fan(self, mock_pddf_fan, fan_module, pddf_plugin_data):
         """Test get_model for non-present non-PSU fan."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
 
         mock_pddf_fan.get_presence.return_value = False
         assert fan.get_model() == "N/A"
 
-    def test_fan_init_ok_when_db_conn_fails(self, fan_module):
+    def test_fan_init_ok_when_db_conn_fails(self, fan_module, pddf_plugin_data):
         """Test Fan initialization is ok when DB connection fails."""
         # Given
         DBConnector = sys.modules["swsscommon"].swsscommon.DBConnector
         with patch.object(DBConnector, "__init__", Mock(side_effect=RuntimeError)):
             # When
-            fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+            fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
             # Then
             assert fan._state_fan_tbl is None
 
-    def test_get_max_speed_default(self, fan_module):
+    def test_get_max_speed_default(self, fan_module, pddf_plugin_data):
         """Test get_max_speed when it hasn't been set."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
-        assert fan.get_max_speed() == fan._DEFAULT_MAX_SPEED
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
+        assert fan.get_max_speed() == fan.default_max_speed
 
-    def test_set_max_speed(self, fan_module):
+    def test_set_max_speed(self, fan_module, pddf_plugin_data):
         """Test set_max_speed writes data to STATE_DB."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
 
         fan.set_max_speed(60.99)
         assert (
@@ -113,17 +119,17 @@ class TestFan:
             == "60.99"
         )
 
-    def test_set_and_get_max_speed(self, fan_module):
+    def test_set_and_get_max_speed(self, fan_module, pddf_plugin_data):
         """Test setting and getting max speed."""
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
 
         fan.set_max_speed(60.99)
         assert fan.get_max_speed() == 60.99
 
-    def test_set_speed_is_clamped_by_max_speed(self, mock_pddf_fan, fan_module):
+    def test_set_speed_is_clamped_by_max_speed(self, mock_pddf_fan, fan_module, pddf_plugin_data):
         """Test set_speed is clamped by the previously set max_speed."""
         # Given
-        fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+        fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
         fan.set_max_speed(60)
 
         # When
@@ -145,22 +151,22 @@ class TestFan:
             any_order=False,
         )
 
-    def test_set_and_get_max_speed_when_db_conn_fails(self, fan_module):
+    def test_set_and_get_max_speed_when_db_conn_fails(self, fan_module, pddf_plugin_data):
         """Test set_max_speed and get_max_speed change nothing when DB connection fails."""
         # Given
         DBConnector = sys.modules["swsscommon"].swsscommon.DBConnector
         with patch.object(DBConnector, "__init__", Mock(side_effect=RuntimeError)):
-            fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+            fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
             # When/Then
             assert fan.set_max_speed(60.99) == False
-            assert fan.get_max_speed() == fan._DEFAULT_MAX_SPEED
+            assert fan.get_max_speed() == fan.default_max_speed
 
-    def test_set_and_get_max_speed_when_db_conn_resumes(self, fan_module):
+    def test_set_and_get_max_speed_when_db_conn_resumes(self, fan_module, pddf_plugin_data):
         """Test set_max_speed and get_max_speed working when DB connection resumes."""
         # Given - Inject a failed DB connection
         DBConnector = sys.modules["swsscommon"].swsscommon.DBConnector
         with patch.object(DBConnector, "__init__", Mock(side_effect=RuntimeError)):
-            fan = fan_module.Fan(tray_idx=0, fan_idx=0)
+            fan = fan_module.Fan(tray_idx=0, fan_idx=0, pddf_plugin_data=pddf_plugin_data)
             assert fan._state_fan_tbl is None
 
         # When - Revive the DB connector
