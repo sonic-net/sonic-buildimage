@@ -98,6 +98,7 @@ module sonic-srv6 {
                 leaf action {
                     type enumeration {
                         enum uN;
+                        enum uA;
                         enum uDT46;
                     }
                 }
@@ -121,6 +122,24 @@ module sonic-srv6 {
                         enum uniform;
                         enum pipe;
                     }
+                }
+
+                leaf interface {
+                    type string;
+                    description "Interface name";
+                }
+                // Constraint: interface is mandatory when action is uA
+                must "not(action = 'uA') or interface" {
+                    error-message "interface is mandatory when action is 'uA'";
+                }
+
+                leaf adj {
+                    type inet:ipv6-address;
+                    description "IPv6 adjacency address";
+                }
+                // Constraint: adj is mandatory when action is uA
+                must "not(action = 'uA') or adj" {
+                    error-message "adj is mandatory when action is 'uA'";
                 }
             }
         }
