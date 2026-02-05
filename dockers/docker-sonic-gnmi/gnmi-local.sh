@@ -3,6 +3,10 @@
 # gnmi-local: Insecure gNMI server on Unix Domain Socket
 # This allows local clients (e.g., device-ops-agent) to connect without TLS
 
+# Enable GRPC GO LOG (same as gnmi-native)
+export GRPC_GO_LOG_VERBOSITY_LEVEL=99
+export GRPC_GO_LOG_SEVERITY_LEVEL=info
+
 # Socket in mounted directory so it's accessible from host
 GNMI_SOCKET="/var/run/gnmi/gnmi.sock"
 
