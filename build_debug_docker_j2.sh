@@ -21,7 +21,7 @@ debs/
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %}
+{%- endfor %} || apt-get -y install -f --no-remove
 
 {% endif %}
 {% endif %}
