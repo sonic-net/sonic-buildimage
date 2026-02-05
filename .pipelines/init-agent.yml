@@ -46,13 +46,9 @@ steps:
       ls -lt $(Agent.BuildDirectory) $(Agent.BuildDirectory)/s
 
       # Mount nfs
-      if ! mount | grep 'on /nfs'; then
-        if echo $arch | grep amd64; then
-          sudo mkdir /nfs -p
-          sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
-          sudo chown nobody /nfs
-          sudo chmod u=rwx,g=rwx,o=r /nfs
-        fi
-      fi
+      sudo umount /nfs
+      sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs2 /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
+      sudo chown nobody /nfs
+      sudo chmod u=rwx,g=rwx,o=r /nfs
     retryCountOnTaskFailure: 5
     displayName: 'Init agent'

@@ -20,8 +20,7 @@ stages:
   - stage: BuildVS
     jobs:
     - job: vs
-      ${{ if ne(variables['Build.DefinitionName'], 'Networking-acs-buildimage-Official-OneBranch') }}:
-        timeoutInMinutes: 840
+      timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
@@ -33,7 +32,6 @@ stages:
           parameters:
             PLATFORM_NAME: vs
             PLATFORM_ARCH: amd64
-            # docker-ptf is using buster, it will migrate to bullseye
             OPTIONS: ${{ parameters.OPTIONS }}
         - script: |
             # skip because internal branch 3 kvmtest cases keeps failing.
@@ -50,6 +48,11 @@ stages:
             set -o pipefail
 
             OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
+            if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+              OPTIONS+=""
+            else
+              OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+            fi
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz 2>&1 | tee target/build.log
           displayName: Build SONiC image
         - script: |
@@ -71,8 +74,7 @@ stages:
     jobs:
     - ${{ if containsValue(parameters.JOBS, 'broadcom') }}:
       - job: broadcom
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
+        timeoutInMinutes: 840
         pool:
           type: linux
           isCustom: true
@@ -91,6 +93,11 @@ stages:
 
               failures=''
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
               echo "==== Building slim images"
               echo "INCLUDE_ACMS = y" >> rules/config.user
               echo "INCLUDE_MUX = n" >> rules/config.user
@@ -124,28 +131,51 @@ stages:
               echo "==== Building syncd-rpc docker"
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz 2>&1 | tee target/buildrpc.log
               echo "==== Finished building syncd-rpc docker"
-              echo "==== Building one debug image"
-              make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin 2>&1 | tee target/builddbg.log
-              mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
-              echo "==== Finished building one debug image"
               mv target/release/* target/
-              [[ "$failures" != '' ]] && echo "Build failures: $failures"
-              set +x
-              echo "##vso[task.setvariable variable=build_result]$failures"
             displayName: Build SONiC image
-          - script: |
-              echo $(build_result)
-              [[ "$(build_result)" == '' ]] && echo "ALL SUCCEEDED" || exit 1
-            continueOnError: true
-            displayName: Check Result
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
               PLATFORM_NAME: broadcom
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+
+    - ${{ if containsValue(parameters.JOBS, 'broadcom-dbg') }}:
+      - job: broadcom_dbg
+        timeoutInMinutes: 840
+        pool:
+          type: linux
+          isCustom: true
+          name: sonicms1ES
+        variables:
+          ob_artifactBaseName: sonic-buildimage.broadcom-dbg
+        steps:
+          - template: /.pipelines/template-presteps.yml@self
+            parameters:
+              PLATFORM_NAME: broadcom
+              PLATFORM_ARCH: amd64
+              OPTIONS: ${{ parameters.OPTIONS }}
+          - script: |
+              set -ex
+              set -o pipefail
+
+              failures=''
+              OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
+              echo "==== Building one debug image"
+              make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin 2>&1 | tee target/builddbg.log
+              mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
+              echo "==== Finished building one debug image"
+            displayName: Build SONiC image
+          - template: /.pipelines/template-poststeps.yml@self
+            parameters:
+              PLATFORM_NAME: broadcom-dbg
+              BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'mellanox') }}:
       - job: mellanox
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
+        timeoutInMinutes: 840
         pool:
           type: linux
           isCustom: true
@@ -162,6 +192,11 @@ stages:
               set -ex
               set -o pipefail
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
               make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
               mv target/sonic-mellanox.bin target/release/sonic-mellanox.bin
               make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_SESSION_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build-session-monitor.log
@@ -174,12 +209,10 @@ stages:
             parameters:
               PLATFORM_NAME: mellanox
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-
     - ${{ if containsValue(parameters.JOBS, 'nvidia-bluefield') }}:
       - job: nvidia_bluefield
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
-        condition: ne(variables.SKIP_BLUEFIELD, 'y')
+        timeoutInMinutes: 840
+        condition: true
         pool:
           type: linux
           isCustom: true
@@ -196,6 +229,11 @@ stages:
               set -ex
               set -o pipefail
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/nvidia-bluefield"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
               make $OPTIONS target/sonic-nvidia-bluefield.bin 2>&1 | tee target/build.log
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
@@ -204,8 +242,7 @@ stages:
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'marvell-prestera-armhf') }}:
       - job: marvell_prestera_armhf
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
+        timeoutInMinutes: 840
         pool:
           type: linux
           isCustom: true
@@ -223,6 +260,11 @@ stages:
               set -ex
               set -o pipefail
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-prestera-armhf INCLUDE_DHCP_SERVER=y"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
               make $OPTIONS target/sonic-marvell-prestera-armhf.bin 2>&1 | tee target/build.log
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
@@ -231,8 +273,7 @@ stages:
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'marvell-prestera-arm64') }}:
       - job: marvell_prestera_arm64
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
+        timeoutInMinutes: 840
         pool:
           type: linux
           isCustom: true
@@ -250,6 +291,11 @@ stages:
               set -ex
               set -o pipefail
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-prestera-arm64 INCLUDE_DHCP_SERVER=y"
+              if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+                OPTIONS+=""
+              else
+                OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+              fi
               make $OPTIONS target/sonic-marvell-prestera-arm64.bin 2>&1 | tee target/build.log
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
@@ -270,3 +316,44 @@ stages:
           OPTIONS: ${{ parameters.OPTIONS }}
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+- ${{ if eq(variables['System.DefinitionId'], 372481) }}:
+  - stage: Summary
+    dependsOn:
+    - ${{ if or(gt(length(parameters.JOBS), 1), not(containsValue(parameters.JOBS, 'vs'))) }}:
+      - Build
+    - ${{ if containsValue(parameters.JOBS, 'vs') }}:
+      - BuildVS
+    condition: and(always(), ne('${{ parameters.BRANCH_FOLDER }}', 'test'))
+    jobs:
+    - job: analyze_build_result
+      pool:
+        type: linux
+        isCustom: true
+        name: sonic-ubuntu-2c
+      steps:
+      - checkout: none
+      - bash: |
+          set -ex
+          curl -u :$SYSTEM_ACCESSTOKEN https://dev.azure.com/msazure/One/_apis/build/builds/$(Build.BuildId)/timeline?api-version=7.1 > timeline
+          cat timeline | jq .records | jq '[.[] | select(.type=="Job" and .result=="failed" and .name!="analyze_build_result" and .name!="Finalize build" and .name!="PolicyValidation" and (.name | contains("kvmtest") | not)) | {name: .name, id: .id, issues: .issues, result: .result, state: .state}]' > failedjobs
+          c=$(cat failedjobs | jq length)
+          rm -rf log_output
+          for i in $(seq 0 $((c-1))); do
+            id=$(cat failedjobs | jq .[$i].id -r)
+            cat failedjobs | jq -r ".[$i].name | \"- \" + . " >> log_output
+            echo "" >> log_output
+            cat timeline | jq .records | jq "[.[] | select(.parentId == \"$id\" and .result==\"failed\") ] | .[].name,.[].issues[].message" -r | uniq | sed 's/^/  /' >> log_output
+          done
+          if [ -e log_output ]; then
+            echo "" >> log_output
+            echo "https://dev.azure.com/msazure/One/_build/results?buildId=$(Build.BuildId)" >> log_output
+            cat log_output
+            des=$(cat log_output)
+            echo $CERT | base64 -d > cert.pfx
+            cert=$(openssl pkcs12 -in cert.pfx -nokeys -nodes -passin pass: | openssl x509 -noout -fingerprint -sha1 | sed 's/^.*=//' | tr -d ':' | tr 'A-Z' 'a-z')
+            jq -n --arg des "$des" '{"name":"official_build_failure","description":$des,"client":"https://dev.azure.com/msazure/One/_build?definitionId=372481"}' | curl -H "Content-Type: application/json" -X POST https://notice-center.azurewebsites.net/noti_center/notice -d @- -v -H "thumbprint: $cert"
+          fi
+        displayName: analyze build result
+        env:
+          CERT: $(cert-noti)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)

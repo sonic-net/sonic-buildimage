@@ -35,6 +35,7 @@ parameters:
   default:
   - vs
   - broadcom
+  - broadcom-dbg
   - mellanox
   - marvell-prestera-armhf
   - marvell-prestera-arm64

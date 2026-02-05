@@ -11,8 +11,7 @@ parameters:
 
 jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
-    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-      timeoutInMinutes: 840
+    timeoutInMinutes: 480
     condition: false
     pool:
       type: linux
@@ -92,6 +91,11 @@ jobs:
         set -ex
         set -o pipefail
         OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y INCLUDE_DHCP_SERVER=y"
+        if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+          OPTIONS+=""
+        else
+          OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+        fi
         make $OPTIONS target/sonic-cisco-8000.bin 2>&1 | tee target/build.log
         make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz 2>&1 | tee target/buildrpc.log
       displayName: Build SONiC image

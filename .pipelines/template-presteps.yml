@@ -63,6 +63,8 @@ steps:
       path: s/platform/pensando/pensando-sonic-artifacts
       displayName: 'Checkout pensando-sonic-artifacts'
   - script: |
+      set -o pipefail
+
       unset REGISTRY_SERVER
       mkdir -p target/release
       [[ "$(Build.Reason)" != "PullRequest" ]] && git checkout -b $(Build.SourceBranchName)

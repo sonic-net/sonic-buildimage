@@ -25,6 +25,7 @@ variables:
   - name: CDP_CLOUDVAULT_VERSION_SANITIZE
     value: true
   - group: SONIC-BUILD-VG-1
+  - group: SONiC-sonicbld
   - name: BUILD_NUMBER
     value: $(Build.BuildId)
 resources:
@@ -49,6 +50,7 @@ parameters:
   default:
   - vs
   - broadcom
+  - broadcom-dbg
   - mellanox
   - marvell-prestera-armhf
   - marvell-prestera-arm64

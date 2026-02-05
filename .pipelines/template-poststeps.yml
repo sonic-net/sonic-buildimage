@@ -5,6 +5,7 @@ parameters:
       - vs
       - generic
       - broadcom
+      - broadcom-dbg
       - mellanox
       - barefoot
       - marvell-prestera-armhf
@@ -149,7 +150,8 @@ steps:
     - script: |
         SONIC_VERSION=$(cat target/sonic.version)
         PORT=443
-        DOCKERS=$(ls target/docker-*.gz)
+        # QoS test needs syncd/rcp dockers, kube SONiC need config-engine as docker base.
+        DOCKERS=$(ls target/docker-*.gz | grep -i -e rpc -e syncd -e config-engine)
         BRANCH=$(Build.SourceBranchName)
         arch=$(cat .arch)
         if echo "$arch" | grep arm; then
@@ -162,9 +164,6 @@ steps:
         for f in $DOCKERS; do
           echo $f
           ./push_docker.sh $f $(REGISTRY_SERVER_INTERNAL) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
-          if [ "$UPLOAD_HL_ACR" = "true" ]; then
-            ./push_docker.sh $f $(HL_REGISTRY_SERVER) $PORT $(HL_REGISTRY_USERNAME) "$HL_REGISTRY_PASSWD" "$LABELS"
-          fi
         done
       env:
         REGISTRY_PASSWD: $(REGISTRY_PASSWD)

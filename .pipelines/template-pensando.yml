@@ -11,9 +11,8 @@ parameters:
 
 jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
-    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-      timeoutInMinutes: 840
-    condition: false 
+    timeoutInMinutes: 360
+    condition: false
     pool:
       type: linux
       isCustom: true
@@ -49,6 +48,11 @@ jobs:
     - script: |
         set -ex
         OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }}"
+        if echo "$(Build.Reason)" | grep -i -e schedule -e pullrequest; then
+          OPTIONS+=""
+        else
+          OPTIONS+=" SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache BUILD_SKIP_TEST=y"
+        fi
         make $OPTIONS target/sonic-pensando.tar
       displayName: Build SONiC image
     - template: /.pipelines/template-poststeps.yml@self

@@ -3,28 +3,7 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 # Build and push sonic-slave-[trixie|bookworm] images for amd64/armhf/arm64
-schedules:
-- cron: "0 0 * * 0"
-  displayName: Weekly build
-  branches:
-    include:
-    - internal
-    - internal-202???
-  always: true
-
 pr: none
-trigger:
-  batch: true
-  branches:
-    include:
-    - internal
-    - internal-202???
-  paths:
-    include:
-    - sonic-slave-*
-    - files/build/versions
-    - Makefile
-    - Makefile.work
 
 parameters:
 - name: 'dists'
