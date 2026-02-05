@@ -7,3 +7,4 @@
 0007-Fix-py_gnmicli.py-POLL-mode.patch
 0008-Fix-ipv6-addr-port-format-for-grpc.patch
 0009-Fix-regex-to-allow-hyphen-character-in-key-name.patch
+0010-Fix-Python3-literal-comparison-errors.patch
