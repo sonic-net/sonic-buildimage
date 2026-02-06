@@ -728,7 +728,7 @@ start() {
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
 	# Provide PMON broad access/permissions to devices on the host for monitoring and management
     -v /dev:/dev \
-	--device-cgroup-rule='a *:* rwm' \
+	--device-cgroup-rule='a *:* rw' \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
