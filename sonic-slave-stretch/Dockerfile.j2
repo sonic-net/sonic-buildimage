@@ -236,6 +236,8 @@ RUN apt-get update && apt-get install -y \
         libcunit1-dev \
 # For initramfs
         bash-completion \
+# For HAM
+        libdbus-c++-dev \
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
