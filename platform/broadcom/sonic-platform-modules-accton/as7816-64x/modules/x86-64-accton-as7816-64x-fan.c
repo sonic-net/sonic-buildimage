@@ -29,6 +29,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/dmi.h>
+#include <linux/version.h>
 
 #define DRVNAME "as7816_64x_fan"
 
@@ -375,8 +376,12 @@ static struct as7816_64x_fan_data *as7816_64x_fan_update_device(struct device *d
     return data;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7816_64x_fan_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as7816_64x_fan_probe(struct i2c_client *client)
+#endif
 {
     struct as7816_64x_fan_data *data;
     int status;
