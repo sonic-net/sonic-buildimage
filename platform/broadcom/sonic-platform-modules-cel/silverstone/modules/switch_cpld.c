@@ -269,8 +269,7 @@ static struct attribute_group sff_led_groups = {
         .attrs = sff_led_attrs,
 };
 
-static int switch_cpld_probe(struct i2c_client *client,
-                             const struct i2c_device_id *id)
+static int switch_cpld_probe(struct i2c_client *client)
 {
         int err;
         struct switch_cpld_data *drvdata1, *drvdata2;
@@ -357,6 +356,7 @@ static int switch_cpld_probe(struct i2c_client *client,
         }
 
         //port led
+
         err = sysfs_create_group(&client->dev.kobj, &sff_led_groups);
         if (err) {
                 dev_err(&client->dev,

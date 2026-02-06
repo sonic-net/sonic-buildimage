@@ -680,10 +680,9 @@ static int cpld_b_drv_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int cpld_b_drv_remove(struct platform_device *pdev)
+static void cpld_b_drv_remove(struct platform_device *pdev)
 {
 	sysfs_remove_group(&pdev->dev.kobj, &cpld_b_attrs_grp);
-	return 0;
 }
 
 static struct platform_driver cpld_b_drv = {

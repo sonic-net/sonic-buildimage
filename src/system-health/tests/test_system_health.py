@@ -13,7 +13,8 @@ import copy
 import os
 import sys
 import docker
-from imp import load_source
+import importlib.util
+import importlib.machinery
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch
@@ -40,6 +41,16 @@ from health_checker.user_defined_checker import UserDefinedChecker
 from health_checker.sysmonitor import Sysmonitor
 from health_checker.sysmonitor import MonitorStateDbTask
 from health_checker.sysmonitor import MonitorSystemBusTask
+
+def load_source(modname, filename):
+    loader = importlib.machinery.SourceFileLoader(modname, filename)
+    spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+    # The module is always executed and not cached in sys.modules.
+    # Uncomment the following line to cache the module.
+    sys.modules[module.__name__] = module
+    loader.exec_module(module)
+    return module
 
 load_source('healthd', os.path.join(scripts_path, 'healthd'))
 from healthd import HealthDaemon
@@ -307,35 +318,40 @@ def test_service_checker_no_critical_process(mock_get_table, mock_docker_client)
 @patch('health_checker.service_checker.ServiceChecker.check_services', MagicMock())
 @patch('health_checker.utils.run_command')
 def test_service_checker_check_by_monit(mock_run):
-    return_value = 'Monit 5.20.0 uptime: 3h 54m\n' \
-                   'Service Name                     Status                      Type\n' \
-                   'sonic                            Running                     System\n' \
-                   'sonic1                           Not running                 System\n' \
-                   'telemetry                        Does not exist              Process\n' \
-                   'orchagent                        Running                     Process\n' \
-                   'root-overlay                     Accessible                  Filesystem\n' \
-                   'var-log                          Is not accessible           Filesystem\n'
+    return_value = '''Monit 5.34.3 uptime: 23h 11m
+ Service Name                     Status                      Type
+ vlab-01                          OK                          System
+ vlab-02                          Resource limit matched      System
+ rsyslog                          OK                          Process
+ root-overlay                     OK                          Filesystem
+ var-log                          Does not exist              Filesystem
+ routeCheck                       Status failed               Program
+ diskCheck                        OK                          Program
+ '''
     mock_run.side_effect = ['active', return_value]
     checker = ServiceChecker()
     config = Config()
     checker.check(config)
-    assert 'sonic' in checker._info
-    assert checker._info['sonic'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert 'vlab-01' in checker._info
+    assert checker._info['vlab-01'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
-    assert 'sonic1' in checker._info
-    assert checker._info['sonic1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'vlab-02' in checker._info
+    assert checker._info['vlab-02'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
 
-    assert 'orchagent' in checker._info
-    assert checker._info['orchagent'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
-
-    assert 'telemetry' in checker._info
-    assert checker._info['telemetry'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'rsyslog' in checker._info
+    assert checker._info['rsyslog'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
     assert 'root-overlay' in checker._info
     assert checker._info['root-overlay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
     assert 'var-log' in checker._info
     assert checker._info['var-log'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'routeCheck' in checker._info
+    assert checker._info['routeCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'diskCheck' in checker._info
+    assert checker._info['diskCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
 
 def test_hardware_checker():

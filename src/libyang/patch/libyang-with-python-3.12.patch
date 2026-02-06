@@ -1,0 +1,13 @@
+diff --git a/swig/python/yang.i b/swig/python/yang.i
+index 32e39deab..ceee62e26 100644
+--- a/swig/python/yang.i
++++ b/swig/python/yang.i
+@@ -44,7 +44,7 @@ public:
+ 
+     std::pair<char *, LYS_INFORMAT> ly_module_imp_clb(const char *mod_name, const char *mod_rev, const char *submod_name, const char *sub_rev, PyObject *user_data) {
+         PyObject *arglist = Py_BuildValue("(ssssO)", mod_name, mod_rev, submod_name, sub_rev, user_data);
+-        PyObject *my_result = PyEval_CallObject(_callback, arglist);
++        PyObject *my_result = PyObject_CallObject(_callback, arglist);
+         Py_DECREF(arglist);
+         if (my_result == nullptr) {
+             throw std::runtime_error("Python callback ly_module_imp_clb failed.\n");

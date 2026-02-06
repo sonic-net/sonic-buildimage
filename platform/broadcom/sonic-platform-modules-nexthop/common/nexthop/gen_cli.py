@@ -5,6 +5,7 @@
 
 import click
 import jinja2
+import json
 import os
 import syslog
 
@@ -14,6 +15,7 @@ PLATFORM_FOLDER = "/usr/share/sonic/platform"
 PDDF_FOLDER = "/usr/share/sonic/platform/pddf"
 
 DEFAULT_PCIE_VARS_FILEPATH = f"{PLATFORM_FOLDER}/pcie-variables.yaml"
+DEFAULT_PLATFORM_JSON_FILEPATH = f"{PLATFORM_FOLDER}/platform.json"
 
 DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json.j2"
 DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH = f"{PDDF_FOLDER}/pddf-device.json"
@@ -38,6 +40,21 @@ def generate_file_from_jinja2_template(
     with open(output_filepath, "w") as f:
         f.write(output)
     syslog.syslog(syslog.LOG_INFO, f"Successfully generated {output_filepath}")
+
+def get_model_name(platform_json_filepath):
+    try:
+        with open(platform_json_filepath, 'r') as file:
+            platform_data = json.load(file)
+            return platform_data["chassis"]["name"]
+    except FileNotFoundError:
+        syslog.syslog(syslog.LOG_ERR, f"Error: Platform JSON file not found at {platform_json_filepath}")
+        return None
+    except json.JSONDecodeError:
+        syslog.syslog(syslog.LOG_ERR, f"Error: Invalid JSON format in {platform_json_filepath}")
+        return None
+    except KeyError as e:
+        syslog.syslog(syslog.LOG_ERR, f"Error: Missing key {e} in platform JSON data from {platform_json_filepath}")
+        return None
 
 
 @click.group()
@@ -66,18 +83,32 @@ def cli():
     help="Filepath to the yaml file containing variables to be substituted in the template.",
 )
 @click.option(
+    "--platform_json_filepath",
+    type=click.Path(exists=False),
+    default=DEFAULT_PLATFORM_JSON_FILEPATH,
+    help="Filepath to the platform.json file.",
+)
+@click.option(
     "--output_filepath",
     type=click.Path(exists=False),
     default=DEFAULT_PDDF_DEVICE_JSON_OUTPUT_FILEPATH,
     help="Filepath to store the generated pddf-device.json. If the file already exists, it will be overwritten.",
 )
-def pddf_device_json(template_filepath, vars_filepath, output_filepath):
+def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, output_filepath):
     check_file_exists_if_not_default(template_filepath, DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH, "--template_filepath")
     check_file_exists_if_not_default(vars_filepath, DEFAULT_PCIE_VARS_FILEPATH, "--vars_filepath")
-    if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath):
+    check_file_exists_if_not_default(platform_json_filepath, DEFAULT_PLATFORM_JSON_FILEPATH, "--platform_json_filepath")
+    if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath) or not os.path.isfile(platform_json_filepath):
         syslog.syslog(syslog.LOG_INFO, f"Skipping {output_filepath} generation")
         return
     vars = pcie_lib.get_pcie_variables(vars_filepath)
+
+    model_name = get_model_name(platform_json_filepath)
+    if model_name is None:
+        syslog.syslog(syslog.LOG_ERR, f"Skipping {output_filepath} generation due to missing model name.")
+        return
+
+    vars["model_name"] = model_name
     generate_file_from_jinja2_template(template_filepath, vars, output_filepath)
 
 

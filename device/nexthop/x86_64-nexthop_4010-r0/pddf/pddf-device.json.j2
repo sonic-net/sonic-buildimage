@@ -11,6 +11,7 @@
     "num_nexthop_fpga_asic_temp_sensors": 2,
     "num_components": 6,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
+    "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
     "pddf_dev_types": {
       "description": " - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -345,7 +346,7 @@
       "device_name": "TMP464-CH1",
       "device_parent": "MULTIFPGAPCIE0",
       "virt_parent": "TMP464",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "Switch Card Lower Rear"
@@ -373,7 +374,7 @@
       "device_name": "TMP464-CH2",
       "device_parent": "MULTIFPGAPCIE0",
       "virt_parent": "TMP464",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "PSU 2 Intake"
@@ -459,7 +460,7 @@
       "device_name": "TMP464-CH5",
       "device_parent": "MULTIFPGAPCIE0",
       "virt_parent": "TMP464",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "PSU 1 Intake"
@@ -654,7 +655,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP1",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon0",
@@ -667,7 +668,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP2",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon1",
@@ -680,7 +681,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP3",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon2",
@@ -693,7 +694,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP4",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon3",
@@ -706,7 +707,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP5",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon4",
@@ -719,7 +720,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP6",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon5",
@@ -732,7 +733,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP7",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon6",
@@ -745,7 +746,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP8",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon7",
@@ -758,7 +759,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP9",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon8",
@@ -771,7 +772,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP10",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon9",
@@ -784,7 +785,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP11",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon10",
@@ -797,7 +798,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP12",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon11",
@@ -810,7 +811,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP13",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon12",
@@ -823,7 +824,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP14",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC top.pvtmon13",
@@ -836,7 +837,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP15",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm_mgmt",
@@ -849,7 +850,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP16",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm0",
@@ -862,7 +863,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP17",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm1",
@@ -875,7 +876,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP18",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm2",
@@ -888,7 +889,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP19",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm3",
@@ -901,7 +902,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP20",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm4",
@@ -914,7 +915,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP21",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm5",
@@ -927,7 +928,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP22",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm6",
@@ -940,7 +941,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP23",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm7",
@@ -953,7 +954,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP24",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm8",
@@ -966,7 +967,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP25",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm9",
@@ -979,7 +980,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP26",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm10",
@@ -992,7 +993,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP27",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm11",
@@ -1005,7 +1006,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP28",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm12",
@@ -1018,7 +1019,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP29",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm13",
@@ -1031,7 +1032,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP30",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm14",
@@ -1044,7 +1045,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP31",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm15",
@@ -1057,7 +1058,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP32",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm16",
@@ -1070,7 +1071,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP33",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm17",
@@ -1083,7 +1084,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP34",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm18",
@@ -1096,7 +1097,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP35",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm19",
@@ -1109,7 +1110,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP36",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm20",
@@ -1122,7 +1123,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP37",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm21",
@@ -1135,7 +1136,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP38",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm22",
@@ -1148,7 +1149,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP39",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm23",
@@ -1161,7 +1162,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP40",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm24",
@@ -1174,7 +1175,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP41",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm25",
@@ -1187,7 +1188,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP42",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm26",
@@ -1200,7 +1201,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP43",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm27",
@@ -1213,7 +1214,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP44",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm28",
@@ -1226,7 +1227,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP45",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm29",
@@ -1239,7 +1240,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP46",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm30",
@@ -1252,7 +1253,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP47",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm31",
@@ -1265,7 +1266,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP48",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm32",
@@ -1278,7 +1279,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP49",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm33",
@@ -1291,7 +1292,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP50",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm34",
@@ -1304,7 +1305,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP51",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm35",
@@ -1317,7 +1318,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP52",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm36",
@@ -1330,7 +1331,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP53",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm37",
@@ -1343,7 +1344,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP54",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm38",
@@ -1356,7 +1357,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP55",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm39",
@@ -1369,7 +1370,7 @@
       "device_type": "ASIC_TEMP_SENSOR",
       "device_name": "ASIC_TEMP56",
       "device_parent": "None",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC pm40",
@@ -1473,14 +1474,14 @@
       "device_type": "NEXTHOP_FPGA_ASIC_TEMP_SENSOR",
       "device_name": "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0",
       "device_parent": "MULTIFPGAPCIE1",
-      "nexthop_thermal_pid_domain": "None"
+      "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
       "display_name": "ASIC Min",
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "nh1",
+      "value_type": "th5",
       "reg_addr": "0x24",
       "field_range": "12:0"
     }
@@ -1498,7 +1499,7 @@
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110,
       "fpga_min_rev": "0xe8020214",
-      "value_type": "nh1",
+      "value_type": "th5",
       "reg_addr": "0x24",
       "field_range": "28:16"
     }
@@ -1986,8 +1987,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_serial_num",
@@ -1995,8 +1995,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9e",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "14"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_mfr_id",
@@ -2004,8 +2003,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x99",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "11"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_fan_dir",
@@ -2013,8 +2011,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_p_out",
@@ -2251,8 +2248,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_serial_num",
@@ -2260,8 +2256,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9e",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "14"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_mfr_id",
@@ -2269,8 +2264,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x99",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "11"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_fan_dir",
@@ -2278,8 +2272,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_p_out",

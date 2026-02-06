@@ -191,6 +191,9 @@ def load_namespace_config():
         if not SonicDBConfig.isInit():
             SonicDBConfig.initialize()
 
+def file_exists_filter(path):
+    return os.path.isfile(path)
+
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
 We will move to DB schema and remove this class when the config templates are modified.
@@ -294,6 +297,7 @@ def _get_jinja2_env(paths):
     env.filters['pfx_filter'] = pfx_filter
     env.filters['ip_network'] = ip_network
     env.filters['get_primary_addr'] = get_primary_addr
+    env.filters['file_exists'] = file_exists_filter
     for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
         env.filters[attr] = partial(prefix_attr, attr)
 

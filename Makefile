@@ -5,7 +5,7 @@ NOSTRETCH ?= 1
 NOBUSTER ?= 1
 NOBULLSEYE ?= 1
 NOBOOKWORM ?= 0
-NOTRIXIE ?= 1
+NOTRIXIE ?= 0
 
 override Q := @
 ifeq ($(QUIET),n)
@@ -60,10 +60,10 @@ ifeq ($(NOBULLSEYE), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bullseye -f Makefile.work bullseye
 endif
 ifeq ($(NOBOOKWORM), 0)
-	$(MAKE_WITH_RETRY) BLDENV=bookworm -f Makefile.work $@
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bookworm -f Makefile.work bookworm
 endif
 ifeq ($(NOTRIXIE), 0)
-	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work trixie
+	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work $@
 endif
 
 	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
