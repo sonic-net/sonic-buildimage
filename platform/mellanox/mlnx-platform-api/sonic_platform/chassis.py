@@ -133,6 +133,7 @@ class Chassis(ChassisBase):
         self._asic_id_map = None
 
         self.liquid_cooling = None
+        self._pwm = None
 
         Chassis.chassis_instance = self
 
@@ -1246,6 +1247,19 @@ class Chassis(ChassisBase):
     def get_liquid_cooling(self):
         self.initialize_liquid_cooling()
         return self.liquid_cooling
+
+    ##############################################
+    # PWM methods
+    ##############################################
+
+    def initialize_pwm(self):
+        if not self._pwm:
+            from .pwm import PWM
+            self._pwm = PWM()
+
+    def get_pwm(self):
+        self.initialize_pwm()
+        return self._pwm
 
 
 class ModularChassis(Chassis):

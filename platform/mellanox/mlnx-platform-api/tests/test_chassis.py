@@ -333,6 +333,33 @@ class TestChassis:
         content = chassis._parse_vpd_data(os.path.join(test_path, 'vpd_data_file'))
         assert content.get('REV') == 'A7'
 
+    def test_pwm(self):
+        from sonic_platform.pwm import PWM
+        chassis = Chassis()
+
+        # Test that PWM is not initialized by default
+        assert chassis._pwm is None
+
+        # Test initialize_pwm
+        chassis.initialize_pwm()
+        assert chassis._pwm is not None
+        assert isinstance(chassis._pwm, PWM)
+
+        # Test that initialize_pwm doesn't create a new PWM if already initialized
+        pwm_instance = chassis._pwm
+        chassis.initialize_pwm()
+        assert chassis._pwm is pwm_instance
+
+        # Test get_pwm
+        chassis._pwm = None
+        pwm = chassis.get_pwm()
+        assert pwm is not None
+        assert isinstance(pwm, PWM)
+
+        # Test get_pwm returns the same instance
+        pwm2 = chassis.get_pwm()
+        assert pwm is pwm2
+
     @mock.patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
     @mock.patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_smartswitch(self):
