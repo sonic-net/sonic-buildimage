@@ -29,7 +29,7 @@ RUN apt-get install -y \
     wget
 
 # Install OpenTelemetry Collector from official .deb package
-ARG OTEL_VERSION=0.114.0
+ARG OTEL_VERSION=0.144.0
 
 # Download and install official .deb package with architecture-specific logic
 {% if CONFIGURED_ARCH == "armhf" %}
