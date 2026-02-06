@@ -64,7 +64,7 @@ module sonic-mux-cable {
                         enum prefix-route;
                         enum host-route;
                     }
-                    default prefix-route;
+                    default host-route;
                     description "DualToR MUX neighbor mode.";
                 }
 
