@@ -41,9 +41,11 @@ $(SNMPD)_RDEPENDS += $(LIBSNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD)))
 
 SNMP_DBG = snmp-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(SNMP_DBG)_RDEPENDS += $(SNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMP_DBG)))
 
 SNMPD_DBG = snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(SNMPD_DBG)_RDEPENDS += $(SNMPD)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD_DBG)))
 
 ifeq ($(BLDENV),trixie)
