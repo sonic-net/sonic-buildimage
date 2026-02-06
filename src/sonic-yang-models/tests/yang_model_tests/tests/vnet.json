@@ -34,7 +34,7 @@
     },
 
     "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
-        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address and vni) in VNET_ROUTE_TUNNEL_LIST table."
+        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address, vni, and metric) in VNET_ROUTE_TUNNEL_LIST table."
     },
 
     "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {
