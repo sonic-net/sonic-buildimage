@@ -90,7 +90,7 @@ class PddfPsu(PsuBase):
         status = 0
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_present")
-        if not output:
+        if not output or output['status'] == None:
             return False
 
         mode = output['mode']
@@ -112,7 +112,7 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_model_name")
-        if not output:
+        if not output or output['status'] == None:
             return None
 
         model = output['status']
@@ -132,7 +132,7 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_serial_num")
-        if not output:
+        if not output or output['status'] == None:
             return None
 
         serial = output['status']
@@ -153,7 +153,7 @@ class PddfPsu(PsuBase):
         device = "PSU{}".format(self.psu_index)
 
         output = self.pddf_obj.get_attr_name_output(device, "psu_power_good")
-        if not output:
+        if not output or output['status'] == None:
             return False
 
         mode = output['mode']
@@ -175,7 +175,7 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_mfr_id")
-        if not output:
+        if not output or output['status'] == None:
             return None
 
         mfr = output['status']
@@ -196,12 +196,15 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_v_out")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         v_out = output['status']
 
-        return float(v_out)/1000
+        if output['mode'] == 'bmc':
+            return float(v_out)
+        else:
+            return float(v_out)/1000
 
     def get_current(self):
         """
@@ -213,13 +216,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_i_out")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         i_out = output['status']
 
-        # current in mA
-        return float(i_out)/1000
+        if output['mode'] == 'bmc':
+            return float(i_out)
+        else:
+            # current in mA
+            return float(i_out)/1000
 
     def get_power(self):
         """
@@ -231,13 +237,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_p_out")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         p_out = output['status']
 
-        # power is returned in micro watts
-        return float(p_out)/1000000
+        if output['mode'] == 'bmc':
+            return float(p_out)
+        else:
+            # power is returned in micro watts
+            return float(p_out)/1000000
 
     def get_powergood_status(self):
         """
@@ -282,13 +291,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_input")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         temp1 = output['status']
 
-        # temperature returned is in milli celcius
-        return float(temp1)/1000
+        if output['mode'] == 'bmc':
+            return float(temp1)
+        else:
+            # temperature returned is in milli celcius
+            return float(temp1)/1000
 
     def get_input_voltage(self):
         """
@@ -300,12 +312,15 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_v_in")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         v_in = output['status']
 
-        return float(v_in)/1000
+        if output['mode'] == 'bmc':
+            return float(v_in)
+        else:
+            return float(v_in)/1000
 
     def get_input_current(self):
         """
@@ -317,13 +332,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_i_in")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         i_in = output['status']
 
-        # current in mA
-        return float(i_in)/1000
+        if output['mode'] == 'bmc':
+            return float(i_in)
+        else:
+            # current in mA
+            return float(i_in)/1000
 
     def get_input_power(self):
         """
@@ -333,13 +351,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_p_in")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         p_in = output['status']
 
-        # power is returned in micro watts
-        return float(p_in)/1000000
+        if output['mode'] == 'bmc':
+            return float(p_in)
+        else:
+            # power is returned in micro watts
+            return float(p_in)/1000000
 
     def get_temperature_high_threshold(self):
         """
@@ -350,11 +371,15 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_high_threshold")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         temp_high_thresh = output['status']
-        return float(temp_high_thresh)/1000
+
+        if output['mode'] == 'bmc':
+            return float(temp_high_thresh)
+        else:
+            return float(temp_high_thresh)/1000
 
     def get_voltage_high_threshold(self):
         """
@@ -365,11 +390,15 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_max")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         v_out_max = output['status']
-        return float(v_out_max)/1000
+
+        if output['mode'] == 'bmc':
+            return float(v_out_max)
+        else:
+            return float(v_out_max)/1000
 
     def get_voltage_low_threshold(self):
         """
@@ -380,11 +409,15 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_min")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         v_out_min = output['status']
-        return float(v_out_min)/1000
+
+        if output['mode'] == 'bmc':
+            return float(v_out_min)
+        else:
+            return float(v_out_min)/1000
 
     def get_maximum_supplied_power(self):
         """
@@ -395,12 +428,16 @@ class PddfPsu(PsuBase):
         """
         device = "PSU{}".format(self.psu_index)
         output = self.pddf_obj.get_attr_name_output(device, "psu_p_out_max")
-        if not output:
+        if not output or output['status'] == None:
             return 0.0
 
         p_out_max = output['status']
-        # max power is in milliwatts
-        return float(p_out_max)/1000
+
+        if output['mode'] == 'bmc':
+            return float(p_out_max)
+        else:
+            # max power is in milliwatts
+            return float(p_out_max)/1000
 
     def get_position_in_parent(self):
         """
