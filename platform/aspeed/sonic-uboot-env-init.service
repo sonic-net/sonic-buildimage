@@ -1,0 +1,19 @@
+[Unit]
+Description=SONiC U-Boot Environment Initialization
+Documentation=man:fw_setenv(8)
+DefaultDependencies=no
+After=local-fs.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+Before=sonic.target
+ConditionPathExists=!/etc/sonic/.uboot-env-initialized
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sonic-uboot-env-init.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

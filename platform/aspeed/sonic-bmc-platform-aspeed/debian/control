@@ -1,0 +1,20 @@
+Source: sonic-bmc-platform-aspeed
+Section: misc
+Priority: optional
+Maintainer: Nexthop <opensource@nexthop.ai>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 3.9.6
+
+Package: sonic-bmc-platform-aspeed
+Architecture: arm64
+Depends: ${misc:Depends}, python3
+Description: SONiC BMC platform support for Aspeed AST2700
+ This package provides BMC-specific systemd services, scripts, and
+ SONiC Platform API implementation for Aspeed AST2700 BMC platform, including:
+  - BMC initialization
+  - Chassis management
+  - Thermal sensor monitoring (16 ADC channels)
+  - Fan monitoring and control (16 TACH inputs, 9 PWM outputs)
+  - Hardware watchdog control
+  - Reboot cause detection
+

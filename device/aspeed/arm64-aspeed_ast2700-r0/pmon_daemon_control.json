@@ -1,0 +1,17 @@
+{
+    "skip_thermalctld": false,
+    "skip_ledd": true,
+    "skip_xcvrd": true,
+    "skip_psud": true,
+    "skip_syseepromd": false,
+    "skip_pcied": true,
+    "skip_chassisd": true,
+    "skip_fancontrol": true,
+    "include_sensormond": false,
+    "thermalctld": {
+        "thermal_monitor_initial_interval": 5,
+        "thermal_monitor_update_interval": 60,
+        "thermal_monitor_update_elapsed_threshold": 30
+    }
+}
+
