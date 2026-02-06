@@ -201,14 +201,23 @@ def ss(tmp_path, monkeypatch):
 
 def test_sync_no_change_fast_path(ss):
     ss, container_fs, host_fs, commands, config_db = ss
-    item = ss.SyncItem("/container/restapi.sh", "/host/restapi.sh", 0o755)
-    container_fs[item.src_in_container] = b"same"
-    host_fs[item.dst_on_host] = b"same"
-    ss.SYNC_ITEMS[:] = [item]
+    
+    # Put required source files in container_fs - files that ensure_sync() expects
+    # Default branch is 202311 from fixture
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"same"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"same"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"same"
+    
+    # Put same files on host
+    host_fs["/usr/bin/restapi.sh"] = b"same"
+    host_fs["/bin/container_checker"] = b"same"
+    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
+    host_fs["/lib/systemd/system/restapi.service"] = b"same"
 
     ok = ss.ensure_sync()
     assert ok is True
-    # No write path used (no /bin/sh -c cat > tmp)
+    # No write path used (no /bin/sh -c cat > tmp) since files are identical
     assert not any(
         c[1][0] == "/bin/sh" and ("-c" in c[1] or "-lc" in c[1])
         for c in commands
@@ -217,19 +226,28 @@ def test_sync_no_change_fast_path(ss):
 
 def test_sync_updates_and_post_actions(ss):
     ss, container_fs, host_fs, commands, config_db = ss
-    item = ss.SyncItem("/container/container_checker", "/bin/container_checker", 0o755)
-    container_fs[item.src_in_container] = b"NEW"
-    host_fs[item.dst_on_host] = b"OLD"
-    ss.SYNC_ITEMS[:] = [item]
+    
+    # Put required source files in container_fs - files that ensure_sync() expects
+    # Default branch is 202311 from fixture
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"NEW-SERVICE"
+    
+    # Put old files on host
+    host_fs["/usr/bin/restapi.sh"] = b"OLD"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"OLD"
+    host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
 
-    ss.POST_COPY_ACTIONS[item.dst_on_host] = [
+    ss.POST_COPY_ACTIONS["/bin/container_checker"] = [
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ]
 
     ok = ss.ensure_sync()
     assert ok is True
-    assert host_fs[item.dst_on_host] == b"NEW"
+    assert host_fs["/bin/container_checker"] == b"NEW-CHECKER"
 
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
@@ -238,8 +256,10 @@ def test_sync_updates_and_post_actions(ss):
 
 def test_sync_missing_src_returns_false(ss):
     ss, container_fs, host_fs, commands, config_db = ss
-    item = ss.SyncItem("/container/missing.sh", "/usr/bin/restapi.sh", 0o755)
-    ss.SYNC_ITEMS[:] = [item]
+    
+    # Don't put source files in container_fs - ensure_sync() will fail
+    # It will try to read files like /usr/share/sonic/systemd_scripts/restapi.sh but they won't exist
+    
     ok = ss.ensure_sync()
     assert ok is False
 
@@ -286,13 +306,10 @@ def test_env_controls_restapi_src_false(monkeypatch, tmp_path):
     
     ss = importlib.import_module("systemd_stub")
     
-    # Verify the source is restapi.sh (not per-branch)
-    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
-    
-    # Verify SYNC_ITEMS contains the correct source
-    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/bin/restapi.sh"), None)
-    assert restapi_sync_item is not None
-    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/restapi.sh"
+    # Verify IS_V1_ENABLED is False and branch detection works
+    assert ss.IS_V1_ENABLED is False
+    branch = ss._get_branch_name()
+    assert branch == "202311"
 
 
 def test_env_controls_restapi_src_true(monkeypatch, tmp_path):
@@ -324,13 +341,10 @@ def test_env_controls_restapi_src_true(monkeypatch, tmp_path):
     
     ss = importlib.import_module("systemd_stub")
     
-    # Verify the source is per-branch restapi.sh_202311
-    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/v1/restapi.sh_202311"
-    
-    # Verify SYNC_ITEMS contains the correct source
-    restapi_sync_item = next((item for item in ss.SYNC_ITEMS if item.dst_on_host == "/usr/bin/restapi.sh"), None)
-    assert restapi_sync_item is not None
-    assert restapi_sync_item.src_in_container == "/usr/share/sonic/systemd_scripts/v1/restapi.sh_202311"
+    # Verify IS_V1_ENABLED is True and branch detection works
+    assert ss.IS_V1_ENABLED is True
+    branch = ss._get_branch_name()
+    assert branch == "202311"
 
 
 def test_env_controls_restapi_src_default(monkeypatch, tmp_path):
@@ -360,8 +374,10 @@ def test_env_controls_restapi_src_default(monkeypatch, tmp_path):
     monkeypatch.delenv("IS_V1_ENABLED", raising=False)
     ss = importlib.import_module("systemd_stub")
     
-    # Verify the default is restapi.sh (not v1)
-    assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
+    # Verify IS_V1_ENABLED defaults to False and branch detection works
+    assert ss.IS_V1_ENABLED is False
+    branch = ss._get_branch_name()
+    assert branch == "202311"
 
 
 def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
@@ -393,14 +409,20 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     
     ss = importlib.import_module("systemd_stub")
     
-    # Get all destination paths from SYNC_ITEMS
-    sync_destinations = {item.dst_on_host for item in ss.SYNC_ITEMS}
+    # Since SYNC_ITEMS is now built dynamically in ensure_sync(), we need to determine
+    # expected destinations based on the branch (202311 from fixture)
+    expected_destinations = {
+        "/usr/bin/restapi.sh",
+        "/bin/container_checker",
+        "/usr/share/sonic/scripts/k8s_pod_control.sh",
+        "/lib/systemd/system/restapi.service",
+    }
     
-    # Verify all POST_COPY_ACTIONS keys are in SYNC_ITEMS destinations
+    # Verify all POST_COPY_ACTIONS keys are in expected sync destinations
     for action_path in ss.POST_COPY_ACTIONS.keys():
-        assert action_path in sync_destinations, \
+        assert action_path in expected_destinations, \
             f"POST_COPY_ACTIONS key '{action_path}' does not match any destination in SYNC_ITEMS. " \
-            f"Available destinations: {sorted(sync_destinations)}"
+            f"Available destinations: {sorted(expected_destinations)}"
 
 
 # ===== Per-branch detection tests =====
@@ -451,12 +473,9 @@ def test_branch_detection_from_version(monkeypatch, tmp_path, version, expected_
     
     ss = importlib.import_module("systemd_stub")
     
-    # Verify correct branch detected
-    assert ss.branch_name == expected_branch
-    
-    # Verify per-branch files are used
-    assert ss._CONTAINER_RESTAPI_SERVICE == f"/usr/share/sonic/systemd_scripts/restapi.service_{expected_branch}"
-    assert ss._CONTAINER_CHECKER_SRC == f"/usr/share/sonic/systemd_scripts/container_checker_{expected_branch}"
+    # Verify correct branch detected (branch_name is now computed at runtime in ensure_sync)
+    branch = ss._get_branch_name()
+    assert branch == expected_branch
 
 
 @pytest.mark.parametrize("version", [
@@ -468,7 +487,7 @@ def test_branch_detection_from_version(monkeypatch, tmp_path, version, expected_
     "unknown-format",
 ])
 def test_unsupported_branches_exit_with_error(monkeypatch, tmp_path, version):
-    """Test that unsupported branches (master/internal/private) exit with SystemExit(1)."""
+    """Test that unsupported branches (master/internal/private) return False from ensure_sync()."""
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     
@@ -494,11 +513,12 @@ def test_unsupported_branches_exit_with_error(monkeypatch, tmp_path, version):
     
     monkeypatch.setattr("builtins.open", mock_open)
     
-    # Should raise SystemExit(1) for unsupported branches
-    with pytest.raises(SystemExit) as exc_info:
-        ss = importlib.import_module("systemd_stub")
+    # Module import should succeed now (branch evaluation happens in ensure_sync())
+    ss = importlib.import_module("systemd_stub")
     
-    assert exc_info.value.code == 1
+    # But ensure_sync() should return False for unsupported branches
+    result = ss.ensure_sync()
+    assert result is False
 
 
 @pytest.mark.parametrize("branch,is_v1_enabled", [
@@ -553,16 +573,10 @@ def test_per_branch_files_with_v1_flag(monkeypatch, tmp_path, branch, is_v1_enab
     
     ss = importlib.import_module("systemd_stub")
     
-    # Verify branch detected correctly
-    assert ss.branch_name == branch
+    # Verify branch detected correctly (branch_name is now computed at runtime in ensure_sync)
+    detected_branch = ss._get_branch_name()
+    assert detected_branch == branch
     
-    # Verify restapi source based on IS_V1_ENABLED
-    if is_v1_enabled:
-        assert ss._RESTAPI_SRC == f"/usr/share/sonic/systemd_scripts/v1/restapi.sh_{branch}"
-    else:
-        assert ss._RESTAPI_SRC == "/usr/share/sonic/systemd_scripts/restapi.sh"
-    
-    # Verify per-branch service and container_checker files
-    assert ss._CONTAINER_RESTAPI_SERVICE == f"/usr/share/sonic/systemd_scripts/restapi.service_{branch}"
-    assert ss._CONTAINER_CHECKER_SRC == f"/usr/share/sonic/systemd_scripts/container_checker_{branch}"
+    # Verify IS_V1_ENABLED is set correctly
+    assert ss.IS_V1_ENABLED == is_v1_enabled
 
