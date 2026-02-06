@@ -416,6 +416,11 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     ("20241110.22", "202411"),
     ("20250510.04", "202505"),
     ("20251110.01", "202511"),
+    # Test with non-standard suffixes (e.g., kw builds)
+    ("20241110.kw.24", "202411"),
+    ("SONiC.20241110.kw.24", "202411"),
+    ("20240510.25", "202405"),
+    ("SONiC.20231120.abc.123", "202311"),
 ])
 def test_branch_detection_from_version(monkeypatch, tmp_path, version, expected_branch):
     """Test branch detection from various SONiC version formats."""
