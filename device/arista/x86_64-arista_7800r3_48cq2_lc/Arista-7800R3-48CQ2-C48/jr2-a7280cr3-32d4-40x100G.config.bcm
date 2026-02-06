@@ -485,16 +485,16 @@ ucode_port_154.BCM8869X=RCY_MIRROR.27:core_1.142
 
 port_priorities.BCM8869X=8
 
-tm_port_header_type_in_0.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_0.BCM8869X=INJECTED
 tm_port_header_type_out_0.BCM8869X=CPU
 
-tm_port_header_type_in_200.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_200.BCM8869X=INJECTED
 tm_port_header_type_out_200.BCM8869X=ETH
-tm_port_header_type_in_201.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_201.BCM8869X=INJECTED
 tm_port_header_type_out_201.BCM8869X=ETH
-tm_port_header_type_in_202.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_202.BCM8869X=INJECTED
 tm_port_header_type_out_202.BCM8869X=ETH
-tm_port_header_type_in_203.BCM8869X=INJECTED_2_PP
+tm_port_header_type_in_203.BCM8869X=INJECTED
 tm_port_header_type_out_203.BCM8869X=ETH
 
 sat_enable.BCM8869X=1
