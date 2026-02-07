@@ -1,0 +1,5 @@
+{
+    "netconf_server": {% if NETCONF_SERVER is defined and "default" in NETCONF_SERVER.keys() %}{{ NETCONF_SERVER['default'] }}{% else %}""{% endif %},
+    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %},
+    "tacacs_plus" :  {%if TACPLUS_SERVER is defined  %}{{ "true" }}{% else %}""{% endif %}
+}
