@@ -46,8 +46,7 @@ $(DOCKER_GNMI)_RUN_OPT += --pid=host
 $(DOCKER_GNMI)_RUN_OPT += --privileged
 # For GNOI running sudo command in case of container NS remapping.
 $(DOCKER_GNMI)_RUN_OPT += --userns=host
-
-
-
+# For gNMI Unix Domain Socket (local access)
+$(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
