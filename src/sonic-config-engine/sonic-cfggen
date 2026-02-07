@@ -348,12 +348,19 @@ def main():
     args = parser.parse_args()
 
     platform = device_info.get_platform()
+    data = {}
+
+    bmc_data = None
+    if platform:
+        bmc_data = device_info.get_bmc_data()
+    if bmc_data:
+        for key, value in bmc_data.items():
+            deep_update(data, {'DEVICE_METADATA': {'bmc': {key:value}}})
 
     db_kwargs = {}
     if args.redis_unix_sock_file is not None:
         db_kwargs['unix_socket_path'] = args.redis_unix_sock_file
 
-    data = {}
     hwsku = args.hwsku
     asic_name = args.namespace
     asic_id = None
