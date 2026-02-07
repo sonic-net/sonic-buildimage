@@ -466,6 +466,7 @@
 {% if LOSSLESS_TC|length > 0 %}
             "pfc_to_queue_map": "AZURE"
 {% endif %}
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
