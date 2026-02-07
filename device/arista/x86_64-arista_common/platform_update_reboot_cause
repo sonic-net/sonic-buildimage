@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 
+import json
 import os
 from datetime import datetime, timezone
 
 REBOOT_CAUSE_DIR = "/host/reboot-cause/"
-REBOOT_LC_BY_SUPERVISOR_FILE = os.path.join(REBOOT_CAUSE_DIR, "reboot-lc-by-supervisor.txt")
+REBOOT_CAUSE_PLATFORM_DIR = "/host/reboot-cause/platform"
+REBOOT_EXTRA_INFO_FILE = os.path.join(REBOOT_CAUSE_PLATFORM_DIR, "reboot-extra-info.json")
 
 def main():
-    reboot_time = datetime.now(timezone.utc).strftime("%a %b %d %I:%M:%S %p %Z %Y")
-
-    if os.path.exists(REBOOT_LC_BY_SUPERVISOR_FILE):
-        os.remove(REBOOT_LC_BY_SUPERVISOR_FILE)
-        with open(os.path.join(REBOOT_CAUSE_DIR, "reboot-cause.txt"), 'w') as reboot_cause_file:
-            reboot_msg = "User issued 'Reboot from Supervisor' command [User: Supervisor, Time: {}]".format(reboot_time)
-            reboot_cause_file.write(reboot_msg)
+    if os.path.exists(REBOOT_EXTRA_INFO_FILE):
+        with open(REBOOT_EXTRA_INFO_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        os.remove(REBOOT_EXTRA_INFO_FILE)
+        who = data.get('from', None)
+        when = data.get('when', None)
+        if who is not None:
+            who = who.capitalize()
+            with open(os.path.join(REBOOT_CAUSE_DIR, "reboot-cause.txt"), 'w') as reboot_cause_file:
+                reboot_msg = f"User issued 'Reboot from {who}' command [User: {who}, Time: {when}]"
+                reboot_cause_file.write(reboot_msg)
 
 if __name__ == "__main__":
     main()

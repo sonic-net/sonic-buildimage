@@ -16,6 +16,10 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+WATCHDOG_STATUS = "/sys/class/watchdog/watchdog1/status"
+WATCHDOG_TIMEOUT = "/sys/class/watchdog/watchdog1/timeout"
+WATCHDOG_ARMED_MASK = 0x8000
+
 class Watchdog(WatchdogBase):
 
     def __init__(self):
@@ -24,22 +28,25 @@ class Watchdog(WatchdogBase):
     def arm(self, seconds):
         """
         For Pensando, watchdog gets handled by pensando image running on
-        docker:dpu docker. returning -1.
+        docker:dpu docker. it is armed but with default seconds, cannot be changed.
         """
+        timeout = open(WATCHDOG_TIMEOUT, "r").read()
+        if self.is_armed():
+            return timeout
         return -1
 
     def disarm(self):
         """
         For Pensando, watchdog gets handled by pensando image running on
-        docker:dpu docker. Setting disarm true to avoid watchdog-timer.service errors
+        docker:dpu docker. It cannot be disarmed
         """
-        return True
+        return False
 
     def is_armed(self):
-        """
-        For Pensando, watchdog gets handled by pensando image running on
-        docker:dpu docker. returning False
-        """
+        status_hex = open(WATCHDOG_STATUS, "r").read()
+        status = int(status_hex, 16)
+        if status & WATCHDOG_ARMED_MASK:
+            return True
         return False
 
     def get_remaining_time(self):

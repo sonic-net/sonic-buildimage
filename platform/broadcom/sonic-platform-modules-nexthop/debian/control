@@ -1,0 +1,71 @@
+Source: sonic-platform-nexthop
+Section: misc
+Priority: optional
+Maintainer: Michael Chan <michaelc@nexthop.ai>
+Build-Depends: debhelper-compat (= 12),
+               dh-python,
+               python3-all,
+               python3-setuptools
+Standards-Version: 4.6.0
+Homepage: https://nexthop.ai
+
+Package: sonic-platform-nexthop-common
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Common modules required on all Nexthop platforms
+
+Package: sonic-platform-nexthop-komodo
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Modules for Komodo CPU Card
+
+Package: sonic-platform-nexthop-4010
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-common,
+         sonic-platform-nexthop-komodo
+Description: Modules for all revisions of NH-4010
+
+Package: sonic-platform-nexthop-4220
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-common
+Description: Modules for all revisions of NH-4220
+
+Package: sonic-platform-nexthop-5010
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-common,
+         sonic-platform-nexthop-komodo
+Description: Modules for all revisions of NH-5010
+
+Package: sonic-platform-nexthop-4010-r0
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4010
+Description: Modules for NH-4010 r0
+
+Package: sonic-platform-nexthop-4010-r1
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4010
+Description: Modules for NH-4010 r1
+
+Package: sonic-platform-nexthop-4020-r0
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4010
+Description: Modules for NH-4020 r0
+
+Package: sonic-platform-nexthop-4220-r0
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-4220,
+         sonic-platform-nexthop-komodo
+Description: Modules for NH-4220 r0
+
+Package: sonic-platform-nexthop-5010-r0
+Architecture: amd64
+Depends: ${misc:Depends},
+         sonic-platform-nexthop-5010
+Description: Modules for NH-5010 r0

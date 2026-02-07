@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="SAI" dsig="md5" sid="92a3e944-e664-45d1-a29f-df4774c889db">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-08-25-1.12" profile="SAI" dsig="md5" sid="83e62682-dcf7-4eee-9ae7-6144f7394d66">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -48,6 +48,21 @@
         <SAIplt:enum>
           <SAIplt:name>ROUTE_BLACKHOLE</SAIplt:name>
           <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>CounterFormat-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Router In Drop Reason Feature Options</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>COALESCED_COUNTER</SAIplt:name>
+          <SAIplt:description>Coalesced/Combined Counter for Packets and Bytes</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>SEPERATE_COUNTER</SAIplt:name>
+          <SAIplt:description>Seperate Counter for Packets and Bytes {Consumes additional hardware resources}</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
@@ -186,6 +201,14 @@
           <SAIplt:description>True</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>mac-address-type</SAIplt:name>
+        <SAIplt:type>string</SAIplt:type>
+        <SAIplt:description>The mac-address type represents an IEEE 802 MAC address.
+The canonical representation uses lowercase characters.
+In the value set and its semantics, this type is equivalent
+to the MacAddress textual convention of the SMIv2.</SAIplt:description>
       </SAIplt:typedef>
     </SAIplt:typedefs>
     <SAIplt:ASIC_Type SAIplt:type="asic-type">ASIC_AC3X</SAIplt:ASIC_Type>
@@ -469,6 +492,7 @@
     </SAIplt:Logging>
     <SAIplt:Feature>
       <SAIplt:PHY_Temperature SAIplt:type="Feature-enable">Disabled</SAIplt:PHY_Temperature>
+      <SAIplt:MAC-in-MAC-Tunnel-Enable SAIplt:type="Feature-enable">Disabled</SAIplt:MAC-in-MAC-Tunnel-Enable>
     </SAIplt:Feature>
   </SAIplt:SAI>
 </data>

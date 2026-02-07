@@ -482,6 +482,9 @@
                 "1x400G": [
                     "Ethernet1/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet1/1"
+                ],
                 "2x400G": [
                     "Ethernet1/1",
                     "Ethernet1/5"
@@ -512,6 +515,9 @@
                     "Ethernet2/1"
                 ],
                 "1x400G": [
+                    "Ethernet2/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet2/1"
                 ],
                 "2x400G": [
@@ -546,6 +552,9 @@
                 "1x400G": [
                     "Ethernet3/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet3/1"
+                ],
                 "2x400G": [
                     "Ethernet3/1",
                     "Ethernet3/5"
@@ -576,6 +585,9 @@
                     "Ethernet4/1"
                 ],
                 "1x400G": [
+                    "Ethernet4/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet4/1"
                 ],
                 "2x400G": [
@@ -610,6 +622,9 @@
                 "1x400G": [
                     "Ethernet5/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet5/1"
+                ],
                 "2x400G": [
                     "Ethernet5/1",
                     "Ethernet5/5"
@@ -640,6 +655,9 @@
                     "Ethernet6/1"
                 ],
                 "1x400G": [
+                    "Ethernet6/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet6/1"
                 ],
                 "2x400G": [
@@ -674,6 +692,9 @@
                 "1x400G": [
                     "Ethernet7/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet7/1"
+                ],
                 "2x400G": [
                     "Ethernet7/1",
                     "Ethernet7/5"
@@ -704,6 +725,9 @@
                     "Ethernet8/1"
                 ],
                 "1x400G": [
+                    "Ethernet8/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet8/1"
                 ],
                 "2x400G": [
@@ -738,6 +762,9 @@
                 "1x400G": [
                     "Ethernet9/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet9/1"
+                ],
                 "2x400G": [
                     "Ethernet9/1",
                     "Ethernet9/5"
@@ -768,6 +795,9 @@
                     "Ethernet10/1"
                 ],
                 "1x400G": [
+                    "Ethernet10/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet10/1"
                 ],
                 "2x400G": [
@@ -802,6 +832,9 @@
                 "1x400G": [
                     "Ethernet11/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet11/1"
+                ],
                 "2x400G": [
                     "Ethernet11/1",
                     "Ethernet11/5"
@@ -832,6 +865,9 @@
                     "Ethernet12/1"
                 ],
                 "1x400G": [
+                    "Ethernet12/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet12/1"
                 ],
                 "2x400G": [
@@ -866,6 +902,9 @@
                 "1x400G": [
                     "Ethernet13/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet13/1"
+                ],
                 "2x400G": [
                     "Ethernet13/1",
                     "Ethernet13/5"
@@ -896,6 +935,9 @@
                     "Ethernet14/1"
                 ],
                 "1x400G": [
+                    "Ethernet14/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet14/1"
                 ],
                 "2x400G": [
@@ -930,6 +972,9 @@
                 "1x400G": [
                     "Ethernet15/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet15/1"
+                ],
                 "2x400G": [
                     "Ethernet15/1",
                     "Ethernet15/5"
@@ -960,6 +1005,9 @@
                     "Ethernet16/1"
                 ],
                 "1x400G": [
+                    "Ethernet16/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet16/1"
                 ],
                 "2x400G": [
@@ -994,6 +1042,9 @@
                 "1x400G": [
                     "Ethernet17/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet17/1"
+                ],
                 "2x400G": [
                     "Ethernet17/1",
                     "Ethernet17/5"
@@ -1024,6 +1075,9 @@
                     "Ethernet18/1"
                 ],
                 "1x400G": [
+                    "Ethernet18/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet18/1"
                 ],
                 "2x400G": [
@@ -1058,6 +1112,9 @@
                 "1x400G": [
                     "Ethernet19/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet19/1"
+                ],
                 "2x400G": [
                     "Ethernet19/1",
                     "Ethernet19/5"
@@ -1088,6 +1145,9 @@
                     "Ethernet20/1"
                 ],
                 "1x400G": [
+                    "Ethernet20/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet20/1"
                 ],
                 "2x400G": [
@@ -1122,6 +1182,9 @@
                 "1x400G": [
                     "Ethernet21/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet21/1"
+                ],
                 "2x400G": [
                     "Ethernet21/1",
                     "Ethernet21/5"
@@ -1152,6 +1215,9 @@
                     "Ethernet22/1"
                 ],
                 "1x400G": [
+                    "Ethernet22/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet22/1"
                 ],
                 "2x400G": [
@@ -1186,6 +1252,9 @@
                 "1x400G": [
                     "Ethernet23/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet23/1"
+                ],
                 "2x400G": [
                     "Ethernet23/1",
                     "Ethernet23/5"
@@ -1216,6 +1285,9 @@
                     "Ethernet24/1"
                 ],
                 "1x400G": [
+                    "Ethernet24/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet24/1"
                 ],
                 "2x400G": [
@@ -1250,6 +1322,9 @@
                 "1x400G": [
                     "Ethernet25/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet25/1"
+                ],
                 "2x400G": [
                     "Ethernet25/1",
                     "Ethernet25/5"
@@ -1280,6 +1355,9 @@
                     "Ethernet26/1"
                 ],
                 "1x400G": [
+                    "Ethernet26/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet26/1"
                 ],
                 "2x400G": [
@@ -1314,6 +1392,9 @@
                 "1x400G": [
                     "Ethernet27/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet27/1"
+                ],
                 "2x400G": [
                     "Ethernet27/1",
                     "Ethernet27/5"
@@ -1344,6 +1425,9 @@
                     "Ethernet28/1"
                 ],
                 "1x400G": [
+                    "Ethernet28/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet28/1"
                 ],
                 "2x400G": [
@@ -1378,6 +1462,9 @@
                 "1x400G": [
                     "Ethernet29/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet29/1"
+                ],
                 "2x400G": [
                     "Ethernet29/1",
                     "Ethernet29/5"
@@ -1408,6 +1495,9 @@
                     "Ethernet30/1"
                 ],
                 "1x400G": [
+                    "Ethernet30/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet30/1"
                 ],
                 "2x400G": [
@@ -1442,6 +1532,9 @@
                 "1x400G": [
                     "Ethernet31/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet31/1"
+                ],
                 "2x400G": [
                     "Ethernet31/1",
                     "Ethernet31/5"
@@ -1472,6 +1565,9 @@
                     "Ethernet32/1"
                 ],
                 "1x400G": [
+                    "Ethernet32/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet32/1"
                 ],
                 "2x400G": [
@@ -1506,6 +1602,9 @@
                 "1x400G": [
                     "Ethernet33/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet33/1"
+                ],
                 "2x400G": [
                     "Ethernet33/1",
                     "Ethernet33/5"
@@ -1536,6 +1635,9 @@
                     "Ethernet34/1"
                 ],
                 "1x400G": [
+                    "Ethernet34/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet34/1"
                 ],
                 "2x400G": [
@@ -1570,6 +1672,9 @@
                 "1x400G": [
                     "Ethernet35/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet35/1"
+                ],
                 "2x400G": [
                     "Ethernet35/1",
                     "Ethernet35/5"
@@ -1600,6 +1705,9 @@
                     "Ethernet36/1"
                 ],
                 "1x400G": [
+                    "Ethernet36/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet36/1"
                 ],
                 "2x400G": [
@@ -1634,6 +1742,9 @@
                 "1x400G": [
                     "Ethernet37/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet37/1"
+                ],
                 "2x400G": [
                     "Ethernet37/1",
                     "Ethernet37/5"
@@ -1664,6 +1775,9 @@
                     "Ethernet38/1"
                 ],
                 "1x400G": [
+                    "Ethernet38/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet38/1"
                 ],
                 "2x400G": [
@@ -1698,6 +1812,9 @@
                 "1x400G": [
                     "Ethernet39/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet39/1"
+                ],
                 "2x400G": [
                     "Ethernet39/1",
                     "Ethernet39/5"
@@ -1728,6 +1845,9 @@
                     "Ethernet40/1"
                 ],
                 "1x400G": [
+                    "Ethernet40/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet40/1"
                 ],
                 "2x400G": [
@@ -1762,6 +1882,9 @@
                 "1x400G": [
                     "Ethernet41/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet41/1"
+                ],
                 "2x400G": [
                     "Ethernet41/1",
                     "Ethernet41/5"
@@ -1792,6 +1915,9 @@
                     "Ethernet42/1"
                 ],
                 "1x400G": [
+                    "Ethernet42/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet42/1"
                 ],
                 "2x400G": [
@@ -1826,6 +1952,9 @@
                 "1x400G": [
                     "Ethernet43/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet43/1"
+                ],
                 "2x400G": [
                     "Ethernet43/1",
                     "Ethernet43/5"
@@ -1856,6 +1985,9 @@
                     "Ethernet44/1"
                 ],
                 "1x400G": [
+                    "Ethernet44/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet44/1"
                 ],
                 "2x400G": [
@@ -1890,6 +2022,9 @@
                 "1x400G": [
                     "Ethernet45/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet45/1"
+                ],
                 "2x400G": [
                     "Ethernet45/1",
                     "Ethernet45/5"
@@ -1920,6 +2055,9 @@
                     "Ethernet46/1"
                 ],
                 "1x400G": [
+                    "Ethernet46/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet46/1"
                 ],
                 "2x400G": [
@@ -1954,6 +2092,9 @@
                 "1x400G": [
                     "Ethernet47/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet47/1"
+                ],
                 "2x400G": [
                     "Ethernet47/1",
                     "Ethernet47/5"
@@ -1984,6 +2125,9 @@
                     "Ethernet48/1"
                 ],
                 "1x400G": [
+                    "Ethernet48/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet48/1"
                 ],
                 "2x400G": [
@@ -2018,6 +2162,9 @@
                 "1x400G": [
                     "Ethernet49/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet49/1"
+                ],
                 "2x400G": [
                     "Ethernet49/1",
                     "Ethernet49/5"
@@ -2048,6 +2195,9 @@
                     "Ethernet50/1"
                 ],
                 "1x400G": [
+                    "Ethernet50/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet50/1"
                 ],
                 "2x400G": [
@@ -2082,6 +2232,9 @@
                 "1x400G": [
                     "Ethernet51/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet51/1"
+                ],
                 "2x400G": [
                     "Ethernet51/1",
                     "Ethernet51/5"
@@ -2112,6 +2265,9 @@
                     "Ethernet52/1"
                 ],
                 "1x400G": [
+                    "Ethernet52/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet52/1"
                 ],
                 "2x400G": [
@@ -2146,6 +2302,9 @@
                 "1x400G": [
                     "Ethernet53/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet53/1"
+                ],
                 "2x400G": [
                     "Ethernet53/1",
                     "Ethernet53/5"
@@ -2176,6 +2335,9 @@
                     "Ethernet54/1"
                 ],
                 "1x400G": [
+                    "Ethernet54/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet54/1"
                 ],
                 "2x400G": [
@@ -2210,6 +2372,9 @@
                 "1x400G": [
                     "Ethernet55/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet55/1"
+                ],
                 "2x400G": [
                     "Ethernet55/1",
                     "Ethernet55/5"
@@ -2240,6 +2405,9 @@
                     "Ethernet56/1"
                 ],
                 "1x400G": [
+                    "Ethernet56/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet56/1"
                 ],
                 "2x400G": [
@@ -2274,6 +2442,9 @@
                 "1x400G": [
                     "Ethernet57/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet57/1"
+                ],
                 "2x400G": [
                     "Ethernet57/1",
                     "Ethernet57/5"
@@ -2304,6 +2475,9 @@
                     "Ethernet58/1"
                 ],
                 "1x400G": [
+                    "Ethernet58/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet58/1"
                 ],
                 "2x400G": [
@@ -2338,6 +2512,9 @@
                 "1x400G": [
                     "Ethernet59/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet59/1"
+                ],
                 "2x400G": [
                     "Ethernet59/1",
                     "Ethernet59/5"
@@ -2368,6 +2545,9 @@
                     "Ethernet60/1"
                 ],
                 "1x400G": [
+                    "Ethernet60/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet60/1"
                 ],
                 "2x400G": [
@@ -2402,6 +2582,9 @@
                 "1x400G": [
                     "Ethernet61/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet61/1"
+                ],
                 "2x400G": [
                     "Ethernet61/1",
                     "Ethernet61/5"
@@ -2432,6 +2615,9 @@
                     "Ethernet62/1"
                 ],
                 "1x400G": [
+                    "Ethernet62/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet62/1"
                 ],
                 "2x400G": [
@@ -2466,6 +2652,9 @@
                 "1x400G": [
                     "Ethernet63/1"
                 ],
+                "1x100G(4)": [
+                    "Ethernet63/1"
+                ],
                 "2x400G": [
                     "Ethernet63/1",
                     "Ethernet63/5"
@@ -2496,6 +2685,9 @@
                     "Ethernet64/1"
                 ],
                 "1x400G": [
+                    "Ethernet64/1"
+                ],
+                "1x100G(4)": [
                     "Ethernet64/1"
                 ],
                 "2x400G": [

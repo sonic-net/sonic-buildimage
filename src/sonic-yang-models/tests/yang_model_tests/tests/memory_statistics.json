@@ -4,13 +4,11 @@
     },
     "MEMORY_STATISTICS_WITH_INVALID_SAMPLING_INTERVAL": {
         "desc": "Configuring memory statistics with an invalid sampling_interval ( out of acceptable range).",
-        "eStrKey": "Range",
-        "eStr": "3..15"
+        "eStrKey": "Range"
     },
     "MEMORY_STATISTICS_WITH_INVALID_RETENTION_PERIOD": {
         "desc": "Configuring memory statistics with an invalid retention_period (out of acceptable range).",
-        "eStrKey": "Range",
-        "eStr": "1..30"
+        "eStrKey": "Range"
     },
     "MEMORY_STATISTICS_WITH_ENABLE_FEATURE": {
         "desc": "Enabling memory statistics feature with valid values."

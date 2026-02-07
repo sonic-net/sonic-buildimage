@@ -100,8 +100,9 @@ route-map CHECK_IDF_ISOLATION permit 10
 !
 !
 !
-{% if CONFIG_DB__DEVICE_METADATA and 'localhost' in CONFIG_DB__DEVICE_METADATA and 'type' in CONFIG_DB__DEVICE_METADATA['localhost'] and 'subtype' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
-{% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC' %}
+{% if CONFIG_DB__DEVICE_METADATA and 'localhost' in CONFIG_DB__DEVICE_METADATA and 'type' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
+{% if (CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and 'subtype' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC') or
+CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'UpperSpineRouter' %}
 bgp community-list standard ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_route_community }}
 bgp community-list standard LOCAL_ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.local_anchor_route_community }}
 bgp community-list standard ANCHOR_CONTRIBUTING_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_contributing_route_community }}
@@ -119,20 +120,20 @@ route-map SELECTIVE_ROUTE_DOWNLOAD_V6 permit 1000
 route-map TAG_ANCHOR_COMMUNITY permit 10
   set community {{ constants.bgp.local_anchor_route_community }} {{ constants.bgp.anchor_route_community }} additive
 !
-route-map TO_BGP_PEER_V6 permit 30
+route-map TO_BGP_PEER_V6 permit 50
   match ipv6 address prefix-list ANCHOR_CONTRIBUTING_ROUTES
   set community {{ constants.bgp.anchor_contributing_route_community }} additive
   on-match next
 !
-route-map TO_BGP_PEER_V6 permit 40
+route-map TO_BGP_PEER_V6 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
 !
-route-map TO_BGP_PEER_V4 permit 30
-  match ipv6 address prefix-list ANCHOR_CONTRIBUTING_ROUTES
+route-map TO_BGP_PEER_V4 permit 50
+  match ip address prefix-list ANCHOR_CONTRIBUTING_ROUTES
   set community {{ constants.bgp.anchor_contributing_route_community }} additive
   on-match next
 !
-route-map TO_BGP_PEER_V4 permit 40
+route-map TO_BGP_PEER_V4 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
 !
 {% endif %}

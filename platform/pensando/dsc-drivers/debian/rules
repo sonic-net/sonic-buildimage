@@ -26,11 +26,11 @@ clean:
 	dh_testroot
 	dh_clean
 	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux make -C $(CURDIR)/src/drivers/linux clean
-	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux/pciesvc make -C $(CURDIR)/src/drivers/linux/pciesvc clean
+	ARCH=aarch64 KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux/pciesvc make -C $(CURDIR)/src/drivers/linux/pciesvc clean
 
 build:
 	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux/ make -C $(CURDIR)/src/drivers/linux
-	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux/pciesvc make -C $(CURDIR)/src/drivers/linux/pciesvc
+	ARCH=aarch64 KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux/pciesvc make -C $(CURDIR)/src/drivers/linux/pciesvc
 
 binary: binary-arch binary-indep
 	# Nothing to do

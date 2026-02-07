@@ -1,6 +1,18 @@
 {% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
 []
 {% else %}
+
+{# Check if the ASIC is Broadcom #}
+{% set is_broadcom = false %}
+{% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
+  {% set is_broadcom = true %}
+{% endif %}
+
+{% set is_broadcom_t1 = false %}
+{% if is_broadcom and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] %}
+    {% set is_broadcom_t1 = true %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -54,23 +66,37 @@
 {% endfor %}
 {%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
 {%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
-{# FIXME: SAI report tunnel TABLE_FULL for large topo. Disable it temporarily if over 128 IPv4/IPv6 tunnels. #}
+{# SAI report tunnel TABLE_FULL for large topo. Only generating for VLAN and loopback if over 128 routed interfaces.#}
 {% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
-{%- set ipv4_addresses = [] %}
-{%- set ipv6_addresses = [] %}
+{%- set ipv4_addresses = ipv4_loopback_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_loopback_addresses + ipv6_vlan_addresses %}
 {% endif %}
+
+{# Check if AZURE QoS map exists #}
+{% set azure_qos_exists = false %}
+{% if DSCP_TO_TC_MAP is defined and DSCP_TO_TC_MAP.AZURE is defined %}
+{% set azure_qos_exists = true %}
+{% endif %}
+
 [
 {% if ipv4_loopback_addresses %}
 {% if subnet_decap.enable %}
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"uniform",
 {% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -88,12 +114,19 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"uniform",
 {% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -118,12 +151,19 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"uniform",
 {% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -141,12 +181,19 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"uniform",
 {% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"

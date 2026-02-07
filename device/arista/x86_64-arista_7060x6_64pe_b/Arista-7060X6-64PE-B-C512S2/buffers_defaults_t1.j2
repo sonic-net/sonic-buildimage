@@ -5,12 +5,12 @@
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
         "ingress_lossy_pool": {
-            "size": "165307264",
+            "size": "163593526",
             "type": "ingress",
             "mode": "dynamic"
         },
         "egress_lossy_pool": {
-            "size": "165307264",
+            "size": "163593526",
             "type": "egress",
             "mode": "dynamic"
         }
@@ -21,13 +21,152 @@
             "size": "0",
             "static_th": "165364160"
         },
+        {# fallback when no DEVICE_NEIGHBOR_METADATA -#}
         "egress_lossy_profile": {
+            "dynamic_th": "1",
+            "pool": "egress_lossy_pool",
+            "size": "1778"
+        },
+        "queue0_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "1"
+            "dynamic_th": "0"
+        },
+        "queue1_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue2_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue3_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue4_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "0"
+        },
+        "queue5_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-3"
+        },
+        "queue6_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "0"
+        },
+        "queue0_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "0"
+        },
+        "queue1_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue2_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue3_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-7"
+        },
+        "queue4_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "0"
+        },
+        "queue5_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "-3"
+        },
+        "queue6_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "0"
         }
     },
 {%- endmacro %}
+
+{# Skip BUFFER_PG #}
+{%- macro generate_pg_profils(ports) %}
+    "BUFFER_PG": {
+    },
+{%- endmacro %}
+
+{% if DEVICE_METADATA
+  and DEVICE_METADATA['localhost']
+  and DEVICE_METADATA['localhost'].type == "ToRRouter"
+  and DEVICE_NEIGHBOR
+  and DEVICE_NEIGHBOR_METADATA %}
+{%- macro generate_queue_buffers(ports) %}
+    "BUFFER_QUEUE": {
+    {% for port in ports.split(',') %}
+        {% if DEVICE_NEIGHBOR[port]
+          and DEVICE_NEIGHBOR[port].name
+          and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name]
+          and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type in ('LeafRouter', 'ToRRouter') %}
+            "{{ port }}|0": {
+                "profile": "queue0_uplink_lossy_profile"
+            },
+            "{{ port }}|1": {
+                "profile": "queue1_uplink_lossy_profile"
+            },
+            "{{ port }}|2": {
+                "profile": "queue2_uplink_lossy_profile"
+            },
+            "{{ port }}|3": {
+                "profile": "queue3_uplink_lossy_profile"
+            },
+            "{{ port }}|4": {
+                "profile": "queue4_uplink_lossy_profile"
+            },
+            "{{ port }}|5": {
+                "profile": "queue5_uplink_lossy_profile"
+            },
+            "{{ port }}|6": {
+                "profile": "queue6_uplink_lossy_profile"
+            }
+        {% else %}
+            "{{ port }}|0": {
+                "profile": "queue0_downlink_lossy_profile"
+            },
+            "{{ port }}|1": {
+                "profile": "queue1_downlink_lossy_profile"
+            },
+            "{{ port }}|2": {
+                "profile": "queue2_downlink_lossy_profile"
+            },
+            "{{ port }}|3": {
+                "profile": "queue3_downlink_lossy_profile"
+            },
+            "{{ port }}|4": {
+                "profile": "queue4_downlink_lossy_profile"
+            },
+            "{{ port }}|5": {
+                "profile": "queue5_downlink_lossy_profile"
+            },
+            "{{ port }}|6": {
+                "profile": "queue6_downlink_lossy_profile"
+            }
+        {% endif %}
+    {%- if not loop.last -%},{% endif %}
+    {% endfor %}
+    }
+{%- endmacro %}
+{% else %}
 {%- macro generate_queue_buffers(ports) %}
     "BUFFER_QUEUE": {
     {% for port in ports.split(',') %}
@@ -38,3 +177,4 @@
     {% endfor %}
     }
 {%- endmacro %}
+{% endif %}

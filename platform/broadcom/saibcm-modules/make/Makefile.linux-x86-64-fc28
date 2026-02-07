@@ -1,5 +1,6 @@
 # $Id: Makefile.linux-gts,v 0.1 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -44,27 +45,29 @@
 
 # some basic path variables for tools and kernel source, etc #
 
+RHEL_VERSION=$(shell sed -n 's/.*release *\([0-9]\+\)\..*/\1/p' /etc/redhat-release)
+
 #
 # For ESW compilation, suppress 'stringop-overflow'
 #
-ifeq ($(BCM_ESW_SUPPORT),1)
-    OPT_CFLAGS += -Wno-error=stringop-overflow
-endif
 ifeq (1,$(GCC_11_2_0))
   export BINUTILSVER := 2.41
   export GCCVER := 11.2.0
-  TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/11.2.0-x86_64
-  OPT_CFLAGS += -Wno-error=array-bounds
+  TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
 else
   ifeq (1,$(GCC_12_1_0))
     export BINUTILSVER := 2.41
     export GCCVER := 12.1.0
-    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
   else
     ifeq (1,$(GCC_13_1_0))
       export BINUTILSVER := 2.41
       export GCCVER := 13.1.0
-      TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/13.1.0
+      ifeq "$(shell expr $(RHEL_VERSION) \>= 8)" "1"
+          TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
+      else
+          TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/$(GCCVER)
+      endif
       ifneq ($(DEBUG_OPTIMIZE),FALSE)
       # {
         # These flags are required for -O2 'optimized' compilation
@@ -76,14 +79,34 @@ else
       # }
       endif
     else
-      # GCC 8.1 does not work with binutils 2.41 and newer
-      export BINUTILSVER := 2.38
-      export GCCVER := 8.1.0
-      TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+      ifeq (1,$(GCC_14_1_0))
+        export GCCVER := 14.1.0
+        export BINUTILSVER := 2.41
+        TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
+        #
+        # We do cast 'int' to pointers in include/sal/types.h. This is
+        # intentional and OK
+        #
+        OPT_CFLAGS += -Wno-error=pointer-to-int-cast
+        ifneq ($(DEBUG_OPTIMIZE),FALSE)
+        # {
+          # These flags are required for -O2 'optimized' compilation
+          # We leave the suppression of array-bounds since, currently,
+          # GCC emits many 'false positive' errors of this kind (among a
+          # few that are justified)
+          OPT_CFLAGS += -Wno-error=array-bounds=
+        # }
+        endif
+      else
+        # GCC 8.1 does not work with binutils 2.41 and newer
+        export BINUTILSVER := 2.38
+        export GCCVER := 8.1.0
+        TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
+      endif
     endif
   endif
 endif
-BINUTILS_DIR = /tools/oss/packages/x86_64-rhel7/binutils/$(BINUTILSVER)/bin
+BINUTILS_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/binutils/$(BINUTILSVER)/bin
 export TCL860 := 1
 
 # For GCC versions >= 4.7
@@ -126,16 +149,6 @@ CFGFLAGS += -D__DUNE_GTS_BCM_CPU__
 endif
 CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
 #CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
-#
-#Flags to prevent gcc 8.1.0 new warnings to appear as errors.
-#(All these flags have been removed so as to activate the maximal types of
-#warning)
-#
-#OPT_CFLAGS += -Wno-error=unused-value
-#OPT_CFLAGS += -Wno-error=unused-but-set-variable
-#OPT_CFLAGS += -Wno-error=maybe-uninitialized
-#OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
-#OPT_CFLAGS += -Wno-error=array-bounds
 
 # set up KFLAGS appropriately. #
 # -fno-builtin needed for using kernel's version of memcpy instead of the gcc inline version
@@ -148,10 +161,6 @@ ifeq (,$(KFLAGS))
 ifneq (1,$(USE_CLANG))
 # {
   KFLAGS += -Wno-error=maybe-uninitialized -lc -fno-delete-null-pointer-checks -maccumulate-outgoing-args -fconserve-stack -mpreferred-stack-boundary=3
-# }
-else
-# {
-  OPTFLAGS +=  -Wno-error=address-of-packed-member
 # }
 endif
 ifeq (1,$(NO_PRECOMPILED_MODULE))
@@ -168,6 +177,10 @@ endif
 # }
 endif
 
+
+CFGFLAGS += -D_SIMPLE_MEMORY_ALLOCATION_=9
+
+export LIBNSL_DEPRECATED := 1
 
 ######################################################################
 # this segment comes from make/Makefile.linux-x86-smp_generic_64-2_6 #
@@ -223,7 +236,8 @@ CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
 CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
 
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+HASH := \#
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 comma = ,
 basetarget = $(basename $(notdir $@))
@@ -234,7 +248,7 @@ basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
 modname_flags  = $(if $(filter 1,$(words $(modname))),\
 -D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
 
-ifneq (, $(EDKHOST))
+ifeq (EDK,$(findstring EDK,$(FEATURE_LIST)))
 # Default open source target build
 OPENSRC_BUILD ?= fed21-x86_64
 endif

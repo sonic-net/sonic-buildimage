@@ -1,4 +1,4 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
 ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
@@ -24,7 +24,6 @@ RUN mkdir -p /etc/rsyslog.d/rsyslog_plugin_conf
 
 COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["*.json", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
 COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
@@ -45,7 +44,7 @@ RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events_info.json
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
+{{ rsync_from_builder_stage() }}
 
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version

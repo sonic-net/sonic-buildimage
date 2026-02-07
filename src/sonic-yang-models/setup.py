@@ -2,6 +2,7 @@ import shutil
 import os
 import glob
 import jinja2
+import sys
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
 
@@ -9,34 +10,103 @@ from setuptools.command.build_py import build_py
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
+def validate_yang_files_completeness(yang_files_list):
+    """
+    Validate that all YANG files are included in the yang_files list.
+    
+    This function checks:
+    1. All .yang files in yang-models/ directory (excluding auto-generated ones)
+    2. All .yang.j2 template files in yang-templates/ directory
+    3. Compares the total count with the yang_files list
+    
+    Returns:
+        tuple: (is_valid, expected_files, missing_files, extra_files)
+    """
+    # Get all template files and convert to .yang names
+    template_files = set()
+    if os.path.exists('./yang-templates/'):
+        for template_path in glob.glob('./yang-templates/*.yang.j2'):
+            template_name = os.path.basename(template_path).replace('.j2', '')
+            template_files.add(template_name)
+
+    # Get all actual YANG files (excluding auto-generated ones)
+    actual_yang_files = set()
+    if os.path.exists('./yang-models/'):
+        for yang_path in glob.glob('./yang-models/*.yang'):
+            yang_name = os.path.basename(yang_path)
+            actual_yang_files.add(yang_name)
+
+    # Expected files = actual YANG files + template files
+    expected_files = actual_yang_files.union(template_files)
+
+    # Convert yang_files list to set for comparison
+    yang_files_set = set(yang_files_list)
+
+    # Find discrepancies
+    missing_files = expected_files - yang_files_set
+    extra_files = yang_files_set - expected_files
+
+    is_valid = len(missing_files) == 0 and len(extra_files) == 0
+
+    return is_valid, expected_files, missing_files, extra_files
+
+def print_yang_files_validation_report(yang_files_list):
+    """Print a validation report for YANG files completeness."""
+    is_valid, expected_files, missing_files, extra_files = validate_yang_files_completeness(yang_files_list)
+
+    print(f"Expected files count: {len(expected_files)}")
+    print(f"yang_files list count: {len(yang_files_list)}")
+
+    if is_valid:
+        print("VALIDATION PASSED: All YANG files are properly included!")
+    else:
+        print("VALIDATION FAILED: Discrepancies found!")
+
+        if missing_files:
+            print(f"\nMISSING from yang_files list ({len(missing_files)} files):")
+            for file in sorted(missing_files):
+                print(f"  - {file}")
+
+        if extra_files:
+            print(f"\nEXTRA in yang_files list ({len(extra_files)} files):")
+            for file in sorted(extra_files):
+                print(f"  - {file}")
+
+    return is_valid
+
 # List of yang file names to be included in the wheel.
 # Specify only the file basenames here; directory prefixes will be added automatically.
 yang_files = [
     'sonic-acl.yang',
+    'sonic-asic-sensors.yang',
     'sonic-auto_techsupport.yang',
-    'sonic-bgp-bbr.yang',
     'sonic-banner.yang',
+    'sonic-bgp-aggregate-address.yang',
+    'sonic-bgp-allowed-prefix.yang',
+    'sonic-bgp-bbr.yang',
     'sonic-bgp-common.yang',
     'sonic-bgp-device-global.yang',
     'sonic-bgp-global.yang',
-    'sonic-bgp-monitor.yang',
     'sonic-bgp-internal-neighbor.yang',
+    'sonic-bgp-monitor.yang',
     'sonic-bgp-neighbor.yang',
     'sonic-bgp-peergroup.yang',
     'sonic-bgp-peerrange.yang',
-    'sonic-bgp-allowed-prefix.yang',
+    'sonic-bgp-prefix-list.yang',
+    'sonic-bgp-sentinel.yang',
     'sonic-bgp-voq-chassis-neighbor.yang',
+    'sonic-bmp.yang',
     'sonic-breakout_cfg.yang',
     'sonic-buffer-pg.yang',
     'sonic-buffer-pool.yang',
-    'sonic-buffer-port-ingress-profile-list.yang',
     'sonic-buffer-port-egress-profile-list.yang',
+    'sonic-buffer-port-ingress-profile-list.yang',
     'sonic-buffer-profile.yang',
     'sonic-buffer-queue.yang',
     'sonic-cable-length.yang',
     'sonic-chassis-module.yang',
-    'sonic-copp.yang',
     'sonic-console.yang',
+    'sonic-copp.yang',
     'sonic-crm.yang',
     'sonic-dash.yang',
     'sonic-debug-counter.yang',
@@ -44,30 +114,42 @@ yang_files = [
     'sonic-device_metadata.yang',
     'sonic-device_neighbor.yang',
     'sonic-device_neighbor_metadata.yang',
+    'sonic-dhcp-server-ipv4.yang',
     'sonic-dhcp-server.yang',
+    'sonic-dhcpv4-relay.yang',
     'sonic-dhcpv6-relay.yang',
     'sonic-dns.yang',
+    'sonic-dot1p-tc-map.yang',
+    'sonic-dscp-fc-map.yang',
+    'sonic-dscp-tc-map.yang',
     'sonic-events-bgp.yang',
     'sonic-events-common.yang',
     'sonic-events-dhcp-relay.yang',
     'sonic-events-host.yang',
     'sonic-events-swss.yang',
     'sonic-events-syncd.yang',
+    'sonic-exp-fc-map.yang',
     'sonic-extension.yang',
     'sonic-fabric-monitor.yang',
     'sonic-fabric-port.yang',
-    'sonic-flex_counter.yang',
-    'sonic-fine-grained-ecmp.yang',
     'sonic-feature.yang',
+    'sonic-fine-grained-ecmp.yang',
     'sonic-fips.yang',
+    'sonic-flex_counter.yang',
+    'sonic-gnmi.yang',
+    'sonic-grpcclient.yang',
     'sonic-hash.yang',
-    'sonic-trimming.yang',
-    'sonic-system-defaults.yang',
+    'sonic-heartbeat.yang',
+    'sonic-high-frequency-telemetry.yang',
     'sonic-interface.yang',
     'sonic-kdump.yang',
     'sonic-kubernetes_master.yang',
+    'sonic-lldp.yang',
+    'sonic-logger.yang',
     'sonic-loopback-interface.yang',
     'sonic-lossless-traffic-pattern.yang',
+    'sonic-macsec.yang',
+    'sonic-mclag.yang',
     'sonic-memory-statistics.yang',
     'sonic-mgmt_interface.yang',
     'sonic-mgmt_port.yang',
@@ -76,80 +158,80 @@ yang_files = [
     'sonic-mpls-tc-map.yang',
     'sonic-mux-cable.yang',
     'sonic-mux-linkmgr.yang',
+    'sonic-nat.yang',
     'sonic-neigh.yang',
     'sonic-ntp.yang',
-    'sonic-nat.yang',
     'sonic-nvgre-tunnel.yang',
     'sonic-passwh.yang',
-    'sonic-ssh-server.yang',
     'sonic-pbh.yang',
-    'sonic-port.yang',
-    'sonic-policer.yang',
-    'sonic-portchannel.yang',
+    'sonic-peer-switch.yang',
+    'sonic-pfc-priority-priority-group-map.yang',
+    'sonic-pfc-priority-queue-map.yang',
     'sonic-pfcwd.yang',
+    'sonic-policer.yang',
+    'sonic-port-qos-map.yang',
+    'sonic-port.yang',
+    'sonic-portchannel.yang',
+    'sonic-queue.yang',
+    'sonic-restapi.yang',
     'sonic-route-common.yang',
     'sonic-route-map.yang',
     'sonic-routing-policy-sets.yang',
+    'sonic-scheduler.yang',
+    'sonic-serial-console.yang',
     'sonic-sflow.yang',
+    'sonic-smart-switch.yang',
     'sonic-snmp.yang',
+    'sonic-spanning-tree.yang',
+    'sonic-srv6.yang',
+    'sonic-ssh-server.yang',
+    'sonic-static-route.yang',
+    'sonic-storm-control.yang',
+    'sonic-stormond-config.yang',
+    'sonic-subnet-decap.yang',
     'sonic-suppress-asic-sdk-health-event.yang',
     'sonic-syslog.yang',
     'sonic-system-aaa.yang',
-    'sonic-system-tacacs.yang',
-    'sonic-system-radius.yang',
+    'sonic-system-defaults.yang',
     'sonic-system-ldap.yang',
-    'sonic-subnet-decap.yang',
+    'sonic-system-port.yang',
+    'sonic-system-radius.yang',
+    'sonic-system-tacacs.yang',
+    'sonic-tc-dscp-map.yang',
+    'sonic-tc-priority-group-map.yang',
+    'sonic-tc-queue-map.yang',
     'sonic-telemetry.yang',
     'sonic-telemetry_client.yang',
-    'sonic-gnmi.yang',
+    'sonic-trimming.yang',
     'sonic-tunnel.yang',
     'sonic-types.yang',
     'sonic-versions.yang',
+    'sonic-vlan-sub-interface.yang',
     'sonic-vlan.yang',
     'sonic-vnet.yang',
     'sonic-voq-inband-interface.yang',
-    'sonic-vxlan.yang',
     'sonic-vrf.yang',
-    'sonic-mclag.yang',
-    'sonic-vlan-sub-interface.yang',
+    'sonic-vxlan.yang',
     'sonic-warm-restart.yang',
-    'sonic-lldp.yang',
-    'sonic-scheduler.yang',
     'sonic-wred-profile.yang',
-    'sonic-queue.yang',
-    'sonic-restapi.yang',
-    'sonic-dscp-fc-map.yang',
-    'sonic-exp-fc-map.yang',
-    'sonic-dscp-tc-map.yang',
-    'sonic-dhcp-server-ipv4.yang',
-    'sonic-dot1p-tc-map.yang',
-    'sonic-storm-control.yang',
-    'sonic-tc-priority-group-map.yang',
-    'sonic-tc-queue-map.yang',
-    'sonic-peer-switch.yang',
-    'sonic-tc-dscp-map.yang',
-    'sonic-pfc-priority-queue-map.yang',
-    'sonic-pfc-priority-priority-group-map.yang',
-    'sonic-logger.yang',
-    'sonic-port-qos-map.yang',
-    'sonic-static-route.yang',
-    'sonic-system-port.yang',
-    'sonic-macsec.yang',
-    'sonic-bgp-sentinel.yang',
-    'sonic-bgp-prefix-list.yang',
-    'sonic-asic-sensors.yang',
-    'sonic-bmp.yang',
     'sonic-xcvrd-log.yang',
-    'sonic-grpcclient.yang',
-    'sonic-serial-console.yang',
-    'sonic-smart-switch.yang',
-    'sonic-srv6.yang',
+    'sonic-ztp.yang',
 ]
 
 class my_build_py(build_py):
     def run(self):
         if not self.dry_run:
-            print("hehe")
+            pass
+
+        # Validate YANG files completeness before building
+        print("RUNNING YANG FILES VALIDATION...")
+        validation_passed = print_yang_files_validation_report(yang_files)
+
+        if not validation_passed:
+            print("Build failed due to YANG files validation errors.")
+            print("Please update the yang_files list in setup.py to include all missing files.")
+            sys.exit(1)
+        print("Validation passed. Proceeding with build...")
 
         if not os.path.exists("./yang-models"):
             os.makedirs("./yang-models")

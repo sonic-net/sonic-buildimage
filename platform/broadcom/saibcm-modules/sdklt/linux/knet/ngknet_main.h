@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -28,6 +29,12 @@
 #include <lkm/lkm.h>
 #include <lkm/ngknet_dev.h>
 #include <bcmcnet/bcmcnet_core.h>
+
+#ifdef NGKNET_XDP_NATIVE
+#include <net/xdp.h>
+#include <net/xdp_sock_drv.h>
+#include <trace/events/xdp.h>
+#endif
 
 /*!
  * Debug levels
@@ -58,11 +65,11 @@
 #define DBG_RATE(_s)        do { if (debug & DBG_LVL_RATE) printk _s; } while (0)
 #define DBG_LINK(_s)        do { if (debug & DBG_LVL_LINK) printk _s; } while (0)
 
+/* Take over the control of SKB and send packet to network interface. */
+typedef void (*ngknet_pkt_recv_f)(struct net_device *ndev, struct sk_buff *skb);
 
-/* FIXME: SAI_FIXUP */
 #define SAI_FIXUP           1
 #define KNET_SVTAG_HOTFIX   1
-
 /*!
  * Device description
  */
@@ -133,10 +140,26 @@ struct ngknet_dev {
     /*! PTP Tx work */
     struct work_struct ptp_tx_work;
 
+    /*! NGKNET work queue for link process */
+    struct workqueue_struct *link_wq;
+
+#ifdef NGKNET_XDP_NATIVE
+    /*! XSK buffer pool */
+    struct xsk_buff_pool *xsk_pool;
+
+    /*! XSK Tx queue */
+    int xsk_queue;
+
+    /* XDP program number */
+    int xprog_num;
+#endif
+
     /*! Flags */
     int flags;
     /*! NGKNET device is active */
 #define NGKNET_DEV_ACTIVE      (1 << 0)
+    /*! NGKNET AF_XDP in Zero-copy mode */
+#define NGKNET_XSK_ZC          (1 << 1)
 };
 
 /*!
@@ -155,6 +178,23 @@ struct ngknet_private {
     /*! Network interface */
     ngknet_netif_t netif;
 
+#ifdef NGKNET_XDP_NATIVE
+    /*! XDP program */
+    struct bpf_prog *xdp_prog;
+
+    /*! XDP Rx info */
+    struct xdp_rxq_info xri;
+
+    /*! XSK ZC mode */
+    bool xsk_zc;
+#endif
+
+    /*! Packet receive callback */
+    ngknet_pkt_recv_f pkt_recv;
+
+    /*! Link work */
+    struct work_struct link_work;
+
     /*! Users of this network interface */
     int users;
 
@@ -172,7 +212,6 @@ struct ngknet_private {
     struct ethtool_link_settings link_settings;
 #endif
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX  /* SONIC-76482 */
-    /* ! MACSEC SVTAG */
     uint8_t svtag[4];
 #endif
 };

@@ -4,7 +4,21 @@
  *
  */
 /*
- * $Copyright:.$
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
+ * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License 
+ * version 2 as published by the Free Software Foundation.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * A copy of the GNU General Public License version 2 (GPLv2) can
+ * be found in the LICENSES folder.
  */
 
 #include <lkm/lkm.h>
@@ -61,7 +75,7 @@ typedef struct edk_dev_s {
     /*! Kernel device number (similar to user mode unit number). */
     int kdev;
 
-    /* TODO: Keep DMArelated vars in a separate sub-structure ? */
+
 
     /*! Logical address of DMA pool. */
     void *dma_vaddr;
@@ -175,7 +189,7 @@ ngedk_dmamem_map_p2v(dma_addr_t paddr)
 }
 EXPORT_SYMBOL(ngedk_dmamem_map_p2v);
 
-int
+static int
 ngedk_intr_wait(int kdev, uint32_t *uc_bmp)
 {
     int32_t core;
@@ -190,7 +204,7 @@ ngedk_intr_wait(int kdev, uint32_t *uc_bmp)
         /* We got a SW Interrupt */
         for (core = 0; core < MCS_NUM_UC; core++) {
             if (test_and_clear_bit(core, &(ed->edk_intr.swi_intr_cores))) {
-               /* FIXME: Check against active_bmp? Or leave it upto EDK-Host? */
+
                *uc_bmp |= (1 << core);
             }
         }

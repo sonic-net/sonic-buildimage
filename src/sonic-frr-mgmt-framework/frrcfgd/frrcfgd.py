@@ -113,7 +113,7 @@ class BgpdClientMgr(threading.Thread):
             'OSPFV2_ROUTER_DISTRIBUTE_ROUTE': ['ospfd'],
             'OSPFV2_INTERFACE': ['ospfd'],
             'OSPFV2_ROUTER_PASSIVE_INTERFACE': ['ospfd'],
-            'STATIC_ROUTE': ['staticd'],
+            'STATIC_ROUTE': ['mgmtd'],
             'PIM_GLOBALS': ['pimd'],
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
@@ -1612,7 +1612,7 @@ class MatchPrefix:
         except ValueError:
             return None
         return '%s/%d' % (normal_ip, mask_len)
-    def __init__(self, af, ip_prefix, len_range = None, action = 'permit'):
+    def __init__(self, af, ip_prefix, len_range = None, action = 'permit', sequence_number = None):
         self.ip_prefix = self.normalize_ip_prefix(af, ip_prefix)
         if self.ip_prefix is None:
             raise ValueError
@@ -1629,10 +1629,12 @@ class MatchPrefix:
         else:
             self.min_len = self.max_len = None
         self.action = action
+        self.sequence_number = sequence_number
     def __hash__(self):
         return hash((self.ip_prefix, self.min_len, self.max_len))
     def __str__(self):
-        ret_str = '%s %s' % (self.action.lower(), self.ip_prefix)
+        seq = 'seq ' + str(self.sequence_number) + ' ' if self.sequence_number is not None else ''
+        ret_str = '%s%s %s' % (seq, self.action.lower(), self.ip_prefix)
         if self.min_len is not None:
             ret_str += ' ge %d' % self.min_len
         if self.max_len is not None:
@@ -1670,7 +1672,7 @@ class MatchPrefixList(list):
             except socket.error:
                 continue
         return None
-    def add_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def add_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         af = self.__get_ip_af(ip_pfx)
         if self.af is None:
             self.af = af
@@ -1678,9 +1680,9 @@ class MatchPrefixList(list):
             if self.af != af:
                 syslog.syslog(syslog.LOG_ERR, 'af of prefix %s is not the  same as prefix set' % ip_pfx)
                 raise ValueError
-        self.append(MatchPrefix(self.af, ip_pfx, len_range, action))
+        self.append(MatchPrefix(self.af, ip_pfx, len_range, action, sequence_number))
         return self[-1]
-    def get_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def get_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         if self.af is None:
             return (None, None)
         prefix = MatchPrefix(self.af, ip_pfx, len_range, action)
@@ -1773,7 +1775,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
-                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit', ['true', 'false']),
+                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -2223,13 +2225,17 @@ class BGPConfigDaemon:
                 self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
         pfx_table = self.config_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
-            pfx_set_name, ip_pfx, len_range = key
+            if len(key) == 4:
+                pfx_set_name, seq, ip_pfx, len_range = key
+            else:
+                pfx_set_name, ip_pfx, len_range = key
+                seq = None
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
             if len_range == 'exact':
                 len_range = None
-            if pfx_set_name in self.prefix_set_list and 'action' in entry:
+            if pfx_set_name in self.prefix_set_list:
                 try:
-                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry['action'])
+                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'), seq)
                 except ValueError:
                     pass
         self.as_path_set_list = {}
@@ -2718,17 +2724,14 @@ class BGPConfigDaemon:
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
             elif table == 'SRV6_MY_LOCATORS':
-                if key is None:
-                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_LOCATORS table')
-                    continue
                 if not del_table:
-                    key = prefix
+                    locator_name = prefix
                     prefix = data['prefix']
-                    cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'locators' "
-                    cmd += " -c 'locator {}' ".format(key)
+                    cmd = "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'locators' "
+                    cmd += " -c 'locator {}' ".format(locator_name)
                     cmd += " -c 'prefix {} block-len {} node-len {} func-bits {}' ".format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)
                     if not self.__run_command(table, cmd):
-                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
                         continue
             elif table == 'SRV6_MY_SOURCE':
                 source = data['source-address']
@@ -2899,7 +2902,15 @@ class BGPConfigDaemon:
                     if pfx_set_name not in self.prefix_set_list:
                         syslog.syslog(syslog.LOG_ERR, 'could not find prefix-set %s from cache' % pfx_set_name)
                         continue
-                    ip_pfx, len_range = key.split('|')
+                    keys = key.split('|')
+                    if len(keys) == 3:
+                        seq = keys[0]
+                        ip_pfx = keys[1]
+                        len_range = keys[2]
+                    else:
+                        ip_pfx = keys[0]
+                        len_range = keys[1]
+                        seq = None
                     if len_range == 'exact':
                         len_range = None
                     pfx_action = data.get('action', None)
@@ -2912,7 +2923,8 @@ class BGPConfigDaemon:
                     else:
                         daemons = ['bgpd', 'zebra']
                     if pfx_action.op == CachedDataWithOp.OP_DELETE or pfx_action.op == CachedDataWithOp.OP_UPDATE:
-                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                         pfx_action.data, seq)
                         if del_pfx is None:
                             syslog.syslog(syslog.LOG_ERR, 'prefix of {} with range {} not found from prefix-set {}'.\
                                             format(ip_pfx, len_range, pfx_set_name))
@@ -2926,7 +2938,8 @@ class BGPConfigDaemon:
                         del(self.prefix_set_list[pfx_set_name][pfx_idx])
                     if pfx_action.op == CachedDataWithOp.OP_ADD or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         try:
-                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data)
+                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data,
+                                                                                    seq)
                         except ValueError:
                             syslog.syslog(syslog.LOG_ERR, 'failed to update prefix-set %s in cache with prefix %s range %s' %
                                     (pfx_set_name, ip_pfx, len_range))
@@ -2937,7 +2950,8 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'failed to add prefix %s with range %s to set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
                             # revert cached update on failure
-                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                             pfx_action.data, seq)
                             if del_pfx is not None:
                                 del(self.prefix_set_list[pfx_set_name][pfx_idx])
                             continue

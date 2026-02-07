@@ -205,48 +205,6 @@ class RebootBETest : public RebootBETestWithoutStop {
   }
 };
 
-TEST_F(RebootBETest, WarmbootInProgressBlocksNewWarmboot) {
-  force_warm_start_state(true);
-
-  start_rebootbe();
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-
-  // Send a warmboot request, confirm it fails.
-  RebootRequest request;
-  request.set_method(RebootMethod::WARM);
-  start_reboot_via_rpc(request, swss::StatusCode::SWSS_RC_IN_USE);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-  force_warm_start_state(false);
-}
-
-TEST_F(RebootBETest, ColdbootWhileWarmbootInProgress) {
-  force_warm_start_state(true);
-  set_mock_defaults();
-
-  start_rebootbe();
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-
-  // Send a coldboot request, confirm it starts.
-  RebootRequest request;
-  request.set_method(RebootMethod::COLD);
-  start_reboot_via_rpc(request);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::COLD_REBOOT_IN_PROGRESS);
-
-  // Cleanup without going through the whole reboot.
-  send_stop_reboot_thread();
-  force_warm_start_state(false);
-}
-
 // Test fixture to skip through the startup sequence into the main loop.
 // Param indicates if RebootBE should be initialized into a state where the
 // system came up in warmboot.
@@ -535,6 +493,67 @@ TEST_P(RebootBEAutoStartTest, TestWarmFailureFollowedByColdBoot) {
   EXPECT_THAT(response,
               IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE,
                        "platform failed to reboot"));
+}
+
+TEST_P(RebootBEAutoStartTest, WarmbootInProgressBlocksNewWarmboot) {
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  std::string json_request = "{\"method\":\"WARM\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request);
+  NotificationResponse response2 = handle_reboot_request(json_request);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Warm Reboot in progress"));
+}
+
+TEST_P(RebootBEAutoStartTest, ColdbootInProgressBlocksNewColdboot) {
+  RebootRequest request;
+  request.set_method(RebootMethod::COLD);
+  std::string json_request = "{\"method\":\"COLD\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request);
+  NotificationResponse response2 = handle_reboot_request(json_request);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Cold Reboot in progress"));
+}
+
+TEST_P(RebootBEAutoStartTest, HaltbootInProgressBlocksNewHaltboot) {
+  RebootRequest request;
+  request.set_method(RebootMethod::HALT);
+  std::string json_request = "{\"method\":\"HALT\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request);
+  NotificationResponse response2 = handle_reboot_request(json_request);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Halt Reboot in progress"));
+}
+
+TEST_P(RebootBEAutoStartTest, WarmbootInProgressBlocksNewColdboot) {
+  RebootRequest request1, request2;
+  request1.set_method(RebootMethod::WARM);
+  std::string json_request1 = "{\"method\":\"WARM\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request1);
+  request1.set_method(RebootMethod::COLD);
+  std::string json_request2 = "{\"method\":\"COLD\"}";
+  NotificationResponse response2 = handle_reboot_request(json_request2);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Warm Reboot in progress"));
+}
+
+TEST_P(RebootBEAutoStartTest, ColdbootInProgressBlocksNewWarmboot) {
+  RebootRequest request1, request2;
+  request1.set_method(RebootMethod::COLD);
+  std::string json_request1 = "{\"method\":\"COLD\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request1);
+  request1.set_method(RebootMethod::WARM);
+  std::string json_request2 = "{\"method\":\"WARM\"}";
+  NotificationResponse response2 = handle_reboot_request(json_request2);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Cold Reboot in progress"));
+}
+
+
+TEST_P(RebootBEAutoStartTest, ColdbootInProgressBlocksNewHaltboot) {
+  RebootRequest request1, request2;
+  request1.set_method(RebootMethod::COLD);
+  std::string json_request1 = "{\"method\":\"COLD\"}";
+  NotificationResponse response1 = handle_reboot_request(json_request1);
+  request1.set_method(RebootMethod::WARM);
+  std::string json_request2 = "{\"method\":\"HALT\"}";
+  NotificationResponse response2 = handle_reboot_request(json_request2);
+  EXPECT_THAT(response2.json_string.c_str(), StrEq("Reboot not allowed at this time. Cold Reboot in progress"));
 }
 
 INSTANTIATE_TEST_SUITE_P(TestWithStartupWarmbootEnabledState,

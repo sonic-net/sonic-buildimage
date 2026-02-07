@@ -7,11 +7,7 @@
 #
 #############################################################################
 
-import sys
-import subprocess
-from datetime import datetime
-import json
-import syslog
+from datetime import datetime, timezone, timedelta
 import docker
 import redis
 from sonic_py_common import syslogger
@@ -26,9 +22,7 @@ def log_err(msg, also_print_to_console=False):
     logger_instance.log_error(msg, also_print_to_console)
 
 try:
-    from swsscommon import swsscommon
     from health_checker.manager import HealthCheckerManager
-    from sonic_py_common import daemon_base
     from sonic_platform.chassis import Chassis
     from sonic_platform.helper import APIHelper
 except Exception as e:
@@ -42,10 +36,13 @@ STATE_DB = 6
 REDIS_LOCALHOST_SERVER_PORT = 6379
 REDIS_LOCALHOST_SERVER_IP = '127.0.0.1'
 NOT_AVAILABLE = 'N/A'
-
+STARTUP_CONTAINER_LIST = ['swss', 'syncd', 'database']
+CONTAINERS_TO_IGNORE = ['macsec']
 try:
     apiHelper = APIHelper()
     chassis = Chassis()
+    dpu_docker_name = apiHelper.get_dpu_docker_container_name()
+    STARTUP_CONTAINER_LIST.append(dpu_docker_name)
 except Exception as e:
     log_err(f'failed to fetch dpu docker name due to {e}')
 
@@ -66,6 +63,14 @@ def bool_to_link_status(status):
         return "up"
     else:
         return "down"
+
+def parse_docker_time(ts: str) -> datetime:
+    ts = ts.rstrip("Z")
+    if '.' in ts:
+        base, fraction = ts.split('.')
+        ts = f"{base}.{fraction[:6]}"
+    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f")
+    return dt.replace(tzinfo=timezone.utc)
 
 class DPUHealthUpdater():
 
@@ -117,18 +122,31 @@ class DPUHealthUpdater():
             client = docker.from_env()
             containers = client.containers.list(all=True)
             all_container_status = True
+            startup_container_status = True
+            swss_container_uptime = 0
             container_not_running = []
             container_restarting = []
             reason = ""
             for container in containers:
                 container_name = container.name
                 container_status = container.status
+                if container_name in CONTAINERS_TO_IGNORE:
+                    continue
                 if container_status == 'restarting':
+                    if container_name in STARTUP_CONTAINER_LIST:
+                        startup_container_status &= False
                     all_container_status &= False
                     container_restarting.append(container_name)
                 elif container_status == 'exited':
+                    if container_name in STARTUP_CONTAINER_LIST:
+                        startup_container_status &= False
                     all_container_status &= False
                     container_not_running.append(container_name)
+                if container_name == "swss" and startup_container_status:
+                    swss_container_uptime = datetime.now(timezone.utc) - parse_docker_time(container.attrs['State']['StartedAt'])
+            if startup_container_status and swss_container_uptime < timedelta(minutes=2):
+                reason = "Early stage containers (swss, syncd, database) are up and running"
+                return startup_container_status, reason
             if container_not_running:
                 reason += "Container not running : " + ', '.join(container_not_running)
             if container_restarting:

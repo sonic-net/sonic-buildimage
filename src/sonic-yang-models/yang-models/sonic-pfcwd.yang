@@ -71,6 +71,17 @@ module sonic-pfcwd {
                     description
                         "Time delay before resuming normal PFC operation in msec.";
                 }
+                leaf pfc_stat_history {
+                    must "../ifname != 'GLOBAL'";
+                    type string {
+                        pattern "enable|disable" {
+                            error-message "pfc_stat_history must be either enable or disable";
+                            error-app-tag pfc-stat-history-invalid-status;
+                        }
+                    }
+                    description
+                        "Toggle for PFC Historical Statistics estimation.";
+                }
                 leaf POLL_INTERVAL {
                     must "../ifname = 'GLOBAL'";
                     type uint32 {

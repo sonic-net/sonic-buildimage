@@ -1,0 +1,98 @@
+{
+    "CONTEXTS": [
+        {
+            "guid": 0,
+            "name": "sw0",
+            "dbAsic": "ASIC_DB",
+            "dbCounters": "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState": "STATE_DB",
+            "zmq_enable": false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index": 0,
+                    "hwinfo": ""
+                }
+            ]
+        },
+        {
+            "guid": 1,
+            "name": "phy",
+            "dbAsic": "GB_ASIC_DB",
+            "dbCounters": "GB_COUNTERS_DB",
+            "dbFlex": "GB_FLEX_COUNTER_DB",
+            "dbState": "STATE_DB",
+            "zmq_enable": false,
+            "zmq_endpoint": "tcp://127.0.0.1:5565",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5566",
+            "switches": [
+                {
+                    "index": 9,
+                    "hwinfo": "9"
+                },
+                {
+                    "index": 8,
+                    "hwinfo": "8"
+                },
+                {
+                    "index": 10,
+                    "hwinfo": "10"
+                },
+                {
+                    "index": 11,
+                    "hwinfo": "11"
+                },
+                {
+                    "index": 12,
+                    "hwinfo": "12"
+                },
+                {
+                    "index": 13,
+                    "hwinfo": "13"
+                },
+                {
+                    "index": 14,
+                    "hwinfo": "14"
+                },
+                {
+                    "index": 15,
+                    "hwinfo": "15"
+                },
+                {
+                    "index": 0,
+                    "hwinfo": "0"
+                },
+                {
+                    "index": 1,
+                    "hwinfo": "1"
+                },
+                {
+                    "index": 2,
+                    "hwinfo": "2"
+                },
+                {
+                    "index": 3,
+                    "hwinfo": "3"
+                },
+                {
+                    "index": 4,
+                    "hwinfo": "4"
+                },
+                {
+                    "index": 5,
+                    "hwinfo": "5"
+                },
+                {
+                    "index": 6,
+                    "hwinfo": "6"
+                },
+                {
+                    "index": 7,
+                    "hwinfo": "7"
+                }
+            ]
+        }
+    ]
+}

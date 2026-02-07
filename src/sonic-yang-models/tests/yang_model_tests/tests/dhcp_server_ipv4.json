@@ -12,7 +12,7 @@
     },
     "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
         "desc": "Add netmask which is not in correct ip-prefix format.",
-        "eStrKey": "Pattern"
+        "eStrKey": "IPv4"
     },
     "DHCP_SERVER_IPV4_STATE_WRONG_VALUE": {
         "desc": "Configure wrong value for state.",
@@ -48,6 +48,20 @@
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
         "desc": "Add ipv4-address type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_EMPTY": {
+        "desc": "Add option with always send empty."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_TRUE": {
+        "desc": "Add option with always send true."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_FALSE": {
+        "desc": "Add option with always send false."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_INVALID": {
+        "desc": "Add option with always send invalid.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["False"]
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
         "desc": "Add uint8 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."

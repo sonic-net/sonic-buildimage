@@ -9,6 +9,8 @@ include $(PLATFORM_PATH)/one-image.mk
 include $(PLATFORM_PATH)/docker-saiserver-mrvl-teralynx.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/python-saithrift.mk
+include $(PLATFORM_PATH)/mrvl-teralynx.mk
+include $(PLATFORM_PATH)/or-tools.mk
 
 SONIC_ALL += $(SONIC_MRVL_TERALYNX_ONE_IMAGE) \
              $(DOCKER_FPM) \
@@ -16,7 +18,7 @@ SONIC_ALL += $(SONIC_MRVL_TERALYNX_ONE_IMAGE) \
              $(DOCKER_SYNCD_MRVL_TERALYNX_RPC)
 
 # Inject mrvl-teralynx sai into syncd
-$(SYNCD)_DEPENDS += $(MRVL_TERALYNX_HSAI) $(MRVL_TERALYNX_LIBSAI) $(MRVL_TERALYNX_SHELL)
+$(SYNCD)_DEPENDS += $(MRVL_TERALYNX_HSAI) $(MRVL_TERALYNX_LIBSAI) $(MRVL_TERALYNX_SHELL) $(LIBOR_TOOLS)
 $(SYNCD)_UNINSTALLS += $(MRVL_TERALYNX_HSAI)
 
 ifeq ($(ENABLE_SYNCD_RPC),y)

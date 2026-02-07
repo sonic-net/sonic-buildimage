@@ -170,9 +170,10 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
 
 def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     config_db = db_connect_configdb(asic_name)
+    
+    config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
     # If available, Read from CONFIG DB first
-    if config_db is not None and port_config_file is None:
-
+    if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("PORT")
         if bool(port_data):
             ports = ast.literal_eval(json.dumps(port_data))
@@ -374,13 +375,19 @@ class BreakoutCfg(object):
 
                 lanes = self._lanes[lane_id:lane_id + lanes_per_port]
 
-                ports[interface_name] = {
+                port_config = {
                     'alias': self._breakout_capabilities[alias_id],
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
                     'index': self._indexes[lane_id],
                     'subport': "0" if total_num_ports == 1 else str(alias_id + 1)
                 }
+                
+                # If the lane speed is greater than 50G, enable FEC
+                if entry.default_speed // lanes_per_port >= 50000:
+                    port_config['fec'] = 'rs'
+
+                ports[interface_name] = port_config
 
                 lane_id += lanes_per_port
                 alias_id += 1

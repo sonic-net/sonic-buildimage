@@ -1,5 +1,6 @@
 /*
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -111,6 +112,13 @@ LKM_MOD_PARAM(usemsi, "i", int, 0);
 MODULE_PARM_DESC(usemsi,
 "Use MSI/ MSIX interrupts if supported by kernel");
 
+/* Check system support msi or not */
+static int msi_check = 1;
+LKM_MOD_PARAM(msi_check, "i", int, (S_IRUGO | S_IWUSR));
+MODULE_PARM_DESC(msi_check,
+"Do not check msi supporting (default 1");
+
+
 /* Ignore all recognized devices (for debug purposes) */
 int nodevices;
 LKM_MOD_PARAM(nodevices, "i", int, 0);
@@ -135,6 +143,12 @@ int msixcnt = 1;
 #ifndef IRQF_SHARED
 #define IRQF_SHARED     SA_SHIRQ
 #endif
+
+/* Set irq affinity for PCIe interrupt handler */
+int pci_irq_affinity = -1;
+LKM_MOD_PARAM(pci_irq_affinity, "i", int, 0);
+MODULE_PARM_DESC(pci_irq_affinity,
+"Manually enforce IRQ affinity for the PCIe interrupt handler");
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
 typedef unsigned long resource_size_t;
@@ -221,9 +235,13 @@ MODULE_PARM_DESC(pci_bridge_setup,
 #define _ISR_PARAMS(_i,_d,_r) int _i, void *_d, struct pt_regs *_r
 typedef irqreturn_t (*irq_handler_t)(int _i, void *_d, struct pt_regs *_r);
 #endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,0))
+#define SYNC_IRQ(_i) synchronize_hardirq(_i)
+#else
 #define SYNC_IRQ(_i) synchronize_irq(_i)
-char * ___strtok;
-char * strtok(char * s,const char * ct)
+#endif
+static char * ___strtok;
+static char * strtok(char * s,const char * ct)
 {
     char *sbegin, *send;
     sbegin  = s ? s : ___strtok;
@@ -241,8 +259,6 @@ char * strtok(char * s,const char * ct)
     ___strtok = send;
     return (sbegin);
 }
-LKM_EXPORT_SYM(___strtok);
-LKM_EXPORT_SYM(strtok);
 
 /* PCIe capabilities */
 #ifndef PCI_CAP_ID_EXP
@@ -376,8 +392,15 @@ typedef struct bde_ctrl_s {
     uint32 inst_id; /* The instance ID of the instance controlling the device */
 
     /*
-     * Callback function from user BDE to determine if there are pending interrupts
-     * currently.
+     * Callback function to determine whether there are any pending
+     * interrupts. This function is called periodically from a timer
+     * tick function when the interrupt handler is idle.
+     *
+     * The timer tick function is disabled temporarily when a second
+     * interrupt handler is installed.
+     *
+     * The timer tick function is disabled permanently if the PCI link
+     * is lost or reset or if the callback function is removed.
      */
     int (*intr_pending)(void *);
     void *intr_pending_data;
@@ -386,6 +409,8 @@ typedef struct bde_ctrl_s {
     uint32 stuck_interrupts;      /* Number of stuck interrupts detected */
     uint32 no_intr_isr_ticks;     /* Number of ISR ticks without interrupt occurred */
     struct timer_list isr_tick;   /* Timer tick to prevent stuck interrupt */
+    uint32 timer_active;          /* Timer was added for handling pending interrupt */
+
 #ifdef INCLUDE_SRAM_DMA
     uint32 dev_sram_dma_start;    /* start address of device SRAM used for DMA */
     uint32 dev_sram_dma_size;     /* size in bytes of device SRAM used for DMA */
@@ -851,8 +876,13 @@ iproc_cmicd_probe(struct platform_device *pldev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int
 iproc_cmicd_remove(struct platform_device *pldev)
+#else
+static void
+iproc_cmicd_remove(struct platform_device *pldev)
+#endif
 {
     int i;
     uint32 mask = BDE_SWITCH_DEV_TYPE | BDE_AXI_DEV_TYPE;
@@ -873,7 +903,9 @@ iproc_cmicd_remove(struct platform_device *pldev)
         }
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 #ifdef CONFIG_OF
 static const struct of_device_id iproc_cmicd_of_match[] = {
@@ -1244,47 +1276,16 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, BCM56684_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56700_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56701_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56720_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56721_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56725_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56800_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56801_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56802_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56803_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56820_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56821_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56822_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56823_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56825_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56630_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56634_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56636_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56638_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56639_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56538_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56520_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56521_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56522_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56524_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56526_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56534_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56685_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56689_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56331_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56333_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56334_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56338_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56320_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56321_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56132_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56134_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56140_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56142_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56143_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56144_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56146_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56147_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56149_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56150_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56151_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56152_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
@@ -1356,8 +1357,6 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, BCM56243_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56245_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56246_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM55450_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM55455_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56260_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56270_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56271_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
@@ -1381,23 +1380,6 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, BCM56467_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56468_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56246_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56248_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56450_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56452_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56454_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56455_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56456_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56457_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56458_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56850_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56851_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56852_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56853_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56854_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56855_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56834_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56750_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, BCM56830_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM55440_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM55441_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56060_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
@@ -1717,7 +1699,7 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3_PLUS_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, JERICHO3_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3_DEVICE_ID_START, PCI_ANY_ID, PCI_ANY_ID },
@@ -1733,9 +1715,15 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, J3AI_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J3AI_PLUS_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3D_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3D_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3D_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
@@ -1757,17 +1745,68 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, Q3A_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3A_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, Q3A_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3U_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3U_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3U_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3U_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3U_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3N_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3N_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3N_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3N_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
-    { BROADCOM_VENDOR_ID, Q3N_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3U_ORIG_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3U_ORIG_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3U_ORIG_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3U_ORIG_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3U_ORIG_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3N_ORIG_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3N_ORIG_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3N_ORIG_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3N_ORIG_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q3N_ORIG_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
 #endif
+#ifdef BCM_JERICHO_4_SUPPORT
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, JERICHO4_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+#endif
+
+#ifdef BCM_Q4D_SUPPORT
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, Q4D_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+#endif
+
+
+#ifdef BCM_J4L_SUPPORT
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, J4L_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+#endif
+
+
 #endif
 #endif /* BCM_DNX_SUPPORT */
 #ifdef BCM_DFE_SUPPORT
@@ -1826,6 +1865,20 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, RAMON3_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
 #endif
 #endif
+#ifdef BCM_DNXFE_SUPPORT
+#ifdef BCM_RAMON_4_SUPPORT
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 1, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 2, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 3, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 4, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 5, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 6, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 7, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 8, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, RAMON4_DEVICE_ID + 9, PCI_ANY_ID, PCI_ANY_ID },
+#endif
+#endif
     { BROADCOM_VENDOR_ID, BCM56860_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56861_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56862_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
@@ -1876,6 +1929,9 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, BCM56472_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56475_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM56474_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM56390_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM56391_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM56392_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { 0, 0, 0, 0 }
 };;
 
@@ -2230,7 +2286,10 @@ _shbde_log_func(int level, const char *str, int param)
 {
     level = (level >= SHBDE_DBG) ? 1 : 0;
     if (debug >= level) {
-        gprintk("%s (%d)\n", str, param);
+        char *klvl = (level == 0) ? KERN_WARNING : "";
+        printk("%s%s (%d): %s 0x%08x (%d)\n",
+               klvl, LINUX_KERNEL_BDE_NAME, current->pid,
+               str, param, param);
     }
 }
 /*
@@ -2455,7 +2514,7 @@ config_pci_intr_type(struct pci_dev *dev, bde_ctrl_t *ctrl, int iproc)
     }
 #endif
 
-    if (ctrl->use_msi == PCI_USE_INT_MSI) {
+    if (msi_check && (ctrl->use_msi == PCI_USE_INT_MSI)) {
         /* check for support MSI vector */
         ret = pci_enable_msi(ctrl->pci_device);
         if (ret < 0) {
@@ -2892,11 +2951,30 @@ _pci_probe(struct pci_dev *dev, const struct pci_device_id *ent)
         /* iProc configuration parameters */
         (void)shbde_pci_iproc_version_get(shbde, dev, &icfg->iproc_ver,
                                           &icfg->cmic_ver, &icfg->cmic_rev);
+
+#ifdef BCM_Q3A_SUPPORT
+        if (((ctrl->bde_dev.device & DNXC_DEVID_FAMILY_MASK) == Q3U_ORIG_DEVICE_ID) && (icfg->iproc_ver == 20)) {
+            /* Workaround for conflicting between Q3u,n devices and Greyhound */
+            ctrl->bde_dev.device |= Q3U_DEVICE_ID ^ Q3U_ORIG_DEVICE_ID; /* 0x840x -> 0x84ax */
+
+            if (debug >= 2) {
+                gprintk("new dev ID = 0x%x\n", ctrl->bde_dev.device);
+            }
+        }
+#endif
         shbde_iproc_config_init(icfg, ctrl->bde_dev.device, ctrl->bde_dev.rev);
 
         if (debug >= 2) {
-            gprintk("iproc version = 0x%x dma_hi_bits  =  0x%x\n", icfg->iproc_ver, icfg->dma_hi_bits);
+            gprintk("iproc version = 0x%x dma_hi_bits = 0x%x\n",
+                    icfg->iproc_ver, icfg->dma_hi_bits);
         }
+
+        /*
+         * Do not allow iProc sub-window remapping on the fly as this may
+         * corrupt iProc access from user space.
+         */
+        icfg->no_subwin_remap = 1;
+
         icfg->use_msi = ctrl->use_msi;
 
         /* Call shared function */
@@ -2970,6 +3048,8 @@ _pci_probe(struct pci_dev *dev, const struct pci_device_id *ent)
                     gprintk("PCI device 0x%x:0x%x using SRAM DMA at 0x%x size 0x%x dev_type=0x%x dev=%u\n", dev->vendor, dev->device,
                             ctrl->dev_sram_dma_start, ctrl->dev_sram_dma_size, ctrl->dev_type, (unsigned)(ctrl - _devices));
                 }
+                /** Device no PCIe connect, the BARs must be accessed by the BDE, permit sub window remapping */
+                ctrl->shbde.icfg.no_subwin_remap = 0;
                     break;
                 default:
                     break;
@@ -3029,12 +3109,6 @@ _pci_remove(struct pci_dev* dev)
         gprintk("PCI device %04x:%04x is removed. \n",
                 dev->vendor, dev->device);
     }
-    if (ctrl->bde_dev.base_address1) {
-        iounmap((void *)ctrl->bde_dev.base_address1);
-    }
-    if (ctrl->bde_dev.base_address) {
-        iounmap((void *)ctrl->bde_dev.base_address);
-    }
 
     /* Free our interrupt handler, if we have one */
     if (ctrl->isr || ctrl->isr2) {
@@ -3053,12 +3127,26 @@ _pci_remove(struct pci_dev* dev)
         }
     }
 #ifdef CONFIG_PCI_MSI
+    if (ctrl->intr_pending && ctrl->use_msi >= PCI_USE_INT_MSI && ctrl->timer_active) {
+        ctrl->timer_active = 0;
+        del_timer_sync(&ctrl->isr_tick);
+    }
+
     _msi_disconnect(ctrl);
 #endif
+
+
     ctrl->isr = NULL;
     ctrl->isr_data = NULL;
     ctrl->isr2 = NULL;
     ctrl->isr2_data = NULL;
+
+    if (ctrl->bde_dev.base_address1) {
+        iounmap((void *)ctrl->bde_dev.base_address1);
+    }
+    if (ctrl->bde_dev.base_address) {
+        iounmap((void *)ctrl->bde_dev.base_address);
+    }
 }
 
 static struct pci_driver _device_driver = {
@@ -3353,6 +3441,8 @@ _init(void)
 
     for (i = 0; i < LINUX_BDE_MAX_DEVICES; ++i) {
         _devices[i].inst_id = BDE_DEV_INST_ID_INVALID;
+        _devices[i].timer_active = 0;
+        _devices[i].intr_pending = NULL;
     }
 
     return 0;
@@ -3882,12 +3972,18 @@ _isr(_ISR_PARAMS(irq, dev_id, iregs))
     return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_PCI_MSI
 static void
 lkbde_isrtick_func(bde_ctrl_t *ctrl)
 {
     unsigned long flags;
 
     spin_lock_irqsave(&ctrl->lock, flags);
+    if (!ctrl->timer_active) {
+        /* Timer is not active, do nothing */
+        spin_unlock_irqrestore(&ctrl->lock, flags);
+        return;
+    }
 
     if (ctrl->prev_interrupts == ctrl->interrupts) {
         if (ctrl->intr_pending(ctrl->intr_pending_data)) {
@@ -3907,7 +4003,9 @@ lkbde_isrtick_func(bde_ctrl_t *ctrl)
 
     ctrl->isr_tick.expires = jiffies + msecs_to_jiffies(isrtickms);
     spin_unlock_irqrestore(&ctrl->lock, flags);
-    add_timer(&ctrl->isr_tick);
+    if (ctrl->timer_active) {
+        add_timer(&ctrl->isr_tick);
+    }
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
@@ -3923,6 +4021,33 @@ lkbde_isrtick(struct timer_list *t)
 {
     bde_ctrl_t *ctrl = from_timer(ctrl, t, isr_tick);
     return lkbde_isrtick_func(ctrl);
+}
+#endif
+
+static void
+lkbde_isrtick_add(bde_ctrl_t *ctrl)
+{
+    if (debug >= 1) {
+        gprintk("Add isr tick, msi %d, intr pending %p, timer active %d\n",
+                 ctrl->use_msi, ctrl->intr_pending, ctrl->timer_active);
+    }
+
+    if (ctrl->use_msi >= PCI_USE_INT_MSI && ctrl->intr_pending
+          && !ctrl->timer_active) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+        init_timer(&ctrl->isr_tick);
+        ctrl->isr_tick.data = (unsigned long)ctrl;
+        ctrl->isr_tick.function = lkbde_isrtick;
+#else
+        timer_setup(&ctrl->isr_tick, lkbde_isrtick, 0);
+#endif
+        ctrl->isr_tick.expires = jiffies + msecs_to_jiffies(isrtickms);
+        ctrl->timer_active = 1;
+        add_timer(&ctrl->isr_tick);
+        if (debug > 1) {
+            gprintk("isr tick added\n");
+        }
+    }
 }
 #endif
 
@@ -3977,6 +4102,16 @@ _interrupt_connect(int d,
         ctrl->isr = isr;
         ctrl->isr_data = isr_data;
         if (isr_active) {
+            if (debug >= 1) {
+                gprintk("add isrtick added? %d\n", ctrl->timer_active);
+            }
+
+#ifdef CONFIG_PCI_MSI
+            /* add isr tick for pending interrupt if ISR tick timer was not added */
+            if (!ctrl->timer_active) {
+                lkbde_isrtick_add(ctrl);
+            }
+#endif
             /* Main handler (_isr) already installed */
             return 0;
         }
@@ -4049,6 +4184,21 @@ _interrupt_connect(int d,
                 if (ret < 0)
                     goto err_disable_msi;
 
+                if (pci_irq_affinity >= 0) {
+                    struct cpumask cmask;
+
+                    /* Clear the cpumask and pin IRQ to pci_irq_affinity */
+                    cpumask_clear(&cmask);
+                    cpumask_set_cpu(pci_irq_affinity, &cmask);
+
+                    ret = irq_set_affinity_hint(ctrl->iLine, &cmask);
+                    if (ret) {
+                        gprintk("Set IRQ(%d) affinity to core %d failed\n",
+                                ctrl->iLine, pci_irq_affinity);
+                        pci_irq_affinity = -1;
+                    }
+                }
+
                 if (unlikely(debug >= 1))
                     gprintk("%s(%d):device# = %d, irq_flags = %lu, irq = %d\n",
                          __func__, __LINE__, d,
@@ -4057,19 +4207,10 @@ _interrupt_connect(int d,
         }
     }
 
-    if ((ctrl->use_msi >= PCI_USE_INT_MSI) && ctrl->intr_pending) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
-        init_timer(&ctrl->isr_tick);
-        ctrl->isr_tick.data = (unsigned long)ctrl;
-        ctrl->isr_tick.function = lkbde_isrtick;
-#else
-        timer_setup(&ctrl->isr_tick, lkbde_isrtick, 0);
+#ifdef CONFIG_PCI_MSI
+    /* add isr tick */
+    lkbde_isrtick_add(ctrl);
 #endif
-
-        ctrl->isr_tick.expires = jiffies + msecs_to_jiffies(isrtickms);
-        add_timer(&ctrl->isr_tick);
-    }
-
     return 0;
 
 err_disable_msi:
@@ -4119,7 +4260,8 @@ _interrupt_disconnect(int d)
 
 #ifdef CONFIG_PCI_MSI
     if (isr_active) {
-        if (ctrl->intr_pending && (ctrl->use_msi >= PCI_USE_INT_MSI)) {
+        if (ctrl->intr_pending && (ctrl->use_msi >= PCI_USE_INT_MSI) && ctrl->timer_active) {
+            ctrl->timer_active = 0;
             del_timer_sync(&ctrl->isr_tick);
         }
     }
@@ -4133,14 +4275,16 @@ _interrupt_disconnect(int d)
         ctrl->isr2_data = NULL;
         ctrl->fmask = 0;
         if (ctrl->isr) {
+
+#ifdef CONFIG_PCI_MSI
+            /* restart timer to handling pending interrupts */
+            if (ctrl->intr_pending && ctrl->use_msi >= PCI_USE_INT_MSI) {
+                lkbde_isrtick_add(ctrl);
+            }
+#endif
             /* Primary handler still active */
             SYNC_IRQ(ctrl->iLine);
 
-            /* restart timer to handling pending interrupts */
-            if (ctrl->intr_pending && (ctrl->use_msi >= PCI_USE_INT_MSI)) {
-                ctrl->isr_tick.expires = jiffies + msecs_to_jiffies(isrtickms);
-                add_timer(&ctrl->isr_tick);
-            }
             return 0;
         }
     } else {
@@ -4150,14 +4294,15 @@ _interrupt_disconnect(int d)
         ctrl->isr = NULL;
         ctrl->isr_data = NULL;
         if (ctrl->isr2) {
+
+#ifdef CONFIG_PCI_MSI
+            /* restart timer to handling pending interrupts */
+            if (ctrl->intr_pending && ctrl->use_msi >= PCI_USE_INT_MSI) {
+                lkbde_isrtick_add(ctrl);
+            }
+#endif
             /* Secondary handler still active */
             SYNC_IRQ(ctrl->iLine);
-
-            /* restart timer to handling pending interrupts */
-            if (ctrl->intr_pending && (ctrl->use_msi >= PCI_USE_INT_MSI)) {
-                ctrl->isr_tick.expires = jiffies + msecs_to_jiffies(isrtickms);
-                add_timer(&ctrl->isr_tick);
-            }
             return 0;
         }
     }
@@ -4195,6 +4340,9 @@ _interrupt_disconnect(int d)
         } else
 #endif
         {
+            if (pci_irq_affinity >= 0) {
+                irq_set_affinity_hint(ctrl->iLine, NULL);
+            }
             free_irq(ctrl->iLine, ctrl);
         }
 #ifdef CONFIG_PCI_MSI
@@ -4508,12 +4656,28 @@ lkbde_cpu_pci_register(int d)
       case Q3U_DEVICE_ID:
 #endif
 #endif
+#ifdef BCM_JERICHO_4_SUPPORT
+      case JERICHO4_DEVICE_ID:
+      case Q4_DEVICE_ID:
+#endif
+#ifdef BCM_Q4D_SUPPORT
+      case Q4D_DEVICE_ID:
+#endif
+#ifdef BCM_J4L_SUPPORT
+      case J4L_DEVICE_ID:
+#endif
+
 #endif
 #ifdef BCM_DNXF_SUPPORT
       case  BCM88790_DEVICE_ID:
 #ifdef BCM_DNXF3_SUPPORT
       case RAMON2_DEVICE_ID:
       case RAMON3_DEVICE_ID:
+#endif
+#endif
+#ifdef BCM_DNXFE_SUPPORT
+#ifdef BCM_RAMON_4_SUPPORT
+      case RAMON4_DEVICE_ID:
 #endif
 #endif
         /*
@@ -4666,8 +4830,23 @@ linux_bde_create(linux_bde_bus_t *bus, ibde_t **ibde)
 int
 linux_bde_destroy(ibde_t *ibde)
 {
+
+    /* timer was added in user_bde context, must delete it */
+#ifdef CONFIG_PCI_MSI
+    int i;
+    for (i = 0; i < _ndevices; i++) {
+        bde_ctrl_t *ctrl = _devices + i;
+
+        /* free allocated kernel space memory */
+        if (ctrl->intr_pending && (ctrl->use_msi >= PCI_USE_INT_MSI) && ctrl->timer_active) {
+            ctrl->timer_active = 0;
+            del_timer_sync(&ctrl->isr_tick);
+        }
+    }
+#endif
+
     /* nothing */
-    return 0;
+     return 0;
 }
 
 /*
@@ -4994,6 +5173,26 @@ lkbde_irq_status_get(int d, uint32_t addr, uint32 *status)
 }
 
 int
+lkbde_iproc_version_get(int d, uint32 *iproc_ver)
+{
+    bde_ctrl_t *ctrl;
+    shbde_iproc_config_t icfg;
+
+    if (!VALID_DEVICE(d)) {
+        return -1;
+    }
+    ctrl = _devices + d;
+
+    if (shbde_pci_iproc_version_get(&ctrl->shbde, ctrl->pci_device, &icfg.iproc_ver,
+                                    &icfg.cmic_ver, &icfg.cmic_rev)) {
+        *iproc_ver = icfg.iproc_ver;
+        return 0;
+    }
+
+    return -1;
+}
+
+int
 lkbde_get_num_devices(int type)
 {
     return _num_devices(type);
@@ -5142,6 +5341,7 @@ LKM_EXPORT_SYM(lkbde_is_dev_managed_by_instance);
 LKM_EXPORT_SYM(lkbde_get_inst_devs);
 LKM_EXPORT_SYM(lkbde_intr_cb_register);
 LKM_EXPORT_SYM(lkbde_get_dev_pci_info);
+LKM_EXPORT_SYM(lkbde_iproc_version_get);
 #ifdef INCLUDE_SRAM_DMA
 LKM_EXPORT_SYM(lkbde_get_sram_dma_info);
 #endif /* INCLUDE_SRAM_DMA */

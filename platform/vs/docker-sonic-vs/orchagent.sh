@@ -37,15 +37,21 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 8192
-ORCHAGENT_ARGS+="-b 8192 "
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-b 65536 "
+else
+    # Set orchagent pop batch size to 8192
+    ORCHAGENT_ARGS+="-b 8192 "
+fi
 
 # Set zmq mode by default for DPU vs
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+
 if [ "$SWITCH_TYPE" == "dpu" ]; then
-    ORCHAGENT_ARGS+="-z zmq_sync "
+    ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi

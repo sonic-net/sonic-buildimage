@@ -29,7 +29,7 @@ else
 	PKG_CACHE_PATH=/sonic/target/vcache/${IMAGENAME}
 fi
 PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
-mkdir -p ${PKG_CACHE_PATH}
+[ -d ${PKG_CACHE_PATH} ] || $SUDO mkdir -p ${PKG_CACHE_PATH}
 
 . ${BUILDINFO_PATH}/scripts/utils.sh
 
@@ -124,10 +124,10 @@ set_reproducible_mirrors()
         expression3="/#SET_REPR_MIRRORS/d"
     fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
-        mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.back
+        $SUDO mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.back
     fi
     if [[ "$1" == "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources.back ]; then
-        mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
+        $SUDO mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
     fi
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"

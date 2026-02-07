@@ -2,7 +2,7 @@
   "PORT_MEDIA_SETTINGS": {
     "1": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -64,7 +64,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -130,7 +130,7 @@
     },
     "2": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -192,7 +192,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -258,7 +258,7 @@
     },
     "3": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -320,7 +320,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -386,7 +386,7 @@
     },
     "4": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -448,7 +448,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -514,7 +514,7 @@
     },
     "5": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -576,7 +576,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -642,7 +642,7 @@
     },
     "6": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -704,7 +704,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -770,7 +770,7 @@
     },
     "7": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -832,7 +832,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -898,7 +898,7 @@
     },
     "8": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -960,7 +960,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1026,7 +1026,7 @@
     },
     "9": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1088,7 +1088,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1154,7 +1154,7 @@
     },
     "10": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1216,7 +1216,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1282,7 +1282,7 @@
     },
     "11": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1344,7 +1344,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1410,7 +1410,7 @@
     },
     "12": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1472,7 +1472,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1538,7 +1538,7 @@
     },
     "13": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1600,7 +1600,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1666,7 +1666,7 @@
     },
     "14": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1728,7 +1728,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1794,7 +1794,7 @@
     },
     "15": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1856,7 +1856,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -1922,7 +1922,7 @@
     },
     "16": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -1984,7 +1984,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2050,7 +2050,7 @@
     },
     "17": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -2112,7 +2112,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2178,7 +2178,7 @@
     },
     "18": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -2240,7 +2240,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x90",
             "lane1": "0x88",
@@ -2306,7 +2306,7 @@
     },
     "19": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2368,7 +2368,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2434,7 +2434,7 @@
     },
     "20": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2496,7 +2496,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2562,7 +2562,7 @@
     },
     "21": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2624,7 +2624,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2690,7 +2690,7 @@
     },
     "22": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2752,7 +2752,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2818,7 +2818,7 @@
     },
     "23": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2880,7 +2880,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -2946,7 +2946,7 @@
     },
     "24": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -3008,7 +3008,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3074,7 +3074,7 @@
     },
     "25": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -3136,7 +3136,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3202,7 +3202,7 @@
     },
     "26": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -3264,7 +3264,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3330,7 +3330,7 @@
     },
     "27": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -3392,7 +3392,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3458,7 +3458,7 @@
     },
     "28": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -3520,7 +3520,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3586,7 +3586,7 @@
     },
     "29": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -3648,7 +3648,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3714,7 +3714,7 @@
     },
     "30": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -3776,7 +3776,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3842,7 +3842,7 @@
     },
     "31": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -3904,7 +3904,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -3970,7 +3970,7 @@
     },
     "32": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -4032,7 +4032,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4098,7 +4098,7 @@
     },
     "33": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4160,7 +4160,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4226,7 +4226,7 @@
     },
     "34": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4288,7 +4288,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4354,7 +4354,7 @@
     },
     "35": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4416,7 +4416,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4482,7 +4482,7 @@
     },
     "36": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4544,7 +4544,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4610,7 +4610,7 @@
     },
     "37": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4672,7 +4672,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4738,7 +4738,7 @@
     },
     "38": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x7C",
             "lane1": "0x7C",
@@ -4800,7 +4800,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4866,7 +4866,7 @@
     },
     "39": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -4928,7 +4928,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -4994,7 +4994,7 @@
     },
     "40": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5056,7 +5056,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -5122,7 +5122,7 @@
     },
     "41": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5184,7 +5184,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -5250,7 +5250,7 @@
     },
     "42": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5312,7 +5312,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -5378,7 +5378,7 @@
     },
     "43": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5440,7 +5440,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -5506,7 +5506,7 @@
     },
     "44": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5568,7 +5568,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5634,7 +5634,7 @@
     },
     "45": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x94",
             "lane1": "0x94",
@@ -5696,7 +5696,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -5762,7 +5762,7 @@
     },
     "46": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x94",
             "lane1": "0x94",
@@ -5824,7 +5824,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -5890,7 +5890,7 @@
     },
     "47": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x94",
             "lane1": "0x94",
@@ -5952,7 +5952,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6018,7 +6018,7 @@
     },
     "48": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -6080,7 +6080,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6146,7 +6146,7 @@
     },
     "49": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -6208,7 +6208,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6274,7 +6274,7 @@
     },
     "50": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -6336,7 +6336,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6402,7 +6402,7 @@
     },
     "51": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6464,7 +6464,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6530,7 +6530,7 @@
     },
     "52": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6592,7 +6592,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6658,7 +6658,7 @@
     },
     "53": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6720,7 +6720,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6786,7 +6786,7 @@
     },
     "54": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6848,7 +6848,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6914,7 +6914,7 @@
     },
     "55": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -6976,7 +6976,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7042,7 +7042,7 @@
     },
     "56": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7104,7 +7104,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7170,7 +7170,7 @@
     },
     "57": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7232,7 +7232,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7298,7 +7298,7 @@
     },
     "58": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7360,7 +7360,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7426,7 +7426,7 @@
     },
     "59": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7488,7 +7488,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7554,7 +7554,7 @@
     },
     "60": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -7616,7 +7616,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7682,7 +7682,7 @@
     },
     "61": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -7744,7 +7744,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -7810,7 +7810,7 @@
     },
     "62": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -7872,7 +7872,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x8C",
             "lane1": "0x8C",
@@ -7938,7 +7938,7 @@
     },
     "63": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -8000,7 +8000,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -8066,7 +8066,7 @@
     },
     "64": {
       "Default": {
-        "speed:400GAUI-8|400G": {
+        "speed:400G|400GAUI-8|200GAUI-4|100GAUI-2": {
           "main": {
             "lane0": "0x84",
             "lane1": "0x84",
@@ -8128,7 +8128,7 @@
             "lane7": "0x0"
           }
         },
-        "speed:800GAUI-8|800G|100GAUI-1-L": {
+        "speed:800G|800GAUI-8|400GAUI-4-L|400GAUI-4-S|200GAUI-2-L|200GAUI-2-S|100GAUI-1-L|100GAUI-1-S": {
           "main": {
             "lane0": "0x88",
             "lane1": "0x88",
@@ -8189,50 +8189,6 @@
             "lane6": "0x0",
             "lane7": "0x0"
           }
-        }
-      }
-    },
-    "65": {
-      "Default": {
-        "main": {
-          "lane0": "0x11"
-        },
-        "post1": {
-          "lane0": "0x4"
-        },
-        "post2": {
-          "lane0": "0x0"
-        },
-        "post3": {
-          "lane0": "0x0"
-        },
-        "pre1": {
-          "lane0": "0x1"
-        },
-        "pre2": {
-          "lane0": "0x0"
-        }
-      }
-    },
-    "66": {
-      "Default": {
-        "main": {
-          "lane0": "0x11"
-        },
-        "post1": {
-          "lane0": "0x5"
-        },
-        "post2": {
-          "lane0": "0x0"
-        },
-        "post3": {
-          "lane0": "0x0"
-        },
-        "pre1": {
-          "lane0": "0x1"
-        },
-        "pre2": {
-          "lane0": "0x0"
         }
       }
     }

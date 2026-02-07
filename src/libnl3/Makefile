@@ -3,14 +3,19 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = libnl-3-200_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
-DERIVED_TARGETS = libnl-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+DERIVED_TARGETS = libnl-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+		  libnl-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-genl-3-200_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+		  libnl-genl-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-genl-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-route-3-200_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+		  libnl-route-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-route-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb  \
 		  libnl-nf-3-200_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+		  libnl-nf-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-nf-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-cli-3-200_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
+		  libnl-cli-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb \
 		  libnl-cli-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :

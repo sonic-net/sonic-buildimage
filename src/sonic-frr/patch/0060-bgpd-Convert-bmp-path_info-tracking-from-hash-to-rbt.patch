@@ -1,0 +1,101 @@
+[PATCH] bgpd: Convert bmp path_info tracking from hash to rbtree
+
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 10 Sep 2025 11:04:10 -0400
+Subject: [PATCH] bgpd: Convert bmp path_info tracking from hash to rbtree
+
+The current implementation has this cycle:
+
+a) As path_info comes in, bmp_process is called, this generates
+an item on a hash.  This typesafe hash was automatically growing
+as more path info's were received.
+b) This generation of items on the hash eventually causes pullwr_run
+to happen, which pulls items off the hash, encodes them and sends them
+to a peer.  This causes the hash to automatically shrink.
+
+Now imagine a scenario where you have a large number of paths being
+brought in upon initial startup.  Run time starts to be dominated by
+the hash_grow and hash_shrink functions because it involves reallocs
+and memory manipulation:
+
++   99.17%     0.00%  bgpd     bgpd               [.] _start
++   99.17%     0.00%  bgpd     libc.so.6          [.] __libc_start_main
++   99.17%     0.00%  bgpd     libc.so.6          [.] 0x00007f0188f2d249
++   99.17%     0.00%  bgpd     bgpd               [.] main
++   99.17%     0.00%  bgpd     libfrr.so.0.0.0    [.] frr_run
++   99.10%     0.01%  bgpd     libfrr.so.0.0.0    [.] event_call
++   64.01%     0.01%  bgpd     bgpd               [.] bgp_process_packet
++   63.95%     0.01%  bgpd     bgpd               [.] bgp_update_receive
++   63.92%     0.01%  bgpd     bgpd               [.] bgp_nlri_parse_ip
++   63.90%     0.04%  bgpd     bgpd               [.] bgp_update
++   63.62%     0.00%  bgpd     bgpd               [.] hook_call_bgp_process (inlined)
++   63.62%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_process
++   63.61%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_process_one (inlined)
++   63.61%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_qhash_add (inlined)
++   63.59%    57.66%  bgpd     libfrr.so.0.0.0    [.] typesafe_hash_grow
++   34.63%     0.00%  bgpd     libfrr.so.0.0.0    [.] pullwr_run
++   34.39%     0.01%  bgpd     bgpd_bmp.so        [.] bmp_wrfill
++   34.39%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_wrqueue (inlined)
++   34.17%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_pull (inlined)
++   34.17%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_pull_from_queue
++   34.17%     0.00%  bgpd     bgpd_bmp.so        [.] bmp_qhash_del (inlined)
++   34.17%    32.71%  bgpd     libfrr.so.0.0.0    [.] typesafe_hash_shrink
+
+As you can see run time is spending 57.66 + 32.71% of the time in
+grow/shrink cycles as each side of the event system gets to run.
+
+Let's just convert the system to use a RB Tree to avoid this problem.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_bmp.c |   23 +----------------------
+ bgpd/bgp_bmp.h |    2 +-
+ 2 files changed, 2 insertions(+), 23 deletions(-)
+
+diff --git a/bgpd/bgp_bmp.c b/bgpd/bgp_bmp.c
+index 9441b5e34..58ec73c00 100644
+--- a/bgpd/bgp_bmp.c
++++ b/bgpd/bgp_bmp.c
+@@ -197,28 +197,7 @@ static int bmp_qhash_cmp(const struct bmp_queue_entry *a,
+ 	return ret;
+ }
+ 
+-static uint32_t bmp_qhash_hkey(const struct bmp_queue_entry *e)
+-{
+-	uint32_t key;
+-
+-	key = prefix_hash_key((void *)&e->p);
+-	key = jhash(&e->peerid,
+-		    offsetof(struct bmp_queue_entry, refcount)
+-			    - offsetof(struct bmp_queue_entry, peerid),
+-		    key);
+-	if ((e->afi == AFI_L2VPN && e->safi == SAFI_EVPN) ||
+-	    (e->safi == SAFI_MPLS_VPN))
+-		key = jhash(&e->rd,
+-			    offsetof(struct bmp_queue_entry, rd)
+-				    - offsetof(struct bmp_queue_entry, refcount)
+-				    + PSIZE(e->rd.prefixlen),
+-			    key);
+-
+-	return key;
+-}
+-
+-DECLARE_HASH(bmp_qhash, struct bmp_queue_entry, bhi,
+-		bmp_qhash_cmp, bmp_qhash_hkey);
++DECLARE_RBTREE_UNIQ(bmp_qhash, struct bmp_queue_entry, bhi, bmp_qhash_cmp);
+ 
+ static int bmp_active_cmp(const struct bmp_active *a,
+ 		const struct bmp_active *b)
+diff --git a/bgpd/bgp_bmp.h b/bgpd/bgp_bmp.h
+index d81b8f9b0..5d4f657ab 100644
+--- a/bgpd/bgp_bmp.h
++++ b/bgpd/bgp_bmp.h
+@@ -54,7 +54,7 @@
+  */
+ 
+ PREDECL_DLIST(bmp_qlist);
+-PREDECL_HASH(bmp_qhash);
++PREDECL_RBTREE_UNIQ(bmp_qhash);
+ 
+ struct bmp_queue_entry {
+ 	struct bmp_qlist_item bli;

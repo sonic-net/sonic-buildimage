@@ -15,72 +15,120 @@
         "fans": [
             {
                 "name": "Fan1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan3",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan4",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan5",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan6",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan7",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan8",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan9",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan10",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan11",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "Fan12",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 38
+                },
                 "status_led": {
                     "controllable": false
                 }
@@ -220,7 +268,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "MB Left",
@@ -228,7 +276,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "MB Right",
@@ -236,7 +284,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "MB Center",
@@ -244,7 +292,71 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
+            },
+            {
+                "name": "MB CPU",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "DDR1",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "DDR2",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },            
+            {
+                "name": "Max Port Temp.",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "ASIC0_DRAM0",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "ASIC0_DRAM1",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "ASIC1_DRAM0",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "ASIC1_DRAM1",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
             },
             {
                 "name": "ASIC0",
@@ -252,7 +364,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "ASIC1",
@@ -260,7 +372,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "CPU",
@@ -268,7 +380,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             }
         ],
         "sfps": [

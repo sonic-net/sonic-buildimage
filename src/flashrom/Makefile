@@ -4,6 +4,7 @@ SHELL = /bin/bash
 
 
 MAIN_TARGET = $(FLASHROM)
+DERIVED_TARGETS = $(FLASHROM_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./flashrom-$(FLASHROM_VERSION_FULL)
@@ -22,4 +23,6 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
 	popd
 
-	mv $* $(DEST)/
+	mv $(DERIVED_TARGETS) $* $(DEST)/
+
+$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)

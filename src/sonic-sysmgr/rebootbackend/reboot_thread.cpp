@@ -179,7 +179,7 @@ void RebootThread::do_halt_reboot(swss::Select &s) {
     return;
   }
 
-  // Wait for platform to reboot. If we return, reboot failed.
+  // Wait for platform to halt. If we return, reboot failed.
   // Logging, error status and monitoring for critical state are handled within.
   if (wait_for_platform_reboot(s) == Progress::EXIT_EARLY) {
     return;

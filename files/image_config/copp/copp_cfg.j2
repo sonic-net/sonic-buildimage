@@ -63,6 +63,16 @@
 		    "cbs":"600",
 		    "red_action":"drop"
 	    },
+	    "queue1_group3": {
+		    "trap_action":"trap",
+		    "trap_priority":"1",
+		    "queue": "1",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"200",
+		    "cbs":"200",
+		    "red_action":"drop"
+	    },
 	    "queue2_group1": {
 		    "cbs": "1000",
 		    "cir": "1000",
@@ -121,6 +131,11 @@
 	    "sflow": {
 		    "trap_group": "queue2_group1",
 		    "trap_ids": "sample_packet"
+	    },
+	    "neighbor_miss": {
+		    "trap_ids": "neighbor_miss",
+		    "trap_group": "queue1_group3",
+		    "always_enabled": "true"
 	    }
     }
 }

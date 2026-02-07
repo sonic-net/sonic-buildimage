@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,7 @@ ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
 endif
 
-$(DOCKER_SYNCD_BASE)_FILES += $(ISSU_VERSION_FILE)
+$(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI) $(ISSU_VERSION_FILE)
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \

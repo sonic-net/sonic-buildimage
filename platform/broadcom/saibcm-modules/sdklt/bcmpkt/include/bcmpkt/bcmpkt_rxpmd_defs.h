@@ -7,7 +7,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -291,8 +292,12 @@
 #define BCMPKT_RXPMD_IS_EGR_TS                   97
 /*! If set, then packet has been modified by the EP and CRC needs to be regenerated */
 #define BCMPKT_RXPMD_MODIFIED_PKT                98
+/*!  */
+#define BCMPKT_RXPMD_FLEX_HDR_MATCH_ID           99
+/*!  */
+#define BCMPKT_RXPMD_HVE_RESULT                  100
 /*! RXPMD FIELD ID NUMBER */
-#define BCMPKT_RXPMD_FID_COUNT                   99
+#define BCMPKT_RXPMD_FID_COUNT                   101
 /*! \} */
 
 /*! RXPMD field name strings for debugging. */
@@ -396,6 +401,8 @@
     {"MATCHED_RULE_EP", BCMPKT_RXPMD_MATCHED_RULE_EP},\
     {"IS_EGR_TS", BCMPKT_RXPMD_IS_EGR_TS},\
     {"MODIFIED_PKT", BCMPKT_RXPMD_MODIFIED_PKT},\
+    {"FLEX_HDR_MATCH_ID", BCMPKT_RXPMD_FLEX_HDR_MATCH_ID},\
+    {"HVE_RESULT", BCMPKT_RXPMD_HVE_RESULT},\
     {"fid count", BCMPKT_RXPMD_FID_COUNT}
 
 /*!
@@ -488,6 +495,49 @@
 #define BCMPKT_RXPMD_REASON_TYPE_NAME_MAP_INIT \
     {"CTC_INITIATED_FROM_IP", BCMPKT_RXPMD_REASON_T_FROM_IP},\
     {"CTC_INITIATED_FROM_EP", BCMPKT_RXPMD_REASON_T_FROM_EP},\
+
+/*!
+ * \name BCMPKT_RXPMD_TUNNEL_DECAP_TYPE encodings.
+ * \anchor BCMPKT_RXPMD_TUNNEL_DECAP_TYPE_XXX
+ */
+/*! \{ */
+/*! No decapsulation */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_NONE         0
+/*! IP */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_IP           1
+/*! L2 MPLS with one label */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_1LABEL 2
+/*! L2 MPLS with two labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_2LABEL 3
+/*! L2 MPLS with three labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_3LABEL 4
+/*! L3 MPLS with one label */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_1LABEL 5
+/*! L3 MPLS with two labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_2LABEL 6
+/*! L3 MPLS with three labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_3LABEL 7
+/*! VxLAN */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_VXLAN        8
+/*! SRv6 with L2 */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_L2      9
+/*! SRv6 with SRH */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_SRH     10
+/*! \} */
+
+/*! BCMPKT_RXPMD_TUNNEL_DECAP_TYPE encoding name strings for debugging. */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_TYPE_NAME_MAP_INIT \
+    {"NONE", BCMPKT_RXPMD_TUNNEL_DECAP_T_NONE},\
+    {"IP", BCMPKT_RXPMD_TUNNEL_DECAP_T_IP},\
+    {"L2MPLS_1LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_1LABEL},\
+    {"L2MPLS_2LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_2LABEL},\
+    {"L2MPLS_3LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_3LABEL},\
+    {"L3MPLS_1LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_1LABEL},\
+    {"L3MPLS_2LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_2LABEL},\
+    {"L3MPLS_3LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_3LABEL},\
+    {"VXLAN", BCMPKT_RXPMD_TUNNEL_DECAP_T_VXLAN},\
+    {"SRV6_L2", BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_L2},\
+    {"SRV6_SRH", BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_SRH},\
 
 /*!
  * \name RX packet metadata internal usage field IDs.
@@ -800,8 +850,14 @@
 #define BCMPKT_RX_REASON_SRV6_CONTROL_PKT        142
 /*! OUI Compression miss */
 #define BCMPKT_RX_REASON_OUI_COMPRESSION_MISS    143
+/*! Epoch check fail */
+#define BCMPKT_RX_REASON_EPOCH_CHECK_FAIL        144
+/*! DLB ECMP DPG Resolution CTC */
+#define BCMPKT_RX_REASON_DLB_ECMP_DPG_RESOLUTION_CTC 145
+/*! SRV6 ALT FRR not supported */
+#define BCMPKT_RX_REASON_SRV6_ALT_FRR_ERROR      146
 /*! BCMPKT_RX_REASON TYPE NUMBER */
-#define BCMPKT_RX_REASON_COUNT                   144
+#define BCMPKT_RX_REASON_COUNT                   147
 /*! \} */
 
 /*! RXPMD reason name strings for debugging. */
@@ -950,6 +1006,9 @@
     {"PORT_DOWN", BCMPKT_RX_REASON_PORT_DOWN},\
     {"SRV6_CONTROL_PKT", BCMPKT_RX_REASON_SRV6_CONTROL_PKT},\
     {"OUI_COMPRESSION_MISS", BCMPKT_RX_REASON_OUI_COMPRESSION_MISS},\
+    {"EPOCH_CHECK_FAIL", BCMPKT_RX_REASON_EPOCH_CHECK_FAIL},\
+    {"DLB_ECMP_DPG_RESOLUTION_CTC", BCMPKT_RX_REASON_DLB_ECMP_DPG_RESOLUTION_CTC},\
+    {"SRV6_ALT_FRR_ERROR", BCMPKT_RX_REASON_SRV6_ALT_FRR_ERROR},\
     {"reason count", BCMPKT_RX_REASON_COUNT}
 
 #endif /*! BCMPKT_RXPMD_DEFS_H */

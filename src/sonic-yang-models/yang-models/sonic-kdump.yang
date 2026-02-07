@@ -33,7 +33,7 @@ module sonic-kdump {
 
                 leaf memory {
                     type string {
-                        pattern "(((([0-9]+[MG])?(-([0-9]+[MG])?):)?[0-9]+[MG],?)+)";
+                        pattern "(((([0-9]+[MG]?)?(-([0-9]+[MG])?):)?[0-9]+[MG],?)+)";
                     }
                     description
                         "Memory reserved for loading the crash handler kernel. The amount

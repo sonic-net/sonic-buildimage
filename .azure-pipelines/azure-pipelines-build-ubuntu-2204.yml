@@ -1,0 +1,68 @@
+# C/C++ with GCC
+# Build your C/C++ project with GCC using make.
+# Add steps that publish test results, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/c-cpp/gcc
+pr: none
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - 202???
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily build
+  branches:
+    include:
+      - master
+      - 202???
+  always: true
+
+stages:
+- stage: Build
+
+  jobs:
+  - job:
+    displayName: "amd64/ubuntu-22.04"
+    pool:
+      vmImage: 'ubuntu-22.04'
+
+    steps:
+    - checkout: self
+      submodules: true
+    - script: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y make wget libtool m4 autoconf dh-exec debhelper \
+                         cmake pkg-config python3-pip python3 cmake libgtest-dev libgmock-dev libyang-dev \
+                         debhelper-compat dh-elpa dh-sequence-python3 python3-all \
+                         libpython3-all-dev python3-six xmlto unzip rake-compiler gem2deb pkg-php-tools \
+                         ant default-jdk maven-repo-helper libguava-java devscripts \
+                         libboost-all-dev libgtest-dev build-essential swig4.0 swig
+        sudo pip3 install pytest click
+        wget http://ftp.us.debian.org/debian/pool/main/libg/libgoogle-gson-java/libgoogle-gson-java_2.8.6-1+deb11u1_all.deb
+        sudo dpkg -i libgoogle-gson-java_2.8.6-1+deb11u1_all.deb
+        mkdir -p /tmp/artifacts
+      displayName: "Install dependencies"
+    - script: |
+        BLDENV=bullseye SONIC_CONFIG_MAKE_JOBS=$(nproc) CONFIGURED_ARCH=amd64 DEST=/tmp/artifacts make -f ../rules/protobuf.mk -f protobuf/Makefile
+      workingDirectory: src
+      displayName: "Build protobuf"
+    - script: |
+        sudo dpkg -i protobuf-compiler_3.21.12-3_amd64.deb libprotoc32_3.21.12-3_amd64.deb \
+                      libprotobuf32_3.21.12-3_amd64.deb libprotobuf-dev_3.21.12-3_amd64.deb \
+                      libprotobuf-lite32_3.21.12-3_amd64.deb
+      workingDirectory: /tmp/artifacts
+      displayName: "Install protobuf"
+    - script: |
+        dpkg-buildpackage -rfakeroot -b -us -uc
+      workingDirectory: src/sonic-dash-api
+      displayName: "Build sonic-dash-api"
+    - script: |
+        cp *.deb /tmp/artifacts
+      workingDirectory: src
+    - publish: /tmp/artifacts
+      artifact: sonic-buildimage.amd64.ubuntu22_04
+      displayName: "Archive sonic-buildimage debian packages for ubuntu22.04"

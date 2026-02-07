@@ -24,7 +24,7 @@ pr: none
 
 stages:
 - stage: Build
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   variables:
   - name: CACHE_MODE
     value: cache
@@ -46,7 +46,7 @@ stages:
             docker_syncd_rpc_image: yes
             platform_rpc: mlnx
         - name: marvell-prestera-armhf
-          pool: sonicbld-armhf
+          pool: sonicso1ES-armhf
           timeoutInMinutes: 1200
           variables:
             PLATFORM_NAME: marvell-prestera

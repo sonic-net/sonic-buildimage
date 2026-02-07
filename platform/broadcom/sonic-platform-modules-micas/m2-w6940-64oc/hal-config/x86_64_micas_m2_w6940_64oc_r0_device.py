@@ -442,7 +442,7 @@ devices = {
             "name": "FAN1",
             "airflow": fanairflow,
             "e2loc": {'loc': '/sys/bus/i2c/devices/i2c-52/52-0050/eeprom', 'offset': 0, 'len': 256, 'way': 'devfile'},
-            "present": {"loc": "/sys/s3ip/fan/fan1/status", "way": "sysfs", "mask": 0x01, "okval": 1},
+            "present": {"loc": "/sys/s3ip/fan/fan1/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"loc": "/dev/cpld10", "offset":0xd0, "len": 1,  "way":"devfile"},
@@ -450,6 +450,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -485,7 +486,7 @@ devices = {
             "name": "FAN2",
             "airflow": fanairflow,
             "e2loc": {'loc': '/sys/bus/i2c/devices/i2c-53/53-0050/eeprom', 'offset': 0, 'len': 256, 'way': 'devfile'},
-            "present": {"loc": "/sys/s3ip/fan/fan2/status", "way": "sysfs", "mask": 0x01, "okval": 1},
+            "present": {"loc": "/sys/s3ip/fan/fan2/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"loc": "/dev/cpld10", "offset":0xd1, "len": 1,  "way":"devfile"},
@@ -493,6 +494,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -528,7 +530,7 @@ devices = {
             "name": "FAN3",
             "airflow": fanairflow,
             "e2loc": {'loc': '/sys/bus/i2c/devices/i2c-54/54-0050/eeprom', 'offset': 0, 'len': 256, 'way': 'devfile'},
-            "present": {"loc": "/sys/s3ip/fan/fan3/status", "way": "sysfs", "mask": 0x01, "okval": 1},
+            "present": {"loc": "/sys/s3ip/fan/fan3/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"loc": "/dev/cpld10", "offset":0xd2, "len": 1,  "way":"devfile"},
@@ -536,6 +538,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -571,7 +574,7 @@ devices = {
             "name": "FAN4",
             "airflow": fanairflow,
             "e2loc": {'loc': '/sys/bus/i2c/devices/i2c-55/55-0050/eeprom', 'offset': 0, 'len': 256, 'way': 'devfile'},
-            "present": {"loc": "/sys/s3ip/fan/fan4/status", "way": "sysfs", "mask": 0x01, "okval": 1},
+            "present": {"loc": "/sys/s3ip/fan/fan4/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
             "led": {"loc": "/dev/cpld10", "offset":0xd3, "len": 1,  "way":"devfile"},
@@ -579,6 +582,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",

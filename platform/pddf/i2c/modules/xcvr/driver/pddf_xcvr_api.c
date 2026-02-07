@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 #include <linux/kobject.h>
+#include "pddf_multifpgapci_defs.h"
 #include "pddf_xcvr_defs.h"
 
 /*#define SFP_DEBUG*/
@@ -293,6 +294,81 @@ int xcvr_fpgapci_write(XCVR_ATTR *info, uint32_t val)
     return status;
 }
 
+int xcvr_multifpgapci_read(XCVR_ATTR *info, int *output)
+{
+    int status = 0;
+    uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Doesn't support MULTIFPGAPCI read yet");
+        status = -1;
+        goto ret;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(info->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        status = -1;
+        goto ret;
+    }
+
+    offset = info->devaddr + info->offset;
+    status = ptr_multifpgapci_readpci(pci_dev, offset, output);
+
+ret:
+    if (status)
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+
+    return status;
+}
+
+int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
+{
+    int status = 0;
+    uint32_t reg, val_mask = 0, dnd_value = 0, reg_val;
+    uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
+        printk(KERN_ERR
+            "PDDF_XCVR: Doesn't support MULTIFPGAPCI read or write yet");
+        return (-1);
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(info->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        status = -1;
+        goto ret;
+    }
+
+    offset = info->devaddr + info->offset;
+    val_mask = BIT_INDEX(info->mask);
+    status = ptr_multifpgapci_readpci(pci_dev, offset, &reg_val);
+    if (status)
+      goto ret;
+    dnd_value =  reg_val & ~val_mask;
+
+    // We expect val to be either 0 or 1. This function doesn't write val thru to the FPGA.
+    // Instead it uses val and a mask to toggle bits.
+    if (((val == 1) && (info->cmpval != 0)) || ((val == 0) && (info->cmpval == 0))) {
+         reg = dnd_value | val_mask;
+    } else {
+         reg = dnd_value;
+    }
+
+    status = ptr_multifpgapci_writepci(pci_dev, reg, offset);
+    if (status)
+      goto ret;
+
+ret:
+    if (status)
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
+
+    return status;
+}
+
 int sonic_i2c_get_mod_pres(struct i2c_client *client, XCVR_ATTR *info, struct xcvr_data *data)
 {
     int status = 0;
@@ -322,19 +398,31 @@ int sonic_i2c_get_mod_pres(struct i2c_client *client, XCVR_ATTR *info, struct xc
             sfp_dbg(KERN_INFO "\nMod presence :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
-    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    else if (strcmp(info->devtype, "fpgapci") == 0)
     {
         status = xcvr_fpgapci_read(info);
 
         if (status < 0)
+        {
             return status;
+        }
         else
         {
             modpres = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nMod presence :0x%x, status= 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        int output;
 
+        status = xcvr_multifpgapci_read(info, &output);
+        if (status)
+          return status;
+
+        modpres = ((output & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+        sfp_dbg(KERN_INFO "\nMod presence :0x%x, reg_value=0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres,  output, info->devaddr, info->mask, info->offset);
+    }
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
         /* get client client for eeprom -  Not Applicable */
@@ -372,17 +460,30 @@ int sonic_i2c_get_mod_reset(struct i2c_client *client, XCVR_ATTR *info, struct x
             sfp_dbg(KERN_INFO "\nMod reset :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
-    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    else if (strcmp(info->devtype, "fpgapci") == 0)
     {
         status = xcvr_fpgapci_read(info);
         sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
         if (status < 0)
+        {
             return status;
+        }
         else
         {
             modreset = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nMod reset :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modreset, status, info->devaddr, info->mask, info->offset);
         }
+    }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        int output;
+
+        status = xcvr_multifpgapci_read(info, &output);
+        if (status)
+          return status;
+
+        modreset = ((output & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+        sfp_dbg(KERN_INFO "\nMod reset :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modreset, output, info->devaddr, info->mask, info->offset);
     }
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
@@ -421,19 +522,32 @@ int sonic_i2c_get_mod_intr_status(struct i2c_client *client, XCVR_ATTR *info, st
             sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
-    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    else if (strcmp(info->devtype, "fpgapci") == 0)
     {
         status = xcvr_fpgapci_read(info);
         sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
         if (status < 0)
+        {
             return status;
+        }
         else
         {
             mod_intr = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", mod_intr, status, info->devaddr, info->mask, info->offset);
         }
     }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        int output;
 
+        status = xcvr_multifpgapci_read(info, &output);
+        if (status) {
+          return status;
+        }
+
+        mod_intr = ((output & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+        sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", mod_intr, output, info->devaddr, info->mask, info->offset);
+    }
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
         /* get client client for eeprom -  Not Applicable */
@@ -472,17 +586,30 @@ int sonic_i2c_get_mod_lpmode(struct i2c_client *client, XCVR_ATTR *info, struct 
             sfp_dbg(KERN_INFO "\nModule LPmode :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
-    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    else if (strcmp(info->devtype, "fpgapci") == 0)
     {
         status = xcvr_fpgapci_read(info);
         sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
         if (status < 0)
+        {
             return status;
+        }
         else
         {
             lpmode = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nlpmode :0x%x, reg_val = 0x%x, op=0x%x, mask=0x%x, offset=0x%x\n", lpmode, status, status & BIT_INDEX(info->mask), info->mask, info->offset);
         }
+    }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        int output;
+
+        status = xcvr_multifpgapci_read(info, &output);
+        if (status)
+          return status;
+
+        lpmode = ((output & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+        sfp_dbg(KERN_INFO "\nlpmode :0x%x, reg_val = 0x%x, op=0x%x, mask=0x%x, offset=0x%x\n", lpmode, output, status & BIT_INDEX(info->mask), info->mask, info->offset);
     }
     else if (strcmp(info->devtype, "eeprom") == 0)
     {
@@ -610,11 +737,18 @@ int sonic_i2c_set_mod_reset(struct i2c_client *client, XCVR_ATTR *info, struct x
     {
         status = xcvr_fpgapci_write(info, data->reset);
     }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        status = xcvr_multifpgapci_write(info, data->reset);
+    }
     else
     {
         printk(KERN_ERR "Error: Invalid device type (%s) to set xcvr reset\n", info->devtype);
         status = -1;
     }
+
+    if (status < 0)
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
 
     return status;
 }
@@ -634,6 +768,10 @@ int sonic_i2c_set_mod_lpmode(struct i2c_client *client, XCVR_ATTR *info, struct 
     else if (strcmp(info->devtype, "fpgapci") == 0)
     {
         status = xcvr_fpgapci_write(info, data->lpmode);
+    }
+    else if (strcmp(info->devtype, "multifpgapci") == 0)
+    {
+        status = xcvr_multifpgapci_write(info, data->lpmode);
     }
     else
     {

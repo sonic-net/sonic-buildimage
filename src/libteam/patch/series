@@ -2,7 +2,7 @@
 0002-teamd-lacp-runner-will-send-lacp-update-right-after-.patch
 0003-libteam-Add-fallback-support-for-single-member-port-.patch
 #0004-Skip-setting-the-same-hwaddr-to-lag-port-to-avoid-di.patch
-0005-Increase-default-buffer-size-from-98304-to-983040.patch
+0005-Increase-default-buffer-size-from-98304-to-2097152.patch
 0006-teamd-Administratively-shutdown-port-channel-has-mem.patch
 #0007-Send-LACP-PDU-immediately-if-our-state-changed.patch
 0008-libteam-Add-warm_reboot-mode.patch
@@ -14,3 +14,4 @@
 0014-dont-move-the-port-state-from-disabled-when-admin-state-is-down.patch
 0015-add-support-for-custom-retry.patch
 0016-block-retry-count-changes.patch
+0017-Specify-netlink-recv-buffer-size-to-avoid-a-syscall.patch

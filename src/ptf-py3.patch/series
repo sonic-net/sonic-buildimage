@@ -2,3 +2,4 @@
 0002-Fill-byte-formatted-client-mac-address-in-DHCP-Disco.patch
 0003-Avoid-local-version-scheme-by-setuptools-scm.patch
 0004-Consider-only-expected-packets-for-timeout.patch
+0005-Fix-a-multithreading-issue-in-writing-pcap-files-204.patch

@@ -2,7 +2,9 @@ import json
 import subprocess
 import time
 import syslog
+from datetime import datetime, timezone
 from swsscommon import swsscommon
+from sonic_py_common import device_info
 from sonic_py_common.general import getstatusoutput_noshell
 
 class BfdFrrMon:
@@ -17,6 +19,15 @@ class BfdFrrMon:
         self.bfdd_running = False
         self.init_done = False
         self.MAX_RETRY_ATTEMPTS = 3
+
+        self.remote_status_table = "DASH_BFD_PROBE_STATE"
+        switch_type = device_info.get_localhost_info("switch_type")
+        if switch_type and switch_type == "dpu":
+            self.remote_db_connector = swsscommon.DBConnector("DPU_STATE_DB", 0, True)
+            self.remote_table = swsscommon.Table(self.remote_db_connector, self.remote_status_table)
+        else:
+            self.remote_db_connector = None
+            self.remote_table = None
 
     def check_bfdd(self):
         """
@@ -73,7 +84,7 @@ class BfdFrrMon:
                                     self.frr_v6_peers.add(session["peer"])
                                 else:  # IPv4
                                     self.frr_v4_peers.add(session["peer"])
-                    return True
+                return True
             except json.JSONDecodeError as e:
                 # Log the exception and retry if within the maximum attempts
                 retry_attempt += 1
@@ -113,13 +124,26 @@ class BfdFrrMon:
 
             # Update Redis with the new peer sets
             values = [
-                ("v4_bfd_up_sessions", json.dumps(list(self.local_v4_peers))),
-                ("v6_bfd_up_sessions", json.dumps(list(self.local_v6_peers)))
+                ("v4_bfd_up_sessions", json.dumps(list(self.local_v4_peers)).strip("[]")),
+                ("v6_bfd_up_sessions", json.dumps(list(self.local_v6_peers)).strip("[]"))
             ]
+
+            timestamp = datetime.now(timezone.utc).strftime("%a %b %d %I:%M:%S %p UTC %Y")
+            if new_v4_peers or removed_v4_peers:
+                values.append(("v4_bfd_up_sessions_timestamp", json.dumps(timestamp)))
+            if new_v6_peers or removed_v6_peers:
+                values.append(("v6_bfd_up_sessions_timestamp", json.dumps(timestamp)))
+
             self.table.set("", values)
             syslog.syslog(syslog.LOG_INFO,
                 "{} table in STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
                 self.status_table, self.local_v4_peers, self.local_v6_peers))
+
+            if self.remote_table:
+                self.remote_table.set("dash_ha", values)
+                syslog.syslog(syslog.LOG_INFO,
+                    "{} table in DPU_STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
+                    self.remote_status_table, self.local_v4_peers, self.local_v6_peers))
 
             self.init_done = True
     

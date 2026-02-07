@@ -9,6 +9,7 @@ rules/config.user
 
 # Build artifacts
 fsroot/
+fsroot-*/
 fs.*
 target/
 *.deb
@@ -22,6 +23,7 @@ target/
 *dbg.j2
 *.img
 *.pyc
+*.mod
 
 # Slave docker log files
 sonic-slave*/*.log
@@ -84,6 +86,7 @@ platform/**/*.mod.c
 platform/**/*.mod.o
 platform/**/*.o
 platform/**/*.d
+!platform/**/etc/systemd/system/*.d
 platform/**/*.cmd
 platform/**/*.order
 platform/broadcom/sonic-platform-modules-dell/s5232f/sonic_platform/ipmihelper.py

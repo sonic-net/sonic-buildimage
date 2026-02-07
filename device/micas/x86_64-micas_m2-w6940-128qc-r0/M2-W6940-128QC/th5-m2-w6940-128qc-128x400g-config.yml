@@ -1355,9 +1355,42 @@ device:
 bcm_device:
     0:
         global:
+            ipv6_lpm_128b_enable: 1
+            shared_block_mask_section: uc_bc
+            skip_protocol_default_entries: 1
+            # LTSW uses value 1 for ALPM combined mode
+            l3_alpm_hit_skip: 1
+            sai_svi_my_station_optimization: 1
+            sai_tcam_opt_support_all_rifs_disable: 1
+            #l3_intf_vlan_split_egress for MTU at L3IF
+            l3_intf_vlan_split_egress : 1
+            sai_tunnel_support: 1
+            sai_tunnel_vxlan_scale: 0
+            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_secondary_mem_size: 4096
+            riot_overlay_l3_egress_mem_size: 16384
+            riot_overlay_l3_intf_mem_size: 4096
+            sai_tunnel_ecmp_sharing_mode: 0
+            #enable port queue drop stats
+            sai_stats_support_mask: 0
+            sai_l3_byte1_udf_disable: 1
+            sai_l3_neighbor_discard_flag_capable: 0
+            sai_l3_route_discard_flag_capable: 0
+            # nbr_bcast (0-Default/LargeIFP-DB, 1-Small-IFP-DB, 2-Disable)
+            # Disable to save on MGID(512) resources
+            sai_nbr_bcast_ifp_optimized: 2
+            vlan_default_port: 1
+            flowtracker_enable: 1
+            flowtracker_hardware_learn_enable: 2
+            ecmp_dlb_port_speeds: 1
+            sai_common_hash_crc: 1
+            # Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
+            sai_adjust_port_if_in_discards: 1
+            sai_cpu_mirror_queue: 28
+            sai_cpu_drop_mirror_queue: 29       
             bcm_tunnel_term_compatible_mode: 1
-            vlan_flooding_l2mc_num_reserved: 2048
-            l3_alpm_template: 2
+            vlan_flooding_l2mc_num_reserved: 0
+            l3_alpm_template: 1
             l3_alpm2_bnk_threshold: 100
             uft_mode: 1
             l3_enable: 1
@@ -1374,6 +1407,7 @@ bcm_device:
             global_flexctr_egr_op_profile_num_reserved: 10
             global_flexctr_egr_group_num_reserved: 1
             flowtracker_flexctr_alloc_enable: 1
+            stat_custom_receive0_management_mode: 1
             sai_postinit_cmd_file: /usr/share/sonic/platform/postinit_cmd_file.soc
 ...
 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +19,10 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-MLXBF_GIGE = mlxbf-gige-${MLXBF_GIGE_DRIVER_VERSION}
-MODULE_DIR := $(shell pwd)/tmp/${MLXBF_GIGE}
+MLXBF_GIGE = ${MLXBF_GIGE_DRIVER}-1.1
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(MLXBF_GIGE_DRIVER)): $(DEST)/% :
+$(addprefix $(DEST)/, $(MLXBF_GIGE_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
@@ -33,7 +32,7 @@ $(addprefix $(DEST)/, $(MLXBF_GIGE_DRIVER)): $(DEST)/% :
 	pushd ${MLXBF_GIGE}
 
 	# Build the package
-	make -C /lib/modules/$(KVERSION)/build M=$(MODULE_DIR)
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 
-	mv ${MLXBF_GIGE_DRIVER} $(DEST)/
+	mv ../${MLXBF_GIGE_DRIVER_DKMS} $(DEST)/
 	popd

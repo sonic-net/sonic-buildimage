@@ -11,13 +11,19 @@
                 "name": "CPU_CPLD"
             },
             {
-                "name": "MAC_CPLD"
+                "name": "CTRL_CPLD"
+            },
+            {
+                "name": "MAC_CPLDA"
+            },
+            {
+                "name": "MAC_CPLDB"
             },
             {
                 "name": "FAN_CPLD"
             },
             {
-                "name": "BASE_CPLD"
+                "name": "MAC_FPGA"
             },
             {
                 "name": "BIOS"
@@ -28,41 +34,236 @@
                 "name": "Fantray1_1",
                 "speed": {
                     "controllable": true,
-                    "minimum": 40,
+                    "minimum": 50,
                     "maximum": 100
                 },
                 "status_led": {
                     "available": false,
-                    "colors": ["off", "red", "amber", "green"]
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray1_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
                 }
             },
             {
                 "name": "Fantray2_1",
                 "speed": {
                     "controllable": true,
-                    "minimum": 40,
+                    "minimum": 50,
                     "maximum": 100
                 },
                 "status_led": {
                     "available": false,
-                    "colors": ["off", "red", "amber", "green"]
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray2_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray3_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray3_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray4_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray4_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray5_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray5_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray6_1",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
+                }
+            },
+            {
+                "name": "Fantray6_2",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": [
+                        "off",
+                        "red",
+                        "amber",
+                        "green"
+                    ]
                 }
             }
         ],
-        "fan_drawers":[
+        "fan_drawers": [
             {
                 "name": "Fantray1",
-                "num_fans" : 1,
+                "num_fans": 2,
                 "status_led": {
                     "controllable": false,
-                    "colors": ["amber", "green", "off"]
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
                 },
                 "fans": [
                     {
-                        "name": "FanTray1_1",
+                        "name": "Fantray1_1",
                         "speed": {
                             "controllable": true,
-                            "minimum": 40,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray1_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
                             "maximum": 100
                         },
                         "status_led": {
@@ -73,17 +274,176 @@
             },
             {
                 "name": "Fantray2",
-                "num_fans" : 1,
+                "num_fans": 2,
                 "status_led": {
                     "controllable": false,
-                    "colors": ["amber", "green", "off"]
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
                 },
                 "fans": [
                     {
-                        "name": "FanTray2_1",
+                        "name": "Fantray2_1",
                         "speed": {
                             "controllable": true,
-                            "minimum": 40,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray2_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray3",
+                "num_fans": 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray3_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray3_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray4",
+                "num_fans": 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray4_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray4_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray5",
+                "num_fans": 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray5_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray5_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray6",
+                "num_fans": 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": [
+                        "amber",
+                        "green",
+                        "off"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray6_1",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray6_2",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 50,
                             "maximum": 100
                         },
                         "status_led": {
@@ -161,6 +521,16 @@
                 "maximum-recorded": true
             },
             {
+                "name": "BOARD_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
                 "name": "CPU_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
@@ -182,6 +552,26 @@
             },
             {
                 "name": "OUTLET_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "PSU1_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
+            },
+            {
+                "name": "PSU2_TEMP",
                 "controllable": false,
                 "low-crit-threshold": true,
                 "high-crit-threshold": true,

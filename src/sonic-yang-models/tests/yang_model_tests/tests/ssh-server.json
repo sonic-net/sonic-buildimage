@@ -5,15 +5,25 @@
     "SSH_SERVER_VALID_MODIFIED": {
         "desc": "Configure modified SSH_SERVER."
     },
+    "SSH_SERVER_PERMIT_ROOT_YES": {
+        "desc": "permit_root_login: yes"
+    },
+    "SSH_SERVER_PERMIT_ROOT_NO": {
+        "desc": "permit_root_login: no"
+    },
+    "SSH_SERVER_PERMIT_ROOT_PROHIBIT_PASSWORD": {
+        "desc": "permit_root_login: prohibit-password"
+    },
+    "SSH_SERVER_PERMIT_ROOT_FORCED_COMMANDS_ONLY": {
+        "desc": "permit_root_login: forced-commands-only"
+    },
     "SSH_SERVER_INVALID_AUTH_RETRIES": {
         "desc": "Configure invalid number of authentication retries in SSH_SERVER.",
-        "eStrKey" : "Pattern",
-        "eStr": ["1..100"]
+        "eStrKey" : "Range"
     },
     "SSH_SERVER_INVALID_LOGIN_TIMEOUT": {
         "desc": "Configure invalid login timeout value in SSH_SERVER.",
-        "eStrKey" : "Pattern",
-        "eStr": ["1..600"]
+        "eStrKey" : "Range"
     },
     "SSH_SERVER_INVALID_PORTS_1": {
         "desc": "Configure invalid port value in SSH_SERVER.",
@@ -25,10 +35,30 @@
     },
     "SSH_SERVER_INVALID_INACTIVITY_TIMEOUT": {
         "desc": "Configure invalid inactivity_timeout value in SSH_SERVER.",
-        "eStr": "does not satisfy the constraint \"0..35000\""
+        "eStrKey": "Range"
     },
     "SSH_SERVER_INVALID_MAX_SESSIONS": {
         "desc": "Configure invalid max_sessions value in SSH_SERVER.",
-        "eStr": "does not satisfy the constraint \"0..100\""
+        "eStrKey": "Range"
+    },
+    "SSH_SERVER_INVALID_PERMIT_ROOT_LOGIN": {
+        "desc": "Configure invalid permit_root_login value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_PASSWORD_AUTHENTICATION": {
+        "desc": "Configure invalid password_authentication value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_CIPHERS": {
+        "desc": "Configure invalid ciphers value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_KEX_ALGORITHMS": {
+        "desc": "Configure invalid kex_algorithms value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_MACS": {
+        "desc": "Configure invalid macs value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
     }
 }

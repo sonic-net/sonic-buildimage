@@ -13,7 +13,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener --container-name database
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name database
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
@@ -35,12 +35,15 @@ dependent_startup=true
 {%- if redis_inst != 'remote_redis' %}
 [program:{{ redis_inst }}]
 {% if redis_items['hostname'] != '127.0.0.1' %}
-{%- set ADDITIONAL_OPTS = '--protected-mode no' %}
 {%- if redis_inst != 'redis_chassis' %}
 {%- set LOOPBACK_IP = '127.0.0.1' -%}
 {%- endif -%}
 {%- else -%}
 {%- set LOOPBACK_IP = '' -%}
+{%- endif -%}
+{%- if not redis_items['is_protected_mode'] %}
+{%- set ADDITIONAL_OPTS = '--protected-mode no' %}
+{%- else %}
 {%- set ADDITIONAL_OPTS = '' %}
 {%- endif -%}
 command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }} {{ ADDITIONAL_OPTS }}"

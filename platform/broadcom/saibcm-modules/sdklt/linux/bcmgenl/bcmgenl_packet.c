@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -213,7 +214,7 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     ngknet_filter_t *match_filt = NULL;
     unsigned long flags;
     bcmgenl_pkt_t bcmgenl_pkt;
-    genl_pkt_t *generic_pkt;
+    genl_pkt_t *generic_pkt = NULL;
     bool strip_tag = false;
     struct sk_buff *skb_generic_pkt;
     static uint32_t last_drop, last_alloc, last_skb;
@@ -237,16 +238,17 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
     /* check if this packet is from the same filter */
-    if  (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB) ||
-        (strncmp(match_filt->desc, BCMGENL_PACKET_NAME, NGKNET_FILTER_DESC_MAX) != 0) {
+    if (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB ||
+        strncmp(match_filt->desc, BCMGENL_PACKET_NAME, NGKNET_FILTER_DESC_MAX) != 0) {
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
     pkt = cbd->pmd + cbd->pmd_len;
+    pkt_len = cbd->pkt_len;
 
     GENL_DBG_VERB
         ("pkt size %d, match_filt->dest_id %d\n",
-         cbd->pkt_len, match_filt->dest_id);
+         pkt_len, match_filt->dest_id);
     GENL_DBG_VERB
         ("filter user data: 0x%08x\n", *(uint32_t *)match_filt->user_data);
     GENL_DBG_VERB
@@ -254,7 +256,6 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     g_bcmgenl_packet_stats.pkts_f_packet_cb++;
 
     /* Adjust original pkt_len to remove 4B FCS */
-    pkt_len = cbd->pkt_len;
     if (pkt_len < FCS_SZ) {
         g_bcmgenl_packet_stats.pkts_d_invalid_size++;
         goto FILTER_CB_PKT_HANDLED;
@@ -375,12 +376,14 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
 FILTER_CB_PKT_HANDLED:
     if (rv == 1) {
         g_bcmgenl_packet_stats.pkts_f_handled++;
-        /* Not sending to network protocol stack */
-        skb = NULL;
     } else {
         g_bcmgenl_packet_stats.pkts_f_pass_through++;
+        if (generic_pkt) {
+            kfree(generic_pkt);
+        }
     }
-    return skb;
+    dev_kfree_skb_any(skb);
+    return NULL;
 }
 
 static void
@@ -807,10 +810,13 @@ int bcmgenl_packet_cleanup(void)
 
 int bcmgenl_packet_init(void)
 {
+    ngknet_filter_cb_attr_t fcb_attr;
+
     ngknet_netif_create_cb_register(bcmgenl_packet_netif_create_cb);
     ngknet_netif_destroy_cb_register(bcmgenl_packet_netif_destroy_cb);
-    ngknet_filter_cb_register_by_name
-        (bcmgenl_packet_filter_cb, BCMGENL_PACKET_NAME);
+    memset(&fcb_attr, 0, sizeof(fcb_attr));
+    fcb_attr.name = BCMGENL_PACKET_NAME;
+    ngknet_filter_cb_attr_register(bcmgenl_packet_filter_cb, &fcb_attr);
 
     genl_cb_proc_init();
     return genl_cb_init();

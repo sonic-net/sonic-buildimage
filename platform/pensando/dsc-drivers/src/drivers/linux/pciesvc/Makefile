@@ -16,14 +16,13 @@ kpci += $(pciesvc-obj)
 INCLUDES = -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/include \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/src \
-	   -I/sonic/src/sonic-linux-kernel/linux-6.1.94/include/linux
+	   -I/usr/src/linux-headers-$(shell echo $(KVERSION) | sed 's/-arm64//')-common/include/linux
 	   #-I/usr/include \
-	   #-I$(PWD) \
-	   #-I/sonic/src/sonic-linux-kernel/linux-6.1.94/debian/build/build_arm64_none_arm64
+	   #-I$(PWD)
 $(MODNAME)-y := $(kpci) kpci_get_entry.o kpcimgr_module.o kpcinterface.o \
 	     kpci_entry.o kpci_kexec.o kpci_test.o pciesvc_end.o
 
-KDIR := /sonic/src/sonic-linux-kernel/linux-6.1.94/debian/build/build_arm64_none_arm64
+KDIR := /lib/modules/$(KVERSION)/build
 PWD := $(shell pwd)
 UTS := X$(shell grep UTS_RELEASE $(KDIR)/include/generated/utsrelease.h)
 REL := $(shell echo $(UTS) | awk '{ print $$3 }' | sed -e 's/"//g')
@@ -46,7 +45,7 @@ cc-option = $(shell set -e;		\
 	fi)
 
 KCFLAGS = -fno-jump-tables -fno-stack-protector -fno-function-sections -fno-dse -ffreestanding -fno-builtin
-KCFLAGS += -fno-data-sections -isystem /usr/lib/gcc/aarch64-linux-gnu/12/include
+KCFLAGS += -fno-data-sections
 KCFLAGS += $(call cc-option,-fno-store-merging,)
 KCFLAGS += $(INCLUDES) -DASIC_ELBA -DPCIESVC_SYSTEM_EXTERN
 KOPT = KCFLAGS="$(KCFLAGS)"
