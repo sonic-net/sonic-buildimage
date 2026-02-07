@@ -607,6 +607,9 @@ start() {
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
         NET="host"
+        {%- if docker_container_name == "eventd" %}
+            NET="bridge"
+        {%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -650,7 +653,7 @@ start() {
             REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
         fi
 
-        {%- if docker_container_name == "database" %}
+        {%- if docker_container_name in ["database", "eventd"] %}
         NET="bridge"
         DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
         {%- else %}
