@@ -19,12 +19,8 @@ RUN apt-get install -y        \
         libz-dev
 {%- endif %}
 
-# For sonic-config-engine Python 3 package
-# Explicitly install pyangbind here, as pyangbind causes enum34 to be installed.
-# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
-# https://github.com/robshakir/pyangbind/issues/232
-RUN pip3 install pyangbind==0.8.2
-RUN pip3 uninstall -y enum34
+
+RUN pip3 install pyangbind==0.8.7
 
 # Install python-redis
 RUN pip3 install redis==5.0.1

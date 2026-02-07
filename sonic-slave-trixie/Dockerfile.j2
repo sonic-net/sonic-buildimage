@@ -75,8 +75,7 @@ RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {
 RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
-RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
-RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.7
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
 
@@ -586,12 +585,8 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
-# For sonic config engine testing
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
-# https://github.com/robshakir/pyangbind/issues/232
-RUN pip3 install pyangbind==0.8.2
-RUN pip3 uninstall -y enum34
+
+RUN pip3 install pyangbind==0.8.7
 
 # For sonic-platform-common testing
 RUN pip3 install redis
