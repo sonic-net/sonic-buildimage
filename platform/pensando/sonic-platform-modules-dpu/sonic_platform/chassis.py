@@ -21,9 +21,6 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-NUM_THERMAL = 2
-NUM_VOLTAGE_SENSORS = 6
-NUM_CURRENT_SENSORS = 6
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 HOST_CHK_CMD = "docker > /dev/null 2>&1"
@@ -31,6 +28,7 @@ REBOOT_CAUSE_SOFTWARE = "Software causes"
 REBOOT_CAUSE_EXTERNAL = "External causes"
 RESET_CAUSE_PATH = "/sys/firmware/pensando/rstcause/this_cause"
 DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
+SLOT_ID_MASK = 0x7
 
 #cpld masks for system led
 SYSTEM_LED_GREEN   = 0x7
@@ -137,12 +135,14 @@ class Chassis(ChassisBase):
 
     def __initialize_thermals(self):
         from sonic_platform.thermal import Thermal
-        global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
+        num_thermal = 2
         if board_id == self._api_helper.mtfuji_board_id:
-            NUM_THERMAL = 8
+            num_thermal = 8
+            if self.get_revision() == self._api_helper.mtfuji_rev_v2:
+                num_thermal = 6
         if Thermal._thermals_available():
-            for index in range(0, NUM_THERMAL):
+            for index in range(0, num_thermal):
                 thermal = Thermal(index)
                 self._thermal_list.append(thermal)
             self._thermals_initialized = True
@@ -174,8 +174,14 @@ class Chassis(ChassisBase):
 
     def __initialize_voltage_sensors(self):
         from sonic_platform.sensor import VoltageSensor
+        board_id = self._api_helper.get_board_id()
+        num_voltage_sensors = 0
+        if board_id == self._api_helper.mtfuji_board_id:
+            num_voltage_sensors = 6
+            if self.get_revision() == self._api_helper.mtfuji_rev_v2:
+                num_voltage_sensors = 4
         if VoltageSensor._validate_voltage_sensors():
-            for index in range(0, NUM_VOLTAGE_SENSORS):
+            for index in range(0, num_voltage_sensors):
                 voltage = VoltageSensor(index)
                 self._voltage_sensor_list.append(voltage)
             self._voltage_sensor_initialized = True
@@ -207,8 +213,14 @@ class Chassis(ChassisBase):
 
     def __initialize_current_sensors(self):
         from sonic_platform.sensor import CurrentSensor
+        board_id = self._api_helper.get_board_id()
+        num_current_sensors = 0
+        if board_id == self._api_helper.mtfuji_board_id:
+            num_current_sensors = 6
+            if self.get_revision() == self._api_helper.mtfuji_rev_v2:
+                num_current_sensors = 4
         if CurrentSensor._validate_current_sensors():
-            for index in range(0, NUM_CURRENT_SENSORS):
+            for index in range(0, num_current_sensors):
                 current = CurrentSensor(index)
                 self._current_sensor_list.append(current)
             self._current_sensor_initialized = True
@@ -361,12 +373,12 @@ class Chassis(ChassisBase):
         try:
             if self._api_helper.is_host():
                 slot_id = self._api_helper.run_docker_cmd(cmd)
-                return int(slot_id,16)
+                return int(slot_id,16) & SLOT_ID_MASK
             else:
                 slot_id_file = DOCKER_HWSKU_PATH + "/dpu_slot_id"
                 slot_id_hex = open(slot_id_file, "r").read()
                 if slot_id_hex:
-                    slot_id = int(slot_id_hex, 16)
+                    slot_id = int(slot_id_hex, 16) & SLOT_ID_MASK
                     return slot_id
             return -1
         except:
@@ -416,4 +428,7 @@ class Chassis(ChassisBase):
             bool: True if it is replaceable.
         """
         return False
+
+    def get_revision(self):
+        return self._api_helper.get_board_rev()
 
