@@ -11,10 +11,13 @@ case $1 in
     ;;
 esac
 
+. /scripts/functions
+
 docker_inram=false
 docker_inram_algo=tmpfs
 docker_inram_size={{ DOCKER_RAMFS_SIZE }}
 logs_inram=false
+mount_pmem=false
 secureboot=false
 bootloader=generic
 in_kdump=false
@@ -37,6 +40,9 @@ for x in $(cat /proc/cmdline); do
             ;;
         logs_inram=on)
             logs_inram=true
+            ;;
+        memmap=*)
+            mount_pmem=true
             ;;
         varlog_size=*)
             varlog_size="${x#varlog_size=}"
@@ -240,6 +246,19 @@ else
         mount -t ext4 -o loop,rw ${rootmnt}/host/disk-img/var-log.ext4 ${rootmnt}/var/log
     fi
 fi
+
+# check the fstype of pmem if not ext4 fformat and mount 
+if $mount_pmem; then
+    # check if /dev/pmem0 is already formated
+    PMEM_FS_TYPE=$(get_fstype /dev/pmem0 || echo "UNKNOWN")
+    # if not formated format /dev/pmem0
+    if [ X"$PMEM_FS_TYPE"  != X"ext4" ]; then
+        mkfs.ext4 /dev/pmem0
+    fi
+    mkdir -p ${rootmnt}/pmem
+    mount /dev/pmem0 ${rootmnt}/pmem
+fi
+
 
 ## fscklog file: /tmp will be lost when overlayfs is mounted
 if [ -f /tmp/fsck.log.gz ]; then
