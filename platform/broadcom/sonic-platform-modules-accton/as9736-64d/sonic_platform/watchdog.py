@@ -1,0 +1,1 @@
+../../../../../device/accton/common/sonic_platform/watchdog.py
