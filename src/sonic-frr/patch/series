@@ -21,7 +21,14 @@
 0020-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch
 0021-Dont-skip-kernel-routes-uninstall.patch
 0022-bgpd-Prevent-unnecessary-re-install-of-routes.patch
-0023-SRv6-Add-support-for-multiple-SRv6-locators.patch
-0024-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
+0023-zebra-EVPN-VXLAN-Multihome-extern-mode-Enable-kernel.patch
+0024-zebra-New-protocol-RTPROT_HW-for-hardware-learnt-MAC.patch
+0025-doc-zebra-Doc-update-for-zebra-option-kernel-mac-ext.patch
+0026-zebra-EVPN-VXLAN-MH-extern-mode-Update-debug-print-f.patch
+0027-zebra-ARP-ND-Suppression-disabled-for-kernel-mac-ext.patch
+0028-zebra-netlink-message-handling-for-mac_extern_learn-.patch
+0029-zebra-mac-sync-update-del-expiry-in-extern_learn-mod.patch
+0030-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch
+0031-bgpd-install-evpn-failure-logging.patch
 0100-bgpd-Allow-proper-shutdown-of-bgp-dynamic-peers.patch
 0101-bgpd-send-EOR-during-GR-only-when-FIB-install-comple.patch
