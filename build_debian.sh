@@ -376,6 +376,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     jq                      \
     auditd                  \
     linux-perf              \
+    util-linux-extra.       \
     resolvconf              \
     lsof                    \
     sysstat                 \
@@ -383,8 +384,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    nvme-cli                \
-    util-linux-extra
+    tzdata-legacy           \
+    nvme-cli
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
