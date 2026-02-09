@@ -46,8 +46,8 @@ RUN apt-get install -y -t bookworm-backports \
 # doesn't ensure all dependencies are installed in the container. So here we
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
-RUN pip3 install grpcio==1.51.1 \
-        grpcio-tools==1.51.1
+RUN pip3 install grpcio==1.53.2 \
+        grpcio-tools==1.53.2
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
 RUN pip3 install thrift==0.13.0
