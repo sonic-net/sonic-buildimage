@@ -168,6 +168,10 @@ COPY ["frr/zebra.conf", "/etc/frr/"]
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
 
+# Create /zmq folder for zmq sync mode.
+RUN mkdir -p /zmq
+COPY ["context_config.json", "/zmq/"]
+
 FROM $BASE
 
 {{ rsync_from_builder_stage() }}
