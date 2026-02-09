@@ -376,7 +376,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     jq                      \
     auditd                  \
     linux-perf              \
-    util-linux-extra.       \
+    util-linux-extra        \
     resolvconf              \
     lsof                    \
     sysstat                 \
