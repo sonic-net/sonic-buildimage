@@ -29,7 +29,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 
-PWM_FILE_PATH = "/var/run/hw-management/thermal/pwm"
+PWM_FILE_PATH = "/var/run/hw-management/thermal/pwm11111111111"
 PWM_NAME = "pwm"
 PWM_MIN_THRESHOLD = 0
 PWM_MAX_THRESHOLD = 255
