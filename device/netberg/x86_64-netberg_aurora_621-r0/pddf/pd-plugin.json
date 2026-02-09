@@ -1,0 +1,97 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false },
+               "valmap-SFP28": {"1":true, "0":false },
+               "valmap-QSFP28": {"1":true, "0":false },
+               "valmap-QSFP-DD": {"1":true, "0":false}
+           }
+        },
+
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "psu_support_list":
+        [
+            {"Manufacturer": "FSPGROUP", "Name": "YNEB0450BM",   "MaxSpd": "PSU_FAN_MAX_SPEED_AC"},
+            {"Manufacturer": "FSPGROUP", "Name": "YNEB0450AM",   "MaxSpd": "PSU_FAN_MAX_SPEED_DC"},
+            {"Manufacturer": "DELTA",    "Name": "DPS-450AB-27", "MaxSpd": "PSU_FAN_MAX_SPEED_AC"},
+            {"Manufacturer": "DELTA",    "Name": "DPS-450AB-28", "MaxSpd": "PSU_FAN_MAX_SPEED_DC"}
+        ],
+
+        "valmap": {
+            "PSU_FAN_MAX_SPEED":"20000",
+            "PSU_FAN_MAX_SPEED_AC":"20000",
+            "PSU_FAN_MAX_SPEED_DC":"18000"
+        }
+    },
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false, "Device Present":true, "Device Absent":false}
+            }
+        },
+        "FAN_MAX_SPEED":"25000"
+    },
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

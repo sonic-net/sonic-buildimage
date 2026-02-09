@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "x86_64-netberg_aurora_221-r0": {
+            "component": {
+                "CPLD1": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
