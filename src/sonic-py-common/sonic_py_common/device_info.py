@@ -37,7 +37,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
-EXPECTED_ASIC_LIST_FILENAME = "platform_expected_asic_list"
+EXPECTED_ASIC_LIST_FILENAME = "platform_expected_asic_list.conf"
 CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
@@ -1094,7 +1094,7 @@ def get_expected_asic_list_file_path():
 def get_expected_asic_list():
     """
     @summary: This function returns list of asic IDs for all NPUs expected to be up on Supervisor
-              based on fabric present. The list is read from platform_expected_asic_list provided
+              based on fabric present. The list is read from EXPECTED_ASIC_LIST_FILENAME provided
               by platform.
 
     @return: List of asic ID integers

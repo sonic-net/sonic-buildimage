@@ -524,7 +524,7 @@ def get_asic_presence_list():
             asics_list = get_expected_asic_list()
             # Ensure asics_list is a list of integers
             asics_list = [int(a) for a in asics_list]
-            if len(asics_list) == 0:
+            if not asics_list:
                 # expected list returned empty, get the asic list from the database
                 db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, False)
                 asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
