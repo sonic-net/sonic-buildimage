@@ -692,7 +692,7 @@ start() {
 {%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
-{%- if docker_container_name != "dhcp_server" %}
+{%- if docker_container_name != "dhcp_server" and '--net' not in docker_image_run_opt %}
         --net=$NET \
 {%- endif %}
         -e RUNTIME_OWNER=local \
