@@ -29,15 +29,9 @@ ifeq ($(CROSS_BUILD_ENVIRON), y)
 else
 	dpkg-buildpackage -rfakeroot -b -us -uc -Ppkg.frr.nortrlib -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
-	stg undo || true
 	git clean -xfdf
 	git checkout $(FRR_TAG)
-	stg branch --delete --force $(STG_BRANCH)
-	git rev-parse --short HEAD | xargs git checkout
-ifeq ($(CROSS_BUILD_ENVIRON), y)
-	git reset --hard
-endif
-	git checkout $(FRR_TAG)
+	git reset --hard $(FRR_TAG)
 	popd
 	mv $(DERIVED_TARGET) $* $(DEST)/
 
