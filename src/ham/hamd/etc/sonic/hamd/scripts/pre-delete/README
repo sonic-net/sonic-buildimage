@@ -1,0 +1,13 @@
+# Before hamd deletes a user from /etc/passwd with the userdel command, hamd
+# invokes, in ASCIIbetical order, the scripts found in this directory.
+#
+# Hamd invokes each script as follows:
+#
+#   [SCRIPT] [USER NAME]
+#
+# Examples:
+#    SCRIPT wyatt
+#
+# Each SCRIPT should return 0 on success, and non-0 on failure. On failure,
+# each SCRIPT should print the cause of the failure to the standard
+# error (stderr).

@@ -1,0 +1,22 @@
+[Unit]
+Description=Host Account Management
+
+# hamd uses the REDIS database and must wait for it to be running
+Requires=database.service
+After=database.service
+
+# Make sure the NSS lookup infra is in place before starting hamd
+After=nss-user-lookup.target
+
+[Service]
+Type=dbus
+BusName=org.SONiC.HostAccountManagement
+ExecStart=/usr/sbin/hamd
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+

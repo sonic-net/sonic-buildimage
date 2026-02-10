@@ -1,0 +1,46 @@
+# ==============================================================================
+# Host Account Management Daemon (hand) configuration file
+
+# ==============================================================================
+# The strategy used for options in the default hamd config shipped with
+# SONiC is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options override the
+# default value.
+
+# ==============================================================================
+# debug: Enable additional debug info to the syslog
+# type:  string
+# range: [yes, no]
+#debug=no
+
+# ==============================================================================
+# Parameter: poll_period
+#   Daemon's polling period. Used for periodic house keeping tasks
+#
+# type:  integer
+# range: 0..N
+# unit:  seconds
+#poll_period=30
+
+# ==============================================================================
+# Parameters: uid_min, uid_max
+#   Define the System-assigned credentials (SAC) min/max UID values.
+#
+#   uid_min should be >= 1000 and lower than uid_max.
+#   uid_max should be > uid_min.
+#
+#   The range uid_min..uid_max should be at least 200. That is,
+#   (1 + (uid_max - uid_min)) >= 200
+#
+# type:  uint32
+# range: 1000..(2^32 - 1)
+#uid_min=5000
+#uid_max=59999
+
+# ==============================================================================
+# Parameter: shell
+#   Shell program used when creating new users.
+#
+# type: string
+#shell=/usr/bin/sonic-launch-shell
+
