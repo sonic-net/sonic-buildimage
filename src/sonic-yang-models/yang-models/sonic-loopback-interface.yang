@@ -9,10 +9,6 @@ module sonic-loopback-interface {
         prefix stypes;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     import sonic-vrf {
         prefix vrf;
     }

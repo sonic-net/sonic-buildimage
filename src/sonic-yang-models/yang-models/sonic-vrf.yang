@@ -2,10 +2,6 @@ module sonic-vrf {
     namespace "http://github.com/sonic-net/sonic-vrf";
     prefix vrf;
 
-    import sonic-extension {
-        prefix sonic-ext;
-    }
-
     import sonic-types {
         prefix stypes;
     }

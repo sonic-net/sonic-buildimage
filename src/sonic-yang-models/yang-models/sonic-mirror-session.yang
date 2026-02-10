@@ -13,10 +13,6 @@ module sonic-mirror-session {
         prefix port;
     }
 
-    import sonic-portchannel {
-        prefix lag;
-    }
-
     import sonic-policer {
         prefix policer;
     }
