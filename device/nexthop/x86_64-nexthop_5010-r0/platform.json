@@ -1,0 +1,927 @@
+{
+    "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
+    },
+    "chassis": {
+        "name": "NH-5010-F",
+        "thermals": [
+            {
+                "name": "Switch Card Left Lower Rear",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Left Port Side Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 PADS tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 NIF0 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 CORE tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 NIF1 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 HBM_PHY1 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 0 HBM_PHY2 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Switch Card Right Lower Rear",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Right Port Side Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 PADS tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 NIF0 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 CORE tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 NIF1 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 HBM_PHY1 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC Diode 1 HBM_PHY2 tsen",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC0",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC1",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC2",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC3",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC4",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC5",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC6",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Mezz Card Left Rear",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Left Upper Port Side Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Mezz Card Right Rear",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "Right Upper Port Side Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC7",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC8",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC9",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC10",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_CORE",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_HBM_PHY1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_HBM_PHY2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_NIF0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_NIF1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D0_VTMON_PADS",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_CORE",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_HBM_PHY1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_HBM_PHY2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_NIF0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_NIF1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC D1_VTMON_PADS",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF4",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF5",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF6",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF7",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF8",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF9",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF10",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF11",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF12",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF13",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF14",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF15",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF16",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF17",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF18",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF19",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF20",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF21",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF22",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF23",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF24",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF25",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF26",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF27",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF28",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF29",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF30",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC NIF31",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE1",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE2",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE3",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE4",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE5",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE6",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC PHY_BRIDGE7",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            }
+        ],
+        "components": [
+            {
+                "name": "SWITCHCARD_FPGA"
+            },
+            {
+                "name": "MEZZCARD_FPGA"
+            },
+            {
+                "name": "CPUCARD_FPGA"
+            },
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "ONIE"
+            },
+            {
+                "name": "TPM"
+            },
+            {
+                "name": "NVMe"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fantray1_1",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray1_2",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray2_1",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray2_2",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray3_1",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray3_2",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray4_1",
+                "status_led": {
+                    "available": false
+                }
+            },
+            {
+                "name": "Fantray4_2",
+                "status_led": {
+                    "available": false
+                }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "Fantray1",
+                "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray1_1",
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray1_2",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray2",
+                "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray2_1",
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray2_2",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray3",
+                "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray3_1",
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray3_2",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray4",
+                "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray4_1",
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray4_2",
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU1_FAN1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU1_TEMP1"
+                    },
+                    {
+                        "name": "PSU1_TEMP2"
+                    },
+                    {
+                        "name": "PSU1_TEMP3"
+                    }
+                ]
+            },
+            {
+                "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU2_FAN1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU2_TEMP1"
+                    },
+                    {
+                        "name": "PSU2_TEMP2"
+                    },
+                    {
+                        "name": "PSU2_TEMP3"
+                    }
+                ]
+            }
+        ],
+        "sfps": [
+            {
+              "name": "PORT1"
+            },
+            {
+              "name": "PORT2"
+            },
+            {
+              "name": "PORT3"
+            },
+            {
+              "name": "PORT4"
+            },
+            {
+              "name": "PORT5"
+            },
+            {
+              "name": "PORT6"
+            },
+            {
+              "name": "PORT7"
+            },
+            {
+              "name": "PORT8"
+            },
+            {
+              "name": "PORT9"
+            },
+            {
+              "name": "PORT10"
+            },
+            {
+              "name": "PORT11"
+            },
+            {
+              "name": "PORT12"
+            },
+            {
+              "name": "PORT13"
+            },
+            {
+              "name": "PORT14"
+            },
+            {
+              "name": "PORT15"
+            },
+            {
+              "name": "PORT16"
+            },
+            {
+              "name": "PORT17"
+            },
+            {
+              "name": "PORT18"
+            },
+            {
+              "name": "PORT19"
+            },
+            {
+              "name": "PORT20"
+            },
+            {
+              "name": "PORT21"
+            },
+            {
+              "name": "PORT22"
+            },
+            {
+              "name": "PORT23"
+            },
+            {
+              "name": "PORT24"
+            },
+            {
+              "name": "PORT25"
+            },
+            {
+              "name": "PORT26"
+            },
+            {
+              "name": "PORT27"
+            },
+            {
+              "name": "PORT28"
+            },
+            {
+              "name": "PORT29"
+            },
+            {
+              "name": "PORT30"
+            },
+            {
+              "name": "PORT31"
+            },
+            {
+              "name": "PORT32"
+            },
+            {
+              "name": "PORT33"
+            },
+            {
+              "name": "PORT34"
+            },
+            {
+              "name": "PORT35"
+            },
+            {
+              "name": "PORT36"
+            },
+            {
+              "name": "PORT37"
+            },
+            {
+              "name": "PORT38"
+            },
+            {
+              "name": "PORT39"
+            },
+            {
+              "name": "PORT40"
+            },
+            {
+              "name": "PORT41"
+            },
+            {
+              "name": "PORT42"
+            },
+            {
+              "name": "PORT43"
+            },
+            {
+              "name": "PORT44"
+            },
+            {
+              "name": "PORT45"
+            },
+            {
+              "name": "PORT46"
+            },
+            {
+              "name": "PORT47"
+            },
+            {
+              "name": "PORT48"
+            },
+            {
+              "name": "PORT49"
+            },
+            {
+              "name": "PORT50"
+            },
+            {
+              "name": "PORT51"
+            },
+            {
+              "name": "PORT52"
+            },
+            {
+              "name": "PORT53"
+            },
+            {
+              "name": "PORT54"
+            },
+            {
+              "name": "PORT55"
+            },
+            {
+              "name": "PORT56"
+            },
+            {
+              "name": "PORT57"
+            },
+            {
+              "name": "PORT58"
+            },
+            {
+              "name": "PORT59"
+            },
+            {
+              "name": "PORT60"
+            },
+            {
+              "name": "PORT61"
+            },
+            {
+              "name": "PORT62"
+            },
+            {
+              "name": "PORT63"
+            },
+            {
+              "name": "PORT64"
+            },
+            {
+              "name": "PORT65"
+            },
+            {
+              "name": "PORT66"
+            }
+        ]
+    },
+    "interfaces": {
+    }
+}

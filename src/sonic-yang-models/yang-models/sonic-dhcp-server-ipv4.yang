@@ -96,6 +96,7 @@ module sonic-dhcp-server-ipv4 {
                     type leafref {
                         path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS/dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST/dhcp-server-ipv4:name";
                     }
+                    ordered-by user;
                 }
 
                 leaf state {
@@ -159,6 +160,12 @@ module sonic-dhcp-server-ipv4 {
                         type uint32;
                     }
                 }
+
+                leaf always_send {
+                    description "Always send option or not";
+                    type boolean;
+                    default true;
+                }
             }
             /* end of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST */
         }
@@ -186,6 +193,7 @@ module sonic-dhcp-server-ipv4 {
                 leaf-list range {
                     description "Range of IPs";
                     type inet:ipv4-address;
+                    ordered-by user;
                 }
 
                 must "((count(range) <= 2) and (count(range) >= 1))";
@@ -232,6 +240,7 @@ module sonic-dhcp-server-ipv4 {
                         error-message "Statement of 'ips' and 'ranges' cannot both exist";
                     }
                     type inet:ipv4-address;
+                    ordered-by user;
                 }
 
                 leaf-list ranges {
@@ -242,6 +251,7 @@ module sonic-dhcp-server-ipv4 {
                     type leafref {
                         path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE_LIST/dhcp-server-ipv4:name";
                     }
+                    ordered-by user;
                 }
             }
             /* end of DHCP_SERVER_IPV4_PORT_LIST */

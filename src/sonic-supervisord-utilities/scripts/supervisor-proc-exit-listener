@@ -103,22 +103,22 @@ def get_autorestart_state(container_name, use_unix_socket_path):
     @return: Return the status of auto-restart feature.
     """
     config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=use_unix_socket_path)
-    config_db.connect()
-    features_table = config_db.get_table(FEATURE_TABLE_NAME)
+    try:
+        config_db.connect()
+        features_table = config_db.get_table(FEATURE_TABLE_NAME)
+    except RuntimeError as e:
+        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve features table from Config DB: {}".format(e))
+        return ""
+
     if not features_table:
-        syslog.syslog(syslog.LOG_ERR, "Unable to retrieve features table from Config DB. Exiting...")
-        sys.exit(2)
+        syslog.syslog(syslog.LOG_WARNING, "Empyt features table")
+        return ""
 
     if container_name not in features_table:
-        syslog.syslog(syslog.LOG_ERR, "Unable to retrieve feature '{}'. Exiting...".format(container_name))
-        sys.exit(3)
+        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve feature '{}'".format(container_name))
+        return ""
 
-    is_auto_restart = features_table[container_name].get('auto_restart')
-    if not is_auto_restart:
-        syslog.syslog(
-            syslog.LOG_ERR, "Unable to determine auto-restart feature status for '{}'. Exiting...".format(container_name))
-        sys.exit(4)
-
+    is_auto_restart = features_table[container_name].get('auto_restart', 'enabled')  # Use default if field not found
     return is_auto_restart
 
 def load_heartbeat_alert_interval(use_unix_socket_path):
@@ -195,7 +195,7 @@ def main(argv):
 
                 if (process_name in critical_process_list or group_name in critical_group_list) and expected == 0:
                     is_auto_restart = get_autorestart_state(container_name, use_unix_socket_path)
-                    if is_auto_restart != "disabled":
+                    if is_auto_restart == "enabled":
                         MSG_FORMAT_STR = "Process '{}' exited unexpectedly. Terminating supervisor '{}'"
                         msg = MSG_FORMAT_STR.format(payload_headers['processname'], container_name)
                         syslog.syslog(syslog.LOG_INFO, msg)

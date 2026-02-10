@@ -1,5 +1,6 @@
 # $Id: Makefile.linux-x86-common-2_6,v 1.13 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -34,8 +35,9 @@ ifeq (,$(findstring -DSAL_BDE_DMA_MEM_DEFAULT,$(CFGFLAGS)))
 CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=16
 endif
 
+HASH := \#
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 comma = ,
 basetarget = $(basename $(notdir $@))

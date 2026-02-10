@@ -39,7 +39,7 @@ check_spine_router() {
 
     # only supported on UpstreamLC or UpperSpineRouter
     if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]; then
-        exit 0
+        return
     fi
 
     echo "Operation is only supported on Upstream SpineRouter." >&2

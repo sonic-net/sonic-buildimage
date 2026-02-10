@@ -60,9 +60,15 @@
                         "name": "psu1/1",
                         "speed": {
                             "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             },
             {
                 "name": "psu2",
@@ -73,9 +79,15 @@
                         "name": "psu2/1",
                         "speed": {
                             "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             }
         ],
         "thermals": [

@@ -39,11 +39,12 @@ bcm_device:
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 2
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
             l3_alpm_large_vrf_mode: 1
-            l3_ecmp_member_secondary_mem_size: 4096
+            l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
             stat_custom_receive0_management_mode: 1
+            sai_pfc_dlr_init_capability: 2
 ---
 device:
     0:
@@ -1409,8 +1410,9 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            #enable port queue drop stats
-            sai_stats_support_mask: 0
+            # bit 2: enable egress queue drop flex counter
+            # bit 11: enable port queue drop stats
+            sai_stats_support_mask: 0x804
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -1432,9 +1434,6 @@ device:
             CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
             CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
-
-        TM_SCHEDULER_CONFIG:
-            DYNAMIC_VOQ: 0
 
         # IFP mode
         FP_CONFIG:
@@ -2159,7 +2158,7 @@ device:
     0:
         TM_THD_UC_Q:
             ?
-                PORT_ID: [[1,4], [17,20], [34,37], [51,54], [476,479], [493,496], [510,513], [527,530]]
+                PORT_ID: [[1,4], [17,20], [34,37], [51,54], 118, 254, [476,479], [493,496], [510,513], [527,530]]
                 TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
             :
                 SHARED_LIMITS: 1
@@ -2175,7 +2174,7 @@ device:
                 RED_LIMIT_CELLS_STATIC: 0
                 RED_LIMIT_DYNAMIC: PERCENTAGE_625
             ?
-                PORT_ID: [[1,4], [17,20], [34,37], [51,54], [476,479], [493,496], [510,513], [527,530]]
+                PORT_ID: [[1,4], [17,20], [34,37], [51,54], 118, 254, [476,479], [493,496], [510,513], [527,530]]
                 TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
             :
                 MIN_GUARANTEE_CELLS: 7
@@ -2577,4 +2576,11 @@ device:
                 PKT_PRI: [3,4]
             :
                 TRAFFIC_CLASS: OBM_TC_LOSSLESS0
+...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
 ...

@@ -1,0 +1,8 @@
+libnl-3-200==3.7.0-0.2+b1sonic1
+libnl-3-dev==3.7.0-0.2+b1sonic1
+libnl-genl-3-200==3.7.0-0.2+b1sonic1
+libnl-genl-3-dev==3.7.0-0.2+b1sonic1
+libnl-route-3-200==3.7.0-0.2+b1sonic1
+libnl-route-3-dev==3.7.0-0.2+b1sonic1
+linux-headers-6.12.41+deb13-sonic-arm64==6.12.41-1
+linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1

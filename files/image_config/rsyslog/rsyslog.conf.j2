@@ -14,6 +14,9 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
+{% if syslog_counter and syslog_counter == "true" %}
+$ModLoad omprog
+{% endif %}
 
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
@@ -27,6 +30,9 @@ $SystemLogRateLimitBurst {{ rate_limit_burst }}
 {% endif %}
 
 $ModLoad imklog   # provides kernel logging support
+$KlogParseKernelTimestamp off
+$KlogKeepKernelTimestamp on
+
 #$ModLoad immark  # provides --MARK-- message capability
 
 # provides UDP syslog reception
@@ -55,10 +61,10 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
-$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
-$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME%  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }}  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 
 {% if forward_with_osversion and forward_with_osversion == "true" %}
 $ActionForwardDefaultTemplate SONiCForwardFormatWithOsVersion
@@ -121,6 +127,11 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 *.{{ severity }}
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
+
+{% if syslog_counter and syslog_counter == "true" %}
+# update rsyslog counter
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on" signalOnClose="on")
+{% endif%}
 
 #
 # Set the default permissions for all log files.

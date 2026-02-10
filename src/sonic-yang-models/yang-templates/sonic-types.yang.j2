@@ -51,6 +51,19 @@ module sonic-types {
       }
     }
 
+    typedef ipv4-address-list {
+        type string {
+            pattern '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+                + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+                + '(%[\p{N}\p{L}]+)?'
+                + '(,(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+                + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+                + '(%[\p{N}\p{L}]+)?)*';
+        }
+        description
+            "Comma-separated IPv4 addresses";
+    }
+
     typedef admin_status {
         type enumeration {
             enum up;
@@ -268,6 +281,14 @@ module sonic-types {
         }
     }
 
+    typedef mac-address-list {
+        type string {
+            pattern '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})(,([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}))*';
+        }
+        description
+            "Comma-separated MAC addresses";
+    }
+
     typedef hostname {
         type string {
             length 1..63;
@@ -280,6 +301,15 @@ module sonic-types {
         }
         description
             "VXLAN Network Identifier";
+    }
+
+    typedef vnid-list {
+        type string {
+            pattern '([1-9][0-9]{0,6}|1[0-5][0-9]{6}|16[0-6][0-9]{5}|167[0-6][0-9]{4}|1677[0-6][0-9]{3}|16777[01][0-9]{2}|1677720[0-9]|1677721[0-5])'
+                + '(,([1-9][0-9]{0,6}|1[0-5][0-9]{6}|16[0-6][0-9]{5}|167[0-6][0-9]{4}|1677[0-6][0-9]{3}|16777[01][0-9]{2}|1677720[0-9]|1677721[0-5]))*';
+        }
+        description
+            "Comma-separated VNIs";
     }
 
     typedef tc_type {
@@ -470,6 +500,24 @@ module sonic-types {
             enum EGRESS_VLAN_FILTER;
         }
     }
+    
+    typedef relay-agent-mode {
+        type enumeration {
+            enum forward_and_append {
+                description "Forward and append our own relay option";
+            }
+            enum forward_and_replace {
+                description "Forward, but replace theirs with ours";
+            }
+            enum forward_untouched {
+                description "Forward without changes";
+            }
+            enum discard {
+                description "Discard the packet";
+            }
+        }
+        description "This enumeration type defines what to do about a dhcp packets that already has a relay option.";
+    }    
 
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */

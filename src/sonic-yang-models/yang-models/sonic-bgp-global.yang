@@ -304,6 +304,7 @@ module sonic-bgp-global {
                     type uint32 {
                         range "1..4294967295";
                     }
+                    ordered-by user;
                     description
                         "Peer ASs in BGP confederation";
                 }
@@ -444,6 +445,13 @@ module sonic-bgp-global {
                         range "1..255";
                     }
                     description "Maximum duration to suppress a stable route";
+                }
+
+                leaf autort {
+                    type enumeration {
+                        enum rfc8365-compatible;
+                    }
+                    description "L2VPN derive route targets as per rfc8365 for interoperability with other implementations.";
                 }
 
                 leaf advertise-all-vni {

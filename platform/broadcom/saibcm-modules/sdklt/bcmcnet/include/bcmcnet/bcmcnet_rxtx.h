@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -36,21 +37,28 @@
 
 /*!
  * \brief Rx buffer mode definitions.
+ *
+ * Buffer modes used for pktio various work modes:
+ *   PDMA_BUF_MODE_PRIV   - Used for UNET DAM buffers mapped to user space.
+ *   PDMA_BUF_MODE_SKB    - Legacy SKB buffer for KNET mode in kernel space.
+ *   PDMA_BUF_MODE_PAGE   - Pages as DMA buffer for KNET mode in kernel space.
+ *   PDMA_BUF_MODE_MAPPED - DMA buffers mapped to user space so zero-copy can
+ *                          be supported by kernel for KNET mode.
  */
 enum buf_mode {
     /*! Private DMA buffer in user space */
     PDMA_BUF_MODE_PRIV,
 
-    /*! SKB in kernel */
+    /*! Legacy SKB buffer in Linux kernel */
     PDMA_BUF_MODE_SKB,
 
-    /*! Paged buffer in kernel */
+    /*! Raw Page buffer in Linux kernel */
     PDMA_BUF_MODE_PAGE,
 
     /*! Kernel buffer mapped to user space */
     PDMA_BUF_MODE_MAPPED,
 
-    /*! MAX mode */
+    /*! Maximum number of modes */
     PDMA_BUF_MODE_MAX
 };
 
@@ -132,6 +140,9 @@ struct pdma_rx_queue {
 
     /*! Page order in PDMA_BUF_MODE_PAGE mode */
     uint32_t page_order;
+
+    /*! Page size in PDMA_BUF_MODE_PAGE mode */
+    uint32_t page_size;
 };
 
 /*!

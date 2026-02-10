@@ -1,0 +1,885 @@
+<?xml version="1.0" ?>
+<root version="2">
+    <name>crt88322</name>
+    <mode>bitmux</mode>
+    <phy context_id="1">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="18" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="26" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="1" rx-polarity="1"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="2">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="3">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,60,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,60,0,0"/>
+            <lane id="21" tx-taps="0,0,60,0,0"/>
+            <lane id="22" tx-taps="0,0,60,0,0"/>
+            <lane id="23" tx-taps="0,0,60,0,0"/>
+            <lane id="24" tx-taps="0,0,60,0,0"/>
+            <lane id="25" tx-taps="0,0,60,0,0"/>
+            <lane id="26" tx-taps="0,0,60,0,0"/>
+            <lane id="27" tx-taps="0,0,60,0,0"/>
+            <lane id="28" tx-taps="0,0,60,0,0"/>
+            <lane id="29" tx-taps="0,0,60,0,0"/>
+            <lane id="30" tx-taps="0,0,60,0,0"/>
+            <lane id="31" tx-taps="0,0,60,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="4">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="5">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="6">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,60,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,60,0,0"/>
+            <lane id="21" tx-taps="0,0,60,0,0"/>
+            <lane id="22" tx-taps="0,0,60,0,0"/>
+            <lane id="23" tx-taps="0,0,60,0,0"/>
+            <lane id="24" tx-taps="0,0,60,0,0"/>
+            <lane id="25" tx-taps="0,0,60,0,0"/>
+            <lane id="26" tx-taps="0,0,60,0,0"/>
+            <lane id="27" tx-taps="0,0,60,0,0"/>
+            <lane id="28" tx-taps="0,0,60,0,0"/>
+            <lane id="29" tx-taps="0,0,60,0,0"/>
+            <lane id="30" tx-taps="0,0,60,0,0"/>
+            <lane id="31" tx-taps="0,0,60,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="7">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="8">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="9">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,60,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,60,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,60,0,0"/>
+            <lane id="31" tx-taps="0,0,60,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="10">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,60,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,60,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,60,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,60,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,60,0,0"/>
+            <lane id="28" tx-taps="0,0,60,0,0"/>
+            <lane id="29" tx-taps="0,0,60,0,0"/>
+            <lane id="30" tx-taps="0,0,60,0,0"/>
+            <lane id="31" tx-taps="0,0,60,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="11">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="12">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,60,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,60,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,60,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,60,0,0"/>
+            <lane id="29" tx-taps="0,0,60,0,0"/>
+            <lane id="30" tx-taps="0,0,60,0,0"/>
+            <lane id="31" tx-taps="0,0,60,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="13">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,60,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,60,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="14">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="15">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+    <phy context_id="16">
+        <phy_addr>0</phy_addr>
+        <topology>2</topology>
+        <mode>bitmux</mode>
+        <lane id="0" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="2" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="4" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="6" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="8" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="10" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="12" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="14" system-side="true" tx-polarity="0" rx-polarity="0"/>
+        <lane id="16" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="17" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="18" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="19" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="20" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="21" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="22" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="23" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="24" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="25" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="26" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="27" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="28" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="29" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="30" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <lane id="31" system-side="false" tx-polarity="0" rx-polarity="0"/>
+        <PAM4>
+            <lane id="0" tx-taps="0,0,31,0,0"/>
+            <lane id="2" tx-taps="0,0,31,0,0"/>
+            <lane id="4" tx-taps="0,0,31,0,0"/>
+            <lane id="6" tx-taps="0,0,31,0,0"/>
+            <lane id="8" tx-taps="0,0,31,0,0"/>
+            <lane id="10" tx-taps="0,0,31,0,0"/>
+            <lane id="12" tx-taps="0,0,31,0,0"/>
+            <lane id="14" tx-taps="0,0,31,0,0"/>
+            <lane id="16" tx-taps="0,0,63,0,0"/>
+            <lane id="17" tx-taps="0,0,63,0,0"/>
+            <lane id="18" tx-taps="0,0,63,0,0"/>
+            <lane id="19" tx-taps="0,0,63,0,0"/>
+            <lane id="20" tx-taps="0,0,63,0,0"/>
+            <lane id="21" tx-taps="0,0,63,0,0"/>
+            <lane id="22" tx-taps="0,0,63,0,0"/>
+            <lane id="23" tx-taps="0,0,63,0,0"/>
+            <lane id="24" tx-taps="0,0,63,0,0"/>
+            <lane id="25" tx-taps="0,0,63,0,0"/>
+            <lane id="26" tx-taps="0,0,63,0,0"/>
+            <lane id="27" tx-taps="0,0,63,0,0"/>
+            <lane id="28" tx-taps="0,0,63,0,0"/>
+            <lane id="29" tx-taps="0,0,63,0,0"/>
+            <lane id="30" tx-taps="0,0,63,0,0"/>
+            <lane id="31" tx-taps="0,0,63,0,0"/>
+        </PAM4>
+    </phy>
+</root>

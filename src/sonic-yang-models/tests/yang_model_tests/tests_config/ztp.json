@@ -1,0 +1,66 @@
+{
+    "ZTP_VALID": {
+        "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "active",
+                    "inband" : "true",
+                    "out-of-band" : "true",
+                    "ipv4" : "true",
+                    "ipv6" : "true",
+                    "product-name" : "product name",
+                    "serial-no" : "1234-5678-9A1"
+                }
+            }
+        }
+    },
+    "ZTP_PROFILE_INVALID": {
+        "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "invalid"
+                }
+            }
+        }
+    },
+    "ZTP_INBAND_INVALID": {
+         "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "active",
+                    "inband": "invalid"
+                }
+            }
+        }
+    },
+    "ZTP_OUTOFBAND_INVALID": {
+         "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "active",
+                    "out-of-band": "invalid"
+                }
+            }
+        }
+    },
+    "ZTP_IPV4_INVALID": {
+         "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "active",
+                    "ipv4": "invalid"
+                }
+            }
+        }
+    },
+    "ZTP_IPV6_INVALID": {
+         "sonic-ztp:sonic-ztp": {
+            "sonic-ztp:ZTP": {
+                "sonic-ztp:mode": {
+                    "profile" : "active",
+                    "ipv6": "invalid"
+                }
+            }
+        }
+    }
+}

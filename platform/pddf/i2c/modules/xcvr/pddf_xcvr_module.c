@@ -109,6 +109,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             XCVR_PDATA *xcvr_platform_data;
             
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             /* Allocate the xcvr_platform_data */
             xcvr_platform_data = (XCVR_PDATA *)kzalloc(sizeof(XCVR_PDATA), GFP_KERNEL);
             xcvr_platform_data->xcvr_attrs = (XCVR_ATTR *)kzalloc(num*sizeof(XCVR_ATTR), GFP_KERNEL);
@@ -147,6 +151,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
 
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             board_info = (struct i2c_board_info) {
                 .platform_data = (void *)NULL,
             };

@@ -6,18 +6,15 @@
 
 import sys
 import signal
-import subprocess
 import threading
 import time
 from datetime import datetime
-import json
 import docker
 import redis
 import syslog
 from sonic_py_common import daemon_base, logger, syslogger
-import multiprocessing
 import grpc
-from concurrent import futures
+import queue
 
 SYSLOG_IDENTIFIER = 'dpu-db-utild'
 logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
@@ -29,7 +26,6 @@ def log_err(msg, also_print_to_console=False):
     logger_instance.log_error(msg, also_print_to_console)
 
 try:
-    from health_checker.manager import HealthCheckerManager
     from sonic_py_common import daemon_base
     import sonic_platform
     from sonic_platform.chassis import Chassis
@@ -84,11 +80,12 @@ class EventHandler(logger.Logger):
         super(EventHandler, self).__init__(SYSLOG_IDENTIFIER)
 
         # operd attributes
-        self.events = []
-        self.events.extend(CRITICAL_EVENTS)
-        self.events.extend(NETWORK_EVENTS)
-        self.event_thread = None
-        self.event_stop = False
+        self.event_types = []
+        self.event_types.extend(CRITICAL_EVENTS)
+        self.event_types.extend(NETWORK_EVENTS)
+        self.request_queue = queue.Queue()
+        self.thread = None
+        self.stop_event = threading.Event()
 
         # dpu state db update related attributes
         try:
@@ -242,25 +239,13 @@ class EventHandler(logger.Logger):
         except Exception as e:
             log_err(f'Failed to populate dpu control plane entries due to {e}')
 
-    def _getGrpcEventMessage(self):
-        while True:
-            if self.event_stop:
-                return
-            grpcmsg = oper_pb2.OperInfoRequest()
-            spec = grpcmsg.Request.add()
-            spec.InfoType = oper_pb2.OPER_INFO_TYPE_EVENT
-            spec.Action = oper_pb2.OPER_INFO_OP_SUBSCRIBE
-            for event in self.events:
-                spec.EventFilter.Types.append(event)
-            yield grpcmsg
-
     def _process_event(self, event):
         global g_count
 
         try:
-            event_type = event.EventInfo.Type
-            event_description = event.EventInfo.Description
-            event_message = event.EventInfo.Message
+            event_type = event.Type
+            event_description = event.Description
+            event_message = event.Message
         except Exception as e:
             log_err(f"Failed to process event due to {e}")
             return
@@ -301,29 +286,60 @@ class EventHandler(logger.Logger):
         except Exception as e:
             log_err(f"Failed to update dpu state db control plane fields due to {e}")
 
+    def _build_event_request(self):
+        """Builds a single gRPC subscription request."""
+        request = oper_pb2.OperInfoRequest()
+        spec = request.Request.add()
+        spec.InfoType = oper_pb2.OPER_INFO_TYPE_EVENT
+        spec.Action = oper_pb2.OPER_INFO_OP_SUBSCRIBE
+        for t in self.event_types:
+            spec.EventFilter.Types.append(t)
+        return request
+
+    def _request_generator(self):
+        """Generator that yields the gRPC request once."""
+        yield self._build_event_request()
+        while not self.stop_event.is_set():
+            time.sleep(1)
+
     def _event_listener(self):
-        channel_addr = "{}:{}".format(LOCALHOST,str(EVENT_PORT))
+        channel_addr = f"{LOCALHOST}:{EVENT_PORT}"
+        log_info(f"Connecting to gRPC server at {channel_addr}")
         channel = grpc.insecure_channel(channel_addr)
         stub = oper_pb2_grpc.OperSvcStub(channel)
-        resp = stub.OperInfoSubscribe(self._getGrpcEventMessage())
-        time.sleep(1)
-        for event in resp:
-            self._process_event(event)
+
+        try:
+            response_stream = stub.OperInfoSubscribe(self._request_generator())
+            for response in response_stream:
+                if self.stop_event.is_set():
+                    break
+                if response.Status != 0:
+                    log_info(f"Received non-OK status: {response.Status}")
+                    continue
+                event = response.EventInfo
+                try:
+                    self._process_event(event)
+                except Exception as e:
+                    log_err(f"_process_event() raised exception: {e}")
+        except grpc.RpcError as e:
+            log_err(f"gRPC error: {e}")
+        finally:
+            log_info("Event listener thread exiting")
 
     def start(self):
-        # spawn operd listener thread
-        self.event_stop = False
-        if (self.event_thread == None) or (not self.event_thread.is_alive()):
-            self.event_thread = threading.Thread(target=self._event_listener)
-            self.event_thread.daemon = True
-            self.event_thread.start()
+        if self.thread is None or not self.thread.is_alive():
+            self.stop_event.clear()
+            self.thread = threading.Thread(target=self._event_listener, daemon=True)
+            self.thread.start()
+            log_info("Event listener thread started")
 
     def stop(self):
-        self.log_warning("Stopping event listener thread")
-        self.event_stop = True
-        if self.event_thread is not None:
-            self.event_thread.join()
-            self.event_thread = None
+        log_info("Stopping event listener thread")
+        self.stop_event.set()
+        if self.thread is not None:
+            self.thread.join(timeout=2)
+            log_info("Event listener thread stopped")
+            self.thread = None
 
 #
 # Daemon =======================================================================

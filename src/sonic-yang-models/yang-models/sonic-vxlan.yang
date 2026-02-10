@@ -46,10 +46,10 @@ module sonic-vxlan {
             list VXLAN_TUNNEL_LIST {
 
                 key "name";
-                max-elements 1;
+                max-elements 2;
 
                 leaf name {
-                    type stypes:interface_name;
+                    type string;
                 }
 
                 leaf src_ip {
@@ -58,6 +58,13 @@ module sonic-vxlan {
 
                 leaf dst_ip {
                     type inet:ip-address;
+                }
+
+                leaf ttl_mode {
+                    description "Decap TTL mode";
+                    type string {
+                        pattern "uniform|pipe";
+                    }
                 }
             }
         }
