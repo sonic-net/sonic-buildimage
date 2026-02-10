@@ -45,6 +45,18 @@ BOOKWORM_DEBS_PATH = $(TARGET_PATH)/debs/bookworm
 BOOKWORM_FILES_PATH = $(TARGET_PATH)/files/bookworm
 TRIXIE_DEBS_PATH = $(TARGET_PATH)/debs/trixie
 TRIXIE_FILES_PATH = $(TARGET_PATH)/files/trixie
+JESSIE_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/jessie
+JESSIE_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/jessie
+STRETCH_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/stretch
+STRETCH_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/stretch
+BUSTER_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/buster
+BUSTER_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/buster
+BULLSEYE_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/bullseye
+BULLSEYE_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/bullseye
+BOOKWORM_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/bookworm
+BOOKWORM_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/bookworm
+TRIXIE_PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/trixie
+TRIXIE_PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/trixie
 DBG_IMAGE_MARK = dbg
 DBG_SRC_ARCHIVE_FILE = $(TARGET_PATH)/sonic_src.tar.gz
 BUILD_WORKDIR = /sonic
@@ -129,8 +141,18 @@ configure :
 	$(Q)mkdir -p $(BULLSEYE_FILES_PATH)
 	$(Q)mkdir -p $(BOOKWORM_FILES_PATH)
 	$(Q)mkdir -p $(TRIXIE_FILES_PATH)
-	$(Q)mkdir -p $(PYTHON_DEBS_PATH)
-	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(JESSIE_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(STRETCH_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(BUSTER_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(BULLSEYE_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(BOOKWORM_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(TRIXIE_PYTHON_DEBS_PATH)
+	$(Q)mkdir -p $(JESSIE_PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(STRETCH_PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(BUSTER_PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(BULLSEYE_PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(BOOKWORM_PYTHON_WHEELS_PATH)
+	$(Q)mkdir -p $(TRIXIE_PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
 	$(Q)mkdir -p $(TARGET_PATH)/vcache
 	$(Q)echo $(PLATFORM) > .platform
