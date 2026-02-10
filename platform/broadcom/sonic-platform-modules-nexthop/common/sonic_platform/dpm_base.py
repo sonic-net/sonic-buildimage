@@ -220,12 +220,13 @@ class DpmBase(ABC):
         """
         pass
 
-    def max_powerup_counter(self) -> int:
+    @classmethod
+    def max_powerup_counter(cls) -> int:
         """Returns the max number of powerup counter before it wraps around.
         
         For example, ADM1266 uses a 16-bit counter, so it returns 65535.
         """
-        return self._max_powerup_counter
+        return cls._max_powerup_counter
 
     @abstractmethod
     def get_powerup_entries(self) -> list[DpmPowerUpEntry]:

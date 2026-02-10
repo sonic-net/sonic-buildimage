@@ -70,7 +70,7 @@ def load_data_from_file(path: Path | str) -> DataBase:
         if data.get("schema_version") == 1:
             return DataV1(**data)
     except Exception:
-        pass
+        return UNKNOWN_DATA
 
     return UNKNOWN_DATA
 

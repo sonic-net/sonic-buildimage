@@ -224,7 +224,7 @@ def merge_sw_and_hw_causes(
 
 
 def squash_sw_and_hw_causes(sorted_causes: list[RebootCause]) -> list[RebootCause]:
-    """Squahes the SW cause and HW cause if they refer to the same reboot."""
+    """Squashes the SW cause and HW cause if they refer to the same reboot."""
 
     def time_diff(cause1: RebootCause, cause2: RebootCause) -> datetime.timedelta | None:
         if not isinstance(cause1.timestamp, datetime.datetime):
