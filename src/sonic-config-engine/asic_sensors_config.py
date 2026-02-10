@@ -23,9 +23,12 @@ def get_asic_sensors_config():
     if os.environ.get("CFGGEN_UNIT_TESTING") == "2":
         json_file =  os.path.join(tests_path, "data",  "asic_sensors", "platform.json")
     else:
-        platform_path = device_info.get_path_to_platform_dir()
+        try:
+            platform_path = device_info.get_path_to_platform_dir()
+        except OSError:
+            return config
         json_file = os.path.join(platform_path, device_info.PLATFORM_JSON_FILE)
-        
+
     if not os.path.exists(json_file):
         return config
     
