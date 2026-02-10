@@ -106,6 +106,7 @@ if [ -n "$NPU_TIME" ]; then
 	if [ -e /dev/rtc0 ]; then
 		hwclock --systohc --utc
 		log "Hardware clock synced from system time"
+	fi
 fi
 
 # Flags that can be overwritten by the bf.cfg
