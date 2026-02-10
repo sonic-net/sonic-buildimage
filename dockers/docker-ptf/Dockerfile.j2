@@ -362,6 +362,20 @@ RUN git clone https://github.com/karimra/gnoic.git \
     && cd .. \
     && rm -rf gnoic
 
+# Install gnmic tool
+{% if CONFIGURED_ARCH == "armhf" %}
+RUN GNMIC_ARCH=armv7 \
+{% elif CONFIGURED_ARCH == "arm64" %}
+RUN GNMIC_ARCH=aarch64 \
+{% else %}
+RUN GNMIC_ARCH=x86_64 \
+{% endif %}
+    && GNMIC_VERSION=0.43.0 \
+    && curl -sL "https://github.com/openconfig/gnmic/releases/download/v${GNMIC_VERSION}/gnmic_${GNMIC_VERSION}_Linux_${GNMIC_ARCH}.deb" \
+      -o /tmp/gnmic.deb \
+    && dpkg -i /tmp/gnmic.deb \
+    && rm -f /tmp/gnmic.deb
+
 {% if PTF_ENV_PY_VER == "py3" %}
 # Install the python-saithrift into the virtual environment
 RUN echo "/usr/lib/python3/dist-packages/saithrift-0.9-py3.11.egg" >> /root/env-python3/lib/python3.11/site-packages/easy-install.pth
