@@ -29,7 +29,14 @@ $(DOCKER_GNMI_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                        $(LIBYANG_PY3)
 
 $(DOCKER_GNMI_SIDECAR)_CONTAINER_NAME = gnmi-sidecar
-$(DOCKER_GNMI_SIDECAR)_RUN_OPT += -t --privileged --pid=host
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += -t --pid=host
+# Container hardening: Replace --privileged with specific capabilities
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += --cap-add=SYS_ADMIN
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += --cap-add=SYS_PTRACE
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += --cap-add=DAC_OVERRIDE
+# Security options needed for nsenter to access host namespaces
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += --security-opt apparmor=unconfined
+$(DOCKER_GNMI_SIDECAR)_RUN_OPT += --security-opt seccomp=unconfined
 $(DOCKER_GNMI_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_GNMI_SIDECAR)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_GNMI_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
