@@ -19,9 +19,8 @@ COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 # Install certificates by disabling the peer verification
-COPY ["no-verify-peer", "/etc/apt/apt.conf.d/"]
-RUN apt-get update && apt-get install -y apt-transport-https ca-certificates
-RUN rm -f /etc/apt/apt.conf.d/no-verify-peer
+RUN apt -o Acquire::https::Verify-Peer=false update && \
+    apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
 
 # Update apt cache and
 # pre-install fundamental packages
