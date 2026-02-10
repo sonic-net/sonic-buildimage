@@ -105,21 +105,8 @@ module sonic-flex_counter {
                 }
             }
 
-            container CP_DATA_CHANNEL {
-                /* CP_DATA_CHANNEL_STAT_COUNTER_FLEX_COUNTER_GROUP */
-                leaf FLEX_COUNTER_STATUS {
-                    type flex_status;
-                }
-                leaf FLEX_COUNTER_DELAY_STATUS {
-                    type flex_delay_status;
-                }
-                leaf POLL_INTERVAL {
-                    type poll_interval;
-                }
-            }
-
-            container BULK_SYNC {
-                /* BULK_SYNC_COUNTER */
+            container HA_SET {
+                /* HA_SET_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
                     type flex_status;
                 }
