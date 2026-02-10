@@ -63,6 +63,11 @@ if [ "$IMAGE_TYPE" = "aboot" ]; then
     TARGET_BOOTLOADER="aboot"
 fi
 
+if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
+  HOSTNAME=sonie
+  FILESYSTEM_ROOT="${FILESYSTEM_ROOT}-recovery"
+fi
+
 ## Check if not a last stage of RFS build
 if [[ $RFS_SPLIT_LAST_STAGE != y ]]; then
 
@@ -352,6 +357,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     e2fsprogs               \
     squashfs-tools          \
     $bootloader_packages    \
+    systemd-boot            \
+    systemd-boot-efi        \
     rsyslog                 \
     screen                  \
     hping3                  \
@@ -384,6 +391,11 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     ethtool                 \
     zstd                    \
     nvme-cli
+
+if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/systemd /init
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT ln -sf /lib/systemd/system/initrd.target lib/systemd/system/default.target
+fi
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd

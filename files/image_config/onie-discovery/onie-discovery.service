@@ -1,0 +1,13 @@
+[Unit]
+Description=ONIE Discovery Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/onie-discovery.sh
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target
