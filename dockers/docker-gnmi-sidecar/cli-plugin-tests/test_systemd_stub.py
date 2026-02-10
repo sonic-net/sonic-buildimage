@@ -10,7 +10,8 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Add sonic-py-common to path so we can import the real sidecar_common
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../src/sonic-py-common")))
+# Path: cli-plugin-tests -> docker-gnmi-sidecar -> dockers -> sonic-buildimage -> src/sonic-py-common
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../src/sonic-py-common")))
 
 
 # ===== Create fakes BEFORE importing sidecar_common =====
