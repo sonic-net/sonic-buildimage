@@ -20,7 +20,7 @@ from unittest.mock import patch, mock_open
 def dirs_of_led_ctrl_lock_path():
     """Returns a list of directories that lead to LED_CTRL_LOCK_PATH.
 
-    FOR USED BY INTEGRATION TEST ONLY.
+    FOR USE BY INTEGRATION TEST ONLY.
     """
     from sonic_platform_pddf_base.pddfapi import LED_CTRL_LOCK_PATH
 
@@ -36,7 +36,7 @@ def dirs_of_led_ctrl_lock_path():
 def setup_patch_for_chassis_init(pddf_plugin_data: dict):
     """A context manager helper to patch open() and os.path.exists() for Chassis.__init__().
 
-    FOR USED BY INTEGRATION TEST ONLY.
+    FOR USE BY INTEGRATION TEST ONLY.
     """
     original_open = open
     original_exists = os.path.exists
