@@ -10,6 +10,7 @@ extern "C"
 #include <string>
 #include <memory>
 #include <csignal>
+#include <atomic>
 #include "syslog_parser.h"
 #include "events.h"
 #include "logger.h"
@@ -25,7 +26,7 @@ using namespace swss;
 
 class RsyslogPlugin {
 public:
-    static bool g_running;
+    static atomic<bool> g_running;
     int onInit();
     bool onMessage(string msg, lua_State* luaState);
     void run();

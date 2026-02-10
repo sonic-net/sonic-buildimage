@@ -38,13 +38,9 @@ class eventd_proxy
 {
     public:
         eventd_proxy(void *ctx) : m_ctx(ctx), m_frontend(NULL), m_backend(NULL),
-            m_capture(NULL) {};
+            m_capture(NULL), m_init_done(false), m_init_result(0) {};
 
         ~eventd_proxy() {
-            zmq_close(m_frontend);
-            zmq_close(m_backend);
-            zmq_close(m_capture);
-
             if (m_thr.joinable())
                 m_thr.join();
         }
@@ -59,6 +55,8 @@ class eventd_proxy
         void *m_backend;
         void *m_capture;
         thread m_thr;
+        atomic<bool> m_init_done;
+        atomic<int> m_init_result;
 };
 
 
@@ -143,9 +141,9 @@ class stats_collector
 
         atomic<bool> m_updated;
 
-        counters_t m_lst_counters[COUNTERS_EVENTS_TOTAL];
+        atomic<counters_t> m_lst_counters[COUNTERS_EVENTS_TOTAL];
 
-        bool m_shutdown;
+        atomic<bool> m_shutdown;
 
         thread m_thr_collector;
         thread m_thr_writer;
@@ -153,11 +151,11 @@ class stats_collector
         shared_ptr<swss::DBConnector> m_counters_db;
         shared_ptr<swss::Table> m_stats_table;
 
-        bool m_pause_heartbeat;
+        atomic<bool> m_pause_heartbeat;
 
-        uint64_t m_heartbeats_published;
+        atomic<uint64_t> m_heartbeats_published;
 
-        int m_heartbeats_interval_cnt;
+        atomic<int> m_heartbeats_interval_cnt;
 };
 
 /*
@@ -234,8 +232,8 @@ class capture_service
         void *m_ctx;
         stats_collector *m_stats_instance;
 
-        bool m_cap_run;
-        capture_control_t m_ctrl;
+        atomic<bool> m_cap_run;
+        atomic<capture_control_t> m_ctrl;
         thread m_thr;
 
         int m_cache_max;
