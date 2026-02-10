@@ -32,65 +32,19 @@ image_version="%%IMAGE_VERSION%%"
 export image_version
 timestamp="$(date -u +%Y%m%d)"
 export timestamp
-export demo_volume_label="SONIE-OS"
-export demo_volume_revision_label="SONIE-OS-${image_version}"
+export demo_volume_label="XBOOTLDR"
 
 # Alias for default_platform.conf compatibility
 export sonie_part_size="${demo_part_size}"
 export sonie_volume_label="${demo_volume_label}"
-export sonie_volume_revision_label="${demo_volume_revision_label}"
 
-#######################################
-# Logs an info message to stdout.
-# Globals:
-#   None
-# Arguments:
-#   Message to log
-# Returns:
-#   None
-#######################################
-log_info() { printf "INFO: %s\n" "$*"; }
-
-#######################################
-# Logs a warning message to stderr.
-# Globals:
-#   None
-# Arguments:
-#   Message to log
-# Returns:
-#   None
-#######################################
-log_warn() { printf "WARN: %s\n" "$*" >&2; }
-
-#######################################
-# Logs an error message to stderr.
-# Globals:
-#   None
-# Arguments:
-#   Message to log
-# Returns:
-#   None
-#######################################
-log_error() { printf "ERROR: %s\n" "$*" >&2; }
-
-#######################################
-# Appends a command to a trap, preserving existing traps.
-# Globals:
-#   None
-# Arguments:
-#   next: The command to append to the trap.
-# Returns:
-#   None
-#######################################
-_trap_push() {
-    local next="${1}"
-    eval "trap_push() {
-        local oldcmd='$(echo "${next}" | sed -e s/\'/\'\\\\\'\'/g)'
-        local newcmd=\"\${1}; \${oldcmd}\"
-        trap -- \"\${newcmd}\" EXIT INT TERM HUP
-        _trap_push \"\${newcmd}\"
-    }"
-}
+# Source utils
+if [ -r "${SCRIPT_DIR}/utils.sh" ]; then
+    . "${SCRIPT_DIR}/utils.sh"
+else
+    echo "ERROR: utils.sh not found in ${SCRIPT_DIR}" >&2
+    exit 1
+fi
 
 #######################################
 # Reads a configuration file and exports variables.
@@ -220,6 +174,8 @@ detect_machine_conf() {
         read_conf_file "/etc/machine.conf"
     elif [ -r /host/machine.conf ]; then
         read_conf_file "/host/machine.conf"
+    elif [ -r "${SCRIPT_DIR}/machine.conf" ]; then
+        read_conf_file "${SCRIPT_DIR}/machine.conf"
     elif [ "${install_env}" != "build" ]; then
         log_error "cannot find machine.conf"
         exit 1
@@ -281,19 +237,24 @@ install_esp_bootloader() {
     local blk_dev="$1"
     local demo_mnt="$2"
 
-    # Mount ESP
     # Use make_partition_dev instead of sed hack
     local esp_dev
     esp_dev="$(make_partition_dev "${blk_dev}" 1)"
 
     local esp_mnt
     esp_mnt="$(mktemp -d)"
+    # Ensure cleanup on exit
+    trap_push "umount \"${esp_mnt}\" || true; rmdir \"${esp_mnt}\" || true"
+
     mount "${esp_dev}" "${esp_mnt}" || { log_error "Failed to mount ESP ${esp_dev}"; exit 1; }
 
     install_grub_to_esp "${blk_dev}" "${esp_mnt}" "${demo_mnt}"
 
+    # helper unmount (trap will also handle it if this fails or script exits early,
+    # but good to be explicit for success path to avoid noise)
     umount "${esp_mnt}"
     rmdir "${esp_mnt}"
+    # We could pop trap here but utils.sh doesn't seem to have trap_pop, so we rely on idempotent cleanup
 }
 
 # Export these for default_platform.conf usage
@@ -323,14 +284,11 @@ main() {
     if [ -r "${SCRIPT_DIR}/platform.conf" ]; then
         . "${SCRIPT_DIR}/platform.conf"
     fi
-
     export sonie_mnt=""
-
     local demo_mnt
     if [ "${install_env}" = "sonie" ] || [ "${install_env}" = "onie" ] || [ "${install_env}" = "sonic" ]; then
         create_partition
         mount_partition
-        # sonie_mnt is set by mount_partition
         demo_mnt="${sonie_mnt}"
     else
         demo_mnt="build_raw_image_mnt"
@@ -382,6 +340,39 @@ main() {
     if [ "${install_env}" != "build" ]; then
         install_esp_bootloader "${blk_dev}" "${demo_mnt}"
     fi
+
+    # Ensure XBOOTLDR is mounted at /host and /boot for subsequent installers (sonic-installer)
+    log_info "Preparing environment for subsequent installers..."
+
+    mkdir -p /boot
+    if ! mountpoint -q /boot; then
+        log_info "Mounting ${demo_mnt} to /boot"
+        mount --bind "${demo_mnt}" /boot
+    fi
+
+    # Ensure /host/grub points to /boot/grub
+    log_info "Creating /host/grub directory..."
+    mkdir -p /host
+    mkdir -p /host/grub
+    if ! mountpoint -q /host/grub; then
+        if [ -d /boot/grub ]; then
+            log_info "Mounting /boot/grub to /host/grub"
+            mount --bind /boot/grub /host/grub
+        else
+             log_warn "/boot/grub not found, skipping /host/grub bind"
+        fi
+    fi
+
+    # Explicit cleanup of demo_mnt if it's still mounted
+    # This ensures we don't leave random /tmp/tmp.XXXX mounts around
+    if [ -n "$demo_mnt" ] && mountpoint -q "$demo_mnt"; then
+        log_info "Unmounting temporary mount $demo_mnt (lazy)"
+        umount -l "$demo_mnt" || log_warn "Failed to unmount $demo_mnt"
+        rmdir "$demo_mnt" || true
+    fi
+
+    # Clear traps to prevent unmounting on exit, so sonic-installer can access files
+    trap - EXIT
 }
 
 main "$@"

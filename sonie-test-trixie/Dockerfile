@@ -9,12 +9,17 @@ RUN apt-get update && \
         gdisk \
         gettext \
         iproute2 \
+        iputils-ping \
+        libcbor0.10 \
+        libfido2-1 \
+        libxmuu1 \
         mtools \
         net-tools \
         openssh-client \
         ovmf \
         procps \
         python3 \
+        sshpass \
         python3-virt-firmware \
         qemu-system-x86 \
         swtpm \

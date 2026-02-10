@@ -14,8 +14,37 @@
 SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
 FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
 
+# Detect SONIC_IMAGE_DIR
+SONIC_IMAGE_DIR=""
+for x in $(cat /proc/cmdline); do
+    case "$x" in
+        loop=*)
+            # x is like loop=/image-A/fs.squashfs
+            # We want /host/image-A
+            loop_path="${x#loop=}"
+            loop_dir=$(dirname "$loop_path")
+            # loop_dir is /image-A
+            SONIC_IMAGE_DIR="/host${loop_dir}"
+            ;;
+    esac
+done
+
+# Fallback checking
+if [ -z "$SONIC_IMAGE_DIR" ] || [ ! -d "$SONIC_IMAGE_DIR" ]; then
+    if [ -f "/host/image-A/sonic_version.yml" ] && grep -q "$SONIC_VERSION" "/host/image-A/sonic_version.yml"; then
+        SONIC_IMAGE_DIR="/host/image-A"
+    elif [ -f "/host/image-B/sonic_version.yml" ] && grep -q "$SONIC_VERSION" "/host/image-B/sonic_version.yml"; then
+        SONIC_IMAGE_DIR="/host/image-B"
+    else
+         # Fallback to legacy versioned path
+         SONIC_IMAGE_DIR="/host/image-${SONIC_VERSION}"
+    fi
+fi
+
+FIRST_BOOT_FILE="${SONIC_IMAGE_DIR}/platform/firsttime"
+
 # Move sonic-environment to /etc/sonic
-SONIC_CONFIG_DIR="/host/image-${SONIC_VERSION}/sonic-config"
+SONIC_CONFIG_DIR="${SONIC_IMAGE_DIR}/sonic-config"
 SONIC_ENV_FILE=${SONIC_CONFIG_DIR}/sonic-environment
 if [ -d ${SONIC_CONFIG_DIR} -a -f ${SONIC_ENV_FILE} ]; then
     echo "moving file ${SONIC_ENV_FILE} to /etc/sonic" 1>&2
@@ -275,13 +304,61 @@ fi
 
 if [ "$is_ram_root" -eq 1 ] && [ ! -f /etc/onie-release ]; then
     mkdir -p /host/grub
+    # Wait for block devices to settle
+    if command -v udevadm >/dev/null; then
+        echo "Waiting for udev to settle..."
+        udevadm settle --timeout=10 || true
+    fi
+
+    # Manual wait loop for ESP partition (max 10s)
+    # This ensures QEMU/Hypervisor disks are fully probed before we continue
+    echo "Waiting for ESP partition..."
+    for i in $(seq 1 10); do
+        # check if blkid finds anything relevant
+        if blkid | grep -q -E "ESP|c12a7328-f81f-11d2-ba4b-00a0c93ec93b"; then
+            echo "ESP partition detected."
+            break
+        fi
+        sleep 1
+    done
+
     # Try to find XBOOTLDR partition by GUID first, then typical labels
     # Verify devices are available before querying (prevents race conditions)
-    udevadm settle || true
-    partprobe || true
+    # Debug: dump blkid
+    echo "DEBUG: blkid output:"
+    blkid || true
+
+    # Mount ESP to /efi
+    # ESP Partition Type GUID: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+    ESP_DEV=$(blkid -l -o device -t PART_ENTRY_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b 2>/dev/null || \
+              blkid -L ESP 2>/dev/null || true)
+
+    # Fallback Loop for ESP detection if cache lookup failed
+    if [ -z "$ESP_DEV" ]; then
+        for dev in $(ls /dev/sd* /dev/vd* /dev/nvme* 2>/dev/null || true); do
+            if [ -b "$dev" ]; then
+                # Check for Label "ESP" or Partition Type GUID
+                if blkid -o value -s LABEL "$dev" 2>/dev/null | grep -q "^ESP$"; then
+                    ESP_DEV="$dev"
+                    break
+                fi
+                if blkid -o value -s PART_ENTRY_TYPE "$dev" 2>/dev/null | grep -qi "^c12a7328-f81f-11d2-ba4b-00a0c93ec93b$"; then
+                    ESP_DEV="$dev"
+                    break
+                fi
+            fi
+        done
+    fi
+
+    if [ -n "$ESP_DEV" ]; then
+        mkdir -p /efi
+        mount "$ESP_DEV" /efi
+        echo "Mounted $ESP_DEV to /efi"
+    fi
+
     # XBOOTLDR Partition Type GUID: bc13c2ff-59e6-4262-a352-b275fd6f7172
     XBOOTLDR_DEV=$(blkid -l -o device -t PART_ENTRY_TYPE=bc13c2ff-59e6-4262-a352-b275fd6f7172 2>/dev/null || \
-                   blkid -L XBOOTLDR || blkid -L SONIE-OS || true)
+                   blkid -L XBOOTLDR || blkid -L SONIE-OS || blkid -L SONIE || true)
 
     if [ -z "$XBOOTLDR_DEV" ]; then
         # Fallback: check standard partition types if blkid by label fails
@@ -289,6 +366,11 @@ if [ "$is_ram_root" -eq 1 ] && [ ! -f /etc/onie-release ]; then
         # ESP GUID: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
         # Try to find a partition that looks like it has grub
         for dev in $(ls /dev/sd* /dev/vd* /dev/nvme* 2>/dev/null || true); do
+            # Skip ESP if detected
+            if [ -n "$ESP_DEV" ] && [ "$dev" = "$ESP_DEV" ]; then
+                continue
+            fi
+
             if [ -b "$dev" ]; then
                  mkdir -p /tmp/check_grub
                  mount -o ro "$dev" /tmp/check_grub 2>/dev/null
@@ -344,10 +426,15 @@ if [ -n "$(grep 'root=/dev/ram0' /proc/cmdline)" ]; then
 
         # Mount the new tmpfs for Docker (requires CONFIG_TMPFS_XATTR=y in kernel)
         echo "rc.local: Mounting tmpfs on /var/lib/docker with user_xattr"
-        mount -t tmpfs -o size=2G,user_xattr tmpfs /var/lib/docker
+        mount -t tmpfs -o size=4G tmpfs /var/lib/docker
 
         # Restore data if any existed
-        if [ "$(ls -A /tmp/docker-orig)" ]; then
+        # Optimize UKI: if we have a compressed dockerfs, unpack it.
+        # Otherwise, fall back to copying from existing directory (LEGACY)
+        if [ -f "/usr/share/docker/dockerfs.tar.gz" ]; then
+             echo "rc.local: Unpacking dockerfs.tar.gz to /var/lib/docker..."
+             tar -xzf /usr/share/docker/dockerfs.tar.gz -C /var/lib/docker/
+        elif [ "$(ls -A /tmp/docker-orig)" ]; then
             echo "Restoring existing docker data..."
             cp -a /tmp/docker-orig/. /var/lib/docker/
             # Clean up stale overlayfs work directories to prevent "upperdir is in-use" errors
@@ -365,12 +452,12 @@ if [ -n "$(grep 'root=/dev/ram0' /proc/cmdline)" ]; then
         fi
 
         # Cleanup
-        umount /tmp/docker-orig
+        umount /tmp/docker-orig || umount -l /tmp/docker-orig || true
 
         # Restart Docker now that storage is ready
         echo "rc.local: Starting Docker..."
         systemctl start docker
-        rmdir /tmp/docker-orig
+        rmdir /tmp/docker-orig || true
     fi
     exit 0
 fi

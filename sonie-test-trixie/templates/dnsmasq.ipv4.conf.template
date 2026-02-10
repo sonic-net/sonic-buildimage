@@ -31,7 +31,7 @@ dhcp-vendorclass=set:pxe_client,PXEClient:Arch:00007
 # -- Boot File Logic --
 
 # 1. All PXE clients (iPXE and standard UEFI) are served the UKI file directly via TFTP.
-dhcp-boot=tag:pxe_client,${UKI_FILE}
+dhcp-boot=tag:pxe_client,${UKI_FILENAME}
 
 # 2. Fallback for any other client: provide the imageset file via HTTP.
 dhcp-boot=tag:!pxe_client,http://${BRIDGE_IP}:${HTTP_PORT}/${IMAGESET_FILE}

@@ -42,6 +42,15 @@ class DualStackServer(http.server.ThreadingHTTPServer):
     """
     address_family = socket.AF_INET6
 
+    def server_bind(self):
+        # Explicitly allow dual stack
+        if hasattr(socket, 'IPPROTO_IPV6') and hasattr(socket, 'IPV6_V6ONLY'):
+            try:
+                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            except OSError:
+                pass
+        super().server_bind()
+
 def run_server(port=8000, host="", directory=""):
     if directory:
         print(f"Serving from directory {directory}")

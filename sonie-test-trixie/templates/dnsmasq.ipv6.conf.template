@@ -16,6 +16,11 @@ enable-ra
 # Assign addresses from this range with a 12-hour lease.
 dhcp-range=${CLIENT_IP6_START},${CLIENT_IP6_END},64,12h
 
+# -- DHCPv4 Range --
+dhcp-range=${CLIENT_IP_START},${CLIENT_IP_END},12h
+dhcp-option=3,${BRIDGE_IP}
+dhcp-option=6,8.8.8.8
+
 # Provide Google's public DNS server to clients.
 dhcp-option=option6:dns-server,[2001:4860:4860::8888]
 
@@ -23,11 +28,17 @@ dhcp-option=option6:dns-server,[2001:4860:4860::8888]
 # Classify clients based on their User-Class or Vendor-Class identifiers.
 # These tags are used to serve specific boot files.
 
-# iPXE bootloader
+# iPXE bootloader (IPv4/IPv6)
 dhcp-userclass=set:ipxe_client6,iPXE
+dhcp-userclass=set:ipxe_client,iPXE
 
 # SONiE installer environment
 dhcp-userclass=set:onie_client6,SONIE
+
+# Standard UEFI PXE (IPv4)
+dhcp-vendorclass=set:pxe_client,PXEClient:Arch:00007
+dhcp-boot=tag:pxe_client,${UKI_FILENAME}
+dhcp-boot=tag:!pxe_client,http://${BRIDGE_IP}:${HTTP_PORT}/${IMAGESET_FILE}
 
 # Standard UEFI PXE and HTTP boot clients
 # Match generic and specific HTTP Client strings with Enterprise ID 343 (Intel/Industry Standard)
@@ -42,15 +53,15 @@ dhcp-vendorclass=set:pxe_boot6,enterprise:343,PXEClient:Arch:00009
 # The order of these rules is important for prioritizing boot behavior.
 
 # 1. SONiE clients receive the imageset file first.
-dhcp-option=tag:onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${IMAGESET_FILE}
+dhcp-option-force=tag:onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${IMAGESET_FILE}
 
 # 2. HTTP Boot Clients (UEFI HTTPClient or iPXE) get the UKI via HTTP.
-dhcp-option=tag:http_boot6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILE}
-dhcp-option=tag:ipxe_client6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILE}
+dhcp-option=tag:http_boot6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILENAME}
+dhcp-option=tag:ipxe_client6,tag:!onie_client6,option6:bootfile-url,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${UKI_FILENAME}
 
 # 3. Standard UEFI PXE Clients (TFTP) get the UKI via TFTP.
 #    We use the standard TFTP port (69), so no port needed in URL.
-dhcp-option=tag:pxe_boot6,tag:!ipxe_client6,tag:!http_boot6,tag:!onie_client6,option6:bootfile-url,tftp://[${BRIDGE_IP6}]/${UKI_FILE}
+dhcp-option=tag:pxe_boot6,tag:!ipxe_client6,tag:!http_boot6,tag:!onie_client6,option6:bootfile-url,tftp://[${BRIDGE_IP6}]/${UKI_FILENAME}
 
 # -- Dynamic Configuration --
 # The following line is dynamically inserted by qemu_runner.sh if a CONFIG_BUNDLE is defined.

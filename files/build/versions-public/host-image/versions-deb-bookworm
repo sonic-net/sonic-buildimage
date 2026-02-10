@@ -134,14 +134,14 @@ libbsd0==0.11.7-2
 libbz2-1.0==1.0.8-5+b1
 libc-ares2==1.18.1-3
 libc-bin==2.36-9+deb12u13
-libc-dev-bin==2.36-9+deb12u9
 libc-l10n==2.36-9+deb12u13
 libc6==2.36-9+deb12u13
-libc6-dev==2.36-9+deb12u9
+libc6-dev==2.36-9+deb12u13
+libc6-dev-bin=2.36-9+deb12u13
 libcairo2-dev==1.16.0-7
-libcap-ng0==0.8.3-1+b3
 libcap2==1:2.66-4+deb12u2
 libcap2-bin==1:2.66-4+deb12u2
+libcap-ng0==0.8.3-1+b3
 libcbor0.8==0.8.0-2+b1
 libcc1-0==12.2.0-14+deb12u1
 libcgroup2==2.0.2-2

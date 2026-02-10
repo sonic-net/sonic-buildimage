@@ -7,6 +7,37 @@
 
 readonly OUTPUT_FILE="/tmp/onie-dhcp-lease.sh"
 
+
+#######################################
+# Convert dotted-decimal subnet mask to CIDR prefix length.
+# Globals:
+#   None
+# Arguments:
+#   $1: Dotted-decimal subnet mask (e.g., "255.255.255.0")
+# Returns:
+#   Prefix length (0-32) to stdout.
+#######################################
+mask_to_prefix() {
+  local mask="$1"
+  local -i prefix=0
+  local octet
+  local IFS=.
+  read -r -a octets <<< "$mask"
+  for octet in "${octets[@]}"; do
+    case "$octet" in
+      255) ((prefix+=8)) ;;
+      254) ((prefix+=7)) ;;
+      252) ((prefix+=6)) ;;
+      248) ((prefix+=5)) ;;
+      240) ((prefix+=4)) ;;
+      224) ((prefix+=3)) ;;
+      192) ((prefix+=2)) ;;
+      128) ((prefix+=1)) ;;
+    esac
+  done
+  echo "$prefix"
+}
+
 #######################################
 # Main event handler for udhcpc.
 # Globals:
@@ -46,7 +77,25 @@ main() {
         echo "DHCP_OPT67='$bootfile'"
       } > "$OUTPUT_FILE"
 
-      # Configure network if requested (optional, since we might already be online)
+      # Configure network if requested
+      if [[ -n "$ip" ]] && [[ -n "$interface" ]]; then
+          echo "Configuring $interface with $ip..."
+
+          # Convert subnet mask to prefix length
+          # Default to /24 if subnet is missing
+          local prefix=24
+          if [[ -n "$subnet" ]]; then
+            local calc_prefix
+            calc_prefix=$(mask_to_prefix "$subnet")
+            # If calculation returned a valid positive integer, use it.
+            if [[ "$calc_prefix" -gt 0 ]]; then
+                prefix="$calc_prefix"
+            fi
+          fi
+
+          ip addr add "$ip/$prefix" dev "$interface" 2>/dev/null || true
+      fi
+
       if [[ -n "$router" ]] && [[ -n "$interface" ]]; then
         # Simple default route add (just in case)
         ip route add default via "$router" dev "$interface" 2>/dev/null

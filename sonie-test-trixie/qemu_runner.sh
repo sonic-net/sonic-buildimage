@@ -9,6 +9,7 @@
 
 set -eu
 set -o pipefail
+set -x
 
 # --- Defaults ---
 # Usage of "readonly" where appropriate for constants
@@ -107,6 +108,7 @@ setup_network() {
 
   ip link add br0 type bridge 2>/dev/null || true # Ignore if exists
   ip link set dev br0 up
+  ip link set dev br0 promisc on
 
   echo 'Setting up TAP tap0...'
   ip tuntap add dev tap0 mode tap 2>/dev/null || true
@@ -118,7 +120,7 @@ setup_network() {
   ip link set dev br0 type bridge mcast_snooping 0 || echo "Warning: Failed to disable mcast_snooping"
 
   echo "Starting tcpdump..."
-  tcpdump -n -i br0 -U -w "${LOG_DIR}/tcpdump.pcap" > "${LOG_DIR}/tcpdump.log" 2>&1 &
+  # tcpdump -n -i br0 -U -w "${LOG_DIR}/tcpdump.pcap" > "${LOG_DIR}/tcpdump.log" 2>&1 &
 }
 
 #######################################
@@ -156,6 +158,7 @@ generate_disk() {
     local esp_blocks=$((esp_size_mb * 1024))
 
     echo "Creating ESP (${esp_size_mb}MB)..."
+    rm -f "${esp_part_image}"
     mkfs.vfat -C "${esp_part_image}" -F 32 -n "ESP" "${esp_blocks}"
     mmd -i "${esp_part_image}" ::/EFI ::/EFI/BOOT ::/boot ::/boot/grub
 
@@ -164,46 +167,159 @@ generate_disk() {
     platform=$([[ -f .platform ]] && cat .platform || echo vs)
     local grub_efi_file=""
 
-    if [[ -n "${GRUB_FILE:-}" && -f "${GRUB_FILE}" ]]; then
-      grub_efi_file="${GRUB_FILE}"
-    elif [[ -f "fsroot-${platform}-recovery/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi" ]]; then
-      grub_efi_file="fsroot-${platform}-recovery/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    elif [[ -f "fsroot-${platform}/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi" ]]; then
-      grub_efi_file="fsroot-${platform}/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    else
-      echo "Warning: Grub EFI not found. Will copy UKI as BOOTX64.EFI for Direct Boot."
-    fi
+    # Force Direct Boot (Bypass GRUB) for testing stability
+    grub_efi_file=""
+
 
     if [[ -n "${grub_efi_file}" ]]; then
       echo "Using Grub: ${grub_efi_file}"
       mcopy -i "${esp_part_image}" "${grub_efi_file}" ::/EFI/BOOT/BOOTX64.EFI
     else
-      mcopy -i "${esp_part_image}" "${UKI_FILE}" ::/EFI/BOOT/BOOTX64.EFI
+      echo "Direct Boot: BOOTX64.EFI will be populated via loop mount to avoid mcopy OOM."
     fi
 
-    # Copy UKI
-    mcopy -i "${esp_part_image}" "${UKI_FILE}" "::/EFI/BOOT/${uki_boot_name}"
+    # Debug mcopy
+    mcopy -V
+
+    # Test small copy
+    echo "test" > test_small.txt
+    mcopy -i "${esp_part_image}" test_small.txt "::/test_small.txt"
+    echo "Small mcopy succeeded."
+
+    # Copy UKI (large file)
+    echo "Copying UKI (${uki_size_mb} MB)..."
+
+    # Use loop mount to avoid OOM with mcopy on large files
+    mkdir -p /mnt/esp_tmp
+    mount -o loop "${esp_part_image}" /mnt/esp_tmp
+
+    # Use dd with controlled block size and sync to avoid memory spikes
+    # Copy to linux.efi
+    # Use dd with bs=4M and no sync flag to avoid OOM
+    dd if="${UKI_FILE}" of="/mnt/esp_tmp/EFI/BOOT/${uki_boot_name}" bs=4M status=progress
+    sync
+
+    # If direct boot, also copy to BOOTX64.EFI
+    if [[ -z "${grub_efi_file}" ]]; then
+        echo "Populating BOOTX64.EFI from UKI..."
+        cp "/mnt/esp_tmp/EFI/BOOT/${uki_boot_name}" "/mnt/esp_tmp/EFI/BOOT/BOOTX64.EFI"
+    fi
+
+    umount /mnt/esp_tmp
+    rmdir /mnt/esp_tmp
+    echo "UKI copy succeeded."
 
     if [[ -n "${grub_efi_file}" ]]; then
       # Create Grub Config
-      printf "console=ttyS0,115200n8\nterm_input console serial\nset timeout=2\nset default=0\nmenuentry \"Boot UKI\" {\n    chainloader /EFI/BOOT/%s\n}\n" "${uki_boot_name}" > "${grub_config_file}"
+      # Use minimal config to avoid serial/terminal issues
+      printf "set timeout=2\nset default=0\nmenuentry \"Boot UKI\" {\n    chainloader /EFI/BOOT/%s\n}\n" "${uki_boot_name}" > "${grub_config_file}"
+      # Copy config to multiple locations for signed/shim loaded GRUBs
       mcopy -i "${esp_part_image}" "${grub_config_file}" ::/EFI/BOOT/grub.cfg
       mcopy -i "${esp_part_image}" "${grub_config_file}" ::/boot/grub/grub.cfg
+
+      # Backup locations for Debian/SONiC signed GRUB
+      mmd -i "${esp_part_image}" ::/EFI/debian ::/EFI/SONiC
+      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/EFI/debian/grub.cfg
+      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/EFI/SONiC/grub.cfg
+      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/grub.cfg
       # Support custom prefixes (/grub or /EFI/SONIE)
       mmd -i "${esp_part_image}" ::/grub ::/EFI/SONIE-OS || true
       mcopy -i "${esp_part_image}" "${grub_config_file}" ::/grub/grub.cfg
-      mcopy -i "${esp_part_image}" "${grub_config_file}" ::/EFI/SONIE-OS/grub.cfg
-      rm "${grub_config_file}"
+      # Keep grub_config_file for XBOOTLDR
+
+      # Copy GRUB modules to ESP (critical for non-monolithic signed images)
+      local modules_src="fsroot-${platform}-recovery/usr/lib/grub/x86_64-efi"
+      if [[ -d "${modules_src}" ]]; then
+          echo "Copying GRUB modules from ${modules_src}..."
+
+          # Target 1: /boot/grub/x86_64-efi
+          mmd -i "${esp_part_image}" ::/boot/grub/x86_64-efi || true
+          mcopy -s -i "${esp_part_image}" "${modules_src}" ::/boot/grub/
+
+          # Target 2: /EFI/BOOT/x86_64-efi
+          mmd -i "${esp_part_image}" ::/EFI/BOOT/x86_64-efi || true
+          mcopy -s -i "${esp_part_image}" "${modules_src}" ::/EFI/BOOT/
+
+          # Target 3: /EFI/debian/x86_64-efi
+          mmd -i "${esp_part_image}" ::/EFI/debian/x86_64-efi || true
+          mcopy -s -i "${esp_part_image}" "${modules_src}" ::/EFI/debian/
+
+          # Target 4: /EFI/SONiC/x86_64-efi
+          mmd -i "${esp_part_image}" ::/EFI/SONiC/x86_64-efi || true
+          mcopy -s -i "${esp_part_image}" "${modules_src}" ::/EFI/SONiC/
+      else
+          echo "Warning: GRUB modules not found at ${modules_src}"
+      fi
     fi
 
     # Create final disk image
     rm -f "${CLIENT_DISK_IMG}"
     truncate -s "${DISK_IMG_SIZE}" "${CLIENT_DISK_IMG}"
     dd if="${esp_part_image}" of="${CLIENT_DISK_IMG}" bs=1M seek=1 conv=notrunc status=none
-    sgdisk --resize-table=128 -n "1:2048:+${esp_size_mb}M" -t 1:ef00 "${CLIENT_DISK_IMG}"
-    # Pre-create XBOOTLDR partition (4GB) to ensure it exists and has enough space
-    # The installer will format it.
-    sgdisk -n "2:0:+4096M" -t 2:ea00 -c 2:"XBOOTLDR" "${CLIENT_DISK_IMG}"
+
+    sgdisk --version
+    echo "Filesystem:"
+    ls -l "${CLIENT_DISK_IMG}"
+
+    # Try just printing first
+    sgdisk -p "${CLIENT_DISK_IMG}" 2>&1 || true
+
+    # Create new GPT table (zap existing if any)
+    echo "Creating new GPT..."
+    sgdisk -Z "${CLIENT_DISK_IMG}" 2>&1 || true
+    sgdisk -o "${CLIENT_DISK_IMG}" 2>&1 || true
+
+    # Create partition 1 (ESP)
+    # Align to 2048 sectors (1MB), matching our dd seek=1
+    echo "Creating Partition 1 (ESP)..."
+    sgdisk -n "1:2048:+${esp_size_mb}M" -t 1:ef00 "${CLIENT_DISK_IMG}" 2>&1 || true
+
+    sgdisk -p "${CLIENT_DISK_IMG}" 2>&1 || true
+
+    # Create partition 2 (XBOOTLDR)
+    echo "Creating Partition 2 (XBOOTLDR)..."
+    local xbootldr_part_image="xbootldr_part.img"
+    local xbootldr_size_mb=256
+    local xbootldr_blocks=$((xbootldr_size_mb * 1024))
+
+    rm -f "${xbootldr_part_image}"
+    # Label filesystem as XBOOTLDR for detection
+    mkfs.vfat -C "${xbootldr_part_image}" -F 32 -n "XBOOTLDR" "${xbootldr_blocks}"
+
+    # Populate XBOOTLDR with grub config if available
+    if [[ -n "${grub_efi_file}" ]]; then
+        # Create standard grub locations
+        # rc.local looks in /boot/grub, /boot/boot/grub, or root /grub.cfg
+        # We'll put it in /grub/grub.cfg and /boot/grub/grub.cfg to be safe
+        mmd -i "${xbootldr_part_image}" ::/grub ::/boot ::/boot/grub || true
+        mcopy -i "${xbootldr_part_image}" "${grub_config_file}" ::/grub/grub.cfg
+        mcopy -i "${xbootldr_part_image}" "${grub_config_file}" ::/boot/grub/grub.cfg
+        mcopy -i "${xbootldr_part_image}" "${grub_config_file}" ::/grub.cfg
+    fi
+
+    # DD XBOOTLDR partition into place
+    # partition 1 ends at 1 + esp_size_mb
+    local p2_offset_mb=$((1 + esp_size_mb))
+    echo "Writing XBOOTLDR to disk at offset ${p2_offset_mb}MB..."
+    dd if="${xbootldr_part_image}" of="${CLIENT_DISK_IMG}" bs=1M seek="${p2_offset_mb}" conv=notrunc status=none
+
+    rm "${xbootldr_part_image}"
+
+    # Cleanup grub config if it exists
+    if [[ -f "${grub_config_file}" ]]; then
+        rm "${grub_config_file}"
+    fi
+
+    # Partition 2 definition
+    # 2048 (1MB) + esp_size_mb * 2048sectors/mb = end_sector_of_p1
+    # start_sector_of_p2 = end_sector_of_p1
+    # We used bs=1M for dd, so pure MB math works for start.
+    # sgdisk takes start sector. 1MB = 2048 sectors.
+    local p2_start_sector=$((p2_offset_mb * 2048))
+
+    sgdisk -n "2:${p2_start_sector}:+${xbootldr_size_mb}M" -t 2:ea00 -c 2:"XBOOTLDR" "${CLIENT_DISK_IMG}" 2>&1 || true
+
+    sgdisk -p "${CLIENT_DISK_IMG}" 2>&1 || true
 
     rm "${esp_part_image}"
   else
@@ -235,6 +351,7 @@ configure_services() {
   # Explicitly export ALL variables needed by templates
   export BRIDGE_IP6 CLIENT_IP6_START CLIENT_IP6_END CLIENT_MAC HTTP_PORT IMAGESET_FILE UKI_FILE
   export BRIDGE_IP CLIENT_IP_START CLIENT_IP_END
+  export UKI_FILENAME="$(basename "${UKI_FILE}")"
   # Calculated variables
   export DNSMASQ_CONFIG_BUNDLE_LINE=""
   export HTTP_ADDR=""
@@ -244,12 +361,14 @@ configure_services() {
   if [[ "${USE_IPV6}" -eq 1 ]]; then
     echo 'Configuring IPv6...'
     ip addr add "${BRIDGE_IP6}/64" dev br0 nodad
+    ip addr add "${BRIDGE_IP}/24" dev br0
 
     echo "${BRIDGE_IP6} server.boot" >> /etc/hosts
 
     if [[ -n "${CONFIG_BUNDLE:-}" ]]; then
       export DNSMASQ_CONFIG_BUNDLE_LINE="dhcp-option=tag:onie_client6,option6:60,http://[${BRIDGE_IP6}]:${HTTP_PORT}/${CONFIG_BUNDLE}"
     fi
+
 
     export HTTP_ADDR="[${BRIDGE_IP6}]"
     envsubst < "${TEMPLATE_DIR}/dnsmasq.ipv6.conf.template" > "${DNSMASQ_CONF}"
@@ -265,6 +384,11 @@ configure_services() {
     server_host="${BRIDGE_IP}"
   fi
 
+  if [[ "${BOOTZ_ENABLED:-0}" -eq 1 ]]; then
+      # option 60 (vendor class) for Bootz is "OpenConfig-Bootz"
+      echo "dhcp-vendorclass=set:bootz_client,OpenConfig-Bootz" >> "${DNSMASQ_CONF}"
+  fi
+
   echo "Starting dnsmasq..."
   echo "============"
   cat "${DNSMASQ_CONF}"
@@ -274,21 +398,31 @@ configure_services() {
 
   echo "Starting python server..."
   # Ensure variables passed to python script are correct
-  PYTHONUNBUFFERED=1 python3 "${SCRIPT_DIR}/http_server_progress.py" "${HTTP_PORT}" "${server_host}" "/data" > "${LOG_DIR}/http_server.log" 2>&1 &
+  # Bind to all interfaces ("") to avoid race conditions or binding issues
+  local bind_host=""
+  if [[ "${USE_IPV6}" -eq 1 ]]; then
+      bind_host="::"
+  fi
+  PYTHONUNBUFFERED=1 python3 "${SCRIPT_DIR}/http_server_progress.py" "${HTTP_PORT}" "${bind_host}" "/data" > "${LOG_DIR}/http_server.log" 2>&1 &
   HTTP_PID=$!
   echo "HTTP Server PID: ${HTTP_PID}"
 
   # Wait for server
   echo "Waiting for Python server to bind to port ${HTTP_PORT}..."
   local started=0
+  set +e
   for i in {1..10}; do
-    if ss -tulpn | grep -q ":${HTTP_PORT} "; then
+    if ss -tulpn | grep -q ":${HTTP_PORT}"; then
       echo "Server is listening on port ${HTTP_PORT}"
       started=1
       break
     fi
+    echo "Wait ${i}/10. ss output:"
+    ss -tulpn || true
+    ps aux | grep python || true
     sleep 1
   done
+  set -e
 
   if [[ "${started}" -eq 0 ]]; then
     echo "ERROR: Python server failed to start."
@@ -299,6 +433,55 @@ configure_services() {
     fi
     cat /data/http_server.log
     exit 1
+  fi
+
+  if [[ "${BOOTZ_ENABLED:-0}" -eq 1 ]]; then
+      echo "Starting Bootz Server..."
+      # Bootz server might need flags. Assuming defaults or env vars for now.
+      # It typically listens on a port (e.g., 50051 for gRPC).
+      # We mounted it at /usr/local/bin/bootz_server
+      # Calculate hashes
+      local sonie_hash
+      sonie_hash=$(sha256sum /data/sonie.efi | awk '{print $1}')
+      local sonic_hash
+      sonic_hash=$(sha256sum /data/sonic-vs.bin | awk '{print $1}')
+
+      # Create dummy inventory for Bootz
+      cat <<EOF > /data/inventory.prototxt
+options {
+    bootzserver: "[${server_host}]:50051"
+}
+chassis {
+    name: "test_device"
+    serial_number: "123456789"
+    manufacturer: "SONiC"
+    bootloader_password_hash: "none"
+    controller_cards {
+        serial_number: "CardA"
+        part_number: "PartA"
+    }
+    software_image {
+        name: "sonie"
+        version: "1.0"
+        url: "http://[${server_host}]:${HTTP_PORT}/sonie.efi"
+        os_image_hash: "${sonie_hash}"
+        hash_algorithm: "SHA256"
+    }
+
+    boot_mode: BOOT_MODE_INSECURE
+}
+EOF
+
+      if [[ -x /usr/local/bin/bootz_server ]]; then
+          /usr/local/bin/bootz_server \
+            --bootz_addr=:50051 \
+            --inv_config=/data/inventory.prototxt \
+            > "${LOG_DIR}/bootz_server.log" 2>&1 &
+          BOOTZ_PID=$!
+          echo "Bootz Server PID: ${BOOTZ_PID}"
+      else
+          echo "Error: Bootz server binary not found or executable at /usr/local/bin/bootz_server"
+      fi
   fi
 }
 
@@ -362,7 +545,7 @@ launch_qemu() {
 
   echo 'Launching QEMU connected to tap0...'
   local qemu_args=(
-    -nographic -serial mon:stdio -m 16G "${cpu_opts[@]}"
+    -nographic -serial mon:stdio -m "${QEMU_MEMORY:-8G}" "${cpu_opts[@]}"
     -machine q35,smm=on,accel=kvm -global driver=cfi.pflash01,property=secure,value=$([[ "${SECURE_BOOT}" -eq 1 ]] && echo on || echo off)
     -drive if=pflash,format=raw,readonly=on,file=/ovmf_code.fd
     -drive if=pflash,format=raw,file="${CLIENT_OVMF_VARS}"
@@ -374,7 +557,6 @@ launch_qemu() {
     -device "tpm-tis,tpmdev=tpm0"
     -k en-us
     -debugcon file:/data/ovmf_debug.log -global isa-debugcon.iobase=0x402
-    -boot c
   )
 
   qemu-system-x86_64 "${qemu_args[@]}"
@@ -457,7 +639,7 @@ enroll_secure_boot_keys() {
 #   None
 #######################################
 configure_boot() {
-  if [[ "${USE_IPV6}" -eq 1 ]]; then
+  if [[ "${USE_IPV6}" -eq 1 && "${INSTALL_DISK:-0}" -ne 1 ]]; then
     # Prioritize IPv6 HTTP Boot using BootNext
     # This avoids waiting for PXEv4 timeout
     echo "Configuring BootNext for IPv6 HTTP Boot..."

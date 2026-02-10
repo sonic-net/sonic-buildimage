@@ -130,7 +130,10 @@ generate_onie_installer_image()
     if [[ "$IMAGE_TYPE" = "recovery" || "$IMAGE_TYPE" = "sonie" ]]; then
         part_size="$XBOOTLDR_PART_SIZE"
         installer_dir="sonie-installer"
-        platform_arg="$CONFIGURED_PLATFORM"
+        if [ "$CONFIGURED_PLATFORM" = "vs" ]; then
+            # For vs, target_machine is generic, so we use the configured platform
+            platform_arg="$TARGET_PLATFORM-$CONFIGURED_PLATFORM-$ONIEIMAGE_VERSION"
+        fi
     fi
 
     # Copy platform-specific ONIE installer config files where onie-mk-demo.sh expects them
@@ -277,7 +280,7 @@ build_onie_image() {
     tmp_output_onie_image=$(mktemp)
     generate_onie_installer_image "$tmp_output_onie_image"
     sudo chmod a+x "$tmp_output_onie_image"
-    sudo ./"$tmp_output_onie_image" || {
+    sudo "$tmp_output_onie_image" || {
         ## Failure during 'build' install mode of the installer results in an incomplete raw image.
         ## Delete the incomplete raw image.
         sudo rm -f "$OUTPUT_RAW_IMAGE"
@@ -349,7 +352,7 @@ build_raw_image() {
     ## Run the installer
     ## The 'build' install mode of the installer is used to generate this dump.
     sudo chmod a+x "$tmp_output_onie_image"
-    sudo ./"$tmp_output_onie_image" || {
+    sudo "$tmp_output_onie_image" || {
         ## Failure during 'build' install mode of the installer results in an incomplete raw image.
         ## Delete the incomplete raw image.
         sudo rm -f "$OUTPUT_RAW_IMAGE"

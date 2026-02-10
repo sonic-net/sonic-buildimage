@@ -98,7 +98,7 @@ main() {
   local tmp_installdir="${TMP_DIR}/installer"
   mkdir -p "${tmp_installdir}"
 
-  cp -r "${installer_dir}"/* "${tmp_installdir}/"
+  cp -rL "${installer_dir}"/* "${tmp_installdir}/"
   # Exclude tests/ directory from the payload
   rm -rf "${tmp_installdir}/tests"
   cp onie-image.conf "${tmp_installdir}/"
@@ -149,6 +149,7 @@ main() {
 
   echo "machine=${machine}" > "${tmp_installdir}/machine.conf"
   echo "platform=${platform}" >> "${tmp_installdir}/machine.conf"
+  echo "onie_platform=${machine}" >> "${tmp_installdir}/machine.conf"
   echo -n "."
 
   # Reduce the size of the usr directory

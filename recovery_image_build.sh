@@ -26,8 +26,8 @@ LINUX_KERNEL_VERSION="${LINUX_KERNEL_VERSION:?LINUX_KERNEL_VERSION is required}"
 CONFIGURED_ARCH="${CONFIGURED_ARCH:?CONFIGURED_ARCH is required}"
 
 # Defaults (can be overridden by env vars)
-SIGNING_KEY="${SIGNING_KEY:-dummy.key}"
-SIGNING_CERT="${SIGNING_CERT:-dummy.crt}"
+SIGNING_KEY="${SIGNING_KEY:-db.key}"
+SIGNING_CERT="${SIGNING_CERT:-db.crt}"
 COMPRESSION_ALGO="${COMPRESSION_ALGO:-zstd}"
 BOOT_IMAGE_TYPE="${BOOT_IMAGE_TYPE:-uki}"
 
@@ -44,14 +44,16 @@ calculate_next_offset() {
   local -r prev_offset="$1"
   local -r prev_file="$2"
   local -r alignment="$3"
-
+  local -r padding="${4:-0}" 
   local size
   size=$(stat -Lc%s "${prev_file}")
-  local next_start=$((prev_offset + size))
-  echo $((next_start + alignment - next_start % alignment))
+  # Use ceiling division to align the next start address
+  local raw_end=$((prev_offset + size + padding))
+  echo $(((raw_end + alignment - 1) / alignment * alignment))
 }
 
 #######################################
+
 # Builds the initramfs from the filesystem root.
 # Globals:
 #   FILESYSTEM_ROOT
@@ -74,7 +76,7 @@ build_initramfs() {
   echo '[Service]
 Environment="DOCKER_RAMDISK=true"' | sudo tee "${FILESYSTEM_ROOT}/etc/systemd/system/docker.service.d/10-ramdisk.conf" > /dev/null
 
-  # Install ONIE discovery service only for SONiE recovery images
+  # Install ONIE discovery service only for SONIE recovery images
   if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
       echo "Installing ONIE discovery service for SONIE build..."
       sudo cp files/image_config/onie-discovery/onie-discovery.service "${FILESYSTEM_ROOT}/etc/systemd/system/"
@@ -91,8 +93,8 @@ Environment="DOCKER_RAMDISK=true"' | sudo tee "${FILESYSTEM_ROOT}/etc/systemd/sy
   local compress_cmd
   case "${COMPRESSION_ALGO}" in
       zstd)
-          # Use zstd -19 (ultra) for maximum compression to shrink UKI
-          compress_cmd="zstd -19 -T0"
+          # Use zstd -19 (ultra) for maximum compression to shrink UKI, or override with ZSTD_LEVEL
+          compress_cmd="zstd -${ZSTD_LEVEL:-19} -T0"
           ;;
       xz)
           compress_cmd="xz --check=crc32 --lzma2=dict=1MiB"
@@ -122,6 +124,7 @@ Environment="DOCKER_RAMDISK=true"' | sudo tee "${FILESYSTEM_ROOT}/etc/systemd/sy
         -o -path ./usr/share/locale \
         -o -path ./usr/share/vim \
         -o -path ./usr/share/zoneinfo \
+        -o -path ./usr/lib/firmware \
         -o -path ./usr/share/sonic/device \
         -o -path ./usr/local/share/man \
         -o -path ./usr/local/share/doc \
@@ -226,6 +229,7 @@ generate_uki() {
 
   # Systemd's UEFI stub acts as the main PE (Portable Executable) file.
   # We need to extract its Section Alignment boundary so new sections
+
   # (kernel, initramfs, etc.) are loaded at valid memory addresses.
   local align
   align="$(objdump -p "$efi_stub" | awk '{ if ($1 == "SectionAlignment"){print $2} }')"
@@ -272,6 +276,14 @@ generate_uki() {
   local linux_offs
   linux_offs=$(calculate_next_offset "${initramfs_offs}" "./initramfs.img" "${align}")
 
+  echo "DEBUG: objcopy inputs:"
+  echo "DEBUG:   osrel: ${staged_os_release} (offset: ${osrel_offs})"
+  echo "DEBUG:   cmdline: cmdline.txt (offset: ${cmdline_offs})"
+  echo "DEBUG:   initrd: ./initramfs.img (offset: ${initramfs_offs})"
+  echo "DEBUG:   linux: ${staged_kernel} (offset: ${linux_offs})"
+  echo "DEBUG:   stub: ${efi_stub}"
+  ls -l "${staged_os_release}" cmdline.txt "./initramfs.img" "${staged_kernel}" "${efi_stub}" || echo "DEBUG: Some files missing!"
+
   # objcopy injects these files as new PE sections into the systemd-boot stub.
   # No sudo needed now
   objcopy \
@@ -290,6 +302,14 @@ generate_uki() {
   rm -rf "${staging_dir}"
 }
 
+ensure_keys() {
+  if [[ ! -f "${SIGNING_KEY}" ]]; then
+    openssl req -new -x509 -newkey rsa:2048 -keyout db.key -out db.crt -nodes -days 1 -subj "/CN=DB/"
+    SIGNING_KEY="db.key"
+    SIGNING_CERT="db.crt"
+  fi
+}
+
 #######################################
 # Signs the generated image with sbsign.
 # Globals:
@@ -300,24 +320,19 @@ generate_uki() {
 #   None
 #######################################
 sign_image() {
-  # If you don't have keys, generate dummy ones just to fix the headers:
-  if [[ ! -f "${SIGNING_KEY}" ]]; then
-    openssl req -new -x509 -newkey rsa:2048 -keyout dummy.key -out dummy.crt -nodes -days 1 -subj "/CN=Dummy/"
-    SIGNING_KEY="dummy.key"
-    SIGNING_CERT="dummy.crt"
-  fi
+  ensure_keys
 
   if ! sbsign --key "${SIGNING_KEY}" \
               --cert "${SIGNING_CERT}" \
               --output "${OUTPUT_RECOVERY_IMAGE}" \
               "${OUTPUT_RECOVERY_IMAGE}.tmp"; then
-    echo "Signing with real key failed, trying dummy key..."
-    # Ensure dummy keys exist if fallback needed
-    if [[ ! -f "dummy.key" ]]; then
-        openssl req -new -x509 -newkey rsa:2048 -keyout dummy.key -out dummy.crt -nodes -days 1 -subj "/CN=Dummy/"
+    echo "Signing with real key failed, trying db key..."
+    # Ensure db keys exist if fallback needed
+    if [[ ! -f "db.key" ]]; then
+        openssl req -new -x509 -newkey rsa:2048 -keyout db.key -out db.crt -nodes -days 1 -subj "/CN=DB/"
     fi
-    if ! sbsign --key dummy.key \
-           --cert dummy.crt \
+    if ! sbsign --key db.key \
+           --cert db.crt \
            --output "${OUTPUT_RECOVERY_IMAGE}" \
            "${OUTPUT_RECOVERY_IMAGE}.tmp"; then
       echo "WARNING: sbsign failed (likely due to file size). Using unsigned image."
@@ -367,14 +382,223 @@ generate_ovmf_enrollment_files() {
 }
 
 #######################################
-# Main entry point.
+# Re-signs kernel modules with the current key.
+# Globals:
+#   FILESYSTEM_ROOT
+#   SIGNING_KEY
+#   SIGNING_CERT
+#   LINUX_KERNEL_VERSION
 # Arguments:
 #   None
+#######################################
+re_sign_modules() {
+  echo "Checking for module re-signing tools..."
+
+  # Find sign-file
+  local sign_file
+  sign_file=$(find /usr/lib -type f -name sign-file 2>/dev/null | head -n 1)
+
+  if [[ -z "${sign_file}" ]]; then
+      echo "Warning: sign-file not found in /usr/lib. Skipping module re-signing."
+      return
+  fi
+
+  # Find extract-cert
+  local extract_cert
+  # Try sibling of sign-file first (../../certs/extract-cert usually)
+  extract_cert="$(dirname "$(dirname "${sign_file}")")/certs/extract-cert"
+
+  if [[ ! -f "${extract_cert}" ]]; then
+      # Fallback global search
+      extract_cert=$(find /usr/lib -type f -name extract-cert 2>/dev/null | head -n 1)
+  fi
+
+  if [[ -z "${extract_cert}" || ! -f "${extract_cert}" ]]; then
+      echo "Warning: extract-cert not found. Skipping module re-signing."
+      return
+  fi
+
+  # Optimization: Check if modules are already signed by our key
+  # We check a sample module (crypto-sha512 or generic)
+  # We compare the Serial Number of our cert with sig_key in modinfo
+  local sample_mod
+  sample_mod=$(find "${FILESYSTEM_ROOT}/lib/modules/${LINUX_KERNEL_VERSION}" -name "crypto-sha512.ko" -o -name "sha512_generic.ko" | head -n 1)
+
+  if [[ -z "${sample_mod}" ]]; then
+      sample_mod=$(find "${FILESYSTEM_ROOT}/lib/modules/${LINUX_KERNEL_VERSION}" -name "*.ko" | head -n 1)
+  fi
+
+  if [[ -n "${sample_mod}" ]]; then
+      local my_serial
+      my_serial=$(openssl x509 -in "${SIGNING_CERT}" -noout -serial | cut -d= -f2 | tr '[:lower:]' '[:upper:]')
+
+      local mod_key
+      mod_key=$(modinfo -F sig_key "${sample_mod}" | tr -d ':')
+
+      if [[ "${my_serial}" == "${mod_key}" ]]; then
+          echo "Modules already signed by current key (${my_serial}). Skipping re-signing."
+          return
+      else
+          echo "Module signature mismatch (Module: ${mod_key} vs Key: ${my_serial}). Re-signing..."
+      fi
+  fi
+
+  echo "Re-signing modules in ${FILESYSTEM_ROOT} using ${sign_file} (SHA256)..."
+
+  # We use the existing helper script if available
+  if [[ -f "scripts/signing_kernel_modules.sh" ]]; then
+      # Make sure absolute paths are used if passing to sudo
+      local abs_key="$(readlink -f "${SIGNING_KEY}")"
+      local abs_cert="$(readlink -f "${SIGNING_CERT}")"
+
+      # Determine correct module directory
+      # files/image_config/platform/rc.local puts modules in /lib/modules usually
+      local mod_dir="${FILESYSTEM_ROOT}/lib/modules/${LINUX_KERNEL_VERSION}"
+      if [[ ! -d "${mod_dir}" ]]; then
+           # Try searching
+           mod_dir=$(find "${FILESYSTEM_ROOT}" -type d -name "${LINUX_KERNEL_VERSION}" | grep "/lib/modules/" | head -n 1)
+      fi
+
+      if [[ -d "${mod_dir}" ]]; then
+        sudo ./scripts/signing_kernel_modules.sh \
+            -l "${LINUX_KERNEL_VERSION}" \
+            -c "${abs_cert}" \
+            -p "${abs_key}" \
+            -k "${mod_dir}" \
+            -s "${sign_file}" \
+            -e "${extract_cert}"
+      else
+        echo "Warning: Module directory for ${LINUX_KERNEL_VERSION} not found in ${FILESYSTEM_ROOT}."
+      fi
+  else
+      echo "Warning: scripts/signing_kernel_modules.sh not found."
+  fi
+}
+
+#######################################
+# Builds a custom Grub binary using grub-mkimage.
+# This allows us to exclude 'shim_lock' for direct UEFI booting.
+# Globals:
+#   FILESYSTEM_ROOT
+# Arguments:
+#   None
+#######################################
+build_custom_grub() {
+  echo "Building custom Grub binary (monolithic)..."
+
+  # Ensure target directory exists
+  local target_dir="${FILESYSTEM_ROOT}/usr/lib/grub/x86_64-efi/monolithic"
+  local target_file="${target_dir}/grubx64.efi"
+
+  sudo mkdir -p "${target_dir}"
+
+  # Copy config to chroot
+  sudo cp files/image_config/grub-standalone.cfg "${FILESYSTEM_ROOT}/tmp/grub-standalone.cfg"
+
+  # Modules to include
+  local modules=(
+  # Partition and FS
+  part_gpt fat ext2 iso9660
+
+  # Core Boot & Config
+  linux normal chain boot configfile loadenv
+
+  # Secure Boot & TPM
+  tpm
+
+  # Search & Utils
+  search search_label search_fs_uuid search_fs_file
+  echo ls test minicmd
+
+  # Power
+  reboot halt
+
+  # Graphics
+  serial
+)
+
+  # Check if grub-mkstandalone exists in chroot
+  if ! sudo chroot "${FILESYSTEM_ROOT}" sh -c "command -v grub-mkstandalone" &>/dev/null; then
+      echo "Error: grub-mkstandalone not found in chroot. Is grub-efi-amd64-bin installed?"
+      return 1
+  fi
+
+  echo "Generating ${target_file}..."
+  # We need to run this inside chroot to use the modules installed there
+  # We use a relative path for output inside chroot
+  local chroot_output="/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
+  local chroot_tmp_config="/tmp/grub-standalone.cfg"
+  sudo chroot "${FILESYSTEM_ROOT}" grub-mkstandalone \
+    --format x86_64-efi \
+    --output "${chroot_output}" \
+    --locales="" \
+    --fonts="" \
+    --modules="${modules[*]}" \
+    "boot/grub/grub.cfg=${chroot_tmp_config}"
+  sudo rm -f "${FILESYSTEM_ROOT}${chroot_tmp_config}"
+  if [[ -f "${target_file}" ]]; then
+      echo "Successfully built custom grubx64.efi at ${target_file}"
+  else
+      echo "Error: Failed to build custom grubx64.efi"
+      exit 1
+  fi
+}
+
+#######################################
+# Signs the Grub binary if found in the filesystem.
+# Globals:
+#   FILESYSTEM_ROOT
+#   SIGNING_KEY
+#   SIGNING_CERT
+# Arguments:
+#   None
+#######################################
+sign_grub() {
+  echo "Checking for Grub binary to sign..."
+  local grub_path="${FILESYSTEM_ROOT}/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
+
+  if [[ ! -f "${grub_path}" ]]; then
+      # Fallback to search
+      grub_path=$(find "${FILESYSTEM_ROOT}/usr/lib/grub" -name grubx64.efi -print -quit 2>/dev/null)
+  fi
+
+  if [[ -f "${grub_path}" ]]; then
+      echo "Found Grub at ${grub_path}"
+
+      # Use absolute paths for sudo
+      local abs_key="$(readlink -f "${SIGNING_KEY}")"
+      local abs_cert="$(readlink -f "${SIGNING_CERT}")"
+
+      # Verify if already signed by OUR key
+      if sbverify --cert "${abs_cert}" "${grub_path}" &>/dev/null; then
+         echo "Grub already signed with current certificate. Skipping."
+         return
+      fi
+
+      echo "Signing Grub binary..."
+      sudo sbsign --key "${abs_key}" --cert "${abs_cert}" --output "${grub_path}" "${grub_path}"
+
+      # Verify signature immediately
+      if sbverify --cert "${abs_cert}" "${grub_path}" &>/dev/null; then
+          echo "Successfully signed ${grub_path}"
+      else
+          echo "Error: Signing failed for ${grub_path}"
+          exit 1
+      fi
+  else
+      echo "Warning: grubx64.efi not found in ${FILESYSTEM_ROOT}. Skipping Grub signing."
+  fi
+}
+
 #######################################
 main() {
   echo "Building image type: ${BOOT_IMAGE_TYPE}"
 
   if [[ "${IMAGE_TYPE}" == "recovery" ]] || [[ -z "${IMAGE_TYPE}" ]]; then
+    if [[ "${SKIP_SIGNING}" != "1" ]]; then
+      ensure_keys
+    fi
+
     # Handle tarball input for Bazel/Artifact builds
     local tmp_fsroot=""
     if [[ -f "${FILESYSTEM_ROOT}" ]]; then
@@ -383,16 +607,52 @@ main() {
         # Use tar with auto-compression detection if possible, or simple -xf
         tar -xf "${FILESYSTEM_ROOT}" -C "${tmp_fsroot}"
         FILESYSTEM_ROOT="${tmp_fsroot}"
-        
+
         # Ensure cleanup on exit
         trap 'rm -rf "${tmp_fsroot}"' EXIT
+    fi
+
+    # Re-sign modules if we are building a recovery image and have keys
+    if [[ "${SKIP_SIGNING}" != "1" ]]; then
+        if [[ "${SKIP_MODULE_SIGNING}" != "1" ]]; then
+            re_sign_modules
+        fi
+    else
+        echo "Stripping signatures from modules (SKIP_SIGNING=1)..."
+        # We need to strip signatures because the kernel might reject them if they are signed by an unknown key
+        # even if Secure Boot is disabled, depending on CONFIG_MODULE_SIG_FORCE or similar.
+        # find "${FILESYSTEM_ROOT}/lib/modules" -name "*.ko" -exec strip --strip-debug --strip-unneeded {} +
+        # Actually, standard 'strip' works.
+        find "${FILESYSTEM_ROOT}/lib/modules" -type f -name "*.ko" -print0 | xargs -0 -P "$(nproc)" -I {} strip --strip-debug --strip-unneeded {}
+    fi
+
+    # Build custom GRUB binary (no shim_lock)
+    build_custom_grub
+
+    # Sign Grub binary
+    if [[ "${SKIP_SIGNING}" != "1" ]]; then
+      sign_grub
     fi
 
     build_initramfs
 
     # Ensure cmdline.txt exists (if not generated by caller)
     if [ ! -f cmdline.txt ]; then
-        echo -n "root=/dev/ram0 systemd.unit=multi-user.target console=tty0 console=ttyS0,115200 onie_platform=${ONIE_PLATFORM:-vs} bg_mac=00:00:00:00:00:00 bonding.max_bonds=0 sonic_asic_platform=vs systemd.show_status=true rc.local_debug=y overlay_tmpfs=on tmpfs_size=6g" > cmdline.txt
+        local -a cmdline_args=(
+            "root=/dev/ram0"
+            "systemd.unit=multi-user.target"
+            "console=tty0"
+            "console=ttyS0,115200"
+            "onie_platform=${ONIE_PLATFORM:-vs}"
+            "bg_mac=00:00:00:00:00:00"
+            "bonding.max_bonds=0"
+            "sonic_asic_platform=vs"
+            "systemd.show_status=true"
+            "rc.local_debug=y"
+            "overlay_tmpfs=on"
+            "tmpfs_size=8g"
+        )
+        echo -n "${cmdline_args[*]}" > cmdline.txt
     fi
 
     if [ "${BOOT_IMAGE_TYPE}" = "fit" ]; then
@@ -401,8 +661,10 @@ main() {
       generate_uki
     fi
 
-    sign_image
-    generate_ovmf_enrollment_files
+    if [[ "${SKIP_SIGNING}" != "1" ]]; then
+      sign_image
+      generate_ovmf_enrollment_files
+    fi
   fi
 }
 

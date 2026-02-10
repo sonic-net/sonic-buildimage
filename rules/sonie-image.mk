@@ -1,7 +1,7 @@
 # SONIE Installer Image (.bin) rule
 
 # Define the target based on the configured platform
-SONIE_IMAGE = sonie-$(CONFIGURED_PLATFORM).bin
+SONIE_IMAGE = sonie-$(CONFIGURED_PLATFORM)-$(CONFIGURED_ARCH).bin
 
 # The .bin target depends on the .efi target and has an explicit recipe.
 $(TARGET_PATH)/$(SONIE_IMAGE): $(TARGET_PATH)/$(SONIE_UKI)

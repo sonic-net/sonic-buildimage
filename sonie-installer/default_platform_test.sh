@@ -8,6 +8,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 DEFAULT_PLATFORM_CONF="${SCRIPT_DIR}/default_platform.conf"
 
+
 # Mocks
 mock_files=()
 
@@ -100,7 +101,6 @@ grub-install() {
 # Mock log functions
 log_warn() { echo "WARN: $*" >&2; }
 log_info() { echo "INFO: $*" >&2; }
-
 # --- Tests ---
 
 #######################################
@@ -189,6 +189,7 @@ test_init_console_settings_custom() {
 test_find_device_from_partdev() {
   echo "test_find_device_from_partdev..."
   if (
+    # Arrange
     source "${DEFAULT_PLATFORM_CONF}"
 
     # Create mock sysfs structure
@@ -217,8 +218,10 @@ test_find_device_from_partdev() {
 
     export SYSFS_BASE="${sys_base}"
 
+    # Act
     res=$(find_device_from_partdev "/dev/nvme0n1p1")
 
+    # Assert
     if [[ "$res" != "/dev/nvme0n1" ]]; then
        echo "FAIL: Expected /dev/nvme0n1 for partdev nvme0n1p1, got $res"
        exit 1
@@ -277,6 +280,7 @@ test_make_partition_dev() {
 test_disk_needs_formatting() {
   echo "test_disk_needs_formatting..."
   if (
+    # Arrange
     source "${DEFAULT_PLATFORM_CONF}"
     trap_push() { :; }
 
@@ -439,6 +443,7 @@ test_create_sonie_gpt_partition_logic() {
     trap_push() { :; }
     create_sonie_gpt_partition "/dev/sda" 2>&1
   )
+
   # Should delete partition 2
   [[ "$output" == *"deleting partition 2"* ]] || { echo "FAIL: Did not delete partition 2. Output: $output"; exit 1; }
   [[ "$output" == *"Partition #4 is available"* ]] || { echo "FAIL: Did not find partition 4 available. Output: $output"; exit 1; }
@@ -510,6 +515,7 @@ test_create_sonie_gpt_partition_reuse() {
     echo "FAIL: Did not update attributes for reused partition. Output: $output"
     exit 1
   fi
+
   echo "PASS"
 }
 
@@ -637,7 +643,7 @@ test_create_partition_sonic() {
   echo "PASS"
 }
 
-# Run tests
+
 #######################################
 # Verifies that create_sonie_uefi_partition cleans up legacy boot variables.
 #
@@ -688,7 +694,6 @@ test_create_sonie_uefi_partition_cleanup() {
 
     # Ensure install_env is NOT 'sonie' to trigger cleanup
     install_env="onie"
-
     rm -f /tmp/mock_efibootmgr_log
     create_sonie_uefi_partition "/dev/sda" 2>&1
   )
@@ -749,7 +754,6 @@ test_install_grub_to_esp() {
 
     # Reset install_env
     install_env="onie"
-
     # Mock sgdisk -p for EF00 detection
     sgdisk() {
       if [[ "$1" == "-p" ]]; then
@@ -779,6 +783,7 @@ test_install_grub_to_esp() {
     rm -rf "$mock_fs_root"
     exit 1
   fi
+
   # Verify grub.cfg content
   local generated_cfg="${mock_os}/grub/grub.cfg"
   if [ ! -f "$generated_cfg" ]; then

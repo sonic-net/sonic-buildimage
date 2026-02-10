@@ -48,7 +48,10 @@ fi
 cd $tmp_dir
 echo -n "Preparing image archive ..."
 
-sed -e '1,/^exit_marker$/d' $archive_path | head -c $payload_image_size | tar xf - || exit 1
+# DEBUG: Inspect the start of the archive stream
+sed -e '1,/^exit_marker$/d' $archive_path | head -c 20 | od -x || true
+echo "DEBUG: Attempting tar extraction..."
+sed -e '1,/^exit_marker$/d' $archive_path | head -c $payload_image_size | tar xf - || { echo "Tar extraction failed"; exit 1; }
 
 echo " OK."
 cd $cur_wd
@@ -61,8 +64,26 @@ if [ -n "$extract" ] ; then
     exit 0
 fi
 
+
+# DEBUG: List extracted files
+echo "DEBUG: Extracted contents of $tmp_dir:"
+find "$tmp_dir" -maxdepth 3 -ls
+
+# DEBUG: Check shell
+if [ ! -x /bin/bash ]; then
+    echo "DEBUG: /bin/bash not found! Available shells:"
+    ls -l /bin/*sh
+fi
+
+installer_script="$tmp_dir/installer/install.sh"
+if [ ! -x "$installer_script" ]; then
+    echo "ERROR: Installer script not executable or missing: $installer_script"
+    ls -l "$installer_script"
+    exit 127
+fi
+
 export ONIE_INSTALLER_PAYLOAD="$archive_path"
-$tmp_dir/installer/install.sh
+"$installer_script"
 rc="$?"
 
 # clean up

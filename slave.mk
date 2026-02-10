@@ -1537,7 +1537,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_kernel_cafile="$(SECURE_UPGRADE_KERNEL_CAFILE)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
-	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
+	export sonic_su_prod_signing_tool="$(if $(SECURE_UPGRADE_PROD_SIGNING_TOOL),/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_otel="$(INCLUDE_SYSTEM_OTEL)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
@@ -1745,7 +1745,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	$(foreach docker, $($*_DOCKERS), \
-		rm -f *$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		$(if $($(docker:-dbg.gz=.gz)_MACHINE),\
+			rm -f $($(docker:-dbg.gz=.gz)_MACHINE)_$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		)
 		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).service
 		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME)@.service
 	)
