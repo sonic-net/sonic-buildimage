@@ -40,6 +40,12 @@ DEFAULT_USERNAME = admin
 # DEFAULT_PASSWORD - default password for installer build
 DEFAULT_PASSWORD = YourPaSsWoRd
 
+# BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
+BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb
+
+# BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD - default password for BMC root account
+BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
+
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
@@ -121,6 +127,9 @@ INCLUDE_SYSTEM_EVENTD = y
 
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = n
+
+# INCLUDE_SYSTEM_OTEL - build docker-sonic-otel for High Frequency Telemetry (HFT) support
+INCLUDE_SYSTEM_OTEL = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
