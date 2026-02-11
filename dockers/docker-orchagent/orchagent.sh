@@ -111,12 +111,6 @@ else
     ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
 fi
 
-# Add VRF parameter when mgmt-vrf enabled
-MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
-if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
-    ORCHAGENT_ARGS+=" -v mgmt"
-fi
-
 # Enable ring buffer
 ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
