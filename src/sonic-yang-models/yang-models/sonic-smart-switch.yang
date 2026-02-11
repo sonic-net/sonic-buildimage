@@ -301,7 +301,7 @@ module sonic-smart-switch {
 					type inet:port-number;
 				}
 
-				leaf dp_channel_port {
+				leaf dp_channel_dst_port {
 					description "Destination port when tunneling packets via DPU-to-DPU data plane channel";
 					type inet:port-number;
 				}
