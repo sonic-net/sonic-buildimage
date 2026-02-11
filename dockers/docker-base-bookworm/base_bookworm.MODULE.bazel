@@ -16,7 +16,7 @@ apt.sources_list(
 
 apt.install(
     dependency_set = "bookworm",
-    target_release = "bookworm",
+    suites = ["bookworm", "bookworm-security", "bookworm-updates"],
     packages = [
         "base-files",
         "ca-certificates",
