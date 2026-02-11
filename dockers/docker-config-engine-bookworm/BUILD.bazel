@@ -24,7 +24,7 @@ site_packages(
     mutate = mutate(
         strip_prefix = "install",
         package_dir = "./usr",
-        awk_script = "//dockers/docker-base-bookworm:mutate.awk",
+        awk_script = "@sonic_bazel_common//:mutate_python_packages",
     ),
 )
 

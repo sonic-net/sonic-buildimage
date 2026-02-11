@@ -4,9 +4,6 @@ load("@tar.bzl", "tar", "mutate")
 load("@aspect_rules_py//py/unstable:defs.bzl", "py_venv_binary")
 load(":site_packages.bzl", "site_packages")
 
-exports_files(["mutate.awk"])
-
-
 site_packages(
     name = "site-packages",
     srcs = [
@@ -17,7 +14,7 @@ site_packages(
     mutate = mutate(
         strip_prefix = "install",
         package_dir = "./usr",
-        awk_script = ":mutate.awk"
+        awk_script = "@sonic_bazel_common//:mutate_python_packages",
     )
 )
 

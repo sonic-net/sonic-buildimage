@@ -1,0 +1,5 @@
+filegroup(
+  name = "mutate_python_packages",
+  srcs = ["mutate_python_packages.awk"],
+  visibility = ["//visibility:public"],
+)

@@ -28,6 +28,12 @@ python.toolchain(python_version = "3.11.6")
 
 include("//dockers/docker-base-bookworm:base_bookworm.MODULE.bazel")
 
+bazel_dep(name = "sonic-bazel-common", version = "0.0.0", repo_name = "sonic_bazel_common")
+local_path_override(
+  module_name = "sonic-bazel-common",
+  path = "tools/sonic-bazel-common",
+)
+
 bazel_dep(name = "sonic-py-common", version = "0.0.0", repo_name = "sonic_py_common")
 local_path_override(
     module_name = "sonic-py-common",

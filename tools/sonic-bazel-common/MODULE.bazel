@@ -1,0 +1,2 @@
+module(name = "sonic-bazel-common", version = "0.0.0")
+
