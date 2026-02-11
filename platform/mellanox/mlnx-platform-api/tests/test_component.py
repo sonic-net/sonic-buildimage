@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -293,15 +294,18 @@ class TestComponent:
         for index, item in enumerate(component_list):
             assert item.name == 'DPU{}_FPGA'.format(index + 1)
 
-    def test_cpld_get_mst_device(self):
+    @mock.patch('sonic_platform.component.subprocess.check_output')
+    def test_cpld_get_mst_device(self, mock_check_output):
         ComponentCPLD.MST_DEVICE_PATH = '/tmp/mst'
         os.system('rm -rf /tmp/mst')
         c = ComponentCPLD(1)
-        assert c._ComponentCPLD__get_mst_device() is None
+        mock_check_output.return_value = b''
+        assert c._ComponentCPLD__get_mst_device() == ''
         os.makedirs(ComponentCPLD.MST_DEVICE_PATH)
-        assert c._ComponentCPLD__get_mst_device() is None
+        assert c._ComponentCPLD__get_mst_device() == ''
         with open('/tmp/mst/mt0_pci_cr0', 'w+') as f:
             f.write('dummy')
+        mock_check_output.return_value = b'/tmp/mst/mt0_pci_cr0'
         assert c._ComponentCPLD__get_mst_device() == '/tmp/mst/mt0_pci_cr0'
 
     @mock.patch('sonic_platform.component.subprocess.check_call')
