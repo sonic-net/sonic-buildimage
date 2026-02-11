@@ -24,7 +24,7 @@ RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %} || true
-apt -y install -f --no-remove --no-upgrade
+RUN apt -y install -f --no-remove --no-upgrade
 
 {% endif %}
 {% endif %}
