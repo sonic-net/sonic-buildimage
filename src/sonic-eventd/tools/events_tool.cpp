@@ -1,8 +1,8 @@
 #include <thread>
 #include <iostream>
 #include <stdlib.h>
-#include "events.h"
-#include "events_common.h"
+#include <swss/events.h>
+#include <swss/events_common.h>
 
 /*
  * Sample i/p file contents for send
