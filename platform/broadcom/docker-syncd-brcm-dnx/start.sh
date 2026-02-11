@@ -26,6 +26,16 @@ else
         sonic-cfggen -d -t $HWSKU_DIR/config.bcm.j2 > /etc/sai.d/config.bcm
     fi
     if [ -f $HWSKU_DIR/sai.profile ]; then
+        if [ ! -z $(grep "aboot_platform=.*arista" "/etc/machine.conf") ]; then
+            if [ -f /etc/sai.d/sai.profile ]; then
+                hashSrc=$(md5sum $HWSKU_DIR/sai.profile | cut -d ' ' -f 1)
+                hashDst=$(md5sum /etc/sai.d/sai.profile | cut -d ' ' -f 1)
+                if [ "${hashSrc}" == "${hashDst}" ]; then
+                    logger -p info "Arista: sai.profile unchanged, skip copying"
+                    exit 0
+                fi
+            fi
+        fi
         cp $HWSKU_DIR/sai.profile /etc/sai.d/sai.profile
     fi
 fi
