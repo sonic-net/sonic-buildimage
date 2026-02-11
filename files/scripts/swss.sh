@@ -406,7 +406,7 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*', 'HIGH_FREQUENCY_TELEMETRY_SESSION_TABLE*' "
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
@@ -584,15 +584,12 @@ function check_ports_present()
     return 1
 }
 
-function check_service_exists()
+function check_service_enabled()
 {
-    systemctl list-units --full -all 2>/dev/null | grep -Fq $1
-    if [[ $? -eq 0 ]]; then
+    if systemctl is-enabled "$1" >/dev/null 2>&1; then
         echo true
-        return
     else
         echo false
-        return
     fi
 }
 
@@ -601,7 +598,7 @@ function check_service_exists()
 DEPENDENT=""
 MULTI_INST_DEPENDENT=""
 
-if [[ $(check_service_exists radv) == "true" ]]; then
+if [[ $(check_service_enabled radv) == "true" ]]; then
     DEPENDENT="$DEPENDENT radv"
 fi
 
@@ -622,7 +619,7 @@ check_add_bgp_dependency
 check_ports_present
 PORTS_PRESENT=$?
 
-if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_exists teamd) == "true" ]]; then
+if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_enabled "teamd${DEV:+@$DEV}") == "true" ]]; then
     MULTI_INST_DEPENDENT="teamd"
 fi
 

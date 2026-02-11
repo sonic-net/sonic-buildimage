@@ -19,6 +19,21 @@
 echo "SDK $SDK_VERSION" > temp_versions_file
 echo "FW $BF3_FW_VERSION" >> temp_versions_file
 echo "SAI $DPU_SAI_VERSION" >> temp_versions_file
+
+SAI_API_VERSION_PATH="/sonic/src/sonic-sairedis/SAI/inc/saiversion.h"
+if [ -f "$SAI_API_VERSION_PATH" ]; then
+    SAI_MAJOR=$(grep "SAI_MAJOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
+    SAI_MINOR=$(grep "SAI_MINOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
+    SAI_REVISION=$(grep "SAI_REVISION" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
+    if [ -n "$SAI_MAJOR" ] && [ -n "$SAI_MINOR" ] && [ -n "$SAI_REVISION" ]; then
+        echo "SAI_API_HEADERS $SAI_MAJOR.$SAI_MINOR.$SAI_REVISION" >> temp_versions_file
+    else
+        echo "SAI_API_HEADERS N/A" >> temp_versions_file
+    fi
+else
+    echo "SAI_API_HEADERS N/A" >> temp_versions_file
+fi
+
 echo "BFSOC $BFSOC_VERSION-$BFSOC_REVISION" >> temp_versions_file
 echo "MFT $MFT_VERSION-$MFT_REVISION" >> temp_versions_file
 echo "KERNEL $KVERSION_SHORT" >> temp_versions_file

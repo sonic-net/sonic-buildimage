@@ -40,6 +40,12 @@ DEFAULT_USERNAME = admin
 # DEFAULT_PASSWORD - default password for installer build
 DEFAULT_PASSWORD = YourPaSsWoRd
 
+# BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
+BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb
+
+# BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD - default password for BMC root account
+BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
+
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
@@ -121,6 +127,9 @@ INCLUDE_SYSTEM_EVENTD = y
 
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = n
+
+# INCLUDE_SYSTEM_OTEL - build docker-sonic-otel for High Frequency Telemetry (HFT) support
+INCLUDE_SYSTEM_OTEL = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
@@ -312,7 +321,7 @@ ENABLE_FIPS ?= n
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
-SONIC_OS_VERSION ?= 12
+SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
@@ -326,3 +335,6 @@ SONIC_PTF_ENV_PY_VER = py3
 
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
+
+# BUILD_SKIP_TEST - skip all tests when building to reduce build time
+BUILD_SKIP_TEST ?= n

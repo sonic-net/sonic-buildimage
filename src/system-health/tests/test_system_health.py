@@ -13,7 +13,8 @@ import copy
 import os
 import sys
 import docker
-from imp import load_source
+import importlib.util
+import importlib.machinery
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch
@@ -40,6 +41,16 @@ from health_checker.user_defined_checker import UserDefinedChecker
 from health_checker.sysmonitor import Sysmonitor
 from health_checker.sysmonitor import MonitorStateDbTask
 from health_checker.sysmonitor import MonitorSystemBusTask
+
+def load_source(modname, filename):
+    loader = importlib.machinery.SourceFileLoader(modname, filename)
+    spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+    # The module is always executed and not cached in sys.modules.
+    # Uncomment the following line to cache the module.
+    sys.modules[module.__name__] = module
+    loader.exec_module(module)
+    return module
 
 load_source('healthd', os.path.join(scripts_path, 'healthd'))
 from healthd import HealthDaemon
@@ -307,35 +318,40 @@ def test_service_checker_no_critical_process(mock_get_table, mock_docker_client)
 @patch('health_checker.service_checker.ServiceChecker.check_services', MagicMock())
 @patch('health_checker.utils.run_command')
 def test_service_checker_check_by_monit(mock_run):
-    return_value = 'Monit 5.20.0 uptime: 3h 54m\n' \
-                   'Service Name                     Status                      Type\n' \
-                   'sonic                            Running                     System\n' \
-                   'sonic1                           Not running                 System\n' \
-                   'telemetry                        Does not exist              Process\n' \
-                   'orchagent                        Running                     Process\n' \
-                   'root-overlay                     Accessible                  Filesystem\n' \
-                   'var-log                          Is not accessible           Filesystem\n'
+    return_value = '''Monit 5.34.3 uptime: 23h 11m
+ Service Name                     Status                      Type
+ vlab-01                          OK                          System
+ vlab-02                          Resource limit matched      System
+ rsyslog                          OK                          Process
+ root-overlay                     OK                          Filesystem
+ var-log                          Does not exist              Filesystem
+ routeCheck                       Status failed               Program
+ diskCheck                        OK                          Program
+ '''
     mock_run.side_effect = ['active', return_value]
     checker = ServiceChecker()
     config = Config()
     checker.check(config)
-    assert 'sonic' in checker._info
-    assert checker._info['sonic'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+    assert 'vlab-01' in checker._info
+    assert checker._info['vlab-01'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
-    assert 'sonic1' in checker._info
-    assert checker._info['sonic1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'vlab-02' in checker._info
+    assert checker._info['vlab-02'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
 
-    assert 'orchagent' in checker._info
-    assert checker._info['orchagent'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
-
-    assert 'telemetry' in checker._info
-    assert checker._info['telemetry'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'rsyslog' in checker._info
+    assert checker._info['rsyslog'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
     assert 'root-overlay' in checker._info
     assert checker._info['root-overlay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
     assert 'var-log' in checker._info
     assert checker._info['var-log'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'routeCheck' in checker._info
+    assert checker._info['routeCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'diskCheck' in checker._info
+    assert checker._info['diskCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
 
 def test_hardware_checker():
@@ -471,9 +487,37 @@ def test_hardware_checker():
         }
     })
 
+    MockConnector.data.update({
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_1'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_2'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_3': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_3'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_4': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_4'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_5': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_5'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_6': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_6'
+        }
+    })
+
     checker = HardwareChecker()
     assert checker.get_category() == 'Hardware'
     config = Config()
+    config.include_devices = ['liquid_cooling']
     checker.check(config)
 
     assert 'ASIC' in checker._info
@@ -521,6 +565,24 @@ def test_hardware_checker():
     assert checker._info['PSU 7'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
     assert checker._info['PSU 7'][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'System power exceeds threshold but power_critical_threshold is invalid'
 
+    assert 'liquid_cooling_1' in checker._info
+    assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_2' in checker._info
+    assert checker._info['liquid_cooling_2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'liquid_cooling_3' in checker._info
+    assert checker._info['liquid_cooling_3'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_4' in checker._info
+    assert checker._info['liquid_cooling_4'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'liquid_cooling_5' in checker._info
+    assert checker._info['liquid_cooling_5'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_6' in checker._info
+    assert checker._info['liquid_cooling_6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
 
 def test_config():
     config = Config()
@@ -532,6 +594,7 @@ def test_config():
     assert 'dummy_service' in config.ignore_services
     assert 'psu.voltage' in config.ignore_devices
     assert len(config.user_defined_checkers) == 0
+    assert 'liquid_cooling' in config.include_devices
 
     assert config.get_led_color('fault') == 'orange'
     assert config.get_led_color('normal') == 'green'
@@ -543,6 +606,7 @@ def test_config():
     assert not config.ignore_devices
     assert not config.user_defined_checkers
     assert not config.config_data
+    assert not config.include_devices
 
     assert config.get_led_color('fault') == 'red'
     assert config.get_led_color('normal') == 'green'

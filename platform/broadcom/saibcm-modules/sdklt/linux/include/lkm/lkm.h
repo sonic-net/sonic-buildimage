@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -139,11 +140,11 @@ static inline void page_ref_dec(struct page *page)
 #define DMA_FORCE_CONTIGUOUS DMA_ATTR_FORCE_CONTIGUOUS
 #endif
 
-#ifndef PCI_IRQ_LEGACY
+#ifndef PCI_IRQ_MSI
 /* Emulate new IRQ API if not available */
-#define PCI_IRQ_LEGACY          (1 << 0)
-#define PCI_IRQ_MSI             (1 << 1)
-#define PCI_IRQ_MSIX            (1 << 2)
+#define PCI_IRQ_INTX          (1 << 0)
+#define PCI_IRQ_MSI     (1 << 1)
+#define PCI_IRQ_MSIX    (1 << 2)
 static inline int
 pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
                       unsigned int max_vecs, unsigned int flags)
@@ -154,7 +155,7 @@ pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
             return 1;
         }
     }
-    if (flags & PCI_IRQ_LEGACY) {
+    if (flags & PCI_IRQ_INTX) {
         return 1;
     }
     return 0;
@@ -169,6 +170,36 @@ pci_irq_vector(struct pci_dev *dev, unsigned int nr)
 {
     return dev->irq;
 }
+#endif
+
+/* Renamed in 6.8 */
+#ifndef PCI_IRQ_INTX
+#define PCI_IRQ_INTX    PCI_IRQ_LEGACY
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+#define strscpy strlcpy
+#endif
+
+#ifndef MAX_PAGE_ORDER
+#define MAX_PAGE_ORDER  MAX_ORDER
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
+#define kernel_ethtool_ts_info ethtool_ts_info
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
+#define PLATFORM_DRIVER_REMOVE_RETURN_TYPE int
+#define PLATFORM_DRIVER_REMOVE_RETURN_VALUE(_v) return (_v)
+#endif
+
+#ifndef PLATFORM_DRIVER_REMOVE_RETURN_TYPE
+#define PLATFORM_DRIVER_REMOVE_RETURN_TYPE void
+#endif
+
+#ifndef PLATFORM_DRIVER_REMOVE_RETURN_VALUE
+#define PLATFORM_DRIVER_REMOVE_RETURN_VALUE(_v)
 #endif
 
 #endif /* LKM_H */
