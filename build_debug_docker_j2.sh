@@ -18,18 +18,12 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN apt update
+RUN apt-get update
 
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %} 2>&1 \
-| sed -n 's/.*Package \(.*\) is not installed\./\1/p' \
-| sort -u > /tmp/missing_deps.txt || true
-
-RUN xargs -a /tmp/missing_deps.txt -r apt install -y
-
-RUN dpkg --configure -a
++{%- endfor %} || apt-get -y install -f --no-remove
 
 {% endif %}
 {% endif %}
