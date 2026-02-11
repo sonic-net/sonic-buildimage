@@ -23,21 +23,13 @@ RUN apt update
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %} || true
+{%- endfor %} 2>&1 \
+| sed -n 's/.*Package \(.*\) is not installed\./\1/p' \
+| sort -u > /tmp/missing_deps.txt || true
 
-RUN { \
-{% for deb in $2.split(' ') -%}
-dpkg-deb -f debs/{{ deb }} Package; \
-{% endfor -%} \
-} | xargs -r apt-mark hold 
+RUN xargs -a /tmp/missing_deps.txt -r apt install -y
 
-RUN apt -y install -f --no-remove --no-upgrade --allow-downgrades
-
-RUN { \
-{% for deb in $2.split(' ') -%}
-dpkg-deb -f debs/{{ deb }} Package; \
-{% endfor -%} \
-} | xargs -r apt-mark unhold 
+RUN dpkg --configure -a
 
 {% endif %}
 {% endif %}
