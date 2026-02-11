@@ -324,11 +324,15 @@
             "i2c": {
                 "valmap": {
                     "D1U74T-W-3200-12-HB4C": "exhaust",
-                    "D1U74T-W-3200-12-HB4T": "exhaust"
+                    "D1U74T-W-3200-12-HB4TC": "exhaust",
+                    "CSU3200AT-3-3M0": "exhaust"
                 }
             }
         },
-        "PSU_FAN_MAX_SPEED": "37000"
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "CSU3200AT-3-3M0": "33000",
+            "default": "37000"
+        }
     },
     "FAN": {
         "present": {
