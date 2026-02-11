@@ -31,7 +31,7 @@ dpkg-deb -f debs/{{ deb }} Package; \
 {% endfor -%} \
 } | xargs -r apt-mark hold 
 
-RUN apt -y install -f --no-remove
+RUN apt -y install -f --no-remove --no-upgrade --allow-downgrades
 
 RUN { \
 {% for deb in $2.split(' ') -%}
