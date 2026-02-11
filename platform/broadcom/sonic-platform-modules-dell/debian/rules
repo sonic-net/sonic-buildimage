@@ -2,6 +2,11 @@
 
 export INSTALL_MOD_DIR:=extra
 
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKE_FLAGS += -j$(NUMJOBS)
+endif
+
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
@@ -9,125 +14,71 @@ MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f s5448f z9332f
 COMMON_DIR := common
 
 %:
-	dh $@
+	dh $@ --with python3
 
-override_dh_auto_build:
-	set -e; \
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_configure:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		mkdir build-$${mod}; \
 		if [ $$mod = "s6100" ]; then \
 			cp $(COMMON_DIR)/dell_pmc.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s6100_lpc.c; \
 			cp $(COMMON_DIR)/dell_ich.c $(MOD_SRC_DIR)/$${mod}/modules/dell_ich.c; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "z9100" ]; then \
 			cp $(COMMON_DIR)/dell_pmc.c $(MOD_SRC_DIR)/$${mod}/modules/dell_mailbox.c; \
 			cp $(COMMON_DIR)/dell_ich.c $(MOD_SRC_DIR)/$${mod}/modules/dell_ich.c; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
-		elif [ $$mod = "s6000" ]; then \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "z9264f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5212f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5212f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5212f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3  -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5224f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5224f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5224f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3  -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5232f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5232f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5232f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5248f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5248f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5248f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5448f" ]; then \
 			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
-				cd $(MOD_SRC_DIR)/$${mod}/pddf; \
-				if [ -f sonic_platform_setup.py ]; then \
-					python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
-					echo "Finished making pddf whl package for $$mod"; \
-				fi; \
-			fi; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5296f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
-		elif [ $$mod = "n3248te" ]; then \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "z9332f" ]; then \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "z9432f" ]; then \
-		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9432f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9432f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
-		elif [ $$mod = "n3248pxe" ]; then \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
-		elif [ $$mod = "e3224f" ]; then \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "z9664f" ]; then \
 			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9664f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			cd $(MOD_SRC_DIR)/$${mod}; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
-				cd $(MOD_SRC_DIR)/$${mod}/pddf; \
-				if [ -f sonic_platform_setup.py ]; then \
-					python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
-					echo "Finished making pddf whl package for $$mod"; \
-				fi; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		make $(MAKE_FLAGS) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			python3 -m build --no-isolation --wheel --outdir $(MOD_SRC_DIR)/build-$${mod} $(MOD_SRC_DIR)/$${mod}; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+			if [ -f sonic_platform_setup.py ]; then \
+				python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+				echo "Finished making pddf whl package for $$mod"; \
 			fi; \
 			cd $(MOD_SRC_DIR); \
 		fi; \
-		echo "making man page alias $$mod -> $$mod APIs";\
-		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-	done); \
-	set +e
+	done)
+
+override_dh_auto_test:
+	# No tests to run
 
 override_dh_auto_install:
-	set -e; \
-	(for mod in $(MODULE_DIRS); do \
-		dh_installdirs -pplatform-modules-$${mod} \
-			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
-			debian/platform-modules-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+	(set -e; for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/platform-modules-$${mod} modules_install; \
 		if [ $$mod = "s6000" ]; then \
 			dh_installdirs -pplatform-modules-$${mod} usr/local/bin ; \
 			cp -r $(MOD_SRC_DIR)/$${mod}/scripts/* debian/platform-modules-$${mod}/usr/local/bin; \
@@ -135,116 +86,56 @@ override_dh_auto_install:
 			dh_installdirs -pplatform-modules-$${mod} usr/share/sonic/device/x86_64-dell_s6100_c2538-r0/bin; \
 			cp $(MOD_SRC_DIR)/$${mod}/bin/* debian/platform-modules-$${mod}/usr/share/sonic/device/x86_64-dell_s6100_c2538-r0/bin; \
 		fi; \
-	done); \
-	set +e
+	done)
 
 override_dh_usrlocal:
 
-override_dh_installmodules:
-	dh_installmodules --no-scripts;
-
-override_dh_clean:
-	dh_clean
-	set -e; \
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		rm -rf build-$${mod}; \
 		if [ $$mod = "s6100" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s6100_lpc.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_ich.c; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "z9100" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_mailbox.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_ich.c; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
-		elif [ $$mod = "s6000" ]; then \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "z9264f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "s5212f" ]; then \
-    	rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-	                rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5212f_fpga_ocores.c; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
+    		rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+	        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5212f_fpga_ocores.c; \
 		elif [ $$mod = "s5224f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5224f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5224f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "s5232f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5232f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5232f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "s5248f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5248f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5248f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "s5448f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
-			if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl ]; then \
-				rm -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl; \
-			fi; \
 		elif [ $$mod = "s5296f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "z9332f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "z9432f" ]; then \
-		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9432f_fpga_ocores.c; \
+		    rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9432f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "n3248pxe" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "n3248te" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "e3224f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "z9664f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9664f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
-			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
-			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
-			if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl ]; then \
-				rm -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl; \
-			fi; \
 		fi; \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
-	done); \
-	set +e
+	done)
+	dh_clean
 

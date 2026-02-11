@@ -571,7 +571,7 @@ static struct i2c_driver efuse_driver = {
 	.driver = {
 		.name = "efuse",
 	},
-	.probe_new = efuse_probe,
+	.probe = efuse_probe,
 	.remove = efuse_remove,
 	.id_table = efuse_id,
 };

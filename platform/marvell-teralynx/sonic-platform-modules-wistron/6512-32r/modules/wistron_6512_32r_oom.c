@@ -576,8 +576,9 @@ static const struct attribute_group wistron_oom_group = {
 	.attrs = wistron_oom_attributes,
 };
 
-static int wistron_oom_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int wistron_oom_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct wistron_oom_data *data;
 	int status;
 

@@ -41,8 +41,9 @@
 #  * ENABLE_DIALOUT: Enable dialout client in telemetry.
 #  *                 Default: unset
 #  *                 Values: y
-#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none or cache
+#  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none, cache, rcache, wcache, rwcache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
+#  * SONIC_DPKG_CACHE_METHOD_OVERRIDE: Specifying whether to override the method used by SONIC_DPKG_CACHE_METHOD: none, rcache, wcache, rwcache
 #  * BUILD_LOG_TIMESTAMP: Set timestamp in the build log (simple/none)
 #  * DOCKER_EXTRA_OPTS: Extra command line arguments for dockerd running in slave container.
 #  * ENABLE_AUTO_TECH_SUPPORT: Enable the configuration for event-driven techsupport & coredump mgmt feature
@@ -72,9 +73,9 @@ USER := $(shell id -un)
 PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
-DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
 else
-DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm debian:trixie uname -m)
 endif
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
@@ -217,6 +218,7 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_MAIN_VERSION=$(FIPS_GOLANG_MAIN_VERSION) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
@@ -260,7 +262,7 @@ SLAVE_TAG = $(shell \
 		 $(SLAVE_DIR)/Dockerfile \
 		 $(SLAVE_DIR)/sources.list.* \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-	&& echo $(USER)/$(PWD)/$(CONFIGURED_PLATFORM)) \
+	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
@@ -450,6 +452,8 @@ DOCKER_USER_BUILD = docker build --no-cache \
 	       -f $(SLAVE_DIR)/Dockerfile.user \
 	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
 
+DOCKER_USER_PULL = docker pull \
+			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG)
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -489,8 +493,24 @@ DOCKER_SLAVE_USER_INSPECT = \
 		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
 	}
 
+DOCKER_SLAVE_USER_PULL_REGISTRY = \
+	[ $(ENABLE_DOCKER_BASE_PULL) == y ] && \
+	{ \
+		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
+		$(DOCKER_USER_PULL); \
+	} && \
+	{ \
+		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG) $(SLAVE_IMAGE):$(SLAVE_TAG) && \
+		$(COLLECT_DOCKER); \
+	}\
+
 SONIC_SLAVE_USER_BUILD = \
-	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
+	{ \
+		$(DOCKER_SLAVE_USER_INSPECT); \
+	} || \
+	{ \
+		$(DOCKER_SLAVE_USER_PULL_REGISTRY); \
+	} || \
 	{ \
 		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
@@ -531,6 +551,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            KERNEL_PROCURE_METHOD=$(KERNEL_PROCURE_METHOD) \
                            SONIC_DPKG_CACHE_METHOD=$(SONIC_DPKG_CACHE_METHOD) \
                            SONIC_DPKG_CACHE_SOURCE=$(SONIC_DPKG_CACHE_SOURCE) \
+                           SONIC_DPKG_CACHE_METHOD_OVERRIDE=$(SONIC_DPKG_CACHE_METHOD_OVERRIDE) \
                            HTTP_PROXY=$(http_proxy) \
                            HTTPS_PROXY=$(https_proxy) \
                            NO_PROXY=$(no_proxy) \
@@ -543,6 +564,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
                            SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
                            SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
+                           SONIC_INCLUDE_SYSTEM_OTEL=$(INCLUDE_SYSTEM_OTEL) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
@@ -580,6 +602,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
+                           BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)

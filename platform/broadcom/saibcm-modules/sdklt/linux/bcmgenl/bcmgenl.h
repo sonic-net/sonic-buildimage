@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -33,11 +34,9 @@
 /*! Module information */
 #define BCMGENL_MODULE_NAME     "linux_bcmgenl"
 
-/*! Use similar path to SDK6 genl psample path */
 #define BCM_PROCFS_NAME        "bcm"
 #define BCMGENL_PROCFS_NAME    "genl"
 #define BCMGENL_PROCFS_PATH    (BCM_PROCFS_NAME "/" BCMGENL_PROCFS_NAME)
-
 /*! set GENL_DEBUG for debug info */
 #define GENL_DEBUG
 #define GENL_DBG_LVL_VERB       0x0001
@@ -90,8 +89,12 @@ typedef struct {
 
 /*! Sampling type */
 #define SAMPLE_TYPE_NONE     0
+/*! Ingress */
 #define SAMPLE_TYPE_INGRESS  1
+/*! Egress */
 #define SAMPLE_TYPE_EGRESS   2
+/*! Ingress or Egress */
+#define SAMPLE_TYPE_INGEGR   3
 
 /*! generic netlink packet metadata */
 typedef struct bcmgenl_packet_meta_s {

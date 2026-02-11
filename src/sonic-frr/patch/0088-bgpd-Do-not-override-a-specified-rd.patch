@@ -1,0 +1,83 @@
+From c7e439bff5cb3c11cde47c6cb46210c8bdd4314f Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Mon, 13 Oct 2025 16:29:13 +0300
+Subject: bgpd: Do not override a specified rd
+
+If the router-id is learned after a bgp vrf has
+already received a specified rd, it will auto-derive
+a value and override the specified on the command line.
+
+Do not let this happen.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_mplsvpn.c | 10 ++++++++--
+ bgpd/bgp_vty.c     |  2 ++
+ bgpd/bgpd.h        |  2 ++
+ 3 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 5169b38666..fcf9909f0d 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -2969,7 +2969,9 @@ void vpn_handle_router_id_update(struct bgp *bgp, bool withdraw,
+ 			 */
+ 			form_auto_rd(bgp->router_id, bgp->vrf_rd_id,
+ 				     &bgp->vrf_prd_auto);
+-			bgp->vpn_policy[afi].tovpn_rd = bgp->vrf_prd_auto;
++			if (!CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_RD_CLI_SET))
++				bgp->vpn_policy[afi].tovpn_rd = bgp->vrf_prd_auto;
++
+ 			prefix_rd2str(&bgp->vpn_policy[afi].tovpn_rd, buf,
+ 				      sizeof(buf), bgp->asnotation);
+ 
+@@ -3103,9 +3105,13 @@ void vrf_import_from_vrf(struct bgp *to_bgp, struct bgp *from_bgp,
+ 	if (first_export) {
+ 		form_auto_rd(from_bgp->router_id, from_bgp->vrf_rd_id,
+ 			     &from_bgp->vrf_prd_auto);
+-		from_bgp->vpn_policy[afi].tovpn_rd = from_bgp->vrf_prd_auto;
++
++		if (!CHECK_FLAG(from_bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_RD_CLI_SET))
++			from_bgp->vpn_policy[afi].tovpn_rd = from_bgp->vrf_prd_auto;
++
+ 		SET_FLAG(from_bgp->vpn_policy[afi].flags,
+ 			 BGP_VPN_POLICY_TOVPN_RD_SET);
++
+ 		prefix_rd2str(&from_bgp->vpn_policy[afi].tovpn_rd, buf,
+ 			      sizeof(buf), from_bgp->asnotation);
+ 		from_bgp->vpn_policy[afi].rtlist[edir] =
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 724c186c44..f7266cff8c 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -9920,11 +9920,13 @@ DEFPY (af_rd_vpn_export,
+ 		bgp->vpn_policy[afi].tovpn_rd = prd;
+ 		SET_FLAG(bgp->vpn_policy[afi].flags,
+ 			 BGP_VPN_POLICY_TOVPN_RD_SET);
++		SET_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_RD_CLI_SET);
+ 	} else {
+ 		XFREE(MTYPE_BGP_NAME, bgp->vpn_policy[afi].tovpn_rd_pretty);
+ 		bgp->vpn_policy[afi].tovpn_rd_pretty = NULL;
+ 		UNSET_FLAG(bgp->vpn_policy[afi].flags,
+ 			   BGP_VPN_POLICY_TOVPN_RD_SET);
++		UNSET_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_RD_CLI_SET);
+ 	}
+ 	hook_call(bgp_route_distinguisher_update, bgp, afi, false);
+ 
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 2a1f68a798..5c674b1eea 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -286,6 +286,8 @@ struct vpn_policy {
+ #define BGP_VPN_POLICY_TOVPN_LABEL_PER_NEXTHOP (1 << 4)
+ /* Manual label is registered with zebra label manager */
+ #define BGP_VPN_POLICY_TOVPN_LABEL_MANUAL_REG (1 << 5)
++/* Is this value set by the cli? */
++#define BGP_VPN_POLICY_TOVPN_RD_CLI_SET       (1 << 6)
+ 
+ 	/*
+ 	 * If we are importing another vrf into us keep a list of
+-- 
+2.48.1
+

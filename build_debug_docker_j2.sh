@@ -18,10 +18,12 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
+RUN apt update
+
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %}
+{%- endfor %} || apt -y install -f --no-remove
 
 {% endif %}
 {% endif %}
@@ -29,7 +31,7 @@ debs/{{ deb }}{{' '}}
 {% if $3 is defined %}
 {% if $3|length %}
 
-RUN apt-get update && apt-get install -f -y \
+RUN apt install -f -y \
 {% for dbg in $3.split(' ') -%}
 {{ dbg }}{{' '}}
 {%- endfor %}

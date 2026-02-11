@@ -22,25 +22,35 @@ PRESTERA_MODULE_PREFIX_ARMHF := mrvl-prestera/drivers/armhf/
 PRESTERA_MODULE_SRC := /cpssEnabler/linuxNoKernelModule/drivers/
 SERVICE_DIR := service
 PLATFORM_DIR := sonic_platform
+#CONF_DIR := conf   - not used
+#UDEV_DIR := udev   - not used
 
 %:
-	dh $@ --with systemd,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
-clean:
-	dh_testdir
-	dh_testroot
-	dh_clean
+override_dh_auto_clean:
 	(for mod in $(MODULE_DIRS); do \
+		$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
+		fi; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
-		rm -rf build/; \
 		rm -rf $(MRVL_MODULE_DIR)/; \
 		rm -rf *.egg-info/; \
 		rm -f *.whl; \
 		cd $(MOD_SRC_DIR)/; \
 	done)
+	dh_clean
 
-build:
+override_dh_auto_configure:
 	(for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
 		mkdir -p $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
 		if [ $$mod = "7215-a1" ] && [ $(CONFIGURED_ARCH) = "arm64" ]; then \
 			cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
@@ -54,6 +64,8 @@ build:
 			cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC); \
 			make clean; \
 			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVDMA=y CONFIG_KM_MVINT=y || exit 1; \
+			cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/mvGpioDrv; \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` || exit 1; \
 		fi; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
 		python3 setup.py build; \
@@ -61,46 +73,37 @@ build:
 		cd $(MOD_SRC_DIR); \
 	done)
 
-binary: binary-arch binary-indep
-	# Nothing to do
+override_dh_auto_test:
+	# No tests to run
 
-binary-arch:
-	# Nothing to do
+override_dh_usrlocal:
+	# debian/sonic-platform-<>-<>/usr/local/bin/* are already done
 
-binary-indep:
-	dh_testdir
-	dh_installdirs
-
-	# Custom package commands
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_install:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		doModInstall=false; \
+		if [ $$mod = "7215-a1" ] && [ $(CONFIGURED_ARCH) = "arm64" ]; then \
+			doModInstall=true; \
+		elif [ $$mod = "7215" ] && [ $(CONFIGURED_ARCH) = "armhf" ]; then \
+			doModInstall=true; \
+		fi; \
+		if [ "$$doModInstall" = false ]; then continue; fi; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /boot; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR) ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		fi; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/mvcpss.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		if [ $$mod = "7215" ] && [ $(CONFIGURED_ARCH) = "armhf" ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/mvGpioDrv/mvGpioDrv.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		fi; \
+		if [ -d "$(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)" ] && ls "$(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)"/*.ko >/dev/null 2>&1; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		fi; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
 		python3 setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 		cd $(MOD_SRC_DIR); \
 	done)
-
-	# Resuming debhelper scripts
-	dh_testroot
-	dh_install
-	dh_installchangelogs
-	dh_installdocs
-	dh_systemd_enable
-	dh_installinit
-	dh_systemd_start
-	dh_link
-	dh_fixperms
-	dh_compress
-	dh_strip
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-.PHONY: build binary binary-arch binary-indep clean

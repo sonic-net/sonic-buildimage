@@ -3,8 +3,8 @@
 SPATH       := $($(SONIC_CONFIG_ENGINE_PY3)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-config.mk rules/sonic-config.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
-DEP_FILES   += files/image_config/interfaces/interfaces.j2 dockers/docker-orchagent/ports.json.j2 dockers/docker-dhcp-relay/wait_for_intf.sh.j2 dockers/docker-dhcp-relay/docker-dhcp-relay.supervisord.conf.j2 dockers/docker-lldp/lldpd.conf.j2 dockers/docker-orchagent/ipinip.json.j2 $(shell find device -type f | sort) files/build_templates/qos_config.j2 dockers/docker-orchagent/switch.json.j2 dockers/docker-orchagent/vxlan.json.j2 files/image_config/constants/constants.yml dockers/docker-orchagent/orch_zmq_tables.conf.j2
+DEP_FILES   += $(shell git ls-files $(SPATH)) $(SONIC_DEVICE_FILES_LIST)
+DEP_FILES   += files/image_config/interfaces/interfaces.j2 dockers/docker-orchagent/ports.json.j2 dockers/docker-dhcp-relay/wait_for_intf.sh.j2 dockers/docker-dhcp-relay/docker-dhcp-relay.supervisord.conf.j2 dockers/docker-lldp/lldpd.conf.j2 dockers/docker-orchagent/ipinip.json.j2 files/build_templates/qos_config.j2 dockers/docker-orchagent/switch.json.j2 dockers/docker-orchagent/vxlan.json.j2 files/image_config/constants/constants.yml dockers/docker-orchagent/orch_zmq_tables.conf.j2
 
 ifeq ($(ENABLE_PY2_MODULES), y)
     $(SONIC_CONFIG_ENGINE_PY2)_CACHE_MODE  := GIT_CONTENT_SHA 

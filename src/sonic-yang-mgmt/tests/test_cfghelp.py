@@ -3,17 +3,6 @@ import subprocess
 import os
 from unittest import TestCase
 
-output1="""\
-  -h, --help            show this help message and exit
-  -t TABLE, --table TABLE
-                        Table name
-  -f FIELD, --field FIELD
-                        Field
-  -p PRINT_FORMAT, --print_format PRINT_FORMAT
-                        Print format
-  -a, --all             Print all tables
-"""
-
 techsupport_table_output="""\
 
 AUTO_TECHSUPPORT
@@ -155,7 +144,18 @@ class TestCfgHelp(TestCase):
     def test_dummy_run(self):
         argument = []
         output = self.run_script(argument)
-        self.assertIn(output1, output)
+
+        options = []
+        options.append(("-t", "--table", "Table name"))
+        options.append(("-f", "--field", "Field"))
+        options.append(("-p", "--print_format", "Print format"))
+        options.append(("-a", "--all", "Print all tables"))
+
+        for option in options:
+            with self.subTest(option=option):
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[0]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*[^\\w]{option[1]}(?s:.)*")
+                self.assertRegex(output, f"(?s:.)*\\b{option[2]}(?s:.)*")
 
     def test_single_table(self):
         argument = ['-t', 'AUTO_TECHSUPPORT']

@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,9 +49,6 @@ class TestThermal:
             if 'sodimm' in pattern:
                 return ['/run/hw-management/thermal/sodimm1_temp_input',
                         '/run/hw-management/thermal/sodimm2_temp_input']
-            elif 'voltmon' in pattern:
-                return ['/run/hw-management/thermal/voltmon1_temp1_input',
-                        '/run/hw-management/thermal/voltmon2_temp1_input']
         mock_glob.side_effect = mocked_glob
         chassis = Chassis()
         thermal_list = chassis.get_all_thermals()

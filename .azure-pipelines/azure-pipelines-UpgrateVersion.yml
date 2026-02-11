@@ -152,7 +152,7 @@ stages:
         git config user.name $GIT_USER
         git config credential.https://github.com.username $GIT_USER
         git add files/build/versions
-        git commit -m "[ci/build]: Upgrade SONiC package versions"
+        git commit -s -m "[ci/build]: Upgrade SONiC package versions"
         git checkout -b $BRANCH_NAME
         git remote add remote https://github.com/$GIT_USER/$GIT_REPO
         git push remote HEAD:refs/heads/$BRANCH_NAME -f

@@ -182,7 +182,11 @@ jobs:
             fi
             if [ $(syncd_rpc_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-mellanox.bin target/sonic-$(GROUP_NAME)-rpc.bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-rpc.bin
+            fi
+            if [ $(session_monitor) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_SESSION_MONITOR=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-session-monitor.bin
             fi
             if [ $(GROUP_NAME) == nvidia-bluefield ]; then
               make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
