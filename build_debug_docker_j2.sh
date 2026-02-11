@@ -23,8 +23,21 @@ RUN apt update
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %} || true
-RUN apt -y install -f --no-remove --no-upgrade
+{%- endfor %}
+
+RUN { \
+{% for deb in $2.split(' ') -%}
+dpkg-deb -f debs/{{ deb }} Package; \
+{% endfor -%} \
+} | xargs -r apt-mark hold 
+
+RUN apt -y install -f --no-remove
+
+RUN { \
+{% for deb in $2.split(' ') -%}
+dpkg-deb -f debs/{{ deb }} Package; \
+{% endfor -%} \
+} | xargs -r apt-mark unhold 
 
 {% endif %}
 {% endif %}
