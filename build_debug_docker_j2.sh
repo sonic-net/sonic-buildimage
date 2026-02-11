@@ -23,7 +23,7 @@ RUN apt update
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %}
+{%- endfor %} || true
 
 RUN { \
 {% for deb in $2.split(' ') -%}
