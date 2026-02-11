@@ -10,6 +10,8 @@ supported_SRv6_behaviors = {
 
 DEFAULT_VRF = "default"
 SRV6_MY_SIDS_TABLE_NAME = "SRV6_MY_SIDS"
+VRF_TABLE_NAME = "VRF_TABLE"
+APPL_DB = "APPL_DB"
 
 class SRv6Mgr(Manager):
     """ This class updates SRv6 configurations when SRV6_MY_SID_TABLE table is updated """

@@ -95,6 +95,9 @@ def test_uDT46_add_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
 
+    # VRF must exist in directory for uDT46 with non-default decap_vrf
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+    
     op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:F2::/64", {
         'action': 'uDT46',
         'decap_vrf': 'Vrf1'
@@ -131,6 +134,9 @@ def test_uN_del():
 def test_uDT46_del_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    # VRF must exist in directory for uDT46 with non-default decap_vrf
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
 
     # add a uN action first to make the uDT46 action not the last function
     assert sid_mgr.set_handler("loc1|FCBB:BBBB:1::/48", {
@@ -224,3 +230,29 @@ def test_out_of_order_add_wait_for_all_deps():
     # verify that both of the sids are programmed because all dependencies are satisfied
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+def test_uDT46_add_vrf_not_exist():
+    """uDT46 SID with non-existent decap_vrf should defer (return False) until VRF exists"""
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+    # Vrf1 NOT in directory - should defer
+
+    key, data = "loc1|FCBB:BBBB:1:F2::/64", {'action': 'uDT46', 'decap_vrf': 'Vrf1'}
+    op_test(sid_mgr, 'SET', (key, data), expected_ret=False, expected_cmds=[])
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+
+    # Simulate handler adding to set_queue when set_handler returns False
+    sid_mgr.set_queue.append((key, data))
+
+    # Add Vrf1 to directory - directory.put triggers on_deps_change for subscribed handlers
+    push_list_called = []
+    def capture_push_list(cmds):
+        push_list_called.append(cmds)
+    sid_mgr.cfg_mgr.push_list = capture_push_list
+    sid_mgr.directory.put("APPL_DB", "VRF_TABLE", "Vrf1", {})
+
+    # SID should now be programmed (on_deps_change was triggered by directory.put)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+    assert len(push_list_called) == 1
+    assert 'sid fcbb:bbbb:1:f2::/64 locator loc1 behavior uDT46 vrf Vrf1' in push_list_called[0]
