@@ -1,4 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@tar.bzl", "tar", "mutate")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_deb//distroless:defs.bzl", "flatten")
 
 # Generate compat.h from template
 genrule(
@@ -158,5 +161,73 @@ cc_library(
 cc_shared_library(
     name = "libyang3_shared",
     deps = [":libyang3"],
+    visibility = ["//visibility:public"],
+)
+
+tar(
+    name = "libyang3_pkg",
+    srcs = [":libyang3_shared"],
+    mtree = [
+        "./usr/lib/x86_64-linux-gnu/libyang.so.3 uid=0 gid=0 mode=0755 type=file content=$(location :libyang3_shared)",
+        "./usr/lib/x86_64-linux-gnu/libyang.so uid=0 gid=0 mode=0755 type=link link=libyang.so.3",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+tar(
+  name = "libyang3-dev_headers",
+  srcs = [
+    ":public_headers",
+  ],
+  mutate = mutate(
+    strip_prefix = package_name(),
+    package_dir = "./usr/include/libyang",
+  )
+)
+
+# TODO: We should use rules_foreign_cc to run cmake and build this file.
+# However, because we don't need to override the install directory,
+# we just paste the result of running `mkdir build && cd build && cmake .. && cat libyang.pc
+write_file(
+  name = "libyang3_pkgconfig_generated",
+  out = "libyang.pc",
+  content = """
+prefix=/usr/local
+includedir=${{prefix}}/include
+libdir=${{prefix}}/lib
+
+Name: libyang
+Description: libyang is YANG data modelling language parser and toolkit written (and providing API) in C.
+Version: 3.12.2
+Requires.private: libpcre2-8
+Libs: -L${{libdir}} -lyang
+Libs.private: -lpcre2-8
+Cflags: -I${{includedir}}
+""".split("\n"),
+)
+
+tar(
+  name = "libyang3-dev_pkgconfig",
+  srcs = [
+    ":libyang3_pkgconfig_generated",
+  ],
+  mutate = mutate(
+    strip_prefix = package_name(),
+    # TODO: Parameterize per target
+    package_dir = "./usr/lib/x86_64-linux-gnu/pkgconfig/",
+  )
+)
+
+flatten(
+    name = "libyang3-dev_pkg",
+    tars = [
+        # TODO: Add docs.
+        #  We don't do it because it needs Doxygen so we don't think it's worth it until somebody actually needs it.
+        #  This is the line from libyang_dev.install
+        #    doc/html /usr/share/doc/libyang-dev
+        ":libyang3_pkg",
+        ":libyang3-dev_headers",
+        ":libyang3-dev_pkgconfig",
+    ],
     visibility = ["//visibility:public"],
 )

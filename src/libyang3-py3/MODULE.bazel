@@ -4,6 +4,7 @@ bazel_dep(name = "rules_python", version = "1.6.3")
 bazel_dep(name = "aspect_rules_py", version = "1.7.1")
 bazel_dep(name = "rules_cc", version = "0.2.10")
 bazel_dep(name = "libyang3", version = "3.12.2")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
 
 # Set up pip dependencies for building using uv lockfile
 uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
@@ -38,3 +39,10 @@ http_archive(
     ],
     patch_args = ["-p1", "-F3"],
 )
+
+bazel_dep(name = "sonic-bazel-common", version = "0.0.0", repo_name = "sonic_bazel_common")
+local_path_override(
+  module_name = "sonic-bazel-common",
+  path = "tools/sonic-bazel-common",
+)
+

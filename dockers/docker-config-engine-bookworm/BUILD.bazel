@@ -28,27 +28,6 @@ site_packages(
     ),
 )
 
-# libyang Python bindings built from source (separate due to different path structure)
-tar(
-    name = "libyang-python",
-    srcs = ["@libyang3_py3//:libyang3_py3"],
-    mutate = mutate(
-        strip_prefix = "install",
-        package_dir = "./usr",
-        awk_script = "//dockers/docker-base-bookworm:mutate.awk",
-    ),
-)
-
-# libyang3 shared library for runtime
-tar(
-    name = "libyang3-lib",
-    srcs = ["@libyang3//:libyang3_shared"],
-    mtree = [
-        "./usr/lib/x86_64-linux-gnu/libyang.so.3 uid=0 gid=0 mode=0755 type=file content=$(location @libyang3//:libyang3_shared)",
-        "./usr/lib/x86_64-linux-gnu/libyang.so uid=0 gid=0 mode=0755 type=link link=libyang.so.3",
-    ],
-)
-
 # sonic-cfggen entrypoint script
 tar(
     name = "sonic-cfggen-tar",
@@ -77,8 +56,8 @@ oci_image(
         "@sonic_yang_mgmt//:dist",
         "@sonic_swss_common//pyext:swsscommon_pkg",
         ":pip-packages",
-        ":libyang-python",
-        ":libyang3-lib",
+        "@libyang3_py3//:libyang3-python_pkg",
+        "@libyang3//:libyang3_pkg",
         ":sonic-cfggen-tar",
         ":templates",
     ],

@@ -1,5 +1,6 @@
 load("@aspect_rules_py//py/unstable:defs.bzl", "py_venv")
 load("//:sdist_build_from_src.bzl", "sdist_build_from_src")
+load("@tar.bzl", "tar", "mutate")
 
 # Export patch files and build file for http_archive
 exports_files([
@@ -31,5 +32,17 @@ sdist_build_from_src(
     venv = ":build_venv",
     dep = "@libyang3//:libyang3_shared",
     headers = "@libyang3//:headers",
+    visibility = ["//visibility:public"],
+)
+
+# libyang Python bindings built from source (separate due to different path structure)
+tar(
+    name = "libyang3-python_pkg",
+    srcs = [":libyang3_py3"],
+    mutate = mutate(
+        strip_prefix = "install",
+        package_dir = "./usr",
+        awk_script = "@sonic_bazel_common//:mutate_python_packages",
+    ),
     visibility = ["//visibility:public"],
 )
