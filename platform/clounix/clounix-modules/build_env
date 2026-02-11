@@ -1,0 +1,108 @@
+#  Copyright Statement:
+#  --------------------
+#  This software and the information contained therein are protected by
+#  copyright and other intellectual property laws and terms herein is
+#  confidential. The software may not be copied and the information
+#  contained herein may not be used or disclosed except with the written
+#  permission of Clounix (Shanghai) Technology Limited. (C) 2020-2025
+#
+#  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+#  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("CLOUNIX SOFTWARE")
+#  RECEIVED FROM CLOUNIX AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+#  AN "AS-IS" BASIS ONLY. CLOUNIX EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+#  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+#  NEITHER DOES CLOUNIX PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+#  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+#  SUPPLIED WITH THE CLOUNIX SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+#  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. CLOUNIX SHALL ALSO
+#  NOT BE RESPONSIBLE FOR ANY CLOUNIX SOFTWARE RELEASES MADE TO BUYER'S
+#  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+#
+#  BUYER'S SOLE AND EXCLUSIVE REMEDY AND CLOUNIX'S ENTIRE AND CUMULATIVE
+#  LIABILITY WITH RESPECT TO THE CLOUNIX SOFTWARE RELEASED HEREUNDER WILL BE,
+#  AT CLOUNIX'S OPTION, TO REVISE OR REPLACE THE CLOUNIX SOFTWARE AT ISSUE,
+#  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+#  CLOUNIX FOR SUCH CLOUNIX SOFTWARE AT ISSUE.
+#
+#  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+#  WITH THE LAWS OF THE PEOPLE'S REPUBLIC OF CHINA, EXCLUDING ITS CONFLICT OF
+#  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+#  RELATED THERETO SHALL BE SETTLED BY LAWSUIT IN SHANGHAI,CHINA UNDER.
+
+#!/usr/bin/env bash
+
+# make sure login docker registry
+#docker login docker.clounix.com with your login password
+#docker login registry.clounix.com with user/Clounix123
+
+# check arguments
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <bldver> <command>"
+  exit 1
+fi
+
+declare -A bldver_map=(
+  ["cuos.master"]="2.0"
+  ["cuos.202211"]="3.0"
+  ["customer.202311"]="3.1"
+  ["customer.202405"]="5.0"
+)
+
+input_bldver=$1
+
+# Check if the input bldver has a mapping
+if [[ -n "${bldver_map[$input_bldver]}" ]]; then
+  bldver="${bldver_map[$input_bldver]}"
+else
+  echo "Unknown bldver: $input_bldver"
+  echo "Use default 2.0"
+  bldver='2.0'
+fi
+
+# check docker image for building
+if [ "$(docker images -q docker.clounix.com/software/platform/tools/nb-knet/build-env:$bldver 2> /dev/null)" == "" ]; then
+  echo "Pull Docker image"
+  docker pull docker.clounix.com/software/platform/tools/nb-knet/build-env:$bldver
+fi
+
+if [ "$(docker images -q clounix/platform/knet-build-env-$USER:$bldver 2> /dev/null)" == "" ]; then
+  echo "Build Docker image as clounix/platform/knet-build-env-$USER:$bldver"
+  docker image build \
+               --network=host \
+               --build-arg bldver=$bldver \
+               --build-arg user=$USER \
+               --build-arg uid=$(id -u) \
+               --build-arg guid=$(id -g) \
+               --build-arg homedir=/var/$USER \
+               --build-arg hostname=$HOSTNAME \
+               --build-arg workdir=$PWD \
+               -t clounix/platform/knet-build-env-$USER:$bldver \
+               -f ./Dockerfile.user \
+               .
+fi
+
+knetdesk=knet-build-$USER
+# execute commands 
+if [ $# -ne 1 ]; then
+  shift
+  echo "$@ ..."
+  docker run \
+	  -v `pwd`:`pwd` \
+	  -v $HOME:/var/$USER \
+	  -v /etc/localtime:/etc/localtime:ro \
+	  -v /etc/timezone:/etc/timezone:ro \
+	  -w `pwd` \
+	  --name $knetdesk \
+	  -it --rm clounix/platform/knet-build-env-$USER:$bldver sh -c "$@"
+else
+  echo "Start bash ..."
+  docker run \
+	  -v `pwd`:`pwd` \
+	  -v $HOME:/var/$USER \
+	  -v /etc/localtime:/etc/localtime:ro \
+	  -v /etc/timezone:/etc/timezone:ro \
+	  -w `pwd` \
+	  --name $knetdesk \
+	  -it --rm clounix/platform/knet-build-env-$USER:$bldver bash
+fi
