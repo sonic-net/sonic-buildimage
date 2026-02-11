@@ -39,7 +39,7 @@ DEBUG = False
 args = []
 FORCE = 0
 i2c_prefix = '/sys/bus/i2c/devices/'
-
+fast_reboot_dir = 'host/fast-reboot'
 
 if DEBUG == True:
     print sys.argv[0]
@@ -75,7 +75,9 @@ def main():
             logging.info('no option')                          
     for arg in args:            
         if arg == 'install':
-           install()
+           install(0)
+        elif arg == 'fast-reboot-install':
+           install(1)
         elif arg == 'clean':
            uninstall()
         else:
@@ -90,7 +92,7 @@ def show_help():
            
 def show_log(txt):
     if DEBUG == True:
-        print "[D7032]"+txt    
+        print "[D7054]"+txt    
     return
     
 def exec_cmd(cmd, show):
@@ -131,13 +133,20 @@ drivers =[
 'swps']
  
 
-                    
-def system_install():
+def system_install(boot_option):
+    ''' boot_option: 0 - normal, 1 - fast-reboot'''
     global FORCE
 
     #install drivers
     for i in range(0,len(drivers)):
-       status, output = exec_cmd("modprobe "+drivers[i], 1)
+       if drivers[i] == "swps":
+           if boot_option == 1:
+               status, output = exec_cmd("modprobe swps io_no_init=1", 1)  
+           else:       
+               status, output = exec_cmd("modprobe "+drivers[i], 1)
+       else:
+           status, output = exec_cmd("modprobe "+drivers[i], 1)
+   
     if status:
 	   print output
 	   if FORCE == 0:                
@@ -145,7 +154,6 @@ def system_install():
     				 
     #instantiate devices
     for i in range(0,len(instantiate)):
-       #time.sleep(1)
        status, output = exec_cmd(instantiate[i], 1)
     if status:
 	   print output
@@ -153,43 +161,43 @@ def system_install():
 	      return status  
     
     for i in range(10,18):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-2/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-2/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:            
                 return status   
     for i in range(18,26):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-3/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-3/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:            
                 return status     
     for i in range(26,34):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-4/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-4/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:            
                 return status     
     for i in range(34,42):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-5/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-5/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:            
                 return status
     for i in range(42,50):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-6/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-6/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:            
                 return status     				
     for i in range(50,58):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-7/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-7/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:
                 return status
     for i in range(58,64):
-        status, output =exec_cmd("echo sff8436 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-8/i2c-"+str(i)+"/new_device", 1)
+        status, output =exec_cmd("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/i2c-8/i2c-"+str(i)+"/new_device", 1)
         if status:
             print output
             if FORCE == 0:
@@ -202,10 +210,11 @@ def system_ready():
         return False
     return True
                
-def install():                      
+def install(boot_option=0):
+    ''' boot_option: 0 - normal, 1 - fast-reboot '''                      
     if not device_found():
         print "No device, installing...."     
-        status = system_install() 
+        status = system_install(boot_option) 
         if status:
             if FORCE == 0:        
                 return  status        

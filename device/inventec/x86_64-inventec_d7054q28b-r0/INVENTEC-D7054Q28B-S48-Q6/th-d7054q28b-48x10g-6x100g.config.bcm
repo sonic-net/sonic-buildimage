@@ -21,14 +21,14 @@ pbmp_xport_xe=0x3fffffffdffffffff7fffffffdfffffffe
 
 
 # EagleCore ports: 36 & 49  
-portmap_66=129:10
-portmap_100=131:10
+#portmap_66=129:10
+#portmap_100=131:10
 
 # Loopback ports
-portmap_33=132:10
-portmap_67=133:10
-portmap_101=134:10
-portmap_135=135:10
+#portmap_33=132:10
+#portmap_67=133:10
+#portmap_101=134:10
+#portmap_135=135:10
 
 # First 12*4 48 ports config for 10G
 # Second 6 ports config for 100G
