@@ -292,6 +292,59 @@ class TestUtils:
         conditions = [lambda: False]
         assert not utils.wait_until_conditions(conditions, 1)
 
+    @mock.patch('sonic_platform.utils.inotify.adapters.Inotify')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_immediate(self, mock_access, mock_inotify):
+        mock_access.return_value = True
+        assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_inotify.assert_not_called()
+
+    @mock.patch('sonic_platform.utils.logger.log_debug')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_dir_missing(self, mock_access, mock_exists, mock_log_debug):
+        """When directory does not exist, return False immediately (no wait)."""
+        mock_access.return_value = False
+        mock_exists.return_value = False
+        assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+        mock_log_debug.assert_called_once()
+
+    @pytest.mark.parametrize("event_type", [
+        "IN_CREATE",
+        "IN_CLOSE_WRITE",
+        "IN_MOVED_TO",
+    ])
+    @mock.patch('sonic_platform.utils.logger.log_info')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_event(self, mock_access, mock_exists, mock_log_info, event_type):
+        """All inotify event types that indicate file creation are handled."""
+        # First os.access: file not readable at start; second: readable when inotify event is processed
+        mock_access.side_effect = [False, True]
+        mock_exists.return_value = True
+
+        mock_notifier = mock.MagicMock()
+        mock_notifier.event_gen.return_value = [
+            (None, [event_type], "/tmp", "test.file")
+        ]
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', return_value=mock_notifier):
+            assert utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_info.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.access')
+    def test_wait_for_file_creation_inotify_error(self, mock_access, mock_exists, mock_log_error):
+        mock_access.side_effect = [False, False]
+        mock_exists.return_value = True
+
+        with mock.patch('sonic_platform.utils.inotify.adapters.Inotify', side_effect=Exception('boom')):
+            assert not utils.wait_for_file_creation('/tmp/test.file', timeout=1)
+
+        mock_log_error.assert_called_once()
+
     def test_timer(self):
         timer = utils.Timer()
         timer.start()
