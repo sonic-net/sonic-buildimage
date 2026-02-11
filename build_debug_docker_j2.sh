@@ -23,7 +23,7 @@ RUN apt-get update
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-+{%- endfor %} || apt-get -y install -f --no-remove
+{%- endfor %} || apt-get -y install -f --no-remove
 
 {% endif %}
 {% endif %}
