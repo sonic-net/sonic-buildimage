@@ -113,7 +113,7 @@ class BgpdClientMgr(threading.Thread):
             'OSPFV2_ROUTER_DISTRIBUTE_ROUTE': ['ospfd'],
             'OSPFV2_INTERFACE': ['ospfd'],
             'OSPFV2_ROUTER_PASSIVE_INTERFACE': ['ospfd'],
-            'STATIC_ROUTE': ['staticd'],
+            'STATIC_ROUTE': ['mgmtd'],
             'PIM_GLOBALS': ['pimd'],
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],

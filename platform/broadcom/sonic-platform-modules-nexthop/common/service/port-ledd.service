@@ -6,7 +6,7 @@ BindsTo=swss.service
 
 [Service]
 ExecStart=/usr/local/bin/port_ledd.py
-Restart=always
+Restart=on-failure
 RestartSec=10s
 KillSignal=SIGTERM
 

@@ -44,6 +44,8 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
 ssize_t show_sysstatus_data(struct device *dev, struct device_attribute *da, char *buf);
 ssize_t store_sysstatus_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
+int __init sysstatus_data_init(void);
+void __exit sysstatus_data_exit(void);
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32,
              (void*)&sysstatus_data.sysstatus_addr_attr.aname, NULL);
@@ -266,7 +268,7 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
     pddf_dbg(SYSSTATUS, KERN_ERR "%s: Populating the data for %s\n", __FUNCTION__, pdata->sysstatus_addr_attr.aname);
 
 #ifdef __STDC_LIB_EXT1__
-    memset_s(&pdata->sysstatus_addr_attr, sizeof(pdata->sysstatus_addr_attr, 0, sizeof(pdata->sysstatus_addr_attr));
+    memset_s(&pdata->sysstatus_addr_attr, sizeof(pdata->sysstatus_addr_attr), 0, sizeof(pdata->sysstatus_addr_attr));
 #else
     _memset(&pdata->sysstatus_addr_attr, 0, sizeof(pdata->sysstatus_addr_attr));
 #endif

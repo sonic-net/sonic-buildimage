@@ -530,7 +530,13 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
-        
+
+        # MDIO specific data store
+        if 'mdio' in dev:
+            ret = self.create_device(dev['mdio']['dev_attr'], "pddf/devices/multifpgapci/{}/mdio".format(bdf), ops)
+            if ret != 0:
+                return create_ret.append(ret)
+
         # TODO: add GPIO & SPI specific data stores
 
         cmd = "echo 'fpgapci_init' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
@@ -544,12 +550,26 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        if 'mdio' in dev:
+            ret = self.create_mdio_bus(bdf, dev['mdio'], ops)
+            if ret != 0:
+                return create_ret.append(ret)
+
         if 'gpio' in dev:
             ret = self.create_multifpgapci_gpio_device(bdf, dev['gpio'], ops)
             if ret != 0:
                 return create_ret.append(ret)
 
         return create_ret.append(ret)
+
+    def create_mdio_bus(self, bdf, mdio_dev, ops):
+        for bus in range(int(mdio_dev['dev_attr']['num_virt_ch'], 16)):
+            cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/mdio/new_mdio_bus".format(bus, bdf)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return ret
+
+        return 0
 
     def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
         create_ret = []
@@ -1362,8 +1382,7 @@ class PddfParse():
                     if attr.get("attr_devaddr") is not None:
                         if attr.get("attr_offset") is not None:
                             if attr.get("attr_mask") is not None:
-                                if attr.get("attr_len") is not None:
-                                    ret_val = "psu success"
+                                ret_val = "psu success"
                 else:
                     ret_val = "psu failed"
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 HWSKU_DIR=/usr/share/sonic/hwsku
+PLATFORM_ENV_CONF=/usr/share/sonic/platform/platform_env.conf
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -130,6 +131,16 @@ fi
 HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
 if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
+# Enable SAI MACSec POST when:
+# - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
+# - MACSec is enabled on platform.
+if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; then
+    [ -f $PLATFORM_ENV_CONF ] && . $PLATFORM_ENV_CONF
+    if [[ $macsec_enabled -eq 1 ]]; then
+        ORCHAGENT_ARGS+=" -M"
+    fi
 fi
 
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.

@@ -17,6 +17,13 @@ load_kernel_drivers() {
     modprobe eeprom
 }
 
+load_kernel_drivers_late() {
+    modprobe mvcpss
+    # Override mvGpioDrv.ko built-in mrvllibsai.deb with correct one
+    GOOD="/usr/lib/modules/$(uname -r)/kernel/extra/mvGpioDrv.ko"
+    find /var/lib/docker/overlay2/*/diff/usr/lib/modules -type f -name mvGpioDrv.ko \
+         -exec sh -c 'cp -a "$0" "$1" 2>/dev/null || true' "$GOOD" {} \;
+}
 
 nokia_7215_profile()
 {
@@ -42,21 +49,23 @@ ismux_bus=$(i2cdetect -l|grep mux|cut -f1)
 # Enumerate the SFP eeprom device on each mux channel
 for mux in ${ismux_bus}
 do
-    echo optoe2 0x50 > /sys/class/i2c-adapter/${mux}/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/${mux}/new_device
 done
 
 # Enumerate system eeprom
-echo 24c02 0x53 > /sys/class/i2c-adapter/i2c-0/new_device
+echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-0/new_device
 sleep 2
-chmod 644 /sys/class/i2c-adapter/i2c-0/0-0053/eeprom
+chmod 644 /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 
 # Enumerate fan eeprom devices
-echo eeprom 0x55 > /sys/class/i2c-adapter/i2c-0/new_device
-echo eeprom 0x56 > /sys/class/i2c-adapter/i2c-0/new_device
+echo eeprom 0x55 > /sys/bus/i2c/devices/i2c-0/new_device
+echo eeprom 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate PSU eeprom devices
-echo eeprom 0x50 > /sys/class/i2c-adapter/i2c-1/new_device
-echo eeprom 0x51 > /sys/class/i2c-adapter/i2c-1/new_device
+echo eeprom 0x50 > /sys/bus/i2c/devices/i2c-1/new_device
+echo eeprom 0x51 > /sys/bus/i2c/devices/i2c-1/new_device
+
+load_kernel_drivers_late
 
 # Enable optical SFP Tx
 i2cset -y -m 0x0f 0 0x41 0x5 0x00

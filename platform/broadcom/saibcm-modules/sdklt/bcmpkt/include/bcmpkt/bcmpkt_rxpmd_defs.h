@@ -7,7 +7,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -291,8 +292,12 @@
 #define BCMPKT_RXPMD_IS_EGR_TS                   97
 /*! If set, then packet has been modified by the EP and CRC needs to be regenerated */
 #define BCMPKT_RXPMD_MODIFIED_PKT                98
+/*!  */
+#define BCMPKT_RXPMD_FLEX_HDR_MATCH_ID           99
+/*!  */
+#define BCMPKT_RXPMD_HVE_RESULT                  100
 /*! RXPMD FIELD ID NUMBER */
-#define BCMPKT_RXPMD_FID_COUNT                   99
+#define BCMPKT_RXPMD_FID_COUNT                   101
 /*! \} */
 
 /*! RXPMD field name strings for debugging. */
@@ -396,6 +401,8 @@
     {"MATCHED_RULE_EP", BCMPKT_RXPMD_MATCHED_RULE_EP},\
     {"IS_EGR_TS", BCMPKT_RXPMD_IS_EGR_TS},\
     {"MODIFIED_PKT", BCMPKT_RXPMD_MODIFIED_PKT},\
+    {"FLEX_HDR_MATCH_ID", BCMPKT_RXPMD_FLEX_HDR_MATCH_ID},\
+    {"HVE_RESULT", BCMPKT_RXPMD_HVE_RESULT},\
     {"fid count", BCMPKT_RXPMD_FID_COUNT}
 
 /*!
@@ -843,8 +850,14 @@
 #define BCMPKT_RX_REASON_SRV6_CONTROL_PKT        142
 /*! OUI Compression miss */
 #define BCMPKT_RX_REASON_OUI_COMPRESSION_MISS    143
+/*! Epoch check fail */
+#define BCMPKT_RX_REASON_EPOCH_CHECK_FAIL        144
+/*! DLB ECMP DPG Resolution CTC */
+#define BCMPKT_RX_REASON_DLB_ECMP_DPG_RESOLUTION_CTC 145
+/*! SRV6 ALT FRR not supported */
+#define BCMPKT_RX_REASON_SRV6_ALT_FRR_ERROR      146
 /*! BCMPKT_RX_REASON TYPE NUMBER */
-#define BCMPKT_RX_REASON_COUNT                   144
+#define BCMPKT_RX_REASON_COUNT                   147
 /*! \} */
 
 /*! RXPMD reason name strings for debugging. */
@@ -993,6 +1006,9 @@
     {"PORT_DOWN", BCMPKT_RX_REASON_PORT_DOWN},\
     {"SRV6_CONTROL_PKT", BCMPKT_RX_REASON_SRV6_CONTROL_PKT},\
     {"OUI_COMPRESSION_MISS", BCMPKT_RX_REASON_OUI_COMPRESSION_MISS},\
+    {"EPOCH_CHECK_FAIL", BCMPKT_RX_REASON_EPOCH_CHECK_FAIL},\
+    {"DLB_ECMP_DPG_RESOLUTION_CTC", BCMPKT_RX_REASON_DLB_ECMP_DPG_RESOLUTION_CTC},\
+    {"SRV6_ALT_FRR_ERROR", BCMPKT_RX_REASON_SRV6_ALT_FRR_ERROR},\
     {"reason count", BCMPKT_RX_REASON_COUNT}
 
 #endif /*! BCMPKT_RXPMD_DEFS_H */

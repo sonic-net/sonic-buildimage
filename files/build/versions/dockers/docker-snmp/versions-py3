@@ -1,4 +1,0 @@
-hiredis==3.3.0
-psutil==7.1.0
-python-arptable==0.0.2
-smbus==1.1.post2

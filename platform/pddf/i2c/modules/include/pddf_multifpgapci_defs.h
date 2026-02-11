@@ -23,6 +23,7 @@
 
 #include "pddf_multifpgapci_gpio_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
+#include "pddf_multifpgapci_mdio_defs.h"
 
 #define NAME_SIZE 32
 

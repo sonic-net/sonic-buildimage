@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -188,7 +189,7 @@ ngedk_dmamem_map_p2v(dma_addr_t paddr)
 }
 EXPORT_SYMBOL(ngedk_dmamem_map_p2v);
 
-int
+static int
 ngedk_intr_wait(int kdev, uint32_t *uc_bmp)
 {
     int32_t core;

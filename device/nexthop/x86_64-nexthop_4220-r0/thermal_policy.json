@@ -1,0 +1,111 @@
+{
+    "interval": 5,
+    "info_types": [
+        {
+            "type": "fan_drawer_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "psu_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "One fan drawer present",
+            "conditions": [
+                {
+                    "type": "fandrawer.one.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 100
+                },
+                {
+                    "type": "fan.set_speed",
+                    "speed": 100
+                }
+            ]
+        },
+        {
+            "name": "Two fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.two.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 95
+                },
+                {
+                    "type": "fan.set_speed",
+                    "speed": 95
+                }
+            ]
+        },
+        {
+            "name": "Three fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.three.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 80
+                }
+            ]
+        },
+        {
+            "name": "Four fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.four.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 75
+                }
+            ]
+        },
+        {
+            "name": "thermal control algorithm",
+            "conditions": [
+                {
+                    "type": "default.operation"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.control_algo",
+                    "fan_limits": {
+                        "min": 30
+                    },
+                    "pid_domains": {
+                        "asic": {
+                            "KP": 10,
+                            "KI": 0.1,
+                            "KD": 5
+                        },
+                        "main": {
+                            "KP": 5,
+                            "KI": 0.05,
+                            "KD": 2.5
+                        }
+                    },
+                    "constants": {
+                        "interval": 5
+                    }
+                }
+            ]
+        }
+    ]
+}
