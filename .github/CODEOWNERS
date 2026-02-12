@@ -109,3 +109,10 @@
 /src/ptf/                               @sonic-net/sonic-fundamentals
 /src/ptf-py3/                           @sonic-net/sonic-fundamentals
 /src/scapy/                             @sonic-net/sonic-fundamentals
+
+## Vendor-specific directories 
+
+# Dell HW Platforms 
+/device/dell/                                    @jeff-yin @vpsubramaniam @srideepDell
+/platform/broadcom/sonic-platform-modules-dell   @jeff-yin @vpsubramaniam @srideepDell
+
