@@ -12,7 +12,7 @@ parameters:
 jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
     timeoutInMinutes: 480
-    condition: false
+    condition: true
     pool:
       type: linux
       isCustom: true
@@ -34,6 +34,8 @@ jobs:
         connectionName: sonic2sub
         kevaultName: sonic-kv
     - script: |
+        exit 0
+        # disable secure boot for this code drop. cisco will fix in next code drop
         echo $(DEV_SIGNING_KEY) | base64 -d | sudo tee "$(SIGNING_KEY)" 1>/dev/null 2>&1
         echo $(DEV_SIGNING_CERT) | base64 -d > "$(SIGNING_CERT)"
         echo "SECURE_UPGRADE_MODE := dev" >> rules/config.user
