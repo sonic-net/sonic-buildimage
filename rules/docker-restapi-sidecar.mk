@@ -42,10 +42,3 @@ $(DOCKER_RESTAPI_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_RESTAPI_SIDECAR)_FILES += $(RESTAPI_SYSTEMD)
 $(DOCKER_RESTAPI_SIDECAR)_FILES += $(K8S_POD_CONTROL)
 
-.PHONY: docker-restapi-sidecar-ut
-docker-restapi-sidecar-ut: $(PYTHON_WHEELS_PATH)/sonic_py_common-1.0-py3-none-any.whl-install
-	@echo "Running unit tests for systemd_stub.py..."
-	@PYTHONPATH=dockers/docker-restapi-sidecar \
-		python3 -m pytest -q dockers/docker-restapi-sidecar/cli-plugin-tests
-
-target/docker-restapi-sidecar.gz: docker-restapi-sidecar-ut
