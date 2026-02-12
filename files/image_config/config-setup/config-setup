@@ -464,7 +464,7 @@ boot_config()
         do_config_initialization
         # force ZTP to restart (only relevant when ZTP was actually used,
         # i.e., when minigraph.xml was not available)
-        if  ztp_is_enabled ; then
+        if [ ! -e ${MINGRAPH_FILE} ] && ztp_is_enabled ; then
             ztp_status=$(ztp status -c)
             if [ "$ztp_status" = "5:SUCCESS" ] || \
           [ "$ztp_status" = "6:FAILED" ]; then
