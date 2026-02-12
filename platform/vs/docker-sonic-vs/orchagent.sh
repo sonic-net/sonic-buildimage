@@ -49,12 +49,17 @@ fi
 # Set zmq mode by default for DPU vs
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
+ZMQ_MODE=$(echo $SWSS_VARS | jq -r '.zmq_mode')
 
-if [ "$SWITCH_TYPE" == "dpu" ]; then
-    ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
+if [[ "$ZMQ_MODE" == "enable" || "$SWITCH_TYPE" == "dpu" ]]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+    [[ "$SWITCH_TYPE" == "dpu" ]] && ORCHAGENT_ARGS+="-k 65536 "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
+
+# Enable zmq
+ORCHAGENT_ARGS+="-q ipc:///zmq_swss/zmq_swss_ep "
 
 # Enable ring buffer
 ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
