@@ -408,6 +408,15 @@ start() {
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
         clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
+        # Flush DPU remote databases on NPU
+        # Check if DPU_APPL_DB remote database is reachable (indicates this is a DPU with an accessible DB)
+        if $SONIC_DB_CLI DPU_APPL_DB PING >/dev/null 2>&1; then
+            debug "Flushing DPU remote databases (DPU_APPL_DB, DPU_STATE_DB, DPU_APPL_STATE_DB, DPU_COUNTERS_DB) ..."
+            $SONIC_DB_CLI DPU_APPL_DB FLUSHDB
+            $SONIC_DB_CLI DPU_STATE_DB FLUSHDB
+            $SONIC_DB_CLI DPU_APPL_STATE_DB FLUSHDB
+            $SONIC_DB_CLI DPU_COUNTERS_DB FLUSHDB
+        fi
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
         MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
