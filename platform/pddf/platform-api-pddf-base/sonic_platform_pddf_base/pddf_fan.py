@@ -183,7 +183,26 @@ class PddfFan(FanBase):
             else:
                 speed = int(float(output['status']))
 
-            max_speed = int(self.plugin_data['PSU']['PSU_FAN_MAX_SPEED'])
+            psu_plugin_data = self.plugin_data['PSU']
+            if 'PSU_FAN_MAX_SPEED_MAP' in psu_plugin_data:
+                psu_fan_max_speed_map = psu_plugin_data['PSU_FAN_MAX_SPEED_MAP']
+
+                max_speed = None
+                output = self.pddf_obj.get_attr_name_output(device, "psu_model_name")
+                if output and 'status' in output:
+                    model = output['status']
+                    model = model.rstrip()
+
+                    if model in psu_fan_max_speed_map:
+                        max_speed = int(psu_fan_max_speed_map[model])
+
+                # Fall back to default if not able to get model name or model
+                # not listed
+                if max_speed is None:
+                    max_speed = int(psu_fan_max_speed_map['default'])
+            else:
+                max_speed = int(psu_plugin_data['PSU_FAN_MAX_SPEED'])
+
             speed_percentage = round((speed*100)/max_speed)
             return speed_percentage
         else:

@@ -67,6 +67,7 @@
 # Common files and FLAGS
 # Run the 'touch cache.skip.common' command in the base directory to exclude the common files from caching
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform slave.mk rules/functions Makefile.cache)
+SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 SONIC_COMMON_FLAGS_LIST :=  $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
