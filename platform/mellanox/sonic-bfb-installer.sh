@@ -400,7 +400,7 @@ extract_bfb() {
             exit 1
         fi
         
-        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | grep "$(basename "$bfb_file")" | head -n 1)
+        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | head -n 1)
         if [ -z "$extracted_bfb" ]; then
             log_error "No BFB file found in tar archive"
             exit 1
