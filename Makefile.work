@@ -304,10 +304,24 @@ endif
 
 # Consider removing the --ulimit flag once nothing older
 # than Bullseye is being used as a slave container.
+# Build container memory limit (set SONIC_BUILD_MEMORY=none to disable).
+# Constrains OOM kills to the container instead of the kernel silently
+# killing unrelated host processes.
+SONIC_BUILD_MEMORY_FLAGS =
+ifneq ($(SONIC_BUILD_MEMORY),)
+ifneq ($(SONIC_BUILD_MEMORY),none)
+    SONIC_BUILD_MEMORY_FLAGS += --memory=$(SONIC_BUILD_MEMORY)
+    ifneq ($(SONIC_BUILD_MEMORY_SWAP),)
+        SONIC_BUILD_MEMORY_FLAGS += --memory-swap=$(SONIC_BUILD_MEMORY_SWAP)
+    endif
+endif
+endif
+
 DOCKER_RUN := docker run --rm=true --privileged --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
+    $(SONIC_BUILD_MEMORY_FLAGS) \
     -e "http_proxy=$(http_proxy)" \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
