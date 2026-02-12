@@ -921,13 +921,34 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT /usr/local/bin/ge
 {% if include_kubernetes == "y" %}
 ## Pull in kubernetes docker images
 echo "pulling universal k8s images ..."
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${K8s_GCR_IO_PAUSE_VERSION}
+{% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${K8s_GCR_IO_PAUSE_VERSION}
+{% endif %}
 echo "docker images pull complete"
 {% endif %}
 
 {% if include_kubernetes_master == "y" %}
 # Pull in kubernetes master docker images
 echo "pulling kubernetes master images ..."
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${MASTER_PAUSE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-controller-manager:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-scheduler:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-proxy:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}coredns/coredns:${MASTER_COREDNS_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}etcd:${MASTER_ETCD_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/metrics-scraper:${MASTER_UI_METRIC_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/dashboard:${MASTER_UI_DASH_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:latest
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
+{% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${MASTER_PAUSE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/kube-controller-manager:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
@@ -943,6 +964,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIV
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
+{% endif %}
 echo "kubernetes master docker images pull complete"
 # Install python packages for mdm metrics collection service usage
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
