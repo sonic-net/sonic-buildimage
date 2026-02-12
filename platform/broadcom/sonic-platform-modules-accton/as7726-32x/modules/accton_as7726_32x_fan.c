@@ -45,7 +45,6 @@ static struct as7726_32x_fan_data *as7726_32x_fan_update_device(struct device *d
 static ssize_t fan_show_value(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
                               const char *buf, size_t count);
-static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da, char *buf);                              
 
 /* fan related data, the index should match sysfs_fan_attributes
  */

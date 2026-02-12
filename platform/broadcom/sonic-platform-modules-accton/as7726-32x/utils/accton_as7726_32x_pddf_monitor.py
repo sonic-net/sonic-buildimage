@@ -21,6 +21,7 @@
 #    4/20/2018: Jostar modify for as7726_32x
 #    12/03/2018:Jostar modify for as7726_32x thermal plan
 #    11/16/2020:Jostar modify for as7726_32x thermal plan based on PDDF
+#    11/19/2023:Jostar modify to add kick fan-wdt
 # ------------------------------------------------------------------
 
 try:
@@ -32,6 +33,7 @@ try:
     import logging.handlers
     import time
     from sonic_platform import platform
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -162,7 +164,7 @@ class device_monitor(object):
         }
         
         fan_dir= platform_chassis.get_fan(0).get_direction()
-        if fan_dir == 'EXHAUST':
+        if fan_dir == 'exhaust':
             fan_policy = fan_policy_f2b
         else:
             fan_policy = fan_policy_b2f
@@ -305,15 +307,47 @@ def main(argv):
     
     global platform_chassis
     platform_chassis = platform.Platform().get_chassis()
-    
+    #cmd_str = ["i2cset", "-y", "-f", "54", "0x66", "0x33", "0x0"]
+    #status, output = getstatusoutput_noshell(cmd_str)
+    #if status:
+    #    print("Warning: Fan speed watchdog could not be disabled")
+
+    cmd_str = ["i2cset", "-y", "-f", "54", "0x66", "0x33", "0x1"]
+    status, output = getstatusoutput_noshell(cmd_str)
+    if status:
+        print("Warning: Fan speed watchdog could not be enabled")
+
+    #Timer need to be set after enable.
+    #if set timer is eralier than enable wdt. Speed will become to wdt speed after 6sec.
+    cmd_str = ["i2cset", "-y", "-f", "54", "0x66", "0x31", "0xF0"]
+    status, output = getstatusoutput_noshell(cmd_str)
+    if status:
+        print("Warning: Fan speed watchdog timer could not be disabled")
+
     platform_chassis.get_fan(0).set_speed(38)
   
     print("set default fan speed to 37.5%")
     monitor = device_monitor(log_file, log_level)
+
+    cmd_kick = ["i2cset", "-y", "-f", "54", "0x66", "0x31", "0xF0"] #kick WDT
+    cmd_check_wdt = ["i2cget",  "-y", "-f", "54", "0x66", "0x33"]
     # Loop forever, doing something useful hopefully:
     while True:
         monitor.manage_fans()
+        getstatusoutput_noshell(cmd_kick)
         time.sleep(10)
+        #polling to check fan-wdt status
+        status, output = getstatusoutput_noshell(cmd_check_wdt)
+        if status is not None:
+            val= int(output,16)
+            if (val & 0x1) == 0:
+                logging.warning('Detect Fan-WDT disable')
+                logging.warning('Try to enable Fan-WDT')
+                cmd_str = ["i2cset", "-y", "-f", "54", "0x66", "0x33", "0x1"]
+                getstatusoutput_noshell(cmd_str)
+                cmd_str = ["i2cset", "-y", "-f", "54", "0x66", "0x31", "0xF0"]
+                getstatusoutput_noshell(cmd_str)
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
