@@ -127,6 +127,10 @@ override_dh_install:
 					dh_install -p$${pkg_name} common/utils/nh_powercycle \
 						usr/lib/systemd/system-shutdown/; \
 				fi; \
+				if [ -f common/utils/platform_reboot ]; then \
+					dh_install -p$${pkg_name} common/utils/platform_reboot \
+						usr/share/sonic/device/$${device_name}/; \
+				fi; \
 				;; \
 		esac; \
 	done)
