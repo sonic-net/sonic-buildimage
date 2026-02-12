@@ -56,9 +56,8 @@ class Psu(PsuBase):
         self.i2c_addr = PSU_FPGA_I2C_MAPPING[self.index]["addr"]
         self.hwmon_path = I2C_PATH.format(self.i2c_num, self.i2c_addr)
 
-        fan_node = Fan(0, 1, True, self.index) #lgtm [py/call/wrong-number-class-arguments] lgtm [py/multiple-definition]
-        fan_node = Fan(0, 2, True, self.index) #lgtm [py/call/wrong-number-class-arguments] lgtm [py/multiple-definition]
-        self._fan_list.append(fan_node)
+        self._fan_list.append(Fan(0, 1, True, self.index))
+        self._fan_list.append(Fan(0, 2, True, self.index))
 
     def get_voltage(self):
         """
