@@ -1,7 +1,7 @@
 {
     "GLOBAL_MEDIA_SETTINGS":{
         "1-32":{
-            "AOI-ALQA9N09ADLA1580":{
+            "AOI-ALQA9N\\d{2}ADLA1580":{
                 "speed:CAUI-4":{
                     "pre2":{
                         "lane0":"0x00000000",
