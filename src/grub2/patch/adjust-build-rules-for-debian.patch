@@ -1,36 +1,28 @@
 Adjust build rules for Debian Trixie
 
-From: Saikrishna Arcot <sarcot@microsoft.com>
-
+From: Jason Bridges <jasonbridges@google.com>
 
 ---
- debian/control |   23 +----------------------
- debian/rules   |    2 --
- 2 files changed, 1 insertion(+), 24 deletions(-)
+ debian/control |   24 ------------------------
+ debian/rules   |    4 ++--
+ 2 files changed, 2 insertions(+), 26 deletions(-)
 
 diff --git a/debian/control b/debian/control
-index 1c48f28e2..976040a8c 100644
+index 11e9e7e57..11c81ed29 100644
 --- a/debian/control
 +++ b/debian/control
-@@ -11,8 +11,7 @@ Build-Depends: debhelper-compat (= 13),
-  po-debconf,
-  help2man,
-  texinfo,
-- gcc-12,
-- gcc-12-multilib [i386 kopensolaris-i386 any-amd64 any-ppc64 any-sparc],
-+ gcc-multilib [i386 kopensolaris-i386 any-amd64 any-ppc64 any-sparc],
-  xfonts-unifont,
-  libfreetype6-dev,
-  gettext,
-@@ -20,7 +19,6 @@ Build-Depends: debhelper-compat (= 13),
+@@ -20,10 +20,8 @@ Build-Depends: debhelper-compat (= 13),
   libgeom-dev (>= 8.2+ds1-1~) [kfreebsd-any] | libgeom-dev (<< 8.2) [kfreebsd-any],
-  libsdl1.2-dev [!hurd-any],
+  libsdl2-dev [!hurd-any],
   xorriso,
 - qemu-system [i386 kfreebsd-i386 kopensolaris-i386 any-amd64],
   cpio [i386 kopensolaris-i386 amd64 x32],
   parted [!hurd-any],
-  libfuse-dev (>= 2.8.4-1.4) [linux-any kfreebsd-any],
-@@ -578,25 +576,6 @@ Description: GRand Unified Bootloader, version 2 (Open Firmware version)
+- libfuse3-dev [linux-any kfreebsd-any],
+  fonts-dejavu-core,
+  liblzma-dev,
+  liblzo2-dev,
+@@ -841,25 +839,6 @@ Description: GRand Unified Bootloader, version 2 (Open Firmware version)
   use with Open Firmware implementations.  Installing this package indicates
   that this version of GRUB should be the active boot loader.
  
@@ -56,16 +48,38 @@ index 1c48f28e2..976040a8c 100644
  Package: grub-uboot-bin
  Architecture: any-arm
  Depends: ${shlibs:Depends}, ${misc:Depends}, grub-common (= ${binary:Version})
+@@ -1034,9 +1013,3 @@ Multi-Arch: foreign
+ Description: GRand Unified Bootloader, version 2 (starfield theme)
+  This is the default theme for GRUB's graphical menu.
+ 
+-Package: grub-mount-udeb
+-Package-Type: udeb
+-Section: debian-installer
+-Architecture: linux-any kfreebsd-any
+-Depends: ${shlibs:Depends}, ${misc:Depends}
+-Description: export GRUB filesystems using FUSE
+-
 diff --git a/debian/rules b/debian/rules
-index d974316dc..2ed556351 100755
+index 7a9414f05..9667c856d 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -37,8 +37,6 @@ else
- with_check := yes
+@@ -65,7 +65,7 @@ BUILD_PACKAGES := $(strip $(shell dh_listpackages))
+ # REAL_PACKAGES build an actual grub variant (and therefore have both configure
+ # and build stages). EXTRA_PACKAGES do not build grub but may depend on a
+ # REAL_PACKAGE (and therefore only have a build stage)
+-REAL_PACKAGES = grub-common grub-emu grub-pc grub-coreboot grub-efi-ia32 grub-efi-amd64 grub-efi-ia64 grub-efi-arm grub-efi-arm64 grub-efi-riscv64 grub-efi-loong64 grub-ieee1275 grub-firmware-qemu grub-uboot grub-xen grub-yeeloong
++REAL_PACKAGES = grub-common grub-emu grub-pc grub-coreboot grub-efi-ia32 grub-efi-amd64 grub-efi-ia64 grub-efi-arm grub-efi-arm64 grub-efi-riscv64 grub-efi-loong64 grub-ieee1275 grub-uboot grub-xen grub-yeeloong
+ EXTRA_PACKAGES = grub-rescue-pc grub-xen-host
+ 
+ ifneq (,$(filter i386 amd64,$(DEB_HOST_ARCH_CPU)))
+@@ -525,8 +525,8 @@ ifeq (yes,$(shell dpkg-vendor --derives-from Ubuntu && echo yes))
+ 		$(CURDIR)/debian/$(package)/etc/pm/sleep.d/10_grub-common
  endif
  
--CC := gcc-12
--
- confflags = \
- 	PACKAGE_VERSION="$(deb_version)" PACKAGE_STRING="GRUB $(deb_version)" \
- 	CC=$(CC) TARGET_CC=$(CC) \
+-NON_PLATFORM_PACKAGES = $(filter grub2 grub-linuxbios grub-efi grub-rescue-pc grub-firmware-qemu grub-xen-host,$(BUILD_PACKAGES))
+-COMMON_PLATFORM_PACKAGES = $(filter grub-common grub2-common grub-theme-starfield grub-mount-udeb,$(BUILD_PACKAGES))
++NON_PLATFORM_PACKAGES = $(filter grub2 grub-linuxbios grub-efi grub-rescue-pc grub-xen-host,$(BUILD_PACKAGES))
++COMMON_PLATFORM_PACKAGES = $(filter grub-common grub2-common grub-theme-starfield,$(BUILD_PACKAGES))
+ PLATFORM_PACKAGES = $(filter grub-pc grub-efi-ia32 grub-efi-amd64 grub-efi-ia64 grub-efi-arm grub-efi-arm64 grub-efi-riscv64 grub-efi-loong64 grub-ieee1275 grub-coreboot grub-uboot grub-xen grub-yeeloong,$(BUILD_PACKAGES))
+ 
+ override_dh_install:
