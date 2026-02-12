@@ -100,9 +100,9 @@ def show_help():
 
 
 def dis_i2c_ir3570a(addr):
-    cmd = ["i2cset", "-y", "0", "0x"+"%x"%addr, "0xE5", "0x01"]
+    cmd = ["i2cset", "-y", "-a", "0", "0x"+"%x"%addr, "0xE5", "0x01"]
     status, output = getstatusoutput_noshell(cmd)
-    cmd = ["i2cset", "-y", "0", "0x"+"%x"%addr, "0x12", "0x02"]
+    cmd = ["i2cset", "-y", "-a", "0", "0x"+"%x"%addr, "0x12", "0x02"]
     status, output = getstatusoutput_noshell(cmd)
     return status
 

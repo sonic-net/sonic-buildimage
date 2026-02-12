@@ -59,7 +59,7 @@ static struct accton_as7326_56x_led_data  *ledctl = NULL;
 #define LED_MODE_DIAG_RED_VALUE	  (0x06)
 #define LED_MODE_DIAG_BLUE_VALUE  (0x03)
 #define LED_MODE_DIAG_GREEN_BLINK_VALUE  (0x17)
-#define LED_MODE_DIAG_RED_BLINK_VALUE	 (0x0d)
+#define LED_MODE_DIAG_RED_BLINK_VALUE	 (0x0f)
 #define LED_MODE_DIAG_BLUE_BLINK_VALUE   (0x27)
 
 #define LED_MODE_DIAG_OFF_VALUE	  (0x07)
@@ -69,7 +69,7 @@ static struct accton_as7326_56x_led_data  *ledctl = NULL;
 #define LED_MODE_LOC_RED_VALUE	 (0x06)
 #define LED_MODE_LOC_BLUE_VALUE  (0x03)
 #define LED_MODE_LOC_GREEN_BLINK_VALUE  (0x17)
-#define LED_MODE_LOC_RED_BLINK_VALUE	(0x0d)
+#define LED_MODE_LOC_RED_BLINK_VALUE	(0x0f)
 #define LED_MODE_LOC_BLUE_BLINK_VALUE   (0x27)
 #define LED_MODE_LOC_OFF_VALUE	(0x07)
 
