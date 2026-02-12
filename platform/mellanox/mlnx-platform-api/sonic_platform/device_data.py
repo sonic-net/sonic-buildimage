@@ -216,6 +216,24 @@ DEVICE_DATA = {
                 "comex_amb": False
             }
         }
+    },
+    'x86_64-nvidia_sn6810_ld-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn6810_ld_simx-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
     }
 }
 
