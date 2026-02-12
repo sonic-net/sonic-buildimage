@@ -46,8 +46,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git commit -m "unmodified snmpd source"
 
 	# Apply patches
-	stg init
-	stg import -s ../patch-$(SNMPD_VERSION)/series
+	# stg init
+	# stg import -s ../patch-$(SNMPD_VERSION)/series
 
 ifneq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -d -us -uc -j$(SNMPD_MAKE_JOBS_NUM) --admindir $(SONIC_DPKG_ADMINDIR)
