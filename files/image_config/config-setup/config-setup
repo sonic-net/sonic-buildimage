@@ -442,6 +442,10 @@ boot_config()
     # a new config and trigger config reload, wiping management IP.
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm boot detected, skipping config initialization and ZTP."
+        # Mark config as initialized so subsequent boots don't re-trigger
+        # initialization unnecessarily (warm-reboot to new image scenario).
+        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        rm -f /tmp/pending_config_initialization
         return 0
     fi
 
