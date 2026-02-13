@@ -74,8 +74,7 @@ def fake_logger_module():
     yield
 
 
-@pytest.fixture
-def ss(tmp_path, monkeypatch):
+def ss_common(tmp_path, monkeypatch):
     """
     Import systemd_stub fresh for every test, and provide fakes:
 
@@ -199,18 +198,37 @@ def ss(tmp_path, monkeypatch):
     return ss, container_fs, host_fs, commands, config_db
 
 
+@pytest.fixture
+def ss(tmp_path, monkeypatch):
+    return ss_common(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def ss_not_v1(tmp_path, monkeypatch):
+    monkeypatch.setenv("IS_V1_ENABLED", "false")
+    return ss_common(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def ss_v1(tmp_path, monkeypatch):
+    monkeypatch.setenv("IS_V1_ENABLED", "true")
+    return ss_common(tmp_path, monkeypatch)
+
+
 def test_sync_no_change_fast_path(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     
     # Put required source files in container_fs - files that ensure_sync() expects
     # Default branch is 202311 from fixture
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"same"
+    container_fs["/usr/share/sonic/systemd_scripts/sonic-restapi.yang"] = b"same"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"same"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
     container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"same"
     
     # Put same files on host
     host_fs["/usr/bin/restapi.sh"] = b"same"
+    host_fs["/usr/local/yang-models/sonic-restapi.yang"] = b"same"
     host_fs["/bin/container_checker"] = b"same"
     host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
     host_fs["/lib/systemd/system/restapi.service"] = b"same"
@@ -224,18 +242,61 @@ def test_sync_no_change_fast_path(ss):
     )
 
 
+def create_files(container_fs, host_fs):
+    # Put required source files in container_fs - files that ensure_sync() expects
+    # Default branch is 202311 from fixture
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
+    container_fs["/usr/share/sonic/systemd_scripts/v1/restapi.sh_202311"] = b"NEW-RESTAPI-V1"
+    container_fs["/usr/share/sonic/systemd_scripts/sonic-restapi.yang"] = b"NEW-YANG"
+    container_fs["/usr/share/sonic/systemd_scripts/v1/sonic-restapi.yang"] = b"NEW-YANG-V1"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"NEW-SERVICE"
+
+    # Put old files on host
+    host_fs["/usr/bin/restapi.sh"] = b"OLD"
+    host_fs["/usr/local/yang-models/sonic-restapi.yang"] = b"OLD"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"OLD"
+    host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
+
+
+def test_sync_updates_v1(ss_v1):
+    ss, container_fs, host_fs, commands, config_db = ss_v1
+
+    create_files(container_fs, host_fs)
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    assert host_fs["/usr/bin/restapi.sh"] == b"NEW-RESTAPI-V1"
+    assert host_fs["/usr/local/yang-models/sonic-restapi.yang"] == b"NEW-YANG-V1"
+
+
+def test_sync_updates_not_v1(ss_not_v1):
+    ss, container_fs, host_fs, commands, config_db = ss_not_v1
+
+    create_files(container_fs, host_fs)
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    assert host_fs["/usr/bin/restapi.sh"] == b"NEW-RESTAPI"
+    assert host_fs["/usr/local/yang-models/sonic-restapi.yang"] == b"NEW-YANG"
+
+
 def test_sync_updates_and_post_actions(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     
     # Put required source files in container_fs - files that ensure_sync() expects
     # Default branch is 202311 from fixture
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
+    container_fs["/usr/share/sonic/systemd_scripts/sonic-restapi.yang"] = b"NEW-YANG"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
     container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"NEW-SERVICE"
     
     # Put old files on host
     host_fs["/usr/bin/restapi.sh"] = b"OLD"
+    host_fs["/usr/local/yang-models/sonic-restapi.yang"] = b"OLD"
     host_fs["/bin/container_checker"] = b"OLD"
     host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"OLD"
     host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
@@ -247,6 +308,7 @@ def test_sync_updates_and_post_actions(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
+    assert host_fs["/usr/local/yang-models/sonic-restapi.yang"] == b"NEW-YANG"
     assert host_fs["/bin/container_checker"] == b"NEW-CHECKER"
 
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
@@ -414,6 +476,7 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     expected_destinations = {
         "/usr/bin/restapi.sh",
         "/bin/container_checker",
+        "/usr/local/yang-models/sonic-restapi.yang",
         "/usr/share/sonic/scripts/k8s_pod_control.sh",
         "/lib/systemd/system/restapi.service",
     }

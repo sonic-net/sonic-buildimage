@@ -121,7 +121,13 @@ def ensure_sync() -> bool:
         if IS_V1_ENABLED
         else "/usr/share/sonic/systemd_scripts/restapi.sh"
     )
-    
+
+    # sonic-restapi.yang: Use the old file when IS_V1_ENABLED, otherwise use the new file.
+    restapi_yang_src = (
+        "/usr/share/sonic/systemd_scripts/v1/sonic-restapi.yang" if IS_V1_ENABLED
+        else "/usr/share/sonic/systemd_scripts/sonic-restapi.yang"
+    )
+
     container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
     container_restapi_service = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
     
@@ -129,6 +135,7 @@ def ensure_sync() -> bool:
     sync_items_list: List[SyncItem] = [
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
+        SyncItem(restapi_yang_src, "/usr/local/yang-models/sonic-restapi.yang", mode=0o644),
         SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh", mode=0o755),
         SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
     ]
