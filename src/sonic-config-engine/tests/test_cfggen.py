@@ -1038,7 +1038,9 @@ class TestCfgGen(TestCase):
         # causing yang validation to fail
 
         os.environ["CFGGEN_UNIT_TESTING"] = ""
-        argument = ['-m', self.packet_chassis_graph, '-v', "ACL_TABLE"]
+        # Pass -p so port config is read from the sample file; otherwise get_path_to_port_config_file()
+        # would call get_path_to_platform_dir() which is not available in the build/test environment.
+        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "ACL_TABLE"]
         output = self.run_script(argument)
         print(output)
         self.assertEqual(
