@@ -159,10 +159,9 @@ static void ionic_mnic_set_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 
 int ionic_bus_alloc_irq_vectors(struct ionic *ionic, unsigned int nintrs)
 {
-	int err = 0;
+	int err;
 
-	err = platform_msi_domain_alloc_irqs(ionic->dev, nintrs,
-					     ionic_mnic_set_msi_msg);
+	err = msi_domain_alloc_irqs(ionic->dev, 0, nintrs);
 	if (err)
 		return err;
 
@@ -171,7 +170,7 @@ int ionic_bus_alloc_irq_vectors(struct ionic *ionic, unsigned int nintrs)
 
 void ionic_bus_free_irq_vectors(struct ionic *ionic)
 {
-	platform_msi_domain_free_irqs(ionic->dev);
+	msi_domain_free_irqs_all(ionic->dev, 0);
 }
 
 struct net_device *ionic_alloc_netdev(struct ionic *ionic)
@@ -425,7 +424,7 @@ err_out_unmap_bars:
 }
 EXPORT_SYMBOL_GPL(ionic_probe);
 
-int ionic_remove(struct platform_device *pfdev)
+void ionic_remove(struct platform_device *pfdev)
 {
 	struct ionic *ionic = platform_get_drvdata(pfdev);
 
@@ -446,7 +445,7 @@ int ionic_remove(struct platform_device *pfdev)
 		dev_info(ionic->dev, "removed\n");
 	}
 
-	return 0;
+	return;
 }
 EXPORT_SYMBOL_GPL(ionic_remove);
 
@@ -484,3 +483,4 @@ void ionic_bus_unregister_driver(void)
 {
 	platform_driver_unregister(&ionic_driver);
 }
+

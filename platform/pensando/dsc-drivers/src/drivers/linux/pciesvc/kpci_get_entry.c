@@ -1,4 +1,4 @@
-#include <stddef.h>
+#include <linux/stddef.h>
 #include "kpcimgr_api.h"
 
 extern char pciesvc_end;
