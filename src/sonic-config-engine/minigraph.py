@@ -1792,7 +1792,8 @@ def parse_default_vxlan_decap(results, vni, lo_intfs):
             lo_addr = str(lo_network.network_address)
             break
     results['VXLAN_TUNNEL'] = {vxlan_tunnel: {
-        'src_ip': lo_addr
+        'src_ip': lo_addr,
+        'ttl_mode': 'pipe'
     }}
 
     # Vnet information
