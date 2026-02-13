@@ -19,6 +19,7 @@ SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
 system_allsrv_state = "DOWN"
 spl_srv_list = ['database-chassis', 'gbsyncd']
+NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
@@ -352,7 +353,9 @@ class Sysmonitor(ProcessTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if srv_type == "oneshot" or service_name in spl_srv_list:
+                        if (srv_type == "oneshot"
+                                or service_name in spl_srv_list
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS):
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
