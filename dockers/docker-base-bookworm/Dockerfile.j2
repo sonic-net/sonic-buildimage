@@ -16,6 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Configure data sources for apt/dpkg
 COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["prefer-snapshots.{{ CONFIGURED_ARCH }}", "/etc/apt/preferences.d/prefer-snapshots"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 
