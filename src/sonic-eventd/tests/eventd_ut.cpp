@@ -151,8 +151,7 @@ static const test_data_t ldata[] = {
     },
 };
 
-void run_cap(void *zctx, atomic<bool> &term, string &read_source,
-        atomic<int> &cnt)
+void run_cap(void *zctx, atomic<bool> &term, atomic<int> &cnt)
 {
     void *mock_cap = zmq_socket (zctx, ZMQ_SUB);
     string source;
@@ -177,7 +176,7 @@ void run_cap(void *zctx, atomic<bool> &term, string &read_source,
     zmq_close(mock_cap);
 }
 
-void run_sub(void *zctx, atomic<bool> &term, string &read_source, internal_events_lst_t &lst,
+void run_sub(void *zctx, atomic<bool> &term, internal_events_lst_t &lst,
         atomic<int> &cnt)
 {
     void *mock_sub = zmq_socket (zctx, ZMQ_SUB);
@@ -193,7 +192,6 @@ void run_sub(void *zctx, atomic<bool> &term, string &read_source, internal_event
     while(!term) {
         if (0 == zmq_message_read(mock_sub, 0, source, ev_int)) {
             lst.push_back(ev_int);
-            read_source.swap(source);
             cnt = (int)lst.size();
         }
     }
@@ -225,7 +223,7 @@ TEST(eventd, proxy)
     printf("Proxy TEST started\n");
     atomic<bool> term_sub = false;
     atomic<bool> term_cap = false;
-    string rd_csource, rd_source, wr_source("hello");
+    string wr_source("hello");
     internal_events_lst_t rd_evts, wr_evts;
     atomic<int> rd_evts_sz = 0, rd_cevts_sz = 0;
     int wr_sz;
@@ -240,10 +238,10 @@ TEST(eventd, proxy)
     EXPECT_EQ(0, pxy->init());
 
     /* capture in a thread */
-    thread thrc(&run_cap, zctx, ref(term_cap), ref(rd_csource), ref(rd_cevts_sz));
+    thread thrc(&run_cap, zctx, ref(term_cap), ref(rd_cevts_sz));
 
     /* subscriber in a thread */
-    thread thr(&run_sub, zctx, ref(term_sub), ref(rd_source), ref(rd_evts), ref(rd_evts_sz));
+    thread thr(&run_sub, zctx, ref(term_sub), ref(rd_evts), ref(rd_evts_sz));
 
     /* Init pub connection */
     void *mock_pub = init_pub(zctx);
@@ -254,8 +252,8 @@ TEST(eventd, proxy)
         wr_evts.push_back(create_ev(ldata[i]));
     }
 
-    EXPECT_TRUE(rd_evts.empty());
-    EXPECT_TRUE(rd_source.empty());
+    EXPECT_EQ(rd_evts_sz, 0);
+    EXPECT_EQ(rd_cevts_sz, 0);
 
     /* Publish events. */
     run_pub(mock_pub, wr_source, wr_evts);
@@ -293,7 +291,6 @@ TEST(eventd, capture)
     printf("Capture TEST started\n");
 
     atomic<bool> term_sub = false;
-    string sub_source;
     atomic<int> sub_evts_sz = 0;
     internal_events_lst_t sub_evts;
     stats_collector stats_instance;
@@ -331,7 +328,7 @@ TEST(eventd, capture)
     EXPECT_EQ(0, pcap->set_control(INIT_CAPTURE));
 
     /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
-    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
+    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_evts), ref(sub_evts_sz));
 
     EXPECT_TRUE(init_cache > 1);
     EXPECT_TRUE((cache_max+3) < (int)ARRAY_SIZE(ldata));
@@ -437,7 +434,6 @@ TEST(eventd, captureCacheMax)
      * in the absence of any subscriber.
      */
     atomic<bool> term_sub = false;
-    string sub_source;
     atomic<int> sub_evts_sz = 0;
     internal_events_lst_t sub_evts;
     stats_collector stats_instance;
@@ -474,7 +470,7 @@ TEST(eventd, captureCacheMax)
     EXPECT_TRUE(init_cache > 1);
 
     /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
-    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
+    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_evts), ref(sub_evts_sz));
 
     /* Collect few serailized strings of events for startup cache */
     for(int i=0; i < init_cache; ++i) {
