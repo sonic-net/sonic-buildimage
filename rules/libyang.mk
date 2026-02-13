@@ -14,11 +14,15 @@ $(LIBYANG)_DEPENDS += $(LIBPCRE3_DEV) $(LIBPCRE3) $(LIBPCRE16_3) $(LIBPCRE32_3) 
 $(LIBYANG)_RDEPENDS += $(LIBPCRE3)
 endif
 $(LIBYANG)_SRC_PATH = $(SRC_PATH)/libyang
-ifeq ($(BLDENV),bookworm)
-# introduce artifical dependency between LIBYANG and FRR
-# make sure LIBYANG is compile after FRR
+# introduce artificial dependency between LIBYANG and FRR
+# make sure LIBYANG is compiled after FRR to prevent libyang-dev
+# package conflicts during parallel builds. Both libyang1-dev and
+# libyang3-dev provide "libyang-dev" and cannot coexist. Without
+# this ordering, high-parallelism builds (JOBS>=16) can fail when
+# FRR (needs libyang3-dev) and libswsscommon (needs libyang1-dev)
+# build concurrently and one replaces the other's headers mid-build.
+# Fixes: https://github.com/sonic-net/sonic-buildimage/issues/25425
 $(LIBYANG)_AFTER = $(FRR)
-endif
 SONIC_MAKE_DEBS += $(LIBYANG)
 
 LIBYANG_DEV = libyang-dev_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
