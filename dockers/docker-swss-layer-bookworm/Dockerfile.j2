@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-RUN apt-get install iputils-ping
+RUN apt-get install -y iputils-ping
 
 {% if docker_swss_layer_bookworm_debs.strip() -%}
 # Copy locally-built Debian package dependencies
