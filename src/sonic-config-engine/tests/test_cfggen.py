@@ -1040,7 +1040,9 @@ class TestCfgGen(TestCase):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
         # Pass -p so port config is read from the sample file; otherwise get_path_to_port_config_file()
         # would call get_path_to_platform_dir() which is not available in the build/test environment.
-        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "ACL_TABLE"]
+        # Pass -n asic1 so DEVICE_METADATA has asic_name set; sonic-port.yang requires asic_name for
+        # chassis-packet when validating PORT/lanes, so validation would fail without -n.
+        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', 'asic1', '-v', "ACL_TABLE"]
         output = self.run_script(argument)
         print(output)
         self.assertEqual(
