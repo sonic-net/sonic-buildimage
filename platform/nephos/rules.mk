@@ -15,7 +15,7 @@ WARM_VERIFIER = warm-verifier
 $(WARM_VERIFIER)_URL = "https://github.com/NephosInc/SONiC/raw/master/sai/warm-verifier"
 
 DSSERVE = dsserve
-$(DSSERVE)_URL = "$(MIRROR_URL)/public/20190307/dsserve"
+$(DSSERVE)_URL = "$(BUILD_PUBLIC_URL)/20190307/dsserve"
 
 SONIC_ONLINE_FILES += $(NPX_DIAG) $(WARM_VERIFIER) $(DSSERVE)
 

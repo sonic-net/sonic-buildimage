@@ -25,7 +25,7 @@ generate_version_file()
 
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     SNAPSHOT_TIMESTAMP=$(grep "^debian==" $TARGET/versions/default/versions-mirror | tail -n 1 | sed 's/.*==//')
-    MIRROR_URL=$DEBIAN_SNAP_MIRROR_URL/debian/$SNAPSHOT_TIMESTAMP
+    MIRROR_URL=$BUILD_SNAPSHOT_URL/debian/$SNAPSHOT_TIMESTAMP
 else
     MIRROR_URL=http://deb.debian.org/debian
 fi

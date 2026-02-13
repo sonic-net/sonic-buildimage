@@ -266,15 +266,15 @@ SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 
-# DEBIAN_SNAP_MIRROR_URL - Debian snapshot mirror url
+# BUILD_SNAPSHOT_URL - Default debian snapshot mirror url
 # Mirror of https://snapshot.debian.org/archive
-DEBIAN_SNAP_MIRROR_URL ?= http://packages.trafficmanager.net/snapshot
+BUILD_SNAPSHOT_URL ?= http://packages.trafficmanager.net/snapshot
 
-# MIRROR_URL - Default mirror url
-MIRROR_URL ?= https://packages.trafficmanager.net
+# BUILD_PUBLIC_URL - Default public mirror url
+BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
 
-# PACKAGE_URL_PREFIX - the package url prefix
-PACKAGE_URL_PREFIX ?= $(MIRROR_URL)/packages
+# BUILD_PACKAGES_URL - Default packages mirror url
+BUILD_PACKAGES_URL ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
 TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc
