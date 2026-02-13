@@ -6,8 +6,7 @@ from unittest.mock import Mock, patch, mock_open
 import os
 
 # Import test fixtures
-sys.path.insert(0, '../../fixtures')
-from fixtures_unit_test import Adm1266Mock
+from fixtures.fixtures_unit_test import Adm1266Mock
 
 
 @pytest.fixture
