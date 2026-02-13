@@ -47,17 +47,20 @@ jobs:
         echo "The cisco 8000 release version is $cisco_ref"
         echo "##vso[task.setvariable variable=cisco.ref]$cisco_ref"
       displayName: 'Export cisco release version'
-    - task: DownloadGitHubRelease@0
-      inputs:
-        connection: cisco-connection-new
-        userRepository: Cisco-8000-sonic/platform-cisco-8000
-        defaultVersionType: specificTag
-        version: $(cisco.ref)
-        itemPattern: 'artifactory-*.tar.gz'
-        downloadPath: '$(System.ArtifactsDirectory)'
     - script: |
-        tar xvfz $(System.ArtifactsDirectory)/artifactory-*.tar.gz -C platform/cisco-8000
+        set -ex
+        if ! gh --version; then
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+        fi
+        GH_TOKEN=$PAT gh release download -R Cisco-8000-sonic/platform-cisco-8000 $(cisco.ref) --pattern artifactory*
+        tar -xzvf artifactory-*.tar.gz -C platform/cisco-8000
       displayName: 'Setup cisco artifacts'
+      env:
+        PAT: $(TOKEN)
     - script: |
         if [ ! -e platform/cisco-8000/device/x86_64-8102_64h_o-r0/Cisco-8102-C64 ]; then
           echo "hwsku Cisco-8102-C64 doesn't exist, copy from 64x100Gb"
