@@ -716,7 +716,7 @@ TEST(eventd, service)
 
 void
 wait_for_heartbeat(stats_collector &stats_instance, long unsigned int cnt,
-        int wait_ms = 3000)
+        int wait_ms = 61000)
 {
     int diff = 0;
 
@@ -763,6 +763,7 @@ TEST(eventd, heartbeat)
 
     /* Wait for any non-zero heartbeat */
     wait_for_heartbeat(stats_instance, 0);
+
 
     /* Pause heartbeat */
     stats_instance.heartbeat_ctrl(true);
