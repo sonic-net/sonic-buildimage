@@ -1,0 +1,84 @@
+diff --git a/bridge/fdb.c b/bridge/fdb.c
+index 652bd8a..45eff3c 100644
+--- a/bridge/fdb.c
++++ b/bridge/fdb.c
+@@ -40,7 +40,7 @@ static void usage(void)
+ 		"              [ self ] [ master ] [ use ] [ router ] [ extern_learn ]\n"
+ 		"              [ sticky ] [ local | static | dynamic ] [ vlan VID ]\n"
+ 		"              { [ dst IPADDR ] [ port PORT] [ vni VNI ] | [ nhid NHID ] }\n"
+-		"	       [ via DEV ] [ src_vni VNI ]\n"
++		"	       [ via DEV ] [ src_vni VNI ] [ protocol PROTO ]\n"
+ 		"       bridge fdb [ show [ br BRDEV ] [ brport DEV ] [ vlan VID ]\n"
+ 		"              [ state STATE ] [ dynamic ] ]\n"
+ 		"       bridge fdb get [ to ] LLADDR [ br BRDEV ] { brport | dev } DEV\n"
+@@ -286,6 +286,15 @@ int print_fdb(struct nlmsghdr *n, void *arg)
+-            close_json_array(PRINT_JSON, NULL);
+-        }
+-
++	close_json_array(PRINT_JSON, NULL);
++	}
++
++	if (tb[NDA_PROTOCOL]) {
++		__u8 proto = rta_getattr_u8(tb[NDA_PROTOCOL]);
++		if (proto != RTPROT_UNSPEC) {
++			SPRINT_BUF(b1);
++			print_string(PRINT_ANY, "protocol", "proto %s ",
++					 rtnl_rtprot_n2a(proto, b1, sizeof(b1)));
++		}
++	}
++
+ 	print_string(PRINT_ANY, "state", "%s\n",
+ 			   state_n2a(r->ndm_state));
+ 	close_json_object();
+@@ -427,6 +436,7 @@ static int fdb_modify(int cmd, int flags, int argc, char **argv)
+ 	char *endptr;
+ 	short vid = -1;
+ 	__u32 nhid = 0;
++	__u32 proto = RTPROT_UNSPEC;
+
+ 	while (argc > 0) {
+ 		if (strcmp(*argv, "dev") == 0) {
+@@ -498,6 +508,10 @@ static int fdb_modify(int cmd, int flags, int argc, char **argv)
+ 			req.ndm.ndm_flags |= NTF_EXT_LEARNED;
+ 		} else if (matches(*argv, "sticky") == 0) {
+ 			req.ndm.ndm_flags |= NTF_STICKY;
++		} else if (matches(*argv, "protocol") == 0) {
++			NEXT_ARG();
++			if (rtnl_rtprot_a2n(&proto, *argv))
++				invarg("\"protocol\" value is invalid\n", *argv);
+ 		} else {
+ 			if (strcmp(*argv, "to") == 0)
+ 				NEXT_ARG();
+@@ -557,6 +571,8 @@ static int fdb_modify(int cmd, int flags, int argc, char **argv)
+ 		addattr32(&req.n, sizeof(req), NDA_SRC_VNI, src_vni);
+ 	if (via)
+ 		addattr32(&req.n, sizeof(req), NDA_IFINDEX, via);
++	if (proto != RTPROT_UNSPEC)
++		addattr8(&req.n, sizeof(req), NDA_PROTOCOL, proto);
+
+ 	req.ndm.ndm_ifindex = ll_name_to_index(d);
+ 	if (!req.ndm.ndm_ifindex)
+diff --git a/include/uapi/linux/rtnetlink.h b/include/uapi/linux/rtnetlink.h
+index f4a540c..a4f9141 100644
+--- a/include/uapi/linux/rtnetlink.h
++++ b/include/uapi/linux/rtnetlink.h
+@@ -305,6 +305,7 @@ enum {
+ #define RTPROT_OSPF		188	/* OSPF Routes */
+ #define RTPROT_RIP		189	/* RIP Routes */
+ #define RTPROT_EIGRP		192	/* EIGRP Routes */
++#define RTPROT_HW		193	/* HW Generated Routes */
+
+ /* rtm_scope
+
+diff --git a/lib/rt_names.c b/lib/rt_names.c
+index b976471..5e5a469 100644
+--- a/lib/rt_names.c
++++ b/lib/rt_names.c
+@@ -142,6 +142,7 @@ static char *rtnl_rtprot_tab[256] = {
+ 	[RTPROT_OSPF]	    = "ospf",
+ 	[RTPROT_RIP]	    = "rip",
+ 	[RTPROT_EIGRP]	    = "eigrp",
++	[RTPROT_HW]	    = "hw",
+ };
+
+
