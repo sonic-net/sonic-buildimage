@@ -47,6 +47,10 @@ class TestCfgGen(TestCase):
         self.sample_cisco_400_graph = os.path.join(self.test_dir, 'sample-cisco-8101-t1-400-minigraph.xml')
         self.sample_cisco_8111_port_config = os.path.join(self.test_dir, 'sample-cisco-8111-port-config.ini')
         self.sample_cisco_8111_graph = os.path.join(self.test_dir, 'sample-cisco-8111-100-minigraph.xml')
+        self.qfx5200_32c_graph = os.path.join(self.test_dir, 'sample-juniper-qfx5200-32c-t0-minigraph.xml')
+        self.qfx5200_32c_port_config = os.path.join(
+            self.test_dir, '..', '..', '..', 'device', 'juniper',
+            'x86_64-juniper_qfx5200-r0', 'Juniper-QFX5200-32C-S', 'port_config.ini')
         # To ensure that mock config_db data is used for unit-test cases
         os.environ["CFGGEN_UNIT_TESTING"] = "2"
 
@@ -102,6 +106,12 @@ class TestCfgGen(TestCase):
         argument = ['-v', "DEVICE_METADATA[\'localhost\'][\'hwsku\']", '-m', self.sample_graph, '-p', self.port_config]
         output = self.run_script(argument)
         self.assertEqual(output.strip(), 'Force10-Z9100')
+
+    def test_minigraph_qfx5200_32c_sku(self):
+        """Test Juniper QFX5200-32C minigraph with explicit port config (-p) so no platform dir is required."""
+        argument = ['-v', "DEVICE_METADATA[\'localhost\'][\'hwsku\']", '-m', self.qfx5200_32c_graph, '-p', self.qfx5200_32c_port_config]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), 'Juniper-QFX5200-32C-S')
 
     def test_minigraph_region(self):
         argument = ['-v', "DEVICE_METADATA[\'localhost\'][\'region\']", '-m', self.sample_graph_metadata, '-p', self.port_config]
