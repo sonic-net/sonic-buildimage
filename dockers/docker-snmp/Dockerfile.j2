@@ -15,13 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-RUN rm -rf /etc/apt/preferences.d/snmp-packages
-
 RUN printf "Package: snmp snmpd libsnmp40\nPin: release o=Debian\nPin-Priority: 90\n" > /etc/apt/preferences.d/snmp-packages
-
-RUN cat /etc/apt/preferences.d/snmp-packages
-
-RUN apt-cache policy snmp snmpd libsnmp40
 
 # Update apt's cache of available packages
 # Install make/gcc which is required for installing hiredis
