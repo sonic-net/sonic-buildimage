@@ -5,7 +5,7 @@ import json
 import re
 import sys
 
-level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS"]
+level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS", "GEARBOX_GLOBAL_MEDIA_SETTINGS", "GEARBOX_PORT_MEDIA_SETTINGS"]
 
 si_param_list = ["preemphasis", "idriver", "ipredriver", \
                  "main", "pre1", "pre2", "pre3", \
@@ -86,19 +86,25 @@ def check_valid_port(port_name):
         return False
 
 
-def check_port_keys(port_media_dict):
+def check_port_keys(port_media_dict, gearbox=False):
     for port in port_media_dict:
 
         if not check_valid_port(port):
             print("Invalid port name " + port)
             return False
 
-        if not check_media_dict(port_media_dict[port]):
-            return False
+        if gearbox:
+            if not check_media_dict(port_media_dict[port]["line"]):
+                return False
+            if not check_media_dict(port_media_dict[port]["system"]):
+                return False
+        else:
+            if not check_media_dict(port_media_dict[port]):
+                return False
     return True
 
 
-def check_global_keys(global_media_dict):
+def check_global_keys(global_media_dict, gearbox=False):
     for keys in global_media_dict:
         if comma_separator in keys:
             port_list = keys.split(comma_separator)
@@ -125,8 +131,14 @@ def check_global_keys(global_media_dict):
             print("Invalid range " + keys)
             return False
 
-        if not check_media_dict(global_media_dict[keys]):
-            return False
+        if gearbox:
+            if not check_media_dict(global_media_dict[keys]["line"]):
+                return False
+            if not check_media_dict(global_media_dict[keys]["system"]):
+                return False
+        else:
+            if not check_media_dict(global_media_dict[keys]):
+                return False
 
     return True
 
@@ -148,6 +160,13 @@ def check_file(media_settings_file):
         if "PORT_MEDIA_SETTINGS" in media_dict:
             if not check_port_keys(media_dict["PORT_MEDIA_SETTINGS"]):
                 return False
+        if "GEARBOX_GLOBAL_MEDIA_SETTINGS" in media_dict:
+            if not check_global_keys(media_dict["GEARBOX_GLOBAL_MEDIA_SETTINGS"], gearbox=True):
+                return False
+        if "GEARBOX_PORT_MEDIA_SETTINGS" in media_dict:
+            if not check_port_keys(media_dict["GEARBOX_PORT_MEDIA_SETTINGS"], gearbox=True):
+                return False
+
 
 
     except IOError:
