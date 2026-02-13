@@ -3,8 +3,10 @@ ifp_inports_support_enable=1
 ipv6_lpm_128b_enable=0x1
 l2_mem_entries=32768
 l2xmsg_mode=1
+l2xmsg_hostbuf_size=8192
 l3_max_ecmp_mode=1
 l3_mem_entries=16384
+l3_alpm_enable=2
 lpm_scaling_enable=1
 max_vp_lags=0
 #mem_cache_enable=0
@@ -24,6 +26,16 @@ serdes_if_type_ce=14
 pbmp_gport_stack.0=0x0000000000000000000000000000000000000000000000000000000000000000
 pbmp_xport_xe=0x3ffffffffffffffffffffffffffffffffe
 port_flex_enable=1
+
+sai_tunnel_support=1
+use_all_splithorizon_groups=1
+bcm_tunnel_term_compatible_mode=1
+riot_enable=1
+riot_overlay_l3_intf_mem_size=4096
+riot_overlay_l3_egress_mem_size=32768
+riot_overlay_ecmp_resilient_hash_size=16384
+flow_init_mode=1
+l3_ecmp_levels=2
 
 ptp_ts_pll_fref=50000000
 ptp_bs_fref_0=50000000
