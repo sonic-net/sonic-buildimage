@@ -34,6 +34,7 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
              s/redis-server.sock/redis.sock/g;           \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^port 6379$/port 0/; \
              s/^databases [0-9]+$/databases 100/ \
             ' /etc/redis/redis.conf
 
