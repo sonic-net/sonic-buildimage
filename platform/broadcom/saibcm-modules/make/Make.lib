@@ -1,5 +1,6 @@
 # $Id: Make.lib,v 1.14 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -41,11 +42,13 @@ ifeq ($(FAST),1)
   endif
 endif
 
-ifeq ($(LINUX_MAKE_SHARED_LIB),1)
-LIBSUFFIX=so.${SHAREDLIBVER}
-else
-LIBSUFFIX=a
+ifeq (1,$(SAND_ONLY))
+  ifeq ($(LINUX_MAKE_SHARED_LIB),1)
+    LIBSUFFIX := so.${SHAREDLIBVER}
+  endif
 endif
+
+LIBSUFFIX ?= a
 
 targetlib = ${LIBDIR}/${lib}.${LIBSUFFIX}
 
@@ -57,12 +60,7 @@ ifdef QUIET
 	@$(ECHO) Building library $(notdir $@)
 endif
 	$Q$(RM) $@
-ifeq ($(LINUX_MAKE_SHARED_LIB),1)
-	$(CC) -shared -Wl,-soname,${lib}.${LIBSUFFIX}${EXTRA_LIB_LDFLAGS} -o ${targetlib} ${BOBJS} -lc
-else
 	$(AR) ${ARFLAGS} $@ $(sort ${BOBJS})
-endif
-
 
 install:: all
 

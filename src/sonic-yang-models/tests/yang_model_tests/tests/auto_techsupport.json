@@ -12,14 +12,14 @@
     },
     "AUTO_TECHSUPPORT_OUT_OF_RANGE_DECIMAL": {
             "desc" : "Configure a value for core-uage outside the range [0, 100)",
-            "eStr": "Value \"100.00\" does not satisfy the constraint \"0..99.99\" (range, length, or pattern)."
+            "eStrKey": "Range"
     },
     "AUTO_TECHSUPPORT_VALID_DECIMAL_VALUE": {
             "desc" : "Configure a value for max_techsupport_size inside the range [0, 100)"
     },
     "AUTO_TECHSUPPORT_INVALID_FRACTION_DIGITS": {
             "desc" : "Configure a value for max_techsupport_size inside the range [0, 100) but with 3 fractional digits",
-            "eStrKey": "InvalidValue"
+            "eStrKey": "DecimalFractionExceed"
     },
     "AUTO_TECHSUPPORT_RATE_LIMIT_INTERVAL_TEST": {
             "desc" : "Configure and test the valid configuration"
@@ -29,13 +29,13 @@
     },
     "AUTO_TECHSUPPORT_INVALID_AVAILABLE_MEM_THRESHOLD": {
             "desc" : "Configure a value for available_mem_threshold inside the range [0, 100) but with 3 fractional digits",
-            "eStrKey": "InvalidValue"
+            "eStrKey": "DecimalFractionExceed"
     },
     "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_VALID": {
             "desc" : "Configure and test the valid configuration"
     },
     "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_INVALID_THRESHOLD": {
             "desc" : "Configure a value for available_mem_threshold inside the range [0, 100) but with 3 fractional digits",
-            "eStrKey": "InvalidValue"
+            "eStrKey": "DecimalFractionExceed"
     }
 }

@@ -95,6 +95,12 @@ module sonic-static-route {
           description
             "When interface is specified, forwarding happens through it";
         }
+        leaf advertise {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+        }
         leaf distance {
           type string {
             pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
@@ -111,7 +117,7 @@ module sonic-static-route {
         }
         leaf nexthop-vrf {
           type string {
-            pattern "(((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt))";
+            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
           }
           description
             "VRF name of the nexthop. This is for vrf leaking";

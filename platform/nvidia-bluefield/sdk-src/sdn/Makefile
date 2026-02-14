@@ -37,10 +37,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	find . -type f -exec touch {} +
 
 	source /etc/profile.d/mlnx-dpdk-aarch64-linux-gnu.sh
-	source /etc/profile.d/doca-sdk-aarch64-linux-gnu.sh
 
 	# Build the Debs
-	PATH=/usr/bin/:$(PATH) dpkg-buildpackage -us -uc -b -j1 --admindir $(SONIC_DPKG_ADMINDIR)
+	PATH=/usr/bin/:$(PATH) dpkg-buildpackage -d -us -uc -b -j1 --admindir $(SONIC_DPKG_ADMINDIR)
 
 	popd
 	mv $(DERIVED_TARGETS) $* $(DEST)/

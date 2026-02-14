@@ -59,5 +59,19 @@
     "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_VLAN_CHECK_MUST_CONDITION_FALSE_TEST": {
         "desc": "Configure valid short name format vlan sub interface vlan must check condition false.",
         "eStrKey": "Must"
+    },
+    "VLAN_SUB_INTERFACE_WITH_VALID_VNET_NAME": {
+        "desc": "Configure VLAN sub interface with valid VNET name reference."
+    },
+    "VLAN_SUB_INTERFACE_WITH_INVALID_VNET_NAME": {
+        "desc": "Configure VLAN sub interface with reference to non-existent VNET.",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_SUB_INTERFACE_WITH_VNET_PORTCHANNEL": {
+        "desc": "Configure PortChannel VLAN sub interface with VNET reference."
+    },
+    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Configure VLAN sub interface with VNET reference but no VNET exsiting.",
+        "eStrKey": "LeafRef"
     }
 }

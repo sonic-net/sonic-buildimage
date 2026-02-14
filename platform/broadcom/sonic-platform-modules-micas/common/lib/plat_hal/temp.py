@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# temp.py
-# Python implementation of the Class temp
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import syslog
-from plat_hal.sensor import sensor
-
+from plat_hal.sensor import sensor, sensor_s3ip
 
 PLATFORM_HAL_TEMP_DEBUG_FILE = "/etc/.platform_hal_temp_debug_flag"
 
@@ -82,7 +91,7 @@ class temp(sensor):
             ret, val = self.get_value(conf)
             if ret is False or val is None:
                 return None
-            return val
+            return float(val)
         except Exception:
             return None
 
@@ -120,6 +129,25 @@ class temp(sensor):
                     self.__Value = int(max_val)
                 else:
                     self.__Value = self.get_format_value(self.format % max_val)
+            elif isinstance(self.ValueConfig, dict) and self.ValueConfig.get("val_conf_list") is not None:
+                val_list = []
+                fail_set = set()
+                for index, val_conf_item in enumerate(self.ValueConfig["val_conf_list"]):
+                    val_tmp = self.get_max_value(val_conf_item)
+                    if val_tmp is None:
+                        fail_set.add(index)
+                        fail_val = val_conf_item.get("fail_val")
+                        if fail_val is None:
+                            return None
+                        val_tmp = fail_val
+                    val_list.append(val_tmp)
+                # check fail set
+                fail_conf_set_list = self.ValueConfig.get("fail_conf_set_list",[])
+                for item in fail_conf_set_list:
+                    if item.issubset(fail_set):
+                        return None
+                val_tuple = tuple(val_list)
+                self.__Value = self.get_format_value(self.ValueConfig["format"] % (val_tuple))
             else:
                 ret, val = self.get_value(self.ValueConfig)
                 if ret is False or val is None:
@@ -137,3 +165,8 @@ class temp(sensor):
     @Value.setter
     def Value(self, val):
         self.__Value = val
+
+class temp_s3ip(sensor_s3ip):
+    def __init__(self, s3ip_conf = None):
+        super(temp_s3ip, self).__init__(s3ip_conf)
+        self.temp_id = s3ip_conf.get("type").upper()

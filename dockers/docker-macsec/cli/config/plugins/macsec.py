@@ -84,10 +84,11 @@ def del_port(port):
     if len(port_entry) == 0:
         ctx.fail("port {} doesn't exist".format(port))
 
-    del port_entry['macsec']
-
-    config_db.set_entry("PORT", port, port_entry)
-
+    if 'macsec' in port_entry:
+        del port_entry['macsec']
+        config_db.set_entry("PORT", port, port_entry)
+    else:
+        click.echo("port {} has no configured macsec profile".format(port))
 
 #
 # 'profile' group ('config macsec profile ...')

@@ -21,9 +21,9 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_ICCPD_DBG)
 endif
 
 $(DOCKER_ICCPD)_CONTAINER_NAME = iccpd
-$(DOCKER_ICCPD)_RUN_OPT += -t
+$(DOCKER_ICCPD)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_ICCPD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_ICCPD)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
+$(DOCKER_ICCPD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 
 $(DOCKER_ICCPD)_BASE_IMAGE_FILES += mclagdctl:/usr/bin/mclagdctl
 

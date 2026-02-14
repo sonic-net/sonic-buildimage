@@ -53,6 +53,7 @@ class LedControl(LedControlBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -70,27 +71,28 @@ class LedControl(LedControlBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(str(value))
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
         return rv
     
     def _pci_set_value(self, resource, data, offset):
-        fd = open(resource, O_RDWR)
+        fd = os.open(resource, os.O_RDWR)
         mm = mmap(fd, 0)
         mm.seek(offset)
         mm.write(struct.pack('I', data))
         mm.close()
-        close(fd)
+        os.close(fd)
 
     def _pci_get_value(self, resource, offset):
-        fd = open(resource, O_RDWR)
+        fd = os.open(resource, os.O_RDWR)
         mm = mmap(fd, 0)
         mm.seek(offset)
         read_data_stream = mm.read(4)
         reg_val = struct.unpack('I', read_data_stream)
         mm.close()
-        close(fd)
+        os.close(fd)
         return reg_val
     
     def _initSystemLed(self):
@@ -99,27 +101,28 @@ class LedControl(LedControlBase):
         oldpsu = 0xf    # 0=amber, 1=green
 
         # Write sys led
-        self._pci_set_value(RESOURCE, 1, REG_FRONT_SYSLED)
+        self._pci_set_value(RESOURCE, 3, REG_FRONT_SYSLED)
         
         # Timer loop to monitor and set front panel Status, Fan, and PSU LEDs
         while True:
             # Front Panel FAN Panel LED setting
-            good_fan = 0
-            for fan in self.chassis._fan_list:
-                if fan.get_status() == True:
-                    good_fan = good_fan + 1
+            good_fan_drawer = 0
+            for fan_drawer in self.chassis._fan_drawer_list:
+                if fan_drawer.get_status() == True:                    
+                    good_fan_drawer = good_fan_drawer + 1
+                    fan_drawer.set_status_led('green')
+                else:
+                    fan_drawer.set_status_led('amber')
             
-            if (good_fan == H4_32D_FAN_DRAWERS * H4_32D_FANS_PER_DRAWER):                
+            if (good_fan_drawer == H4_32D_FAN_DRAWERS):                
                 if oldfan != 0x1:
                     self._pci_set_value(RESOURCE, 1, REG_FRONT_FANLED)
                     oldfan = 0x1
                 
             else:                
                 if oldfan != 0x0:
-                    self._pci_set_value(RESOURCE, 0, REG_FRONT_FANLED)
+                    self._pci_set_value(RESOURCE, 2, REG_FRONT_FANLED)
                     oldfan = 0x0
-                
-
             
             time.sleep(6)
 

@@ -17,6 +17,9 @@
 /* Default value for getpwent */
 #define DEFAULT_GETPWENT_SIZE_MAX     4096
 
+/* Remote IP address size */
+#define REMOTE_ADDRESS_SIZE     64
+
 /* Return value for is_local_user method */
 #define IS_LOCAL_USER              0
 #define IS_REMOTE_USER             1
@@ -43,6 +46,13 @@
 /* Tacacs+ config file timestamp string length */
 #define  CONFIG_FILE_TIME_STAMP_LEN  100
 
+#define GET_ENV_VARIABLE_OK                 0
+#define GET_ENV_VARIABLE_NOT_FOUND          1
+#define GET_ENV_VARIABLE_INCORRECT_FORMAT   2
+#define GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER  3
+#define GET_REMOTE_ADDRESS_OK               0
+#define GET_REMOTE_ADDRESS_FAILED           1
+
 /*
     Convert log to a string because va args resoursive issue:
     http://www.c-faq.com/varargs/handoff.html
@@ -59,7 +69,6 @@ const char *tacacs_config_file = "/etc/tacplus_nss.conf";
 
 /* Unknown user name */
 const char *unknown_username = "UNKNOWN";
-
 
 /* Config file attribute */
 struct stat config_file_attr;
@@ -110,7 +119,7 @@ int send_authorization_message(
     int tac_fd,
     const char *user,
     const char *tty,
-    const char *host,
+    const char *remote,
     uint16_t taskid,
     const char *cmd,
     char **args,
@@ -147,8 +156,8 @@ int send_authorization_message(
     }
 
     re.msg = NULL;
-    output_debug("send authorizatiom message with user: %s, tty: %s, host: %s\n", user, tty, host);
-    retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)host, attr);
+    output_debug("send authorizatiom message with user: %s, tty: %s, remote: %s\n", user, tty, remote);
+    retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)remote, attr);
     output_debug("authorization result: %d\n", retval);
 
     if(retval < 0) {
@@ -184,7 +193,7 @@ int send_authorization_message(
 int tacacs_authorization(
     const char *user,
     const char *tty,
-    const char *host,
+    const char *remote,
     const char *cmd,
     char **args,
     int argc)
@@ -202,7 +211,7 @@ int tacacs_authorization(
 
         // increase connected servers
         connected_servers++;
-        result = send_authorization_message(server_fd, user, tty, host, task_id, cmd, args, argc);
+        result = send_authorization_message(server_fd, user, tty, remote, task_id, cmd, args, argc);
         close(server_fd);
         if(result) {
             // authorization failed
@@ -225,19 +234,68 @@ int tacacs_authorization(
 }
 
 /*
+ * Get environment variable first part by name and delimiters
+ */
+int get_environment_variable_first_part(char* dst, socklen_t size, const char* name, const char* delimiters)
+{
+    memset(dst, 0, size);
+
+    const char* variable = getenv(name);
+    if (variable == NULL) {
+        output_debug("Can't get environment variable %s, errno=%d", name, errno);
+        return GET_ENV_VARIABLE_NOT_FOUND;
+    }
+
+    char* context = NULL;
+    char* first_part = strtok_r((char *)variable, delimiters, &context);
+    if (first_part == NULL) {
+        output_debug("Can't split %s by delimiters %s", variable, delimiters);
+        return GET_ENV_VARIABLE_INCORRECT_FORMAT;
+    }
+
+    int first_part_len = strlen(first_part);
+    if (first_part_len >= size) {
+        output_debug("Dest buffer size %d not enough for %s", size, first_part);
+        return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
+    }
+
+    snprintf(dst, size, "%s", first_part);
+    output_debug("Remote address=%s", dst);
+    return GET_ENV_VARIABLE_OK;
+}
+
+/*
+ * Get current SSH session remote address from environment variable
+ */
+int get_remote_address(char* dst, socklen_t size)
+{
+    // SSHD will create environment variable SSH_CONNECTION after user session created.
+    if (get_environment_variable_first_part(dst, size, "SSH_CONNECTION", " ") == GET_ENV_VARIABLE_OK) {
+        return GET_REMOTE_ADDRESS_OK;
+    }
+
+    // Before user session created, SSHD will create environment variable SSH_CLIENT_IPADDR_PORT.
+    if (get_environment_variable_first_part(dst, size, "SSH_CLIENT_IPADDR_PORT", " ") == GET_ENV_VARIABLE_OK) {
+        return GET_REMOTE_ADDRESS_OK;
+    }
+
+    return GET_REMOTE_ADDRESS_FAILED;
+}
+
+/*
  * Send authorization request.
  * This method based on build_auth_req in https://github.com/daveolson53/tacplus-auth/blob/master/tacplus-auth.c
  */
 int authorization_with_host_and_tty(const char *user, const char *cmd, char **argv, int argc)
 {
     // try get host name
-    char hostname[64];
-    memset(&hostname, 0, sizeof(hostname));
+    char remote_addr[REMOTE_ADDRESS_SIZE];
+    memset(&remote_addr, 0, sizeof(remote_addr));
 
-    (void)gethostname(hostname, sizeof(hostname) -1);
-    if (!hostname[0]) {
-        snprintf(hostname, sizeof(hostname), "UNK");
-        output_error("Failed to determine hostname, passing %s\n", hostname);
+    int result = get_remote_address(remote_addr, sizeof(remote_addr));
+    if ((result != GET_REMOTE_ADDRESS_OK)) {
+        snprintf(remote_addr, sizeof(remote_addr), "UNK");
+        output_error("Failed to determine remote address, passing %s\n", remote_addr);
     }
 
     // try get tty name
@@ -262,7 +320,7 @@ int authorization_with_host_and_tty(const char *user, const char *cmd, char **ar
     }
 
     // send tacacs authorization request
-    return tacacs_authorization(user, ttyname, hostname, cmd, argv, argc);
+    return tacacs_authorization(user, ttyname, remote_addr, cmd, argv, argc);
 }
 
 /*
@@ -343,7 +401,7 @@ void plugin_uninit()
 /*
  * Check if current user is local user.
  */
-int is_local_user(char *user)
+int is_local_user(const char *user)
 {
     if (user == unknown_username) {
         // for unknown user name, when tacacs enabled, always authorization with tacacs.
@@ -390,7 +448,7 @@ int is_local_user(char *user)
 /*
  * Get user name.
  */
-char* get_user_name(char *user)
+const char* get_user_name(char *user)
 {
     if (user != NULL && strlen(user) != 0) {
         return user;
@@ -421,7 +479,7 @@ char* get_user_name(char *user)
  */
 int on_shell_execve (char *user, int shell_level, char *cmd, char **argv)
 {
-    char* user_namd = get_user_name(user);
+    const char* user_namd = get_user_name(user);
     output_debug("Authorization parameters:\n");
     output_debug("    Shell level: %d\n", shell_level);
     output_debug("    Current user: %s\n", user_namd);

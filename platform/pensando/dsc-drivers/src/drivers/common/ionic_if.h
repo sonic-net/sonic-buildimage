@@ -9,6 +9,7 @@
 #define IONIC_IFNAMSIZ				16
 
 #ifdef __CHECKER__
+#define IONIC_SIZE_CHECK(type, N, X)
 #define IONIC_CHECK_CMD_LENGTH(X)
 #define IONIC_CHECK_COMP_LENGTH(X)
 #define IONIC_CHECK_CMD_DATA_LENGTH(X)
@@ -280,17 +281,41 @@ struct ionic_dev_identify_comp {
 };
 
 enum ionic_debug_type {
-	IONIC_DEBUG_TYPE_MSG   = 1,
+	IONIC_DEBUG_TYPE_MSG     = 1,
+	IONIC_DEBUG_TYPE_STATS   = 2,
 };
+
+/**
+ * struct ionic_dev_debug_stats - Driver/device debug stats struct
+ * @fld:	A string specifying the field name
+ * @cnt:	Counter value for the field
+ */
+struct ionic_dev_debug_stats {
+	char     fld[56];
+	uint64_t cnt;
+} __attribute__((packed));
+IONIC_SIZE_CHECK(struct, 64, ionic_dev_debug_stats);
+
 /**
  * struct ionic_dev_debug_cmd - Driver/device debug command
- * @opcode:  opcode
- * @type:    debug_type (enum ionic_debug_type)
+ * @opcode:	opcode
+ * @type:	debug_type (enum ionic_debug_type)
+ * @stats:	Debug stats region properties
+ * 		@count:		Number of (field, cnt) pairs
+ * 		@stats_pa:	Physical address of the debug stats region
  */
 struct ionic_dev_debug_cmd {
 	u8 opcode;
 	u8 debug_type;
-	u8 rsvd[62];
+	u8 rsvd[6];
+	union {
+		struct {
+			__le16 count;
+			u8 rsvd2[6];
+			__le64 stats_pa;
+		} stats;
+	};
+	u8 rsvd3[40];
 };
 IONIC_CHECK_CMD_LENGTH(ionic_dev_debug_cmd);
 

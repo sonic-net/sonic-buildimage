@@ -93,6 +93,7 @@ module sonic-events-host {
             leaf fail_type {
                 type enumeration {
                     enum "read_only";
+                    enum "disk_full";
                 }
                 description "Type of failure";
             }

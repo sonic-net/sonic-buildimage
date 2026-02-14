@@ -1,0 +1,2 @@
+bcm_field_entry_destroy(0, 2048);
+bcm_field_group_destroy(0, 5);

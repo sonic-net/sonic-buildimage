@@ -9,6 +9,10 @@ module sonic-portchannel {
         prefix stypes;
     }
 
+    import ietf-yang-types {
+        prefix yang;
+    }
+
     import sonic-extension {
         prefix ext;
     }
@@ -53,7 +57,6 @@ module sonic-portchannel {
 
                 leaf name {
                     type string {
-                        length 1..128;
                         pattern 'PortChannel[0-9]{1,4}';
                     }
                 }
@@ -63,7 +66,7 @@ module sonic-portchannel {
                         range 1..1024;
                     }
                 }
-               
+
                leaf mode {
                    description "PortChannel SwitchPort Mode possible values are routed|access|trunk. Default value for mode is routed.";
                    type stypes:switchport_mode;
@@ -193,6 +196,11 @@ module sonic-portchannel {
 			type stypes:mode-status;
 			default disable;
 		}
+
+                leaf mac_addr {
+                    description "Assign administrator-provided MAC address to Interface";
+                    type yang:mac-address;
+                }
 
             } /* end of list PORTCHANNEL_INTERFACE_LIST */
 

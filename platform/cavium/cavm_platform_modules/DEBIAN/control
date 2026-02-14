@@ -1,6 +1,0 @@
-Package: cavm-platform-modules
-Version: 1.0
-Architecture: amd64
-Depends: linux-image-4.19.0-12-2-amd64-unsigned
-Maintainer: Nadiya.Stetskovych@cavium.com
-Description: kernel modules for platform devices such as fan, led, sfp

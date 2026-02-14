@@ -22,7 +22,7 @@ extern "C" {
 #include "pciesvc_cmd.h"
 
 #define PCIESVC_VERSION_MAJ     3
-#define PCIESVC_VERSION_MIN     1
+#define PCIESVC_VERSION_MIN     5
 
 typedef struct pciesvc_params_v0_s {
     int         port;                   /* port to config */

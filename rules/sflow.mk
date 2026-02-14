@@ -37,9 +37,14 @@ export PSAMPLE_VERSION PSAMPLE_SUBVERSION
 
 PSAMPLE = psample_$(PSAMPLE_VERSION)-$(PSAMPLE_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(PSAMPLE)_SRC_PATH = $(SRC_PATH)/sflow/psample
-
 SONIC_MAKE_DEBS += $(PSAMPLE)
-export PSAMPLE
+
+PSAMPLE_DBG = psample-dbgsym_$(PSAMPLE_VERSION)-$(PSAMPLE_SUBVERSION)_$(CONFIGURED_ARCH).deb
+$(PSAMPLE_DBG)_DEPENDS += $(PSAMPLE)
+$(PSAMPLE_DBG)_RDEPENDS += $(PSAMPLE)
+$(eval $(call add_derived_package,$(PSAMPLE),$(PSAMPLE_DBG)))
+
+export PSAMPLE PSAMPLE_DBG
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.

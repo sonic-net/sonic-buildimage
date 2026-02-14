@@ -50,7 +50,7 @@ fantray_eeprom_format = [
 class Eeprom(TlvInfoDecoder):
     """DellEMC Platform-specific EEPROM class"""
 
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
 
     def __init__(self, is_psu=False, psu_index=0, is_fantray=False, fantray_index=0):
         self.is_psu_eeprom = is_psu
@@ -429,7 +429,7 @@ class EepromS6000(EepromDecoder):
                     data = ":".join(["{:02x}".format(T) for T in e[offset:offset+f[1]]]).upper()
                 else:
                     data = e[offset:offset+f[1]].decode('ascii')
-                client.hset('EEPROM_INFO|{}'.format(f[0]), 'Value', data)
+                client.hset('EEPROM_INFO|{}'.format(f[0]), 'Value', data.strip('\x00'))
                 offset += f[1]
 
             if not self._is_valid_block_checksum(e[blk_start:blk_end]):

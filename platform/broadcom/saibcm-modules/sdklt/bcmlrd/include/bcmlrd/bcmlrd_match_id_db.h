@@ -7,7 +7,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -159,6 +160,9 @@ typedef struct bcmlrd_pdd_info_s {
 
     /*! If set, then PDD is aligned from LSB. */
     bool is_lsb;
+
+    /*! Absolute offset of container in the container list. */
+    uint16_t bit_offset;
 } bcmlrd_pdd_info_t;
 
 /*!

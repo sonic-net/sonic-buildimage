@@ -1,9 +1,10 @@
 {
     "switch_type": "{% if DEVICE_METADATA and 'localhost' in DEVICE_METADATA and 'switch_type' in DEVICE_METADATA['localhost'] %}{{ DEVICE_METADATA['localhost']['switch_type'] }}{%endif %}",
+    "type": "{% if DEVICE_METADATA and 'localhost' in DEVICE_METADATA and 'type' in DEVICE_METADATA['localhost'] %}{{ DEVICE_METADATA['localhost']['type'] }}{%endif %}",
     "interface": "{% for (name, prefix) in INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
     "pc_interface" : "{% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
     "vlan_sub_interface": "{% for (name, prefix) in VLAN_SUB_INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
     "vlan" : "{% if VLAN %}{{ VLAN.keys() | join(' ') }}{% endif %}",
-    "static_route_nexthops": "{% if STATIC_ROUTE %}{% for static_route_prefix, static_route_attr in STATIC_ROUTE.items() %}{%- if static_route_prefix -%}{{ static_route_attr['nexthop'].split(',') | join(' ') | lower + " " }}{%- endif -%}{% endfor %}{% endif %}",
+    "static_route_nexthops": "{% if STATIC_ROUTE %}{% for static_route_prefix, static_route_attr in STATIC_ROUTE.items() %}{%- if static_route_prefix and 'nexthop' in static_route_attr -%}{{ static_route_attr['nexthop'].split(',') | join(' ') | lower + " " }}{%- endif -%}{% endfor %}{% endif %}",
     "static_route_ifnames": "{% if STATIC_ROUTE %}{% for static_route_prefix, static_route_attr in STATIC_ROUTE.items() %}{%- if static_route_prefix and 'ifname' in static_route_attr -%}{{ static_route_attr['ifname'].split(',') | join(' ') + " " }}{%- endif -%}{% endfor %}{% endif %}"
 }

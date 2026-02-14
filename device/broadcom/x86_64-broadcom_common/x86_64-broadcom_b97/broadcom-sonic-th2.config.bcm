@@ -1,5 +1,8 @@
-schan_intr_enable=0
+[Low Inheritance Precedence]
 l2xmsg_mode=1
+max_vp_lags=0
+flow_init_mode=1
+schan_intr_enable=0
 mmu_lossless=0
 arl_clean_timeout_usec=15000000
 asf_mem_profile=2
@@ -9,12 +12,10 @@ cdma_timeout_usec=15000000
 dma_desc_timeout_usec=15000000
 ipv6_lpm_128b_enable=1
 lpm_scaling_enable=0
-max_vp_lags=0
 miim_intr_enable=0
 module_64ports=1
 oversubscribe_mode=1
 bcm_num_cos=10
-default_cpu_tx_queue=9
 # Drop monitor configuration
 flowtracker_enable=2
 flowtracker_max_flows=48000
@@ -22,10 +23,12 @@ flowtracker_drop_monitor_enable=1
 flowtracker_export_interval_usecs=1000000
 flowtracker_max_export_pkt_length=9000
 flowtracker_fsp_reinject_max_length=128
-flow_init_mode=1
 num_queues_pci=46
 num_queues_uc0=1
 num_queues_uc1=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
-
+sai_nbr_bcast_ifp_optimized=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
+sai_stats_support_mask=0x1

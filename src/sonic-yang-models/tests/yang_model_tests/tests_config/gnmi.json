@@ -10,7 +10,9 @@
                 "gnmi": {
                     "client_auth": "true",
                     "log_level": "2",
-                    "port": "50052"
+                    "port": "50052",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -26,7 +28,9 @@
                 "gnmi": {
                     "client_auth": "up",
                     "log_level": "2",
-                    "port": "50052"
+                    "port": "50052",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -42,7 +46,9 @@
                 "gnmi": {
                     "client_auth": "true",
                     "log_level": "2",
-                    "port": "abc"
+                    "port": "abc",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -59,7 +65,9 @@
                     "client_auth": "true",
                     "log_level": "2",
                     "port": "50051",
-                    "save_on_set": "wrong"
+                    "save_on_set": "wrong",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -76,7 +84,9 @@
                     "client_auth": "true",
                     "log_level": "2",
                     "port": "50052",
-                    "save_on_set": "false"
+                    "save_on_set": "false",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -98,13 +108,34 @@
                 "GNMI_CLIENT_CERT_LIST": [
                 {
                     "cert_cname": "testcert1",
-                    "role": "RW"
+                    "role": [
+                        "RW"
+                    ]
                 },
                 {
                     "cert_cname": "testcert2",
-                    "role": "RO"
+                    "role": [
+                        "RO"
+                    ]
                 }
                 ]
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_VALID_USER_AUTH": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "user_auth": "none",
+                    "log_level": "2",
+                    "port": "50052"
+                }
             }
         }
     }

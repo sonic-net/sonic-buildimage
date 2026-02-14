@@ -1,4 +1,5 @@
 import click
+import re
 from tabulate import tabulate
 import utilities_common.cli as clicommon
 
@@ -6,7 +7,6 @@ import utilities_common.cli as clicommon
 import ipaddress
 from datetime import datetime
 import fnmatch
-import re
 
 
 def ts_to_str(ts):
@@ -43,6 +43,12 @@ def lease(db, dhcp_interface):
         entry = dbconn.get_all("STATE_DB", key)
         interface, mac = key.split("|")[1:]
         port = dbconn.get("STATE_DB", "FDB_TABLE|" + interface + ":" + mac, "port")
+        if not port:
+            # Smart switch sample: aa:bb:cc:dd:ee:ff dev dpu0 master bridge-midplane
+            (out, _) = clicommon.run_command("sudo bridge fdb show | grep {}".format(mac), return_cmd=True, shell=True)
+            match = re.match(r'([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2} dev (.*) master (.*)', out)
+            if match and match.group(3).strip() == interface:
+                port = match.group(2).strip()
         if not port:
             port = "<Unknown>"
         table.append([interface + "|" + port, mac, entry["ip"], ts_to_str(entry["lease_start"]), ts_to_str(entry["lease_end"])])
@@ -104,9 +110,9 @@ def info(db, dhcp_interface, with_customized_options):
     for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
         entry = dbconn.get_all("CONFIG_DB", key)
         interface = key.split("|")[1]
-        table.append([interface, entry["mode"], entry["gateway"], entry["netmask"], entry["lease_time"], entry["state"]])
+        table.append([interface, entry["mode"], entry.get("gateway", ""), entry["netmask"], entry["lease_time"], entry["state"]])
         if with_customized_options:
-            table[-1].append(entry["customized_options@"])
+            table[-1].append(entry["customized_options@"] if "customized_options@" in entry else "")
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 

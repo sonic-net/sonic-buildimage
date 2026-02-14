@@ -1,0 +1,27 @@
+{
+    "SRV6_VALID": {
+        "desc": "Valid config"
+    },
+    "SRV6_MY_LOCATOR_INVALID_FUNC_LEN": {
+        "desc": "A locator configured with invalid func_len",
+        "eStrKey" : "Must"
+    },
+    "SRV6_MY_LOCATOR_INVALID_VRF": {
+        "desc": "A locator configured with an invalid VRF name",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["vrf"]
+    },
+    "SRV6_MY_SID_INVALID_LOCATOR": {
+        "desc": "A SID configured with invalid locator identifier",
+        "eStrKey" : "LeafRef"
+    },
+    "SRV6_MY_SID_INVALID_IP_PREFIX": {
+        "desc": "A SID configured with invalid IPv6 address",
+        "eStrKey" : "Pattern"
+    },
+    "SRV6_MY_SID_INVALID_ACTION": {
+        "desc": "A SID configured with invalid action",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["action"]
+    }
+}

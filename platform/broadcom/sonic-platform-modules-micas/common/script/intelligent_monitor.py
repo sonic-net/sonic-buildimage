@@ -1,12 +1,26 @@
 #!/usr/bin/python3
-# -*- coding: UTF-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import time
 import syslog
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
-from platform_util import io_rd, wbi2cget
+from platform_util import get_value
 
 INTELLIGENT_MONITOR_DEBUG_FILE = "/etc/.intelligent_monitor_debug"
 
@@ -59,39 +73,20 @@ class IntelligentMonitor():
             check_item = self.__dcdc_whitelist.get(dcdc_name, {})
             if len(check_item) == 0:
                 return False
-            gettype = check_item.get("gettype", None)
+
             checkbit = check_item.get("checkbit", None)
             okval = check_item.get("okval", None)
-            if gettype is None or checkbit is None or okval is None:
-                monitor_syslog('%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s config error. gettype:%s, checkbit:%s, okval:%s' %
-                               (dcdc_name, gettype, checkbit, okval))
+            if checkbit is None or okval is None:
+                monitor_syslog('%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s config error. checkbit:%s, okval:%s' %
+                               (dcdc_name, checkbit, okval))
                 return False
-            if gettype == "io":
-                io_addr = check_item.get('io_addr', None)
-                val = io_rd(io_addr)
-                if val is not None:
-                    retval = val
-                else:
-                    monitor_syslog(
-                        '%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s io_rd error. io_addr:%s' %
-                        (dcdc_name, io_addr))
-                    return False
-            elif gettype == "i2c":
-                bus = check_item.get('bus', None)
-                addr = check_item.get('addr', None)
-                offset = check_item.get('offset', None)
-                ind, val = wbi2cget(bus, addr, offset)
-                if ind is True:
-                    retval = val
-                else:
-                    monitor_syslog('%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s i2cget error. bus:%s, addr:%s, offset:%s' %
-                                   (dcdc_name, bus, addr, offset))
-                    return False
-            else:
-                monitor_syslog('%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s gettype not support' % dcdc_name)
+            ret, retval = get_value(check_item)
+            if ret is False:
+                monitor_syslog(
+                    '%%INTELLIGENT_MONITOR-3-DCDC_WHITELIST_FAILED: %s get value failed, msg:%s' % (dcdc_name, retval))
                 return False
 
-            val_t = (int(retval, 16) & (1 << checkbit)) >> checkbit
+            val_t = retval & (1 << checkbit) >> checkbit
             if val_t != okval:
                 return False
             return True

@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,20 +36,27 @@ try:
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
-    from sonic_platform_base.sonic_xcvr.api.public import cmis, sff8636, sff8436
+    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
+
+    from sonic_platform_base.sonic_xcvr.api.public import cmis as cmis_api
+    from sonic_platform_base.sonic_xcvr.codes.public import cmis as cmis_codes
+    from sonic_platform_base.sonic_xcvr.mem_maps.public import cmis as cmis_mem
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 try:
-    # python_sdk_api does not support python3 for now. Daemons like thermalctld or psud
-    # also import this file without actually use the sdk lib. So we catch the ImportError
-    # and ignore it here. Meanwhile, we have to trigger xcvrd using python2 now because it
-    # uses the sdk lib.
-    from python_sdk_api.sxd_api import *
-    from python_sdk_api.sx_api import *
-except ImportError as e:
-    pass
+    import sys
+    sys.path.append('/run/hw-management/bin')
+    import hw_management_independent_mode_update
+except ImportError:
+    # Only mock if running under pytest (check if pytest is imported)
+    if 'pytest' in sys.modules:
+        from unittest import mock
+        hw_management_independent_mode_update = mock.MagicMock()
+        hw_management_independent_mode_update.vendor_data_set_module = mock.MagicMock()
+    else:
+        raise
 
 # Define the sdk constants
 SX_PORT_MODULE_STATUS_INITIALIZING = 0
@@ -56,15 +64,6 @@ SX_PORT_MODULE_STATUS_PLUGGED = 1
 SX_PORT_MODULE_STATUS_UNPLUGGED = 2
 SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR = 3
 SX_PORT_MODULE_STATUS_PLUGGED_DISABLED = 4
-
-try:
-    if os.environ["PLATFORM_API_UNIT_TESTING"] == "1":
-        # Unable to import SDK constants under unit test
-        # Define them here
-        SX_PORT_ADMIN_STATUS_UP = True
-        SX_PORT_ADMIN_STATUS_DOWN = False
-except KeyError:
-    pass
 
 # identifier value of xSFP module which is in the first byte of the EEPROM
 # if the identifier value falls into SFP_TYPE_CODE_LIST the module is treated as a SFP module and parsed according to 8472
@@ -90,6 +89,7 @@ QSFP_DD_TYPE_CODE_LIST = [
 ]
 
 RJ45_TYPE = "RJ45"
+CPO_TYPE = "CPO"
 
 #variables for sdk
 REGISTER_NUM = 1
@@ -185,7 +185,7 @@ SFP_SYSFS_HWRESET = 'hw_reset'
 SFP_SYSFS_POWER_MODE = 'power_mode'
 SFP_SYSFS_POWER_MODE_POLICY = 'power_mode_policy'
 POWER_MODE_POLICY_HIGH = 1
-POWER_MODE_POLICY_AUTO = 2
+POWER_MODE_POLICY_LOW = 3
 POWER_MODE_LOW = 1
 # POWER_MODE_HIGH = 2  # not used
 
@@ -197,8 +197,6 @@ SFP_TYPE_SFF8636 = 'sff8636'
 # SFP stderr
 SFP_EEPROM_NOT_AVAILABLE = 'Input/output error'
 
-SFP_DEFAULT_TEMP_WARNNING_THRESHOLD = 70.0
-SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD = 80.0
 SFP_TEMPERATURE_SCALE = 8.0
 
 # Module host management definitions begin
@@ -206,6 +204,7 @@ SFP_SW_CONTROL = 1
 SFP_FW_CONTROL = 0
 
 CMIS_MAX_POWER_OFFSET = 201
+CMIS_MEDIA_INTERFACE_TECH_OFFSET = 212
 
 SFF_POWER_CLASS_MASK = 0xE3
 SFF_POWER_CLASS_MAPPING = {
@@ -288,38 +287,6 @@ limited_eeprom = {
 logger = Logger()
 
 
-# SDK initializing stuff, called from chassis
-def initialize_sdk_handle():
-    rc, sdk_handle = sx_api_open(None)
-    if (rc != SX_STATUS_SUCCESS):
-        logger.log_warning("Failed to open api handle, please check whether SDK is running.")
-        sdk_handle = None
-
-    return sdk_handle
-
-
-def deinitialize_sdk_handle(sdk_handle):
-    if sdk_handle is not None:
-        rc = sx_api_close(sdk_handle)
-        if (rc != SX_STATUS_SUCCESS):
-            logger.log_warning("Failed to close api handle.")
-
-        return rc == SXD_STATUS_SUCCESS
-    else:
-         logger.log_warning("Sdk handle is none")
-         return False
-
-class SdkHandleContext(object):
-    def __init__(self):
-        self.sdk_handle = None
-
-    def __enter__(self):
-        self.sdk_handle = initialize_sdk_handle()
-        return self.sdk_handle
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        deinitialize_sdk_handle(self.sdk_handle)
-
 class NvidiaSFPCommon(SfpOptoeBase):
     sfp_index_to_logical_port_dict = {}
     sfp_index_to_logical_lock = threading.Lock()
@@ -356,18 +323,11 @@ class NvidiaSFPCommon(SfpOptoeBase):
         0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
     }
 
-    def __init__(self, sfp_index):
+    def __init__(self, sfp_index, asic_id='asic0'):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
         self.sdk_index = sfp_index
-
-    @property
-    def sdk_handle(self):
-        if not SFP.shared_sdk_handle:
-            SFP.shared_sdk_handle = initialize_sdk_handle()
-            if not SFP.shared_sdk_handle:
-                logger.log_error('Failed to open SDK handle')
-        return SFP.shared_sdk_handle
+        self.asic_id = asic_id
 
     @classmethod
     def _get_module_info(self, sdk_index):
@@ -386,7 +346,11 @@ class NvidiaSFPCommon(SfpOptoeBase):
         return oper_state, error_type
 
     def get_fd(self, fd_type):
-        return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+        try:
+            return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+        except FileNotFoundError as e:
+            logger.log_warning(f'Trying to access /sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type} file which does not exist')
+            return None
 
     def get_fd_for_polling_legacy(self):
         """Get polling fds for when module host management is disabled
@@ -417,7 +381,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         Returns:
             tuple: (error state, error description)
         """
-        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/statuserror', default=-1)
         sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
         if sfp_state_bits is None:
             logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
@@ -435,6 +399,8 @@ class NvidiaSFPCommon(SfpOptoeBase):
         sfp_state = str(sfp_state_bits)
         return sfp_state, error_description
     
+    def get_asic_id(self):
+        return self.asic_id
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
@@ -451,8 +417,8 @@ class SFP(NvidiaSFPCommon):
     # only applicable for module host management
     action_table = None
 
-    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None):
-        super(SFP, self).__init__(sfp_index)
+    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None, asic_id='asic0'):
+        super(SFP, self).__init__(sfp_index, asic_id=asic_id)
         self._sfp_type = sfp_type
 
         if slot_id == 0: # For non-modular chassis
@@ -477,6 +443,13 @@ class SFP(NvidiaSFPCommon):
         else:
             self.state = STATE_FCP_DOWN
         self.processing_insert_event = False
+        self.sn = None
+        self.temp_high_threshold = None
+        self.temp_critical_threshold = None
+        self.retry_read_threshold = 5
+        self.retry_read_vendor = 5
+        self.manufacturer = None
+        self.part_number = None
 
     def __str__(self):
         return f'SFP {self.sdk_index}'
@@ -496,12 +469,17 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-        presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
-        if utils.read_int_from_file(presence_sysfs) != 1:
+
+        try:
+            presence_file =  'hw_present' if self.is_sw_control() else 'present'
+            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+                return False
+            eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
+            return eeprom_raw is not None
+        except Exception as e:
+            logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
             return False
-        eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
-        return eeprom_raw is not None
-    
+
     @classmethod
     def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
         not_ready_list = sfp_list
@@ -516,6 +494,18 @@ class SFP(NvidiaSFPCommon):
         
         for s in not_ready_list:
             logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
+
+    def check_eeprom_ready_if_present(self):
+        """
+        Check if the eeprom is ready for a present SFP
+
+        Returns:
+            bool: False if the SFP is present and the eeprom is not ready, True otherwise
+        """
+        presence_file =  'hw_present' if self.is_sw_control() else 'present'
+        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
+            return True
+        return self._read_eeprom(0, 1, log_on_error=False) is not None
 
     # read eeprom specfic bytes beginning from offset with size as num_bytes
     def read_eeprom(self, offset, num_bytes):
@@ -553,6 +543,9 @@ class SFP(NvidiaSFPCommon):
                     else:
                         result += content
                     read_length = len(content)
+                    if read_length == 0:
+                        logger.log_error(f'SFP {self.sdk_index}: EEPROM page {page} is empty, no data retrieved')
+                        return None
                     num_bytes -= read_length
                     if num_bytes > 0:
                         page_size = f.seek(0, os.SEEK_END)
@@ -620,24 +613,6 @@ class SFP(NvidiaSFPCommon):
                 return False
         return True
 
-    @classmethod
-    def mgmt_phy_mod_pwr_attr_get(cls, power_attr_type, sdk_handle, sdk_index, slot_id):
-        sx_mgmt_phy_mod_pwr_attr_p = new_sx_mgmt_phy_mod_pwr_attr_t_p()
-        sx_mgmt_phy_mod_pwr_attr = sx_mgmt_phy_mod_pwr_attr_t()
-        sx_mgmt_phy_mod_pwr_attr.power_attr_type = power_attr_type
-        sx_mgmt_phy_mod_pwr_attr_t_p_assign(sx_mgmt_phy_mod_pwr_attr_p, sx_mgmt_phy_mod_pwr_attr)
-        module_id_info = sx_mgmt_module_id_info_t()
-        module_id_info.slot_id = slot_id
-        module_id_info.module_id = sdk_index
-        try:
-            rc = sx_mgmt_phy_module_pwr_attr_get(sdk_handle, module_id_info, sx_mgmt_phy_mod_pwr_attr_p)
-            assert SX_STATUS_SUCCESS == rc, "sx_mgmt_phy_module_pwr_attr_get failed {}".format(rc)
-            sx_mgmt_phy_mod_pwr_attr = sx_mgmt_phy_mod_pwr_attr_t_p_value(sx_mgmt_phy_mod_pwr_attr_p)
-            pwr_mode_attr = sx_mgmt_phy_mod_pwr_attr.pwr_mode_attr
-            return pwr_mode_attr.admin_pwr_mode_e, pwr_mode_attr.oper_pwr_mode_e
-        finally:
-            delete_sx_mgmt_phy_mod_pwr_attr_t_p(sx_mgmt_phy_mod_pwr_attr_p)
-
     def get_lpmode(self):
         """
         Retrieves the lpmode (low power mode) status of this SFP
@@ -649,44 +624,13 @@ class SFP(NvidiaSFPCommon):
             if self.is_sw_control():
                 api = self.get_xcvr_api()
                 return api.get_lpmode() if api else False
-            elif DeviceDataManager.is_module_host_management_mode():
-                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE
-                power_mode = utils.read_int_from_file(file_path)
-                return power_mode == POWER_MODE_LOW
         except Exception as e:
             print(e)
             return False
 
-        if utils.is_host():
-            # To avoid performance issue,
-            # call class level method to avoid initialize the whole sonic platform API
-            get_lpmode_code = 'from sonic_platform import sfp;\n' \
-                              'with sfp.SdkHandleContext() as sdk_handle:' \
-                              'print(sfp.SFP._get_lpmode(sdk_handle, {}, {}))'.format(self.sdk_index, self.slot_id)
-            lpm_cmd = ["docker", "exec", "pmon", "python3", "-c", get_lpmode_code]
-            try:
-                output = subprocess.check_output(lpm_cmd, universal_newlines=True)
-                return 'True' in output
-            except subprocess.CalledProcessError as e:
-                print("Error! Unable to get LPM for {}, rc = {}, err msg: {}".format(self.sdk_index, e.returncode, e.output))
-                return False
-        else:
-            return self._get_lpmode(self.sdk_handle, self.sdk_index, self.slot_id)
-
-    @classmethod
-    def _get_lpmode(cls, sdk_handle, sdk_index, slot_id):
-        """Class level method to get low power mode.
-
-        Args:
-            sdk_handle: SDK handle
-            sdk_index (integer): SDK port index
-            slot_id (integer): Slot ID
-
-        Returns:
-            [boolean]: True if low power mode is on else off
-        """
-        _, oper_pwr_mode = cls.mgmt_phy_mod_pwr_attr_get(SX_MGMT_PHY_MOD_PWR_ATTR_PWR_MODE_E, sdk_handle, sdk_index, slot_id)
-        return oper_pwr_mode == SX_MGMT_PHY_MOD_PWR_MODE_LOW_E
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE
+        power_mode = utils.read_int_from_file(file_path)
+        return power_mode == POWER_MODE_LOW
 
     def reset(self):
         """
@@ -708,128 +652,6 @@ class SFP(NvidiaSFPCommon):
             print(f'Failed to reset module - {e}')
             logger.log_error(f'Failed to reset module - {e}')
             return False
-
-
-    @classmethod
-    def is_nve(cls, port):
-        return (port & NVE_MASK) != 0
-
-
-    @classmethod
-    def is_cpu(cls, port):
-        return (port & CPU_MASK) != 0
-
-
-    @classmethod
-    def _fetch_port_status(cls, sdk_handle, log_port):
-        oper_state_p = new_sx_port_oper_state_t_p()
-        admin_state_p = new_sx_port_admin_state_t_p()
-        module_state_p = new_sx_port_module_state_t_p()
-        rc = sx_api_port_state_get(sdk_handle, log_port, oper_state_p, admin_state_p, module_state_p)
-        assert rc == SXD_STATUS_SUCCESS, "sx_api_port_state_get failed, rc = %d" % rc
-
-        admin_state = sx_port_admin_state_t_p_value(admin_state_p)
-        oper_state = sx_port_oper_state_t_p_value(oper_state_p)
-
-        delete_sx_port_oper_state_t_p(oper_state_p)
-        delete_sx_port_admin_state_t_p(admin_state_p)
-        delete_sx_port_module_state_t_p(module_state_p)
-
-        return oper_state, admin_state
-
-
-    @classmethod
-    def is_port_admin_status_up(cls, sdk_handle, log_port):
-        _, admin_state = cls._fetch_port_status(sdk_handle, log_port);
-        return admin_state == SX_PORT_ADMIN_STATUS_UP
-
-
-    @classmethod
-    def set_port_admin_status_by_log_port(cls, sdk_handle, log_port, admin_status):
-        rc = sx_api_port_state_set(sdk_handle, log_port, admin_status)
-        if SX_STATUS_SUCCESS != rc:
-            logger.log_error("sx_api_port_state_set failed, rc = %d" % rc)
-
-        return SX_STATUS_SUCCESS == rc
-
-
-    @classmethod
-    def get_logical_ports(cls, sdk_handle, sdk_index, slot_id):
-        # Get all the ports related to the sfp, if port admin status is up, put it to list
-        port_cnt_p = new_uint32_t_p()
-        uint32_t_p_assign(port_cnt_p, 0)
-        rc = sx_api_port_device_get(sdk_handle, DEVICE_ID, SWITCH_ID, None,  port_cnt_p)
-
-        assert rc == SX_STATUS_SUCCESS, "sx_api_port_device_get failed, rc = %d" % rc
-        port_cnt = uint32_t_p_value(port_cnt_p)
-        port_attributes_list = new_sx_port_attributes_t_arr(port_cnt)
-
-        rc = sx_api_port_device_get(sdk_handle, DEVICE_ID , SWITCH_ID, port_attributes_list,  port_cnt_p)
-        assert rc == SX_STATUS_SUCCESS, "sx_api_port_device_get failed, rc = %d" % rc
-
-        port_cnt = uint32_t_p_value(port_cnt_p)
-        log_port_list = []
-        for i in range(0, port_cnt):
-            port_attributes = sx_port_attributes_t_arr_getitem(port_attributes_list, i)
-            if not cls.is_nve(int(port_attributes.log_port)) \
-               and not cls.is_cpu(int(port_attributes.log_port)) \
-               and port_attributes.port_mapping.module_port == sdk_index \
-               and port_attributes.port_mapping.slot == slot_id \
-               and cls.is_port_admin_status_up(sdk_handle, port_attributes.log_port):
-                log_port_list.append(port_attributes.log_port)
-
-        delete_sx_port_attributes_t_arr(port_attributes_list)
-        delete_uint32_t_p(port_cnt_p)
-        return log_port_list
-
-
-    @classmethod
-    def mgmt_phy_mod_pwr_attr_set(cls, sdk_handle, sdk_index, slot_id, power_attr_type, admin_pwr_mode):
-        result = False
-        sx_mgmt_phy_mod_pwr_attr = sx_mgmt_phy_mod_pwr_attr_t()
-        sx_mgmt_phy_mod_pwr_mode_attr = sx_mgmt_phy_mod_pwr_mode_attr_t()
-        sx_mgmt_phy_mod_pwr_attr.power_attr_type = power_attr_type
-        sx_mgmt_phy_mod_pwr_mode_attr.admin_pwr_mode_e = admin_pwr_mode
-        sx_mgmt_phy_mod_pwr_attr.pwr_mode_attr = sx_mgmt_phy_mod_pwr_mode_attr
-        sx_mgmt_phy_mod_pwr_attr_p = new_sx_mgmt_phy_mod_pwr_attr_t_p()
-        sx_mgmt_phy_mod_pwr_attr_t_p_assign(sx_mgmt_phy_mod_pwr_attr_p, sx_mgmt_phy_mod_pwr_attr)
-        module_id_info = sx_mgmt_module_id_info_t()
-        module_id_info.slot_id = slot_id
-        module_id_info.module_id = sdk_index
-        try:
-            rc = sx_mgmt_phy_module_pwr_attr_set(sdk_handle, SX_ACCESS_CMD_SET, module_id_info, sx_mgmt_phy_mod_pwr_attr_p)
-            if SX_STATUS_SUCCESS != rc:
-                logger.log_error("Error occurred when setting power mode for SFP module {}, slot {}, error code {}".format(sdk_index, slot_id, rc))
-                result = False
-            else:
-                result = True
-        finally:
-            delete_sx_mgmt_phy_mod_pwr_attr_t_p(sx_mgmt_phy_mod_pwr_attr_p)
-
-        return result
-
-
-    @classmethod
-    def _set_lpmode_raw(cls, sdk_handle, sdk_index, slot_id, ports, attr_type, power_mode):
-        result = False
-        # Check if the module already works in the same mode
-        admin_pwr_mode, oper_pwr_mode = cls.mgmt_phy_mod_pwr_attr_get(attr_type, sdk_handle, sdk_index, slot_id)
-        if (power_mode == SX_MGMT_PHY_MOD_PWR_MODE_LOW_E and oper_pwr_mode == SX_MGMT_PHY_MOD_PWR_MODE_LOW_E) \
-           or (power_mode == SX_MGMT_PHY_MOD_PWR_MODE_AUTO_E and admin_pwr_mode == SX_MGMT_PHY_MOD_PWR_MODE_AUTO_E):
-            return True
-        try:
-            # Bring the port down
-            for port in ports:
-                cls.set_port_admin_status_by_log_port(sdk_handle, port, SX_PORT_ADMIN_STATUS_DOWN)
-            # Set the desired power mode
-            result = cls.mgmt_phy_mod_pwr_attr_set(sdk_handle, sdk_index, slot_id, attr_type, power_mode)
-        finally:
-            # Bring the port up
-            for port in ports:
-                cls.set_port_admin_status_by_log_port(sdk_handle, port, SX_PORT_ADMIN_STATUS_UP)
-
-        return result
-
 
     def set_lpmode(self, lpmode):
         """
@@ -856,47 +678,16 @@ class SFP(NvidiaSFPCommon):
                 # If at some point get_lpmode=desired_lpmode, it will return true.
                 # If after timeout ends, lpmode will not be desired_lpmode, it will return false.
                 return utils.wait_until(check_lpmode, 2, 1, api=api, lpmode=lpmode)
-            elif DeviceDataManager.is_module_host_management_mode():
-                # FW control under CMIS host management mode. 
-                # Currently, we don't support set LPM under this mode.
-                # Just return False to indicate set Fail
-                return False
         except Exception as e:
             print(e)
             return False
 
-        if utils.is_host():
-            # To avoid performance issue,
-            # call class level method to avoid initialize the whole sonic platform API
-            set_lpmode_code = 'from sonic_platform import sfp;\n' \
-                              'with sfp.SdkHandleContext() as sdk_handle:' \
-                              'print(sfp.SFP._set_lpmode({}, sdk_handle, {}, {}))' \
-                              .format('True' if lpmode else 'False', self.sdk_index, self.slot_id)
-            lpm_cmd = ["docker", "exec", "pmon", "python3", "-c", set_lpmode_code]
-
-            # Set LPM
-            try:
-                output = subprocess.check_output(lpm_cmd, universal_newlines=True)
-                return 'True' in output
-            except subprocess.CalledProcessError as e:
-                print("Error! Unable to set LPM for {}, rc = {}, err msg: {}".format(self.sdk_index, e.returncode, e.output))
-                return False
-        else:
-            return self._set_lpmode(lpmode, self.sdk_handle, self.sdk_index, self.slot_id)
-
-
-    @classmethod
-    def _set_lpmode(cls, lpmode, sdk_handle, sdk_index, slot_id):
-        log_port_list = cls.get_logical_ports(sdk_handle, sdk_index, slot_id)
-        sdk_lpmode = SX_MGMT_PHY_MOD_PWR_MODE_LOW_E if lpmode else SX_MGMT_PHY_MOD_PWR_MODE_AUTO_E
-        cls._set_lpmode_raw(sdk_handle,
-                            sdk_index,
-                            slot_id,
-                            log_port_list,
-                            SX_MGMT_PHY_MOD_PWR_ATTR_PWR_MODE_E,
-                            sdk_lpmode)
-        logger.log_info("{} low power mode for module {}, slot {}".format("Enabled" if lpmode else "Disabled", sdk_index, slot_id))
-        return True
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE_POLICY
+        target_admin_mode = POWER_MODE_POLICY_LOW if lpmode else POWER_MODE_POLICY_HIGH
+        current_admin_mode = utils.read_int_from_file(file_path)
+        if current_admin_mode == target_admin_mode:
+            return True
+        return utils.write_file(file_path, str(target_admin_mode))
 
     def is_replaceable(self):
         """
@@ -933,8 +724,11 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             if self.is_sw_control():
-                return 'Not supported'
-        except:
+                api = self.get_xcvr_api()
+                return api.get_error_description() if api else None
+        except NotImplementedError:
+            return 'Not supported'
+        except Exception:
             return self.SFP_STATUS_INITIALIZING
 
         oper_status, error_code = self._get_module_info(self.sdk_index)
@@ -1073,6 +867,11 @@ class SFP(NvidiaSFPCommon):
             list: [False] * channels
         """
         api = self.get_xcvr_api()
+        try:
+            if self.is_sw_control():
+                return api.get_rx_los() if api else None
+        except Exception as e:
+            print(e)
         return [False] * api.NUM_CHANNELS if api else None
 
     def get_tx_fault(self):
@@ -1088,6 +887,158 @@ class SFP(NvidiaSFPCommon):
         except Exception as e:
             print(e)
         return [False] * api.NUM_CHANNELS if api else None
+    
+    def _get_serial(self):
+        """
+        Get serial number from EEPROM. sfp_base.get_serial() might read from
+        memory cache, which is not always up to date. This function is used by reinit_if_sn_changed() to detect if a SFP is replaced.
+        """
+        api = self.get_xcvr_api()
+        if not api:
+            return None
+        
+        sn = api.xcvr_eeprom.read(consts.VENDOR_SERIAL_NO_FIELD)
+        if sn is None:
+            return None
+        return sn.rstrip()
+    
+    def reinit_if_sn_changed(self):
+        """Reinitialize the SFP if the module ID has changed
+        """
+        sn = self._get_serial()
+        if sn != self.sn:
+            self.reinit()
+            # Clear cached vendor info so a new module will be re-read
+            self.manufacturer = None
+            self.part_number = None
+            self.temp_high_threshold = None
+            self.temp_critical_threshold = None
+            self.sn = self._get_serial()
+            if self.sn is not None:
+                self.retry_read_threshold = 5
+                self.retry_read_vendor = 5
+            else:
+                self.retry_read_threshold = 0
+                self.retry_read_vendor = 0
+            return True
+        return False
+
+    def get_vendor_info(self):
+        """Get SFP vendor info (manufacturer and part number).
+        Reads fields via xcvr_eeprom to avoid manual offset logic.
+        Uses cache to avoid redundant reads.
+        Returns:
+            tuple: (manufacturer, part_number) or (None, None) if read fails
+        """
+        try:
+            display_idx = self.sdk_index + 1
+            if self.manufacturer is not None and self.part_number is not None:
+                return self.manufacturer, self.part_number
+
+            api = self.get_xcvr_api()
+            if not api or api.xcvr_eeprom is None:
+                return None, None
+
+            try:
+                manufacturer = api.xcvr_eeprom.read(consts.VENDOR_NAME_FIELD)
+                part_number = api.xcvr_eeprom.read(consts.VENDOR_PART_NO_FIELD)
+                logger.log_info(f"SFP {display_idx} vendor info read: manufacturer='{manufacturer}', part_number='{part_number}'")
+            except Exception as e:
+                logger.log_error(f"SFP {display_idx} vendor info read failed: {e}")
+                manufacturer = None
+                part_number = None
+
+            if manufacturer and part_number:
+                self.manufacturer = manufacturer
+                self.part_number = part_number
+                return manufacturer, part_number
+
+            return None, None
+        except Exception:
+            return None, None
+
+    def get_temperature_info(self):
+        """Get SFP temperature info in a fast way. This function is faster than calling following functions one by one: get_temperature, get_temperature_warning_threshold, get_temperature_critical_threshold.
+
+        Returns:
+            tuple: (temperature, warning_threshold, critical_threshold)
+        """
+        try:
+            sn_changed = self.reinit_if_sn_changed()
+            if self.retry_read_vendor > 0:
+                try:
+                    manufacturer, part_number = self.get_vendor_info()
+                    if manufacturer and part_number:
+                        vendor_info = {'manufacturer': manufacturer, 'part_number': part_number}
+                        hw_management_independent_mode_update.vendor_data_set_module(
+                            0,  # ASIC index always 0 for now
+                            self.sdk_index + 1,
+                            vendor_info
+                        )
+                        logger.log_notice(f'Module {self.sdk_index + 1} vendor info updated - '
+                                          f'manufacturer: {manufacturer} part_number: {part_number}')
+                        self.retry_read_vendor = 0
+                    else:
+                        self.retry_read_vendor -= 1
+                        if self.retry_read_vendor == 0:
+                            logger.log_notice(f"SFP {self.sdk_index + 1}: vendor info unavailable after retries")
+                except Exception as e:
+                    logger.log_warning(f'Failed to publish vendor info for SFP {self.sdk_index + 1} - {e}')
+                    self.retry_read_vendor -= 1
+                    if self.retry_read_vendor == 0:
+                        logger.log_notice(f"SFP {self.sdk_index + 1}: vendor info unavailable after retries")
+
+            sw_control = self.is_sw_control()
+            if not sw_control:
+                return sw_control, None, None, None
+
+            self.reinit_if_sn_changed()
+            # software control, read from EEPROM
+            temperature = super().get_temperature()
+            if temperature is None:
+                # Failed to read temperature, no need read threshold
+                return sw_control, None, None, None
+            elif temperature == 0.0:
+                # Temperature is not supported, no need read threshold
+                return sw_control, 0.0, 0.0, 0.0
+            else:
+                self._update_temperature_threshold(sw_control)
+                return sw_control, temperature, self.temp_high_threshold, self.temp_critical_threshold
+        except:
+            # module under initialization, return as temperature not supported
+            return False, None, None, None
+
+    def _update_temperature_threshold(self, sw_control):
+        """Update temperature threshold
+
+        Args:
+            sw_control (bool): True if software control, False if firmware control
+        """
+        if self.retry_read_threshold <= 0:
+            return
+        self.temp_high_threshold = None
+        self.temp_critical_threshold = None
+        if sw_control:
+            api = self.get_xcvr_api()
+            if api:
+                thresh_support = api.get_transceiver_thresholds_support()
+                if thresh_support:
+                    self.temp_high_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_WARNING_FIELD)
+                    self.temp_critical_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_ALARM_FIELD)
+        else:
+            threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
+            threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_critical_hi'
+
+            self.temp_high_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
+            self.temp_high_threshold = self.temp_high_threshold / SFP_TEMPERATURE_SCALE
+
+            self.temp_critical_threshold = utils.read_int_from_file(threshold_critical_file, log_func=None)
+            self.temp_critical_threshold = self.temp_critical_threshold / SFP_TEMPERATURE_SCALE
+                
+        if not self.temp_high_threshold or not self.temp_critical_threshold:
+            self.retry_read_threshold -= 1
+        else:
+            self.retry_read_threshold = 0
 
     def get_temperature(self):
         """Get SFP temperature
@@ -1109,9 +1060,8 @@ class SFP(NvidiaSFPCommon):
         except:
             return 0.0
 
-        self.reinit()
-        temperature = super().get_temperature()
-        return temperature if temperature is not None else None
+        self.reinit_if_sn_changed()
+        return super().get_temperature()
 
     def get_temperature_warning_threshold(self):
         """Get temperature warning threshold
@@ -1122,18 +1072,13 @@ class SFP(NvidiaSFPCommon):
             other float value if warning threshold is available
         """
         try:
-            self.is_sw_control()
+            sw_control = self.is_sw_control()
         except:
             return 0.0
         
-        support, thresh = self._get_temperature_threshold()
-        if support is None or thresh is None:
-            # Failed to read from EEPROM
-            return None
-        if support is False:
-            # Do not support
-            return 0.0
-        return thresh.get(consts.TEMP_HIGH_WARNING_FIELD, SFP_DEFAULT_TEMP_WARNNING_THRESHOLD)
+        self.reinit_if_sn_changed()
+        self._update_temperature_threshold(sw_control)
+        return self.temp_high_threshold
 
     def get_temperature_critical_threshold(self):
         """Get temperature critical threshold
@@ -1144,37 +1089,13 @@ class SFP(NvidiaSFPCommon):
             other float value if critical threshold is available
         """
         try:
-            self.is_sw_control()
+            sw_control = self.is_sw_control()
         except:
             return 0.0
 
-        support, thresh = self._get_temperature_threshold()
-        if support is None or thresh is None:
-            # Failed to read from EEPROM
-            return None
-        if support is False:
-            # Do not support
-            return 0.0
-        return thresh.get(consts.TEMP_HIGH_ALARM_FIELD, SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD)
-
-    def _get_temperature_threshold(self):
-        """Get temperature thresholds data from EEPROM
-
-        Returns:
-            tuple: (support, thresh_dict)
-        """
-        self.reinit()
-        api = self.get_xcvr_api()
-        if not api:
-            return None, None
-
-        thresh_support = api.get_transceiver_thresholds_support()
-        if thresh_support:
-            if isinstance(api, sff8636.Sff8636Api) or isinstance(api, sff8436.Sff8436Api):
-                return thresh_support, api.xcvr_eeprom.read(consts.TEMP_THRESHOLDS_FIELD)
-            return thresh_support, api.xcvr_eeprom.read(consts.THRESHOLDS_FIELD)
-        else:
-            return thresh_support, {}
+        self.reinit_if_sn_changed()
+        self._update_temperature_threshold(sw_control)
+        return self.temp_critical_threshold
 
     def get_xcvr_api(self):
         """
@@ -1185,8 +1106,6 @@ class SFP(NvidiaSFPCommon):
         """
         if self._xcvr_api is None:
             self.refresh_xcvr_api()
-            if self._xcvr_api is not None:
-                self._xcvr_api.get_rx_los = self.get_rx_los
         return self._xcvr_api
 
     def is_sw_control(self):
@@ -1289,7 +1208,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api is of type CMIS
         """
-        return isinstance(xcvr_api, cmis.CmisApi)
+        return isinstance(xcvr_api, cmis_api.CmisApi)
 
     def is_sff_api(self, xcvr_api):
         """Check if the api type is SFF
@@ -1302,6 +1221,16 @@ class SFP(NvidiaSFPCommon):
         """
         return isinstance(xcvr_api, sff8636.Sff8636Api) or isinstance(xcvr_api, sff8436.Sff8436Api)
 
+    def check_media_interface_technology(self, xcvr_api):
+        """Check media interface technology
+        0x0F in offset 212, means the module is 'Copper cable, linear active equalizers'.
+        Nvidia doesn't support it to be SW control, so we set it to FW control
+        Args:
+            xcvr_api (object): xcvr api object
+        """
+        media_interface = self.read_eeprom(CMIS_MEDIA_INTERFACE_TECH_OFFSET, 1)
+        return media_interface[0] != 0x0F if media_interface else False
+
     def is_supported_for_software_control(self, xcvr_api):
         """Check if the api object supports software control
 
@@ -1311,7 +1240,13 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api object supports software control
         """
-        return self.is_cmis_api(xcvr_api) and not xcvr_api.is_flat_memory()
+        if xcvr_api.is_flat_memory():
+            if self.is_cmis_api(xcvr_api):
+                # For Copper active modules, Nvidia doesn't support SW control
+                return self.check_media_interface_technology(xcvr_api)
+            return self.is_sff_api(xcvr_api)
+
+        return self.is_cmis_api(xcvr_api)
 
     def check_power_capability(self):
         """Check module max power with cage power limit
@@ -1725,14 +1660,14 @@ class SFP(NvidiaSFPCommon):
             # Resetting SFP requires a reloading of module firmware, it takes up to 3 seconds
             # according to standard
             max_wait_time = 3.5
-            begin = time.time()
+            begin = time.monotonic()
             while True:
                 ready_sfp_set = wait_ready_task.get_ready_set()
                 for sfp_index in ready_sfp_set:
                     s = sfp_list[sfp_index]
                     logger.log_debug(f'SFP {sfp_index} is recovered from resetting state')
                     s.on_event(EVENT_RESET_DONE)
-                elapse = time.time() - begin
+                elapse = time.monotonic() - begin
                 if elapse < max_wait_time:
                     time.sleep(0.5)
                 else:
@@ -1749,8 +1684,8 @@ class SFP(NvidiaSFPCommon):
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
-    def __init__(self, sfp_index):
-        super(RJ45Port, self).__init__(sfp_index)
+    def __init__(self, sfp_index, asic_id='asic0'):
+        super(RJ45Port, self).__init__(sfp_index, asic_id=asic_id)
         self.sfp_type = RJ45_TYPE
 
     def get_presence(self):
@@ -1998,3 +1933,36 @@ class RJ45Port(NvidiaSFPCommon):
         """
         status = super().get_module_status()
         return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status
+
+
+class CpoPort(SFP):
+    """class derived from SFP, representing CPO ports"""
+
+    def __init__(self, sfp_index, asic_id='asic0'):
+        super(CpoPort, self).__init__(sfp_index, asic_id=asic_id)
+        self._sfp_type_str = None
+        self.sfp_type = CPO_TYPE
+
+    def get_transceiver_info(self):
+        transceiver_info_dict = super().get_transceiver_info()
+        transceiver_info_dict['type'] = self.sfp_type
+        return transceiver_info_dict
+
+    def get_xcvr_api(self):
+        if self._xcvr_api is None:
+            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
+        return self._xcvr_api
+
+    def get_presence(self):
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
+        present = utils.read_int_from_file(file_path)
+        return present == 1
+
+    def reinit(self):
+        """
+        Nothing to do for cpo. Just provide it to avoid exception
+        :return:
+        """
+        return
+
+

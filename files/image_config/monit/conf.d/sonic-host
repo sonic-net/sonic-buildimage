@@ -56,3 +56,21 @@ check program vnetRouteCheck with path "/usr/local/bin/vnet_route_check.py"
 # memory_check tool that verifies that memory usage does not cross the threshold or invokes techsupport.
 check program memory_check with path "/usr/local/bin/memory_threshold_check.py"
     if status == 2 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py"
+
+# arp_update_checker tool that verifies that arp_update script is not stuck on ping command every 10 minutes
+check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
+    if status != 0 for 3 times within 3 cycles then alert repeat every 1 cycles
+
+# Check if there are control plane packet drops reported by softnet_stats
+check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# Periodically update oper status of mgmt interface in STATE_DB 
+check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
+    every 1 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# check if NTP is synchronized
+#check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+#    if status != 0 for 3 cycle then alert repeat every 5 cycles

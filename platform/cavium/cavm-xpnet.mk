@@ -1,6 +1,0 @@
-CAVM_SAI_URL = https://github.com/XPliant/OpenXPS/raw/c26aea6a7098936ab3692e148238d73fa8962585/SAI
-
-CAVM_XPNET_DEB = xp80-Pcie-Endpoint.deb
-$(CAVM_XPNET_DEB)_URL = $(CAVM_SAI_URL)/netdev/$(CAVM_XPNET_DEB)
-
-SONIC_ONLINE_DEBS += $(CAVM_XPNET_DEB)

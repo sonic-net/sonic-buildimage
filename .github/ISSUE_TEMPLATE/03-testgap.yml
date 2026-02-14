@@ -1,0 +1,11 @@
+name: Report a Test Gap
+description: Report a Test Gap
+title: "Test Gap:"
+labels: ["Test gap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this report!
+
+        Test Gaps are tracked on the sonic-mgmt repository. [Click here to open a new test gap issue](https://github.com/sonic-net/sonic-mgmt/issues/new?template=03-testgap.yml)

@@ -245,23 +245,16 @@ class PddfSfp(SfpOptoeBase):
         status = False
         device = 'PORT{}'.format(self.port_index)
         path = self.pddf_obj.get_path(device, 'xcvr_reset')
-
         if path:
             try:
-                f = open(path, 'r+')
-            except IOError as e:
-                return False
-
-            try:
-                f.seek(0)
-                f.write('1')
-                time.sleep(1)
-                f.seek(0)
-                f.write('0')
-
-                f.close()
-                status = True
-            except IOError as e:
+                with open(path, 'r+') as f:
+                    f.seek(0)
+                    f.write('1')
+                    time.sleep(1)
+                    f.seek(0)
+                    f.write('0')
+                    status = True
+            except (IOError, OSError):
                 status = False
         else:
             # Use common SfpOptoeBase implementation for reset

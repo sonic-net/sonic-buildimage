@@ -5,18 +5,18 @@
 /*
  * Layout of non-Linux Memory:
  *  (base address provided in device tree and may change)
- *  C500 0000  SHMEM segment (pciehw_shmem_t) [0x942440 bytes ~9.25Mb]
- *  C5F0 0000  kpcimgr state (kstate_t)       [3 * 64k]
- *  C5F3 0000  relocated code                 [Allow 256k]
- *  C5F7 0000  available for stack when in nommu mode (64k)
- *  C5F8 0000  top of stack
- *  C5FF FFFF  end of 1M allotted range
+ *  C5F8 D000  kpcimgr state (kstate_t)       [3 * 64k]
+ *  C5FB D000  relocated code                 [Allow 256k]
+ *       ....  code can grow upwards and stack downwards
+ *  C5FF D000  top of stack
+ *  C5FF FFE0  fake efi.mem area for LPI
+ *  C5FF FFFF  end of HWMEM range
  */
-#define SHMEM_KSTATE_OFFSET       0xF00000
+#define COMPAT_SHMEM_KSTATE_OFFSET 0xF00000
 #define SHMEM_KSTATE_SIZE          0x30000
-#define KSTATE_STACK_OFFSET        0x80000
-#define KSTATE_CODE_OFFSET      (SHMEM_KSTATE_OFFSET + SHMEM_KSTATE_SIZE)
+#define KSTATE_CODE_OFFSET      SHMEM_KSTATE_SIZE
 #define KSTATE_CODE_SIZE        (256 * 1024)
+#define KSTATE_STACK_OFFSET     SHMEM_KSTATE_SIZE+KSTATE_CODE_SIZE
 #define KSTATE_MAGIC            0x1743BA1F
 
 /* size of trace data arrays */

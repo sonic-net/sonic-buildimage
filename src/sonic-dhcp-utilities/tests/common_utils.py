@@ -65,10 +65,11 @@ def mock_get_config_db_table(table_name):
 
 
 class MockProc(object):
-    def __init__(self, name, pid=1, exited=False):
+    def __init__(self, name, pid=1, exited=False, ppid=1):
         self.proc_name = name
         self.pid = pid
         self.exited = exited
+        self.parent_id = ppid
 
     def name(self):
         if self.exited:
@@ -95,6 +96,9 @@ class MockProc(object):
 
     def status(self):
         return self.status
+
+    def ppid(self):
+        return self.parent_id
 
 
 class MockPopen(object):

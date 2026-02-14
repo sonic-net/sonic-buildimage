@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-06-05-1.08" profile="SAI" dsig="md5" sid="daa51f10-6b7d-424f-ab07-3c51ae064e20">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-02-25-1.11" profile="SAI" sid="e29ba6fe-f08d-4673-ac2d-2961846d0e1c">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -165,6 +165,26 @@
           <SAIplt:name>ASIC_Falcon</SAIplt:name>
           <SAIplt:description>FALCON</SAIplt:description>
           <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_AC5P</SAIplt:name>
+          <SAIplt:description>AC5P</SAIplt:description>
+          <SAIplt:value>3</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>boolean-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Boolean 32 bits , due to bing endian</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>false</SAIplt:name>
+          <SAIplt:description>False</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>true</SAIplt:name>
+          <SAIplt:description>True</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
     </SAIplt:typedefs>
@@ -444,12 +464,16 @@
     <SAIplt:Counters>
       <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
       <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">ROUTE_BLACKHOLE</SAIplt:router-in-drop-counter>
+      <SAIplt:Queue-counter>
+        <SAIplt:queue-pass-drop-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-pass-drop-counter>
+        <SAIplt:queue-watermark-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-watermark-counter>
+      </SAIplt:Queue-counter>
     </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
     </SAIplt:Logging>
     <SAIplt:Feature>
-      <SAIplt:MACsec SAIplt:type="Feature-enable">Disabled</SAIplt:MACsec>
+      <SAIplt:PHY_Temperature SAIplt:type="Feature-enable">Disabled</SAIplt:PHY_Temperature>
     </SAIplt:Feature>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">control-acl</SAIplt:feature>

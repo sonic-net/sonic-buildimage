@@ -2,6 +2,25 @@
 {%- set PORT_BP = [] %}
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
+{%- set PORT_QOS_BYPASS = [] %}
+{%- set PORT_UPLINK = [] %}
+{%- set PORT_DOWNLINK = [] %}
+{%- set PORT_SERVICE = [] %}
+
+{% if template_exists("buffers.json.j2") %}
+    {% import "buffers.json.j2" as buffer_defs with context %}
+    {%- set filename_postfix = buffer_defs.default_topo | default("def", true) %}
+{% else %}
+    {%- set filename_postfix = "def" %}
+{% endif %}
+
+{# Allow includer to pre-package defs without needing an import #}
+{%- if defs is not defined %}
+    {# Import default values from device HWSKU folder #}
+    {%- if template_exists('buffers_defaults_%s.j2' % filename_postfix) %}
+        {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
+    {%- endif -%}
+{%- endif -%}
 
 {%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
@@ -31,6 +50,12 @@
 {%- if generate_bp_port_list is defined %}
     {%- if generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
 {%- endif %}
+{%- if generate_qos_bypass_port_list is defined %}
+    {%- if generate_qos_bypass_port_list(PORT_QOS_BYPASS) %} {% endif %}
+{%- endif %}
+{%- if defs is defined and defs.generate_service_port_list is defined %}
+    {%- if defs.generate_service_port_list(PORT_SERVICE) %}{% endif %}
+{%- endif %}
 
 {%- if PORT_ALL | sort_by_port_index %}{% endif %}
 
@@ -55,7 +80,42 @@
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
 {%- endif %}
+{%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_QOS_BYPASS) | list %}
 {%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
+
+{# Generate uplink and downlink port lists based on router type and neighbors #}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] and DEVICE_NEIGHBOR is defined %}
+        {%- set local_router_type = DEVICE_METADATA['localhost']['type'] %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR[port].name is defined and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+                {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
+                {%- if 'LeafRouter' in local_router_type %}
+                    {%- if 'ToRRouter' in neighbor_info.type %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- elif 'SpineRouter' in neighbor_info.type %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- elif 'ToRRouter' in local_router_type %}
+                    {%- if 'LeafRouter' in neighbor_info.type %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- else %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- else %}
+                {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endif %}
+
+{%- set port_names_downlink = PORT_DOWNLINK | join(',') -%}
+{%- set port_names_uplink = PORT_UPLINK | join(',') -%}
 
 {%- set port_names_list_active = [] %}
 {%- for port in PORT_ACTIVE %}
@@ -77,7 +137,14 @@
 {% endif %}
 {%- endfor %}
 
-{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot', 'marvell'] -%}
+{%- set LOSSLESS_TC = [] %}
+{%- if generate_lossless_tc_list is defined %}
+    {{- generate_lossless_tc_list(LOSSLESS_TC) }}
+{%- else %}
+    {%- set LOSSLESS_TC = ['3','4'] %}
+{%- endif %}
+
+{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
 
@@ -92,8 +159,22 @@
         ('resource_type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
+{% elif generate_tc_to_pg_map_per_sku is defined %}
+    {{- generate_tc_to_pg_map_per_sku() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
+{% if PORT_DPC %}
+        "AZURE_DPC": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "7"
+        },
+{% endif %}
         "AZURE": {
             "0": "0",
             "1": "0",
@@ -106,6 +187,9 @@
         }
     },
 {% endif %}
+{% if (generate_pfc_to_queue_map is defined) %}
+    {{- generate_pfc_to_queue_map() }}
+{% else %}
     "MAP_PFC_PRIORITY_TO_QUEUE": {
         "AZURE": {
             "0": "0",
@@ -118,8 +202,11 @@
             "7": "7"
         }
     },
+{% endif %}
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
+{% elif (generate_tc_to_queue_map_per_sku is defined) %}
+    {{ generate_tc_to_queue_map_per_sku() }}
 {% else %}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
@@ -156,6 +243,8 @@
          ('resource_type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
+{% elif (generate_dscp_to_tc_map_per_sku is defined) %}
+    {{ generate_dscp_to_tc_map_per_sku() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -228,7 +317,12 @@
 {% endif %}
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
+{% elif (generate_tc_to_dscp_map_per_sku is defined) %}
+    {{ generate_tc_to_dscp_map_per_sku() }}
 {% endif %}
+{% if (generate_scheduler_config is defined) %}
+    {{- generate_scheduler_config() }}
+{% else %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -267,6 +361,8 @@
             "weight": "5"
         }
     },
+{% elif generate_scheduler_per_sku is defined %}
+    {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -278,6 +374,7 @@
             "weight": "15"
         }
     },
+{% endif %}
 {% endif %}
 {% if asic_type in pfc_to_pg_map_supported_asics  %}
     "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
@@ -295,6 +392,18 @@
         }
     },
 {% endif %}
+{% if (generate_port_qos_map is defined) %}
+    {{- generate_port_qos_map(port_names_active) }}
+{% elif (generate_port_qos_map_per_sku is defined) and (PORT_DOWNLINK|length > 0 or PORT_UPLINK|length > 0) %}
+    "PORT_QOS_MAP": {
+        {% if port_names_downlink and port_names_downlink.strip() %}
+        {{ generate_port_qos_map_per_sku(port_names_downlink, 'downlink') }}{% if port_names_uplink and port_names_uplink.strip() %},{% endif %}
+        {% endif %}
+        {% if port_names_uplink and port_names_uplink.strip() %}
+        {{ generate_port_qos_map_per_sku(port_names_uplink, 'uplink') }}
+        {% endif %}
+    },
+{% else %}
     "PORT_QOS_MAP": {
 {% if generate_global_dscp_to_tc_map is defined %}
         {{- generate_global_dscp_to_tc_map() }}
@@ -336,19 +445,28 @@
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
+{% if port not in PORT_SERVICE %}
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
-            "pfc_enable"      : "3,4",
+            "pfc_enable"      : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4",
+            "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
-            "tc_to_pg_map"    : "AZURE",
+{% endif %}
+{% if port not in PORT_DPC %}
+            "tc_to_pg_map"    : "AZURE"{% if port not in PORT_SERVICE %},{% endif %}
+{% else %}
+            "tc_to_pg_map"    : "AZURE_DPC"{% if port not in PORT_SERVICE %},{% endif %}
+{% endif %}
+{% if port not in PORT_SERVICE %}
             "pfc_to_queue_map": "AZURE"
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
     },
+{% endif %}
 {% if generate_wred_profiles is defined %}
     {{- generate_wred_profiles() }}
 {% else %}
@@ -410,6 +528,26 @@
         }{% if not loop.last %},{% endif %}
 {% endfor %}
     }
+{% elif generate_direction_based_queue_per_sku is defined and (PORT_DOWNLINK|length > 0 or PORT_UPLINK|length > 0) %}
+    "QUEUE": {
+{% for port in PORT_DOWNLINK %}
+    {{ generate_direction_based_queue_per_sku(port, 'downlink') }}
+    {%- if not loop.last or PORT_UPLINK|length > 0 -%},{% endif %}
+{% endfor %}
+{% for port in PORT_UPLINK %}
+    {{ generate_direction_based_queue_per_sku(port, 'uplink') }}
+        {%- if not loop.last -%},{% endif %}
+{% endfor %}
+    }
+{% elif generate_single_queue_per_sku is defined %}
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        {{ generate_single_queue_per_sku(port) }}
+        {%- if not loop.last -%},{% endif %}
+{% endfor %}
+    }
+{% elif generate_queue_config is defined %}
+    {{- generate_queue_config(port_names_active) }}
 {% else %}
    "QUEUE": {
 {% if 'type' in DEVICE_METADATA['localhost'] and

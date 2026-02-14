@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,8 +107,9 @@ class Testdpuctl:
 
     def test_dpuctl_status(self):
         """Tests for dpuctl click Implementation for Status API"""
-        mock_file_list = ['shtdn_ready', '_ready', 'boot_progress']
-        mock_return_value = [0, 1, 5]
+        mock_file_list = ['shtdn_ready', '_ready', 'boot_progress', 'pwr_force']
+        mock_return_value = [0, 1, 5, 1]
+        assert len(mock_file_list) == len(mock_return_value)
 
         def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
             for index, value in enumerate(mock_file_list):
@@ -119,6 +121,7 @@ class Testdpuctl:
             cmd = dpuctl_get_status
             runner = CliRunner()
             result = runner.invoke(cmd, catch_exceptions=False, obj=obj)
+            print(result.output)
             assert result.output == status_output[0]
             result = runner.invoke(cmd, ['dpu1'], catch_exceptions=False, obj=obj)
             assert result.output == status_output[1]
@@ -128,10 +131,10 @@ class Testdpuctl:
             assert result.output == status_output[3]
             result = runner.invoke(cmd, ['dpu10'], catch_exceptions=False, obj=obj)
             assert result.output == status_output[4]
-            mock_return_value = [1, 0, 0]
+            mock_return_value = [1, 0, 0, 1]
             result = runner.invoke(cmd, catch_exceptions=False, obj=obj)
             assert result.output == status_output[5]
-            header = ["DPU", "dpu ready", "dpu shutdown ready", "boot progress"]
+            header = ["DPU", "dpu ready", "dpu shutdown ready", "boot progress", "Force Power Required"]
             boot_prog_map = {
                 0: "Reset/Boot-ROM",
                 1: "BL2 (from ATF image on eMMC partition)",
@@ -148,14 +151,14 @@ class Testdpuctl:
                 15: "Software is inactive"
             }
             for key in boot_prog_map.keys():
-                mock_return_value = [0, 1, key]
+                mock_return_value = [0, 1, key, 1]
                 result = runner.invoke(cmd, ['dpu1'], catch_exceptions=False, obj=obj)
                 expected_value = f"{key} - {boot_prog_map.get(key)}"
-                expected_data = [[status_output[6][0], status_output[6][1], status_output[6][2], expected_value]]
+                expected_data = [[status_output[6][0], status_output[6][1], status_output[6][2], expected_value, status_output[6][3]]]
                 expected_res = tabulate(expected_data, header)
                 assert result.output == expected_res + "\n"
-            mock_return_value = [5, 5, 25]
-            expected_data = [["dpu1", "5 - N/A", "5 - N/A", "25 - N/A"]]
+            mock_return_value = [5, 5, 25, 6]
+            expected_data = [["dpu1", "5 - N/A", "5 - N/A", "25 - N/A", "6 - N/A"]]
             result = runner.invoke(cmd, ['dpu1'], catch_exceptions=False, obj=obj)
             expected_res = tabulate(expected_data, header)
             assert result.output == expected_res + "\n"

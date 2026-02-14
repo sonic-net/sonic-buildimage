@@ -7,7 +7,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -199,32 +200,116 @@
 #define BCMPKT_TXPMD_COOKIE_7_0                  76
 /*! The MSB of Cookie corresponding to 1588 2-Step */
 #define BCMPKT_TXPMD_COOKIE_8                    77
-/*! Unicast Valid. */
-#define BCMPKT_TXPMD_UNICAST_VALID               78
-/*! Indicates the vpp port to send a SOBMH packet out. */
-#define BCMPKT_TXPMD_DST_VPP_PORT_NUM            79
-/*! Indicates for TS packet transmitted from CPU into IP that the outgoing packet needs to have its transmit timestamp captured by the port. */
-#define BCMPKT_TXPMD_IEEE1588_TX_TS              80
-/*! Destination chip port number. */
-#define BCMPKT_TXPMD_DST_CHIP_PORT_NUM           81
-/*! Source chip port number. */
-#define BCMPKT_TXPMD_SRC_CHIP_PORT_NUM           82
 /*! Unicast packet type. */
-#define BCMPKT_TXPMD_UNICAST_PKT_TYPE            83
-/*! Unicast packet. */
-#define BCMPKT_TXPMD_UNICAST_PKT_VALID           84
+#define BCMPKT_TXPMD_AUX_SOBMH_UNICAST_PKT       78
 /*! vpp_port to send a SOBMH packet out. */
-#define BCMPKT_TXPMD_TX_VPP_PORT                 85
+#define BCMPKT_TXPMD_AUX_SOBMH_TX_VPP_PORT       79
 /*! Destination chip_port number. */
-#define BCMPKT_TXPMD_TX_CHIP_PORT                86
+#define BCMPKT_TXPMD_AUX_SOBMH_TX_CHIP_PORT      80
 /*! RX chip port. */
-#define BCMPKT_TXPMD_RX_CHIP_PORT                87
-/*! Ingress vpp port. */
-#define BCMPKT_TXPMD_RX_VPP_PORT                 88
+#define BCMPKT_TXPMD_AUX_SOBMH_RX_CHIP_PORT      81
 /*! SVP */
-#define BCMPKT_TXPMD_CPU_TX_SVP                  89
+#define BCMPKT_TXPMD_CPU_TX_SVP                  82
+/*! Switch packet copy is accepted. */
+#define BCMPKT_TXPMD_SWITCH_COPY                 83
+/*! Switch packet copy type. */
+#define BCMPKT_TXPMD_SWITCH_COPY_TYPE            84
+/*! Destination port of switch packet copy. */
+#define BCMPKT_TXPMD_SWITCH_COPY_DEST_PORT       85
+/*! Queue number of the switch packet copy. */
+#define BCMPKT_TXPMD_SWITCH_COPY_COS             86
+/*! Adaptive routing group. */
+#define BCMPKT_TXPMD_CPU_TX_AR_GROUP             87
+/*! INCA group ID. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_GROUP_ID        88
+/*! INCA collective ID. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_COLLECTIVE_ID   89
+/*! INCA internal QP ID. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_INTERNAL_QP_ID  90
+/*! INCA source host profile. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_SRC_HOST_PROFILE 91
+/*! INCA flow type. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_FLOW_TYPE       92
+/*! INCA Reduction required: 0 : Reduction not required (Broadcast), 1 : Reduction required         (AllReduce/Reduce) */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD       93
+/*! INCA Replication required: 0 : Replication not required (Reduce), 1 : Replication required (AllReduce/Broadcast) */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD       94
+/*! INCA Second pass destination. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_SECOND_PASS_DEST 95
+/*!
+ * Operation type. 0-Sum, 1-Sum and Scale, 2-15 - Reserved.
+ * Valid only when the INCA_REDN_REQD==1 where INCA reduction is required.
+ * This field is consumed by ICE and not carried beyond to second pass.
+ */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE   96
+/*! Vlan profile. */
+#define BCMPKT_TXPMD_CPU_TX_VLAN_PROFILE         97
+/*! Forwarding profile. */
+#define BCMPKT_TXPMD_CPU_TX_FWD_PROFILE          98
+/*! Data format. Valid only when INCA_REDN_REQD==1 where INCA reduction is required. This field is consumed by ICE and not carried beyond to second pass. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT 99
+/*! Indicates the offset at 2B granularity from beginning of the pkt to the start  of INCA DATA for reduction.Valid only when INCA_REDN_REQD==1 where INCA reduction is required. This  is consumed by IDN and not carried beyond to second pass. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_OFFSET 100
+/*! CNG field. */
+#define BCMPKT_TXPMD_CPU_TX_CNG                  101
+/*! Packet Entropy. */
+#define BCMPKT_TXPMD_CPU_TX_PACKET_ENTROPY       102
+/*! Source port number. */
+#define BCMPKT_TXPMD_CPU_TX_SRC_PORT_NUM         103
+/*! Packet control profile. */
+#define BCMPKT_TXPMD_CPU_TX_PKT_CTRL_PROFILE     104
+/*! Queue number. */
+#define BCMPKT_TXPMD_CPU_TX_COS                  105
+/*! Internal priority valid. */
+#define BCMPKT_TXPMD_CPU_TX_INT_PRI_VALID        106
+/*! CNG vaild. */
+#define BCMPKT_TXPMD_CPU_TX_CNG_VALID            107
+/*! Internal congestion valid. */
+#define BCMPKT_TXPMD_CPU_TX_INT_CN_VALID         108
+/*! Input priority valid. */
+#define BCMPKT_TXPMD_CPU_TX_INPUT_PRI_VALID      109
+/*! COS valid. */
+#define BCMPKT_TXPMD_CPU_TX_COS_VALID            110
+/*! CPU Tx Type. */
+#define BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE          111
+/*! DOP Trigger. */
+#define BCMPKT_TXPMD_CPU_TX_DOP_TRIGGER          112
+/*! Aux to LPP class ID. */
+#define BCMPKT_TXPMD_CPU_TX_VPP_TO_LPP_CLASS_ID  113
+/*! Cell length */
+#define BCMPKT_TXPMD_AUX_SOBMH_CELL_LENGTH       114
+/*! End of Packet indication. */
+#define BCMPKT_TXPMD_AUX_SOBMH_EOP               115
+/*! Start of packet indication. */
+#define BCMPKT_TXPMD_AUX_SOBMH_SOP               116
+/*! Packet length. */
+#define BCMPKT_TXPMD_AUX_SOBMH_PKT_LENGTH        117
+/*! Copy to CPU. */
+#define BCMPKT_TXPMD_AUX_SOBMH_COPY_TO_CPU       118
+/*! Copy to debug. */
+#define BCMPKT_TXPMD_AUX_SOBMH_COPY_TO_DEBUG     119
+/*! CNG field. */
+#define BCMPKT_TXPMD_AUX_SOBMH_CNG               120
+/*! Queue number. */
+#define BCMPKT_TXPMD_AUX_SOBMH_COS               121
+/*! Indicates that PBI.UNICAST should be set to queue as unicast packet. */
+#define BCMPKT_TXPMD_AUX_SOBMH_UNICAST           122
+/*! Indicates that PBI.L2_BITMAP should be set (to queue as L2MC packet). */
+#define BCMPKT_TXPMD_AUX_SOBMH_SET_L2BM          123
+/*! RQE queue number. */
+#define BCMPKT_TXPMD_AUX_SOBMH_RQE_Q_NUM         124
+/*! Input priority. */
+#define BCMPKT_TXPMD_AUX_SOBMH_INPUT_PRI         125
+/*! Cell error indication. */
+#define BCMPKT_TXPMD_AUX_SOBMH_CELL_ERROR        126
+/*! Header type. */
+#define BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE       127
+/*! Start of frame indicator. */
+#define BCMPKT_TXPMD_AUX_SOBMH_START             128
+/*! INCA uplink port. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_UPLINK_PORT     129
 /*! TXPMD FIELD ID NUMBER */
-#define BCMPKT_TXPMD_FID_COUNT                   90
+#define BCMPKT_TXPMD_FID_COUNT                   130
 /*! \} */
 
 /*! TXPMD field name strings for debugging. */
@@ -307,18 +392,58 @@
     {"CPU_TX::COOKIE_VALID", BCMPKT_TXPMD_CPU_TX_COOKIE_VALID},\
     {"COOKIE_7_0", BCMPKT_TXPMD_COOKIE_7_0},\
     {"COOKIE_8", BCMPKT_TXPMD_COOKIE_8},\
-    {"UNICAST_VALID", BCMPKT_TXPMD_UNICAST_VALID},\
-    {"DST_VPP_PORT_NUM", BCMPKT_TXPMD_DST_VPP_PORT_NUM},\
-    {"IEEE1588_TX_TS", BCMPKT_TXPMD_IEEE1588_TX_TS},\
-    {"DST_CHIP_PORT_NUM", BCMPKT_TXPMD_DST_CHIP_PORT_NUM},\
-    {"SRC_CHIP_PORT_NUM", BCMPKT_TXPMD_SRC_CHIP_PORT_NUM},\
-    {"UNICAST_PKT_TYPE", BCMPKT_TXPMD_UNICAST_PKT_TYPE},\
-    {"UNICAST_PKT_VALID", BCMPKT_TXPMD_UNICAST_PKT_VALID},\
-    {"TX_VPP_PORT", BCMPKT_TXPMD_TX_VPP_PORT},\
-    {"TX_CHIP_PORT", BCMPKT_TXPMD_TX_CHIP_PORT},\
-    {"RX_CHIP_PORT", BCMPKT_TXPMD_RX_CHIP_PORT},\
-    {"RX_VPP_PORT", BCMPKT_TXPMD_RX_VPP_PORT},\
+    {"AUX_SOBMH::UNICAST_PKT", BCMPKT_TXPMD_AUX_SOBMH_UNICAST_PKT},\
+    {"AUX_SOBMH::TX_VPP_PORT", BCMPKT_TXPMD_AUX_SOBMH_TX_VPP_PORT},\
+    {"AUX_SOBMH::TX_CHIP_PORT", BCMPKT_TXPMD_AUX_SOBMH_TX_CHIP_PORT},\
+    {"AUX_SOBMH::RX_CHIP_PORT", BCMPKT_TXPMD_AUX_SOBMH_RX_CHIP_PORT},\
     {"CPU_TX::SVP", BCMPKT_TXPMD_CPU_TX_SVP},\
+    {"SWITCH_COPY", BCMPKT_TXPMD_SWITCH_COPY},\
+    {"SWITCH_COPY_TYPE", BCMPKT_TXPMD_SWITCH_COPY_TYPE},\
+    {"SWITCH_COPY_DEST_PORT", BCMPKT_TXPMD_SWITCH_COPY_DEST_PORT},\
+    {"SWITCH_COPY_COS", BCMPKT_TXPMD_SWITCH_COPY_COS},\
+    {"CPU_TX::AR_GROUP", BCMPKT_TXPMD_CPU_TX_AR_GROUP},\
+    {"CPU_TX::INCA_GROUP_ID", BCMPKT_TXPMD_CPU_TX_INCA_GROUP_ID},\
+    {"CPU_TX::INCA_COLLECTIVE_ID", BCMPKT_TXPMD_CPU_TX_INCA_COLLECTIVE_ID},\
+    {"CPU_TX::INCA_INTERNAL_QP_ID", BCMPKT_TXPMD_CPU_TX_INCA_INTERNAL_QP_ID},\
+    {"CPU_TX::INCA_SRC_HOST_PROFILE", BCMPKT_TXPMD_CPU_TX_INCA_SRC_HOST_PROFILE},\
+    {"CPU_TX::INCA_FLOW_TYPE", BCMPKT_TXPMD_CPU_TX_INCA_FLOW_TYPE},\
+    {"CPU_TX::INCA_REDN_REQD", BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD},\
+    {"CPU_TX::INCA_REPL_REQD", BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD},\
+    {"CPU_TX::INCA_SECOND_PASS_DEST", BCMPKT_TXPMD_CPU_TX_INCA_SECOND_PASS_DEST},\
+    {"CPU_TX::INCA_ICE_OPER_TYPE", BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE},\
+    {"CPU_TX::VLAN_PROFILE", BCMPKT_TXPMD_CPU_TX_VLAN_PROFILE},\
+    {"CPU_TX::FWD_PROFILE", BCMPKT_TXPMD_CPU_TX_FWD_PROFILE},\
+    {"CPU_TX::INCA_ICE_DATA_FORMAT", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT},\
+    {"CPU_TX::INCA_ICE_DATA_OFFSET", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_OFFSET},\
+    {"CPU_TX::CNG", BCMPKT_TXPMD_CPU_TX_CNG},\
+    {"CPU_TX::PACKET_ENTROPY", BCMPKT_TXPMD_CPU_TX_PACKET_ENTROPY},\
+    {"CPU_TX::SRC_PORT_NUM", BCMPKT_TXPMD_CPU_TX_SRC_PORT_NUM},\
+    {"CPU_TX::PKT_CTRL_PROFILE", BCMPKT_TXPMD_CPU_TX_PKT_CTRL_PROFILE},\
+    {"CPU_TX::COS", BCMPKT_TXPMD_CPU_TX_COS},\
+    {"CPU_TX::INT_PRI_VALID", BCMPKT_TXPMD_CPU_TX_INT_PRI_VALID},\
+    {"CPU_TX::CNG_VALID", BCMPKT_TXPMD_CPU_TX_CNG_VALID},\
+    {"CPU_TX::INT_CN_VALID", BCMPKT_TXPMD_CPU_TX_INT_CN_VALID},\
+    {"CPU_TX::INPUT_PRI_VALID", BCMPKT_TXPMD_CPU_TX_INPUT_PRI_VALID},\
+    {"CPU_TX::COS_VALID", BCMPKT_TXPMD_CPU_TX_COS_VALID},\
+    {"CPU_TX::CPU_TX_TYPE", BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE},\
+    {"CPU_TX::DOP_TRIGGER", BCMPKT_TXPMD_CPU_TX_DOP_TRIGGER},\
+    {"CPU_TX::VPP_TO_LPP_CLASS_ID", BCMPKT_TXPMD_CPU_TX_VPP_TO_LPP_CLASS_ID},\
+    {"AUX_SOBMH::CELL_LENGTH", BCMPKT_TXPMD_AUX_SOBMH_CELL_LENGTH},\
+    {"AUX_SOBMH::EOP", BCMPKT_TXPMD_AUX_SOBMH_EOP},\
+    {"AUX_SOBMH::SOP", BCMPKT_TXPMD_AUX_SOBMH_SOP},\
+    {"AUX_SOBMH::PKT_LENGTH", BCMPKT_TXPMD_AUX_SOBMH_PKT_LENGTH},\
+    {"AUX_SOBMH::COPY_TO_CPU", BCMPKT_TXPMD_AUX_SOBMH_COPY_TO_CPU},\
+    {"AUX_SOBMH::COPY_TO_DEBUG", BCMPKT_TXPMD_AUX_SOBMH_COPY_TO_DEBUG},\
+    {"AUX_SOBMH::CNG", BCMPKT_TXPMD_AUX_SOBMH_CNG},\
+    {"AUX_SOBMH::COS", BCMPKT_TXPMD_AUX_SOBMH_COS},\
+    {"AUX_SOBMH::UNICAST", BCMPKT_TXPMD_AUX_SOBMH_UNICAST},\
+    {"AUX_SOBMH::SET_L2BM", BCMPKT_TXPMD_AUX_SOBMH_SET_L2BM},\
+    {"AUX_SOBMH::RQE_Q_NUM", BCMPKT_TXPMD_AUX_SOBMH_RQE_Q_NUM},\
+    {"AUX_SOBMH::INPUT_PRI", BCMPKT_TXPMD_AUX_SOBMH_INPUT_PRI},\
+    {"AUX_SOBMH::CELL_ERROR", BCMPKT_TXPMD_AUX_SOBMH_CELL_ERROR},\
+    {"AUX_SOBMH::HEADER_TYPE", BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE},\
+    {"AUX_SOBMH::START", BCMPKT_TXPMD_AUX_SOBMH_START},\
+    {"CPU_TX::INCA_UPLINK_PORT", BCMPKT_TXPMD_CPU_TX_INCA_UPLINK_PORT},\
     {"fid count", BCMPKT_TXPMD_FID_COUNT}
 
 /*!
@@ -348,10 +473,16 @@
 #define BCMPKT_TXPMD_HEADER_T_TO_CPU             0
 /*! Packets from CPU with SOBMH header format to Passthru NLF */
 #define BCMPKT_TXPMD_HEADER_T_FROM_CPU           1
+/*! Header type CPU_TX in LPP pipeline */
+#define BCMPKT_TXPMD_HEADER_T_LPP_CPU_TX         1
 /*! Header type CPU_TX */
 #define BCMPKT_TXPMD_HEADER_T_CPU_TX             2
+/*! Header type TX_MD in LPP pipeline */
+#define BCMPKT_TXPMD_HEADER_T_LPP_TX_MD_HEADER   2
 /*! MAC in MAC packets to Passthru NLF */
 #define BCMPKT_TXPMD_HEADER_T_MIM                2
+/*! Packet with SOBMH header format */
+#define BCMPKT_TXPMD_HEADER_T_LPP_SOBMH          3
 /*! MPLS packets to Passthru NLF */
 #define BCMPKT_TXPMD_HEADER_T_MPLS_PMP           3
 /*! Trill Network Packets to Passthru NLF */
@@ -380,8 +511,11 @@
 #define BCMPKT_TXPMD_HEADER_TYPE_NAME_MAP_INIT \
     {"SOBMH_EP_COPY_TO_CPU", BCMPKT_TXPMD_HEADER_T_TO_CPU},\
     {"SOBMH_FROM_CPU", BCMPKT_TXPMD_HEADER_T_FROM_CPU},\
+    {"LPP_CPU_TX", BCMPKT_TXPMD_HEADER_T_LPP_CPU_TX},\
     {"CPU_TX", BCMPKT_TXPMD_HEADER_T_CPU_TX},\
+    {"LPP_TX_MD_HEADER", BCMPKT_TXPMD_HEADER_T_LPP_TX_MD_HEADER},\
     {"MIM", BCMPKT_TXPMD_HEADER_T_MIM},\
+    {"LPP_SOBMH", BCMPKT_TXPMD_HEADER_T_LPP_SOBMH},\
     {"MPLS_PMP", BCMPKT_TXPMD_HEADER_T_MPLS_PMP},\
     {"TRILL_NW", BCMPKT_TXPMD_HEADER_T_TRILL_NW},\
     {"TRILL_AC", BCMPKT_TXPMD_HEADER_T_TRILL_AC},\
@@ -449,6 +583,14 @@
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_L2_PBM 7
 /*! LAG ID */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_LAG_ID 8
+/*! Destination is Invalid */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL   9
+/*! Egress Port */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT 10
+/*! Trunk ID */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID   11
+/*! Next Hop Index */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP 12
 /*! Forward and derive destination normally */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_FORWARD 15
 /*! Destination is Invalid */
@@ -466,10 +608,10 @@
     {"VLAN_FLOOD", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_VLAN_FLOOD},\
     {"L2_PBM", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_L2_PBM},\
     {"LAG_ID", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_LAG_ID},\
-    {"RESERVED_COUNTER", 9},\
-    {"RESERVED_COUNTER", 10},\
-    {"RESERVED_COUNTER", 11},\
-    {"RESERVED_COUNTER", 12},\
+    {"NULL", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL},\
+    {"DEST_PORT", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT},\
+    {"TGID", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID},\
+    {"NEXT_HOP", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP},\
     {"RESERVED_COUNTER", 13},\
     {"RESERVED_COUNTER", 14},\
     {"FORWARD", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_FORWARD},\
@@ -545,6 +687,111 @@
 #define BCMPKT_TXPMD_OAM_DOWNMEP_TX_TIMESTAMP_ACTION_NAME_MAP_INIT \
     {"NO_OP", BCMPKT_TXPMD_OAM_DOWNMEP_TX_TIMESTAMP_ACTION_NO_OP},\
     {"SAMPLE", BCMPKT_TXPMD_OAM_DOWNMEP_TX_TIMESTAMP_ACTION_SAMPLE},\
+
+/*!
+ * \name BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD encodings.
+ * \anchor BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_XXX
+ */
+/*! \{ */
+/*! Reduction not required. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_BROADCAST 0
+/*! Reduction required. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_REDUCE 1
+/*! \} */
+
+/*! BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD encoding name strings for debugging. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_NAME_MAP_INIT \
+    {"BROADCAST", BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_BROADCAST},\
+    {"REDUCE", BCMPKT_TXPMD_CPU_TX_INCA_REDN_REQD_REDUCE},\
+
+/*!
+ * \name BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD encodings.
+ * \anchor BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_XXX
+ */
+/*! \{ */
+/*! Replication required. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_REDUCE 0
+/*! Replication not required. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_BROADCAST 1
+/*! \} */
+
+/*! BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD encoding name strings for debugging. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_NAME_MAP_INIT \
+    {"REDUCE", BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_REDUCE},\
+    {"BROADCAST", BCMPKT_TXPMD_CPU_TX_INCA_REPL_REQD_BROADCAST},\
+
+/*!
+ * \name BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE encodings.
+ * \anchor BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE_XXX
+ */
+/*! \{ */
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_T_SUM  0
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_T_SUM_AND_SCALE 1
+/*! \} */
+
+/*! BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE encoding name strings for debugging. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_TYPE_NAME_MAP_INIT \
+    {"SUM", BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_T_SUM},\
+    {"SUM_AND_SCALE", BCMPKT_TXPMD_CPU_TX_INCA_ICE_OPER_T_SUM_AND_SCALE},\
+
+/*!
+ * \name BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT encodings.
+ * \anchor BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_XXX
+ */
+/*! \{ */
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP32 0
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP16 1
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_BF16 2
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_INT32 3
+/*!  */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP8 4
+/*! \} */
+
+/*! BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT encoding name strings for debugging. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_NAME_MAP_INIT \
+    {"FP32", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP32},\
+    {"FP16", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP16},\
+    {"BF16", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_BF16},\
+    {"INT32", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_INT32},\
+    {"FP8", BCMPKT_TXPMD_CPU_TX_INCA_ICE_DATA_FORMAT_FP8},\
+
+/*!
+ * \name BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE encodings.
+ * \anchor BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE_XXX
+ */
+/*! \{ */
+/*! Classic CPU TX (Masquerade, Dest-based). */
+#define BCMPKT_TXPMD_CPU_TX_CPU_TX_T_MASQUERADE  0
+/*! Sample timestamp. */
+#define BCMPKT_TXPMD_CPU_TX_CPU_TX_T_INCA        1
+/*! \} */
+
+/*! BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE encoding name strings for debugging. */
+#define BCMPKT_TXPMD_CPU_TX_CPU_TX_TYPE_NAME_MAP_INIT \
+    {"MASQUERADE", BCMPKT_TXPMD_CPU_TX_CPU_TX_T_MASQUERADE},\
+    {"INCA", BCMPKT_TXPMD_CPU_TX_CPU_TX_T_INCA},\
+
+/*!
+ * \name BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE encodings.
+ * \anchor BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE_XXX
+ */
+/*! \{ */
+/*! Reserved. */
+#define BCMPKT_TXPMD_AUX_SOBMH_HEADER_T_RESERVED 0
+/*! Packets from CPU with SOBMH header format to Passthru NLF */
+#define BCMPKT_TXPMD_AUX_SOBMH_HEADER_T_FROM_CPU 1
+/*! \} */
+
+/*! BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE encoding name strings for debugging. */
+#define BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE_NAME_MAP_INIT \
+    {"RESERVED", BCMPKT_TXPMD_AUX_SOBMH_HEADER_T_RESERVED},\
+    {"SOBMH_FROM_CPU", BCMPKT_TXPMD_AUX_SOBMH_HEADER_T_FROM_CPU},\
 
 /*!
  * \name TX packet metadata internal usage field IDs.

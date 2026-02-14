@@ -98,7 +98,7 @@ fi
 # First time renaming the interfaces to maX.
 # The second time renaming them to their final name ethX.
 if [ -n "$aboot_flag" ]; then
-   if [ "$platform_flag" = 'rook' -o "$platform_flag" = 'lorikeet' ]; then
+   if [ "$platform_flag" = 'rook' -o "$platform_flag" = 'lorikeet' -o "$platform_flag" = 'redstart' ]; then
       # Rename existing ethX interfaces to tmpX
       for x in $(ls /sys/class/net/); do
          case $x in

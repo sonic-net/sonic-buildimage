@@ -31,10 +31,9 @@ endif
 $(DOCKER_NAT)_CONTAINER_NAME = nat
 $(DOCKER_NAT)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_NAT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_NAT)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
+$(DOCKER_NAT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_NAT)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
-$(DOCKER_NAT)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
 $(DOCKER_NAT)_BASE_IMAGE_FILES += natctl:/usr/bin/natctl
 

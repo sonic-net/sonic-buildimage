@@ -1,0 +1,327 @@
+From 3adf8b97755b49947e465b5a14645f11e79fa0cd Mon Sep 17 00:00:00 2001
+From: ganglv <88995770+ganglyu@users.noreply.github.com>
+Date: Fri, 8 Sep 2023 13:15:29 +0800
+Subject: [PATCH 5/5] Enhance gnmi_cli_py (#4)
+
+1. Upgrade grpcio and grpcio-tools
+2. Support origin in gnmi prefix
+3. Print grpc error code
+4. Support PROTO encoding for gnmi get
+5. Ignore / in []
+6. Support proto_bytes for gnmi set
+7. Support multiple path and value for gnmi set, get and subscribe
+---
+ gnmi_cli_py/py_gnmicli.py    | 161 ++++++++++++++++++++++++++---------
+ gnmi_cli_py/requirements.txt |   4 +-
+ 2 files changed, 125 insertions(+), 40 deletions(-)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index c46592a..0ea6f3d 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -111,8 +111,11 @@ def _create_parser():
+                       'file (prepend filename with "@")', default='get')
+   parser.add_argument('-val', '--value', type=str, help='Value for SetRequest.'
+                       '\nCan be Leaf value or JSON file. If JSON file, prepend'
+-                      ' with "@"; eg "@interfaces.json".',
+-                      required=False)
++                      ' with "@"; eg "@interfaces.json".'
++                      '\n If empty value for delete operation, use "".',
++                      nargs="+", required=False)
++  parser.add_argument('--proto', type=str, help='Output files for proto bytes',
++                      nargs="*", required=False)
+   parser.add_argument('-pkey', '--private_key', type=str, help='Fully'
+                       'quallified path to Private key to use when establishing'
+                       'a gNMI Channel to the Target', required=False)
+@@ -127,10 +130,13 @@ def _create_parser():
+                       'Target when establishing secure gRPC channel.',
+                       required=False, action='store_true')
+   parser.add_argument('-x', '--xpath', type=str, help='The gNMI path utilized'
+-                      'in the GetRequest or Subscirbe', required=True)
++                      'in the GetRequest or Subscirbe', nargs="+", required=True)
+   parser.add_argument('-xt', '--xpath_target', type=str, help='The gNMI prefix'
+                       'target in the GetRequest or Subscirbe', default=None,
+                       required=False)
++  parser.add_argument('-xo', '--xpath_origin', type=str, help='The gNMI prefix'
++                      'origin in the GetRequest, SetRequest or Subscirbe', default=None,
++                      required=False)
+   parser.add_argument('-o', '--host_override', type=str, help='Use this as '
+                       'Targets hostname/peername when checking it\'s'
+                       'certificate CN. You can check the cert with:\nopenssl '
+@@ -181,7 +187,53 @@ def _path_names(xpath):
+   """
+   if not xpath or xpath == '/':  # A blank xpath was provided at CLI.
+     return []
+-  return xpath.strip().strip('/').split('/')  # Remove leading and trailing '/'.
++  xpath = xpath.strip().strip('/')
++  path = []
++  xpath = xpath + '/'
++  # insideBrackets is true when at least one '[' has been found and no
++  # ']' has been found. It is false when a closing ']' has been found.
++  insideBrackets = False
++  # begin marks the beginning of a path element, which is separated by
++  # '/' unclosed between '[' and ']'.
++  begin = 0
++  # end marks the end of a path element, which is separated by '/'
++  # unclosed between '[' and ']'.
++  end = 0
++
++  # Split the given string using unescaped '/'.
++  while end < len(xpath):
++    if xpath[end] == '/':
++      if not insideBrackets:
++        # Current '/' is a valid path element
++        # separator.
++        if end > begin:
++          path.append(xpath[begin:end])
++        end += 1
++        begin = end
++      else:
++        # Current '/' must be part of a List key value
++        # string.
++        end += 1
++    elif xpath[end] == '[':
++      if (end == 0 or xpath[end-1] != '\\') and not insideBrackets:
++        # Current '[' is unescacped, and is the
++        # beginning of List key-value pair(s) string.
++        insideBrackets = True
++      end += 1
++    elif xpath[end] == ']':
++      if (end == 0 or xpath[end-1] != '\\') and insideBrackets:
++        # Current ']' is unescacped, and is the end of
++        # List key-value pair(s) string.
++        insideBrackets = False
++      end += 1
++    else:
++      end += 1
++
++  if insideBrackets:
++    print("missing ] in path string: %s" % xpath)
++    return []
++
++  return path
+ 
+ 
+ def _parse_path(p_names):
+@@ -275,6 +327,16 @@ def _get_val(json_value):
+       raise JsonReadError('Error while loading JSON: %s' % str(e))
+     val.json_ietf_val = json.dumps(set_json).encode()
+     return val
++  elif '$' in json_value:
++    try:
++      proto_bytes = six.moves.builtins.open(json_value.strip('$'), 'rb').read()
++    except (IOError, ValueError) as e:
++      raise ValueError('Error while loading %s: %s' % (json_value.strip('$'), str(e)))
++    val.proto_bytes = proto_bytes
++    return val
++  elif json_value == '':
++    # GNMI client should use delete operation for empty string
++    return None
+   coerced_val = _format_type(json_value)
+   type_to_value = {bool: 'bool_val', int: 'int_val', float: 'float_val',
+                    str: 'string_val'}
+@@ -283,16 +345,16 @@ def _get_val(json_value):
+   return val
+ 
+ 
+-def _get(stub, paths, username, password, prefix):
++def _get(stub, paths, username, password, prefix, encoding):
+   """Create a gNMI GetRequest.
+ 
+   Args:
+     stub: (class) gNMI Stub used to build the secure channel.
+-    paths: gNMI Path
++    paths: (list) gNMI Path
+     username: (str) Username used when building the channel.
+     password: (str) Password used when building the channel.
+     prefix: gNMI Path
+-
++    encoding: (int) Encoding
+   Returns:
+     a gnmi_pb2.GetResponse object representing a gNMI GetResponse.
+   """
+@@ -300,35 +366,40 @@ def _get(stub, paths, username, password, prefix):
+   if username:  # User/pass supplied for Authentication.
+     kwargs = {'metadata': [('username', username), ('password', password)]}
+   return stub.Get(
+-      gnmi_pb2.GetRequest(prefix=prefix, path=[paths], encoding='JSON_IETF'),
++      gnmi_pb2.GetRequest(prefix=prefix, path=paths, encoding=encoding),
+                   **kwargs)
+ 
+-def _set(stub, paths, set_type, username, password, json_value):
++def _set(stub, prefix, paths, set_type, username, password, value_list):
+   """Create a gNMI SetRequest.
+ 
+   Args:
+     stub: (class) gNMI Stub used to build the secure channel.
+-    paths: gNMI Path
++    paths: (list) gNMI Path
+     set_type: (str) Type of gNMI SetRequest.
+     username: (str) Username used when building the channel.
+     password: (str) Password used when building the channel.
+-    json_value: (str) JSON_IETF or file.
++    value_list: (list) JSON_IETF or file.
+ 
+   Returns:
+     a gnmi_pb2.SetResponse object representing a gNMI SetResponse.
+   """
+-  if json_value:  # Specifying ONLY a path is possible (eg delete).
+-    val = _get_val(json_value)
+-    path_val = gnmi_pb2.Update(path=paths, val=val,)
+-
++  delete_list = []
++  update_list = []
++  replace_list = []
++  for path, value in zip(paths, value_list):
++    val = _get_val(value)
++    if val is None:
++      delete_list.append(path)
++    elif set_type == 'update':
++      path_val = gnmi_pb2.Update(path=path, val=val,)
++      update_list.append(path_val)
++    elif set_type == 'replace':
++      path_val = gnmi_pb2.Update(path=path, val=val,)
++      replace_list.append(path_val)
+   kwargs = {}
+   if username:
+     kwargs = {'metadata': [('username', username), ('password', password)]}
+-  if set_type == 'delete':
+-    return stub.Set(gnmi_pb2.SetRequest(delete=[paths]), **kwargs)
+-  elif set_type == 'update':
+-    return stub.Set(gnmi_pb2.SetRequest(update=[path_val]), **kwargs)
+-  return stub.Set(gnmi_pb2.SetRequest(replace=[path_val]), **kwargs)
++  return stub.Set(gnmi_pb2.SetRequest(prefix=prefix, delete=delete_list, update=update_list, replace=replace_list), **kwargs)
+ 
+ 
+ def _build_creds(target, port, get_cert, certs, notls):
+@@ -378,17 +441,18 @@ def _open_certs(**kwargs):
+ def gen_request(paths, opt, prefix):
+     """Create subscribe request for passed xpath.
+     Args:
+-        paths: (str) gNMI path.
++        paths: (list) gNMI path.
+         opt: (dict) Command line argument passed for subscribe reqeust.
+     Returns:
+       gNMI SubscribeRequest object.
+     """
+     mysubs = []
+-    mysub = gnmi_pb2.Subscription(path=paths, mode=opt["submode"],
+-      sample_interval=opt["interval"]*1000000,
+-        heartbeat_interval=opt['heartbeat']*1000000,
+-          suppress_redundant=opt['suppress'])
+-    mysubs.append(mysub)
++    for path in paths:
++      mysub = gnmi_pb2.Subscription(path=path, mode=opt["submode"],
++        sample_interval=opt["interval"]*1000000,
++          heartbeat_interval=opt['heartbeat']*1000000,
++            suppress_redundant=opt['suppress'])
++      mysubs.append(mysub)
+ 
+     if prefix:
+       myprefix = prefix
+@@ -482,16 +546,22 @@ def main():
+   get_cert = args['get_cert']
+   root_cert = args['root_cert']
+   cert_chain = args['cert_chain']
+-  json_value = args['value']
++  value_list = args['value']
+   private_key = args['private_key']
+-  xpath = args['xpath']
+-  prefix = gnmi_pb2.Path(target=args['xpath_target'])
++  xpath_list = args['xpath']
++  proto_list = args['proto']
++  # In the case that a prefix is specified, it MUST specify any required origin
++  prefix = gnmi_pb2.Path(origin=args['xpath_origin'], target=args['xpath_target'])
+   host_override = args['host_override']
+   user = args['username']
+   password = args['password']
+   form = args['format']
+   create_connections = args['create_connections']
+-  paths = _parse_path(_path_names(xpath))
++  encoding = args['encoding']
++  paths = []
++  if xpath_list:
++    for xpath in xpath_list:
++      paths.append(_parse_path(_path_names(xpath)))
+   kwargs = {'root_cert': root_cert, 'cert_chain': cert_chain,
+             'private_key': private_key}
+   certs = _open_certs(**kwargs)
+@@ -517,13 +587,25 @@ def main():
+       if mode == 'get':
+         print('Performing GetRequest, encoding=JSON_IETF', 'to', target,
+               ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-        response = _get(stub, paths, user, password, prefix)
++        response = _get(stub, paths, user, password, prefix, encoding)
+         print('The GetResponse is below\n' + '-'*25 + '\n')
+-        if form == 'protobuff':
++        if encoding == 2:
++          i = 0
++          for notification in response.notification:
++            for update in notification.update:
++              if i >= len(proto_list):
++                print("Not enough files: %s" % str(proto_list))
++                sys.exit(1)
++              with open(proto_list[i], 'wb') as fp:
++                fp.write(update.val.proto_bytes)
++              i += 1
++        elif form == 'protobuff':
+           print(response)
+         elif response.notification[0].update[0].val.json_ietf_val:
+-          print(json.dumps(json.loads(response.notification[0].update[0].val.
+-                                      json_ietf_val), indent=2))
++          for notification in response.notification:
++            for update in notification.update:
++              print(json.dumps(json.loads(update.val.json_ietf_val), indent=2))
++              print('-'*25 + '\n')
+         elif response.notification[0].update[0].val.string_val:
+           print(response.notification[0].update[0].val.string_val)
+         else:
+@@ -531,18 +613,18 @@ def main():
+           print(response)
+       elif mode == 'set-update':
+         print('Performing SetRequest Update, encoding=JSON_IETF', ' to ', target,
+-              ' with the following gNMI Path\n', '-'*25, '\n', paths, json_value)
+-        response = _set(stub, paths, 'update', user, password, json_value)
++              ' with the following gNMI Path\n', '-'*25, '\n', paths, value_list)
++        response = _set(stub, prefix, paths, 'update', user, password, value_list)
+         print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+       elif mode == 'set-replace':
+         print('Performing SetRequest Replace, encoding=JSON_IETF', ' to ', target,
+               ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-        response = _set(stub, paths, 'replace', user, password, json_value)
++        response = _set(stub, prefix, paths, 'replace', user, password, value_list)
+         print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+       elif mode == 'set-delete':
+         print('Performing SetRequest Delete, encoding=JSON_IETF', ' to ', target,
+               ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-        response = _set(stub, paths, 'delete', user, password, json_value)
++        response = _set(stub, prefix, paths, 'delete', user, password, value_list)
+         print('The SetRequest response is below\n' + '-'*25 + '\n', response)
+       elif mode == 'subscribe':
+         request_iterator = gen_request(paths, args, prefix)
+@@ -552,6 +634,9 @@ def main():
+         print("Client receives an exception '{}' indicating gNMI server is shut down and Exiting ..."
+               .format(err.details()))
+         sys.exit(GNMI_SERVER_UNAVAILABLE)
++      else:
++        print("GRPC error\n {}".format(err.details()))
++        sys.exit(1)
+ 
+ 
+ if __name__ == '__main__':
+diff --git a/gnmi_cli_py/requirements.txt b/gnmi_cli_py/requirements.txt
+index dab2db6..e32b3ff 100644
+--- a/gnmi_cli_py/requirements.txt
++++ b/gnmi_cli_py/requirements.txt
+@@ -1,6 +1,6 @@
+ enum34==1.1.6
+ futures==3.2.0
+-grpcio==1.18.0
+-grpcio-tools==1.15.0
++grpcio==1.41.1
++grpcio-tools==1.41.1
+ protobuf==3.6.1 --no-binary=protobuf
+ six==1.12.0
+-- 
+2.48.1.windows.1
+

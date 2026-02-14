@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +66,7 @@ class WaitSfpReadyTask(threading.Thread):
             is_empty = len(self._wait_dict) == 0
   
             # The item will be expired in 3 seconds
-            self._wait_dict[sfp_index] = time.time() + self.WAIT_TIME
+            self._wait_dict[sfp_index] = time.monotonic() + self.WAIT_TIME
 
         if is_empty:
             logger.log_debug('An item arrives, wake up WaitSfpReadyTask')
@@ -120,7 +121,7 @@ class WaitSfpReadyTask(threading.Thread):
                 self.event.wait()
                 self.event.clear()
 
-            now = time.time()
+            now = time.monotonic()
             with self.lock:
                 logger.log_debug(f'Processing wait SFP dict: {self._wait_dict}, now={now}')
                 for sfp_index, expire_time in self._wait_dict.items():

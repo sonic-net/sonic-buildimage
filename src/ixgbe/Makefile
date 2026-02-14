@@ -6,7 +6,7 @@ MAIN_TARGET = ixgbe.ko
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./ixgbe-$(IXGBE_DRIVER_VERSION)
-	wget -O ixgbe-$(IXGBE_DRIVER_VERSION).tar.gz "https://sonicstorage.blob.core.windows.net/public/ixgbe-5.2.4.tar.gz"
+	wget -O ixgbe-$(IXGBE_DRIVER_VERSION).tar.gz "https://packages.trafficmanager.net/public/ixgbe-5.2.4.tar.gz"
 	tar xzf ixgbe-$(IXGBE_DRIVER_VERSION).tar.gz
 
 	# Patch

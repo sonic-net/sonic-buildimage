@@ -1,0 +1,11 @@
+depmod -a
+systemctl enable rename-mgmt-interface.service
+systemctl start rename-mgmt-interface.service
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable port-ledd.service
+systemctl start --no-block port-ledd.service
+systemctl enable system-ledd.service
+systemctl start --no-block system-ledd.service
+systemctl enable transceiver-init.service
+systemctl start transceiver-init.service

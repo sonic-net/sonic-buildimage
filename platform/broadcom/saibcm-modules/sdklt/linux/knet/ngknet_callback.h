@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -25,6 +26,14 @@
 
 #include <lkm/ngknet_kapi.h>
 
+typedef struct dev_cb_s {
+    /*! List head */
+    struct list_head list;
+
+    /*! Device callback */
+    ngknet_dev_init_cb_f cb;
+} dev_cb_t;
+
 typedef struct netif_cb_s {
     /*! List head */
     struct list_head list;
@@ -37,18 +46,25 @@ typedef struct filter_cb_s {
     /*! List head */
     struct list_head list;
 
+    /*! Filter description */
     char desc[NGKNET_FILTER_DESC_MAX];
 
     /*! Handle Filter callback */
     ngknet_filter_cb_f cb;
+
+    /*! Handle Filter create callback */
+    ngknet_filter_create_cb_f create_cb;
+
+    /*! Handle Filter destroy callback */
+    ngknet_filter_destroy_cb_f destroy_cb;
 } filter_cb_t;
 
 /*!
  * \brief NGKNET callback control.
  */
 struct ngknet_callback_ctrl {
-    /*! Handle TX/RX callback initialization. */
-    ngknet_dev_init_cb_f dev_init_cb;
+    /*! Device initialization callback list */
+    struct list_head dev_init_cb_list;
 
     /*! Handle Rx packet */
     ngknet_rx_cb_f rx_cb;

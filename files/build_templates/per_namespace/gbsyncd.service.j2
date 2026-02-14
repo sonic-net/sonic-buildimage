@@ -7,7 +7,6 @@ After=interfaces-config.service
 After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
 BindsTo=sonic.target
 After=sonic.target
-Before=ntp-config.service
 
 [Service]
 User=root

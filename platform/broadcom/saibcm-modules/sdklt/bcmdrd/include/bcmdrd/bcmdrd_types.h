@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -186,10 +187,32 @@ bcmdrd_pbmp_parse(const char *str, bcmdrd_pbmp_t *pbmp);
  * the subsequent statement for all bits set in the port bitmap.
  *
  * \param [in] _pbmp Port bitmap.
- * \param [in] _port Port iterator variable.
+ * \param [out] _port Port iterator variable.
  */
 #define BCMDRD_PBMP_ITER(_pbmp, _port)                          \
     for (_port = 0; _port < BCMDRD_CONFIG_MAX_PORTS; _port++)   \
+        if (BCMDRD_PBMP_WORD(_pbmp, _port) == 0)                \
+            _port += 31;                                        \
+        else if (BCMDRD_PBMP_MEMBER(_pbmp, _port))
+
+/*!
+ * \brief Iterate over a port bitmap with maximum.
+ *
+ * Iterate over a port bitmap of type \ref bcmdrd_pbmp_t and execute
+ * the subsequent statement for all bits set in the port bitmap.
+ *
+ * The iteration will be terminated if the iterator variable reaches
+ * the value of \c _port_max. This macro is mainly intended to prevent
+ * false errors from static analysis tools like Coverity.
+ *
+ * \param [in] _pbmp Port bitmap.
+ * \param [in] _port_max Maximum number of ports.
+ * \param [out] _port Port iterator variable.
+ */
+#define BCMDRD_PBMP_MAX_ITER(_pbmp, _port_max, _port)           \
+    for (_port = 0;                                             \
+         _port < _port_max && _port < BCMDRD_CONFIG_MAX_PORTS;  \
+         _port++)                                               \
         if (BCMDRD_PBMP_WORD(_pbmp, _port) == 0)                \
             _port += 31;                                        \
         else if (BCMDRD_PBMP_MEMBER(_pbmp, _port))
@@ -500,11 +523,34 @@ bcmdrd_pipemap_is_null(const bcmdrd_pipemap_t *pm);
  * bitmap.
  *
  * \param [in] _pm Pipe map.
- * \param [in] _pipe Pipe iterator variable.
+ * \param [out] _pipe Pipe iterator variable.
  */
-#define BCMDRD_PIPEMAP_ITER(_pm, _pipe)                    \
+#define BCMDRD_PIPEMAP_ITER(_pm, _pipe)                         \
     for (_pipe = 0; _pipe < BCMDRD_CONFIG_MAX_PIPES; _pipe++)   \
-        if (BCMDRD_PIPEMAP_WORD(_pm, _pipe) == 0)          \
+        if (BCMDRD_PIPEMAP_WORD(_pm, _pipe) == 0)               \
+            _pipe += 31;                                        \
+        else if (BCMDRD_PIPEMAP_MEMBER(_pm, _pipe))
+
+/*!
+ * \brief Iterate over a pipe map with maximum.
+ *
+ * Iterate over a pipe map of type \ref bcmdrd_pipemap_t and
+ * execute the subsequent statement for all bits set in the pipe
+ * bitmap.
+ *
+ * The iteration will be terminated if the iterator variable reaches
+ * the value of \c _pipe_max. This macro is mainly intended to prevent
+ * false errors from static analysis tools like Coverity.
+ *
+ * \param [in] _pm Pipe map.
+ * \param [in] _pipe_max Maximum number of pipes.
+ * \param [out] _pipe Pipe iterator variable.
+ */
+#define BCMDRD_PIPEMAP_MAX_ITER(_pm, _pipe_max, _pipe)          \
+    for (_pipe = 0;                                             \
+         _pipe < _pipe_max && _pipe < BCMDRD_CONFIG_MAX_PIPES;  \
+         _pipe++)                                               \
+        if (BCMDRD_PIPEMAP_WORD(_pm, _pipe) == 0)               \
             _pipe += 31;                                        \
         else if (BCMDRD_PIPEMAP_MEMBER(_pm, _pipe))
 

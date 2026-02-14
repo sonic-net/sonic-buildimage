@@ -67,6 +67,11 @@ module sonic-logger{
                     }
                     default SYSLOG;
                 }
+
+                leaf require_manual_refresh {
+                    type stypes:boolean_type;
+                    description "When updating the log level, will refresh configuration via SIGHUP sent to the process.";
+                }
             }/* end of list LOGGER_LIST */
         }/* end of LOGGER container */
     }/* end of sonic-logger container */

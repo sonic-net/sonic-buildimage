@@ -65,7 +65,27 @@ expected_dhcp_config = {
                     },
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "192.168.0.1"
+                        "data": "10.0.0.1",
+                        "always-send": False
+                    }
+                ],
+                "valid-lifetime": 900,
+                "reservations": []
+            },
+            {
+                "id": 4000,
+                "subnet": "192.168.3.0/24",
+                "pools": [
+                    {
+                        "pool": "192.168.3.2 - 192.168.3.3",
+                        "client-class": "sonic-host:etp11"
+                    }
+                ],
+                "option-data": [
+                    {
+                        "name": "dhcp-server-identifier",
+                        "data": "192.168.3.1",
+                        "always-send": True
                     }
                 ],
                 "valid-lifetime": 900,
@@ -93,12 +113,23 @@ expected_dhcp_config = {
             {
                 "name": "sonic-host:etp7",
                 "test": "substring(relay4[1].hex, -15, 15) == 'sonic-host:etp7'"
+            },
+            {
+                "name": "sonic-host:etp11",
+                "test": "substring(relay4[1].hex, -16, 16) == 'sonic-host:etp11'"
             }
         ]
     }
 }
 expected_dhcp_config_without_port_config = {
     "Dhcp4": {
+        "option-def": [
+            {
+                "name": "option223",
+                "code": 223,
+                "type": "string"
+            }
+        ],
         "hooks-libraries": [
             {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
@@ -187,18 +218,56 @@ expected_render_obj = {
             "pools": [{"range": "192.168.0.2 - 192.168.0.6", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.10 - 192.168.0.10", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.7 - 192.168.0.7", "client_class": "sonic-host:etp7"}],
-            "gateway": "192.168.0.1", "server_id": "192.168.0.1", "lease_time": "900",
+            "gateway": "192.168.0.1", "lease_time": "900",
             "customized_options": {
                 "option223": {
                     "always_send": "true",
-                    "value": "dummy_value"
+                    "value": "dummy_value",
+                    "option_type": "customized",
+                    "id": "223"
+                },
+                "option60": {
+                    "always_send": "false",
+                    "value": "dummy_value",
+                    "option_type": "standard",
+                    "id": "60"
                 }
+            },
+            "dhcp_server_id_option": {
+                "always_send": "false",
+                "value": "10.0.0.1",
+                "option_type": "standard",
+                "id": "54"
+            }
+        },
+        {
+            "subnet": "192.168.3.0/24", 'id': '4000',
+            "pools": [{"range": "192.168.3.2 - 192.168.3.3", "client_class": "sonic-host:etp11"}],
+            "lease_time": "900",
+            "customized_options": {
+                "option223": {
+                    "always_send": "true",
+                    "value": "dummy_value",
+                    "option_type": "customized",
+                    "id": "223"
+                },
+                "option60": {
+                    "always_send": "false",
+                    "value": "dummy_value",
+                    "option_type": "standard",
+                    "id": "60"
+                }
+            },
+            "dhcp_server_id_option": {
+                "value": "192.168.3.1",
+                "always_send": "true"
             }
         }
     ],
     "client_classes": [
         {"name": "sonic-host:etp8", "condition": "substring(relay4[1].hex, -15, 15) == 'sonic-host:etp8'"},
-        {"name": "sonic-host:etp7", "condition": "substring(relay4[1].hex, -15, 15) == 'sonic-host:etp7'"}
+        {"name": "sonic-host:etp7", "condition": "substring(relay4[1].hex, -15, 15) == 'sonic-host:etp7'"},
+        {"name": "sonic-host:etp11", "condition": "substring(relay4[1].hex, -16, 16) == 'sonic-host:etp11'"}
     ],
     "lease_update_script_path": "/etc/kea/lease_update.sh",
     "lease_path": "/tmp/kea-lease.csv",
@@ -207,17 +276,28 @@ expected_render_obj = {
             "id": "223",
             "value": "dummy_value",
             "type": "string",
-            "always_send": "true"
+            "always_send": "true",
+            "option_type": "customized"
         }
     },
     "hook_lib_path": "/usr/local/lib/kea/hooks/libdhcp_run_script.so"
 }
 tested_options_data = {
     "data": {
+        "option83": {
+            "id": "83",
+            "type": "string",
+            "value": "dummy_value"
+        },
         "option223": {
             "id": "223",
             "type": "string",
             "value": "dummy_value"
+        },
+        "option32": {
+            "id": "32",
+            "type": "string",
+            "value": "192.168.0.1"
         },
         "option60": {
             "id": "60",
@@ -238,9 +318,9 @@ tested_options_data = {
             "id": "218",
             "type": "string",
             "value": "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                        "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                        "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                        "long_valuelong_valuelong_valuelong_valuelong_value"
+                     "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
+                     "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
+                     "long_valuelong_valuelong_valuelong_valuelong_value"
         },
         "option217": {
             "id": "217",
@@ -254,9 +334,11 @@ tested_options_data = {
         }
     },
     "res": {
-        "option223": "dummy_value",
-        "option217": "dummy_value\\\\,dummy_value",
-        "option216": "8"
+        "option223": {"value": "dummy_value", "option_type": "customized"},
+        "option217": {"value": "dummy_value\\\\,dummy_value", "option_type": "customized"},
+        "option216": {"value": "8", "option_type": "customized"},
+        "option60": {"value": "dummy_value", "option_type": "standard"},
+        "option32": {"value": "192.168.0.1", "type": "ipv4-address", "option_type": "standard"},
     }
 }
 
@@ -348,7 +430,29 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                                     mock_get_render_template):
     mock_config_db = MockConfigDb(config_db_path="tests/test_data/mock_config_db.json")
     dhcp_db_connector = DhcpDbConnector()
-    customized_options = {"option223": {"id": "223", "value": "dummy_value", "type": "string", "always_send": "true"}}
+    customized_options = {
+        "option223": {
+            "id": "223",
+            "value": "dummy_value",
+            "type": "string",
+            "always_send": "true",
+            "option_type": "customized"
+        },
+        "option60": {
+            "id": "60",
+            "value": "dummy_value",
+            "type": "string",
+            "always_send": "false",
+            "option_type": "standard"
+        },
+        "option54": {
+            "id": "54",
+            "value": "10.0.0.1",
+            "type": "ipv4-address",
+            "always_send": "false",
+            "option_type": "standard"
+        }
+    }
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
     tested_hostname = "sonic-host"
     port_ips = {
@@ -359,6 +463,11 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                 "etp9": []
             }
         },
+        "Vlan4000": {
+            "192.168.3.1/24": {
+                "etp11": [["192.168.3.2", "192.168.3.3"]]
+            }
+        },
         "Vlan6000": {
         }
     }
@@ -367,32 +476,42 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                                                        port_ips, tested_hostname, customized_options)
     assert render_obj == expected_render_obj
     assert enabled_dhcp_interfaces == {"Vlan1000", "Vlan4000", "Vlan3000", "Vlan6000"}
-    assert used_options == set(["option223", "option60"])
+    assert used_options == set(["option223", "option60", "option54"])
     assert subscribe_table == set(PORT_MODE_CHECKER)
 
 
 @pytest.mark.parametrize("with_port_config", [True, False])
 @pytest.mark.parametrize("with_option_config", [True, False])
 def test_render_config(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, with_port_config,
-                       with_option_config):
+                       with_option_config, request):
     dhcp_db_connector = DhcpDbConnector()
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                                               kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
     render_obj = copy.deepcopy(expected_render_obj)
-    expected_config = copy.deepcopy(expected_dhcp_config)
     if not with_port_config:
         render_obj["client_classes"] = []
         render_obj["subnets"] = []
-    elif not with_option_config:
-        render_obj["subnets"][0]["customized_options"] = {}
+        expected_config = copy.deepcopy(expected_dhcp_config_without_port_config)
+    else:
+        expected_config = copy.deepcopy(expected_dhcp_config)
+        if not with_option_config:
+            for i in range(len(expected_config["Dhcp4"]["subnet4"])):
+                render_obj["subnets"][i]["customized_options"] = {}
+        else:
+            for i in range(len(expected_config["Dhcp4"]["subnet4"])):
+                expected_config["Dhcp4"]["subnet4"][i]["option-data"].insert(0, {
+                                "code": 60,
+                                "data": "dummy_value",
+                                "always-send": False,
+                                "csv-format": True
+                        })
+                expected_config["Dhcp4"]["subnet4"][i]["option-data"].insert(0, {
+                                "name": "option223",
+                                "data": "dummy_value",
+                                "always-send": True
+                        })
     config = dhcp_cfg_generator._render_config(render_obj)
-    if with_option_config:
-        expected_config["Dhcp4"]["subnet4"][0]["option-data"].insert(0, {
-                        "name": "option223",
-                        "data": "dummy_value",
-                        "always-send": True
-                    })
-    assert json.loads(config) == expected_config if with_port_config else expected_config
+    assert json.loads(config) == expected_config
 
 
 def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_render_template,
@@ -405,9 +524,10 @@ def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_ren
     for key, value in tested_options_data["res"].items():
         expected_res[key] = {
             "id": customized_options_ipv4[key]["id"],
-            "value": value,
-            "type": customized_options_ipv4[key]["type"],
-            "always_send": "true"
+            "value": value["value"],
+            "type": value.get("type", customized_options_ipv4[key]["type"]),
+            "always_send": "true",
+            "option_type": value["option_type"]
         }
     assert customized_options == expected_res
 

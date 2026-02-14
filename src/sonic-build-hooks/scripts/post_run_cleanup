@@ -15,18 +15,17 @@ if [ ! -z "$(get_version_cache_option)" ]; then
 	fi
 fi
 
-apt-get -s clean -y
-apt-get -s autoclean -y
-apt-get -s autoremove -y
-#apt-get -s autoremove -y --purge
+apt-get clean -y
+apt-get autoclean -y
+apt-get autoremove -y --purge
 rm -f /var/cache/apt/archives/*.deb /var/cache/apt/*.bin
 
 if [[ ! ${IMAGENAME} =~ -slave- ]]; then
-	rm -f /var/lib/apt/lists/*
+	rm -rf /var/lib/apt/lists/*
 fi
 
 rm -rf /sonic/target /ssh
-rm -f /tmp/*
+rm -rf /tmp/*
 rm -rf /debs /python-wheels  ~/.cache
 find / | grep -E "__pycache__" | xargs rm -rf
 
@@ -39,3 +38,17 @@ set_reproducible_mirrors -d
 # Remove the version deb preference
 rm -f $VERSION_DEB_PREFERENCE
 rm -f /etc/apt/preferences.d/01-versions-deb
+
+# Remove all doc files
+find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
+
+# Clean doc directories that are empty or only contain empty directories
+while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
+    rm -rf               \
+    /usr/share/man/*     \
+    /usr/share/groff/*   \
+    /usr/share/info/*    \
+    /usr/share/lintian/* \
+    /usr/share/linda/*   \
+    /var/cache/man/*     \
+    /usr/share/locale/*

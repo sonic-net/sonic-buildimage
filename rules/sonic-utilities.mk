@@ -7,10 +7,6 @@ $(SONIC_UTILITIES_PY3)_SRC_PATH = $(SRC_PATH)/sonic-utilities
 $(SONIC_UTILITIES_PY3)_PYTHON_VERSION = 3
 $(SONIC_UTILITIES_PY3)_NAME = $(SONIC_UTILITIES_PY3_NAME)
 $(SONIC_UTILITIES_PY3)_VERSION = $(SONIC_UTILITIES_PY3_VERSION)
-ifeq ($(BLDENV),bookworm)
-# TODO: Odd failures in TestAclLoader and TestMuxcable, skip for now
-$(SONIC_UTILITIES_PY3)_TEST = n
-endif
 $(SONIC_UTILITIES_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                   $(SONIC_CONFIG_ENGINE_PY3) \
                                   $(SONIC_PLATFORM_COMMON_PY3) \
@@ -21,4 +17,7 @@ $(SONIC_UTILITIES_PY3)_DEBS_DEPENDS = $(LIBYANG) \
                                       $(LIBYANG_PY3) \
                                       $(LIBSWSSCOMMON) \
                                       $(PYTHON3_SWSSCOMMON)
+ifeq ($(CONFIGURED_PLATFORM),nvidia-bluefield)
+$(SONIC_UTILITIES_PY3)_DEBS_DEPENDS += $(LIB_SONIC_DASH_API)
+endif
 SONIC_PYTHON_WHEELS += $(SONIC_UTILITIES_PY3)

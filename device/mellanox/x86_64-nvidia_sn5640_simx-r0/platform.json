@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "SN5600_SIMX",
+        "name": "SN5640_SIMX",
         "components": [
             {
                 "name": "ONIE"
@@ -22,12 +22,6 @@
             },
             {
                 "name": "CPLD4"
-            },
-            {
-                "name": "CPLD5"
-            },
-            {
-                "name": "CPLD6"
             }
         ],
         "fans": [],
@@ -37,6 +31,9 @@
                 "fans": [
                     {
                         "name": "fan1"
+                    },
+                    {
+                        "name": "fan2"
                     }
                 ]
             },
@@ -44,7 +41,10 @@
                 "name": "drawer2",
                 "fans": [
                     {
-                        "name": "fan2"
+                        "name": "fan3"
+                    },
+                    {
+                        "name": "fan4"
                     }
                 ]
             },
@@ -52,7 +52,10 @@
                 "name": "drawer3",
                 "fans": [
                     {
-                        "name": "fan3"
+                        "name": "fan5"
+                    },
+                    {
+                        "name": "fan6"
                     }
                 ]
             },
@@ -60,7 +63,21 @@
                 "name": "drawer4",
                 "fans": [
                     {
-                        "name": "fan4"
+                        "name": "fan7"
+                    },
+                    {
+                        "name": "fan8"
+                    }
+                ]
+            },
+            {
+                "name": "drawer5",
+                "fans": [
+                    {
+                        "name": "fan9"
+                    },
+                    {
+                        "name": "fan10"
                     }
                 ]
             }
@@ -91,14 +108,37 @@
                         "name": "PSU-2 Temp"
                     }
                 ]
+            },
+            {
+                "name": "PSU 3",
+                "fans": [
+                    {
+                        "name": "psu3_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-3 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "PSU 4",
+                "fans": [
+                    {
+                        "name": "psu4_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-4 Temp"
+                    }
+                ]
             }
         ],
         "thermals": [
             {
                 "name": "ASIC"
-            },
-            {
-                "name": "Ambient COMEX Temp"
             },
             {
                 "name": "Ambient Fan Side Temp"
@@ -107,19 +147,10 @@
                 "name": "Ambient Port Side Temp"
             },
             {
-                "name": "CPU Core 0 Temp"
-            },
-            {
-                "name": "CPU Core 1 Temp"
-            },
-            {
-                "name": "CPU Core 2 Temp"
-            },
-            {
-                "name": "CPU Core 3 Temp"
-            },
-            {
                 "name": "CPU Pack Temp"
+            },
+            {
+                "name": "SODIMM 1 Temp"
             }
         ],
         "sfps": [
@@ -632,6 +663,22 @@
                 "thermals": [
                     {
                         "name": "xSFP module 64 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "sfp65",
+                "thermals": [
+                    {
+                        "name": "xSFP module 65 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "sfp66",
+                "thermals": [
+                    {
+                        "name": "xSFP module 66 Temp"
                     }
                 ]
             }

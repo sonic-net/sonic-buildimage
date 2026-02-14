@@ -976,7 +976,8 @@
     "alias": "Eth36/1",
     "pfc_asym": "off",
     "subport": "1",
-    "speed": "25000"
+    "speed": "25000",
+    "role": "Dpc"
   },
   "Ethernet141": {
     "index": "36",
@@ -987,7 +988,8 @@
     "alias": "Eth36/2",
     "pfc_asym": "off",
     "speed": "25000",
-    "subport": "2"
+    "subport": "2",
+    "role": "Dpc"
   },
   "Ethernet142": {
     "index": "36",

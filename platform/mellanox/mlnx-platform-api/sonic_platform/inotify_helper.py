@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,9 @@
 """Helper code for Inotify Implementation for reading file until timeout"""
 import os
 import errno
+# Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
+# https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
+os.environ['DEBUG'] = '0'
 import inotify.adapters
 
 try:

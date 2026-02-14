@@ -1,5 +1,10 @@
 /*
- * Copyright 2017-2024 Broadcom
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
+ *
+ * Permission is granted to use, copy, modify and/or distribute this
+ * software under either one of the licenses below.
+ *
+ * License Option 1: GPL
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -12,11 +17,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 (GPLv2) along with this source code.
- */
-/*
- * $Id: $
- * $Copyright: (c) 2017 Broadcom Corp.
- * All Rights Reserved.$
+ *
+ *
+ * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+ *
+ * This software is governed by the Broadcom Open Network Switch APIs license:
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ *
+ *
  */
 
 /*
@@ -100,7 +108,7 @@ static void strip_vlan_tag(struct sk_buff *skb);
 static int  get_tag_status(int dcb_type, void *meta);
 static struct sk_buff *strip_tag_rx_cb(struct sk_buff *skb, int dev_no, void *meta);
 static struct sk_buff *strip_tag_tx_cb(struct sk_buff *skb, int dev_no, void *meta);
-static int  strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
+int strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                                 int chan, kcom_filter_t * kf);
 static int  _pprint(struct seq_file *m);
 static int  _cleanup(void);
@@ -315,7 +323,7 @@ strip_tag_tx_cb(struct sk_buff *skb, int dev_no, void *meta)
 }
 
 /* Filter callback not used */
-static int
+int
 strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                     int chan, kcom_filter_t *kf)
 {
@@ -323,7 +331,6 @@ strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
     return 0;
 }
 
-#ifdef BCM_DNX_SUPPORT
 static int
 knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                      int chan, kcom_filter_t *kf)
@@ -358,7 +365,7 @@ knet_netif_destroy_cb(struct net_device *dev, int unit, kcom_netif_t *netif)
 #endif
     return retv;
 }
-#endif
+
 /*
  * Get statistics.
  * % cat /proc/linux-knet-cb

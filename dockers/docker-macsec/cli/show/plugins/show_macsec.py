@@ -4,13 +4,14 @@ import datetime
 import pickle
 import os
 import copy
-
+import json
 import click
 from tabulate import tabulate
 
 import utilities_common.multi_asic as multi_asic_util
-from swsscommon.swsscommon import CounterTable, MacsecCounter
+from swsscommon.swsscommon import CounterTable, MacsecCounter, SonicV2Connector
 from utilities_common.cli import UserCache
+from sonic_py_common import device_info
 
 CACHE_MANAGER = UserCache(app_name="macsec")
 CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
@@ -63,7 +64,7 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         counters = copy.deepcopy(self.counters)
         if cache:
             for k, v in counters.items():
-                if k in cache.counters:
+                if k in cache.counters and k.startswith("SAI_MACSEC_SA_STAT"):
                     counters[k] = int(counters[k]) - int(cache.counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)
@@ -266,8 +267,22 @@ def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
 @click.argument('interface_name', required=False)
 @click.option('--profile', is_flag=True, required=False, default=False, help="show all macsec profiles")
 @click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
+@click.option('--post-status', is_flag=True, required=False, default=False, help="show macsec FIPS POST(Pre-Operational Self-Test) status")
+@click.option('--fips-module', is_flag=True, required=False, default=False, help="show macsec FIPS module")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display, profile):
+def macsec(interface_name, dump_file, namespace, display, profile, post_status, fips_module):
+    if post_status:
+        if interface_name is not None or profile or dump_file or fips_module:
+            click.echo('POST status is not valid with other options/arguments')
+            return
+        MacsecContext(namespace, display).show_post_status()
+        return
+    if fips_module:
+        if interface_name is not None or profile or dump_file or post_status:
+            click.echo('fips-module is not valid with other options/arguments')
+            return
+        MacsecContext(namespace, display).show_fips_module()
+        return
     if interface_name is not None and profile:
         click.echo('Interface name is not valid with profile option')
         return
@@ -328,6 +343,80 @@ class MacsecContext(object):
             with open(CACHE_FILE.format(self.multi_asic.current_namespace), 'wb') as dump_file:
                 pickle.dump(dump_obj, dump_file)
                 dump_file.flush()
+
+    @multi_asic_util.run_on_multi_asic
+    def show_post_status(self):
+        """Show POST (Pre-Operational Self-Test) status"""
+        # Define the table name
+        table_name = "FIPS_MACSEC_POST_TABLE"
+
+        def format_module_status(module, namespace):
+            # Get all fields from the table
+            post_data = state_db.get_all("STATE_DB", table_name+"|"+module)
+
+            # Format according to SONiC CLI guidelines
+            output = []
+            indent = "  " if namespace else ""
+            output.append(f"{indent}{'Module'.ljust(11)} : {module}")
+
+            for field in post_data:
+                value = post_data[field]
+                # Format field name for consistent alignment (capitalize and pad to 11 chars)
+                display_name = field.capitalize().ljust(11)
+                output.append(f"{indent}{display_name} : {value}")
+
+            return "\n".join(output)
+
+        namespace = self.multi_asic.current_namespace
+        # Connect to STATE_DB
+        state_db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+        state_db.connect(state_db.STATE_DB)
+
+        # Get all keys in the FIPS_MACSEC_POST_TABLE
+        all_keys = state_db.keys(state_db.STATE_DB, table_name + "|*")
+        if not len(all_keys):
+            click.echo("")  # Add blank line for separation
+            if namespace:
+                click.echo(f"Namespace ({namespace})")
+                click.echo("  No entries found")
+            else:
+                click.echo("No entries found")
+            return
+
+        # Extract module names from the keys and sort them
+        modules = []
+        for key in all_keys:
+            # Key format is "FIPS_MACSEC_POST_TABLE|module_name"
+            if "|" in key:
+                module = key.split("|", 1)[1]
+                modules.append(module)
+
+        # Sort modules for consistent output
+        modules.sort()
+
+        display_output = [""]
+        if namespace:
+            display_output.append(f"Namespace ({namespace})")
+        for i, module in enumerate(modules):
+            if i > 0:
+                display_output.append("")  # Add separator between modules
+            module_output = format_module_status(module, namespace)
+            display_output.append(module_output)
+
+        if display_output:
+            click.echo("\n".join(display_output))
+
+    def show_fips_module(self):
+        json_file = device_info.get_path_to_platform_dir() + '/' + device_info.PLATFORM_JSON_FILE
+        if not os.path.exists(json_file):
+            return
+        try:
+            with open(json_file, 'r') as file:
+                platform_data = json.load(file)
+        except (json.JSONDecodeError, IOError, TypeError, ValueError):
+            return
+        if 'fips_module' in platform_data:
+            click.echo(platform_data['fips_module'])
 
 def register(cli):
     cli.add_command(macsec)

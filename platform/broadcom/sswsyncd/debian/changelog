@@ -1,0 +1,5 @@
+sswsyncd (1.0.0) stable; urgency=medium
+
+  * Initial release of sswsyncd package
+
+ -- SONiC Team <sonic-dev@lists.sonicfoundation.dev>  Wed, 01 May 2024 00:00:00 +0000

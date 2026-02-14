@@ -74,7 +74,9 @@ module sonic-port{
 					when "not(not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:asic_name) and
 					((/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq') or 
 					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='chassis-packet') or
-					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric')))";
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_four_asic_vs') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_multi_asic_vs')))";
 
 					description "Number of hardware lanes for the port. This is mandatory for all devices except for chassis devices";
 					mandatory true;
@@ -97,8 +99,14 @@ module sonic-port{
 				leaf speed {
 					mandatory true;
 					type uint32 {
-						range 1..800000;
+						range 1..1600000;
 					}
+				}
+
+				leaf dhcp_rate_limit {
+					description "DHCP DOS Mitigation Rate with default value 300";
+					type uint32; 
+					default 300;
 				}
 
 				leaf link_training {
@@ -122,12 +130,13 @@ module sonic-port{
 
 					type union {
 						type uint32 {
-							range 1..800000;
+							range 1..1600000;
 						}
 						type string {
 							pattern "all";
 						}
 					}
+					ordered-by user;
 				}
 
 				must "(count(adv_speeds[text()='all']) = 0) or (count(adv_speeds) = 1)";
@@ -147,6 +156,7 @@ module sonic-port{
 							pattern "all";
 						}
 					}
+					ordered-by user;
 				}
 
 				must "(count(adv_interface_types[text()='all']) = 0) or (count(adv_interface_types) = 1)";
@@ -230,6 +240,13 @@ module sonic-port{
 						description "Target laser frequency(GHz) for the 400G ZR transceiver";
 						type int32;
 				}
+
+				leaf fast_linkup {
+					type boolean;
+					default "false";
+					description "Enable or disable fast link-up on the port";
+				}
+
 
 			} /* end of list PORT_LIST */
 

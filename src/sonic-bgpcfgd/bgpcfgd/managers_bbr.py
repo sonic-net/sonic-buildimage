@@ -5,6 +5,11 @@ from swsscommon import swsscommon
 from .log import log_err, log_info
 from .manager import Manager
 
+BGP_BBR_TABLE_NAME = "BGP_BBR"
+BGP_BBR_STATUS_KEY = "status"
+BGP_BBR_STATUS_ENABLED = "enabled"
+BGP_BBR_STATUS_DISABLED = "disabled"
+
 
 class BBRMgr(Manager):
     """ This class initialize "BBR" feature for  """
@@ -37,11 +42,13 @@ class BBRMgr(Manager):
         self.cfg_mgr.push_list(cmds)
         self.cfg_mgr.restart_peer_groups(peer_groups_to_restart)
         log_info("BBRMgr::Scheduled BBR update")
+        self.directory.put(self.db_name, self.table_name, BGP_BBR_STATUS_KEY, data[BGP_BBR_STATUS_KEY])
         return True
 
     def del_handler(self, key):
         """ Implementation of 'DEL' command for this class """
         log_err("The '%s' table shouldn't be removed from the db" % self.table_name)
+        self.directory.remove(self.db_name, self.table_name, BGP_BBR_STATUS_KEY)
 
     def __init(self):
         """ Initialize BBRMgr. Extracted from constructor """
@@ -158,6 +165,8 @@ class BBRMgr(Manager):
                     if peer_group_name.startswith(pg_name) and af in self.bbr_enabled_pgs[pg_name]:
                         cmds.append("  %sneighbor %s allowas-in 1" % (prefix_of_commands, peer_group_name))
                         peer_groups_to_restart.add(peer_group_name)
+            cmds.append(" exit-address-family")
+        cmds.append("exit")
         return cmds, list(peer_groups_to_restart)
 
     def __get_available_peer_groups(self):

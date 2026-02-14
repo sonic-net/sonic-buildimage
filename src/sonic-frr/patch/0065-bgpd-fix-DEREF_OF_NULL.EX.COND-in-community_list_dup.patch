@@ -1,0 +1,32 @@
+From c9cc9dce4990da85c6451a2f3e539e3a5fa2f8be Mon Sep 17 00:00:00 2001
+From: Petr Vaganov <petrvaganoff@gmail.com>
+Date: Mon, 4 Aug 2025 12:07:31 +0500
+Subject: bgpd: fix DEREF_OF_NULL.EX.COND in community_list_dup_check
+
+Found by the static analyzer Svace (ISP RAS).
+
+After having been assigned to a NULL value at bgp_clist.c:1241, pointer
+'entry->config' is passed in call to function 'community_list_dup_check'
+at bgp_clist.c:1244, where it is dereferenced at bgp_clist.c:899.
+
+Signed-off-by: Petr Vaganov <petrvaganoff@gmail.com>
+---
+ bgpd/bgp_clist.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_clist.c b/bgpd/bgp_clist.c
+index 5019181921..429f5f2a5a 100644
+--- a/bgpd/bgp_clist.c
++++ b/bgpd/bgp_clist.c
+@@ -896,7 +896,7 @@ static bool community_list_dup_check(struct community_list *list,
+ 		case COMMUNITY_LIST_EXPANDED:
+ 		case EXTCOMMUNITY_LIST_EXPANDED:
+ 		case LARGE_COMMUNITY_LIST_EXPANDED:
+-			if (strcmp(entry->config, new->config) == 0)
++			if (new->config && (strcmp(entry->config, new->config) == 0))
+ 				return true;
+ 			break;
+ 		default:
+-- 
+2.48.1
+

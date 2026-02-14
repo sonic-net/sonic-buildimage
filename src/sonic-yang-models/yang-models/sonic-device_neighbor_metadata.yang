@@ -93,6 +93,12 @@ module sonic-device_neighbor_metadata {
                 leaf deployment_id {
                     type uint32;
                 }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
             }
             /* end of list DEVICE_NEIGHBOR_METADATA_LIST */
         }

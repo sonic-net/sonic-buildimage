@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,11 +20,23 @@ import glob
 import os
 import time
 import re
+from pathlib import Path
+from enum import Enum
 
 from . import utils
 from sonic_py_common.general import check_output_pipe
 
 DEFAULT_WD_PERIOD = 65535
+
+
+class DpuInterfaceEnum(Enum):
+    MIDPLANE_INT = "midplane_interface"
+    RSHIM_INT = "rshim_info"
+    PCIE_INT = "bus_info"
+    RSHIM_PCIE_INT = "rshim_bus_info"
+
+
+dpu_interface_values = [item.value for item in DpuInterfaceEnum]
 
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
@@ -151,6 +164,42 @@ DEVICE_DATA = {
             'fw_control_ports': [64]  # 0 based sfp index list
         }
     },
+    'x86_64-nvidia_sn5600_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn5610n-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
+        }
+    },
     'x86_64-nvidia_sn4280_simx-r0': {
         'thermal': {
             "capability": {
@@ -184,10 +233,19 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def get_fan_drawer_sysfs_count(cls):
+        return len(glob.glob('/run/hw-management/thermal/fan*_status'))
+
+    @classmethod
+    @utils.read_only_cache()
     def get_fan_drawer_count(cls):
         # Here we don't read from /run/hw-management/config/hotplug_fans because the value in it is not
         # always correct.
-        return len(glob.glob('/run/hw-management/thermal/fan*_status')) if cls.is_fan_hotswapable() else 1
+        fan_status_count = cls.get_fan_drawer_sysfs_count()
+        if fan_status_count == 0:
+            # For system with no fan, for example, liquid cooling system.
+            return 0
+        return fan_status_count if cls.is_fan_hotswapable() else 1
 
     @classmethod
     @utils.read_only_cache()
@@ -271,16 +329,26 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def get_platform_dpus_data(cls):
-        json_data = cls.get_platform_json_data()
-        return json_data.get('DPUS', None)
-
-    @classmethod
-    @utils.read_only_cache()
-    def get_platform_json_data(cls):
         from sonic_py_common import device_info
         platform_path = device_info.get_path_to_platform_dir()
         platform_json_path = os.path.join(platform_path, 'platform.json')
-        return utils.load_json_file(platform_json_path)
+        json_data = utils.load_json_file(platform_json_path)
+        return json_data.get('DPUS', None)
+
+    @classmethod
+    def get_dpu_interface(cls, dpu, interface):
+        dpu_data = cls.get_platform_dpus_data()
+        if (not dpu_data) or (interface not in dpu_interface_values):
+            return None
+        return dpu_data.get(dpu, {}).get(interface)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_dpu_count(cls):
+        dpu_data = cls.get_platform_dpus_data()
+        if not dpu_data:
+            return 0
+        return len(dpu_data)
 
     @classmethod
     def get_bios_component(cls):
@@ -307,8 +375,8 @@ class DeviceDataManager:
     def is_module_host_management_mode(cls):
         sai_profile_file = '/tmp/sai.profile'
         if not os.path.exists(sai_profile_file):
-            from sonic_py_common import device_info
-            _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
+            asic_id = 0 if cls.is_multi_asic_platform() else None
+            hwsku_dir = utils.get_path_to_hwsku_directory(asic_id=asic_id)
             sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
@@ -316,22 +384,41 @@ class DeviceDataManager:
     @classmethod
     def wait_platform_ready(cls):
         """
-        Wait for Nvidia platform related services(SDK, hw-management) ready
+        Legacy function for backward compatibility
+        """
+        return True
+
+    @classmethod
+    def check_sysfs_access(cls, path):
+        try:
+            p = Path(path)
+            if not p.exists():
+                return False
+            if p.is_dir():
+                return True
+            with open(path, "rb", buffering=0) as f:
+                f.read(1)
+            return True
+        except:
+            return False
+
+    @classmethod
+    def wait_sysfs_ready(cls, modules_count, timeout=300, interval=1):
+        """
+        Wait for sysfs nodes of modules to be ready before proceeding.
         Returns:
             bool: True if wait success else timeout
         """
-        conditions = []
-        sysfs_nodes = ['power_mode', 'power_mode_policy', 'present', 'reset', 'status', 'statuserror']
+
+        sysfs_nodes = ['present', 'status', 'statuserror']
         if cls.is_module_host_management_mode():
-            sysfs_nodes.extend(['control', 'frequency', 'frequency_support', 'hw_present', 'hw_reset',
-                                'power_good', 'power_limit', 'power_on', 'temperature/input'])
-        else:
-            conditions.append(lambda: utils.read_int_from_file('/var/run/hw-management/config/asics_init_done') == 1)
-        sfp_count = cls.get_sfp_count()
-        for sfp_index in range(sfp_count):
+            sysfs_nodes.extend(['control', 'power_on'])
+
+        conditions = []
+        for sfp_index in range(modules_count):
             for sysfs_node in sysfs_nodes:
-                conditions.append(lambda: os.path.exists(f'/sys/module/sx_core/asic0/module{sfp_index}/{sysfs_node}'))
-        return utils.wait_until_conditions(conditions, 300, 1)
+                conditions.append(lambda idx=sfp_index, node=sysfs_node: cls.check_sysfs_access(f'/sys/module/sx_core/asic0/module{idx}/{node}'))
+        return utils.wait_until_conditions(conditions, timeout, interval)
 
     @classmethod
     @utils.read_only_cache()
@@ -345,16 +432,27 @@ class DeviceDataManager:
             return DEFAULT_WD_PERIOD
 
         return watchdog_data.get('max_period', None)
-    
+
     @classmethod
     @utils.read_only_cache()
     def get_always_fw_control_ports(cls):
         platform_data = DEVICE_DATA.get(cls.get_platform_name())
         if not platform_data:
             return None
-        
+
         sfp_data = platform_data.get('sfp')
         if not sfp_data:
             return None
-        
+
         return sfp_data.get('fw_control_ports')
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_asic_count(cls):
+        from sonic_py_common import device_info
+        return device_info.get_num_npus()
+
+    @classmethod
+    @utils.read_only_cache()
+    def is_multi_asic_platform(cls):
+        return cls.get_asic_count() > 1

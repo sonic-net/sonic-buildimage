@@ -43,9 +43,7 @@ typedef struct FAN_DATA_ATTR
     int mult;                       // Multiplication factor to get the actual data
     uint8_t is_divisor;                     // Check if the value is a divisor and mult is dividend
     void *access_data;
-
 }FAN_DATA_ATTR;
-
 
 typedef struct FAN_SYSFS_ATTR_DATA
 {
@@ -75,7 +73,7 @@ typedef struct FAN_DATA
     int num_fantrays;                    // num of fans controlled by this fan client
     FAN_DATA_ATTR fan_attr;
     int len;             // no of valid attributes for this fan client
-    FAN_DATA_ATTR fan_attrs[MAX_FAN_ATTRS]; 
+    FAN_DATA_ATTR fan_attrs[MAX_FAN_ATTRS];
 }FAN_DATA;
 
 typedef struct FAN_PDATA

@@ -38,10 +38,12 @@ fi
 
 nm -u $1  | grep -v mcount | awk '{ print $2 }' | 
   {
-    read pattern
-    if [ "$pattern" != kpcimgr_module_register ]
+    if read pattern
     then
-	echo Caution: found undesirable symbol $pattern
+      if [ "$pattern" != kpcimgr_module_register ]
+      then
+  	  echo Caution: found undesirable symbol $pattern
+      fi
     fi
 
     while read symbol
@@ -52,9 +54,15 @@ nm -u $1  | grep -v mcount | awk '{ print $2 }' |
 	  echo Caution: found undesirable symbol $symbol
 	fi
     done
-    echo checking objects for any of these symbols: $pattern
 
-    nm kpci_entry.o kpcinterface.o pciesvc/src/*.o | grep -E $pattern >$tmp
+    if [ -z $pattern ]
+    then
+       echo No undesirable symbols founds
+       >$tmp
+    else
+       echo checking objects for any of these symbols: $pattern
+       nm kpci_entry.o kpcinterface.o pciesvc/src/*.o | grep -E $pattern >$tmp
+    fi
   }
 
 if [ -s $tmp ]

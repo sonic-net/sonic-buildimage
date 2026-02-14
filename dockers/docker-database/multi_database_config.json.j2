@@ -1,0 +1,192 @@
+{% set include_remote_db = (REMOTE_DB_IP is defined and REMOTE_DB_PORT is defined) %}
+{
+    "INSTANCES": {
+        "redis":{
+            "hostname" : "{{HOST_IP}}",
+            "port" : {{REDIS_PORT}},
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis.sock",
+            "persistence_for_warm_boot" : "yes"
+            {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
+            ,"database_type": "{{DATABASE_TYPE}}"
+            {% endif %}
+        },
+        "redis1": {
+           "hostname" : "{{HOST_IP}}",
+            "port" : 6378,
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis1.sock",
+            "persistence_for_warm_boot" : "yes"
+            {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
+            ,"database_type": "{{DATABASE_TYPE}}"
+            {% endif %}
+        },
+        "redis2": {
+            "hostname" : "{{HOST_IP}}",
+            "port" : 6377,
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis2.sock",
+            "persistence_for_warm_boot" : "yes"
+            {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
+            ,"database_type": "{{DATABASE_TYPE}}"
+            {% endif %}
+        },
+        "redis3": {
+           "hostname" : "{{HOST_IP}}",
+            "port" : 6376,
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis3.sock",
+            "persistence_for_warm_boot" : "yes"
+            {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
+            ,"database_type": "{{DATABASE_TYPE}}"
+            {% endif %}
+        },
+        "redis4": {
+            "hostname" : "{{HOST_IP}}",
+            "port" : 6375,
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis4.sock",
+            "persistence_for_warm_boot" : "yes"
+            {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
+            ,"database_type": "{{DATABASE_TYPE}}"
+            {% endif %}
+        },
+        "redis_chassis":{
+            "hostname" : "redis_chassis.server",
+            "port": 6380,
+            "unix_socket_path": "/var/run/redis-chassis/redis_chassis.sock",
+            "persistence_for_warm_boot" : "yes"
+        }
+{% if include_remote_db %}
+        ,"remote_redis":{
+            "hostname" : "{{REMOTE_DB_IP}}",
+            "port" : {{REMOTE_DB_PORT}},
+            "unix_socket_path": "",
+            "persistence_for_warm_boot" : "yes"
+        }
+{% endif %},
+        "redis_bmp":{
+            "hostname" : "{{HOST_IP}}",
+            "port" : {{BMP_DB_PORT}},
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis_bmp.sock",
+            "persistence_for_warm_boot" : "yes"
+        }
+    },
+    "DATABASES" : {
+       "APPL_DB": {
+            "id": 0,
+            "separator": ":",
+            "instance": "redis1"
+        },
+        "ASIC_DB": {
+            "id": 1,
+            "separator": ":",
+            "instance": "redis2"
+        },
+        "COUNTERS_DB": {
+            "id": 2,
+            "separator": ":",
+            "instance": "redis3"
+        },
+        "LOGLEVEL_DB": {
+            "id": 3,
+            "separator": ":",
+            "instance": "redis"
+        },
+        "CONFIG_DB": {
+            "id": 4,
+            "separator": "|",
+            "instance": "redis"
+        },
+        "PFC_WD_DB": {
+            "id": 5,
+            "separator": ":",
+            "instance": "redis3"
+        },
+        "FLEX_COUNTER_DB": {
+            "id": 5,
+            "separator": ":",
+            "instance": "redis3"
+        },
+        "STATE_DB": {
+            "id": 6,
+            "separator": "|",
+            "instance": "redis"
+        },
+        "SNMP_OVERLAY_DB": {
+            "id": 7,
+            "separator": "|",
+            "instance": "redis"
+        },
+        "SYSMON_DB": {
+            "id": 10,
+            "separator": "|",
+            "instance": "redis"
+        },
+        "BMC_DB": {
+            "id": 12,
+            "separator": ":",
+            "instance": "redis4"
+        },
+        "RESTAPI_DB": {
+            "id": 8,
+            "separator": "|",
+            "instance": "redis"
+        },
+        "GB_ASIC_DB": {
+            "id": 9,
+            "separator": ":",
+            "instance": "redis"
+        },
+        "GB_COUNTERS_DB": {
+            "id": 10,
+            "separator": ":",
+            "instance": "redis"
+        },
+        "GB_FLEX_COUNTER_DB": {
+            "id": 11,
+            "separator": ":",
+            "instance": "redis"
+        },
+        "APPL_STATE_DB": {
+            "id": 14,
+            "separator": ":",
+            "instance": "redis"
+        },
+        "CHASSIS_APP_DB" : {
+            "id" : 12,
+            "separator": "|",
+            "instance" : "redis_chassis"
+        },
+        "CHASSIS_STATE_DB" : {
+            "id" : 13,
+            "separator": "|",
+            "instance" : "redis_chassis"
+        }
+{% if DATABASE_TYPE is defined and DATABASE_TYPE == "dpudb" %}
+        ,
+        "DPU_APPL_DB" : {
+            "id" : 15,
+            "separator": ":",
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %},
+            "format": "proto"
+        },
+        "DPU_APPL_STATE_DB" : {
+            "id" : 16,
+            "separator": "|",
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
+        },
+        "DPU_STATE_DB" : {
+            "id" : 17,
+            "separator": "|",
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
+        },
+        "DPU_COUNTERS_DB" : {
+            "id" : 18,
+            "separator": ":",
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
+        }
+{% endif %},
+         "BMP_STATE_DB" : {
+            "id" : 20,
+            "separator": "|",
+            "instance" : "redis_bmp"
+        }
+    },
+    "VERSION" : "1.0"
+}

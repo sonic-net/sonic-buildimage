@@ -15,3 +15,9 @@ endif
 clean:
 	rm -rf target
 	rm -rf bin
+
+test:
+	cargo test
+
+fmt:
+	cargo clippy

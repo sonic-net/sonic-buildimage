@@ -1,6 +1,7 @@
 ##
-## Copyright (c) 2016-2022 NVIDIA CORPORATION & AFFILIATES.
-## Apache-2.0
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -14,8 +15,10 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -56,4 +59,9 @@ COPY ["sai_2700.xml", "/usr/share/"]
 RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
 RUN rm -rf /debs
 
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

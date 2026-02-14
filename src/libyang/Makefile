@@ -3,7 +3,12 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = $(LIBYANG)
-DERIVED_TARGETS = $(LIBYANG_DEV) $(LIBYANG_DBGSYM) $(LIBYANG_PY3) $(LIBYANG_CPP)
+DERIVED_TARGETS = $(LIBYANG_DEV) \
+		  $(LIBYANG_DBGSYM) \
+		  $(LIBYANG_PY3) \
+		  $(LIBYANG_PY3_DBG) \
+		  $(LIBYANG_CPP) \
+		  $(LIBYANG_CPP_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
         # Obtaining the libyang

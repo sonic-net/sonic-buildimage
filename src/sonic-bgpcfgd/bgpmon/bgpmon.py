@@ -77,7 +77,7 @@ class BgpStateGet:
 
     # Get a new snapshot of BGP neighbors and store them in the "new" location
     def get_all_neigh_states(self):
-        cmd = ["vtysh", "-c", 'show bgp summary json']
+        cmd = ["vtysh", "-H", "/dev/null",  "-c", 'show bgp summary json']
         retry_attempt = 0
 
         while retry_attempt < self.MAX_RETRY_ATTEMPTS:

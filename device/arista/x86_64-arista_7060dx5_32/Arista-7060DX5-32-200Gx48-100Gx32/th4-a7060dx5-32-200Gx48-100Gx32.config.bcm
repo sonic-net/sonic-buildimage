@@ -19,6 +19,7 @@ bcm_device:
     0:
         global:
             pktio_mode: 1
+            default_cpu_tx_queue: 7
             vlan_flooding_l2mc_num_reserved: 0
             ipv6_lpm_128b_enable: 1
             shared_block_mask_section: uc_bc

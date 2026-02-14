@@ -1,8 +1,53 @@
-mem_cache_enable=0
+[Low Inheritance Precedence]
+mem_cache_enable=1
+mpls_mem_entries=16384
+vlan_xlate_1_mem_entries=65536
+vlan_xlate_2_mem_entries=16384
+flow_init_mode=1
+sai_tunnel_support=1
 ifp_inports_support_enable=1
 ipv6_lpm_128b_enable=0x1
 l3_max_ecmp_mode=1
 lpm_scaling_enable=0
 bcm_num_cos=10
-default_cpu_tx_queue=9
 mmu_lossless=0
+sai_nbr_bcast_ifp_optimized=1
+l2_entry_used_as_my_station=1
+multi_hash_recurse_depth_l3=3
+# Drop monitor and IFA configuration
+flowtracker_enable=2
+flowtracker_max_flows=48000
+flowtracker_drop_monitor_enable=1
+flowtracker_export_interval_usecs=1000000
+flowtracker_max_export_pkt_length=9000
+flowtracker_fsp_reinject_max_length=128
+host_as_route_disable=1
+num_queues_pci=46
+num_queues_uc0=1
+num_queues_uc1=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+ifa_enable=1
+sai_load_hw_config=/usr/lib/cancun/
+sai_fast_convergence_support=1
+sai_brcm_sonic_acl_enhancements=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
+sai_stats_support_mask=0x1
+
+# MMU Lossless configurations 
+sai_optimized_mmu=1
+sai_mmu_tc_to_pg_config=1
+buf.map.egress_pool0.ingress_pool=0
+buf.map.egress_pool1.ingress_pool=0
+buf.map.egress_pool2.ingress_pool=1
+
+#Tunnels
+use_all_splithorizon_groups=1
+bcm_tunnel_term_compatible_mode=1
+
+#RIOT Enable
+riot_enable=1
+riot_overlay_l3_intf_mem_size=8192
+riot_overlay_l3_egress_mem_size=32768
+l3_ecmp_levels=2
+riot_overlay_ecmp_resilient_hash_size=16384

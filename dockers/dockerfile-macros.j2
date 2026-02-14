@@ -1,8 +1,8 @@
 {% macro install_debian_packages(packages) -%}
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; }; \
-    {%- for deb in packages %}
-        dpkg_apt /debs/{{ deb }} {%- if not loop.last %} && \ {%- endif %}
-    {%- endfor %}
+RUN dpkg -i \
+{%- for deb in packages %}
+    /debs/{{ deb }} {%- if not loop.last %} \ {%- endif %}
+{%- endfor %} || apt-get -y install -f --no-remove
 {%- endmacro %}
 
 {% macro install_python2_wheels(packages) -%}
@@ -36,4 +36,15 @@ COPY \
         {{ prefix }}/{{ file }} \
     {%- endfor %}
     {{ dest }}
+{%- endmacro %}
+
+{% macro install_offending_packages(packages) -%}
+    {%- for pkg in packages %}
+        RUN pip3 install {{ pkg }}
+        RUN pip3 install setuptools==51.0.0
+    {%- endfor %}
+{%- endmacro %}
+
+{% macro rsync_from_builder_stage() -%}
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 {%- endmacro %}

@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.7 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -53,7 +54,7 @@ endif
 
 export SDK
 
-override kernel_version=5_10
+override kernel_version=6_6
 platform=iproc
 
 IPROC_BUILD=1
@@ -61,7 +62,6 @@ export IPROC_BUILD
 export BUILD_PLATFORM
 export ARM_LINUX_VERSION
 
-LINUX_MAKE_USER=1
 export ADD_TO_CFLAGS
 export BR_NO_CCACHE
 

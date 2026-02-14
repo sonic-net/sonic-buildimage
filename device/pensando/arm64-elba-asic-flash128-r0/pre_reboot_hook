@@ -1,0 +1,32 @@
+#!/bin/bash
+
+LOG_MSG() {
+    echo "$1" | tee /dev/kmsg /dev/stderr /dev/console
+}
+
+LOG_MSG "Flushing file system buffers..."
+sync
+
+LOG_MSG "Flushing eMMC partitions..."
+for dev in $(lsblk -nd -o NAME | grep -E 'mmcblk'); do
+    LOG_MSG "Flushing /dev/$dev"
+    blockdev --flushbufs "/dev/$dev"
+done
+
+LOG_MSG "Ensuring all IOs are completed..."
+sync
+sleep 2  # Give time for completion
+
+LOG_MSG "Dropping caches..."
+LOG_MSG 3 > /proc/sys/vm/drop_caches
+LOG_MSG "Cache cleared."
+
+sleep 2
+LOG_MSG "Pre-reboot flush and cache clear complete."
+
+sleep 2
+LOG_MSG "Writing pre-shutdown success to CPLD reg"
+docker exec "$(cat /host/dpu-docker-info/name)" /nic/bin/cpldapp -w 0xd 200
+
+LOG_MSG "Platform specific pre-shutdown is successful"
+

@@ -1,6 +1,5 @@
 import subprocess
 
-
 def run_command(command):
     """
     Utility function to run an shell command and return the output.

@@ -1,5 +1,5 @@
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -56,11 +56,16 @@ KNET_BLDDIR := $(OUTPUT_DIR)/knet
 KNETCB_BLDDIR := $(OUTPUT_DIR)/knetcb
 BCMGENL_BLDDIR := $(OUTPUT_DIR)/bcmgenl
 GENL_PACKET_BLDDIR := $(OUTPUT_DIR)/genl-packet
+EDK_BLDDIR := $(OUTPUT_DIR)/edk
+PTPCLOCK_BLDDIR := $(OUTPUT_DIR)/ptpclock
+ST_BLDDIR := $(OUTPUT_DIR)/st
 
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
 
-kmod: bde knet knetcb genl-packet bcmgenl
+KMODS := bde knet knetcb genl-packet bcmgenl edk ptpclock st
+
+kmod: $(KMODS)
 
 bde:
 	$(MAKE) -C $(SDK)/linux/bde SDK=$(SDK) \
@@ -82,7 +87,6 @@ knetcb: knet
 bcmgenl: knet genl-packet
 	$(MAKE) -C $(SDK)/linux/bcmgenl SDK=$(SDK) \
 		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
-		KBUILD_EXTRA_SYMBOLS+=$(GENL_PACKET_BLDDIR)/Module.symvers \
 		LKM_BLDDIR=$(BCMGENL_BLDDIR) $(TARGET)
 	ln -sf $(BCMGENL_BLDDIR)/*.ko $(OUTPUT_DIR)
 
@@ -90,6 +94,26 @@ genl-packet:
 	$(MAKE) -C $(SDK)/linux/genl-packet SDK=$(SDK) \
 		LKM_BLDDIR=$(GENL_PACKET_BLDDIR) $(TARGET)
 	ln -sf $(GENL_PACKET_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+edk: bde
+	$(MAKE) -C $(SDK)/linux/edk SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(EDK_BLDDIR) $(TARGET)
+	ln -sf $(EDK_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+ptpclock: bde knet edk
+	$(MAKE) -C $(SDK)/linux/ptpclock SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS+=$(KNET_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS+=$(EDK_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(PTPCLOCK_BLDDIR) $(TARGET)
+	ln -sf $(PTPCLOCK_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+st: bde
+	$(MAKE) -C $(SDK)/linux/st SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(ST_BLDDIR) $(TARGET)
+	ln -sf $(ST_BLDDIR)/*.ko $(OUTPUT_DIR)
 
 clean:
 	$(MAKE) kmod TARGET=$@
@@ -99,4 +123,4 @@ distclean:
 	$(MAKE) kmod TARGET=$@
 	rm -rf $(OUTPUT_DIR)
 
-.PHONY: help kmod bde knet knetcb genl-packet bcmgenl clean distclean
+.PHONY: help kmod clean distclean $(KMODS)

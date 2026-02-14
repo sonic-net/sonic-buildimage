@@ -1,0 +1,41 @@
+module sonic-asic-sensors {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-asic-sensors";
+  prefix asic-sensors;
+
+  import sonic-types {
+    prefix stypes;
+  }
+
+  description "ASIC SENSORs config yang Module for SONiC OS";
+
+  revision 2024-11-19 {
+    description "First Revision";
+  }
+
+  container sonic-asic-sensors {
+    container ASIC_SENSORS {
+      description "ASIC_SENSORS part of config_db.json";
+
+      container ASIC_SENSORS_POLLER_INTERVAL {
+        leaf interval {
+          description "ASIC SENSORS polling interval";
+          type uint32 {
+            range "1..999";
+          }
+          units seconds;
+          default "10 ";
+        }
+      } /* ASIC_SENSORS_POLLER_INTERVAL */
+
+      container ASIC_SENSORS_POLLER_STATUS {
+        leaf admin_status {
+          description "ASIC SENSORS polling administrative status";
+          type stypes:mode-status;
+          default "enable";
+        } /* admin_status */
+      } /* ASIC_SENSORS_POLLER_STATUS */
+
+    } /* end of ASIC_SENSORS */
+  } /* end of container sonic-asic-sensors */
+} /* end of module sonic-asic-sensors */

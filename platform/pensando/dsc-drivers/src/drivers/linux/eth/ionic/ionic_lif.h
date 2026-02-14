@@ -185,7 +185,9 @@ enum ionic_lif_state_flags {
 	IONIC_LIF_F_BROKEN,
 	IONIC_LIF_F_TX_DIM_INTR,
 	IONIC_LIF_F_RX_DIM_INTR,
-	IONIC_LIF_F_CMB_RINGS,
+	IONIC_LIF_F_CMB_TX_RINGS,
+	IONIC_LIF_F_CMB_RX_RINGS,
+	IONIC_LIF_F_IN_SHUTDOWN,
 
 	/* leave this as last */
 	IONIC_LIF_F_STATE_SIZE
@@ -249,6 +251,7 @@ struct ionic_lif {
 	u64 hw_features;
 	unsigned int index;
 	unsigned int hw_index;
+	unsigned int link_down_count;
 
 	u8 rss_hash_key[IONIC_RSS_HASH_KEY_SIZE];
 	u8 *rss_ind_tbl;
@@ -319,7 +322,8 @@ struct ionic_queue_params {
 	unsigned int nrxq_descs;
 	u64 rxq_features;
 	bool intr_split;
-	bool cmb_enabled;
+	bool cmb_tx;
+	bool cmb_rx;
 };
 
 static inline void ionic_init_queue_params(struct ionic_lif *lif,
@@ -330,7 +334,8 @@ static inline void ionic_init_queue_params(struct ionic_lif *lif,
 	qparam->nrxq_descs = lif->nrxq_descs;
 	qparam->rxq_features = lif->rxq_features;
 	qparam->intr_split = test_bit(IONIC_LIF_F_SPLIT_INTR, lif->state);
-	qparam->cmb_enabled = test_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
+	qparam->cmb_tx = test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
+	qparam->cmb_rx = test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
 }
 
 static inline void ionic_set_queue_params(struct ionic_lif *lif,
@@ -346,10 +351,15 @@ static inline void ionic_set_queue_params(struct ionic_lif *lif,
 	else
 		clear_bit(IONIC_LIF_F_SPLIT_INTR, lif->state);
 
-	if (qparam->cmb_enabled)
-		set_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
+	if (qparam->cmb_tx)
+		set_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
 	else
-		clear_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
+		clear_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
+
+	if (qparam->cmb_rx)
+		set_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
+	else
+		clear_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
 }
 
 static inline u32 ionic_coal_usec_to_hw(struct ionic *ionic, u32 usecs)
@@ -374,10 +384,9 @@ static inline bool ionic_is_pf(struct ionic *ionic)
 	       ionic->pdev->device == PCI_DEVICE_ID_PENSANDO_IONIC_ETH_PF;
 }
 
-static inline bool ionic_use_eqs(struct ionic_lif *lif)
+static inline bool ionic_txq_hwstamp_enabled(struct ionic_queue *q)
 {
-	return lif->ionic->neth_eqs &&
-	       lif->qtype_info[IONIC_QTYPE_RXQ].features & IONIC_QIDENT_F_EQ;
+	return unlikely(q->features & IONIC_TXQ_F_HWSTAMP);
 }
 
 void ionic_lif_deferred_enqueue(struct ionic_deferred *def,
@@ -454,7 +463,11 @@ int ionic_lif_addr_add(struct ionic_lif *lif, const u8 *addr);
 int ionic_lif_addr_del(struct ionic_lif *lif, const u8 *addr);
 
 struct ionic_lif *ionic_netdev_lif(struct net_device *netdev);
-void ionic_device_reset(struct ionic_lif *lif);
+
+void ionic_stop_queues_reconfig(struct ionic_lif *lif);
+void ionic_txrx_free(struct ionic_lif *lif);
+void ionic_qcqs_free(struct ionic_lif *lif);
+int ionic_restart_lif(struct ionic_lif *lif);
 
 #ifdef IONIC_DEBUG_STATS
 static inline void debug_stats_txq_post(struct ionic_queue *q, bool dbell)

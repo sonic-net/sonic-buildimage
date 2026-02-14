@@ -75,7 +75,7 @@ def extract_cmd_daemons(cmd_str):
 class BgpdClientMgr(threading.Thread):
     VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
-    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd']
+    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
     TABLE_DAEMON = {
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
@@ -113,11 +113,15 @@ class BgpdClientMgr(threading.Thread):
             'OSPFV2_ROUTER_DISTRIBUTE_ROUTE': ['ospfd'],
             'OSPFV2_INTERFACE': ['ospfd'],
             'OSPFV2_ROUTER_PASSIVE_INTERFACE': ['ospfd'],
-            'STATIC_ROUTE': ['staticd'],
+            'STATIC_ROUTE': ['mgmtd'],
             'PIM_GLOBALS': ['pimd'],
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
+            'SRV6_MY_LOCATORS': ['zebra'],
+            'SRV6_MY_SOURCE': ['zebra'],
+            'SRV6_MY_SIDS': ['mgmtd']
+
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
                         (r'show ip mroute($|\s+\S+)', ['pimd']),
@@ -400,6 +404,7 @@ def get_command_cmn(daemon, cmd_str, op, st_idx, vals, bool_values):
             continue
         cmd_args.append(CommandArgument(daemon, cmd_enable, vals[idx]))
     return [cmd_str.format(*cmd_args, no = CommandArgument(daemon, cmd_enable))]
+
 
 def hdl_set_extcomm(daemon, cmd_str, op, st_idx, args, is_inline):
     if is_inline:
@@ -1441,6 +1446,56 @@ def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
     daemon.upd_nh_set = ip_nh_set
     return cmd_list
 
+def hdl_admin_status(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 1:
+        return None
+
+    cmd_list = []
+    status = args[st_idx]
+
+    # Convert up/down to true/false if needed
+    if status == 'up':
+        status = 'true'
+    elif status == 'down':
+        status = 'false'
+    elif status not in ['true', 'false']:
+        return None
+
+    # For delete operation, treat as 'false'
+    if op == CachedDataWithOp.OP_DELETE:
+        status = 'false'
+
+    # Apply the command with appropriate no prefix
+    cmd_list.append(cmd_str.format(
+        CommandArgument(daemon, True, args[0]),
+        no=CommandArgument(daemon, (status == 'true'))))
+
+    return cmd_list
+
+def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 2:
+        return None
+
+    cmd_list = []
+    status = args[st_idx]
+    shutdown_msg = args[st_idx + 1] if op != CachedDataWithOp.OP_DELETE else ""
+
+    # Convert up/down to true/false if needed
+    if status == 'up':
+        status = 'true'
+    elif status == 'down':
+        status = 'false'
+    elif status not in ['true', 'false']:
+        return None
+
+    # Apply the command with appropriate no prefix
+    cmd_list.append(cmd_str.format(
+        CommandArgument(daemon, True, args[0]),
+        CommandArgument(daemon, True, shutdown_msg),
+        no=CommandArgument(daemon, (status == 'false'))).rstrip())
+
+    return cmd_list
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -1557,7 +1612,7 @@ class MatchPrefix:
         except ValueError:
             return None
         return '%s/%d' % (normal_ip, mask_len)
-    def __init__(self, af, ip_prefix, len_range = None, action = 'permit'):
+    def __init__(self, af, ip_prefix, len_range = None, action = 'permit', sequence_number = None):
         self.ip_prefix = self.normalize_ip_prefix(af, ip_prefix)
         if self.ip_prefix is None:
             raise ValueError
@@ -1574,10 +1629,12 @@ class MatchPrefix:
         else:
             self.min_len = self.max_len = None
         self.action = action
+        self.sequence_number = sequence_number
     def __hash__(self):
         return hash((self.ip_prefix, self.min_len, self.max_len))
     def __str__(self):
-        ret_str = '%s %s' % (self.action.lower(), self.ip_prefix)
+        seq = 'seq ' + str(self.sequence_number) + ' ' if self.sequence_number is not None else ''
+        ret_str = '%s%s %s' % (seq, self.action.lower(), self.ip_prefix)
         if self.min_len is not None:
             ret_str += ' ge %d' % self.min_len
         if self.max_len is not None:
@@ -1615,7 +1672,7 @@ class MatchPrefixList(list):
             except socket.error:
                 continue
         return None
-    def add_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def add_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         af = self.__get_ip_af(ip_pfx)
         if self.af is None:
             self.af = af
@@ -1623,9 +1680,9 @@ class MatchPrefixList(list):
             if self.af != af:
                 syslog.syslog(syslog.LOG_ERR, 'af of prefix %s is not the  same as prefix set' % ip_pfx)
                 raise ValueError
-        self.append(MatchPrefix(self.af, ip_pfx, len_range, action))
+        self.append(MatchPrefix(self.af, ip_pfx, len_range, action, sequence_number))
         return self[-1]
-    def get_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def get_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         if self.af is None:
             return (None, None)
         prefix = MatchPrefix(self.af, ip_pfx, len_range, action)
@@ -1718,7 +1775,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
-                      ('srv6_locator',                                  '{no:no-prefix}srv6-locator {}'),
+                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -1780,6 +1837,7 @@ class BGPConfigDaemon:
                            '+route_flap_dampen_suppress_threshold',
                            '+route_flap_dampen_max_suppress'],          '{no:no-prefix}bgp dampening {} {} {} {}', ['true', 'false']),
                          ('advertise-all-vni',                      '{no:no-prefix}advertise-all-vni', ['true','false']),
+                         ('advertise-svi-ip',                       '{no:no-prefix}advertise-svi-ip', ['true','false']),
                          ('advertise-default-gw',                   '{no:no-prefix}advertise-default-gw', ['true','false']),
                          ('advertise-ipv4-unicast',                      '{no:no-prefix}advertise ipv4 unicast', ['true','false']),
                          ('advertise-ipv6-unicast',                      '{no:no-prefix}advertise ipv6 unicast', ['true','false']),
@@ -1801,7 +1859,7 @@ class BGPConfigDaemon:
     cmn_key_map = [('asn&peer_type',                        '{no:no-prefix}neighbor {} remote-as {}'),
                    (['local_asn', '+local_as_no_prepend',
                      '+local_as_replace_as'],               '{no:no-prefix}neighbor {} local-as {} {:no-prepend} {:replace-as}'),
-                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', ['false', 'true']),
+                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', hdl_admin_status_shutdown_msg),
                    ('local_addr',                           '{no:no-prefix}neighbor {} update-source {}'),
                    ('name',                                 '{no:no-prefix}neighbor {} description {}'),
                    (['ebgp_multihop', '+ebgp_multihop_ttl'],'{no:no-prefix}neighbor {} ebgp-multihop {}', ['true', 'false']),
@@ -1828,9 +1886,9 @@ class BGPConfigDaemon:
     nbr_key_map = [('peer_group_name',  '{no:no-prefix}neighbor {} peer-group {}')]
 
     nbr_af_key_map = [(['allow_as_in', '+allow_as_count&allow_as_origin'],  '{no:no-prefix}neighbor {} allowas-in {:allow-as-in}', ['true', 'false']),
-                      ('admin_status|ipv4',                                 '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
-                      ('admin_status|ipv6',                                 '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
-                      ('admin_status|l2vpn',                                '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
+                      ('admin_status|ipv4',                                 '{no:no-prefix}neighbor {} activate', hdl_admin_status),
+                      ('admin_status|ipv6',                                 '{no:no-prefix}neighbor {} activate', hdl_admin_status),
+                      ('admin_status|l2vpn',                                '{no:no-prefix}neighbor {} activate', hdl_admin_status),
                       (['send_default_route', '+default_rmap'],             '{no:no-prefix}neighbor {} default-originate {:default-rmap}', ['true', 'false']),
                       ('default_rmap',                                      '{no:no-prefix}neighbor {} default-originate route-map {}'),
                       (['max_prefix_limit', '++max_prefix_warning_threshold',
@@ -2065,7 +2123,7 @@ class BGPConfigDaemon:
                       'PIM_GLOBALS':                    pim_global_key_map,
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
-                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map
+                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2167,13 +2225,17 @@ class BGPConfigDaemon:
                 self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
         pfx_table = self.config_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
-            pfx_set_name, ip_pfx, len_range = key
+            if len(key) == 4:
+                pfx_set_name, seq, ip_pfx, len_range = key
+            else:
+                pfx_set_name, ip_pfx, len_range = key
+                seq = None
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
             if len_range == 'exact':
                 len_range = None
-            if pfx_set_name in self.prefix_set_list and 'action' in entry:
+            if pfx_set_name in self.prefix_set_list:
                 try:
-                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry['action'])
+                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'), seq)
                 except ValueError:
                     pass
         self.as_path_set_list = {}
@@ -2262,7 +2324,10 @@ class BGPConfigDaemon:
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
-            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common)
+            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
+            ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
+            ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
+            ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2643,6 +2708,14 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_ERR, 'local ASN for VRF %s was not configured' % vrf)
                         continue
                     cmd_prefix = ['configure terminal', 'router bgp {} vrf {}'.format(local_asn, vrf)]
+                    if 'srv6_locator' in data:
+                        cmd =  "vtysh -c 'configure terminal' "
+                        cmd += " -c 'router bgp {} vrf {}' ".format(local_asn, vrf)
+                        cmd += " -c 'segment-routing srv6' "
+                        cmd += " -c 'locator {}' ".format(data['srv6_locator'].data)
+                        if not self.__run_command(table, cmd):
+                            syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
+                            continue
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running BGP global config command')
                         continue
@@ -2650,6 +2723,42 @@ class BGPConfigDaemon:
                         self.bgp_confed_peers[vrf] = copy.copy(self.upd_confed_peers)
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
+            elif table == 'SRV6_MY_LOCATORS':
+                if not del_table:
+                    locator_name = prefix
+                    prefix = data['prefix']
+                    cmd = "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'locators' "
+                    cmd += " -c 'locator {}' ".format(locator_name)
+                    cmd += " -c 'prefix {} block-len {} node-len {} func-bits {}' ".format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)
+                    if not self.__run_command(table, cmd):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATORS config command')
+                        continue
+            elif table == 'SRV6_MY_SOURCE':
+                source = data['source-address']
+                cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'encapsulation' "
+                cmd += " -c 'source-address {}' ".format(source.data)
+                if not self.__run_command(table, cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
+                    continue
+            elif table == 'SRV6_MY_SIDS':
+                if key is None:
+                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')
+                    continue
+                if not del_table:
+                    cmd = "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' "
+                    cmd +="-c 'static-sids' "
+                    uDTAction = ["uDT46", "uDT4", "uDT6"]
+                    if data['action'].data in uDTAction:
+                        cmd +="-c 'sid {} locator {} behavior {} vrf {}' ".format(key, prefix, data['action'].data, data['decap_vrf'].data)
+                    elif data['action'].data == 'uN':
+                        cmd +="-c 'sid {} locator {} behavior {} ' ".format(key, prefix, data['action'].data)
+                    else:
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command, not support action %s'.format(data['action'].data))
+                        continue
+                    if not self.__run_command(table, cmd):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 SRV6_MY_SIDS config command')
+                        continue
+
             elif table == 'BGP_GLOBALS_AF':
                 af, ip_type = key.lower().split('_')
                 #this is to temporarily make table cache key accessible to key_map handler function
@@ -2793,7 +2902,15 @@ class BGPConfigDaemon:
                     if pfx_set_name not in self.prefix_set_list:
                         syslog.syslog(syslog.LOG_ERR, 'could not find prefix-set %s from cache' % pfx_set_name)
                         continue
-                    ip_pfx, len_range = key.split('|')
+                    keys = key.split('|')
+                    if len(keys) == 3:
+                        seq = keys[0]
+                        ip_pfx = keys[1]
+                        len_range = keys[2]
+                    else:
+                        ip_pfx = keys[0]
+                        len_range = keys[1]
+                        seq = None
                     if len_range == 'exact':
                         len_range = None
                     pfx_action = data.get('action', None)
@@ -2806,7 +2923,8 @@ class BGPConfigDaemon:
                     else:
                         daemons = ['bgpd', 'zebra']
                     if pfx_action.op == CachedDataWithOp.OP_DELETE or pfx_action.op == CachedDataWithOp.OP_UPDATE:
-                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                         pfx_action.data, seq)
                         if del_pfx is None:
                             syslog.syslog(syslog.LOG_ERR, 'prefix of {} with range {} not found from prefix-set {}'.\
                                             format(ip_pfx, len_range, pfx_set_name))
@@ -2820,7 +2938,8 @@ class BGPConfigDaemon:
                         del(self.prefix_set_list[pfx_set_name][pfx_idx])
                     if pfx_action.op == CachedDataWithOp.OP_ADD or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         try:
-                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data)
+                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data,
+                                                                                    seq)
                         except ValueError:
                             syslog.syslog(syslog.LOG_ERR, 'failed to update prefix-set %s in cache with prefix %s range %s' %
                                     (pfx_set_name, ip_pfx, len_range))
@@ -2831,7 +2950,8 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'failed to add prefix %s with range %s to set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
                             # revert cached update on failure
-                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                             pfx_action.data, seq)
                             if del_pfx is not None:
                                 del(self.prefix_set_list[pfx_set_name][pfx_idx])
                             continue

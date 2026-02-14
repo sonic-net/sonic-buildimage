@@ -24,8 +24,34 @@
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "enable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
+        },
+        "PORT": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "RIF": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PFCWD": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "BUFFER_POOL_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT_BUFFER_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
         }
     },
     "BGP_DEVICE_GLOBAL": {
@@ -58,9 +84,10 @@
     {% do features.append(("restapi", "enabled", false, "enabled")) %}
 {%- endif %}
 {%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", true, "enabled")) %}{% endif %}
-{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
+{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in ['SpineRouter', 'UpperSpineRouter'] and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_system_otel == "y" %}{% do features.append(("otel", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" %}
     {% do features.append(("eventd","disabled", false, "enabled")) %}
 {%- elif include_system_eventd == "y" %}

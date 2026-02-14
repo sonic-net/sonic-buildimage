@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -166,6 +167,8 @@ bcmpkt_flexhdr_len_get(bcmlrd_variant_t variant, uint32_t hid,
     } else if (sal_strcasecmp(name, "hg3_base_t") == 0 ||
                sal_strcasecmp(name, "hg3_extension_0_t") == 0) {
         *len = 8;
+    } else if (sal_strcasecmp(name, "vlan_t") == 0) {
+        *len = 4;
     } else {
         /* no support*/
         *len = 0;

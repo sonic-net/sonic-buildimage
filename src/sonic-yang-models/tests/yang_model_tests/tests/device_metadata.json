@@ -42,8 +42,56 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtLeafRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LOWER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerMgmtAggregator for Type field"
+    },
+    "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperMgmtAggregator for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MINI_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as MiniTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LEAF_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as LeafTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SPINE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as SpineTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CORE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as CoreTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CONSOLE_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as ConsoleServer for Type field"
+    },
+    "DEVICE_METADATA_TYPE_TERMINAL_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as TerminalServer for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "desc": "DEVICE_METADATA value as SonicHost for Type field"
@@ -77,7 +125,7 @@
     },
     "DEVICE_METADATA_INCORRECT_BUFFER_MODEL_PATTERN": {
         "desc": "DEVICE_METADATA wrong value for BUFFER_MODEL field.",
-        "eStr": ["pattern", "does not satisfy"]
+        "eStrKey": "Pattern"
     },
     "DEVICE_METADATA_FRR_MGMT_FWK_CONFIG": {
         "desc": "Verifying FRR MGMT framework configuration."
@@ -91,11 +139,26 @@
     "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
         "desc": "Verifying resource type configuration."
     },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "desc": "Verifying mgmt type configuration."
+    },
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."
     },
-    "DEVICE_METADATA_VALID_SUBTYPE": {
-        "desc": "Verifying valid subtype value"
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "desc": "Verifying valid subtype value dualtor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "desc": "Verifying valid subtype value supervisor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "desc": "Verifying valid subtype value upstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value LowerSpineRouter"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
@@ -106,7 +169,7 @@
     },
     "DEVICE_METADATA_INVALID_PEER_SWITCH": {
         "desc": "Verifying test fails with hostname that is too long",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "DEVICE_METADATA_VALID_STORAGE_DEVICE": {
         "desc": "Verifying valid storage device value"
@@ -157,7 +220,7 @@
     },
     "DEVICE_METADATA_INVALID_TIMEZONE": {
         "desc": "Verifying invalid timezone value",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
         "desc": "Verifying the create_only_config_db_buffers value"
@@ -165,6 +228,9 @@
     "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
         "desc": "Verifying invalid create_only_config_db_buffers value",
         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "desc": "Verifying the supporting_bulk_counter_groups value"
     },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "desc": "Verifying bgp_router_id configuration."
@@ -179,7 +245,23 @@
     "DEVICE_METADATA_VALID_SLICE_TYPE": {
         "desc": "Verifying valid slice_type configuration."
     },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "desc": "Verifying valid location_type configuration."
+    },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
-     }
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "desc": "Verifying valid zebra_nexthop configuration."
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "desc": "Verifying valid t2_group_asns."
+    },
+     "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+         "desc": "Verifying invalid t2_group_asns.",
+         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "desc": "Verifying valid anchor_route_source."
+    }
 }

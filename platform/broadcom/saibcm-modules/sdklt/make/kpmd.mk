@@ -1,5 +1,5 @@
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -14,8 +14,27 @@
 # A copy of the GNU General Public License version 2 (GPLv2) can
 # be found in the LICENSES folder.
 #
-# Helper makefile for building stand-alone PMD kernel module
+# Helper makefile for building Linux kernel module that depends on the
+# SDK Packet Meta Data (PMD) library.
 #
+# The makefile provides a make target named 'kpmd', which the main
+# kernel module makefile should depend on.
+#
+# The 'kpmd' make target will create symbolic links from the relevant
+# SDK source files into the module source directory, which must be
+# specified via either one of $(KMODDIR) or $(GENDIR).
+#
+# The 'kpmd' make target also exports two make variables, of which
+# $(SDK_PMD_KFLAGS) should be added to the kernel module build flags,
+# and $(SDK_PMD_KOBJS) should be added to the list of kernel module
+# object files.
+#
+# For example usage, please refer to $SDK/linux/bcmgenl/Makefile.
+#
+
+ifndef SDK
+$(error The $$SDK environment variable is not set)
+endif
 
 # SDK make utilities
 include $(SDK)/make/makeutils.mk
@@ -126,17 +145,6 @@ VARIANT_DIRS := $(foreach K, $(filter $(VAR_CHIPS),$(PMD_CHIPS)),\
 	$(wildcard $(BCMPKTDIR)/xfcr/$(K)/* -type d))
 endif # SDK_CHIPS
 
-ifdef SDK_CHIPS
-KNETCB_CPPFLAGS := -DKPMD $(SDK_CPPFLAGS)
-endif
-
-ifdef SDK_VARIANTS
-override KNETCB_CPPFLAGS := -DKPMD $(SDK_CPPFLAGS)
-endif
-
-KNETCB_CPPFLAGS += -DKPMD
-export KNETCB_CPPFLAGS
-
 PMD_FLEX_CHIPS := $(filter $(PMD_CHIPS),$(sort $(foreach D, $(VARIANT_DIRS), \
 	$(lastword $(filter-out $(lastword $(subst /, ,$D)),$(subst /, ,$D))))))
 
@@ -162,7 +170,7 @@ endif
 
 CHIP_OBJS ?= $(patsubst %.c, %.o, $(CHIP_SRCS))
 
-SDK_PMD_KFLAGS := -DSAL_LINUX \
+SDK_PMD_KFLAGS := -DSAL_LINUX -DKPMD $(SDK_CPPFLAGS) \
 		  -I$(SDK)/sal/include \
 		  -I$(SDK)/bcmltd/include \
 		  -I$(SDK)/bcmlrd/include \
