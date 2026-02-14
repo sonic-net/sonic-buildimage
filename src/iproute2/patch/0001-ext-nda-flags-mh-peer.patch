@@ -1,15 +1,15 @@
 diff --git a/bridge/fdb.c b/bridge/fdb.c
-index 775feb1..652bd8a 100644
+index 7b44436..2806664 100644
 --- a/bridge/fdb.c
 +++ b/bridge/fdb.c
-@@ -275,6 +275,17 @@ int print_fdb(struct nlmsghdr *n, void *arg)
+@@ -283,6 +283,17 @@ int print_fdb(struct nlmsghdr *n, void *arg)
  		print_string(PRINT_ANY, "master", "master %s ",
  			     ll_index_to_name(rta_getattr_u32(tb[NDA_MASTER])));
-
-+	if (tb[NDA_FLAGS_EXT])
-+	{
+ 
++	if (tb[NDA_FLAGS_EXT]) {
 +		uint32_t flags_ext = rta_getattr_u32(tb[NDA_FLAGS_EXT]);
-+		open_json_array(PRINT_JSON, is_json_context() ? "flags_ext" : "");
++		open_json_array(PRINT_JSON,
++				is_json_context() ? "flags_ext" : "");
 +
 +		if (flags_ext & NTF_EXT_MH_PEER_SYNC)
 +			print_string(PRINT_ANY, NULL, "%s ", "mh-sync");
@@ -21,30 +21,29 @@ index 775feb1..652bd8a 100644
  			   state_n2a(r->ndm_state));
  	close_json_object();
 diff --git a/include/uapi/linux/neighbour.h b/include/uapi/linux/neighbour.h
-index a998bf7..fe9d7c1 100644
+index 5e67a7e..dce82ed 100644
 --- a/include/uapi/linux/neighbour.h
 +++ b/include/uapi/linux/neighbour.h
-@@ -53,6 +53,8 @@ enum {
- #define NTF_ROUTER	(1 << 7)
+@@ -54,6 +54,7 @@ enum {
  /* Extended flags under NDA_FLAGS_EXT: */
- #define NTF_EXT_MANAGED	(1 << 0)
-+#define NTF_EXT_LOCKED          (1 << 1)
-+#define NTF_EXT_MH_PEER_SYNC    (1 << 2)
-
+ #define NTF_EXT_MANAGED		(1 << 0)
+ #define NTF_EXT_LOCKED		(1 << 1)
++#define NTF_EXT_MH_PEER_SYNC (1 << 2)
+ 
  /*
   *	Neighbor Cache Entry States.
 diff --git a/ip/ipneigh.c b/ip/ipneigh.c
-index 61b0a4a..d60f232 100644
+index bd7f44e..2b47ef7 100644
 --- a/ip/ipneigh.c
 +++ b/ip/ipneigh.c
-@@ -462,6 +462,17 @@ int print_neigh(struct nlmsghdr *n, void *arg)
+@@ -459,6 +459,17 @@ int print_neigh(struct nlmsghdr *n, void *arg)
  	if (r->ndm_state)
  		print_neigh_state(r->ndm_state);
-
-+	if (tb[NDA_FLAGS_EXT])
-+	{
+ 
++	if (tb[NDA_FLAGS_EXT]) {
 +		uint32_t flags_ext = rta_getattr_u32(tb[NDA_FLAGS_EXT]);
-+		open_json_array(PRINT_JSON, is_json_context() ? "flags_ext" : "");
++		open_json_array(PRINT_JSON,
++				is_json_context() ? "flags_ext" : "");
 +
 +		if (flags_ext & NTF_EXT_MH_PEER_SYNC)
 +			print_string(PRINT_ANY, NULL, "%s ", "mh-sync");
@@ -54,4 +53,4 @@ index 61b0a4a..d60f232 100644
 +
  	if (protocol) {
  		SPRINT_BUF(b1);
-
+ 
