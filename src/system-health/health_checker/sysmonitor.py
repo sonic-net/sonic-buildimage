@@ -327,7 +327,7 @@ class Sysmonitor(ProcessTaskBase):
                 #Raise syslog for service state change
                 logger.log_info("{} service state changed to [{}/{}]".format(event, active_state, sub_state))
 
-                if status == "enabled" or status == "enabled-runtime" or status == "static":
+                if status in ("enabled", "enabled-runtime", "static", "generated"):
                     if fail_reason == "success":
                         fail_reason = "-"
                     if (active_state == "active" and sub_state == "exited"):
