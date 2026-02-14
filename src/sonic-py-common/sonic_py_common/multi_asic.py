@@ -5,7 +5,7 @@ import subprocess
 from natsort import natsorted
 from swsscommon import swsscommon
 
-from .device_info import get_asic_conf_file_path
+from .device_info import get_asic_conf_file_path, get_expected_asic_list
 from .device_info import is_supervisor, is_chassis
 from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
 
@@ -497,12 +497,15 @@ def validate_namespace(namespace):
 
 def get_asic_presence_list():
     """
-    @summary: This function will get the asic presence list. On Supervisor, the list includes only the asics
-              for inserted and detected fabric cards. For non-supervisor cards, e.g. line card, the list should
-              contain all supported asics by the card. The function gets the asic list from CHASSIS_ASIC_TABLE from
-              CHASSIS_STATE_DB. The function assumes that the first N asic ids (asic0 to asic(N-1)) in
-              CHASSIS_ASIC_TABLE belongs to the supervisor, where N is the max number of asics supported by the Chassis
-    @return:  List of asics present
+    @summary: This function retrieves the asic presence list. On Supervisor, the list includes asics
+              for inserted and detected fabric cards. For non-supervisor cards (e.g., line cards), the
+              list contains all supported asics by the card.
+
+              For Line Cards: Retrieves asic list from CHASSIS_ASIC_TABLE in CHASSIS_STATE_DB.
+              For Supervisor: First attempts to get expected asic list from platform. If that list is
+                              empty, retrieves asic list from CHASSIS_FABRIC_ASIC_INFO_TABLE in
+                              CHASSIS_STATE_DB (as supervisor handles fabric asics).
+    @return:  List of asics present (list of integers)
     """
     asics_list = []
     if is_multi_asic():
@@ -512,20 +515,28 @@ def get_asic_presence_list():
             asics_list = list(range(0, get_num_asics()))
         else:
             # This is supervisor card. Some fabric cards may not be inserted.
-            # Get asic list from CHASSIS_ASIC_TABLE which lists only the asics
+            # Get asic list from platform or CHASSIS_FABRIC_ASIC_INFO_TABLE which lists only the asics
             # present based on Fabric card detection by the platform.
-            db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, False)
-            asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
-            if asic_table:
-                asics_presence_list = list(asic_table.getKeys())
-                for asic in asics_presence_list:
-                    # asic is asid id: asic0, asic1.... asicN. Get the numeric value.
-                    asics_list.append(int(get_asic_id_from_name(asic)))
+
+            # Get expected asic list. "Expected" refers to the ASIC IDs anticipated to be present based on
+            # platform configuration, which may include ASICs that failed enumeration and therefore do not
+            # appear in CHASSIS_FABRIC_ASIC_INFO_TABLE. If the expected list is empty, retrieve the list from the database.
+            asics_list = get_expected_asic_list()
+            # Ensure asics_list is a list of integers
+            asics_list = [int(a) for a in asics_list]
+            if not asics_list:
+                # expected list returned empty, get the asic list from the database
+                db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, False)
+                asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
+                if asic_table:
+                    asics_presence_list = list(asic_table.getKeys())
+                    for asic in asics_presence_list:
+                        # asic is asid id: asic0, asic1.... asicN. Get the numeric value.
+                        asics_list.append(int(get_asic_id_from_name(asic)))
     else:
         # This is not multi-asic, all asics should be present.
         asics_list = list(range(0, get_num_asics()))
     return asics_list
-
 
 def get_container_name_from_asic_id(service_name, asic_id):
     """Get the container name for a service according to the ASIC ID
