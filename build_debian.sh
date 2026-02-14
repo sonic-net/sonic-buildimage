@@ -586,6 +586,9 @@ if [[ ! -f './asic_config_checksum' ]]; then
 fi
 sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
 
+# Copy GNMI bypass validation configuration
+sudo cp files/image_config/gnmi_bypass/gnmi_bypass.yml $FILESYSTEM_ROOT/etc/sonic/
+
 ## Check if not a last stage of RFS build
 fi
 
