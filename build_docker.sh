@@ -10,7 +10,7 @@ usage() {
     cat >&2 <<EOF
 Usage:
   sudo ./build_docker.sh [-i DOCKER_IMAGE_NAME] [-t DOCKER_IMAGE_TAG] DOCKER_BUILD_DIR [REGISTRY_SERVER REGISTRY_PORT REGISTRY_USERNAME REGISTRY_PASSWD]
-  
+
 Description:
   -i DOCKER_IMAGE_NAME
        Specify the docker image's name, by default it is DOCKER_BUILD_DIR
@@ -22,7 +22,7 @@ Description:
        The server name of the docker registry
   REGISTRY_PORT
        The port of the docker registry
-       
+
 Example:
   ./build_docker.sh -i docker-orchagent-mlnx docker-orchagent
 EOF
