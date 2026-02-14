@@ -2953,8 +2953,7 @@
         },
         "FIPS":{
             "global": {
-                "enable": "true",
-                "enforce": "true"
+                "enable": "true"
             }
         },
         "FG_NHG_MEMBER": {
