@@ -27,6 +27,13 @@ COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 {%- else %}
 COPY ["sources.list.amd64", "/etc/apt/sources.list"]
+{%- endif %}
+
+# Install certificates by disabling the peer verification
+RUN apt -o Acquire::https::Verify-Peer=false update && \
+    apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
 {%- if CONFIGURED_ARCH == "armhf" %}
 ARG arch=armhf
 ARG gcc_arch=arm-linux-gnueabihf
@@ -554,8 +561,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang golang-go
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
