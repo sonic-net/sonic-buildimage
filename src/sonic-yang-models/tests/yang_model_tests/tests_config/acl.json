@@ -1578,6 +1578,16 @@
                         "type": "L3"
                     }
                 ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "L3",
+                        "MATCHES": ["SRC_IP", "DST_IP", "TCP_FLAGS"],
+                        "ACTIONS": ["PACKET_ACTION"],
+                        "BIND_POINTS": ["PORT"]
+                    }
+                ]
             }
         }
     },
@@ -2165,6 +2175,108 @@
                         "description": "Ethernet1",
                         "mtu": 9000,
                         "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_TCP_FLAGS_UNSUPPORTED_TABLE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-TCP-FLAGS-TABLE",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_TCPFlags_Invalid",
+                        "TCP_FLAGS": "0x12"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-TCP-FLAGS-TABLE",
+                        "policy_desc": "Table without TCP_FLAGS match",
+                        "ports": ["Ethernet1"],
+                        "stage": "INGRESS",
+                        "type": "CUSTOM_L3"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
+                        "MATCHES": ["SRC_IP", "DST_IP"],
+                        "ACTIONS": ["PACKET_ACTION"],
+                        "BIND_POINTS": ["PORT"]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_TCP_FLAGS_SUPPORTED_TABLE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TCP-FLAGS-TABLE",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 100,
+                        "RULE_NAME": "Rule_TCPFlags_Valid",
+                        "TCP_FLAGS": "0x12/0x12"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TCP-FLAGS-TABLE",
+                        "policy_desc": "Table with TCP_FLAGS match",
+                        "ports": ["Ethernet1"],
+                        "stage": "INGRESS",
+                        "type": "CUSTOM_L3_TCP"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "CUSTOM_L3_TCP",
+                        "MATCHES": ["SRC_IP", "DST_IP", "TCP_FLAGS"],
+                        "ACTIONS": ["PACKET_ACTION"],
+                        "BIND_POINTS": ["PORT"]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
                         "name": "Ethernet1",
                         "speed": 25000
                     }
