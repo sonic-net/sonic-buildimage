@@ -10,6 +10,7 @@ function showHelpAndExit()
     echo "    -i    : Apply Permit Inbound route-map"
     echo "    -o    : Apply Permit Outbound route-map"
     echo "    -p    : Set the device to AZNG Production State"
+    echo "    -r    : Set the device to AZNG Pre-Migration State"
     exit "${EXIT_SUCCESS}"
 }
 
@@ -133,10 +134,10 @@ function aznz_migration_with_deny()
        exit ${EXIT_FAILURE}
    fi
    AZNG_DENY_TEMP_FILE=$(mktemp)
-   echo "route-map FROM_AH_V4 deny 5" >> $AZNG_DENY_TEMP_FILE
-   echo "route-map FROM_AH_V6 deny 5" >> $AZNG_DENY_TEMP_FILE
-   echo "route-map TO_AH_V4 deny 5" >> $AZNG_DENY_TEMP_FILE
-   echo "route-map TO_AH_V6 deny 5" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map FROM_AH_V4 deny 15" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map FROM_AH_V6 deny 15" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map TO_AH_V4 deny 15" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map TO_AH_V6 deny 15" >> $AZNG_DENY_TEMP_FILE
    echo "no route-map FROM_AH_V6 permit 10" >> $AZNG_DENY_TEMP_FILE
    echo "no route-map TO_AH_V6 permit 50" >> $AZNG_DENY_TEMP_FILE
    echo "no route-map FROM_AH_V4 permit 10" >> $AZNG_DENY_TEMP_FILE
@@ -150,10 +151,10 @@ function aznz_migration_with_deny()
        exit ${EXIT_FAILURE}
    fi
    local ah_deny_route_maps=(
-        "FROM_AH_V6 deny 5"
-        "TO_AH_V6 deny 5"
-        "FROM_AH_V4 deny 5"
-        "TO_AH_V4 deny 5"
+        "FROM_AH_V6 deny 15"
+        "TO_AH_V6 deny 15"
+        "FROM_AH_V4 deny 15"
+        "TO_AH_V4 deny 15"
     )
    check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
@@ -182,8 +183,8 @@ function aznz_migration_with_deny()
 function aznz_migration_outbound_allow()
 {
    local ah_deny_route_maps=(
-        "FROM_AH_V6 deny 5"
-        "FROM_AH_V4 deny 5"
+        "FROM_AH_V6 deny 15"
+        "FROM_AH_V4 deny 15"
     )
    check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
@@ -193,8 +194,8 @@ function aznz_migration_outbound_allow()
        exit ${EXIT_FAILURE}
    fi
    AZNG_ALLOW_OUTBOUND_TEMP_FILE=$(mktemp)
-   echo "no route-map FROM_AH_V4 deny 5" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
-   echo "no route-map FROM_AH_V6 deny 5" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
+   echo "no route-map FROM_AH_V4 deny 15" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
+   echo "no route-map FROM_AH_V6 deny 15" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
    check_and_apply_frr_config_helper "apply" $AZNG_ALLOW_OUTBOUND_TEMP_FILE 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
        LOG="AZNG_MIGRATION: Failed to remove inbound deny route-maps"
@@ -221,8 +222,8 @@ function aznz_migration_outbound_allow()
 function aznz_migration_inbound_allow()
 {
    local ah_deny_route_maps=(
-        "TO_AH_V6 deny 5"
-        "TO_AH_V4 deny 5"
+        "TO_AH_V6 deny 15"
+        "TO_AH_V4 deny 15"
     )
    check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
@@ -232,8 +233,8 @@ function aznz_migration_inbound_allow()
        exit ${EXIT_FAILURE}
    fi
    AZNG_ALLOW_INBOUND_TEMP_FILE=$(mktemp)
-   echo "no route-map TO_AH_V4 deny 5" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
-   echo "no route-map TO_AH_V6 deny 5" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
+   echo "no route-map TO_AH_V4 deny 15" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
+   echo "no route-map TO_AH_V6 deny 15" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
    check_and_apply_frr_config_helper "apply" $AZNG_ALLOW_INBOUND_TEMP_FILE 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
        LOG="AZNG_MIGRATION: Failed to remove outbound deny route-maps"
@@ -282,7 +283,7 @@ function aznz_set_production()
         echo "Command: $config_save_cmd timedout or failed after 10 seconds."
         exit ${EXIT_FAILURE}
     fi
-    LOG="AZNG_MIGRATION: Device Metadata successfully updated."
+    LOG="AZNG_MIGRATION: Device Metadata successfully updated for migration to AZNG Production."
     logger "$LOG"
     echo "$LOG"
     exit ${EXIT_SUCCESS}
@@ -362,7 +363,7 @@ function aznz_migration_rollback()
 
 function parseOptions()
 {
-    while getopts "hdiop" opt; do
+    while getopts "hdiopr" opt; do
         case ${opt} in
             h|\? )
                 showHelpAndExit
@@ -379,8 +380,14 @@ function parseOptions()
             p )
                 aznz_set_production
                 ;;
+            r )
+                aznz_migration_rollback
+                ;;
+
         esac
     done
 }
 
 parseOptions $@
+
+
