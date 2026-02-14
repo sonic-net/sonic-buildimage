@@ -34,7 +34,7 @@ PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
 . ${BUILDINFO_PATH}/scripts/utils.sh
 
 
-URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
+URL_PREFIX="${PACKAGE_URL_PREFIX}"
 
 log_err()
 {
