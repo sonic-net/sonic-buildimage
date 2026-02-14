@@ -93,7 +93,10 @@ def prefix_attr(attr, value):
             prefix = netaddr.IPNetwork(str(value))
         except:
             return None
-    return str(getattr(prefix, attr))
+    result = getattr(prefix, attr)
+    if result is None:
+        return None
+    return str(result)
 
 def unique_name(l):
     name_list = []
