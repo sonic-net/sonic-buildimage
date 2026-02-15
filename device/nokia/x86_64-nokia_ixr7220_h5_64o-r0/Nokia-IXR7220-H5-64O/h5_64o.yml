@@ -42,7 +42,7 @@ bcm_device:
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
             default_cpu_tx_queue: 7
-            sai_l3_byte1_udf_disable: 1
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:

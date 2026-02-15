@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef UFISPACE_s7801_54xs_CPLD_H
-#define UFISPACE_s7801_54xs_CPLD_H
+#ifndef UFISPACE_S7801_54XS_CPLD_H
+#define UFISPACE_S7801_54XS_CPLD_H
 
 /* CPLD device index value */
 enum cpld_id {

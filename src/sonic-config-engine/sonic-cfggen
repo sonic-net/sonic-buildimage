@@ -191,6 +191,9 @@ def load_namespace_config():
         if not SonicDBConfig.isInit():
             SonicDBConfig.initialize()
 
+def file_exists_filter(path):
+    return os.path.isfile(path)
+
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
 We will move to DB schema and remove this class when the config templates are modified.
@@ -294,6 +297,7 @@ def _get_jinja2_env(paths):
     env.filters['pfx_filter'] = pfx_filter
     env.filters['ip_network'] = ip_network
     env.filters['get_primary_addr'] = get_primary_addr
+    env.filters['file_exists'] = file_exists_filter
     for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
         env.filters[attr] = partial(prefix_attr, attr)
 
@@ -344,12 +348,19 @@ def main():
     args = parser.parse_args()
 
     platform = device_info.get_platform()
+    data = {}
+
+    bmc_data = None
+    if platform:
+        bmc_data = device_info.get_bmc_data()
+    if bmc_data:
+        for key, value in bmc_data.items():
+            deep_update(data, {'DEVICE_METADATA': {'bmc': {key:value}}})
 
     db_kwargs = {}
     if args.redis_unix_sock_file is not None:
         db_kwargs['unix_socket_path'] = args.redis_unix_sock_file
 
-    data = {}
     hwsku = args.hwsku
     asic_name = args.namespace
     asic_id = None

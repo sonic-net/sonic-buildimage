@@ -315,7 +315,7 @@ err:
         return ret;
 }
 
-static int ms200i_wdt_remove(struct platform_device *pdev)
+static void ms200i_wdt_remove(struct platform_device *pdev)
 {
         struct ms200i_wdt_drvdata *drvdata = platform_get_drvdata(pdev);
 
@@ -323,7 +323,6 @@ static int ms200i_wdt_remove(struct platform_device *pdev)
 #ifdef ENAB_DEBUG
         printk(KERN_INFO "MS200i WDT Remove");
 #endif
-        return 0;
 }
 
 static struct platform_driver ms200i_wdt_drv = {

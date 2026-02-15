@@ -3,3 +3,4 @@
 0003-Avoid-local-version-scheme-by-setuptools-scm.patch
 0004-Consider-only-expected-packets-for-timeout.patch
 0005-Fix-a-multithreading-issue-in-writing-pcap-files-204.patch
+0006-Improve-the-runtime-of-method-verify_n.patch

@@ -8,7 +8,7 @@ import sys
 # Global variable
 PORT_ATTRIBUTES = ["default_brkout_mode"]
 OPTIONAL_PORT_ATTRIBUTES = ["fec", "autoneg", "port_type", "subport", "role"]
-PORT_REG = "Ethernet(\d+)"
+PORT_REG = r"Ethernet(\d+)"
 HWSKU_JSON = '*hwsku.json'
 INTF_KEY = "interfaces"
 

@@ -19,6 +19,8 @@ pub enum Error {
     Join(#[from] tokio::task::JoinError),
     #[error("Device info error")]
     DeviceInfo(#[from] sonic_rs_common::device_info::DeviceInfoError),
+    #[error("Syslog initialization error: {0}")]
+    Syslog(String),
 }
 
 pub trait DockerApi: Send + Sync {

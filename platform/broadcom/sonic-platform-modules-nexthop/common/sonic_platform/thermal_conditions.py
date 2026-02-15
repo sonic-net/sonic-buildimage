@@ -5,30 +5,57 @@
 
 from sonic_platform_base.sonic_thermal_control.thermal_condition_base import ThermalPolicyConditionBase
 from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
-from .thermal_infos import FanInfo
+from .thermal_infos import FanDrawerInfo
 
-class FanCondition(ThermalPolicyConditionBase):
-    def get_fan_info(self, thermal_info_dict) -> FanInfo:
+class FanDrawerCondition(ThermalPolicyConditionBase):
+    def get_fan_drawer_info(self, thermal_info_dict) -> FanDrawerInfo:
         """
         Get fan info from thermal dict to determine
         if a fan condition matches
         """
-        return thermal_info_dict.get(FanInfo.INFO_TYPE)
+        return thermal_info_dict.get(FanDrawerInfo.INFO_TYPE)
 
-@thermal_json_object('fan.two.or.fewer.present')
-class FanTwoOrFewerPresentCondition(FanCondition):
+@thermal_json_object('fandrawer.one.present')
+class FanDrawerOnePresentCondition(FanDrawerCondition):
     """
-    Condition if two or fewer fantray fans are present
+    Condition if one fan drawer is present
     """
     def is_match(self, thermal_info_dict: dict) -> bool:
-        fan_info = self.get_fan_info(thermal_info_dict)
-        return fan_info.get_num_present_fans() <= 2
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 1
+
+@thermal_json_object('fandrawer.two.present')
+class FanDrawerTwoPresentCondition(FanDrawerCondition):
+    """
+    Condition if two fan drawers are present
+    """
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 2
+
+@thermal_json_object('fandrawer.three.present')
+class FanDrawerThreePresentCondition(FanDrawerCondition):
+    """
+    Condition if three fan drawers are present
+    """
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 3
+
+@thermal_json_object('fandrawer.four.present')
+class FanDrawerFourPresentCondition(FanDrawerCondition):
+    """
+    Condition if four fan drawers are present
+    """
+    def is_match(self, thermal_info_dict: dict) -> bool:
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() == 4
     
 @thermal_json_object('default.operation')
-class ThermalControlAlgorithmCondition(FanCondition):
+class ThermalControlAlgorithmCondition(FanDrawerCondition):
     """
-    Default case, will be the complement of all other conditions
+    Default case when more than two fan drawers are present
     """
     def is_match(self, thermal_info_dict):
-        fan_info = self.get_fan_info(thermal_info_dict)
-        return fan_info.get_num_present_fans() > 2
+        fan_drawer_info = self.get_fan_drawer_info(thermal_info_dict)
+        return fan_drawer_info.get_num_present_fan_drawers() > 2

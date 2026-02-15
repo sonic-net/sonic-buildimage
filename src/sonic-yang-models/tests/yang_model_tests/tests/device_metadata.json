@@ -72,6 +72,24 @@
     "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
         "desc": "DEVICE_METADATA value as UpperMgmtAggregator for Type field"
     },
+    "DEVICE_METADATA_TYPE_MINI_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as MiniTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LEAF_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as LeafTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SPINE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as SpineTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CORE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as CoreTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CONSOLE_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as ConsoleServer for Type field"
+    },
+    "DEVICE_METADATA_TYPE_TERMINAL_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as TerminalServer for Type field"
+    },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
@@ -232,6 +250,9 @@
     },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "desc": "Verifying valid zebra_nexthop configuration."
     },
     "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
         "desc": "Verifying valid t2_group_asns."

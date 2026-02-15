@@ -8,7 +8,7 @@
 {%- set PORT_SERVICE = [] %}
 
 {% if template_exists("buffers.json.j2") %}
-    {% import "buffers.json.j2" as buffer_defs %}
+    {% import "buffers.json.j2" as buffer_defs with context %}
     {%- set filename_postfix = buffer_defs.default_topo | default("def", true) %}
 {% else %}
     {%- set filename_postfix = "def" %}

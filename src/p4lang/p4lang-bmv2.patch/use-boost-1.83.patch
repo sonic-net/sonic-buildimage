@@ -1,0 +1,38 @@
+Index: p4lang-bmv2-1.15.0/debian/control
+===================================================================
+--- p4lang-bmv2-1.15.0.orig/debian/control
++++ p4lang-bmv2-1.15.0/debian/control
+@@ -12,11 +12,11 @@ Build-Depends:
+     git,
+     g++,
+     gfortran | gfortran-10,
+-    libboost-dev,
+-    libboost-filesystem-dev,
+-    libboost-program-options-dev,
+-    libboost-system-dev,
+-    libboost-thread-dev,
++    libboost1.83-dev,
++    libboost-filesystem1.83-dev,
++    libboost-program-options1.83-dev,
++    libboost-system1.83-dev,
++    libboost-thread1.83-dev,
+     libgmp-dev,
+     libgrpc++-dev,
+     libgrpc-dev,
+@@ -50,11 +50,11 @@ Depends:
+     ${shlibs:Depends},
+     ${misc:Depends},
+     ${python3:Depends},
+-    libboost-dev,
+-    libboost-filesystem-dev,
+-    libboost-program-options-dev,
+-    libboost-system-dev,
+-    libboost-thread-dev,
++    libboost1.83-dev,
++    libboost-filesystem1.83-dev,
++    libboost-program-options1.83-dev,
++    libboost-system1.83-dev,
++    libboost-thread1.83-dev,
+     libgmp-dev,
+     libgrpc++-dev,
+     libgrpc-dev,

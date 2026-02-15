@@ -1,11 +1,12 @@
 import os
 import sys
 import shutil
-from typing import Counter
 
 import pytest
 import tempfile
+
 from dataclasses import dataclass
+from typing import Counter
 
 from nexthop.fpga_lib import (
     find_pci_devices,
@@ -153,21 +154,21 @@ def do_test_read_write(root: str):
     assert read_32(pci_address, offset=0x0, root=root) == 0
     assert read_32(pci_address, offset=0x4, root=root) == 0
     assert read_32(pci_address, offset=0x8, root=root) == 0
-    assert read_32(pci_address, offset=0xc, root=root) == 0
+    assert read_32(pci_address, offset=0xC, root=root) == 0
 
     write_32(pci_address, offset=0x100000 - 4, val=1, root=root)
     write_32(pci_address, offset=0x0, val=2, root=root)
     write_32(pci_address, offset=0x4, val=3, root=root)
     write_32(pci_address, offset=0x8, val=4, root=root)
-    with pytest.raises(ValueError): # Unaligned writes not allowed.
-        write_32(pci_address, offset=0xc - 1, val=0xdeadbeef, root=root)
-    write_32(pci_address, offset=0xc, val=0xdeadbeef, root=root)
+    with pytest.raises(ValueError):  # Unaligned writes not allowed.
+        write_32(pci_address, offset=0xC - 1, val=0xDEADBEEF, root=root)
+    write_32(pci_address, offset=0xC, val=0xDEADBEEF, root=root)
 
     assert read_32(pci_address, offset=0x100000 - 4, root=root) == 1
     assert read_32(pci_address, offset=0x0, root=root) == 2
     assert read_32(pci_address, offset=0x4, root=root) == 3
     assert read_32(pci_address, offset=0x8, root=root) == 4
-    assert read_32(pci_address, offset=0xc, root=root) == 0xdeadbeef
+    assert read_32(pci_address, offset=0xC, root=root) == 0xDEADBEEF
 
 
 def test_read_write():
@@ -177,13 +178,13 @@ def test_read_write():
     except AssertionError:
         resource0_path = get_resource_0_path("0000:00:02.0", root=root)
         print(f"\nHexdump of {resource0_path}:")
-        with open(resource0_path, 'rb') as f:
+        with open(resource0_path, "rb") as f:
             content = f.read()
             skip = False
             for i in range(0, len(content), 16):
-                chunk = content[i:i+16]
+                chunk = content[i : i + 16]
                 if any(b != 0 for b in chunk):
-                    hex_str = ' '.join(f'{b:02x}' for b in chunk)
+                    hex_str = " ".join(f"{b:02x}" for b in chunk)
                     print(f"{i:08x}: {hex_str}")
                     skip = False
                 elif not skip:

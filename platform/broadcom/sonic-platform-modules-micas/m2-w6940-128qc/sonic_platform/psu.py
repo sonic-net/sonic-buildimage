@@ -125,7 +125,7 @@ class Psu(PsuBase):
         Returns:
             string: The name of the device
         """
-        return "Psu{}".format(self.index)
+        return "PSU {}".format(self.index)
 
     def get_mfr_id(self):
         """

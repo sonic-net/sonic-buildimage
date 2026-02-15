@@ -1,6 +1,7 @@
 /*
  * $Id: devids.h,v 1.309 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -1642,6 +1643,13 @@
 #define BCM56474_DEVICE_ID      0xb474
 #define BCM56474_A0_REV_ID      1
 
+/* Trident3 X3Plus */
+#define BCM56390_DEVICE_ID      0xb390
+#define BCM56390_A0_REV_ID      1
+#define BCM56391_DEVICE_ID      0xb391
+#define BCM56391_A0_REV_ID      1
+#define BCM56392_DEVICE_ID      0xb392
+#define BCM56392_A0_REV_ID      1
 
 /* Wolfhound2 (Hurricane3-CR)*/
 #define BCM53540_DEVICE_ID      0x8540
@@ -1725,6 +1733,11 @@
 #define BCM88955_A1_REV_ID      0x0002
 #define BCM88956_DEVICE_ID      0x8956
 #define BCM88956_A1_REV_ID      0x0002
+#define DNXC_REV_A_FAMILY       0
+#define DNXC_REV_B_FAMILY       0x10
+#define DNXC_REV_C_FAMILY       0x20
+#define DNXC_REV_D_FAMILY       0x30
+#define DNXC_REV_FAMILY_MASK    0xf0
 #define DNXC_A0_REV_ID          0x0001
 #define DNXC_A1_REV_ID          0x0002
 #define DNXC_A2_REV_ID          0x0003
@@ -1754,11 +1767,16 @@
 #define BCM8879C_DEVICE_ID      0x879C
 #define BCM8879D_DEVICE_ID      0x879D
 #define BCM8879E_DEVICE_ID      0x879E
-#define BCM8879F_DEVICE_ID      0x879F  
+#define BCM8879F_DEVICE_ID      0x879F
 #ifdef BCM_DNXF3_SUPPORT
 #define RAMON2_DEVICE_ID      0x8910
 #define BCM8891F_DEVICE_ID      0x891F
 #define RAMON3_DEVICE_ID      0x8920
+#endif
+#ifdef BCM_DNXFE_SUPPORT
+#ifdef BCM_RAMON_4_SUPPORT
+#define RAMON4_DEVICE_ID      0x9470
+#endif
 #endif
 #define ARADPLUS_DEVICE_ID      0x8660
 #define ARADPLUS_A0_REV_ID      0x0001
@@ -2051,9 +2069,15 @@
 
 #ifdef BCM_DNX3_SUPPORT
 #define JERICHO3_DEVICE_ID      0x8860
+#define J3_PLUS_DEVICE_ID       0x8867
+#define J3_PLUS_DEVICE_ID_START J3_PLUS_DEVICE_ID
+#define J3_PLUS_DEVICE_ID_END   0x8869
 #define Q3_DEVICE_ID_START      0x886a
 #define Q3_DEVICE_ID_END        0x886f
-#define J3AI_DEVICE_ID           0x8890
+#define J3AI_DEVICE_ID          0x8890
+#define J3AI_PLUS_DEVICE_ID     0x8897
+#define J3AI_PLUS_DEVICE_ID_START J3AI_PLUS_DEVICE_ID
+#define J3AI_PLUS_DEVICE_ID_END   0x889f
 #define Q3D_DEVICE_ID           0x8870
 #ifdef BCM_Q3A_SUPPORT
 #define Q3A_DEVICE_ID           0x8490
@@ -2062,6 +2086,23 @@
 #define Q3U_ORIG_DEVICE_ID      0x8400
 #define Q3N_ORIG_DEVICE_ID      0x8405
 #endif
+#ifdef BCM_JERICHO_4_SUPPORT
+#define JERICHO4_DEVICE_ID      0x9450
+#define Q4_DEVICE_ID            0x9420
+#endif
+
+#ifdef BCM_Q4D_SUPPORT
+#define Q4D_DEVICE_ID           0x9430
+#define Q4D_PT200_START_DEVICE_ID  0x9436
+#define Q4D_PT200_END_DEVICE_ID 0x9439
+#endif
+
+
+#ifdef BCM_J4L_SUPPORT
+#define J4L_DEVICE_ID           0x9410
+#endif
+
+
 #endif
 #define Q2A_DEVICE_ID           0x8480
 #define Q2A_A0_REV_ID           DNXC_A0_REV_ID
@@ -2202,6 +2243,16 @@
 
 #define PLX9056_DEVICE_ID       0x9056 /* needed for DNX_TEST_BOARD */
 
+/* Tomahawk F1 */
+#define BCM78920_DEVICE_ID 0xf920
+#define BCM78920_A0_REV_ID 0x0001
+#define BCM78923_DEVICE_ID 0xf923
+#define BCM78923_A0_REV_ID 0x0001
+#define BCM78924_DEVICE_ID 0xf924
+#define BCM78924_A0_REV_ID 0x0001
+#define BCM78928_DEVICE_ID 0xf928
+#define BCM78928_A0_REV_ID 0x0001
+
 /* Trident4 X11c */
 #define BCM56890_DEVICE_ID 0xb890
 #define BCM56890_A0_REV_ID 0x0001
@@ -2323,6 +2374,20 @@
 /* Tomahawk5-512 */
 #define BCM78907_DEVICE_ID 0xf907
 #define BCM78907_A0_REV_ID 0x0001
+
+/* Tomahawk6P */
+#define BCM78910_DEVICE_ID 0xf910
+#define BCM78910_A0_REV_ID 0x0001
+
+/* Tomahawk6C */
+#define BCM78914_DEVICE_ID 0xf914
+#define BCM78914_B0_REV_ID 0x0011
+
+/* Tomahawk6C */
+#ifndef BCM78914_DEVICE_ID
+#define BCM78914_DEVICE_ID 0xf914
+#endif
+#define BCM78914_B1_REV_ID 0x0012
 
 /* Firelight2 */
 #define BCM56080_DEVICE_ID 0xb080

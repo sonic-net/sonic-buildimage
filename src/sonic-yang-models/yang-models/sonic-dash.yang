@@ -64,6 +64,7 @@ module sonic-dash {
 
                 leaf-list address_spaces {
                      type stypes:sonic-ip-prefix;
+                     ordered-by user;
                 }
 
             } /* end of list DASH_VNET_LIST */
@@ -270,14 +271,17 @@ module sonic-dash {
                 leaf-list ip_protocol {
                     description "IP Protocol (tcp or udp or icmp etc)";
                     type stypes:ip-protocol-type;
+                    ordered-by user;
                 }
 
                 leaf-list src_addr {
                     type stypes:sonic-ip-prefix;
+                    ordered-by user;
                 }
 
                 leaf-list dst_addr {
                     type stypes:sonic-ip-prefix;
+                    ordered-by user;
                 }
 
                 leaf-list src_port {
@@ -285,6 +289,7 @@ module sonic-dash {
                      type string {
                          pattern '([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])-([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])';
                      }
+                     ordered-by user;
                 }
 
                 leaf-list dst_port {
@@ -292,6 +297,7 @@ module sonic-dash {
                      type string {
                          pattern '([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])-([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])';
                      }
+                     ordered-by user;
                 }
 
             } /* end of list DASH_ACL_RULE_LIST */

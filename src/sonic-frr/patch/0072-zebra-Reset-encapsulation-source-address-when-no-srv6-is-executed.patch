@@ -1,0 +1,162 @@
+From d3efdb37323f634120cedf7fa9419168e4673a4a Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 13 Aug 2025 17:12:37 +0000
+Subject: zebra: Reset encapsulation source address when 'no srv6' is executed
+
+When the 'no srv6' command is executed, all configurations under the
+'srv6' VTY node should be cleared and defaults restored. However, the
+encapsulation source address is not being reset and remains configured
+after running 'no srv6'.
+
+This commit corrects this behavior by ensuring the encapsulation source
+address is properly cleared and restored to its default state when
+'no srv6' is executed.
+
+The following example shows the issue.
+
+// Set source address to fcbb:bbbb:1::1
+r1# configure
+r1(config)# segment-routing
+r1(config-sr)# srv6
+r1(config-srv6)# encapsulation
+r1(config-srv6-encap)# source-address fcbb:bbbb:1::1
+r1(config-srv6-encap)# exit
+r1(config-srv6)# exit
+r1(config-sr)# exit
+r1(config)# exit
+r1# show running-config
+...
+segment-routing
+ srv6
+  encapsulation
+   source-address fcbb:bbbb:1::1
+...
+
+// Execute 'no srv6'
+r1# configure
+r1(config)# segment-routing
+r1(config-sr)# no srv6
+r1# show running-config
+...
+segment-routing
+ srv6
+  encapsulation
+   source-address fcbb:bbbb:1::1   <-- Source address is still configured
+...
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/zebra_srv6_vty.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/zebra/zebra_srv6_vty.c b/zebra/zebra_srv6_vty.c
+index f43ffd1705..324bd6a360 100644
+--- a/zebra/zebra_srv6_vty.c
++++ b/zebra/zebra_srv6_vty.c
+@@ -711,6 +711,11 @@ DEFUN (no_srv6,
+ 
+ 		zebra_srv6_locator_delete(locator);
+ 	}
++
++	/* Unset SRv6 encapsulation source address */
++	zebra_srv6_encap_src_addr_unset();
++	dplane_srv6_encap_srcaddr_set(&in6addr_any, NS_DEFAULT);
++
+ 	return CMD_SUCCESS;
+ }
+ 
+-- 
+2.48.1
+
+
+From 53ff5572e3f744e6b6f8b0dea066ce26417d6738 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 13 Aug 2025 17:13:20 +0000
+Subject: tests: Verify SRv6 encap source address resets when 'no srv6' is run
+
+Add a test cases to verify the SRv6 encapsulation source address is
+reset to its default value after running the 'no srv6' command.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../test_srv6_encap_src_addr.py               | 64 +++++++++++++++++++
+ 1 file changed, 64 insertions(+)
+
+diff --git a/tests/topotests/srv6_encap_src_addr/test_srv6_encap_src_addr.py b/tests/topotests/srv6_encap_src_addr/test_srv6_encap_src_addr.py
+index 2db5e70695..c4cdbf7ee5 100755
+--- a/tests/topotests/srv6_encap_src_addr/test_srv6_encap_src_addr.py
++++ b/tests/topotests/srv6_encap_src_addr/test_srv6_encap_src_addr.py
+@@ -154,6 +154,70 @@ def test_zebra_srv6_encap_src_addr_set(tgen):
+     )
+ 
+ 
++def test_zebra_srv6_encap_src_addr_no_srv6(tgen):
++    """
++    Verify the SRv6 encapsulation source address is reset after running
++    'no srv6' command.
++    """
++
++    logger.info(
++        "Verify the SRv6 encapsulation source address is reset after"
++        "running 'no srv6' command"
++    )
++    r1 = tgen.gears["r1"]
++
++    r1.vtysh_cmd(
++        """
++        configure terminal
++         segment-routing
++          no srv6
++        """
++    )
++
++    json_file = "{}/r1/expected_srv6_encap_src_addr_unset.json".format(CWD)
++    expected = json.loads(open(json_file).read())
++
++    ok = topotest.router_json_cmp_retry(
++        r1, "show segment-routing srv6 manager json", expected, retry_timeout=15
++    )
++    assert ok, '"r1" JSON output mismatches'
++
++    router_compare_json_output(
++        "r1", "ip --json sr tunsrc show", "ip_tunsrc_show_unset.json"
++    )
++
++
++def test_zebra_srv6_encap_src_addr_set_again(tgen):
++    """
++    Verify the SRv6 encapsulation source address can be set again.
++    """
++
++    logger.info("Verify the SRv6 encapsulation source address can be set again.")
++    r1 = tgen.gears["r1"]
++
++    r1.vtysh_cmd(
++        """
++        configure terminal
++         segment-routing
++          srv6
++           encapsulation
++            source-address fc00:0:1::1
++        """
++    )
++
++    json_file = "{}/r1/expected_srv6_encap_src_addr_set.json".format(CWD)
++    expected = json.loads(open(json_file).read())
++
++    ok = topotest.router_json_cmp_retry(
++        r1, "show segment-routing srv6 manager json", expected, retry_timeout=15
++    )
++    assert ok, '"r1" JSON output mismatches'
++
++    router_compare_json_output(
++        "r1", "ip --json sr tunsrc show", "ip_tunsrc_show_set.json"
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+-- 
+2.48.1
+

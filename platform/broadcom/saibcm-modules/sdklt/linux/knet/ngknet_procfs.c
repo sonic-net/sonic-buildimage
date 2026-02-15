@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -24,6 +25,7 @@
 #include <lkm/ngknet_ioctl.h>
 #include "ngknet_main.h"
 #include "ngknet_extra.h"
+#include "ngknet_procfs.h"
 
 extern struct ngknet_dev ngknet_devices[];
 
@@ -186,9 +188,11 @@ static int
 proc_filter_info_show(struct seq_file *m, void *v)
 {
     struct ngknet_dev *dev;
-    ngknet_filter_t filt = {0};
-    int di, dn = 0, fn = 0;
-    int rv;
+    struct filt_ctrl *fc;
+    ngknet_filter_t filt;
+    uint64_t hits;
+    unsigned long flags;
+    int di, id, dn = 0, fn = 0;
 
     for (di = 0; di < NUM_PDMA_DEV_MAX; di++) {
         dev = &ngknet_devices[di];
@@ -197,13 +201,17 @@ proc_filter_info_show(struct seq_file *m, void *v)
         }
         dn++;
 
-        do {
-            rv = ngknet_filter_get_next(dev, &filt);
-            if (SHR_FAILURE(rv)) {
-                printk("ngknet: get device%d filter failed\n", di);
-                break;
+        for (id = 1; id <= NUM_FILTER_MAX; id++) {
+            spin_lock_irqsave(&dev->lock, flags);
+            fc = (struct filt_ctrl *)dev->fc[id];
+            if (!fc) {
+                spin_unlock_irqrestore(&dev->lock, flags);
+                continue;
             }
+            memcpy(&filt, &fc->filt, sizeof(filt));
+            hits = fc->hits;
             fn++;
+            spin_unlock_irqrestore(&dev->lock, flags);
 
             seq_printf(m, "\n");
             seq_printf(m, "dev_no:         %d\n",   di);
@@ -230,8 +238,8 @@ proc_filter_info_show(struct seq_file *m, void *v)
             proc_data_show(m, filt.mask.b, filt.oob_data_size + filt.pkt_data_size);
             seq_printf(m, "user_data:      ");
             proc_data_show(m, filt.user_data, NGKNET_FILTER_USER_DATA);
-            seq_printf(m, "hits:           %llu\n", ((struct filt_ctrl *)dev->fc[filt.id])->hits);
-        } while (filt.next);
+            seq_printf(m, "hits:           %llu\n", hits);
+        }
     }
 
     if (!dn) {
@@ -270,9 +278,10 @@ proc_netif_info_show(struct seq_file *m, void *v)
     struct ngknet_dev *dev;
     struct net_device *ndev;
     struct ngknet_private *priv;
-    ngknet_netif_t netif = {0};
-    int di, ma, dn = 0, nn = 0;
-    int rv;
+    ngknet_netif_t netif;
+    struct net_device_stats stats;
+    unsigned long flags;
+    int di, ma, id, dn = 0, nn = 0;
 
     for (di = 0; di < NUM_PDMA_DEV_MAX; di++) {
         dev = &ngknet_devices[di];
@@ -281,15 +290,18 @@ proc_netif_info_show(struct seq_file *m, void *v)
         }
         dn++;
 
-        do {
-            rv = ngknet_netif_get_next(dev, &netif);
-            if (SHR_FAILURE(rv)) {
-                printk("ngknet: get device%d netif failed\n", di);
-                break;
+        for (id = 0; id <= NUM_VDEV_MAX; id++) {
+            spin_lock_irqsave(&dev->lock, flags);
+            ndev = id == 0 ? dev->net_dev : dev->vdev[id];
+            if (!ndev) {
+                spin_unlock_irqrestore(&dev->lock, flags);
+                continue;
             }
-            nn++;
-            ndev = netif.id == 0 ? dev->net_dev : dev->vdev[netif.id];
             priv = netdev_priv(ndev);
+            memcpy(&netif, &priv->netif, sizeof(netif));
+            memcpy(&stats, &priv->stats, sizeof(stats));
+            nn++;
+            spin_unlock_irqrestore(&dev->lock, flags);
 
             seq_printf(m, "\n");
             seq_printf(m, "dev_no:         %d\n",   di);
@@ -315,15 +327,15 @@ proc_netif_info_show(struct seq_file *m, void *v)
             proc_data_show(m, netif.meta_data, netif.meta_len);
             seq_printf(m, "user_data:      ");
             proc_data_show(m, netif.user_data, NGKNET_NETIF_USER_DATA);
-            seq_printf(m, "rx_packets:     %lu\n",  priv->stats.rx_packets);
-            seq_printf(m, "rx_bytes:       %lu\n",  priv->stats.rx_bytes);
-            seq_printf(m, "rx_dropped:     %lu\n",  priv->stats.rx_dropped);
-            seq_printf(m, "rx_errors:      %lu\n",  priv->stats.rx_errors);
-            seq_printf(m, "tx_packets:     %lu\n",  priv->stats.tx_packets);
-            seq_printf(m, "tx_bytes:       %lu\n",  priv->stats.tx_bytes);
-            seq_printf(m, "tx_dropped:     %lu\n",  priv->stats.tx_dropped);
-            seq_printf(m, "tx_errors:      %lu\n",  priv->stats.tx_errors);
-        } while (netif.next);
+            seq_printf(m, "rx_packets:     %lu\n",  stats.rx_packets);
+            seq_printf(m, "rx_bytes:       %lu\n",  stats.rx_bytes);
+            seq_printf(m, "rx_dropped:     %lu\n",  stats.rx_dropped);
+            seq_printf(m, "rx_errors:      %lu\n",  stats.rx_errors);
+            seq_printf(m, "tx_packets:     %lu\n",  stats.tx_packets);
+            seq_printf(m, "tx_bytes:       %lu\n",  stats.tx_bytes);
+            seq_printf(m, "tx_dropped:     %lu\n",  stats.tx_dropped);
+            seq_printf(m, "tx_errors:      %lu\n",  stats.tx_errors);
+        }
     }
 
     if (!dn) {

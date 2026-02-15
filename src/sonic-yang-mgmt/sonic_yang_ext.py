@@ -442,7 +442,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 table (str): config DB table, this table is being translated.
 
             Returns:
-                 leafDict (dict): dict with leaf(s) information for List\Container
+                 leafDict (dict): dict with leaf(s) information for List/Container
                     corresponding to config DB table.
         '''
         leafDict = dict()
