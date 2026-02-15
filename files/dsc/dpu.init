@@ -33,7 +33,7 @@ function start_polaris()
     modprobe mnet_uio_pdrv_genirq
     modprobe mdev
     modprobe pciesvc
-    insmod /usr/lib/modules/6.1.0-22-2-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
+    insmod /usr/lib/modules/6.12.41+deb13-sonic-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
 
     mkdir -p $HOST_DIR_POLARIS/update
     mkdir -p $HOST_DIR_POLARIS/sysconfig/config0
