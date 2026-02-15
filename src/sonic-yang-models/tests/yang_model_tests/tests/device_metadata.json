@@ -263,5 +263,8 @@
     },
     "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
         "desc": "Verifying valid anchor_route_source."
+    },
+    "DEVICE_METADATA_FRR_MGMT_FRAMEWORK_CFG_TEMPLATE_RESTORE": {
+        "desc": "Verifying unified_config_restore configuration."
     }
 }
