@@ -27,6 +27,7 @@ from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
+from .managers_vrf import VRFMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
@@ -104,6 +105,8 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # Bgp Aggregate Address Manager
         AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
+        # VRF Manager
+        VRFMgr(common_objs, "APPL_DB", "VRF_TABLE"),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
