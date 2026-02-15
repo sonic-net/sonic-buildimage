@@ -427,5 +427,14 @@
                 }
             }
         }
+    },
+    "SYSLOG_CONFIG_PRESERVE_FQDN_ENABLED": {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_CONFIG": {
+                "GLOBAL": {
+                    "preserve_fqdn": true
+                }
+            }
+        }
     }
 }
