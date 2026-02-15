@@ -1,7 +1,7 @@
 apt==3.0.3
-base-files==13.8+deb13u2
+base-files==13.8+deb13u3
 base-passwd==3.6.7
-bash==5.2.37-2+b5
+bash==5.2.37-2+b7
 bsdutils==1:2.41-5
 coreutils==9.7-3
 dash==0.5.12-12
@@ -12,7 +12,7 @@ diffutils==1:3.10-4
 dpkg==1.22.21
 findutils==4.10.0-3
 gcc-14-base==14.2.0-19
-grep==3.11-4
+grep==3.11-4+b1
 gzip==1.13-1
 hostname==3.25
 init-system-helpers==1.69~deb13u1
@@ -24,10 +24,10 @@ libaudit1==1:4.0.2-2+b2
 libblkid1==2.41-5
 libbsd0==0.12.2-2
 libbz2-1.0==1.0.8-6
-libc-bin==2.41-12
-libc6==2.41-12
+libc-bin==2.41-12+deb13u1
+libc6==2.41-12+deb13u1
 libcap-ng0==0.8.5-4+b1
-libcap2==1:2.75-10+b1
+libcap2==1:2.75-10+b3
 libcrypt1==1:4.4.38-1
 libdb5.3t64==5.3.28+dfsg2-9
 libdebconfclient0==0.280
@@ -69,8 +69,8 @@ ncurses-bin==6.5+20250216-2
 openssl-provider-legacy==3.5.4-1~deb13u1
 passwd==1:4.17.4-2
 perl-base==5.40.1-6
-sed==4.9-2
-sqv==1.3.0-3
+sed==4.9-2+b1
+sqv==1.3.0-3+b2
 sysvinit-utils==3.14-4
 tar==1.35+dfsg-3.1
 tzdata==2025b-4+deb13u1
