@@ -1,7 +1,7 @@
 /*
  * A i2c cpld driver for the ufispace_s8901_54xc
  *
- * Copyright (C) 2017-2022 UfiSpace Technology Corporation.
+ * Copyright (C) 2025 UfiSpace Technology Corporation.
  * Jason Tsai <jason.cy.tsai@ufispace.com>
  *
  * Based on ad7414.c
@@ -104,6 +104,7 @@ enum cpld_sysfs_attributes {
     CPLD_CPU_NMI_INTR,
     CPLD_PTP_INTR,
     CPLD_SYSTEM_INTR,
+    CPLD_RESET_BTN_INTR,
 
     CPLD_MAC_MASK,
     CPLD_HWM_MASK,
@@ -352,6 +353,7 @@ static sysfs_info_t sysfs_info[] = {
     [CPLD_CPU_NMI_INTR]   = {CPLD_CPU_NMI_INTR_REG,   MASK_ALL, PERM_R},
     [CPLD_PTP_INTR]       = {CPLD_PTP_INTR_REG,   MASK_ALL, PERM_R},
     [CPLD_SYSTEM_INTR]    = {CPLD_SYSTEM_INTR_REG, MASK_ALL, PERM_R},
+    [CPLD_RESET_BTN_INTR] = {CPLD_RESET_BTN_INTR_REG, MASK_CPLD_RESET_BTN_INTR, PERM_RW},
 
     [CPLD_MAC_MASK]       = {CPLD_MAC_MASK_REG,   MASK_ALL, PERM_RW},
     [CPLD_HWM_MASK]       = {CPLD_HWM_MASK_REG,   MASK_ALL, PERM_RW},
@@ -563,6 +565,7 @@ static _SENSOR_DEVICE_ATTR_RO(cpld_sfp_ioexp_intr, cpld_callback, CPLD_SFP_IOEXP
 static _SENSOR_DEVICE_ATTR_RO(cpld_cpu_nmi_intr,   cpld_callback, CPLD_CPU_NMI_INTR);
 static _SENSOR_DEVICE_ATTR_RO(cpld_ptp_intr,       cpld_callback, CPLD_PTP_INTR);
 static _SENSOR_DEVICE_ATTR_RO(cpld_system_intr,    cpld_callback, CPLD_SYSTEM_INTR);
+static _SENSOR_DEVICE_ATTR_RW(cpld_reset_btn_intr, cpld_callback, CPLD_RESET_BTN_INTR);
 
 static _SENSOR_DEVICE_ATTR_RW(cpld_mac_mask,       cpld_callback, CPLD_MAC_MASK);
 static _SENSOR_DEVICE_ATTR_RW(cpld_hwm_mask,       cpld_callback, CPLD_HWM_MASK);
@@ -746,6 +749,7 @@ static struct attribute *cpld1_attributes[] = {
     _DEVICE_ATTR(cpld_cpu_nmi_intr),
     _DEVICE_ATTR(cpld_ptp_intr),
     _DEVICE_ATTR(cpld_system_intr),
+    _DEVICE_ATTR(cpld_reset_btn_intr),
 
     _DEVICE_ATTR(cpld_mac_mask),
     _DEVICE_ATTR(cpld_hwm_mask),
@@ -921,6 +925,8 @@ static struct attribute *cpld2_attributes[] = {
 
     NULL
 };
+
+int s8901_54xc_cpld_psu_mux_sel(u8) ;
 
 /* cpld 1 attributes group */
 static const struct attribute_group cpld1_group = {
@@ -1244,9 +1250,15 @@ static void cpld_remove_client(struct i2c_client *client)
 }
 
 /* cpld drvier probe */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int cpld_probe(struct i2c_client *client,
                     const struct i2c_device_id *dev_id)
 {
+#else
+static int cpld_probe(struct i2c_client *client)
+{
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
     int status;
     struct cpld_data *data = NULL;
     int ret = -EPERM;
@@ -1334,11 +1346,10 @@ exit:
 
 /* cpld drvier remove */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-static int
+static int cpld_remove(struct i2c_client *client)
 #else
-static void
+static void cpld_remove(struct i2c_client *client)
 #endif
-cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
 
@@ -1514,6 +1525,7 @@ static void __exit cpld_exit(void)
 
 MODULE_AUTHOR("Jason Tsai <jason.cy.tsai@ufispace.com>");
 MODULE_DESCRIPTION("x86_64_ufispace_s8901_54xc_cpld driver");
+MODULE_VERSION("1.0.1");
 MODULE_LICENSE("GPL");
 
 module_init(cpld_init);

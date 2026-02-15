@@ -399,6 +399,16 @@
                 "high-threshold": true,
                 "minimum-recorded": true,
                 "maximum-recorded": true
+            },
+            {
+                "name": "MOS_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": true,
+                "maximum-recorded": true
             }
         ],
         "modules": [],

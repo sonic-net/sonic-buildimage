@@ -540,8 +540,9 @@ static void sw_to3200k_cpld_remove_client(struct i2c_client *client)
 /*
  * I2C init/probing/exit functions
  */
-static int sw_to3200k_cpld_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int sw_to3200k_cpld_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);
     struct sw_to3200k_cpld_data     *data;
     int                             ret = -ENODEV;
     const struct attribute_group    *group = NULL;

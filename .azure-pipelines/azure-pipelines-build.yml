@@ -147,6 +147,7 @@ jobs:
               rm target/sonic-vs.img
             fi
             make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
@@ -181,7 +182,11 @@ jobs:
             fi
             if [ $(syncd_rpc_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-mellanox.bin target/sonic-$(GROUP_NAME)-rpc.bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-rpc.bin
+            fi
+            if [ $(session_monitor) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_SESSION_MONITOR=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-session-monitor.bin
             fi
             if [ $(GROUP_NAME) == nvidia-bluefield ]; then
               make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb

@@ -88,7 +88,7 @@ class Chassis(ChassisBase):
         self.PORT_END = 15
         PORTS_IN_BLOCK = (self.PORT_END + 1)
         _qsfp_port = range(13, self.PORT_END + 1)
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
 
         for index in range(self.PORT_START, PORTS_IN_BLOCK):
             port_num = index + 1

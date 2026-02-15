@@ -307,7 +307,7 @@ class PostProcess(HwMgmtAction):
         print("\n -> POST: series file updated with non-upstream patches \n{}".format("".join(Data.agg_slk_series)))
 
     def get_series_diff(self):
-        diff = difflib.unified_diff(Data.up_slk_series, Data.agg_slk_series, fromfile='a/patch/series', tofile="b/patch/series", lineterm="\n")
+        diff = difflib.unified_diff(Data.up_slk_series, Data.agg_slk_series, fromfile='a/patches-sonic/series', tofile="b/patches-sonic/series", lineterm="\n")
         lines = []
         for line in diff:
             lines.append(line)

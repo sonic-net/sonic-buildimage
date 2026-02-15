@@ -2,6 +2,7 @@
     "services_to_ignore": [],
     "devices_to_ignore": [],
     "user_defined_checkers": [],
+    "include_devices": [],
     "polling_interval": 60,
     "led_color": {
         "fault": "amber",

@@ -1,0 +1,52 @@
+{%- set default_cable = '300m' %}
+
+{%- include 'buffer_ports.j2' %}
+
+{%- macro generate_qos_bypass_port_list(PORT_QOS_BYPASS) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(256, 261, 4) %}
+        {%- if PORT_QOS_BYPASS.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_pool": {
+            "size": "56441610000",
+            "type": "both",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        },
+        "egress_lossy_profile": {
+            "pool":"ingress_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_pg_profils(port_names_active) %}
+    "BUFFER_PG": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}|0-7": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    },
+{%- endmacro %}
+
+{% macro generate_queue_buffers(port_names_active) %}
+    "BUFFER_QUEUE": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}|0-7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+{% endmacro %}

@@ -1,4 +1,5 @@
-From da81e60f5852eee8f0f4b8d21bafd8931ffbebb4 Mon Sep 17 00:00:00 2001
+[PATCH] bgpd: Convert bmp path_info tracking from hash to rbtree
+
 From: Donald Sharp <sharpd@nvidia.com>
 Date: Wed, 10 Sep 2025 11:04:10 -0400
 Subject: [PATCH] bgpd: Convert bmp path_info tracking from hash to rbtree
@@ -46,12 +47,16 @@ grow/shrink cycles as each side of the event system gets to run.
 Let's just convert the system to use a RB Tree to avoid this problem.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_bmp.c |   23 +----------------------
+ bgpd/bgp_bmp.h |    2 +-
+ 2 files changed, 2 insertions(+), 23 deletions(-)
 
 diff --git a/bgpd/bgp_bmp.c b/bgpd/bgp_bmp.c
-index 1de48a072a..0fb43f501f 100644
+index 9441b5e34..58ec73c00 100644
 --- a/bgpd/bgp_bmp.c
 +++ b/bgpd/bgp_bmp.c
-@@ -174,28 +174,7 @@ static int bmp_qhash_cmp(const struct bmp_queue_entry *a,
+@@ -197,28 +197,7 @@ static int bmp_qhash_cmp(const struct bmp_queue_entry *a,
  	return ret;
  }
  
@@ -82,7 +87,7 @@ index 1de48a072a..0fb43f501f 100644
  static int bmp_active_cmp(const struct bmp_active *a,
  		const struct bmp_active *b)
 diff --git a/bgpd/bgp_bmp.h b/bgpd/bgp_bmp.h
-index dadd99eb6d..f4d82392d8 100644
+index d81b8f9b0..5d4f657ab 100644
 --- a/bgpd/bgp_bmp.h
 +++ b/bgpd/bgp_bmp.h
 @@ -54,7 +54,7 @@
@@ -94,6 +99,3 @@ index dadd99eb6d..f4d82392d8 100644
  
  struct bmp_queue_entry {
  	struct bmp_qlist_item bli;
--- 
-2.50.1
-

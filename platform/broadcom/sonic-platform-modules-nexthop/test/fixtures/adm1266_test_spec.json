@@ -1,0 +1,45 @@
+{
+  "description": "Self-contained ADM1266 test vector using embedded hexdump lines; only hex byte pairs kept",
+  "hexdump_lines": [
+    "23 00 02 01 00 10 0c 00 0b 00 00 00 00 00 1f 3c",
+    "f9 32 00 00 fc 1f 4d 11 79 2e ee 02 00 00 00 00",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff d2",
+    "22 00 02 01 00 10 0c 00 0b 00 00 00 00 00 1f 3c",
+    "f9 32 00 00 fc 1f 4c 11 38 cc 80 02 00 00 00 00",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff d0",
+    "21 00 02 01 00 10 0c 00 0b 00 00 00 00 00 1f 3c",
+    "f9 32 00 00 fc 1f 4b 11 63 42 a8 02 00 00 00 00",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff",
+    "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff 6d"
+  ],
+  "expected_blackbox_records": [
+    { "fault_uid": 35, "action": 1, "rule": 0, "vhx": 16, "current": 12, "last": 11, "vp_ov": 0, "vp_uv": 0, "gpio_in": 15391, "gpio_out": 13049, "pdio_in": 0, "pdio_out": 8188, "powerup": 4429 },
+    { "fault_uid": 34, "action": 1, "rule": 0, "vhx": 16, "current": 12, "last": 11, "vp_ov": 0, "vp_uv": 0, "gpio_in": 15391, "gpio_out": 13049, "pdio_in": 0, "pdio_out": 8188, "powerup": 4428 },
+    { "fault_uid": 33, "action": 1, "rule": 0, "vhx": 16, "current": 12, "last": 11, "vp_ov": 0, "vp_uv": 0, "gpio_in": 15391, "gpio_out": 13049, "pdio_in": 0, "pdio_out": 8188, "powerup": 4427 }
+  ],
+  "expected_reboot_causes": [
+    { "fault_uid": "0x23", "powerup": "0x114d", "action": "0x1", "rule": "0x0", "current": "0xc", "last": "0xb",
+      "vhx": "VH5 (0b00010000)", "vp_ov": "0b0000000000000000", "vp_uv": "0b0000000000000000", 
+      "gpio_in": "GPIO1,GPIO2,GPIO3,GPIO4,GPIO5,GPIO11,GPIO12,GPIO13,GPIO14 (0b0011110000011111)",
+      "gpio_out": "GPIO1,GPIO4,GPIO5,GPIO6,GPIO7,GPIO8,GPIO10,GPIO13,GPIO14 (0b0011001011111001)",
+      "pdio_in": "0b0000000000000000",
+      "pdio_out": "PDIO3,PDIO4,PDIO5,PDIO6,PDIO7,PDIO8,PDIO9,PDIO10,PDIO11,PDIO12,PDIO13 (0b0001111111111100)",
+      "timestamp": "12 minutes 30.181534 seconds after power-on" },
+    { "fault_uid": "0x22", "powerup": "0x114c", "action": "0x1", "rule": "0x0", "current": "0xc", "last": "0xb",
+      "vhx": "VH5 (0b00010000)", "vp_ov": "0b0000000000000000", "vp_uv": "0b0000000000000000",
+      "gpio_in": "GPIO1,GPIO2,GPIO3,GPIO4,GPIO5,GPIO11,GPIO12,GPIO13,GPIO14 (0b0011110000011111)",
+      "gpio_out": "GPIO1,GPIO4,GPIO5,GPIO6,GPIO7,GPIO8,GPIO10,GPIO13,GPIO14 (0b0011001011111001)",
+      "pdio_in": "0b0000000000000000",
+      "pdio_out": "PDIO3,PDIO4,PDIO5,PDIO6,PDIO7,PDIO8,PDIO9,PDIO10,PDIO11,PDIO12,PDIO13 (0b0001111111111100)",
+      "timestamp": "10 minutes 40.797729 seconds after power-on" },
+    { "fault_uid": "0x21", "powerup": "0x114b", "action": "0x1", "rule": "0x0", "current": "0xc", "last": "0xb",
+      "vhx": "VH5 (0b00010000)", "vp_ov": "0b0000000000000000", "vp_uv": "0b0000000000000000",
+      "gpio_in": "GPIO1,GPIO2,GPIO3,GPIO4,GPIO5,GPIO11,GPIO12,GPIO13,GPIO14 (0b0011110000011111)",
+      "gpio_out": "GPIO1,GPIO4,GPIO5,GPIO6,GPIO7,GPIO8,GPIO10,GPIO13,GPIO14 (0b0011001011111001)",
+      "pdio_in": "0b0000000000000000",
+      "pdio_out": "PDIO3,PDIO4,PDIO5,PDIO6,PDIO7,PDIO8,PDIO9,PDIO10,PDIO11,PDIO12,PDIO13 (0b0001111111111100)",
+      "timestamp": "11 minutes 20.259323 seconds after power-on"}
+  ]
+}

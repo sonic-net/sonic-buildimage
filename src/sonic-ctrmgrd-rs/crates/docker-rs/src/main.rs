@@ -32,13 +32,14 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() {
-    let identity = CString::new("docker-rs").unwrap();
+async fn main() -> Result<(), container::Error> {
+    let identity = CString::new("docker-rs")
+        .map_err(|e| container::Error::Syslog(format!("invalid identity string: {}", e)))?;
     let syslog = syslog_tracing::Syslog::new(
         identity,
         syslog_tracing::Options::LOG_PID,
         syslog_tracing::Facility::Daemon
-    ).unwrap();
+    ).ok_or_else(|| container::Error::Syslog("failed to initialize syslog".to_string()))?;
     tracing_subscriber::fmt()
         .with_writer(syslog)
         .with_ansi(false)
@@ -74,9 +75,10 @@ async fn main() {
         // Don't exit with failure for wait operations when container was killed (exit code 137)
         if matches!(cli.action, Action::Wait) {
             if let container::Error::Docker(bollard::errors::Error::DockerContainerWaitError { code: 137, .. }) = e {
-                return;
+                return Ok(());
             }
         }
         std::process::exit(FAILURE);
     }
+    Ok(())
 }

@@ -24,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 /* Addresses to scan */
 static const unsigned short normal_i2c[] = { 0x48, 0x49, 0x4a, 0x4b, I2C_CLIENT_END };
@@ -656,7 +657,11 @@ static struct i2c_driver tmp464_driver = {
 		.name	= "nh_tmp464",
 		.of_match_table = of_match_ptr(tmp464_of_match),
 	},
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 	.probe_new = tmp464_probe,
+#else
+	.probe = tmp464_probe,
+#endif
 	.id_table = tmp464_id,
 	.address_list = normal_i2c,
 };
