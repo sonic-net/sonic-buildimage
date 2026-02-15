@@ -139,6 +139,9 @@ configure :
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
 	$(Q)mkdir -p $(TARGET_PATH)/vcache
+	$(Q)# Clean up stale lock directories left by killed builds (see #25507)
+	$(Q)find $(TARGET_PATH) -maxdepth 3 -name dpkg_lock -type d -exec rm -d {} + 2>/dev/null || true
+	$(Q)find $(TARGET_PATH) -maxdepth 3 -name pip_lock -type d -exec rm -d {} + 2>/dev/null || true
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
 
@@ -920,6 +923,11 @@ $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install
 		$(foreach deb, $($*_CONFLICT_DEBS), \
 			{ while dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) | grep "^Version: $(word 2, $(subst _, ,$(basename $(deb))))" &> /dev/null; do echo "waiting for $(deb) to be uninstalled" $(LOG); sleep 1; done } )
 		# put a lock here because dpkg does not allow installing packages in parallel
+		# Remove stale lock from killed builds (older than 10 minutes)
+		if [ -d $(DEBS_PATH)/dpkg_lock ] && [ $$(( $$(date +%s) - $$(stat -c %Y $(DEBS_PATH)/dpkg_lock 2>/dev/null || echo $$(date +%s)) )) -gt 600 ]; then \
+			echo "Removing stale dpkg_lock (older than 10 minutes)" $(LOG); \
+			rm -d $(DEBS_PATH)/dpkg_lock 2>/dev/null || true; \
+		fi
 		if mkdir $(DEBS_PATH)/dpkg_lock &> /dev/null; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
@@ -1046,7 +1054,12 @@ $(SONIC_INSTALL_WHEELS) : $(PYTHON_WHEELS_PATH)/%-install : .platform $$(addsuff
 	$(HEADER)
 	[ -f $(PYTHON_WHEELS_PATH)/$* ] || { echo $(PYTHON_WHEELS_PATH)/$* does not exist $(LOG) && exit 1; }
 	# put a lock here to avoid race conditions
+	# Remove stale lock from killed builds (older than 10 minutes)
 	while true; do
+	if [ -d $(PYTHON_WHEELS_PATH)/pip_lock ] && [ $$(( $$(date +%s) - $$(stat -c %Y $(PYTHON_WHEELS_PATH)/pip_lock 2>/dev/null || echo $$(date +%s)) )) -gt 600 ]; then \
+		echo "Removing stale pip_lock (older than 10 minutes)" $(LOG); \
+		rm -d $(PYTHON_WHEELS_PATH)/pip_lock 2>/dev/null || true; \
+	fi
 	if mkdir $(PYTHON_WHEELS_PATH)/pip_lock &> /dev/null; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 	{ sudo -E SKIP_BUILD_HOOK=Y pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG) && rm -d $(PYTHON_WHEELS_PATH)/pip_lock && break; } || { rm -d $(PYTHON_WHEELS_PATH)/pip_lock && exit 1 ; }
