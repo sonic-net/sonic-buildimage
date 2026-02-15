@@ -1,5 +1,6 @@
 include $(PLATFORM_PATH)/sai-modules.mk
-include $(PLATFORM_PATH)/sai.mk
+include $(PLATFORM_PATH)/sai-xgs.mk
+include $(PLATFORM_PATH)/sai-dnx.mk
 include $(PLATFORM_PATH)/sswsyncd.mk
 # TODO(trixie): re-enable modules after updating for Trixie
 include $(PLATFORM_PATH)/platform-modules-nokia.mk

@@ -125,6 +125,26 @@
             {
                 "name": "Management Card",
                 "controllable": false
+            },
+            {
+                "name": "PCB Temp Near Q3D",
+                "controllable": false
+            },
+            {
+                "name": "D0 Temp diode 0",
+                "controllable": false
+            },
+            {
+                "name": "D0 Temp diode 1",
+                "controllable": false
+            },
+            {
+                "name": "D1 Temp diode 0",
+                "controllable": false
+            },
+            {
+                "name": "D1 Temp diode 1",
+                "controllable": false
             }
         ],
         "sfps": [
