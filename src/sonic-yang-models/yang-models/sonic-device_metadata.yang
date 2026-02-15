@@ -173,6 +173,12 @@ module sonic-device_metadata {
                     }
                 }
 
+                leaf dualatortype {
+                    type string {
+                        pattern "active-active|active-standby";
+                    }
+                }
+
                 leaf peer_switch {
                     type stypes:hostname;
                 }
