@@ -80,14 +80,30 @@ Any server can be a build image server as long as it has:
 > options to expose the full KVM interface to the VM
 > (e.g. [the KVM paravirtualization support on VirtualBox](https://www.virtualbox.org/manual/ch10.html#gimproviders)).
 
-A good choice of OS for building SONiC is currently Ubuntu 22.04.
+A good choice of OS for building SONiC is currently Ubuntu 22.04 or Ubuntu 24.04.
+
+> **Note (Ubuntu 24.04):** Python 3.12+ removed the `imp` module, which breaks the
+> legacy `j2cli` package. The prerequisites script and manual steps below install
+> `jinjanator` instead, which is a drop-in replacement that works on all Python versions.
 
 ## Automated prerequisites installation and repository cloning
 
 For convenience, you can use the automated prerequisites script to handle both prerequisites installation and repository cloning:
 
 ```shell
+# After cloning, or from a fresh checkout:
+bash scripts/prerequisites.sh
+
+# Or before cloning (downloads and runs the script):
 curl -sSL https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/scripts/prerequisites.sh | bash
+```
+
+You can override the defaults via environment variables:
+```shell
+SONIC_REPO=git@github.com:sonic-net/sonic-buildimage.git \
+SONIC_DIR=~/sonic-buildimage \
+BRANCH=master \
+  bash scripts/prerequisites.sh
 ```
 
 This script will automatically:
@@ -155,6 +171,36 @@ make configure PLATFORM=[ASIC_VENDOR]
 # Note: You can set this higher, but 4 is a good number for most cases
 #       and is well-tested.
 make SONIC_BUILD_JOBS=4 all
+```
+
+### Build performance tips
+
+**Parallelism vs memory:** Each parallel job can use ~6 GB RAM during C++ compilation.
+Set `SONIC_BUILD_JOBS` so that `JOBS × 6 GB ≤ available RAM`:
+
+| JOBS | RAM needed | Typical VS build time |
+|------|-----------|----------------------|
+| 1    | ~10 GB    | ~3 hours             |
+| 4    | ~24 GB    | ~1.5 hours           |
+| 8    | ~48 GB    | ~1 hour              |
+
+**Contain OOM in the build container** (protects host processes):
+```shell
+# Add to rules/config.user (persists across rebases):
+SONIC_BUILD_MEMORY = 24g
+```
+
+**Skip tests for faster iteration:**
+```shell
+make SONIC_BUILD_JOBS=4 BUILD_SKIP_TEST=y all
+```
+
+**Use a persistent config file** instead of CLI overrides — create `rules/config.user` (gitignored):
+```makefile
+SONIC_CONFIG_BUILD_JOBS = 4
+BUILD_SKIP_TEST = y
+SONIC_BUILD_MEMORY = 24g
+DEFAULT_BUILD_LOG_TIMESTAMP = simple
 ```
 
 The supported ASIC vendors are:
