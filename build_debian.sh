@@ -780,35 +780,18 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
                 KERNEL_PATH="/boot/vmlinuz-${KERNEL_VERSION_FULL}"
                 INITRD_PATH="/boot/initrd.img-${KERNEL_VERSION_FULL}"
 
-                # Read DTB name from platform config if available
-                platform_conf_file="$PLATFORM_DIR/$CONFIGURED_PLATFORM/platform_${CONFIGURED_ARCH}.conf"
-                if [ ! -f "$platform_conf_file" ]; then
-                    platform_conf_file="$PLATFORM_DIR/$CONFIGURED_PLATFORM/platform.conf"
-                fi
-
-                # Extract dtb_name from platform config (e.g., dtb_name="ast2700-evb.dtb")
-                # Strip quotes and comments
-                DTB_NAME=$(grep "^dtb_name=" "$platform_conf_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d '"' | tr -d "'" | tr -d ' ')
-
-                if [ -z "$DTB_NAME" ]; then
-                    echo "Warning: dtb_name not found in $platform_conf_file, using default"
-                    DTB_NAME="default.dtb"
-                fi
-
-                # Construct DTB path based on platform
+                # For aspeed platform, construct DTB directory path
+                # The FIT image template contains multiple DTBs, we only substitute the directory path
                 if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-                    DTB_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/aspeed/${DTB_NAME}"
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/aspeed"
                 else
-                    # Generic fallback - use platform name
-                    DTB_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/${CONFIGURED_PLATFORM}/${DTB_NAME}"
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/${CONFIGURED_PLATFORM}"
                 fi
 
                 # Substitute placeholders in sonic_fit.its template
-                sed -e "s|__KERNEL_VERSION__|${KERNEL_VERSION_FULL}|g" \
-                    -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
+                sed -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
                     -e "s|__INITRD_PATH__|${INITRD_PATH}|g" \
-                    -e "s|__DTB_PATH__|${DTB_PATH}|g" \
-                    -e "s|__DTB_NAME__|${DTB_NAME}|g" \
+                    -e "s|__DTB_PATH_ASPEED__|${DTB_DIR_PATH}|g" \
                     $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its > /tmp/sonic_fit.its.tmp
 
                 sudo cp -v /tmp/sonic_fit.its.tmp $FILESYSTEM_ROOT/boot/sonic_fit.its
@@ -822,13 +805,31 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
         fi
     fi
 
-    # Install U-Boot environment initialization script and service for aspeed platform
+    # Install platform-level scripts and services for aspeed platform
     if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing U-Boot environment initialization service for aspeed platform..."
-        sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic-uboot-env-init.sh $FILESYSTEM_ROOT/usr/bin/
-        sudo chmod +x $FILESYSTEM_ROOT/usr/bin/sonic-uboot-env-init.sh
-        sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic-uboot-env-init.service $FILESYSTEM_ROOT/etc/systemd/system/
-        sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic-uboot-env-init.service
+        echo "Installing platform scripts and services for aspeed..."
+
+        # Copy all scripts from platform/aspeed/scripts/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
+            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
+                if [ -f "$script" ]; then
+                    echo "Installing $(basename $script)..."
+                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
+                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
+                fi
+            done
+        fi
+
+        # Copy all systemd services from platform/aspeed/systemd/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
+            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
+                if [ -f "$service" ]; then
+                    echo "Installing and enabling $(basename $service)..."
+                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
+                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
+                fi
+            done
+        fi
     fi
 fi
 

@@ -1,10 +1,14 @@
 /dts-v1/;
 
 /*
- * FIT Image Configuration for AST2700 SONiC
+ * FIT Image Configuration for AST2700 SONiC - Multi-DTB Support
  *
- * NOTE: This is a TEMPLATE file. The actual paths are substituted during build.
- * Kernel version and paths are read from platform_arm64.conf
+ * This FIT image contains multiple DTBs for different hardware variants:
+ * - ast2700-evb: Aspeed AST2700 EVB reference platform
+ * - nh-ast2700-r0: NextHop AST2700 platform
+ *
+ * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
+ * which is set based on hardware detection at boot time.
  *
  * Load addresses are chosen based on AST2700 memory map:
  * - RAM: 0x400000000 - 0x47e000000 (2016 MB)
@@ -31,7 +35,7 @@
  */
 
 / {
-	description = "Kernel fitImage for SONiC AST2700 (__KERNEL_VERSION__)";
+	description = "Kernel fitImage for SONiC AST2700 with Multi-DTB Support";
 	#address-cells = <2>;
 
 	images {
@@ -48,9 +52,20 @@
 				algo = "sha256";
 			};
 		};
-		fdt-__DTB_NAME__ {
-			description = "Flattened Device Tree blob";
-			data = /incbin/("__DTB_PATH__");
+		fdt-ast2700-evb {
+			description = "Flattened Device Tree blob for Aspeed AST2700 EVB";
+			data = /incbin/("__DTB_PATH_ASPEED__/ast2700-evb.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-nh-ast2700-r0 {
+			description = "Flattened Device Tree blob for NextHop AST2700";
+			data = /incbin/("__DTB_PATH_ASPEED__/nh-ast2700-r0.dtb");
 			type = "flat_dt";
 			arch = "arm64";
 			compression = "none";
@@ -74,11 +89,20 @@
 	};
 
 	configurations {
-		default = "conf-__DTB_NAME__";
-		conf-__DTB_NAME__ {
-			description = "1 Linux kernel, FDT blob, ramdisk";
+		default = "conf-ast2700-evb";
+		conf-ast2700-evb {
+			description = "SONiC for Aspeed AST2700 EVB";
 			kernel = "kernel-1";
-			fdt = "fdt-__DTB_NAME__";
+			fdt = "fdt-ast2700-evb";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-nh-ast2700-r0 {
+			description = "SONiC for NextHop AST2700";
+			kernel = "kernel-1";
+			fdt = "fdt-nh-ast2700-r0";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";

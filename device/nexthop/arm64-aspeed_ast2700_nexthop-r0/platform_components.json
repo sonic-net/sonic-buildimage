@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "AST2700-BMC": {
+            "component": {
+                "BMC": {},
+                "BIOS": {}
+            }
+        }
+    }
+}

@@ -65,6 +65,25 @@ if [ $? -ne 0 ]; then
     fi
 fi
 
+{% if CONFIGURED_PLATFORM == "aspeed" %}
+# For Aspeed platforms, install the common base package first if not already installed
+python3 -c "import sonic_platform_aspeed_common" > /dev/null 2>&1 || pip3 show sonic-platform-aspeed-common > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    SONIC_PLATFORM_ASPEED_COMMON_WHEEL="/usr/share/sonic/platform/sonic_platform_aspeed_common-1.0-py3-none-any.whl"
+    echo "sonic-platform-aspeed-common package not installed, attempting to install..."
+    if [ -e ${SONIC_PLATFORM_ASPEED_COMMON_WHEEL} ]; then
+       pip3 install ${SONIC_PLATFORM_ASPEED_COMMON_WHEEL}
+       if [ $? -eq 0 ]; then
+          echo "Successfully installed ${SONIC_PLATFORM_ASPEED_COMMON_WHEEL}"
+       else
+          echo "Error: Failed to install ${SONIC_PLATFORM_ASPEED_COMMON_WHEEL}"
+       fi
+    else
+       echo "Error: Unable to locate ${SONIC_PLATFORM_ASPEED_COMMON_WHEEL}"
+    fi
+fi
+{% endif %}
+
 # If the Python 3 sonic-platform package is not installed, try to install it
 python3 -c "import sonic_platform" > /dev/null 2>&1 || pip3 show sonic-platform > /dev/null 2>&1
 if [ $? -ne 0 ]; then
