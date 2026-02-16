@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo "Do sync"
+sync
+
+echo "Stop pmon.service"
+systemctl stop pmon.service
+
+echo "Stop as9726-32d-platform-monitor-fan.service"
+systemctl stop as9726-32d-platform-monitor-fan.service
+
+echo "Stop as9726-32d-platform-monitor-psu.service"
+systemctl stop as9726-32d-platform-monitor-psu.service
+
+echo "Stop as9726-32d-platform-monitor.service"
+systemctl stop as9726-32d-platform-monitor.service
+
+echo "Cold Reset via CPLD Offset 0x4 Bit 3"
+i2cset -y -f 1 0x65 0x4 0x15
+

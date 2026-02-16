@@ -42,6 +42,7 @@ static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
 /* fan related data, the index should match sysfs_fan_attributes
  */
 static const u8 fan_reg[] = {
+    0x01,       /* fan cpld version */
     0x0F,       /* fan 1-6 present status */
     0x10,	    /* fan 1-6 direction(0:F2B 1:B2F) */
     0x11,       /* fan PWM(for all fan) */
@@ -80,6 +81,7 @@ enum fan_id {
 };
 
 enum sysfs_fan_attributes {
+    FAN_VERSION,
     FAN_PRESENT_REG,
     FAN_DIRECTION_REG,
     FAN_DUTY_CYCLE_PERCENTAGE, /* Only one CPLD register to control duty cycle for all fans */
@@ -148,6 +150,12 @@ enum sysfs_fan_attributes {
                                            &sensor_dev_attr_fan##index##_input.dev_attr.attr, \
                                            &sensor_dev_attr_fan##index2##_input.dev_attr.attr
 
+#define DECLARE_FAN_VERSION_SENSOR_DEV_ATTR() \
+    static SENSOR_DEVICE_ATTR(version, S_IRUGO, fan_show_value, NULL, FAN_VERSION)
+
+#define DECLARE_FAN_VERSION_ATTR()      &sensor_dev_attr_version.dev_attr.attr
+
+
 /* 6 fan fault attributes in this platform */
 DECLARE_FAN_FAULT_SENSOR_DEV_ATTR(1);
 DECLARE_FAN_FAULT_SENSOR_DEV_ATTR(2);
@@ -178,6 +186,7 @@ DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(5);
 DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(6);
 /* 1 fan duty cycle attribute in this platform */
 DECLARE_FAN_DUTY_CYCLE_SENSOR_DEV_ATTR();
+DECLARE_FAN_VERSION_SENSOR_DEV_ATTR();
 
 static struct attribute *as9726_32d_fan_attributes[] = {
     /* fan related attributes */
@@ -206,6 +215,7 @@ static struct attribute *as9726_32d_fan_attributes[] = {
     DECLARE_FAN_DIRECTION_ATTR(5),
     DECLARE_FAN_DIRECTION_ATTR(6),
     DECLARE_FAN_DUTY_CYCLE_ATTR(),
+    DECLARE_FAN_VERSION_ATTR(),
     NULL
 };
 
@@ -367,6 +377,11 @@ static ssize_t fan_show_value(struct device *dev, struct device_attribute *da,
 
     if (data->valid) {
         switch (attr->index) {
+        case FAN_VERSION:
+        {
+            ret = sprintf(buf, "%x\n", data->reg_val[FAN_VERSION]);
+            break;
+        }
         case FAN_DUTY_CYCLE_PERCENTAGE:
         {
             u32 duty_cycle = reg_val_to_duty_cycle(data->reg_val[FAN_DUTY_CYCLE_PERCENTAGE]);
