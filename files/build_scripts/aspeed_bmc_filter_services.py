@@ -36,8 +36,6 @@ BMC_EXCLUDED_SERVICES = {
 
     # SONiC NOS services - not needed for BMC
     'sonic-hostservice.service',     # SONiC host services (VLAN, LAG, etc.) - NOS-specific
-    'featured.service',              # SONiC feature management - NOS-specific
-    'featured.timer',                # Timer for featured service
     'hostcfgd.service',              # SONiC host config daemon - NOS-specific
     'hostcfgd.timer',                # Timer for hostcfgd service
 
@@ -54,8 +52,9 @@ BMC_EXCLUDED_SERVICES = {
 
 # Services to ENSURE are included for BMC
 BMC_REQUIRED_SERVICES = {
-    # BMC-specific services (core functionality)
-    'bmc-init.service',
+    # Feature management (required to start services based on CONFIG_DB)
+    'featured.service',               # SONiC feature management daemon
+    'featured.timer',                 # Timer for featured service
 
     # Security and monitoring (important for BMC)
     'caclmgrd.service',               # Firewall for management interfaces
@@ -71,6 +70,9 @@ BMC_REQUIRED_SERVICES = {
 
     # System health monitoring
     'system-health.service',          # SONiC system health monitor
+
+    # Platform monitoring
+    'pmon.service',                   # Platform monitor container (sensors, fans, PSU, etc.)
 
     # Telemetry and monitoring
     'gnmi.service',                   # gNMI telemetry service
@@ -122,13 +124,9 @@ def create_gnmi_bmc_override(filesystem_root):
 # BMC override: Remove ASIC/switch dependencies (swss, syncd)
 # GNMI on BMC only needs database service
 After=database.service
-
-[Install]
-# Enable GNMI to start automatically on BMC
-WantedBy=multi-user.target
 """
 
-    return create_service_override(filesystem_root, 'gnmi.service', override_content, enable=True)
+    return create_service_override(filesystem_root, 'gnmi.service', override_content, enable=False)
 
 def create_watchdog_control_bmc_override(filesystem_root):
     """Create systemd drop-in override for watchdog-control to remove swss dependency on BMC."""
@@ -140,12 +138,9 @@ def create_watchdog_control_bmc_override(filesystem_root):
 # BMC override: Remove ASIC/switch dependency (swss)
 # Watchdog control on BMC doesn't need swss
 After=
-
-[Install]
-WantedBy=multi-user.target
 """
 
-    return create_service_override(filesystem_root, 'watchdog-control.service', override_content, enable=True)
+    return create_service_override(filesystem_root, 'watchdog-control.service', override_content, enable=False)
 
 def create_determine_reboot_cause_bmc_override(filesystem_root):
     """Create systemd drop-in override for determine-reboot-cause to remove rc-local dependency on BMC."""
@@ -158,12 +153,9 @@ def create_determine_reboot_cause_bmc_override(filesystem_root):
 # Reboot cause determination on BMC doesn't need rc-local
 Requires=
 After=
-
-[Install]
-WantedBy=multi-user.target
 """
 
-    return create_service_override(filesystem_root, 'determine-reboot-cause.service', override_content, enable=True)
+    return create_service_override(filesystem_root, 'determine-reboot-cause.service', override_content, enable=False)
 
 def mask_services_in_filesystem(filesystem_root):
     """Mask excluded services by removing symlinks and creating mask files."""

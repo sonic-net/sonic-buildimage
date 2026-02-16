@@ -1,0 +1,4 @@
+build-platform_base/sonic_platform_aspeed_common-1.0-py3-none-any.whl usr/share/sonic/device/arm64-aspeed_ast2700_nexthop-r0/
+build-nexthop/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-aspeed_ast2700_nexthop-r0/
+nexthop/obmc-console/*.conf usr/share/sonic/device/arm64-aspeed_ast2700_nexthop-r0/obmc-console/
+nexthop/scripts/switch_cpu_utils.sh usr/share/sonic/device/arm64-aspeed_ast2700_nexthop-r0/scripts/

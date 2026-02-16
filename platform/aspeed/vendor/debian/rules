@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+MOD_SRC_DIR := $(shell pwd)
+MODULE_DIRS := evb nexthop
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	rm -rf build-*
+
+override_dh_auto_configure:
+	# No configure needed
+
+override_dh_auto_build:
+	# First build platform_base wheel (common dependency)
+	python3 -m build --no-isolation --wheel --outdir $(MOD_SRC_DIR)/build-platform_base $(MOD_SRC_DIR)/platform_base
+	# Install platform_base wheel so vendor packages can import from it during their build
+	pip3 install --no-deps $(MOD_SRC_DIR)/build-platform_base/sonic_platform_aspeed_common-*.whl
+	# Build vendor-specific wheels
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			python3 -m build --no-isolation --wheel --outdir $(MOD_SRC_DIR)/build-$${mod} $(MOD_SRC_DIR)/$${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_test:
+	# No tests to run
+
+override_dh_auto_install:
+	# Installation handled by .install files
