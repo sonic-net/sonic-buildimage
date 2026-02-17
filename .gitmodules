@@ -7,7 +7,7 @@
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
         url = https://github.com/yue-fred-gao/sonic-sairedis
-        branch = acl_multi_table
+        branch = route_update
 [submodule "sonic-swss"]
 	path = src/sonic-swss
 	url = https://github.com/sonic-net/sonic-swss
