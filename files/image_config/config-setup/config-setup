@@ -171,26 +171,36 @@ copy_config_files_and_directories()
 }
 
 # Check if SONiC switch has booted after a warm reboot request.
-# Uses both /proc/cmdline (set by reboot scripts) and STATE_DB
-# to reliably detect warm boot even early in the boot sequence.
+# Prefers STATE_DB when available (reflects true warm boot state and
+# gets cleared after warm boot completes). Falls back to /proc/cmdline
+# only during the "boot" command when database services may not be up yet.
 check_system_warm_boot()
 {
     WARM_BOOT="false"
 
-    # Check /proc/cmdline first — this is the authoritative source set by
-    # warm-reboot scripts and is available before database services start.
-    case "$(cat /proc/cmdline)" in
-    *SONIC_BOOT_TYPE=warm*)
-        WARM_BOOT="true"
-        return
-        ;;
-    esac
+    # Try STATE_DB first — authoritative source that reflects current
+    # warm boot state and is cleared after warm boot completes.
+    SYSTEM_WARM_START=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable 2>/dev/null)
+    DB_RC=$?
 
-    # Fall back to STATE_DB check for compatibility
-    SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
-    # SYSTEM_WARM_START could be empty, always make WARM_BOOT meaningful.
-    if [[ x"$SYSTEM_WARM_START" == x"true" ]]; then
-        WARM_BOOT="true"
+    if [ $DB_RC -eq 0 ]; then
+        # DB is reachable — use its answer exclusively
+        if [[ x"$SYSTEM_WARM_START" == x"true" ]]; then
+            WARM_BOOT="true"
+        fi
+        return
+    fi
+
+    # DB not available — fall back to /proc/cmdline only during boot,
+    # when database services may not have started yet.
+    # Outside of boot context, /proc/cmdline may contain a stale
+    # SONIC_BOOT_TYPE=warm from a previous warm reboot.
+    if [ "$CMD" = "boot" ]; then
+        case "$(cat /proc/cmdline)" in
+        *SONIC_BOOT_TYPE=warm*)
+            WARM_BOOT="true"
+            ;;
+        esac
     fi
 }
 
