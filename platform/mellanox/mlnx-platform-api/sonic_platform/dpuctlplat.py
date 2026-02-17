@@ -271,7 +271,7 @@ class DpuCtlPlat():
             for pci_dev_path in self.get_pci_dev_path():
                 remove_path = os.path.join(pci_dev_path, "remove")
                 if os.path.exists(remove_path):
-                    with self.time_check_context("pci remove {pci_dev_path}"):
+                    with self.time_check_context(f"pci remove {pci_dev_path}"):
                         self.write_file(remove_path, OperationType.SET.value)
             return True
         except Exception as e:
