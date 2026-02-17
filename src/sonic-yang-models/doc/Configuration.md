@@ -2792,14 +2792,14 @@ monitoring sessions for the vnet routes and is optional.
 ### VNET_ROUTE
 
 VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
-- NEXTHOP: The nexthop IP (mandatory). It is used to identify the nexthop of the vnet route.
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
 - IFNAME: The interface name (mandatory), such as "Ethernet1". It identifies the outgoing interface for the vnet route.
 
 ```
 {
   "VNET_ROUTE": {
     "Vnet_2000|100.100.3.0/24": {
-        "nexthop": "100.100.3.1",
+        "nexthop": "100.100.3.1,100.100.3.2",
         "ifname": "Ethernet1"
     },
     "Vnet_3000|100.100.4.0/24": {

@@ -125,7 +125,7 @@ module sonic-vnet {
 
                 leaf nexthop {
                     description "Nexthop IP address";
-                    type inet:ipv4-address;
+                    type stypes:ipv4-address-list;
                     mandatory true;
                 }
 
