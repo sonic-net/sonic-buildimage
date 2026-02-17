@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-MLNX_SDK_VERSION = 4.8.3404
+MLNX_SDK_VERSION = 4.8.3405
 MLNX_SDK_ISSU_VERSION = 101
 
 MLNX_SDK_DRIVERS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers
