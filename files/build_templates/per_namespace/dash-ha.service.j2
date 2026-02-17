@@ -1,3 +1,4 @@
+[Unit]
 Description=DASH HA container
 Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service swss.service
 After=database{% if multi_instance == 'true' %}@%i{% endif %}.service swss.service interfaces-config.service
