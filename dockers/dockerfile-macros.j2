@@ -1,8 +1,8 @@
 {% macro install_debian_packages(packages) -%}
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f --no-remove; } || return 1; }; \
-    {%- for deb in packages %}
-        dpkg_apt /debs/{{ deb }} {%- if not loop.last %} && \ {%- endif %}
-    {%- endfor %}
+RUN dpkg -i \
+{%- for deb in packages %}
+    /debs/{{ deb }} {%- if not loop.last %} \ {%- endif %}
+{%- endfor %} || apt-get -y install -f --no-remove
 {%- endmacro %}
 
 {% macro install_python2_wheels(packages) -%}
