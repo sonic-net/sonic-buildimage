@@ -1,0 +1,38 @@
+module sonic-fast-linkup {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-fast-linkup";
+  prefix sfl;
+
+  organization "SONiC";
+  contact "SONiC";
+  description
+    "YANG model for SWITCH_FAST_LINKUP global configuration.";
+
+  revision 2025-10-20 {
+    description "Initial revision.";
+  }
+
+  container sonic-fast-linkup {
+    container SWITCH_FAST_LINKUP {
+      description "SWITCH_FAST_LINKUP part of config_db.json";
+
+      container GLOBAL {
+        leaf polling_time {
+          type uint16;
+          description "Polling time in seconds";
+        }
+        leaf guard_time {
+          type uint8;
+          description "Guard time in seconds";
+        }
+        leaf ber_threshold {
+          type uint8;
+          description "BER threshold exponent (e.g., 12 for 1e-12)";
+        }
+      }
+      /* end of container GLOBAL */
+    }
+    /* end of container SWITCH_FAST_LINKUP */
+  }
+}
+
