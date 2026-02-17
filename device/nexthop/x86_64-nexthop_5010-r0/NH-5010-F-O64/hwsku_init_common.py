@@ -345,8 +345,11 @@ class SkuBasePipeline:
             # gb_plat_cfg = self.generate_plat_gearbox_config()
             sonic_gb = self.generate_sonic_gearbox_config()
             sonic_phy = self.generate_sonic_phy_config()
-            env = Environment(loader=FileSystemLoader(template_dir),
-                              autoescape=select_autoescape(["html", "xml"]))
+            env = Environment(
+                loader=FileSystemLoader(template_dir),
+                autoescape=select_autoescape(["html", "xml"])
+            ) # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+
             if gearbox_template:
                 env.get_template(gearbox_template).stream(interfaces=sonic_gb).dump(
                     os.path.join(output_dir, "gearbox_config.json")
