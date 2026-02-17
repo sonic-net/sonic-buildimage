@@ -1,7 +1,7 @@
 #include <thread>
 #include <memory>
+#include <swss/dbconnector.h>
 #include "eventd.h"
-#include "dbconnector.h"
 #include "zmq.h"
 
 /*
@@ -57,8 +57,22 @@ static bool s_unit_testing = false;
 int
 eventd_proxy::init()
 {
-    int ret = -1, rc = 0;
-    SWSS_LOG_INFO("Start xpub/xsub proxy");
+	SWSS_LOG_INFO("Start xpub/xsub proxy");
+
+	m_thr = thread(&eventd_proxy::run, this);
+
+    while (!m_init_done) {
+        this_thread::sleep_for(chrono::milliseconds(10));
+    }
+
+	return m_init_result;
+}
+
+void
+eventd_proxy::run()
+{
+	int rc = 0;
+    SWSS_LOG_INFO("Running xpub/xsub proxy");
 
     m_frontend = zmq_socket(m_ctx, ZMQ_XSUB);
     RET_ON_ERR(m_frontend != NULL, "failing to get ZMQ_XSUB socket");
@@ -78,19 +92,32 @@ eventd_proxy::init()
     rc = zmq_bind(m_capture, get_config(string(CAPTURE_END_KEY)).c_str());
     RET_ON_ERR(rc == 0, "Failing to bind capture PUB to %s", get_config(string(CAPTURE_END_KEY)).c_str());
 
-    m_thr = thread(&eventd_proxy::run, this);
-    ret = 0;
-out:
-    return ret;
-}
-
-void
-eventd_proxy::run()
-{
-    SWSS_LOG_INFO("Running xpub/xsub proxy");
+    /* Signal successful initialization to init() */
+    m_init_result = 0;
+    m_init_done = true;
 
     /* runs forever until zmq context is terminated */
     zmq_proxy(m_frontend, m_backend, m_capture);
+
+out:
+    /* Signal failure if we got here before successful init */
+    if (!m_init_done) {
+        m_init_result = 1;
+        m_init_done = true;
+    }
+
+    if (m_frontend != NULL) {
+        zmq_close(m_frontend);
+        m_frontend = NULL;
+    }
+    if (m_backend != NULL) {
+        zmq_close(m_backend);
+        m_backend = NULL;
+    }
+    if (m_capture != NULL) {
+        zmq_close(m_capture);
+        m_capture = NULL;
+    }
 
     SWSS_LOG_INFO("Stopped xpub/xsub proxy");
 }
@@ -111,25 +138,27 @@ stats_collector::stats_collector() :
 void
 stats_collector::set_heartbeat_interval(int val)
 {
+    int interval_count_to_set = 0;
     if (val > 0) {
         /* Round to highest possible multiples of MIN */
-        m_heartbeats_interval_cnt =
+        interval_count_to_set =
             (((val * 1000) + STATS_HEARTBEAT_MIN - 1) / STATS_HEARTBEAT_MIN);
     }
     else if (val == 0) {
         /* Least possible */
-        m_heartbeats_interval_cnt = 1;
+        interval_count_to_set = 1;
     }
     else if (val == -1) {
         /* Turn off heartbeat */
-        m_heartbeats_interval_cnt = 0;
+        interval_count_to_set = 0;
         SWSS_LOG_INFO("Heartbeat turned OFF");
     }
     /* Any other value is ignored as invalid */
+    m_heartbeats_interval_cnt = interval_count_to_set;
 
     SWSS_LOG_INFO("Set heartbeat: val=%d secs cnt=%d min=%d ms final=%d secs",
-            val, m_heartbeats_interval_cnt, STATS_HEARTBEAT_MIN,
-            (m_heartbeats_interval_cnt * STATS_HEARTBEAT_MIN / 1000));
+            val, interval_count_to_set, STATS_HEARTBEAT_MIN,
+            (interval_count_to_set * STATS_HEARTBEAT_MIN / 1000));
 }
 
 
@@ -255,7 +284,7 @@ stats_collector::run_collector()
             if (rc < 0) {
                 SWSS_LOG_ERROR(
                         "event_receive failed with rc=%d; stats:published(%lu)", rc,
-                        m_lst_counters[INDEX_COUNTERS_EVENTS_PUBLISHED]);
+                        m_lst_counters[INDEX_COUNTERS_EVENTS_PUBLISHED].load());
             }
             if (!m_pause_heartbeat && (m_heartbeats_interval_cnt > 0) &&
                     ++hb_cntr >= m_heartbeats_interval_cnt) {
@@ -525,7 +554,7 @@ capture_service::set_control(capture_control_t ctrl, event_serialized_lst_t *lst
     int duration = CAPTURE_SERVICE_POLLING_DURATION;
 
     /* Can go in single step only. */
-    RET_ON_ERR((ctrl - m_ctrl) == 1, "m_ctrl(%d)+1 < ctrl(%d)", m_ctrl, ctrl);
+    RET_ON_ERR((ctrl - m_ctrl) == 1, "m_ctrl(%d)+1 < ctrl(%d)", m_ctrl.load(), ctrl);
 
     switch(ctrl) {
         case INIT_CAPTURE:
@@ -794,11 +823,11 @@ out:
     service.close_service();
     stats_instance.stop();
 
-    if (proxy != NULL) {
-        delete proxy;
-    }
     if (zctx != NULL) {
         zmq_ctx_term(zctx);
+    }
+    if (proxy != NULL) {
+        delete proxy;
     }
     SWSS_LOG_INFO("Eventd service exiting\n");
 }
