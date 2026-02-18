@@ -13,6 +13,12 @@ fi
 INSTALL=$(check_apt_install "$@")
 COMMAND_INFO="Locked by command: $REAL_COMMAND $@"
 if [ "$INSTALL" == y ]; then
+    # Pin package versions when deb version control is enabled
+    versioned_args_str=$(pin_apt_versions "$@")
+    if [ -n "$versioned_args_str" ]; then
+        read -r -a versioned_args <<< "$versioned_args_str"
+        set -- "${versioned_args[@]}"
+    fi
     check_apt_version "$@"
     lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
     $REAL_COMMAND "$@"
@@ -20,8 +26,9 @@ if [ "$INSTALL" == y ]; then
     [ "$lock_result" == y ] && release_apt_installation_lock
     exit $command_result
 else
-    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* ]]; then
-      # When running the purge command, collect the debian versions
+    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* || " $@ " == *" autoremove "* ]]; then
+      # When running purge/remove/autoremove, collect the debian versions
+      # so intermediate packages are captured for reproducible builds
       dpkg-query -W -f '${Package}==${Version}\n' >> $POST_VERSION_PATH/purge-versions-deb
       chmod a+wr $POST_VERSION_PATH/purge-versions-deb
     fi
