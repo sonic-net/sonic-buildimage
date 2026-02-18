@@ -1,0 +1,12 @@
+[Unit]
+Description=ext_phy_pre_set
+Before=sdkmsg.service
+After=platform_driver.service
+# DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ext_phy_pre_set.sh start
+
+[Install]
+WantedBy=multi-user.target

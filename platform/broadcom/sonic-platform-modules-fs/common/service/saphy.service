@@ -1,0 +1,14 @@
+[Unit]
+Description=saphy service
+After=platform_driver.service
+
+[Service]
+ExecStart=/usr/local/bin/saphy_script.sh start
+ExecStop=/usr/local/bin/saphy_script.sh stop
+KillMode=process
+Restart=on-failure
+RestartSec=60s
+SuccessExitStatus=TERM
+
+[Install]
+WantedBy=multi-user.target

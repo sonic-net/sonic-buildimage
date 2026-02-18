@@ -1,0 +1,11 @@
+[Unit]
+Description= check netcard mac status and eth0 status.
+After=networking.service privatenetwork.service
+DefaultDependencies=no
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/netstatus.py
+
+[Install]
+WantedBy=multi-user.target

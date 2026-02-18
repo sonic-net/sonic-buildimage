@@ -1,0 +1,18 @@
+MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
+MODULES_DIR = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/modules)
+FIRMWARE_UPGRADE_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/app/common/firmware_upgrade/firmware_driver/include)
+BSP_PUBLIC_PATH = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/public/include)
+
+EXTRA_CFLAGS+= -I$(BSP_PUBLIC_PATH)
+EXTRA_CFLAGS+= -I$(MODULES_DIR)/common
+EXTRA_CFLAGS+= -I$(FIRMWARE_UPGRADE_PATH)
+
+obj-m += wb_pcie_dev_device.o
+obj-m += wb_io_dev_device.o
+obj-m += wb_fpga_i2c_bus_device.o
+obj-m += wb_i2c_mux_pca954x_device.o
+obj-m += wb_fpga_pca954x_device.o
+obj-m += wb_i2c_dev_device.o
+obj-m += wb_firmware_upgrade_device.o
+obj-m += wb_wdt_device.o
+obj-m += wb_indirect_dev_device.o
