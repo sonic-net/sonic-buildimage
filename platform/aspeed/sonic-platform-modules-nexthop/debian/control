@@ -1,0 +1,13 @@
+Source: sonic-platform-aspeed-nexthop
+Section: misc
+Priority: optional
+Maintainer: Nexthop <opensource@nexthop.ai>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Standards-Version: 3.9.6
+
+Package: sonic-platform-aspeed-nexthop-b27
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: SONiC platform support for NextHop B27 Aspeed AST2700 BMC
+ This package provides platform-specific implementation for NextHop's
+ B27 card based on Aspeed AST2700 BMC.

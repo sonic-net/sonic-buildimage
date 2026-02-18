@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "AST2700-BMC",
+        "name": "AST2700-EVB-BMC",
         "thermal_manager": false,
         "status_led": {
             "controllable": true,

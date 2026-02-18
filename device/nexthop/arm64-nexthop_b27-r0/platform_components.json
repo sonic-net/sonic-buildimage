@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "AST2700-BMC": {
+        "NH-B27-BMC": {
             "component": {
                 "BMC": {},
                 "BIOS": {}

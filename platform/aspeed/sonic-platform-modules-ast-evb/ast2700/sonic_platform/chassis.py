@@ -8,10 +8,10 @@ import os
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
-    from sonic_platform_aspeed_common.watchdog import Watchdog
-    from sonic_platform_aspeed_common.thermal import Thermal
-    from sonic_platform_aspeed_common.fan import Fan
-    from sonic_platform_aspeed_common.fan_drawer import FanDrawer
+    from sonic_platform.watchdog import Watchdog
+    from sonic_platform.thermal import Thermal
+    from sonic_platform.fan import Fan
+    from sonic_platform.fan_drawer import FanDrawer
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -32,23 +32,24 @@ WDIOF_POWEROVER = 0x0040     # Power over voltage
 
 class Chassis(ChassisBase):
     """
-    Chassis class for Aspeed AST2700 BMC platform
+    Chassis class for Aspeed AST2700 EVB BMC platform
 
     Provides chassis-level functionality including reboot cause detection,
     thermal sensors, and fan management.
     """
 
-    # Number of thermal sensors (16 ADC channels)
-    NUM_THERMAL_SENSORS = 16
+    # EVB has 9 PWM-controlled fans (fan0-fan8)
+    # Even though there are 16 TACH inputs, only 9 have PWM control
+    NUM_FANS = 9
 
-    # Number of fans (16 TACH inputs, but only 9 have PWM control)
-    NUM_FANS = 16
+    # EVB has 16 ADC channels enabled (ADC0 + ADC1)
+    NUM_THERMAL_SENSORS = 16
 
     def __init__(self):
         """
         Initialize the Chassis object
         """
-        ChassisBase.__init__(self)
+        super().__init__()
 
         # Initialize watchdog
         self._watchdog = Watchdog()

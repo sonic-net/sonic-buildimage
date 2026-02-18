@@ -34,10 +34,10 @@ log "Detected compatible string: $COMPATIBLE"
 PLATFORM=""
 MACHINE=""
 
-if echo "$COMPATIBLE" | grep -q "nexthop,nh-ast2700"; then
-    PLATFORM="arm64-aspeed_ast2700_nexthop-r0"
+if echo "$COMPATIBLE" | grep -q "nexthop,nexthop-b27-r0"; then
+    PLATFORM="arm64-nexthop_b27-r0"
     MACHINE="aspeed_ast2700"
-    log "Detected NextHop AST2700 platform"
+    log "Detected NextHop B27 BMC platform"
 elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
     PLATFORM="arm64-aspeed_ast2700_evb-r0"
     MACHINE="aspeed_ast2700"
@@ -45,7 +45,7 @@ elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
 else
     log "ERROR: Unknown hardware. Compatible string: $COMPATIBLE"
     log "Supported platforms:"
-    log "  - nexthop,nh-ast2700-r0 -> arm64-aspeed_ast2700_nexthop-r0"
+    log "  - nexthop,nexthop-b27-r0 -> arm64-nexthop_b27-r0"
     log "  - aspeed,ast2700-evb -> arm64-aspeed_ast2700_evb-r0"
     exit 1
 fi
