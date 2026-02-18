@@ -39,12 +39,17 @@
         "psu_fan_dir": {
             "i2c": {
                 "valmap": {
-                    "TEC5200-54-074NA": "exhaust"
+                    "TEC5200-54-074NA": "exhaust",
+                    "TDPS-5200CB A": "exhaust"
                 }
             }
         },
-        "PSU_FAN_MAX_SPEED": "29975"
-    },    
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "TEC5200-54-074NA": "29975",
+            "TDPS-5200CB A": "36000",
+            "default": "36000"
+        }
+    },
     "FAN": {
         "present": {
             "i2c": {

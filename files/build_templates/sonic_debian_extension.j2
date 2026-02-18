@@ -119,6 +119,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get updat
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
 
+# Install tpm-tools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
+
+sudo cp src/sonic-platform-common/sonic_platform_base/bmc_fw_update.py $FILESYSTEM_ROOT/usr/bin/bmc_fw_update.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bmc_fw_update.py
+
 # Apply environtment configuration files
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/
@@ -649,6 +655,13 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable dash-engine
 
 {%- endif %}
 
+{%- if include_system_otel == "y" %}
+
+# Copy OTEL configuration files
+sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
+
+{%- endif %}
+
 # Copy platform topology configuration scripts
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
@@ -662,6 +675,12 @@ j2 files/build_templates/config-setup.service.j2 | sudo tee $FILESYSTEM_ROOT_USR
 sudo cp $IMAGE_CONFIGS/config-setup/config-setup $FILESYSTEM_ROOT/usr/bin/config-setup
 sudo mkdir -p $FILESYSTEM_ROOT/etc/config-setup
 sudo cp $IMAGE_CONFIGS/config-setup/config-setup.conf $FILESYSTEM_ROOT/etc/config-setup/config-setup.conf
+sudo mkdir -p $FILESYSTEM_ROOT/etc/config-setup/config-migration-pre-hooks.d
+sudo cp $IMAGE_CONFIGS/config-setup/01-pre-security-cipher $FILESYSTEM_ROOT/etc/config-setup/config-migration-pre-hooks.d/01-pre-security-cipher
+sudo chmod +x $FILESYSTEM_ROOT/etc/config-setup/config-migration-pre-hooks.d/01-pre-security-cipher
+sudo mkdir -p $FILESYSTEM_ROOT/etc/config-setup/config-migration-post-hooks.d
+sudo cp $IMAGE_CONFIGS/config-setup/01-post-security-cipher $FILESYSTEM_ROOT/etc/config-setup/config-migration-post-hooks.d/01-post-security-cipher
+sudo chmod +x $FILESYSTEM_ROOT/etc/config-setup/config-migration-post-hooks.d/01-post-security-cipher
 echo "config-setup.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable config-setup.service
 
@@ -904,13 +923,34 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT /usr/local/bin/ge
 {% if include_kubernetes == "y" %}
 ## Pull in kubernetes docker images
 echo "pulling universal k8s images ..."
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${K8s_GCR_IO_PAUSE_VERSION}
+{% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${K8s_GCR_IO_PAUSE_VERSION}
+{% endif %}
 echo "docker images pull complete"
 {% endif %}
 
 {% if include_kubernetes_master == "y" %}
 # Pull in kubernetes master docker images
 echo "pulling kubernetes master images ..."
+{% if DEFAULT_CONTAINER_REGISTRY is defined and DEFAULT_CONTAINER_REGISTRY %}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}pause:${MASTER_PAUSE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-controller-manager:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-scheduler:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kube-proxy:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}coredns/coredns:${MASTER_COREDNS_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}etcd:${MASTER_ETCD_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/metrics-scraper:${MASTER_UI_METRIC_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/dashboard:${MASTER_UI_DASH_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:latest
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
+{% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${MASTER_PAUSE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/kube-controller-manager:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
@@ -926,6 +966,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIV
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
+{% endif %}
 echo "kubernetes master docker images pull complete"
 # Install python packages for mdm metrics collection service usage
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
@@ -1043,6 +1084,7 @@ sudo LANG=C cp $SCRIPTS_DIR/database.sh $FILESYSTEM_ROOT/usr/local/bin/database.
 sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
+sudo LANG=C cp $SCRIPTS_DIR/otel.sh $FILESYSTEM_ROOT/usr/local/bin/otel.sh
 sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
@@ -1117,10 +1159,19 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
-j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
 sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
+
+sudo cp platform/mellanox/files/sx-kernel.sh $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+
+sudo cp platform/mellanox/files/sx-kernel.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/sx-kernel.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sx-kernel.service
+
+sudo cp platform/mellanox/files/mlnx-fw-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/mlnx-fw-manager.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable mlnx-fw-manager.service
 
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
@@ -1160,8 +1211,6 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platfo
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
-SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
 sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
@@ -1199,8 +1248,9 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+
 {% if installer_python_debs.strip() -%}
-# Install FIPS python package will break apt-get purge command, so install after all purge command finish 
+# Install FIPS python package will break apt-get purge command, so install after all purge command finish
 if [ "$INCLUDE_FIPS" == y ]; then
     install_deb_package {{installer_python_debs}}
 fi
@@ -1223,4 +1273,12 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
 
+
+## Copy over  set-vrf-strict-mode.service
+{% if ENABLE_VRF_STRICT == "y" %}
+sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYSTEM_ROOT/etc/systemd/system/set-vrf-strict-mode.service
+
+# Install set-vrf-strict-mode service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
+{% endif %}
 

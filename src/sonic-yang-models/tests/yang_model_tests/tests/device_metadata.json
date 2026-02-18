@@ -96,6 +96,9 @@
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "desc": "DEVICE_METADATA value as SonicHost for Type field"
     },
+    "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
+        "desc": "DEVICE_METADATA value as FilterLeaf for Type field"
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
     },
@@ -250,6 +253,9 @@
     },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "desc": "Verifying valid zebra_nexthop configuration."
     },
     "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
         "desc": "Verifying valid t2_group_asns."
