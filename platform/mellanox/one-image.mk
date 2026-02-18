@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2017-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +22,7 @@ $(SONIC_ONE_IMAGE)_MACHINE = mellanox
 $(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SX_KERNEL) $(KERNEL_MFT) $(MFT_OEM) $(MFT) $(MFT_FWTRACE_CFG) $(MLNX_HW_MANAGEMENT) $(MLNX_RSHIM)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
+$(SONIC_ONE_IMAGE)_PYTHON_WHEELS += $(MELLANOX_FW_MANAGER)
 ifeq ($(INSTALL_DEBUG_TOOLS),y)
 $(SONIC_ONE_IMAGE)_DOCKERS += $(SONIC_INSTALL_DOCKER_DBG_IMAGES)
 $(SONIC_ONE_IMAGE)_DOCKERS += $(filter-out $(patsubst %-$(DBG_IMAGE_MARK).gz,%.gz, $(SONIC_INSTALL_DOCKER_DBG_IMAGES)), $(SONIC_INSTALL_DOCKER_IMAGES))

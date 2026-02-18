@@ -242,6 +242,7 @@ class DpuCtlPlat():
             if count > 1:
                 time.sleep(1)
                 self._power_off_force()
+                time.sleep(1)
                 return self._power_on_force(count=count - 1)
             self.log_error(f"Failed Force power on! Exiting")
             return False
@@ -258,6 +259,7 @@ class DpuCtlPlat():
         if not dpu_rdy:
             self.log_error(f"Failed power on! Trying Force Power on")
             self._power_off_force()
+            time.sleep(1)
             return self._power_on_force()
         self.log_info(f"Power on Successful!")
         return True
@@ -329,12 +331,14 @@ class DpuCtlPlat():
         return_value = True
         if not dpu_rdy:
             self._power_off_force()
+            time.sleep(1)
             return_value = self._power_on_force()
         return return_value
 
     def _reboot_force(self, no_wait):
         """Per DPU Force Reboot Private function API"""
         self._power_off_force()
+        time.sleep(1)
         return_value = self._power_on_force(no_wait=no_wait)
         return return_value
 

@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ RECIPE_DIR = recipes
 
 override TARGET_BOOTLOADER=grub
 
+include $(PLATFORM_PATH)/fw-manager/fw-manager.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/bluefield-soc.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/mft.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/fw.mk
