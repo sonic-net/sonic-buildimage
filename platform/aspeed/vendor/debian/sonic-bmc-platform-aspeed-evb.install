@@ -1,3 +1,0 @@
-build-platform_base/sonic_platform_aspeed_common-1.0-py3-none-any.whl usr/share/sonic/device/arm64-aspeed_ast2700_evb-r0/
-build-evb/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-aspeed_ast2700_evb-r0/
-evb/obmc-console/*.conf usr/share/sonic/device/arm64-aspeed_ast2700_evb-r0/obmc-console/

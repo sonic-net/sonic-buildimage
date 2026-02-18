@@ -5,7 +5,7 @@
  *
  * This FIT image contains multiple DTBs for different hardware variants:
  * - ast2700-evb: Aspeed AST2700 EVB reference platform
- * - nh-ast2700-r0: NextHop AST2700 platform
+ * - nexthop-b27-r0: NextHop AST2700 platform
  *
  * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
  * which is set based on hardware detection at boot time.
@@ -63,9 +63,9 @@
 				algo = "sha256";
 			};
 		};
-		fdt-nh-ast2700-r0 {
+		fdt-nexthop-b27-r0 {
 			description = "Flattened Device Tree blob for NextHop AST2700";
-			data = /incbin/("__DTB_PATH_ASPEED__/nh-ast2700-r0.dtb");
+			data = /incbin/("__DTB_PATH_ASPEED__/nexthop-b27-r0.dtb");
 			type = "flat_dt";
 			arch = "arm64";
 			compression = "none";
@@ -99,10 +99,10 @@
 				algo = "sha256";
 			};
 		};
-		conf-nh-ast2700-r0 {
+		conf-nexthop-b27-r0 {
 			description = "SONiC for NextHop AST2700";
 			kernel = "kernel-1";
-			fdt = "fdt-nh-ast2700-r0";
+			fdt = "fdt-nexthop-b27-r0";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";

@@ -1,22 +1,22 @@
-"""
-SONiC Platform API - Platform class for Aspeed BMC
-
-This module provides the Platform class for Aspeed AST2700 BMC platform.
-"""
+#!/usr/bin/env python3
+#
+# platform.py
+#
+# Platform implementation for Aspeed AST2700 EVB
+#
 
 try:
-    from sonic_platform_aspeed_common.chassis import Chassis
+    from sonic_platform.chassis import Chassis
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
-
 class Platform:
     """
-    Platform class for Aspeed BMC
+    Platform class for Aspeed AST2700 EVB
     
     Provides access to chassis-level functionality.
     """
-    
+
     def __init__(self):
         """
         Initialize the Platform object

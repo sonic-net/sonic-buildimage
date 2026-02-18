@@ -3,7 +3,7 @@ Description=SONiC Machine Configuration Initialization
 Documentation=man:machine.conf(5)
 DefaultDependencies=no
 After=local-fs.target
-Before=sonic.target sonic-uboot-env-init.service
+Before=sonic.target sonic-uboot-env-init.service rc-local.service
 ConditionPathExists=!/host/machine.conf
 
 [Service]
