@@ -3069,7 +3069,7 @@
             "global": {
                 "vnet_name": "Vnet55",
                 "cp_data_channel_port": "11362",
-                "dp_channel_port": "11368",
+                "dp_channel_dst_port": "11368",
                 "dp_channel_src_port_min": "49152",
                 "dp_channel_src_port_max": "53247",
                 "dp_channel_probe_interval_ms": "100",
@@ -3194,6 +3194,13 @@
                 "ipv6" : "true",
                 "product-name" : "product name",
                 "serial-no" : "1234-5678-91A"
+            }
+        },
+        "SWITCH_FAST_LINKUP": {
+            "GLOBAL": {
+                "polling_time": "10",
+                "guard_time": "2",
+                "ber_threshold": "12"
             }
         }
     },
