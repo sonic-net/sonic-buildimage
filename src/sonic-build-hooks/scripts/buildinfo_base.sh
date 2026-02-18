@@ -449,6 +449,61 @@ check_apt_version()
     fi
 }
 
+# Pin apt-get install arguments to versions from versions-deb when version control is enabled.
+# Outputs the modified argument list. Empty output means no changes needed.
+# Note: Options after 'install' (e.g., '-t bullseye') have their flag skipped but the
+# value (e.g., 'bullseye') is treated as a package name — it won't match in versions-deb
+# so it passes through unchanged. This is safe but not ideal.
+pin_apt_versions()
+{
+    if [ "$ENABLE_VERSION_CONTROL_DEB" != "y" ]; then
+        return
+    fi
+
+    local VERSION_FILE="${VERSION_PATH}/versions-deb"
+    if [ ! -f "$VERSION_FILE" ]; then
+        return
+    fi
+
+    local modified=false
+    local args=()
+    local in_install=false
+    for para in "$@"; do
+        if [[ "$para" == -* ]]; then
+            args+=("$para")
+            continue
+        fi
+
+        if [ "$in_install" == false ]; then
+            if [ "$para" == "install" ]; then
+                in_install=true
+            fi
+            args+=("$para")
+            continue
+        fi
+
+        # Already has version pinned
+        if [[ "$para" == *=* ]]; then
+            args+=("$para")
+            continue
+        fi
+
+        # Look up version in versions-deb file (exact match on package name).
+        # Use awk instead of grep to avoid regex issues with +/. in package names.
+        local version=$(awk -F'==' -v pkg="$para" '$1==pkg {print $2; exit}' "$VERSION_FILE")
+        if [ -n "$version" ]; then
+            args+=("${para}=${version}")
+            modified=true
+        else
+            args+=("$para")
+        fi
+    done
+
+    if [ "$modified" == true ]; then
+        echo "${args[@]}"
+    fi
+}
+
 acquire_apt_installation_lock()
 {
     local result=n
