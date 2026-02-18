@@ -404,4 +404,11 @@ if [ -f /var/log/fsck.log.gz ]; then
     rm -f /var/log/fsck.log.gz
 fi
 
+# Fallback recovery from minigraph.xml if config_db.json is missing
+if [ ! -s /etc/sonic/config_db.json ] && [ -f /etc/sonic/minigraph.xml ]; then
+    logger "rc.local: config_db.json missing. Attempting recovery using minigraph.xml"
+    config load_minigraph -y
+    config save -y
+fi
+
 exit 0
