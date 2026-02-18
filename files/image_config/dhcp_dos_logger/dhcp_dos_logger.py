@@ -4,13 +4,14 @@ import os
 import subprocess
 import time
 from sonic_py_common.logger import Logger
-from swsscommon.swsscommon import ConfigDBConnector
+from sonic_py_common import daemon_base
+from swsscommon import swsscommon
 
 SYSLOG_IDENTIFIER = os.path.basename(__file__)
 logger = Logger(SYSLOG_IDENTIFIER)
 logger.log_info("Starting DHCP DoS logger...")
 
-config_db = ConfigDBConnector()
+config_db = swsscommon.ConfigDBConnector()
 config_db.connect()
 
 ports = config_db.get_table('PORT').keys()
@@ -50,5 +51,38 @@ def handler():
                 logger.log_error(f"Error on port {port}: {str(e)}")
         time.sleep(10)
 
+def wait_for_port_init_done():
+    """
+    Wait for PortInitDone event from APP_DB.
+
+    Returns:
+        None (blocks until PortInitDone is received)
+    """
+    appl_db = daemon_base.db_connect("APPL_DB")
+
+    sel = swsscommon.Select()
+    sst = swsscommon.SubscriberStateTable(appl_db, swsscommon.APP_PORT_TABLE_NAME)
+    sel.addSelectable(sst)
+
+    logger.log_info("Waiting for PortInitDone...")
+    while True:
+        (state, _) = sel.select(1000)
+
+        if state == swsscommon.Select.TIMEOUT:
+            continue
+        if state != swsscommon.Select.OBJECT:
+            logger.log_warning("sel.select() did not return swsscommon.Select.OBJECT")
+            continue
+
+        while True:
+            (key, op, fvp) = sst.pop()
+            if not key:
+                break
+
+            if key == "PortInitDone":
+                logger.log_info("PortInitDone received")
+                return
+
 if __name__ == "__main__":
+    wait_for_port_init_done()
     handler()
