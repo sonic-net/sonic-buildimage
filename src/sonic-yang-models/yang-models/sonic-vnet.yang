@@ -131,7 +131,7 @@ module sonic-vnet {
 
                 leaf ifname {
                     description "Interface names";
-                    type stypes:ifname_list;
+                    type stypes:ifname-list;
                     mandatory true;
                 }
             }
