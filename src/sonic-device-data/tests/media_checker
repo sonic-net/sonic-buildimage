@@ -12,7 +12,7 @@ si_param_list = ["preemphasis", "idriver", "ipredriver", \
                  "post1", "post2", "post3", "attn", \
                  "ob_m2lp", "ob_alev_out", "obplev", "obnlev", \
                  "regn_bfm1p", "regn_bfm1n", "unreliable_los", \
-                 "rxpolarity", "interface_type"]
+                 "rxpolarity", "interface_type", "media_type"]
 lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
