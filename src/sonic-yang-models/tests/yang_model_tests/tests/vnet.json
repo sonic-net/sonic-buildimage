@@ -59,11 +59,15 @@
         "desc": "VNET route configuration referencing a non-existent VNET name, violating the must condition.",
         "eStrKey" : "LeafRef"
     },
-    "VNET_ROUTE_TEST_MULTI_NEXTHOP": {
-        "desc": "VNET route configuration with multiple comma-separated nexthop IPs in VNET_ROUTE_LIST table."
+    "VNET_ROUTE_TEST_MULTI_NEXTHOP_INTERFACE": {
+        "desc": "VNET route configuration with multiple comma-separated nexthop IPs and interfaces in VNET_ROUTE_LIST table."
     },
     "VNET_ROUTE_TEST_INVALID_MULTI_NEXTHOP": {
         "desc": "VNET route configuration with invalid IP in comma-separated nexthop list.",
+        "eStrKey": "Pattern"
+    },
+    "VNET_ROUTE_TEST_INVALID_MULTI_INTERFACE": {
+        "desc": "VNET route configuration with invalid interface name in comma-separated interface list.",
         "eStrKey": "Pattern"
     },
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
