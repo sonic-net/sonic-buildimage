@@ -37,7 +37,7 @@ def enable_rates():
 def enable_counters():
     db = swsscommon.ConfigDBConnector()
     db.connect()
-    dpu_counters = ["ENI","DASH_METER", "HA_SET"]
+    dpu_counters = ["ENI","DASH_METER"]
 
     platform_info = device_info.get_platform_info(db)
     if platform_info.get('switch_type') == 'dpu':
