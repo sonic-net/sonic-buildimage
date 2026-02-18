@@ -200,6 +200,15 @@ DEVICE_DATA = {
             }
         }
     },
+    'x86_64-nvidia_sn6600_ld-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
+    },
     'x86_64-nvidia_sn4280_simx-r0': {
         'thermal': {
             "capability": {
