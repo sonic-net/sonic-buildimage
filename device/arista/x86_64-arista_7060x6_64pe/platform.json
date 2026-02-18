@@ -110,6 +110,14 @@
             {
                 "name": "Management Card Inlet",
                 "controllable": false
+            },
+            {
+                "name": "TH5 Diode 1",
+                "controllable": false
+            },
+            {
+                "name": "TH5 Diode 2",
+                "controllable": false
             }
         ],
         "sfps": [
