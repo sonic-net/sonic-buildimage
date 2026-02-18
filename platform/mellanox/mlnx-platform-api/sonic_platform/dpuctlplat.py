@@ -112,7 +112,7 @@ class DpuCtlPlat():
         def print_with_time(msg):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] {msg}")
-            self.logger.log_notice(f"{self.dpu_name}: {msg}")
+            logger.log_notice(f"{self.dpu_name}: {msg}")
 
         if use_print:
             self.logger_info = print_with_time

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -226,7 +226,20 @@ run_dpuctl_reset() {
     if [[ "$use_verbose" == true ]]; then
         reset_cmd="$reset_cmd -v"
     fi
-    eval $reset_cmd
+    local start_time
+    start_time=$(date +%s)
+    eval $reset_cmd &
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        local elapsed=$(($(date +%s) - start_time))
+        printf "\r%s: Reboot: %d seconds elapsed" "$dpu" "$elapsed"
+        sleep 5
+    done
+    wait $pid
+    local end_time
+    end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    printf "\r%s: Reboot: %d seconds elapsed in total\n" "$dpu" "$elapsed"
 }
 
 # Function to reset DPU using reboot helper or fallback to dpuctl
