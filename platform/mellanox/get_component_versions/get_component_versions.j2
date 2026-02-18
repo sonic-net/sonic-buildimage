@@ -1,6 +1,6 @@
 {#
     SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-    Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
     SPDX-License-Identifier: Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,8 @@ COMMANDS_FOR_ACTUAL = {
     "SAI": [["docker", "exec", "-it", "syncd", "bash", "-c", 'dpkg -l | grep mlnx-sai'], ".*1\\.mlnx\\.([A-Za-z0-9.]*)"],
     "SAI_API_HEADERS": [["docker", "exec", "syncd", "dpkg", "-s", "mlnx-sai"], "X-Sai-Headers-Version: ([0-9.]+)"],
     "FW": [["mlxfwmanager", "--query"], "FW * [0-9]{2}\\.([0-9.]*)"],
-    "KERNEL": [["uname", "-r"], "(.*)-[a-z0-9]+$"]
+    "KERNEL": [["uname", "-r"], "(.*)-[a-z0-9]+$"],
+    "RSHIM": [["dpkg", "-l"], ["grep", "rshim "], "rshim *([0-9.-]*)"]
 }
 
 UNAVAILABLE_COMPILED_VERSIONS = {
@@ -54,7 +55,8 @@ UNAVAILABLE_COMPILED_VERSIONS = {
     "HW_MANAGEMENT": "N/A",
     "MFT": "N/A",
     "KERNEL": "N/A",
-    "SIMX": "N/A"
+    "SIMX": "N/A",
+    "RSHIM": "N/A"
 }
 
 {% elif sonic_asic_platform == "nvidia-bluefield" %}
