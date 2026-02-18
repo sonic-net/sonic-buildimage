@@ -65,6 +65,9 @@
 #  * ENABLE_MULTIDB: Enable multiple redis database instances.
 #  *                 Default: unset
 #  *                 Values: y
+#  * ENABLE_VRF_STRICT: Enable VRF strict mode.
+#  *                 Default: unset
+#  *                 Values: y
 ###############################################################################
 
 SHELL = /bin/bash
@@ -619,6 +622,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

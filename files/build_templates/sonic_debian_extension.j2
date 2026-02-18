@@ -1246,8 +1246,9 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+
 {% if installer_python_debs.strip() -%}
-# Install FIPS python package will break apt-get purge command, so install after all purge command finish 
+# Install FIPS python package will break apt-get purge command, so install after all purge command finish
 if [ "$INCLUDE_FIPS" == y ]; then
     install_deb_package {{installer_python_debs}}
 fi
@@ -1270,4 +1271,12 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
 
+
+## Copy over  set-vrf-strict-mode.service
+{% if ENABLE_VRF_STRICT == "y" %}
+sudo cp $IMAGE_CONFIGS/set-vrf-strict-mode/set-vrf-strict-mode.service $FILESYSTEM_ROOT/etc/systemd/system/set-vrf-strict-mode.service
+
+# Install set-vrf-strict-mode service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-vrf-strict-mode
+{% endif %}
 
