@@ -32,6 +32,7 @@
 #include <linux/kthread.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 #define DRVNAME "as5812_54x_fan"
 
@@ -391,12 +392,18 @@ exit:
     return status;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int accton_as5812_54x_fan_remove(struct platform_device *pdev)
+#else
+static void accton_as5812_54x_fan_remove(struct platform_device *pdev)
+#endif
 {
     hwmon_device_unregister(fan_data->hwmon_dev);
     sysfs_remove_group(&fan_data->pdev->dev.kobj, &accton_as5812_54x_fan_group);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
     return 0;
+#endif
 }
 
 

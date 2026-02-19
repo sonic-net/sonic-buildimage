@@ -33,6 +33,7 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define NUM_OF_SFF_PORT 54
 #define SFP_PORT_MAX    48
@@ -444,11 +445,18 @@ static const struct attribute_group as5812_54x_sfp_group = {
     .attrs = as5812_54x_sfp_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as5812_54x_sfp_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as5812_54x_sfp_probe(struct i2c_client *client)
+#endif
 {
     struct as5812_54x_sfp_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     extern int platform_accton_as5812_54x(void);
     if(!platform_accton_as5812_54x()) {
