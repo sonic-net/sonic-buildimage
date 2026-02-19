@@ -154,6 +154,9 @@
     "ACL_PACKET_ACTION_VALIDATE_VALUE_ACCEPT": {
         "desc": "Configure CTRLPLANE with proper action ACCEPT."
     },
+    "ACL_PACKET_ACTION_VALIDATE_VALUE_COPY": {
+        "desc": "Configure MIRROR ACL with proper action COPY."
+    },
     "ACL_RULE_WITH_INVALID_MIRROR_INGRESS_ACTION": {
         "desc": "Configure ACL_RULE with invalid mirror action.",
         "eStrKey" : "LeafRef"
