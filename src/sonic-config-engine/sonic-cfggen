@@ -33,7 +33,7 @@ from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
 from portconfig import get_port_config, get_breakout_mode
-from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic
+from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
 from asic_sensors_config import get_asic_sensors_config
@@ -478,6 +478,10 @@ def main():
                 print('Warning: Failed to get device ID from asic.conf file for', asic_name, file=sys.stderr)
             else:
                 hardware_data['DEVICE_METADATA']['localhost'].update(asic_id=device_id)
+
+            sub_role = get_asic_sub_role(asic_id)
+            if sub_role is not None:
+                hardware_data['DEVICE_METADATA']['localhost'].update(sub_role=sub_role)
 
         deep_update(data, hardware_data)
 
