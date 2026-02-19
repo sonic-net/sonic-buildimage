@@ -42,7 +42,9 @@
                     {
                         "profile_name": "global",
                         "algorithm": "ewma",
-                        "max_flows": "2048"
+                        "max_flows": "2048",
+   	                    "ars_nhg_path_selector_mode": "interface",
+                        "ars_lag_path_selector_mode": "interface"
                     }
                 ]
             },
@@ -57,20 +59,22 @@
                     "scaling_factor": "1000"
                 }]
            },
-           "sonic-ars:ARS_NEXTHOP_GROUP": {
-                "ARS_NEXTHOP_GROUP_LIST": [
+           "sonic-ars:ARS_NEXTHOP": {
+                "ARS_NEXTHOP_LIST": [
                 {
                     "vrf_name": "default",
-                    "ip_prefix": "10.0.0.0/24",
-                    "profile_name": "global",
-                    "assign_mode": "per_flowlet_quality",
-                    "max_flows": "512"
+                    "nexthop_ip": "10.0.0.1"
                 },
                 {
                     "vrf_name": "default",
-                    "ip_prefix": "10.1.0.0/24",
-                    "profile_name": "global",
-                    "assign_mode": "per_packet"
+                    "nexthop_ip": "10.1.0.1"
+                }]
+           },
+           "sonic-ars:ARS_OBJECT": {
+                "ARS_OBJECT_LIST": [
+                {
+                    "ars_obj_name": "ars_obj_name",
+                    "assign_mode": "per_packet_quality"
                 }]
            }
        }
@@ -91,47 +95,49 @@
             }
         }
     },
-    "ARS_TEST_OBJECT_INVALID_MODE": {
-        "sonic-ars:sonic-ars": {
-            "sonic-ars:ARS_PROFILE": {
-                "ARS_PROFILE_LIST": [
-                    {
-                        "profile_name": "group1",
-                        "algorithm": "ewma"
-                    }
-                ]
-            },
-            "sonic-ars:ARS_NEXTHOP_GROUP": {
-                "ARS_NEXTHOP_GROUP_LIST": [
-                    {
-                        "vrf_name": "default",
-                        "ip_prefix": "10.1.0.0/24",
-                        "profile_name": "group1",
-                        "assign_mode": "illegal_mode"
-                    }
-                ]
-            }
-        }
-    },
-    "ARS_PREFIX_TEST_INVALID_PREFIX": {
-        "sonic-ars:sonic-ars": {
-            "sonic-ars:ARS_NEXTHOP_GROUP": {
-                "ARS_NEXTHOP_GROUP_LIST": [
-                    {
-                        "vrf_name": "default",
-                        "ip_prefix": "invalid_prefix",
-                        "profile_name": "global"
-                    }
-                ]
-            }
-        }
-    },
-    "ARS_INTERFACE_TEST_INVALID_LINK": {
+    "ARS_TEST_INTERFACE_INVALID_LINK": {
         "sonic-ars:sonic-ars": {
             "sonic-ars:ARS_INTERFACE": {
                 "ARS_INTERFACE_LIST": [
                     {
                         "if_name": "EthernetXXX"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_OBJECT_INVALID_MODE": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_OBJECT": {
+                "ARS_OBJECT_LIST": [
+                    {
+                        "ars_obj_name": "ars_obj_default",
+                        "assign_mode": "invalid_mode_value"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_OBJECT_REFERENCE_IN_PROFILE_INVALID": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_PROFILE": {
+                "ARS_PROFILE_LIST": [
+                    {
+                        "profile_name": "group1",
+                        "algorithm": "ewma",
+                        "default_ars_object": "ars_obj_default"
+                    }
+                ]
+            }
+        }
+    },
+    "ARS_TEST_NEXTHOP_INVALID_IP": {
+        "sonic-ars:sonic-ars": {
+            "sonic-ars:ARS_NEXTHOP": {
+                "ARS_NEXTHOP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "nexthop_ip": "300.1.2.3"
                     }
                 ]
             }

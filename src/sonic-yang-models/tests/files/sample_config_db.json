@@ -3204,8 +3204,11 @@
             }
         },
         "ARS_PROFILE": {
-            "global": {
+            "ars_profile_default": {
                 "algorithm": "ewma",
+                "ars_nhg_path_selector_mode": "interface",
+                "ars_lag_path_selector_mode": "interface",
+                "default_ars_object": "ars_obj_name",
                 "max_flows": "2048",
                 "sampling_interval": "10",
                 "past_load_min_value": "0",
@@ -3220,32 +3223,33 @@
                 "ipv6_enable": "true"
             }
         },
-        "ARS_NEXTHOP_GROUP": {
-            "default|192.168.0.0/32": {
-                "profile_name": "global",
+        "ARS_OBJECT": {
+            "ars_obj_name": {
                 "assign_mode": "per_flowlet_quality",
-                "max_flows": "512"
+                "flowlet_idle_time": "256",
+                "max_flows": "512",
+                "primary_path_threshold": "100",
+                "alternative_path_cost": "250"
+            }
+        },
+        "ARS_NEXTHOP": {
+            "default|1.1.1.10": {
+                "ars_obj_name": "ars_obj_name"
+            },
+            "default|2.2.2.20": {
+                "ars_obj_name": "ars_obj_name",
+                "role": "alternative_path"
+            },
+            "default|3.3.3.30": {
+                "ars_obj_name": "ars_obj_name"
             }
         },
         "ARS_INTERFACE": {
-            "Ethernet1": {"scaling_factor": "100"},
-            "Ethernet3": {},
-            "Ethernet10":{}
-        },
-        "MEMORY_STATISTICS": {
-            "memory_statistics": {
-                "enabled": "false",
-                "sampling_interval": "5",
-                "retention_period": "15"
-            }
-        },
-        "ASIC_SENSORS": {
-            "ASIC_SENSORS_POLLER_INTERVAL": {
-                "interval": "10"
+            "Ethernet0": {
+                "scaling_factor": "100",
+                "ars_obj_name": "ars_obj_name"
             },
-            "ASIC_SENSORS_POLLER_STATUS": {
-                "admin_status": "enable"
-            }
+            "Ethernet8": {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

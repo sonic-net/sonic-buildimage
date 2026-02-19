@@ -401,22 +401,6 @@ module sonic-flex_counter {
 
             }
 
-            list ARS_NEXTHOP_GROUP_COUNTER_ROUTE_PATTERN_LIST {
-
-                key "ip_prefix";
-
-                leaf ip_prefix {
-                    type inet:ip-prefix;
-                }
-
-                leaf max_match_count {
-                    type uint32 {
-                        range 1..50;
-                    }
-                }
-
-            }
-
             list FLOW_COUNTER_ROUTE_PATTERN_VRF_LIST {
 
                 key "vrf_name ip_prefix";
