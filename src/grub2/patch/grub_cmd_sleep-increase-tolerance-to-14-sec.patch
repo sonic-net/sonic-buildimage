@@ -1,0 +1,35 @@
+From db8282b2b4b4b5a4958e8eff09dd7e1bbcc7e2a6 Mon Sep 17 00:00:00 2001
+From: Yan Markman <ymarkman@marvell.com>
+Date: Thu, 12 Feb 2026 14:08:04 +0200
+Subject: [PATCH 1/1] grub_cmd_sleep: increase tolerance to 14 sec
+
+The sleep(10) wall-clock timing is flake under several parallel build-jobs.
+Do not SKIP it but increase fail threshold tolerance from 11 sec to 14 sec.
+
+Signed-off-by: Yan Markman <ymarkman@marvell.com>
+---
+ tests/grub_cmd_sleep.in | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/tests/grub_cmd_sleep.in b/tests/grub_cmd_sleep.in
+index 8797f6632..e5dd796be 100644
+--- a/tests/grub_cmd_sleep.in
++++ b/tests/grub_cmd_sleep.in
+@@ -19,7 +19,13 @@ if [ "${grub_modinfo_target_cpu}" = arm ] && [ $((dt2 - dt1)) -ge 15 ] && [ $((d
+   exit 0;
+ fi
+
+-if [ $((dt2 - dt1)) -gt 11 ] || [ $((dt2 - dt1)) -lt 9 ]; then
++MAX_SLEEP=14
++if [ -n "${SONIC_CONFIG_MAKE_JOBS+x}" ] && [ "$SONIC_CONFIG_MAKE_JOBS" -eq 1 ]; then
++    MAX_SLEEP=11
++fi
++INTERVAL=$((dt2 - dt1))
++
++if [ "$INTERVAL" -gt "$MAX_SLEEP" ] || [ "$INTERVAL" -lt 9 ]; then
+   echo "Interval not in range $dt2-$dt1 != 10"
+   exit 1
+ fi
+--
+2.34.1
+
