@@ -19,6 +19,7 @@ SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
 system_allsrv_state = "DOWN"
 spl_srv_list = ['database-chassis', 'gbsyncd']
+NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
@@ -311,7 +312,7 @@ class Sysmonitor(ProcessTaskBase):
         try:
             service_status = "Down"
             service_up_status = "Down"
-            service_name,last_name = event.split('.')
+            service_name,last_name = event.rsplit('.', 1)
 
             sysctl_show = self.run_systemctl_show(event)
 
@@ -352,7 +353,9 @@ class Sysmonitor(ProcessTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if srv_type == "oneshot" or service_name in spl_srv_list:
+                        if (srv_type == "oneshot"
+                                or service_name in spl_srv_list
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS):
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
@@ -454,7 +457,7 @@ class Sysmonitor(ProcessTaskBase):
                 astate = "DOWN"
             self.publish_system_status(astate)
 
-            srv_name,last = event.split('.')
+            srv_name,last = event.rsplit('.', 1)
             # stop on service maybe propagated to timers and in that case,
             # the state_db entry for the service should not be deleted
             if last == "service":
