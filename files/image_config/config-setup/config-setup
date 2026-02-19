@@ -180,7 +180,7 @@ check_system_warm_boot()
 
     # Try STATE_DB first — authoritative source that reflects current
     # warm boot state and is cleared after warm boot completes.
-    SYSTEM_WARM_START=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable 2>/dev/null)
+    SYSTEM_WARM_START=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable)
     DB_RC=$?
 
     if [ $DB_RC -eq 0 ]; then
