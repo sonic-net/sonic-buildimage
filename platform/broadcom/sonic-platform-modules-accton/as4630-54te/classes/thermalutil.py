@@ -39,10 +39,10 @@ class ThermalUtil(object):
         value = path to fan device file (string) """
 
     thermal_sysfspath = {
-        THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/14-0048/hwmon/hwmon*/temp1_input"],
-        THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/24-004b/hwmon/hwmon*/temp1_input"],
-        THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/25-004a/hwmon/hwmon*/temp1_input"],
-        THERMAL_NUM_4_IDX: ["/sys/class/hwmon/hwmon1/temp1_input"],
+        THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/14-0048/hwmon/hwmon*/temp1_input", "MB_temp"],
+        THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/24-004b/hwmon/hwmon*/temp1_input", "CB_temp"],
+        THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/25-004a/hwmon/hwmon*/temp1_input", "FB_temp"],
+        THERMAL_NUM_4_IDX: ["/sys/class/hwmon/hwmon1/temp1_input", "CPU_Package_temp"],
     }
 
     def _get_thermal_val(self, thermal_num):
@@ -83,6 +83,9 @@ class ThermalUtil(object):
 
     def get_thermal_path(self, thermal_num):
         return self.thermal_sysfspath[thermal_num][0]
+
+    def get_thermal_name(self, thermal_num):
+        return self.thermal_sysfspath[thermal_num][1]
 
 
 def main():

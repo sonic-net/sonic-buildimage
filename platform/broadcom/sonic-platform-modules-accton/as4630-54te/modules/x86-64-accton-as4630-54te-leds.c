@@ -405,7 +405,7 @@ static struct led_classdev accton_as4630_54te_leds[] = {
         .brightness_set	 = accton_as4630_54te_led_diag_set,
         .brightness_get	 = accton_as4630_54te_led_diag_get,
         .flags			 = LED_CORE_SUSPENDRESUME,
-        .max_brightness	 = LED_MODE_GREEN,
+        .max_brightness	 = LED_MODE_GREEN_BLINK,
     },
     [LED_TYPE_PRI] = {
         .name			 = "pri",

@@ -6,33 +6,32 @@
 #
 #############################################################################
 
-import subprocess
-
 try:
+    import sys
     from sonic_platform_base.chassis_base import ChassisBase
     from .helper import APIHelper
+    from .event import SfpEvent
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 NUM_FAN_TRAY = 3
 NUM_FAN = 2
 NUM_PSU = 2
-NUM_THERMAL = 3
+NUM_THERMAL = 8
 NUM_QSFP = 6
 PORT_START = 49
 PORT_END = 54
-NUM_COMPONENT = 2
+NUM_COMPONENT = 3
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
-HOST_CHK_CMD = ["docker"]
 SYSLED_FNODE = "/sys/class/leds/diag/brightness"
 SYSLED_MODES = {
-    "0" : "STATUS_LED_COLOR_OFF",
-    "1" : "STATUS_LED_COLOR_GREEN",
-    "2" : "STATUS_LED_COLOR_AMBER",
-    "5" : "STATUS_LED_COLOR_GREEN_BLINK"
+    "0" : "off",
+    "1" : "green",
+    "2" : "amber",
+    "5" : "green_blink"
 }
 
 
@@ -41,7 +40,6 @@ class Chassis(ChassisBase):
 
     def __init__(self):
         ChassisBase.__init__(self)
-        self._api_helper = APIHelper()
         self._api_helper = APIHelper()
         self.is_host = self._api_helper.is_host()
 
@@ -53,12 +51,14 @@ class Chassis(ChassisBase):
         self.__initialize_components()
         self.__initialize_sfp()
         self.__initialize_eeprom()
+        self.__initialize_watchdog()
 
     def __initialize_sfp(self):
         from sonic_platform.sfp import Sfp
         for index in range(0, PORT_END):
             sfp = Sfp(index)
             self._sfp_list.append(sfp)
+        self._sfpevent = SfpEvent(self._sfp_list)
         self.sfp_module_initialized = True
 
     def __initialize_fan(self):
@@ -93,19 +93,6 @@ class Chassis(ChassisBase):
         from sonic_platform.watchdog import Watchdog
         self._watchdog = Watchdog()
 
-
-    def __is_host(self):
-        return subprocess.call(HOST_CHK_CMD) == 0
-
-    def __read_txt_file(self, file_path):
-        try:
-            with open(file_path, 'r') as fd:
-                data = fd.read()
-                return data.strip()
-        except IOError:
-            pass
-        return None
-
     def get_name(self):
         """
         Retrieves the name of the device
@@ -113,7 +100,7 @@ class Chassis(ChassisBase):
             string: The name of the device
         """
 
-        return self._api_helper.hwsku
+        return self._eeprom.get_modelstr()
 
     def get_presence(self):
         """
@@ -176,6 +163,12 @@ class Chassis(ChassisBase):
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
 
+    def get_change_event(self, timeout=0):
+        # SFP event
+        if not self.sfp_module_initialized:
+            self.__initialize_sfp()
+        return self._sfpevent.get_sfp_event(timeout)
+
     def get_sfp(self, index):
         """
         Retrieves sfp represented by (1-based) index <index>
@@ -234,3 +227,28 @@ class Chassis(ChassisBase):
             return False
         else:
             return self._api_helper.write_txt_file(SYSLED_FNODE, mode)
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return self._eeprom.get_pn()
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return self._eeprom.get_serial()
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self._eeprom.get_revisionstr()

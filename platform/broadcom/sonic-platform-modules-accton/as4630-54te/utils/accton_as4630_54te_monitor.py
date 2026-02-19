@@ -20,12 +20,14 @@
 # ------------------------------------------------------------------
 
 try:
+    import os
     import sys
     import getopt
     import logging
     import logging.config
     import logging.handlers
     import time
+    import subprocess
     from as4630_54te.fanutil import FanUtil
     from as4630_54te.thermalutil import ThermalUtil
 except ImportError as e:
@@ -34,6 +36,8 @@ except ImportError as e:
 # Deafults
 VERSION = '1.0'
 FUNCTION_NAME = '/usr/local/bin/accton_as4630_54te_monitor'
+sensors_name_check = ""
+threshold_level = ["warning", "error", "low-critical", "high-critical"]
 
 # Temperature Policy
 # If any fan fail , please set fan speed register to 16
@@ -87,6 +91,9 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+
+        self.thermal = ThermalUtil()
+        self.fan = FanUtil()
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -103,9 +110,10 @@ class device_monitor(object):
             console.setFormatter(formatter)
             logging.getLogger('').addHandler(console)
 
-        sys_handler = logging.handlers.SysLogHandler(
-            address='/dev/log')
-        sys_handler.setLevel(logging.WARNING)
+        sys_handler = handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        sys_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('#%(module)s: %(message)s')
+        sys_handler.setFormatter(formatter)
         logging.getLogger('').addHandler(sys_handler)
 
     def get_state_from_fan_policy(self, temp, policy):
@@ -125,6 +133,7 @@ class device_monitor(object):
         global alarm_state
         global temp_test_data
         global test_temp_revert
+        global sensors_name_check
         LEVEL_FAN_MIN = 0
         LEVEL_FAN_NORMAL = 1
         LEVEL_FAN_MID = 2
@@ -134,12 +143,13 @@ class device_monitor(object):
             LEVEL_FAN_MIN: [50, 8, 0, 140000],
             LEVEL_FAN_NORMAL: [62, 10, 140000, 150000],
             LEVEL_FAN_MID: [75, 12, 150000, 160000],
-            LEVEL_FAN_HIGH: [88, 14, 160000, 240000],
+            LEVEL_FAN_HIGH: [87, 14, 160000, 240000],
             LEVEL_TEMP_CRITICAL: [100, 16, 240000, 300000],
         }
+        shutdown_temp = 70000
         temp = [0, 0, 0]
-        thermal = ThermalUtil()
-        fan = FanUtil()
+        thermal = self.thermal
+        fan = self.fan
         ori_duty_cycle = fan.get_fan_duty_cycle()
         new_duty_cycle = 0
 
@@ -165,14 +175,21 @@ class device_monitor(object):
                 break
             temp_val += temp[i]
 
+        if sensors_name_check == "":
+            sensors_name_check = "({} + {} + {})".format(thermal.get_thermal_name(1),
+                                                         thermal.get_thermal_name(2),
+                                                         thermal.get_thermal_name(3))
+
         # Check Fan status
         for i in range(fan.FAN_NUM_1_IDX, fan.FAN_NUM_ON_MAIN_BROAD + 1):
             if fan.get_fan_status(i) == 0:
                 new_pwm = 100
-                logging.warning('Fan_%d fail, set pwm to 100', i)
+                logging.warning('Monitor Fan_%d absent/failed.', i)
                 if test_temp == 0:
                     fan_fail = 1
                     fan.set_fan_duty_cycle(new_pwm)
+                    if new_pwm > ori_duty_cycle:
+                        logging.warning('Increase fan duty_cycle from %d%% to %d%%.', ori_duty_cycle, new_pwm)
                     break
             else:
                 fan_fail = 0
@@ -187,29 +204,42 @@ class device_monitor(object):
         # Decision : Decide new fan pwm percent.
         if fan_fail == 0 and ori_duty_cycle != fan_policy[fan_policy_state][0]:
             new_duty_cycle = fan_policy[fan_policy_state][0]
-            fan.set_fan_duty_cycle(new_duty_cycle)
 
-        if temp[0] >= 70000:  # LM75-48
+            set_val = new_duty_cycle if fan_policy_state == LEVEL_TEMP_CRITICAL else new_duty_cycle + 1
+            fan.set_fan_duty_cycle(set_val)
+
+            if new_duty_cycle > ori_duty_cycle:
+                logging.warning('Increase fan duty_cycle from %d%% to %d%%.', ori_duty_cycle, new_duty_cycle)
+            else:
+                logging.info('Decrease fan duty_cycle from %d%% to %d%%.', ori_duty_cycle, new_duty_cycle)
+
+        if temp[0] >= shutdown_temp:  # LM75-48
             # critical case*/
-            logging.critical(
-                'Alarm-Critical for temperature critical is detected, reset DUT')
-            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0xE4"]
+            logging.critical('Monitor %s, temperature is %.1f. Temperature is over the shutdown threshold(%.1f) of thermal policy, shutdown DUT.',
+                            thermal.get_thermal_name(1), temp[0]/1000, shutdown_temp/1000)
+
+            # Sync log buffer to disk
+            cmd_str="sync"
+            status, output = subprocess.getstatusoutput(cmd_str)
+            cmd_str="/sbin/fstrim -av"
+            status, output = subprocess.getstatusoutput(cmd_str)
+            time.sleep(3)
+
+            # shutdown dut
+            cmd_str = "i2cset -y -f 3 0x60 0x4 0x74"
             time.sleep(2)
-            return_value = subprocess.call(cmd_str)
-            logging.warning('Fan set: i2cset -y -f 3 0x60 0x4 0xE4, status is %d', return_value)
+            status, output = subprocess.getstatusoutput(cmd_str)
 
         #logging.debug('ori_state=%d, current_state=%d, temp_val=%d\n\n',ori_state, fan_policy_state, temp_val)
 
-        if ori_state < LEVEL_FAN_HIGH:
-            if fan_policy_state >= LEVEL_FAN_HIGH:
-                if alarm_state == 0:
-                    logging.warning('Alarm for temperature high is detected')
-                    alarm_state = 1
-
-        if fan_policy_state < LEVEL_FAN_MID:
-            if alarm_state == 1:
-                logging.info('Alarm for temperature high is cleared')
-                alarm_state = 0
+        if fan_policy_state == ori_state:
+            return True
+        elif fan_policy_state > ori_state:
+           logging.warning('Monitor %s, temperature is %.1f. Temperature is over the %s threshold(%.1f) of thermal policy.',
+                            sensors_name_check, temp_val/1000, threshold_level[fan_policy_state-1], fan_policy[fan_policy_state][2]/1000)
+        else:
+            logging.info('Monitor %s, temperature is less than the %s threshold(%.1f) of thermal policy.',
+                          sensors_name_check, threshold_level[fan_policy_state], fan_policy[fan_policy_state][3]/1000)
 
         return True
 
