@@ -22,6 +22,7 @@
   * [Cable length](#cable-length)
   * [Chassis module](#chassis-module)
   * [COPP_TABLE](#copp_table)
+  * [COPP_TRAP_EXCLUDE_PORTS](#copp_trap_exclude_ports)
   * [Console](#console)
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
@@ -916,6 +917,21 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 	 "trap_ids": "ip2me",
 	 "trap_priority": "1"
       }
+    }
+}
+```
+
+### COPP_TRAP_EXCLUDE_PORTS
+
+Ports listed here are excluded from all CoPP traps, including ttl_error.
+Only physical ports are supported. PortChannel members are skipped.
+
+```
+{
+    "COPP_TRAP_EXCLUDE_PORTS": {
+        "GLOBAL": {
+            "ports": [ "Ethernet0", "Ethernet4" ]
+        }
     }
 }
 ```
