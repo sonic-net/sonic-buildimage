@@ -376,7 +376,9 @@
     },
 {% endif %}
 {% endif %}
-{% if asic_type in pfc_to_pg_map_supported_asics  %}
+{% if generate_pfc_priority_to_pg_map is defined %}
+    {{- generate_pfc_priority_to_pg_map() }}
+{% elif asic_type in pfc_to_pg_map_supported_asics  %}
     "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
 {% if port_names_list_extra_queues|length > 0 %}
         "AZURE_DUALTOR": {
