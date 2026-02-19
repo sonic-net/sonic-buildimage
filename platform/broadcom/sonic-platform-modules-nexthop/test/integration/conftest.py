@@ -4,22 +4,33 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Configuration for integration tests.
+Test configuration for integration tests.
 
 Integration tests require a SONiC build environment and require not/minimal mocks.
 """
 
 import os
-import sys
 import pytest
+import sys
 
-# Add the test directory to Python path for imports
-test_root = os.path.join(os.path.dirname(__file__), '..')
-sys.path.insert(0, test_root)
+from unittest.mock import patch
 
-# Add the common directory to path for nexthop modules imports by tests
-common_path = os.path.join(test_root, '../common')
-sys.path.insert(0, common_path)
 
-# Mock out common imports. This is done by importing the following module
-import fixtures.mock_imports_common
+@pytest.fixture(scope="module", autouse=True)
+def patch_dependencies():
+    """Sets up real dependencies for all integration tests.
+
+    This fixture is automatically applied to all tests in the integration/ directory.
+    It uses module scope, so it won't interfere with unit tests.
+    """
+    TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+    sonic_platform_common = os.path.join(
+        TEST_DIR, "../../../../../src/sonic-platform-common/"
+    )
+    pddf_base = os.path.join(
+        TEST_DIR, "../../../../../platform/pddf/platform-api-pddf-base"
+    )
+
+    with patch.object(sys, "path", [sonic_platform_common, pddf_base] + sys.path):
+        # Keep the patch active while integration tests are running
+        yield
