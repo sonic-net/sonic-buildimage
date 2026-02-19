@@ -320,7 +320,18 @@ ifneq ($(SONIC_BUILD_MEMORY),none)
 endif
 endif
 
-DOCKER_RUN := docker run --rm=true --privileged --init \
+# When using native dockerd (DooD), we don't need --privileged for Docker-in-Docker.
+# Use specific capabilities instead for better security.
+# When using DinD (default), --privileged is required for the nested dockerd.
+ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
+DOCKER_PRIVMODE := --cap-add SYS_ADMIN --cap-add SYS_CHROOT --cap-add NET_ADMIN \
+    --cap-add MKNOD --cap-add DAC_OVERRIDE \
+    --security-opt apparmor=unconfined --security-opt seccomp=unconfined
+else
+DOCKER_PRIVMODE := --privileged
+endif
+
+DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
