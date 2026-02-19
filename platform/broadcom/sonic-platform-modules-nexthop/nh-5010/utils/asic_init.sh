@@ -6,6 +6,17 @@ FPGA_BDF=$(setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0')
 KOMODO_FPGA_BDF=$(setpci -s 00:02.1 0x19.b | xargs printf '0000:%s:00.0')
 LOG_TAG="asic_init"
 
+fpga_read() {
+  local offset="$1"
+  # Default to "0:31" if $2 is empty
+  local bits="${2:-0:31}"
+  fpga read32 "$FPGA_BDF" "$offset" --bits="$bits"
+  if [ $? -ne 0 ]; then
+    logger -t $LOG_TAG -p error "Error reading from reg $offset on fpga $FPGA_BDF"
+    exit 1
+  fi
+}
+
 fpga_write() {
   local offset="$1"
   local value="$2"
@@ -124,10 +135,43 @@ function clear_sticky_bits() {
   fpga_write 0x41cc 0xffffffff
 }
 
+read_fan_status_register() {
+  local offset="$1"
+  local value_hex
+
+  # Read bits 16:31
+  value_hex=$(fpga_read "$offset" 16:31)
+  # Convert hex string (base 16) to decimal integer
+  echo "$((value_hex))"
+}
+
+function check_fan_status() {
+  logger -t $LOG_TAG "Checking fan status..."
+
+  # List of all fan register offsets
+  local fan_offsets=(0xB0 0xB8 0xC0 0xC8)
+
+  for offset in "${fan_offsets[@]}"; do
+    local fan_value
+    fan_value=$(read_fan_status_register "$offset")
+
+    if [[ $fan_value -ne 0xFFFF ]]; then
+      # Fan with valid fan tach found
+      logger -t $LOG_TAG "Fan status check complete, proceeding with ASIC init"
+      return 0
+    fi
+  done
+
+  logger -t $LOG_TAG -p error "ASIC init skipped because fan status check failed"
+  exit 1
+}
+
 if [ -f /disable_asic ]; then
   logger -p user.warning -t $LOG_TAG "ASIC init disabled due to /disable_asic file"
   exit 0
 fi
+
+check_fan_status
 
 acquire_lock
 

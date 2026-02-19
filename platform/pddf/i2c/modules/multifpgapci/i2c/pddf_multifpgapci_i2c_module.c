@@ -78,7 +78,7 @@ ssize_t new_i2c_adapter(struct device *dev, struct device_attribute *da,
 	}
 
 	i2c_adapters[index].owner = THIS_MODULE;
-	i2c_adapters[index].class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+	i2c_adapters[index].class = I2C_CLASS_HWMON;
 
 	// /dev/i2c-xxx for FPGA LOGIC I2C channel controller 1-7
 	i2c_adapters[index].nr = index + i2c_privdata->virt_bus;

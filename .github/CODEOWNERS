@@ -86,7 +86,7 @@
 /src/snmpd/                             @sonic-net/sonic-management
 
 # dhcp relay
-/src/dhcp6relay/                        @sonic-net/sonic-fundamentals
+/src/dhcprelay/                         @sonic-net/sonic-fundamentals
 /src/dhcpmon/                           @sonic-net/sonic-fundamentals
 /src/isc-dhcp/                          @sonic-net/sonic-fundamentals
 

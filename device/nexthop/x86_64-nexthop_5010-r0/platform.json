@@ -162,6 +162,12 @@
                 "low-crit-threshold": false
             },
             {
+                "name": "CPU",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
                 "name": "ASIC D0_VTMON_CORE",
                 "low-threshold": false,
                 "low-crit-threshold": false,

@@ -1,5 +1,6 @@
 # $Id: Make.depend,v 1.14 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -35,6 +36,33 @@
 # If making 'clean', do not include any .d files.  If they are included,
 # gmake intrinsically tries to remake them all.
 #
+# We add this 'UNIQUE' section here to remove repeated compiler/linker flags and,
+# thus, make the command line shorter. Some compilers are sensitive to the length of
+# the command line.
+# Note that this changes the order of options. For example, if we have '-DDISPLAY_MEM_USAGE=1',
+# followed by '-DDISPLAY_MEM_USAGE=0' followed by '-DDISPLAY_MEM_USAGE=1' then, without UNIQUE,
+# the 'winner' is '-DDISPLAY_MEM_USAGE=1' while, with UNIQUE, the winner is '-DDISPLAY_MEM_USAGE=0'.
+# Also note that, for UNIQE to work properly, we need to attach compilation flags, which are expected
+# to appear a few time, to their argument. So, for example, we should use
+#   KFLAGS += -include$(LINUX_INCLUDE_BUILD)/generated/uapi/linux/version.h
+# rather than
+#  KFLAGS += -include $(LINUX_INCLUDE_BUILD)/generated/uapi/linux/version.h
+#
+# Note that, to be on the safe side, we only 'clean' duplicates of
+# either -D or -I type. The original 'cleanup' was for all options:
+#   UNIQE = $(if $1,$(firstword $1) $(call UNIQE,$(filter-out $(firstword $1),$1)))
+#
+# We add this section here since 'Make.depend' is, virtually, included by each compiling make file.
+#
+ifeq ($(ARCH),arm64)
+  XUNIQE = $(if $1,$(firstword $1)$(if $(filter -D% -I%,$(firstword $1)), $(call XUNIQE,$(filter-out $(firstword $1),$1)), $(call XUNIQE,$(wordlist 2,$(words $1),$1)) ) )
+  CFLAGS := $(call XUNIQE,$(CFLAGS))
+  CFGFLAGS := $(call XUNIQE,$(CFGFLAGS))
+  PHYMOD_CPPFLAGS := $(call XUNIQE,$(PHYMOD_CPPFLAGS))
+  SDK_CPPFLAGS := $(call XUNIQE,$(SDK_CPPFLAGS))
+  CXXFLAGS := $(call XUNIQE,$(CXXFLAGS))
+endif
+
 ifeq (,$(findstring clean,$(MAKECMDGOALS)))
 
 ZFS      :=$(wildcard *.zf)
@@ -105,15 +133,6 @@ endif
 endif
 
 endif	# !CLEANING
-
-ifeq ($(ARCH),arm64)
-# SAI: SONIC-76388 and SDK: SDK-367718
-# This macro removes the redundant macros and gcc options
-# JIRA SONIC-69062
-UNIQE = $(if $1,$(firstword $1) $(call UNIQE,$(filter-out $(firstword $1),$1)))
-CFLAGS := $(call UNIQE,$(CFLAGS))
-CFGFLAGS := $(call UNIQE,$(CFGFLAGS))
-endif
 
 clean_d::
 ifdef QUIET

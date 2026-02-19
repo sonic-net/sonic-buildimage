@@ -115,8 +115,9 @@ static const struct attribute_group wistron_thermal_group = {
 	.attrs = wistron_thermal_attributes,
 };
 
-static int wistron_thermal_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
+static int wistron_thermal_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct wistron_thermal_data  *data;
 	int                          status;
 

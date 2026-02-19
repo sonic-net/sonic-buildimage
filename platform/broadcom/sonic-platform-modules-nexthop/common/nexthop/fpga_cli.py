@@ -62,6 +62,9 @@ class AlignedOffset(click.ParamType):
     name = "aligned_offset"
 
     def convert(self, value, param, ctx) -> int:
+        if isinstance(value, int):
+            return value
+
         try:
             offset = int(value, 16)
         except ValueError:
@@ -79,6 +82,9 @@ class BitRange(click.ParamType):
 
         Validates that the start and end are within [0, 31] and that start <= end.
         """
+        if isinstance(value, tuple):
+            return value
+
         match = re.search(pattern=r"^(\d+):(\d+)$", string=value)
         if match is None:
             self.fail(
@@ -194,7 +200,7 @@ def write32(pci_address, offset, value, bits):
     default="0:31",
     help="Inclusive range of bits to read from (e.g., '0:31').",
 )
-def read32(offset, pci_address, bits):
+def read32(pci_address, offset, bits):
     """Read 32-bit value from FPGA register.
     
     TARGET_FPGA can be either the FPGA name (e.g., 'CPU_CARD_FPGA') or 
