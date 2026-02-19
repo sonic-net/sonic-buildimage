@@ -66,6 +66,15 @@ jobs:
           sudo setfacl -R -b $(Agent.BuildDirectory)
         displayName: 'setfacl'
       - script: |
+          set -x
+          ip addr || echo $?
+          docker info || echo $?
+          df -h || echo $?
+          lsblk -i || echo $?
+          ls -al / || echo $?
+          echo $USER $(id) || echo $?
+        displayName: debug
+      - script: |
           set -ex
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
