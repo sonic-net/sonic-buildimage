@@ -25,7 +25,6 @@ def check_docker_image(image_name):
         DOCKER_CLIENT.images.get(image_name)
         return True
     except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
-        logger.log_warning("Failed to get image '{}'. Error: '{}'".format(image_name, err))
         return False
 
 class ServiceChecker(HealthChecker):
@@ -109,6 +108,12 @@ class ServiceChecker(HealthChecker):
                     else:
                         container_list.append("gnmi")
                     continue
+            # Some platforms may not include the OTEL container; skip expecting it when image absent
+            if container_name == "otel":
+                if not check_docker_image("docker-sonic-otel"):
+                    logger.log_debug("Ignoring otel container check on image which has no corresponding docker image")
+                    continue
+
             container_list.append(container_name)
 
         for container_name in container_list:
@@ -382,7 +387,7 @@ class ServiceChecker(HealthChecker):
                 # it not always possible to get process cmdline in supervisor.conf. E.g, cmdline of orchagent is "/usr/bin/orchagent",
                 # however, in supervisor.conf it is "/usr/bin/orchagent.sh"
                 cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container_name)
-                process_status = utils.run_command(cmd)
+                process_status = utils.run_command(cmd, timeout=15)
                 if process_status is None:
                     for process_name in critical_process_list:
                         self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))
