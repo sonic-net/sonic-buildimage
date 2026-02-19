@@ -965,16 +965,16 @@ def test_update_system_status():
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
     assert result == "UP"
 
-from sonic_py_common.task_base import ProcessTaskBase
-import multiprocessing
-mpmgr = multiprocessing.Manager()
+from sonic_py_common.task_base import ThreadTaskBase
+import threading
+import queue
 
-myQ = mpmgr.Queue()
+myQ = queue.Queue()
 def test_monitor_statedb_task():
     sysmon = MonitorStateDbTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -982,7 +982,7 @@ def test_monitor_sysbus_task():
     sysmon = MonitorSystemBusTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -990,7 +990,7 @@ def test_monitor_sysbus_task():
 def test_system_service():
     sysmon = Sysmonitor()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 
