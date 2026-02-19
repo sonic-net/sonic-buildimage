@@ -274,7 +274,7 @@ do_config_initialization()
         rm -f ${TMP_ZTP_CONFIG_DB_JSON}
     fi
 
-    rm -f /tmp/pending_config_initialization
+    rm -f /etc/sonic/pending_config_initialization
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 }
 
@@ -370,7 +370,7 @@ do_config_migration()
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
         do_db_migration
-        rm -f /tmp/pending_config_migration
+        rm -f /etc/sonic/pending_config_migration
         exit 0
     elif check_all_config_db_present; then
         echo "Use config_db.json from old system..."
@@ -384,7 +384,7 @@ do_config_migration()
         echo "Didn't found neither config_db.json nor minigraph.xml ..."
     fi
 
-    rm -f /tmp/pending_config_migration
+    rm -f /etc/sonic/pending_config_migration
 }
 
 # Take a backup of current SONiC configuration
@@ -408,7 +408,7 @@ do_config_backup()
 boot_config()
 {
     check_system_warm_boot
-    if [ -e /tmp/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
+    if [ -e /etc/sonic/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
         do_config_migration
     fi
 
@@ -420,7 +420,7 @@ boot_config()
         return 0
     fi	
 
-    if [ -e /tmp/pending_config_initialization ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
+    if [ -e /etc/sonic/pending_config_initialization ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
         do_config_initialization
     fi
 
