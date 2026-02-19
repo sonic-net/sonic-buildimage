@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "M2-W6510-48GT4V": {
+            "component": {
+                "CPU_CPLD": { },
+                "CTRL_CPLD": { },
+                "PORT_CPLD": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

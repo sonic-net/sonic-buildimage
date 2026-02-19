@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# sensor.py
-# Python implementation of the Class sensor
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import time
 from plat_hal.devicebase import devicebase
 
@@ -103,9 +113,9 @@ class sensor(devicebase):
         val_list = []
         for i in range(0, read_times):
             ret, real_value = self.get_value(value_config)
-            if i != (read_times - 1):
-                time.sleep(0.01)
             if ret is False or real_value is None:
+                if i != (read_times - 1):
+                    time.sleep(0.01)
                 continue
             val_list.append(real_value)
         val_list.sort()
@@ -272,3 +282,65 @@ class sensor(devicebase):
                               self.Max, self.Unit,
                               self.format)
         return tmpstr
+
+class sensor_s3ip(sensor):
+    def __init__(self, s3ip_conf):
+        self.s3ip_conf = s3ip_conf
+        value_conf = {}
+        value_conf["loc"] = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "value")
+        value_conf["way"] = "sysfs"
+        conf = {}
+        conf["value"] = value_conf
+        conf["read_times"] = s3ip_conf.get("read_times", 1)
+        conf["Unit"] = unit = s3ip_conf.get("Unit", None)
+        conf["format"] = unit = s3ip_conf.get("format", None)
+        super(sensor_s3ip, self).__init__(conf)
+        self.min_path = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "min")
+        self.max_path = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "max")
+        self.alias = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "alias")
+        self.sensor_id = self.s3ip_conf.get("type").upper()
+
+    @property
+    def Min(self):
+        try:
+            ret, val = self.get_sysfs(self.min_path)
+            if ret is True:
+                return val
+        except Exception:
+            pass
+        return None
+
+    @Min.setter
+    def Min(self, val):
+        try:
+            return self.set_sysfs(self.min_path, val)
+        except Exception as e:
+            return False, (str(e) + " location[%s][%d]" % (self.min_path, val))
+
+    @property
+    def Max(self):
+        try:
+            ret, val = self.get_sysfs(self.max_path)
+            if ret is True:
+                return val
+        except Exception:
+            pass
+        return None
+
+    @Max.setter
+    def Max(self, val):
+        try:
+            return self.set_sysfs(self.max_path, val)
+        except Exception as e:
+            return False, (str(e) + " location[%s][%d]" % (self.max_path, val))
+
+    @property
+    def name(self):
+        try:
+            ret, val = self.get_sysfs(self.alias)
+            if ret is True:
+                return val
+        except Exception:
+            pass
+        return None
+

@@ -1,5 +1,19 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class FantlvException(Exception):
     def __init__(self, message='fantlverror', code=-100):
@@ -32,17 +46,33 @@ class fan_tlv():
     def typename(self):
         return self._typename
 
+    @typename.setter
+    def typename(self, value):
+        self._typename = value
+
     @property
     def typesn(self):
         return self._typesn
+
+    @typesn.setter
+    def typesn(self, value):
+        self._typesn = value
 
     @property
     def typehwinfo(self):
         return self._typehwinfo
 
+    @typehwinfo.setter
+    def typehwinfo(self, value):
+        self._typehwinfo = value
+
     @property
     def typedevtype(self):
         return self._typedevtype
+
+    @typedevtype.setter
+    def typedevtype(self, value):
+        self._typedevtype = value
 
     def __init__(self):
         self._typename = ""
@@ -61,15 +91,15 @@ class fan_tlv():
 
     def hex_to_str(self, s):
         len_t = len(s)
-        if len_t % 2 != 0:
+        if int(len_t % 2) != 0:
             return 0
         ret = ""
-        for t in range(0, len_t / 2):
+        for t in range(0, int(len_t / 2)):
             ret += chr(int(s[2 * t:2 * t + 2], 16))
         return ret
 
-    def generate_fan_value(self):
-        bin_buffer = [chr(0xff)] * 256
+    def generate_fan_value(self, size=256):
+        bin_buffer = [chr(0x00)] * size
         bin_buffer[0] = chr(self.VERSION)
         bin_buffer[1] = chr(self.FLAG)
         bin_buffer[2] = chr(self.HW_VER)
@@ -79,6 +109,10 @@ class fan_tlv():
         typedevtype_t = self.hex_to_str(temp_t)
         total_len = len(self.typename) + len(self.typesn) + \
             len(self.typehwinfo) + len(typedevtype_t) + 8
+
+        rawdata_len = self._FAN_TLV_HDR_LEN + total_len + 2
+        if rawdata_len > size:
+            raise FantlvException("Generate rg tlv value failed, totallen: %d more than e2_size: %d" % (rawdata_len, size), -10)
 
         bin_buffer[4] = chr(total_len >> 8)
         bin_buffer[5] = chr(total_len & 0x00FF)

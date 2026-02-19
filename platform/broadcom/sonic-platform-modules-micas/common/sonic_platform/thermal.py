@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-
-########################################################################
 #
-# Module contains an implementation of SONiC Platform Base API and
-# provides the Thermals' information which are available in the platform
+# Copyright (C) 2024 Micas Networks Inc.
 #
-########################################################################
-
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 try:
     import time
@@ -86,7 +93,10 @@ class Thermal(ThermalBase):
             False if not
         """
         self.temp_dict_update()
-        if (self.temp_dict["Value"] >= self.temp_dict["High"]) or (self.temp_dict["Value"] <= self.temp_dict["Low"]):
+        if self.temp_dict["High"] is not None and self.temp_dict["Value"] > self.temp_dict["High"]:
+            return False
+
+        if self.temp_dict["Low"] is not None and self.temp_dict["Value"] < self.temp_dict["Low"]:
             return False
 
         return True
@@ -120,6 +130,15 @@ class Thermal(ThermalBase):
         value = self.temp_dict["Value"]
         if value is None or value == self.int_case.error_ret:
             return "N/A"
+        # temp value invalid
+        temp_invalid = self.temp_dict.get("Invalid")
+        if temp_invalid is not None and int(value) == int(temp_invalid):
+            return "N/A"
+        # temp value error
+        temp_error = self.temp_dict.get("Error")
+        if temp_error is not None and int(value) == int(temp_error):
+            return "N/A"
+
         if len(self.temperature_list) >= 1000:
             del self.temperature_list[0]
         self.temperature_list.append(float(value))
