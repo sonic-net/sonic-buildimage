@@ -41,9 +41,11 @@ $(SNMPD)_RDEPENDS += $(LIBSNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD)))
 
 SNMP_DBG = snmp-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(SNMP_DBG)_RDEPENDS += $(SNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMP_DBG)))
 
 SNMPD_DBG = snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(SNMPD_DBG)_RDEPENDS += $(SNMPD)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD_DBG)))
 
 ifeq ($(BLDENV),trixie)
@@ -63,8 +65,17 @@ $(LIBSNMP_DBG)_DEPENDS += $(LIBSNMP)
 $(LIBSNMP_DBG)_RDEPENDS += $(LIBSNMP)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP_DBG)))
 
+ifeq ($(BLDENV),trixie)
+LIBNETSNMPTRAPD40 = libnetsnmptrapd40t64_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+else
+LIBNETSNMPTRAPD40 = libnetsnmptrapd40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+endif
+$(LIBNETSNMPTRAPD40)_DEPENDS += $(LIBSNMP)
+$(LIBNETSNMPTRAPD40)_RDEPENDS += $(LIBSNMP) $(LIBSNMP_BASE)
+$(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBNETSNMPTRAPD40)))
+
 LIBSNMP_DEV = libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-$(LIBSNMP_DEV)_DEPENDS += $(LIBSNMP)
+$(LIBSNMP_DEV)_DEPENDS += $(LIBSNMP) $(LIBNETSNMPTRAPD40)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP_DEV)))
 
 LIBSNMP_PERL = libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
