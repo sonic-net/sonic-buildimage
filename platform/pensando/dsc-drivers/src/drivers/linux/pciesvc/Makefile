@@ -46,9 +46,11 @@ cc-option = $(shell set -e;		\
 
 KCFLAGS = -fno-jump-tables -fno-stack-protector -fno-function-sections -fno-dse -ffreestanding -fno-builtin
 KCFLAGS += -fno-data-sections
+KCFLAGS += -fno-pic -fno-plt -mcmodel=tiny -fno-common -mno-outline-atomics
 KCFLAGS += $(call cc-option,-fno-store-merging,)
 KCFLAGS += $(INCLUDES) -DASIC_ELBA -DPCIESVC_SYSTEM_EXTERN
 KOPT = KCFLAGS="$(KCFLAGS)"
+# Ensure the log implementation is flagged correctly
 
 all:
 	make pciesvc.ko
@@ -71,3 +73,4 @@ pciesvc_upg.ko:
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
 	$(RM) -r $(REL)
+

@@ -10,15 +10,18 @@
 #include <linux/reboot.h>
 #include <linux/stacktrace.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/execmem.h>     /* Required for 6.12 executable memory */
+#include <linux/set_memory.h>  /* Required for permission management */
+#include <linux/string.h>
 #include "version.h"
 
 MODULE_LICENSE("GPL");
 MODULE_VERSION("OLdev-1.0");
 MODULE_INFO(build, PCIESVC_VERSION);
 MODULE_INFO(intree, "Y"); /* no out-of-tree module taints kernel */
-
 int kpcimgr_module_register(struct module *mod,
-			    struct kpcimgr_entry_points_t *ep, int relocate);
+                struct kpcimgr_entry_points_t *ep, int relocate);
 
 /* loaded elf data, code, symtab, etc */
 static void *elfdata, *bin_image;
@@ -26,114 +29,112 @@ static int elf_valid_bytes, bin_valid_bytes, start_offset;
 static char *strtbl;
 static Elf64_Sym *symtbl, *symtbl_end;
 
-/*
- * Retrieve kstate_t from kpcimgr via device tree
- */
 kstate_t *get_kpci_state(void)
 {
-	static kstate_t *kstate = NULL;
-	struct device_node *dn;
-	u32 kstate_idx;
-	int err;
+    static kstate_t *kstate = NULL;
+    struct device_node *dn;
+    u32 kstate_idx;
+    int err;
 
-	if (kstate != NULL)
-		return kstate;
+    if (kstate != NULL)
+        return kstate;
 
-	dn = of_find_compatible_node(NULL, NULL, "pensando,kpcimgr");
-	if (dn == NULL) {
-		pr_err("pciesvc_loader: no compatible device found in dtree\n");
-		return NULL;
-	}
+    dn = of_find_compatible_node(NULL, NULL, "pensando,kpcimgr");
+    if (dn == NULL) {
+        pr_err("pciesvc_loader: no compatible device found in dtree\n");
+        return NULL;
+    }
 
-	err = of_property_read_u32(dn, "kstate-index", &kstate_idx);
-	if (err) {
-		pr_err("pciesvc_loader: please upgrade to new kstate-index dtree\n");
-		return NULL;
-	}
+    err = of_property_read_u32(dn, "kstate-index", &kstate_idx);
+    if (err) {
+        pr_err("pciesvc_loader: please upgrade to new kstate-index dtree\n");
+        return NULL;
+    }
 
-	kstate = (kstate_t *) of_iomap(dn, kstate_idx);
-	if (kstate == NULL) {
-		pr_err("pciesvc_loader: failed to map kstate\n");
-		return NULL;
-	}
+    kstate = (kstate_t *)of_iomap(dn, kstate_idx);
+    if (kstate == NULL) {
+        pr_err("pciesvc_loader: failed to map kstate\n");
+        return NULL;
+    }
 
-	return kstate;
+    return kstate;
 }
 
 /*
- * Allocate executable memory
+ * Allocate executable memory using the modern 6.12 execmem API
  */
 void *vmalloc_exec(unsigned long size)
 {
-	pgprot_t prot = PAGE_KERNEL_EXEC;
-
-	return __vmalloc(size, GFP_KERNEL, prot);
+    /* Use the module text region for ARM64 branch instruction reachability */
+    return execmem_alloc(EXECMEM_MODULE_TEXT, PAGE_ALIGN(size));
 }
 
-/*
- * Simple Elf Loader
- */
 int load_elf(void)
 {
-	Elf64_Ehdr *h = elfdata;
-	Elf64_Shdr *sh;
-	size_t length;
-	char *sh_strtbl;
-	int i;
+    Elf64_Ehdr *h = (Elf64_Ehdr *)elfdata;
+    Elf64_Shdr *sh;
+    size_t length = 0;
+    char *sh_strtbl;
+    int i;
 
-	strtbl = NULL;
-	symtbl = NULL;
+    strtbl = NULL;
+    symtbl = NULL;
 
-	if (h == NULL)
-		return -ENOENT;
+    if (h == NULL)
+        return -ENOENT;
 
-	if (strncmp(h->e_ident, ELFMAG, SELFMAG))
-		return -EINVAL;
+    if (strncmp(h->e_ident, ELFMAG, SELFMAG))
+        return -EINVAL;
 
-	if (h->e_machine != EM_AARCH64)
-		return -ENOTTY;
+    if (h->e_machine != EM_AARCH64)
+        return -ENOTTY;
 
-	/* determine memory needed for executable image */
-	sh = elfdata + h->e_shoff;
-	for (i=0; i < h->e_shnum; i++, sh++)
-		if (sh->sh_flags & SHF_ALLOC)
-			length = sh->sh_addr + sh->sh_size;
+    /* Determine memory needed */
+    sh = (Elf64_Shdr *)(elfdata + h->e_shoff);
+    for (i = 0; i < h->e_shnum; i++) {
+        if (sh[i].sh_flags & SHF_ALLOC)
+            length = max_t(size_t, length, sh[i].sh_addr + sh[i].sh_size);
+    }
 
-	/* round up to page align */
-	bin_valid_bytes = length;
-	length = (length + 0xfff) & ~0xfffL;
+    bin_valid_bytes = length;
+    length = PAGE_ALIGN(length);
 
-	/* allocate executable memory */
-	if (bin_image)
-		vfree(bin_image);
-	bin_image = vmalloc_exec(length);
-	memset(bin_image, 0, length);
+    if (bin_image)
+        execmem_free(bin_image);
 
-	/* iterate over sections */
-	sh = elfdata + h->e_shoff;
-	sh_strtbl = elfdata + sh[h->e_shstrndx].sh_offset;
-	for (i=0; i < h->e_shnum; i++, sh++) {
+    bin_image = vmalloc_exec(length);
+    if (!bin_image)
+        return -ENOMEM;
 
-		if (sh->sh_flags & SHF_ALLOC) {
-			if (sh->sh_type == SHT_NOBITS)
-				memset(bin_image + sh->sh_addr, 0, sh->sh_size);
-			else
-				memcpy(bin_image + sh->sh_addr, elfdata + sh->sh_offset, sh->sh_size);
-			if (sh->sh_flags & SHF_EXECINSTR)
-				start_offset = sh->sh_addr;
-		} else {
-			if (sh->sh_type == SHT_SYMTAB &&
-			    strcmp(sh_strtbl + sh->sh_name, ".symtab") == 0) {
-				symtbl = elfdata + sh->sh_offset;
-				symtbl_end = elfdata + sh->sh_offset + sh->sh_size;
-			}
-			if (sh->sh_type == SHT_STRTAB &&
-			    strcmp(sh_strtbl + sh->sh_name, ".strtab") == 0)
-				strtbl = elfdata + sh->sh_offset;
-		}
-	}
-	flush_icache_range((unsigned long)bin_image, length);
-	return 0;
+    /* Memory is writable after allocation, we perform memcpy here */
+    memset(bin_image, 0, length);
+    sh_strtbl = (char *)(elfdata + sh[h->e_shstrndx].sh_offset);
+
+    for (i = 0; i < h->e_shnum; i++, sh++) {
+        if (sh->sh_flags & SHF_ALLOC) {
+            if (sh->sh_type == SHT_NOBITS)
+                memset(bin_image + sh->sh_addr, 0, sh->sh_size);
+            else
+                memcpy(bin_image + sh->sh_addr, elfdata + sh->sh_offset, sh->sh_size);
+            
+            if (sh->sh_flags & SHF_EXECINSTR)
+                start_offset = sh->sh_addr;
+        } else {
+            if (sh->sh_type == SHT_SYMTAB && strcmp(sh_strtbl + sh->sh_name, ".symtab") == 0) {
+                symtbl = (Elf64_Sym *)(elfdata + sh->sh_offset);
+                symtbl_end = (Elf64_Sym *)(elfdata + sh->sh_offset + sh->sh_size);
+            }
+            if (sh->sh_type == SHT_STRTAB && strcmp(sh_strtbl + sh->sh_name, ".strtab") == 0)
+                strtbl = (char *)(elfdata + sh->sh_offset);
+        }
+    }
+
+    /* Finalize permissions for 6.12 W^X security */
+    set_memory_ro((unsigned long)bin_image, length >> PAGE_SHIFT);
+    set_memory_x((unsigned long)bin_image, length >> PAGE_SHIFT);
+    
+    flush_icache_range((unsigned long)bin_image, (unsigned long)bin_image + length);
+    return 0;
 }
 
 static ssize_t run_show(struct device *dev,
@@ -144,51 +145,48 @@ static ssize_t run_show(struct device *dev,
 }
 
 static ssize_t run_store(struct device *dev,
-			   struct device_attribute *attr,
-			   const char *buf,
-			   size_t count)
+               struct device_attribute *attr,
+               const char *buf,
+               size_t count)
 {
-	void *(*start_fn)(void *), (*version_fn)(char **);
-	struct kpcimgr_entry_points_t *ep;
-	struct module mod;
-	char *version;
-	int ret;
+    void *(*start_fn)(void *), (*version_fn)(char **);
+    struct kpcimgr_entry_points_t *ep;
+    struct module mod;
+    char *version;
+    int ret;
 
-	if (elfdata == NULL)
-		return -ENODEV;
+    if (elfdata == NULL)
+        return -ENODEV;
 
-	ret = load_elf();
-	if (ret)
-		return ret;
+    ret = load_elf();
+    if (ret)
+        return ret;
 
-	start_fn = bin_image + start_offset;
-	ep = start_fn(NULL);
+    start_fn = bin_image + start_offset;
+    ep = start_fn(NULL);
 
-	pr_info("pciesvc_loader: expected mgr ver=%d, lib version=%d.%d\n",
-	       ep->expected_mgr_version,
-	       ep->lib_version_major, ep->lib_version_minor);
+    pr_info("pciesvc_loader: lib version=%d.%d\n", ep->lib_version_major, ep->lib_version_minor);
 
-	version_fn = ep->entry_point[K_ENTRY_GET_VERSION];
-	(void) version_fn(&version);
-	pr_info("pciesvc_loader: lib returned version string '%s'\n", version);
+    version_fn = ep->entry_point[K_ENTRY_GET_VERSION];
+    version_fn(&version);
+    pr_info("pciesvc_loader: version string '%s'\n", version);
 
-	mod.core_layout.base = bin_image;
-	mod.core_layout.size = bin_valid_bytes;
-	mod.init_layout.base = 0;
-	mod.init_layout.size = 0;
-	strcpy_s(mod.name, sizeof(mod.name), "pciesvc.lib");
+    /* Ported for 6.12 module memory layout */
+    memset(&mod, 0, sizeof(struct module));
+    mod.state = MODULE_STATE_COMING;
+    mod.mem[MOD_TEXT].base = bin_image;
+    mod.mem[MOD_TEXT].size = bin_valid_bytes;
+    strscpy(mod.name, "pciesvc.lib", sizeof(mod.name));
 
-	ret = kpcimgr_module_register(&mod, ep, 1);
-	if (ret) {
-		pr_err("kpcimgr_module_register returned %d\n", ret);
-		pr_err("bin_image was at 0x%lx\n", (long)bin_image);
-		vfree(bin_image);
-		bin_image = NULL;
-	}
+    ret = kpcimgr_module_register(&mod, ep, 1);
+    if (ret) {
+        pr_err("kpcimgr_module_register failed: %d\n", ret);
+        execmem_free(bin_image);
+        bin_image = NULL;
+    }
 
-	return count;
+    return count;
 }
-
 
 static ssize_t valid_show(struct device *dev,
 			  struct device_attribute *attr,
@@ -360,37 +358,28 @@ char *pciesvc_address_lookup(unsigned long addr,
  * called unless you put "crash_kexec_post_notifiers" on the
  * boot command line.
  */
-static int pciesvc_panic(struct notifier_block *nb,
-			 unsigned long code, void *unused)
+static int pciesvc_panic(struct notifier_block *nb, unsigned long code, void *unused)
 {
-	unsigned long entries[48], offset, size;
-	struct stack_trace trace;
-	char *modname, buffer[256];
-	const char *name;
-	int i, len;
+    unsigned long entries[48], offset, size;
+    unsigned int nr_entries;
+    char *modname, buffer[256];
+    const char *name;
+    int i;
 
-	trace.nr_entries = 0;
-	trace.max_entries = ARRAY_SIZE(entries);
-	trace.entries = entries;
-	trace.skip = 0;
+    /* save_stack_trace is legacy; use stack_trace_save */
+    nr_entries = stack_trace_save(entries, ARRAY_SIZE(entries), 0);
 
-	save_stack_trace(&trace);
-	pr_emerg("pciesvc stack trace:\n");
-	for (i=0; i<trace.nr_entries; i++) {
-		name = pciesvc_address_lookup(entries[i], &size, &offset,
-					      &modname, buffer);
-		if (name) {
-			len = strlen(buffer);
-			len += sprintf(buffer + len, "+%#lx/%#lx", offset, size);
-			if (modname)
-				len += sprintf(buffer + len, " [%s]", modname);
-		}
-		else
-			sprint_symbol(buffer, entries[i]);
-		pr_emerg("%s\n", buffer);
-	}
+    pr_emerg("pciesvc stack trace:\n");
+    for (i = 0; i < nr_entries; i++) {
+        name = pciesvc_address_lookup(entries[i], &size, &offset, &modname, buffer);
+        if (name) {
+            pr_emerg("%s+%#lx/%#lx [%s]\n", buffer, offset, size, modname ? modname : "unknown");
+        } else {
+            pr_emerg("%pS\n", (void *)entries[i]);
+        }
+    }
 
-	return NOTIFY_DONE;
+    return NOTIFY_DONE;
 }
 
 struct notifier_block panic_notifier;
@@ -437,7 +426,9 @@ static void __exit pciesvc_loader_cleanup(void)
 	ks = get_kpci_state();
 	vfree(ks);
 	vfree(elfdata);
-	vfree(bin_image);
+	
+	if (bin_image)
+        execmem_free(bin_image);
 }
 
 module_init(pciesvc_loader_probe);
