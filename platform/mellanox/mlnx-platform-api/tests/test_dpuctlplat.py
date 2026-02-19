@@ -67,7 +67,7 @@ class TestDpuCtlPlatInit:
         # Test with print mode
         dpuctl_obj.setup_logger(True)
         # Test that the logger functions add timestamps. Patch logger so it doesn't
-        # run in test (avoids socket errors and extra print calls from tracebacks).
+        # run in test (avoids socket errors and extra print calls from errors).
         with patch('time.strftime') as mock_time:
             mock_time.return_value = "2024-01-01 12:00:00"
             with patch('builtins.print') as mock_print, \
