@@ -83,6 +83,18 @@ module sonic-mux-cable {
                     description "SoC IPv6 address. Optional and for active-active ports only. ";
                 }
 
+                leaf self_interval {
+                    type uint32;
+
+                    description "Self ICMP heartbeat interval in msec. Optional and overrides LINK_PROBER intervals. ";
+                }
+
+                leaf peer_interval {
+                    type uint32;
+
+                    description "Peer ICMP heartbeat interval in msec. Optional and overrides LINK_PROBER intervals. ";
+                }
+
                 leaf state {
                     type enumeration {
                         enum auto;
