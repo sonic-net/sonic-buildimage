@@ -7,10 +7,6 @@ module sonic-lldp {
         prefix prt;
     }
 
-    import sonic-extension {
-        prefix sonic-ext;
-    }
-
     organization
         "SONiC";
 

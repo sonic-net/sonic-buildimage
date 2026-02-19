@@ -11,18 +11,6 @@ module sonic-tunnel {
 		prefix ps;
 	}
 
-	import sonic-dscp-tc-map {
-		prefix dtm;
-	}
-
-	import sonic-tc-priority-group-map {
-		prefix tpgm;
-	}
-
-	import sonic-tc-queue-map {
-		prefix tqm;
-	}
-
 	organization
 		"SONiC";
 

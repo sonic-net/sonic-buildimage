@@ -17,10 +17,6 @@ module sonic-vlan {
 		prefix stypes;
 	}
 
-	import sonic-extension {
-		prefix ext;
-	}
-
 	import sonic-port {
 		prefix port;
 		revision-date 2019-07-01;
