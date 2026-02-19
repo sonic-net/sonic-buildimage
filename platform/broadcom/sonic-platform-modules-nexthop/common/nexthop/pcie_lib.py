@@ -71,7 +71,7 @@ def get_pcie_variables(vars_filepath, vars_to_get: set[str] | None = None) -> di
     all_vars = get_var_name_to_cmd_map(vars_filepath)
 
     return {
-        name: get_cmd_output(cmd) 
+        name: get_cmd_output(cmd)
         for name, cmd in all_vars.items() 
         if vars_to_get is None or name in vars_to_get
     }
