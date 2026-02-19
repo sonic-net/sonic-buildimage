@@ -16,6 +16,21 @@ SONIC_CONFIG_BUILD_JOBS = 1
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
 SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 
+# SONIC_BUILD_MEMORY - set memory limit for the build container.
+# When set, passes --memory and --memory-swap flags to docker run.
+# This prevents the kernel OOM killer from silently killing build processes
+# (or unrelated host processes) when parallel builds exhaust system RAM.
+# The OOM will instead be contained within the build container.
+# Example: SONIC_BUILD_MEMORY = 24g
+# Set to "none" to explicitly disable.
+# SONIC_BUILD_MEMORY =
+
+# SONIC_BUILD_MEMORY_SWAP - set memory+swap limit for the build container.
+# Only takes effect when SONIC_BUILD_MEMORY is set. Defaults to double
+# the value of SONIC_BUILD_MEMORY if not specified (Docker default behavior).
+# Set to -1 for unlimited swap. Set equal to SONIC_BUILD_MEMORY to disable swap.
+# SONIC_BUILD_MEMORY_SWAP =
+
 # DEFAULT_BUILD_LOG_TIMESTAMP - add timestamp in build log
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
