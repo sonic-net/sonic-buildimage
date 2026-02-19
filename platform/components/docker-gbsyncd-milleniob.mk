@@ -27,7 +27,8 @@ SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_GBSYNCD_MILLENIOB_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_GBSYNCD_MILLENIOB_DBG)
 
 $(DOCKER_GBSYNCD_MILLENIOB)_CONTAINER_NAME = gbsyncd
-$(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += --privileged -t
+$(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += --cap-add=SYS_RAWIO --cap-add=SYS_ADMIN --cap-add=NET_ADMIN --cap-add=NET_RAW -t
+$(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /host/warmboot:/var/warmboot
