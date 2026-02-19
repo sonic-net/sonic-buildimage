@@ -17,7 +17,7 @@ import importlib.util
 import importlib.machinery
 from swsscommon import swsscommon
 
-from mock import Mock, MagicMock, patch
+from mock import Mock, MagicMock, patch, call
 from sonic_py_common import device_info
 
 from .mock_connector import MockConnector
@@ -696,6 +696,40 @@ def test_utils():
     assert output
 
 
+@patch('health_checker.utils.logger.log_warning')
+@patch('health_checker.utils.logger.log_notice')
+@patch('health_checker.utils.logger.log_error')
+@patch('os.killpg')
+@patch('subprocess.Popen')
+def test_utils_timeout(mock_popen, mock_killpg, mock_log_error, mock_log_notice, mock_log_warning):
+    # Mock the spawned process
+    from subprocess import TimeoutExpired
+    mock_process = MagicMock()
+    mock_process.pid = 1234
+    mock_process.communicate.side_effect = [
+        TimeoutExpired(cmd='cmd', timeout=0.01), # first call triggers timeout
+        ('', '')                                 # second call during cleanup
+    ]
+    mock_popen.return_value = mock_process
+
+    # Execute with a timeout to trigger the TimeoutExpired path
+    output = utils.run_command('cmd', timeout=0.01)
+
+    # Expectations
+    assert output is None
+
+    assert mock_process.communicate.call_count == 2
+    mock_process.communicate.assert_has_calls([call(timeout=0.01), call(timeout=1)])
+
+    from signal import SIGKILL
+    mock_killpg.assert_called_once()
+    mock_killpg.assert_called_with(mock_process.pid, SIGKILL)
+
+    assert mock_log_notice.call_count == 2  # cleanup + done
+    mock_log_warning.assert_called_once() # command timeout
+    mock_log_error.assert_not_called() # no errors
+
+
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
 @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @patch('docker.DockerClient')
@@ -1016,3 +1050,22 @@ def test_healthd_check_interval(mock_log_warning, mock_log_notice, mock_time):
 
     daemon.stop_event.wait.return_value = True
     assert not daemon._run_checker(manager, chassis)
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_multi_dot_unit_name():
+    """Test that check_unit_status does not crash on unit names with multiple dots.
+
+    Systemd device/mount units can have names like 'sys-devices-pci0000:00.device'
+    which contain multiple dots. Using str.split('.') would raise ValueError
+    (too many values to unpack). Using rsplit('.', 1) correctly handles this.
+    Regression test for issue #25291.
+    """
+    sysmon = Sysmonitor()
+    # These should not raise ValueError
+    sysmon.check_unit_status('sys-devices-pci0000:00-0000:00:1f.0.device')
+    sysmon.check_unit_status('dev-disk-by\\x2did-wwn\\x2d0x5001.mount')
+    sysmon.check_unit_status('run-user-1000.mount')
+    # Normal service name should still work
+    sysmon.check_unit_status('mock_snmp.timer')

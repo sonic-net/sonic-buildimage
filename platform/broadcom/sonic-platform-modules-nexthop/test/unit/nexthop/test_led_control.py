@@ -9,15 +9,15 @@ These tests run in isolation from the SONiC environment using pytest:
 python -m pytest test/unit/nexthop/test_led_control.py -v
 """
 
-import os
-import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
-# Add the test directory to Python path for imports
-test_root = os.path.join(os.path.dirname(__file__), '../..')
-sys.path.insert(0, test_root)
+@pytest.fixture(scope="function", autouse=True)
+def led_control_module():
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from nexthop import led_control
 
+    yield led_control
 
 class TestLedControl:
     """Test class for LED control functionality."""
@@ -222,7 +222,7 @@ class TestLedControl:
 )
     def test_led_control(
         self,
-        nexthop_led_control,
+        led_control_module,
         port_name,
         get_port_num_return,
         port_status_map,
@@ -232,11 +232,11 @@ class TestLedControl:
     ):
         """Test LED control functionality with various port states."""
         # Get the LedControl class from the module
-        LedControl = nexthop_led_control.LedControl
+        LedControl = led_control_module.LedControl
 
         # Patch the module-level functions in the led_control module
-        with patch.object(nexthop_led_control, "get_port_config") as mock_get_port_config, \
-             patch.object(nexthop_led_control, "get_chassis", return_value=MagicMock()) as mock_get_chassis, \
+        with patch.object(led_control_module, "get_port_config") as mock_get_port_config, \
+             patch.object(led_control_module, "get_chassis", return_value=MagicMock()) as mock_get_chassis, \
              patch.object(LedControl, "_get_xcvr_presence") as mock_get_xcvr_presence, \
              patch.object(LedControl, "_get_port_status") as mock_get_port_status, \
              patch.object(LedControl, "_get_port_num") as mock_get_port_num, \
@@ -322,16 +322,16 @@ class TestLedControl:
     )
     def test_get_xcvr_presence(
         self,
-        nexthop_led_control,
+        led_control_module,
         port_num,
         xcvr_info_map,
         expected_xcvr_presence,
     ):
         """Test transceiver presence detection."""
         # Get the LedControl class from the module
-        LedControl = nexthop_led_control.LedControl
+        LedControl = led_control_module.LedControl
 
-        with patch.object(nexthop_led_control, "get_port_config") as mock_get_port_config, \
+        with patch.object(led_control_module, "get_port_config") as mock_get_port_config, \
              patch.object(LedControl, "_get_interfaces_for_port") as mock_get_interfaces_for_port, \
              patch.object(LedControl, "_get_xcvr_info") as mock_get_xcvr_info:
 
@@ -522,16 +522,16 @@ class TestLedControl:
 )
     def test_get_port_mappings(
         self,
-        nexthop_led_control,
+        led_control_module,
         ports_dict,
         expected_logical_to_physical,
         expected_physical_to_logical,
     ):
         """Test port mapping functionality."""
         # Get the LedControl class from the module
-        LedControl = nexthop_led_control.LedControl
+        LedControl = led_control_module.LedControl
 
-        with patch.object(nexthop_led_control, "get_port_config") as mock_get_port_config:
+        with patch.object(led_control_module, "get_port_config") as mock_get_port_config:
             mock_get_port_config.return_value = (ports_dict, {}, {})
 
             led_control = LedControl()
