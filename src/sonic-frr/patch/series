@@ -57,3 +57,5 @@
 0095-bgpd-Crash-due-to-usage-of-freed-up-evpn_overlay-att.patch
 0096-bgpd-Notify-all-incoming-outgoing-on-peer-group-noti.patch
 0097-mgmt-Note-that-a-DS-is-locked-or-not-in-output.patch
+0098-SRv6-Add-support-for-multiple-SRv6-locators.patch
+0099-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch

@@ -164,14 +164,40 @@ class TestUtils:
         assert utils.extract_RJ45_ports_index() == [0]
 
     @pytest.mark.parametrize(
-        "mock_exists_value, platform_json, hwsku_json, expected_result",
+        "platform_json, hwsku_json, expected_result",
         [
-            # Case 1: hwsku.json file does not exist
-            (False, {}, {}, None),
+            # Case 1: platform.json and hwsku.json files do not exist
+            ({}, {}, None),
 
-            # Case 2: file exists, but no CPO ports
+            # Case 2: platform.json file does not exist
             (
-                True,
+                {},
+                {
+                    "interfaces": {
+                        "Ethernet0": {
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 3: hwsku.json file does not exist
+            (
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0"
+                        }
+                    }
+                },
+                {},
+                None
+            ),
+
+            # Case 4: no CPO ports
+            (
                 {
                     'interfaces': {
                         "Ethernet0": {
@@ -194,9 +220,8 @@ class TestUtils:
                 None
             ),
 
-            # Case 3: one CPO port
+            # Case 5: one CPO port
             (
-                True,
                 {
                     'interfaces': {
                         "Ethernet0": {
@@ -219,9 +244,8 @@ class TestUtils:
                 [0]
             ),
 
-            # Case 4: multiple CPO ports
+            # Case 6: multiple CPO ports
             (
-                True,
                 {
                     'interfaces': {
                         "Ethernet0": {"index": "1"},
@@ -245,9 +269,20 @@ class TestUtils:
     @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
     @mock.patch('sonic_platform.utils.load_json_file')
     @mock.patch('os.path.exists')
-    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, mock_exists_value, platform_json, hwsku_json, expected_result):
-        mock_exists.return_value = mock_exists_value
-        mock_load_json.side_effect = [platform_json, hwsku_json]
+    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, platform_json, hwsku_json, expected_result):
+        if platform_json and hwsku_json:
+            mock_exists.side_effect = [True, True]
+            mock_load_json.side_effect = [platform_json, hwsku_json]
+        elif platform_json:
+            mock_exists.side_effect = [True, False]
+            mock_load_json.side_effect = [platform_json, None]
+        elif hwsku_json:
+            mock_exists.side_effect = [False, True]
+            mock_load_json.side_effect = [None, hwsku_json]
+        else:
+            mock_exists.side_effect = [False, False]
+            mock_load_json.side_effect = [None, None]
+
         assert utils.extract_cpo_ports_index() == expected_result
 
     def test_wait_until(self):

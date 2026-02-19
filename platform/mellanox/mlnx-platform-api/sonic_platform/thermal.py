@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -140,15 +140,6 @@ THERMAL_NAMING_RULE = {
             "high_critical_threshold": "sodimm{}_temp_crit",
             "search_pattern": '/run/hw-management/thermal/sodimm*_temp_input',
             'index_pattern': r'sodimm(\d+)_temp_input',
-            "type": "discrete",
-        },
-        {
-            "name": "PMIC {} Temp",
-            "temperature": "voltmon{}_temp1_input",
-            "high_threshold": "voltmon{}_temp1_max",
-            "high_critical_threshold": "voltmon{}_temp1_crit",
-            "search_pattern": '/run/hw-management/thermal/voltmon*_temp1_input',
-            'index_pattern': r'voltmon(\d+)_temp1_input',
             "type": "discrete",
         }
     ],

@@ -607,3 +607,15 @@ class TestSfp:
         assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')
         assert sfp.get_temperature_info() == (False, None, None, None)
+
+    def test_reinit_if_sn_changed(self):
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert not sfp.reinit_if_sn_changed()
+        
+        sfp.get_xcvr_api.return_value = mock.MagicMock()
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read = mock.MagicMock(return_value='1234567890')
+        assert sfp.reinit_if_sn_changed()
+        
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read.return_value = '1234567891'
+        assert sfp.reinit_if_sn_changed()
