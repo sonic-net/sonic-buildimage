@@ -19,6 +19,7 @@ $(DOCKER_SYNCD_CLOUNIX_RPC)_CONTAINER_NAME = syncd
 $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_diag:/usr/bin/clx_diag
 $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_ipython:/usr/bin/clx_ipython
 $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_icling:/usr/bin/clx_icling
+$(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_shell:/usr/bin/clx_shell
 
 $(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += --net=host --privileged -t
 $(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
