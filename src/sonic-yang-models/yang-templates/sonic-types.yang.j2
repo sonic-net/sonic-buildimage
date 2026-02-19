@@ -64,6 +64,14 @@ module sonic-types {
             "Comma-separated IPv4 addresses";
     }
 
+    typedef ifname-list {
+        type string {
+            pattern '([a-zA-Z0-9]+)(,([a-zA-Z0-9]+))*';
+        }
+        description
+            "Comma-separated interface names";
+    }
+
     typedef admin_status {
         type enumeration {
             enum up;

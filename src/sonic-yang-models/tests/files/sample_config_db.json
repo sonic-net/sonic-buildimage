@@ -2476,8 +2476,8 @@
         },
         "VNET_ROUTE": {
             "vnet1|100.100.4.0/24": {
-                "nexthop": "100.100.4.1",
-                "ifname": "Ethernet2"
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
             }
         },
         "VNET_ROUTE_TUNNEL" : {

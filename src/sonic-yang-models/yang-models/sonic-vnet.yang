@@ -124,14 +124,14 @@ module sonic-vnet {
                 }
 
                 leaf nexthop {
-                    description "Nexthop IP address";
-                    type inet:ipv4-address;
+                    description "Nexthop IP addresses";
+                    type stypes:ipv4-address-list;
                     mandatory true;
                 }
 
                 leaf ifname {
-                    description "Interface name";
-                    type string;
+                    description "Interface names";
+                    type stypes:ifname-list;
                     mandatory true;
                 }
             }
