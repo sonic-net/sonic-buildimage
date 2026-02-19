@@ -1,0 +1,17 @@
+[Unit]
+Description=SFP max temp updater for BMC
+#After=syslog.target
+After=platform-modules-sse-t7132s.service
+After=database.service
+After=updategraph.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+SyslogIdentifier=sfp-max-temp-updater
+Environment="PATH=/home/{{ user }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart=/usr/bin/python3 /usr/local/bin/sfp_max_temp_updater.py
+
+[Install]
+WantedBy=multi-user.target

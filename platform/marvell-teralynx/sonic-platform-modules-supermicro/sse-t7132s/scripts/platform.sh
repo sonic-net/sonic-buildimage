@@ -62,36 +62,114 @@ update_share_password() {
     echo "Update shared password !!!"
     SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
     image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
+    host_images=$(find /host -maxdepth 1 -name "*image-*" | sed -e 's/\/host\/image-//')
     if [ -f /host/reboot-cause/platform/last_boot_image ]; then
         last_image_ver=$(cat /host/reboot-cause/platform/last_boot_image)
+        echo "The last boot image is ${last_image_ver}"
     else
         last_image_ver=""
-    fi
-    echo "last_image_ver=${last_image_ver}"
+        echo "The last boot image tag file is not found."
 
-        find /host -name "*image-*" | sed -e 's/\/host\/image-//' | while read var ; do
-        #echo "var=${var} image_dir=${image_dir}"
-        if [ "image-${var}" != "$image_dir" ] && [ "$last_image_ver" != "${SONIC_VERSION}" ]; then
-            cp /host/image-${var}/rw/etc/shadow /host/${image_dir}/rw/etc/shadow
-            cp /host/image-${var}/rw/etc/passwd /host/${image_dir}/rw/etc/passwd
-            cp /host/image-${var}/rw/etc/gshadow /host/${image_dir}/rw/etc/gshadow
-            cp /host/image-${var}/rw/etc/group /host/${image_dir}/rw/etc/group
+        # try to detect reset-factory
+        # reset-factory deletes all docker containers except "database"
+        while read -r var; do
+            names=$(find /host/image-${var}/docker/containers -name config.v2.json -exec jq ".Name" {} \;)
+            echo "image-${var} docker containers: ${names}"
+            if [ "$names" == '"/database"' ]; then
+                echo "image-${var} was reset-factory"
+                # if already found current image has reset-factory,
+                # then keep last_image_ver to be current image,
+                # to skip copy password
+                if [ "$last_image_ver" != "${SONIC_VERSION}" ]; then
+                    last_image_ver=${var}
+                fi
+            fi
+        done <<< "$host_images"
+
+        if [ -z "$last_image_ver" ]; then
+            echo "No reset-factory is detected"
         fi
-    done
-
-    if [ -d /host/reboot-cause/platform ]; then
-        echo "${SONIC_VERSION}" | sudo tee /host/reboot-cause/platform/last_boot_image > /dev/null
     fi
+
+    echo "last_image_ver = ${last_image_ver}"
+    COPIED=""
+    if [ -n "$last_image_ver" ]; then
+        if [ "$last_image_ver" == "${SONIC_VERSION}" ]; then
+            echo "No need to copy password to the same firmware"
+        else
+            while read -r var; do
+                #echo "var=${var} image_dir=${image_dir}"
+                if [ "image-${var}" != "$image_dir" ]; then
+                    cp /host/image-${var}/rw/etc/shadow /host/${image_dir}/rw/etc/shadow
+                    cp /host/image-${var}/rw/etc/passwd /host/${image_dir}/rw/etc/passwd
+                    cp /host/image-${var}/rw/etc/gshadow /host/${image_dir}/rw/etc/gshadow
+                    cp /host/image-${var}/rw/etc/group /host/${image_dir}/rw/etc/group
+                    mount -o remount,rw /
+                    echo "Copied password from image-${var} to ${image_dir}"
+                    COPIED="image-${var}"
+                    #Fix the issue about missing user "nptsec" from SONiC 202305 firmware
+                    RUNASUSER=ntpsec
+                    UGID=$(getent passwd $RUNASUSER | cut -f 3,4 -d:)
+                    if [ -n "$UGID"]; then
+                        echo "Add user $RUNASUSER"
+                        adduser --system --group $RUNASUSER
+                    fi
+                fi
+            done <<< "$host_images"
+        fi
+    fi
+    echo "COPIED = ${COPIED}"
+    if [ -z "$COPIED" ]; then
+        echo "No password is copied"
+    fi
+
+    if [ ! -d /host/reboot-cause/platform ]; then
+        mkdir -p /host/reboot-cause/platform
+    fi
+    echo "${SONIC_VERSION}" | sudo tee /host/reboot-cause/platform/last_boot_image > /dev/null
 }
 
+increase_xcvr_voltage() {
+    echo "Increase xcvr voltage"
+
+    i2cset -y 45 0x5c 0x0 0x1
+    old1=$(i2cget -y 45 0x5c 0x24 w)
+    i2cset -y 45 0x5c 0x24 0x0635 w
+    new1=$(i2cget -y 45 0x5c 0x24 w)
+    old2=$(i2cget -y 45 0x5c 0x21 w)
+    i2cset -y 45 0x5c 0x21 0x0633 w
+    new2=$(i2cget -y 45 0x5c 0x21 w)
+
+    i2cset -y 45 0x60 0x0 0x0
+    old3=$(i2cget -y 45 0x60 0x24 w)
+    i2cset -y 45 0x60 0x24 0x0635 w
+    new3=$(i2cget -y 45 0x60 0x24 w)
+    old4=$(i2cget -y 45 0x60 0x21 w)
+    i2cset -y 45 0x60 0x21 0x0633 w
+    new4=$(i2cget -y 45 0x60 0x21 w)
+
+    printf "old values = %s %s %s %s\n" $old1 $old2 $old3 $old4
+    printf "new values = %s %s %s %s\n" $new1 $new2 $new3 $new4
+}
+
+load_modules() {
+    # for the first boot the modules must be loaded manually
+    modules=$(grep -v '^#' /etc/modules-load.d/t7132s-modules.conf)
+    for module in $modules; do
+        modprobe "$module"
+    done
+}
 
 if [ "$1" == "init" ]; then
     echo "Initializing hardware components ..."
     depmod -a
     sys_eeprom "new_device"
+    load_modules
     modprobe t7132s
     install_python_api_package
     update_share_password
+    /usr/bin/python3 /usr/local/bin/delay_start_services.py &
+    increase_xcvr_voltage
 elif [ "$1" == "deinit" ]; then
     echo "De-initializing hardware components ..."
     modprobe -r t7132s

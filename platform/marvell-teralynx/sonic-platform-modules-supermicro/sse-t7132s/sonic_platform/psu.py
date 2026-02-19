@@ -95,7 +95,7 @@ class Psu(PsuBase):
             # Formula: R/10
             psu_voltage = int("".join(raw_oem_read.split()[::-1]), 16) / 10
 
-        return psu_voltage
+        return float(psu_voltage)
 
     def get_voltage_high_threshold(self):
         """
@@ -107,7 +107,7 @@ class Psu(PsuBase):
         # Formula: PSU_OUT_VOLTAGEx11/10
         psu_voltage = PSU_OUT_VOLTAGE * 11 / 10
 
-        return psu_voltage
+        return float(psu_voltage)
 
     def get_voltage_low_threshold(self):
         """
@@ -119,7 +119,7 @@ class Psu(PsuBase):
         # Formula: PSU_OUT_VOLTAGEx9/10
         psu_voltage = PSU_OUT_VOLTAGE * 9 / 10
 
-        return psu_voltage
+        return float(psu_voltage)
 
     def get_current(self):
         """
@@ -136,7 +136,7 @@ class Psu(PsuBase):
             # Formula: R/1000
             psu_current = int("".join(raw_oem_read.split()[::-1]), 16) / 1000
 
-        return psu_current
+        return float(psu_current)
 
     def get_power(self):
         """
@@ -152,7 +152,7 @@ class Psu(PsuBase):
         if raw_oem_read:
             # Formula: R
             psu_power = int("".join(raw_oem_read.split()[::-1]), 16)
-        return psu_power
+        return float(psu_power)
 
     def get_maximum_supplied_power(self):
         """
@@ -169,7 +169,7 @@ class Psu(PsuBase):
         if raw_oem_read:
             # Formula: R
             psu_power = int("".join(raw_oem_read.split()[::-1]), 16)
-        return psu_power
+        return float(psu_power)
 
     def get_powergood_status(self):
         """
@@ -229,9 +229,11 @@ class Psu(PsuBase):
             of one degree Celsius, e.g. 30.125
             there are three temp sensors , we choose one of them
         """
-        # Need implement after BMC function ready
-        psu_temperature = None
+        # Return temperature of PSU Temp 2
+        psu_temperature = self.get_thermal(1).get_temperature()
 
+        if psu_temperature is not None:
+            psu_temperature = float(psu_temperature)
         return psu_temperature
 
     def get_temperature_high_threshold(self):
@@ -242,10 +244,12 @@ class Psu(PsuBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
             there are three temp sensors , we choose one of them
         """
-        # Need implement after BMC function ready
-        psu_temperature = None
+        # Return high threshold of PSU Temp 2
+        high_threshold = self.get_thermal(1).get_high_threshold()
 
-        return psu_temperature
+        if high_threshold is not None:
+            high_threshold = float(high_threshold)
+        return high_threshold
 
     def get_name(self):
         """
@@ -268,8 +272,8 @@ class Psu(PsuBase):
         status_byte = self.find_value(raw_status_read)
 
         if status:
-            presence_int = (int(status_byte, 16) >> 0) & 1
-            psu_presence = True if presence_int else False
+            presence_int = int(status_byte, 16)
+            psu_presence = True if (presence_int != 255) else False
 
         return psu_presence
 
