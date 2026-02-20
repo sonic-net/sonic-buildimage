@@ -1,0 +1,19 @@
+# GNMI Bypass Validation Configuration
+# This file configures which tables and SKUs can use the bypass fast path
+# for gNMI Set operations (direct ConfigDB writes, skipping DBUS/GCU validation)
+
+bypass:
+  # Tables that are allowed to use bypass validation (exact match)
+  allowed_tables:
+    - VNET
+    - VNET_ROUTE_TUNNEL
+    - VLAN_SUB_INTERFACE
+    - ACL_RULE
+    - BGP_PEER_RANGE
+
+  # SKU prefixes that are allowed to use bypass validation
+  # Device hwsku must start with one of these prefixes
+  allowed_sku_prefixes:
+    - Cisco-8102
+    - Cisco-8101
+    - Cisco-8223
