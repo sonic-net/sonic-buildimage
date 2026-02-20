@@ -82,13 +82,13 @@ apply_ipinip_subset() {
 SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 SWSS_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|swss" enable`
 if [[ "$SYSTEM_WARM_START" == "true" ]] || [[ "$SWSS_WARM_START" == "true" ]]; then
-    # On warm boot, only apply TUNNEL_DECAP_TABLE subset on non-Broadcom ASICs to
-    # match ipinip.json.j2 config
-    if [[ "$sonic_asic_type" != "broadcom" ]]; then
-        echo "Preparing to apply ipinip.json config for non-broadcom ASIC switch"
-        apply_ipinip_subset
+    # On warm boot, only apply TUNNEL_DECAP_TABLE subset to match ipinip.json.j2 config,
+    # except for broadcom and marvell-teralynx asic_types
+    if [[ "$sonic_asic_type" == "broadcom" ]] || [[ "$sonic_asic_type" == "marvell-teralynx" ]]; then
+        echo "Skip applying ipinip.json config for ASIC type: $sonic_asic_type after warm-boot"
     else
-        echo "Skip applying ipinip.json config for broadcom ASIC switch after warm-boot"
+        echo "Preparing to apply ipinip.json config for ASIC type: $sonic_asic_type"
+        apply_ipinip_subset
     fi
     exit 0
 fi
