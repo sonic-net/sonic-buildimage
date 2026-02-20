@@ -57,6 +57,7 @@ class TestChassis:
         """Test basic chassis functionality."""
         # Test that chassis object was created successfully
         chassis = chassis_module.Chassis()
+        chassis = chassis_module.Chassis()
         assert chassis is not None
 
         # Test that get_change_event method exists and is callable
