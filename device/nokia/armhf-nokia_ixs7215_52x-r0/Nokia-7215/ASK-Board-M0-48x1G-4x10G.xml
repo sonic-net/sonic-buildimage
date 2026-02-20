@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-08-14-1.12" profile="Askboard" dsig="md5" sid="61ccdecb-014b-4202-8209-4dc4fe1f4545">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-09-28-1.13" profile="Askboard" dsig="md5" sid="f310abdc-8815-4e41-9fca-d057d4d1a83b">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -202,8 +202,8 @@ Ethernet Transceiver</askboardplt:description>
           <askboardplt:value>9</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>alaska-88E3520</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3520, Integrated Octal 10/100/1000/2.5G/5G/10GBASE-T
+          <askboardplt:name>alaska-CUX3520</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier CUX3520, Integrated Octal 10/100/1000/2.5G/5G/10GBASE-T
 Ethernet Transceiver</askboardplt:description>
           <askboardplt:value>10</askboardplt:value>
         </askboardplt:enum>
