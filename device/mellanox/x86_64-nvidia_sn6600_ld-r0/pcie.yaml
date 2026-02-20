@@ -1,0 +1,220 @@
+##
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 14b5
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Root
+    Complex (rev 01)'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: 14b6
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Family 17h-19h IOMMU'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: 14b8
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: 14b8
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '3'
+  id: 14b8
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe GPP Bridge'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: 14b7
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h PCIe Dummy
+    Host Bridge (rev 01)'
+- bus: '00'
+  dev: 08
+  fn: '1'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
+- bus: '00'
+  dev: 08
+  fn: '2'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
+- bus: '00'
+  dev: 08
+  fn: '3'
+  id: 14b9
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h-19h Internal PCIe
+    GPP Bridge (rev 10)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 71)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 51)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: '1679'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 0'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: 167a
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: 167b
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: 167c
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: 167d
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: 167e
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 5'
+- bus: '00'
+  dev: '18'
+  fn: '6'
+  id: 167f
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 6'
+- bus: '00'
+  dev: '18'
+  fn: '7'
+  id: '1680'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Rembrandt Data Fabric: Device
+    18h; Function 7'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: '2268'
+  name: 'Non-Volatile memory controller: Silicon Motion, Inc. SM2268XT (DRAM-less)
+    NVMe SSD Controller (rev 10)'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD/ATI]
+    Dummy Function (absent graphics controller)'
+- bus: '04'
+  dev: '00'
+  fn: '2'
+  id: '1649'
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 19h PSP/CCP'
+- bus: '04'
+  dev: '00'
+  fn: '3'
+  id: 161d
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
+    #3'
+- bus: '04'
+  dev: '00'
+  fn: '4'
+  id: 161e
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
+    #4'
+- bus: '04'
+  dev: '00'
+  fn: '5'
+  id: 15e2
+  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] Audio Coprocessor
+    (rev 60)'
+- bus: '04'
+  dev: '00'
+  fn: '7'
+  id: 15e4
+  name: 'Signal processing controller: Advanced Micro Devices, Inc. [AMD] Sensor Fusion
+    Hub'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function (rev a1)'
+- bus: '05'
+  dev: '00'
+  fn: '2'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] XGMAC 10GbE Controller'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function'
+- bus: '06'
+  dev: '00'
+  fn: '3'
+  id: 15d6
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
+    #5'
+- bus: '06'
+  dev: '00'
+  fn: '4'
+  id: 15d7
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
+    #6'
