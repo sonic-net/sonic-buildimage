@@ -9,6 +9,7 @@
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
 #  * INCLUDE_KUBERNETES_MASTER: Allows including Kubernetes master
+#  * INCLUDE_DUMMYK8S: Allows including dummy container to be deployed using Kubernetes
 #  * INCLUDE_MUX: Include MUX feature/services for TOR switch.
 #  * ENABLE_PFCWD_ON_START: Enable PFC Watchdog (PFCWD) on server-facing ports
 #  * by default for TOR switch.
@@ -549,6 +550,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
                            INCLUDE_KUBERNETES=$(INCLUDE_KUBERNETES) \
+                           INCLUDE_DUMMYK8S=$(INCLUDE_DUMMYK8S) \
                            KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
                            KUBERNETES_CNI_VERSION=$(KUBERNETES_CNI_VERSION) \
                            KUBERNETES_CRI_TOOLS_VERSION=$(KUBERNETES_CRI_TOOLS_VERSION) \

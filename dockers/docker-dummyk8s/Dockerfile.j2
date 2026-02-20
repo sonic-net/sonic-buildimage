@@ -1,0 +1,19 @@
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Update apt's cache of available packages
+RUN apt-get update
+
+COPY ["readiness-probe.sh", "/usr/bin"]
+
+RUN chmod +x /usr/bin/readiness-probe.sh
+
+ENTRYPOINT ["sleep", "900"]
