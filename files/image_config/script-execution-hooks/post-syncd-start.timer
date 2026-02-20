@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer to run a set of commands after syncd has been initialized
+StopPropagatedFrom=syncd.service swss.service
+
+[Timer]
+OnActiveSec=3min
+
+[Install]
+WantedBy=syncd.service

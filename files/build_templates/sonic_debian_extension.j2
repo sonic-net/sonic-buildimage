@@ -522,6 +522,11 @@ sudo cp $IMAGE_CONFIGS/corefile_uploader/core_uploader.py $FILESYSTEM_ROOT/usr/b
 sudo cp $IMAGE_CONFIGS/corefile_uploader/core_analyzer.rc.json $FILESYSTEM_ROOT_ETC_SONIC/
 sudo chmod og-rw $FILESYSTEM_ROOT_ETC_SONIC/core_analyzer.rc.json
 
+# Copy script hook systemd files
+sudo cp $IMAGE_CONFIGS/script-execution-hooks/post-syncd-start.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo cp $IMAGE_CONFIGS/script-execution-hooks/post-syncd-start.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable post-syncd-start.timer
+
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     # Install rasdaemon package
     # NOTE: Can be installed from debian directly when we move to trixie
