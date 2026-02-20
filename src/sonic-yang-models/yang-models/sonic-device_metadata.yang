@@ -100,7 +100,7 @@ module sonic-device_metadata {
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|FilterLeaf|not-provisioned";
                     }
                 }
 
