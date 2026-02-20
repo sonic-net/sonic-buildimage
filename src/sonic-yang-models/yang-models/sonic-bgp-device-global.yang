@@ -37,10 +37,27 @@ module sonic-bgp-device-global {
                     "When set to true, Traffic is shifted away (TSA), i.e, BGP routes are not advertised to neighboring routers";
                 }
 
-                leaf wcmp_enabled {
-                    description "Enables/Disables Weighted-Equal Cost-Multipath using BGP link bandwidth";
-                    type boolean;
-                    default "false";
+                leaf originate_bandwidth {
+                    description "Configures state for device to send bandwidth for W-ECMP";
+                    type union {
+                        type enumeration {
+                            enum cumulative {
+                                description "Cumulative bandwidth of all multipaths";
+                            }
+                            enum num_multipaths {
+                                description "Internally computed bandwidth based on number of multipaths";
+                            }
+                            enum disabled {
+                                description "Disable W-ECMP using BGP link bandwidth";
+                            }
+                        }
+                        type uint16 {
+                            range "1..25600" {
+                                description "A value between 1 and 25600 (Mbps) to be advertised through BGP link bandwidth";
+                            }
+                        }
+                    }
+                    default "disabled";
                 }
 
                 leaf idf_isolation_state {
