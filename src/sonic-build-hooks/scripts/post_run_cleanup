@@ -52,3 +52,6 @@ while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)
     /usr/share/linda/*   \
     /var/cache/man/*     \
     /usr/share/locale/*
+
+# clean up buildx cache
+rm -rf ~/.docker/buildx
