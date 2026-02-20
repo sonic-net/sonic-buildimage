@@ -40,6 +40,9 @@ jobs:
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
           fi
+          if echo $(PLATFORM_AZP) | grep -E -q "^vs$"; then
+            BUILD_OPTIONS="$BUILD_OPTIONS NOBUSTER=0"
+          fi
           echo $BUILD_OPTIONS
           echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"
         displayName: "Set cache options"

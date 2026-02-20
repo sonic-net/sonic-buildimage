@@ -54,10 +54,8 @@ jobs:
       build_options="$(VERSION_CONTROL_OPTIONS)"
       image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
-      if echo ${{ parameters.pool }} | grep ${{ parameters.arch }};then
-        image_latest=$(echo ${image_latest} | sed 's/:/-${{ parameters.arch }}:/')
-      fi
-      image_branch=$(echo $(echo $image_latest | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      image_branch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      image_branch_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
       docker rmi $image_tag || true
 
       if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
@@ -71,11 +69,15 @@ jobs:
 
       docker tag ${image_tag} ${REGISTRY_SERVER}/${image_tag}
       docker push ${REGISTRY_SERVER}/${image_tag}
-      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch}
-      docker push ${REGISTRY_SERVER}/${image_branch}
-      if [[ "$(Build.SourceBranchName)" == "master" ]];then
-        docker tag ${image_tag} ${REGISTRY_SERVER}/${image_latest}
-        docker push ${REGISTRY_SERVER}/${image_latest}
+      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch_arch}
+      docker push ${REGISTRY_SERVER}/${image_branch_arch}
+      if [[ "${{ parameters.arch }}" == "amd64" ]];then
+        docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch}
+        docker push ${REGISTRY_SERVER}/${image_branch}
+        if [[ "$(Build.SourceBranchName)" == "master" ]];then
+          docker tag ${image_tag} ${REGISTRY_SERVER}/${image_latest}
+          docker push ${REGISTRY_SERVER}/${image_latest}
+        fi
       fi
     env:
       REGISTRY_SERVER: ${{ parameters.registry_url }}

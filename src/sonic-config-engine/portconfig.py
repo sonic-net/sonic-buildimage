@@ -385,13 +385,19 @@ class BreakoutCfg(object):
                 else:
                     subport = "0" if total_num_ports == 1 else str(alias_id + 1)
 
-                ports[interface_name] = {
+                port_config = {
                     'alias': alias,
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
                     'index': self._indexes[lane_id],
                     'subport': subport
                 }
+                
+                # If the lane speed is greater than 50G, enable FEC
+                if entry.default_speed // lanes_per_port >= 50000:
+                    port_config['fec'] = 'rs'
+
+                ports[interface_name] = port_config
 
                 lane_id += lanes_per_port
                 alias_id += 1

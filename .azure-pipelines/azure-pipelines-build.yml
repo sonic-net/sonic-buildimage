@@ -146,8 +146,8 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-            make $BUILD_OPTIONS target/docker-ptf-sai.gz
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-ptf-sai.gz target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run

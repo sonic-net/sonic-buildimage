@@ -1,6 +1,6 @@
 iputils-ping==3:20221126-1+deb12u1
 libdbus-1-dev==1.14.10-1~deb12u1
-libexpat1-dev==2.5.0-1+deb12u1
+libexpat1-dev==2.5.0-1+deb12u2
 libjs-sphinxdoc==5.3.0-4
 libjs-underscore==1.13.4~dfsg+~1.11.4-3
 libpcap-dev==1.10.3-1
@@ -11,7 +11,7 @@ libpython3-dev==3.11.2-1+b1
 libpython3.11-dev==3.11.2-6+deb12u6
 libsaimetadata==1.0.0
 libsairedis==1.0.0
-mrvllibsai==1.15.1-1
+mrvllibsai==1.16.1-2
 pkg-config==1.8.1-1
 pkgconf==1.8.1-1
 pkgconf-bin==1.8.1-1
