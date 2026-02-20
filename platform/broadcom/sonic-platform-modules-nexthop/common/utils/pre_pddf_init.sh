@@ -29,6 +29,4 @@ fi
 nh_gen pddf_device_json
 nh_gen pcie_yaml
 
-echo "blacklist adm1266" > /etc/modprobe.d/blacklist-adm1266.conf
-
 exit 0

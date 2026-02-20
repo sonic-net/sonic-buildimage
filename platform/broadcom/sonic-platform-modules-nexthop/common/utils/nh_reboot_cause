@@ -5,93 +5,98 @@ Displays reboot-cause information from saved DPM fault records.
 Reads persisted JSON files only - no device access or recomputation.
 """
 
-import os
 import click
-from typing import List
 
-from sonic_platform.adm1266 import Adm1266Display
-from sonic_platform.dpm import SystemDPMLogHistory
+from sonic_platform import adm1266
+from sonic_platform.dpm_base import DpmType
+from sonic_platform.dpm_logger import DpmLogger, DataBase, DataV1
+
+RECORD_NAME_WIDTH = 42
 
 
-@click.command()
-@click.option('--history', is_flag=True,
-              help='Show history of all saved reboot-cause records')
-def reboot_cause(history: bool) -> None:
-    """Show reboot-cause information from DPM fault records.
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.option("-v", "verbosity", flag_value=1, help="Show debug fields from DPM records")
+@click.option("-vv", "verbosity", flag_value=2, help="Show all fields from DPM records")
+def reboot_cause(ctx, verbosity: int) -> None:
+    """Shows reboot-cause information and DPM records.
 
     By default, displays the most recent reboot-cause.
-    Use --history to show all saved historical records.
+    Use history to show all saved historical records.
+    Use -v or -vv to show DPM records.
     """
-    if history:
-        show_history()
-    else:
-        show_current()
+    if ctx.invoked_subcommand is None:
+        show_current(verbosity)
 
 
-def show_current() -> None:
-    """Display the most recent reboot-cause from saved data."""
-    dpm_type, records = SystemDPMLogHistory().load()
+def _show_dpm_record(name: str, record: dict[str, str]) -> None:
+    first_row = True
+    for k, v in record.items():
+        v = v.replace("\n", f"\n{' ' * RECORD_NAME_WIDTH} {' ' * len(k)}  ")
+        if first_row:
+            click.echo(f"  {name:<{RECORD_NAME_WIDTH-2}} {k}: {v}")
+        else:
+            click.echo(f"{' ' * RECORD_NAME_WIDTH} {k}: {v}")
+        first_row = False
+    click.echo()
 
-    if not records:
+
+def _show_data_v1(data: DataV1, verbosity: int) -> None:
+    click.secho(f"=== Captured at {data.gen_time} ===", fg="yellow")
+
+    for c in reversed(data.causes):
+        click.secho(
+            f"[{c.timestamp}] cause: {c.cause}; description: {c.description}; source: {c.source}",
+            fg="blue",
+        )
+
+    if verbosity:
+        records = [(dpm, record) for dpm in data.dpms for record in reversed(dpm.records)]
+        click.echo(" DPM records:")
+        if not records:
+            click.echo("  None")
+        else:
+            for dpm, record in records:
+                if dpm.type == DpmType.ADM1266.value:
+                    record_name = adm1266.record_unique_name(record)
+                    if verbosity == 1:
+                        record = adm1266.trim_record_dict(record)
+                else:
+                    record_name = dpm.name
+                _show_dpm_record(record_name, record)
+
+def _show_data(data: DataBase, verbosity: int) -> None:
+    if data.schema_version == 1 and isinstance(data, DataV1):
+        _show_data_v1(data, verbosity)
+
+
+def show_current(verbosity: int) -> None:
+    """Displays the most recent reboot-cause history from saved data."""
+    dpm_logger = DpmLogger()
+    data = dpm_logger.load()
+
+    if not data:
         click.echo("No reboot-cause records found")
         return
 
-    if dpm_type != "adm1266":
-        click.echo(f"Error: Unsupported DPM type '{dpm_type}' (expected 'adm1266')")
+    _show_data(data, verbosity)
+
+
+@reboot_cause.command()
+@click.option("-v", "verbosity", flag_value=1, help="Show debug fields from DPM records")
+@click.option("-vv", "verbosity", flag_value=2, help="Show all fields from DPM records")
+def history(verbosity: int) -> None:
+    """Displays reboot-cause history with most recent entry first."""
+    dpm_logger = DpmLogger()
+    datas = dpm_logger.load_all()
+
+    if not datas:
+        click.echo("No reboot-cause records found")
         return
 
-    messages = Adm1266Display(records).render(is_first=True)
-    for msg in messages:
-        if msg:
-            click.echo(msg)
+    for data in reversed(datas):
+        _show_data(data, verbosity)
 
 
-def show_history() -> None:
-    """Display reboot-cause history with most recent entry first."""
-    history = SystemDPMLogHistory()
-    files: List[str] = list(getattr(history, '_history_files', []))
-
-    if not files:
-        click.echo("No reboot-cause history found")
-        return
-
-    # Determine the current (most recent) file
-    latest = None
-    if os.path.exists(history.prev_link) or os.path.islink(history.prev_link):
-        try:
-            latest = os.path.realpath(history.prev_link)
-        except Exception:
-            pass
-
-    # Build display order: current first, then remaining files newest to oldest
-    ordered: List[str] = []
-    if latest and latest in files:
-        ordered.append(latest)
-
-    for path in reversed(files):
-        if path != latest:
-            ordered.append(path)
-
-    # Display each history entry
-    is_first = True
-    for path in ordered:
-        timestamp = history.get_timestamp(path)
-        click.echo(f"Logs recorded at {timestamp}")
-
-        dpm_type, records = history.load_file(path)
-        if not records:
-            continue
-
-        if dpm_type != "adm1266":
-            click.echo(f"  Warning: Unsupported DPM type '{dpm_type}' (skipping)")
-            continue
-
-        messages = Adm1266Display(records).render(is_first=is_first)
-        for msg in messages:
-            if msg:
-                click.echo(msg)
-        is_first = False
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     reboot_cause()

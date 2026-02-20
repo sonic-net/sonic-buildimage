@@ -8,14 +8,13 @@ Test script for nh_reboot_cause utility.
 This script sets up the necessary mocks and imports to test the CLI tool.
 """
 
-import base64
 import importlib
-import json
 import os
 import pytest
+import textwrap
 import sys
-import tempfile
 
+from click.testing import CliRunner
 from unittest.mock import Mock, patch
 
 # Prevent Python from writing .pyc files during test imports
@@ -23,26 +22,16 @@ from unittest.mock import Mock, patch
 sys.dont_write_bytecode = True
 
 
-class MockChassisBase:
-    REBOOT_CAUSE_HARDWARE_OTHER = "Unknown"
-    REBOOT_CAUSE_POWER_LOSS = "Power Loss"
-    REBOOT_CAUSE_THERMAL_OVERLOAD_CPU = "Thermal Overload"
-    REBOOT_CAUSE_WATCHDOG = "Watchdog"
-
-    def __init__(self, *args, **kwargs):
-        pass
-
 @pytest.fixture
-def mock_chassis_base():
-    """Injects and returns a mock ChassisBase for testing."""
-    chassis_base = Mock()
-    chassis_base.ChassisBase = MockChassisBase
-    with patch.dict(sys.modules, {"sonic_platform_base.chassis_base": chassis_base}):
-        yield chassis_base.ChassisBase
+def dpm_logger_module():
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from sonic_platform import dpm_logger
+
+    yield dpm_logger
 
 
 @pytest.fixture
-def nh_reboot_cause_module(mock_chassis_base):
+def nh_reboot_cause_module():
     """Loads the module before each test. This is to let conftest.py inject deps first."""
     # For files without .py extension, we need to use SourceFileLoader explicitly
     TEST_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -55,147 +44,568 @@ def nh_reboot_cause_module(mock_chassis_base):
     yield nh_reboot_cause_module
 
 
-def create_test_data():
-    """Create test DPM fault records in the correct envelope format.
+def create_data_v1_sw_reboot(dpm_logger_module):
+    return dpm_logger_module.DataV1(
+        gen_time="2025-10-02 23:24:32 UTC",
+        schema_version=1,
+        causes=[
+            dpm_logger_module.CauseV1(
+                source="SW",
+                timestamp="2025-10-02 23:22:06 UTC",
+                cause="reboot",
+                description="n/a",
+            ),
+            dpm_logger_module.CauseV1(
+                source="cpu_card",
+                timestamp="2025-10-02 23:22:56 UTC",
+                cause="FPGA_PWR_CYC_REQ",
+                description="FPGA requested power cycle",
+            ),
+        ],
+        dpms=[
+            dpm_logger_module.DpmV1(
+                name="cpu_card",
+                type="adm1266",
+                records=[
+                    {
+                        "timestamp": "2025-10-02 23:22:56 UTC",
+                        "dpm_name": "cpu_card",
+                        "power_fault_cause": "FPGA_PWR_CYC_REQ (FPGA requested power cycle), under_voltage: VH1(POS12V), over_voltage: n/a",
+                        "uid": "12345",
+                        "powerup_counter": "1000",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b100000000000 [GPI7]",
+                        "pdio_in_[16:1]": "0b0000000000000010 [PDI2]",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0001 [VH1(POS12V)]",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    }
+                ],
+            ),
+            dpm_logger_module.DpmV1(
+                name="switch_card",
+                type="adm1266",
+                records=[
+                    {
+                        "timestamp": "2025-10-02 22:10:10 UTC",
+                        "dpm_name": "switch_card",
+                        "power_fault_cause": "n/a, under_voltage: n/a, over_voltage: n/a",
+                        "uid": "23455",
+                        "powerup_counter": "2000",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b000000000000",
+                        "pdio_in_[16:1]": "0b0000000000000000",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0000",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    },
+                    {
+                        "timestamp": "2025-10-02 23:22:56 UTC",
+                        "dpm_name": "switch_card",
+                        "power_fault_cause": "CPU_PWR_CYC_REQ (CPU card commanded power cycle), under_voltage: VH1(12V), over_voltage: n/a",
+                        "uid": "23456",
+                        "powerup_counter": "2000",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b000000000000",
+                        "pdio_in_[16:1]": "0b0000000100000000 [PDI9]",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0001 [VH1(12V)]",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    },
+                    {
+                        "timestamp": "37.123456s after power-on",
+                        "dpm_name": "switch_card",
+                        "power_fault_cause": "n/a, under_voltage: n/a, over_voltage: n/a",
+                        "uid": "23457",
+                        "powerup_counter": "2001",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b000000000000",
+                        "pdio_in_[16:1]": "0b0000000000000000",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0000",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    },
+                ],
+            ),
+        ],
+    )
 
-    The 'raw' field must be a base64-encoded string (as stored by Serializer)
-    representing 64 bytes of blackbox data.
-    """
-    # Create a minimal 64-byte raw record (all zeros) and encode it
-    raw_bytes = bytes(64)
-    raw_encoded = 'base64:' + base64.b64encode(raw_bytes).decode('ascii')
 
-    records = [
-        {
-            "dpm_name": "test-dpm-1",
-            "fault_uid": "0x1234",
-            "power_loss": "Yes",
-            "timestamp": "2025-01-15 10:30:45",
-            "dpm_fault": "PSU input power lost",
-            "raw": raw_encoded,
-        },
-        {
-            "dpm_name": "test-dpm-2",
-            "fault_uid": "0x5678",
-            "power_loss": "No",
-            "timestamp": "2025-01-15 10:30:46",
-            "dpm_fault": "Watchdog timeout",
-            "raw": raw_encoded,
-        }
+def create_data_v1_hw_watchdog(dpm_logger_module):
+    return dpm_logger_module.DataV1(
+        gen_time="2025-10-03 05:13:55 UTC",
+        schema_version=1,
+        causes=[
+            dpm_logger_module.CauseV1(
+                source="switch_card",
+                timestamp="2025-10-03 05:12:39 UTC",
+                cause="WATCHDOG",
+                description="FPGA watchdog expired",
+            ),
+        ],
+        dpms=[
+            dpm_logger_module.DpmV1(
+                name="cpu_card",
+                type="adm1266",
+                records=[
+                    {
+                        "timestamp": "2025-10-03 05:12:38 UTC",
+                        "dpm_name": "cpu_card",
+                        "power_fault_cause": "n/a, under_voltage: VH1(POS12V), over_voltage: n/a",
+                        "uid": "12346",
+                        "powerup_counter": "1001",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b000000000000",
+                        "pdio_in_[16:1]": "0b0000000000000000",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0001 [VH1(POS12V)]",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    }
+                ],
+            ),
+            dpm_logger_module.DpmV1(
+                name="switch_card",
+                type="adm1266",
+                records=[
+                    {
+                        "timestamp": "2025-10-03 05:12:39 UTC",
+                        "dpm_name": "switch_card",
+                        "power_fault_cause": "WATCHDOG (FPGA watchdog expired), under_voltage: VH1(12V), over_voltage: n/a",
+                        "uid": "23458",
+                        "powerup_counter": "2001",
+                        "gpio_in_[7:4,9:8,R,R,R,3:1]": "0b000000000000",
+                        "pdio_in_[16:1]": "0b0000000000001000 [PDI4]",
+                        "vh_over_voltage_[4:1]": "0b0000",
+                        "vh_under_voltage_[4:1]": "0b0001 [VH1(12V)]",
+                        "raw": textwrap.dedent(
+                            """\
+                            01 02 03 04 05 06 07 08
+                            11 12 13 14 15 16 17 18
+                            21 22 23 24 25 26 27 28
+                            31 32 33 34 35 36 37 38
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ff
+                            ff ff ff ff ff ff ff ab"""
+                        ),
+                    },
+                ],
+            ),
+        ],
+    )
+
+
+def test_show_current(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause)
+
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+            """
+        )
+
+
+def test_show_current_verbosity_1(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["-v"])
+
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+             DPM records:
+              cpu_card:powerup_1000:uid_12345          timestamp: 2025-10-02 23:22:56 UTC
+                                                       power_fault_cause: FPGA_PWR_CYC_REQ (FPGA requested power cycle), under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b100000000000 [GPI7]
+                                                       pdio_in_[16:1]: 0b0000000000000010 [PDI2]
+
+              switch_card:powerup_2001:uid_23457       timestamp: 37.123456s after power-on
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+
+              switch_card:powerup_2000:uid_23456       timestamp: 2025-10-02 23:22:56 UTC
+                                                       power_fault_cause: CPU_PWR_CYC_REQ (CPU card commanded power cycle), under_voltage: VH1(12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000100000000 [PDI9]
+
+              switch_card:powerup_2000:uid_23455       timestamp: 2025-10-02 22:10:10 UTC
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+
+            """
+        )
+
+
+def test_show_current_verbosity_2(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["-vv"])
+
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+             DPM records:
+              cpu_card:powerup_1000:uid_12345          timestamp: 2025-10-02 23:22:56 UTC
+                                                       dpm_name: cpu_card
+                                                       power_fault_cause: FPGA_PWR_CYC_REQ (FPGA requested power cycle), under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       uid: 12345
+                                                       powerup_counter: 1000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b100000000000 [GPI7]
+                                                       pdio_in_[16:1]: 0b0000000000000010 [PDI2]
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(POS12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+
+              switch_card:powerup_2001:uid_23457       timestamp: 37.123456s after power-on
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       uid: 23457
+                                                       powerup_counter: 2001
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0000
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+
+              switch_card:powerup_2000:uid_23456       timestamp: 2025-10-02 23:22:56 UTC
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: CPU_PWR_CYC_REQ (CPU card commanded power cycle), under_voltage: VH1(12V), over_voltage: n/a
+                                                       uid: 23456
+                                                       powerup_counter: 2000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000100000000 [PDI9]
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+
+              switch_card:powerup_2000:uid_23455       timestamp: 2025-10-02 22:10:10 UTC
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       uid: 23455
+                                                       powerup_counter: 2000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0000
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+
+            """
+        )
+
+
+def test_show_history(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = [
+        create_data_v1_sw_reboot(dpm_logger_module),
+        create_data_v1_hw_watchdog(dpm_logger_module),
     ]
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history"])
 
-    return {
-        "dpm_type": "adm1266",
-        "gen_time": "2025_01_15_10_30_45",
-        "schema_version": 1,
-        "records_json": records
-    }
-
-
-def test_show_current(nh_reboot_cause_module, capsys):
-    """Test showing current reboot-cause."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
-
-        try:
-            # Create test data file
-            test_data = create_test_data()
-            timestamp = "2025_01_15_10_30_45"
-            test_file = os.path.join(tmpdir, f"reboot-cause-{timestamp}.json")
-
-            with open(test_file, 'w') as f:
-                json.dump(test_data, f)
-
-            # Create symlink to latest
-            prev_link = os.path.join(tmpdir, "previous-reboot-cause.json")
-            os.symlink(test_file, prev_link)
-
-            # Test show_current and verify output
-            nh_reboot_cause_module.show_current()
-            captured = capsys.readouterr()
-
-            assert "test-dpm-1" in captured.out, "Expected DPM name in output"
-            assert "test-dpm-2" in captured.out, "Expected second DPM name in output"
-            assert "0x1234" in captured.out, "Expected fault UID in output"
-            assert "Unsupported DPM type" not in captured.out, "Should not show DPM type error"
-
-        finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-03 05:13:55 UTC ===
+            [2025-10-03 05:12:39 UTC] cause: WATCHDOG; description: FPGA watchdog expired; source: switch_card
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+            """
+        )
 
 
-def test_show_history(nh_reboot_cause_module, capsys):
-    """Test showing reboot-cause history."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
+def test_show_history_verbosity_1(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = [
+        create_data_v1_sw_reboot(dpm_logger_module),
+        create_data_v1_hw_watchdog(dpm_logger_module),
+    ]
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history", "-v"])
 
-        try:
-            # Create multiple test data files
-            test_data = create_test_data()
-            timestamps = ["2025_01_15_10_30_45", "2025_01_15_11_45_30", "2025_01_15_14_20_15"]
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-03 05:13:55 UTC ===
+            [2025-10-03 05:12:39 UTC] cause: WATCHDOG; description: FPGA watchdog expired; source: switch_card
+             DPM records:
+              cpu_card:powerup_1001:uid_12346          timestamp: 2025-10-03 05:12:38 UTC
+                                                       power_fault_cause: n/a, under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+            
+              switch_card:powerup_2001:uid_23458       timestamp: 2025-10-03 05:12:39 UTC
+                                                       power_fault_cause: WATCHDOG (FPGA watchdog expired), under_voltage: VH1(12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000001000 [PDI4]
+            
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+             DPM records:
+              cpu_card:powerup_1000:uid_12345          timestamp: 2025-10-02 23:22:56 UTC
+                                                       power_fault_cause: FPGA_PWR_CYC_REQ (FPGA requested power cycle), under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b100000000000 [GPI7]
+                                                       pdio_in_[16:1]: 0b0000000000000010 [PDI2]
+            
+              switch_card:powerup_2001:uid_23457       timestamp: 37.123456s after power-on
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+            
+              switch_card:powerup_2000:uid_23456       timestamp: 2025-10-02 23:22:56 UTC
+                                                       power_fault_cause: CPU_PWR_CYC_REQ (CPU card commanded power cycle), under_voltage: VH1(12V), over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000100000000 [PDI9]
+            
+              switch_card:powerup_2000:uid_23455       timestamp: 2025-10-02 22:10:10 UTC
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
 
-            for ts in timestamps:
-                test_file = os.path.join(tmpdir, f"reboot-cause-{ts}.json")
-                with open(test_file, 'w') as f:
-                    json.dump(test_data, f)
-
-            # Create symlink to latest
-            latest_file = os.path.join(tmpdir, f"reboot-cause-{timestamps[-1]}.json")
-            prev_link = os.path.join(tmpdir, "previous-reboot-cause.json")
-            os.symlink(latest_file, prev_link)
-
-            # Test show_history and verify output
-            nh_reboot_cause_module.show_history()
-            captured = capsys.readouterr()
-
-            assert captured.out.count("Logs recorded at") == len(timestamps), \
-                f"Expected {len(timestamps)} history entries"
-            assert "test-dpm-1" in captured.out, "Expected DPM name in history output"
-
-        finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
+            """
+        )
 
 
-def test_cli_help(nh_reboot_cause_module):
-    """Test that the CLI command is properly configured with click."""
-    cli = nh_reboot_cause_module.reboot_cause
+def test_show_history_verbosity_2(dpm_logger_module, nh_reboot_cause_module):
+    # Given
+    DATA_V1 = [
+        create_data_v1_sw_reboot(dpm_logger_module),
+        create_data_v1_hw_watchdog(dpm_logger_module),
+    ]
+    with patch.object(
+        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history", "-vv"])
 
-    # Verify the command has help text
-    assert cli.help is not None, "CLI command should have help text"
-    assert "reboot-cause" in cli.help.lower(), "Help text should mention reboot-cause"
+        # Then
+        assert result.exit_code == 0
+        assert result.output == textwrap.dedent(
+            """\
+            === Captured at 2025-10-03 05:13:55 UTC ===
+            [2025-10-03 05:12:39 UTC] cause: WATCHDOG; description: FPGA watchdog expired; source: switch_card
+             DPM records:
+              cpu_card:powerup_1001:uid_12346          timestamp: 2025-10-03 05:12:38 UTC
+                                                       dpm_name: cpu_card
+                                                       power_fault_cause: n/a, under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       uid: 12346
+                                                       powerup_counter: 1001
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(POS12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+            
+              switch_card:powerup_2001:uid_23458       timestamp: 2025-10-03 05:12:39 UTC
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: WATCHDOG (FPGA watchdog expired), under_voltage: VH1(12V), over_voltage: n/a
+                                                       uid: 23458
+                                                       powerup_counter: 2001
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000001000 [PDI4]
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+            
+            === Captured at 2025-10-02 23:24:32 UTC ===
+            [2025-10-02 23:22:56 UTC] cause: FPGA_PWR_CYC_REQ; description: FPGA requested power cycle; source: cpu_card
+            [2025-10-02 23:22:06 UTC] cause: reboot; description: n/a; source: SW
+             DPM records:
+              cpu_card:powerup_1000:uid_12345          timestamp: 2025-10-02 23:22:56 UTC
+                                                       dpm_name: cpu_card
+                                                       power_fault_cause: FPGA_PWR_CYC_REQ (FPGA requested power cycle), under_voltage: VH1(POS12V), over_voltage: n/a
+                                                       uid: 12345
+                                                       powerup_counter: 1000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b100000000000 [GPI7]
+                                                       pdio_in_[16:1]: 0b0000000000000010 [PDI2]
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(POS12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+            
+              switch_card:powerup_2001:uid_23457       timestamp: 37.123456s after power-on
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       uid: 23457
+                                                       powerup_counter: 2001
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0000
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+            
+              switch_card:powerup_2000:uid_23456       timestamp: 2025-10-02 23:22:56 UTC
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: CPU_PWR_CYC_REQ (CPU card commanded power cycle), under_voltage: VH1(12V), over_voltage: n/a
+                                                       uid: 23456
+                                                       powerup_counter: 2000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000100000000 [PDI9]
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0001 [VH1(12V)]
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+            
+              switch_card:powerup_2000:uid_23455       timestamp: 2025-10-02 22:10:10 UTC
+                                                       dpm_name: switch_card
+                                                       power_fault_cause: n/a, under_voltage: n/a, over_voltage: n/a
+                                                       uid: 23455
+                                                       powerup_counter: 2000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000000000000
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0000
+                                                       raw: 01 02 03 04 05 06 07 08
+                                                            11 12 13 14 15 16 17 18
+                                                            21 22 23 24 25 26 27 28
+                                                            31 32 33 34 35 36 37 38
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
 
-    # Verify --history option exists
-    has_history_option = any(param.name == 'history' for param in cli.params)
-    assert has_history_option, "CLI should have --history option"
-
-
-def test_unsupported_dpm_type(nh_reboot_cause_module, capsys):
-    """Test that unsupported DPM types are rejected."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
-
-        try:
-            # Create test data with wrong DPM type
-            test_data = create_test_data()
-            test_data["dpm_type"] = "unknown_dpm"
-            timestamp = "2025_01_15_10_30_45"
-            test_file = os.path.join(tmpdir, f"reboot-cause-{timestamp}.json")
-
-            with open(test_file, 'w') as f:
-                json.dump(test_data, f)
-
-            prev_link = os.path.join(tmpdir, "previous-reboot-cause.json")
-            os.symlink(test_file, prev_link)
-
-            # Test show_current with wrong DPM type
-            nh_reboot_cause_module.show_current()
-            captured = capsys.readouterr()
-
-            assert "Unsupported DPM type" in captured.out, "Should show DPM type error"
-            assert "unknown_dpm" in captured.out, "Should mention the unsupported DPM type"
-
-        finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
-
+            """
+        )
