@@ -2,3 +2,4 @@
 0002-disable-checks-when-using-no-wait.patch
 0003-Fix-the-return-value-of-utils._execute_subprocess-me.patch
 bug-296-python-3.12-compability.patch
+0004-Ensure-etc-iproute2-rt_tables.d-directory-present-fo.patch
