@@ -14,7 +14,7 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
-{% if syslog_counter and syslog_counter == "true" %}
+{% if (syslog_counter and syslog_counter == "true") or (include_system_eventd == "y" and build_reduce_image_size != "y") %}
 $ModLoad omprog
 {% endif %}
 
