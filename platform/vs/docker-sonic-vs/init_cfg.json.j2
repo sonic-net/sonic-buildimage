@@ -3,7 +3,8 @@
         "localhost": {
             "mac": "{{ system_mac }}",
             "switch_type": "{{ switch_type }}",
-            "buffer_model": "traditional"
+            "buffer_model": "traditional",
+            "zmq_mode": "enable"
         }
     },
 {% if switch_type != "dpu" %}

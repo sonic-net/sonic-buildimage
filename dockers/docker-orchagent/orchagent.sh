@@ -35,8 +35,11 @@ fi
 # Set zmq mode by default for smartswitch DPU and increase the max bulk limit
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
+ZMQ_MODE=$(echo $SWSS_VARS | jq -r '.zmq_mode')
 if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
+elif [ "$ZMQ_MODE" == "enable" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
@@ -61,6 +64,9 @@ fi
 if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
+
+# Enable zmq
+ORCHAGENT_ARGS+="-q ipc:///zmq/zmq_swss_ep "
 
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then

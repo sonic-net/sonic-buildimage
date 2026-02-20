@@ -7,6 +7,7 @@
     "mac": "{{ DEVICE_METADATA.localhost.mac }}",
     "resource_type": "{{ DEVICE_METADATA.localhost.resource_type }}",
     "synchronous_mode": {% if DEVICE_METADATA.localhost.synchronous_mode == "disable" %}"disable"{% else %}"enable"{% endif %},
+    "zmq_mode": {% if DEVICE_METADATA.localhost.zmq_mode == "enable" %}"enable"{% else %}"disable"{% endif %},
     {%if DEVICE_METADATA.localhost.supporting_bulk_counter_groups is defined and DEVICE_METADATA.localhost.supporting_bulk_counter_groups != '' -%}
     "supporting_bulk_counter_groups": "{{ DEVICE_METADATA.localhost.supporting_bulk_counter_groups|join(',') }}",
     {% endif -%}
