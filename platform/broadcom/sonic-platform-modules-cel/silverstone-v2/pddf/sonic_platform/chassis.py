@@ -43,7 +43,7 @@ class Chassis(PddfChassis):
         for port_idx in range(1, self.platform_inventory['num_ports'] + 1):
             present = self.get_sfp(port_idx).get_presence()
             self.sfp_status_dict[port_idx] = '1' if present else '0'
-        for index in range(self.platform_inventory['num_component']):
+        for index in range(self.platform_inventory['num_components']):
             component_obj = component.Component(index)
             self._component_list.append(component_obj)
 

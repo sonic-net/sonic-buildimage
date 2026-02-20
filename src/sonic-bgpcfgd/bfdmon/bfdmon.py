@@ -140,7 +140,7 @@ class BfdFrrMon:
                 self.status_table, self.local_v4_peers, self.local_v6_peers))
 
             if self.remote_table:
-                self.remote_table.set("", values)
+                self.remote_table.set("dash_ha", values)
                 syslog.syslog(syslog.LOG_INFO,
                     "{} table in DPU_STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
                     self.remote_status_table, self.local_v4_peers, self.local_v6_peers))

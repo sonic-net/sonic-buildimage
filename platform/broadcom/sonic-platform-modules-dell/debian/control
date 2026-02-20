@@ -2,47 +2,48 @@ Source: sonic-dell-platform-modules
 Section: main
 Priority: extra
 Maintainer: Dell Team <support@dell.com>
-Build-Depends: debhelper (>= 8.0.0), bzip2
-Standards-Version: 3.9.3
+Build-Depends: debhelper-compat (= 13), dh-python, python3, linux-headers-6.12.41+deb13-common-sonic
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
 
 Package: platform-modules-s6000
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-z9100
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s6100
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-z9264f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5212f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5224f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5232f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5248f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5448f
@@ -52,32 +53,32 @@ Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-n3248te
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-z9332f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-z9432f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-n3248pxe
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-e3224f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-s5296f
 Architecture: amd64
-Depends: linux-image-6.1.0-29-2-amd64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-z9664f

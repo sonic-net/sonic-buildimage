@@ -55,7 +55,7 @@ module sonic-mgmt_interface {
                         type stypes:sonic-ip-prefix;
                         type inet:ip-address;
                     }
-
+                    ordered-by user;
                     description
                         "This configuration allows addtional routes to be added to default VRF table
                          or mgmt VRF table, based on if Management VRF is configured.

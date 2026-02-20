@@ -54,7 +54,7 @@ class TestACL:
 
     @pytest.mark.parametrize(
         "action,error_message", [
-            pytest.param('INVALID_VALUE', 'Invalid value', id="invalid-value")
+            pytest.param('INVALID_VALUE', 'Invalid enumeration value', id="invalid-value")
         ]
     )
     def test_neg_rule_packet_action(self, yang_model, action, error_message):

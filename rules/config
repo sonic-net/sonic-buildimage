@@ -16,6 +16,21 @@ SONIC_CONFIG_BUILD_JOBS = 1
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
 SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 
+# SONIC_BUILD_MEMORY - set memory limit for the build container.
+# When set, passes --memory and --memory-swap flags to docker run.
+# This prevents the kernel OOM killer from silently killing build processes
+# (or unrelated host processes) when parallel builds exhaust system RAM.
+# The OOM will instead be contained within the build container.
+# Example: SONIC_BUILD_MEMORY = 24g
+# Set to "none" to explicitly disable.
+# SONIC_BUILD_MEMORY =
+
+# SONIC_BUILD_MEMORY_SWAP - set memory+swap limit for the build container.
+# Only takes effect when SONIC_BUILD_MEMORY is set. Defaults to double
+# the value of SONIC_BUILD_MEMORY if not specified (Docker default behavior).
+# Set to -1 for unlimited swap. Set equal to SONIC_BUILD_MEMORY to disable swap.
+# SONIC_BUILD_MEMORY_SWAP =
+
 # DEFAULT_BUILD_LOG_TIMESTAMP - add timestamp in build log
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
@@ -34,14 +49,17 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 # CHANGE_DEFAULT_PASSWORD - enforce default user/users to change password on 1st login
 CHANGE_DEFAULT_PASSWORD ?= n
 
-# Default value for SMARTSWITCH
-SMARTSWITCH ?= 0
-
 # DEFAULT_USERNAME - default username for installer build
 DEFAULT_USERNAME = admin
 
 # DEFAULT_PASSWORD - default password for installer build
 DEFAULT_PASSWORD = YourPaSsWoRd
+
+# BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
+BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb
+
+# BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD - default password for BMC root account
+BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD ?=
 
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
@@ -125,6 +143,9 @@ INCLUDE_SYSTEM_EVENTD = y
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = n
 
+# INCLUDE_SYSTEM_OTEL - build docker-sonic-otel for High Frequency Telemetry (HFT) support
+INCLUDE_SYSTEM_OTEL = y
+
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
 
@@ -147,13 +168,8 @@ INCLUDE_NAT = y
 # INCLUDE_DHCP_RELAY - build and install dhcp-relay package
 INCLUDE_DHCP_RELAY = y
 
-# INCLUDE_DHCP_SERVER - build and install dhcp-server package
+# INCLUDE_DHCP_SERVER - build dhcp-server package and enable based on config_db.json
 INCLUDE_DHCP_SERVER ?= n
-
-# Conditionally enable DHCP_SERVER when SMARTSWITCH is set to 1
-ifeq ($(SMARTSWITCH), 1)
-    INCLUDE_DHCP_SERVER = y
-endif
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
@@ -238,19 +254,22 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # Full Secure Boot feature flags.
 # SECURE_UPGRADE_DEV_SIGNING_KEY - path to development signing key, used for image signing during build
 # SECURE_UPGRADE_SIGNING_CERT - path to development signing certificate, used for image signing during build
+# SECURE_UPGRADE_KERNEL_CAFILE - path to a file containing trusted certificates in PEM format to embed into the kernel.
+#                                Defaults to the value in SECURE_UPGRADE_SIGNING_CERT if not specified.
 # SECURE_UPGRADE_MODE - enum value for secure upgrade mode, valid options are "dev", "prod" and "no_sign"
 # SECURE_UPGRADE_PROD_SIGNING_TOOL - path to a vendor signing tool for production flow.
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
 SECURE_UPGRADE_DEV_SIGNING_KEY ?= 
 SECURE_UPGRADE_SIGNING_CERT ?= 
-SECURE_UPGRADE_MODE = "no_sign"
+SECURE_UPGRADE_MODE ?= "no_sign"
+SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 # PACKAGE_URL_PREFIX - the package url prefix
 PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
-TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,https://packages.microsoft.com/keys/microsoft.asc
+TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc
 
 # SONIC_VERSION_CONTROL_COMPONENTS - Valid values: none|all|components..., the components consist of one or multiple: deb,py2,py3,web,git,docker, seperated by comma
 #   none  : disable the version control
@@ -317,7 +336,7 @@ ENABLE_FIPS ?= n
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
-SONIC_OS_VERSION ?= 12
+SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
@@ -331,3 +350,6 @@ SONIC_PTF_ENV_PY_VER = py3
 
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
+
+# BUILD_SKIP_TEST - skip all tests when building to reduce build time
+BUILD_SKIP_TEST ?= n

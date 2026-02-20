@@ -34,7 +34,7 @@ from swsscommon import swsscommon
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "mem-threshold-exceeded"
 
-CGROUP_DOCKER_MEMORY_DIR = "/sys/fs/cgroup/memory/docker/"
+CGROUP_DOCKER_MEMORY_DIR = "/sys/fs/cgroup/system.slice/docker-"
 
 # Define common error codes
 ERROR_CONTAINER_ID_NOT_FOUND = "[memory_checker] Failed to get container ID of '{}'! Exiting ..."
@@ -110,7 +110,7 @@ def get_container_id(container_name):
 
 def get_memory_usage(container_id):
     """Reads the container's memory usage from the control group subsystem's file
-    '/sys/fs/cgroup/memory/docker/<container_id>/memory.usage_in_bytes'.
+    '/sys/fs/cgroup/memory/docker/<container_id>/memory.current'.
     Args:
         container_id: A string indicates the full ID of a container.
     Returns:
@@ -118,7 +118,7 @@ def get_memory_usage(container_id):
     """
     validate_container_id(container_id)
 
-    docker_memory_usage_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.usage_in_bytes"
+    docker_memory_usage_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + ".scope/memory.current"
 
     for attempt in range(3):
         try:
@@ -137,7 +137,7 @@ def get_memory_usage(container_id):
     sys.exit(INTERNAL_ERROR)
 
 def get_inactive_cache_usage(container_id):
-    """Reads the container's cache usage from the field 'total_inactive_file' in control
+    """Reads the container's cache usage from the field 'inactive_file' in control
     group subsystem's file '/sys/fs/cgroup/memory/docker/<container_id>/memory.stat'.
     Args:
         container_id: A string indicates the full ID of a container.
@@ -148,7 +148,7 @@ def get_inactive_cache_usage(container_id):
 
     validate_container_id(container_id)
 
-    docker_memory_stat_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.stat"
+    docker_memory_stat_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + ".scope/memory.stat"
     if not os.path.exists(docker_memory_stat_file_path):
         syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_STATS_NOT_FOUND.format(docker_memory_stat_file_path, container_id))
         sys.exit(INTERNAL_ERROR)
@@ -156,7 +156,7 @@ def get_inactive_cache_usage(container_id):
     try:
         with open(docker_memory_stat_file_path, 'r') as file:
             for line in file:
-                if "total_inactive_file" in line:
+                if "inactive_file" in line:
                     split_line = line.split()
                     if len(split_line) >= 2:
                         cache_usage_in_bytes = split_line[1].strip()

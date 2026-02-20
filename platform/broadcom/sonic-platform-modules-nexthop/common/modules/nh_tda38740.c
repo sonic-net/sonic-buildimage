@@ -19,6 +19,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/mod_devicetable.h>
 #include <linux/pmbus.h>
+#include <linux/version.h>
 #include "nh_pmbus.h"
 
 MODULE_IMPORT_NS(PMBUS);
@@ -215,8 +216,14 @@ static struct pmbus_driver_info tda38740_info[] = {
 	},
 };
 
-static int tda38740_probe(struct i2c_client *client,
-			  const struct i2c_device_id *id)
+static const struct i2c_device_id tda38740_id[] = {
+	{ "nh_tda38725", tda38725 },     { "nh_tda38725a", tda38725a },
+	{ "nh_tda38740", tda38740 },     { "nh_tda38740a", tda38740a },
+	{ "nh_xdpe1a2g5b", xdpe1a2g5b }, { "nh_xdpe19284c", xdpe19284c },
+	{ "nh_xdpe192c4b", xdpe192c4b }, {}
+};
+
+static int tda38740_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	enum chips chip_id;
@@ -228,7 +235,7 @@ static int tda38740_probe(struct i2c_client *client,
 	if (dev_fwnode(dev))
 		chip_id = (enum chips)device_get_match_data(dev);
 	else
-		chip_id = id ? id->driver_data : tda38740;
+		chip_id = i2c_match_id(tda38740_id, client)->driver_data;
 
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -247,13 +254,6 @@ static int tda38740_probe(struct i2c_client *client,
 
 	return nh_pmbus_do_probe(client, info);
 }
-
-static const struct i2c_device_id tda38740_id[] = {
-	{ "nh_tda38725", tda38725 },     { "nh_tda38725a", tda38725a },
-	{ "nh_tda38740", tda38740 },     { "nh_tda38740a", tda38740a },
-	{ "nh_xdpe1a2g5b", xdpe1a2g5b }, { "nh_xdpe19284c", xdpe19284c },
-	{ "nh_xdpe192c4b", xdpe192c4b }, {}
-};
 
 MODULE_DEVICE_TABLE(i2c, tda38740_id);
 
@@ -278,7 +278,11 @@ static struct i2c_driver tda38740_driver = {
 		.name = "nh_tda38740",
 		.of_match_table = of_match_ptr(tda38740_of_match),
 	},
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+	.probe_new = tda38740_probe,
+#else
 	.probe = tda38740_probe,
+#endif
 	.id_table = tda38740_id,
 };
 

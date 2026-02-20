@@ -34,7 +34,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	unzip nv_hws.zip
 
 	pushd nv_hws/
+
+	find . -type f -exec touch {} +
+
 	PATH=/usr/bin/:$(PATH) dpkg-buildpackage -d -us -uc -b -j1 --admindir $(SONIC_DPKG_ADMINDIR)
+
 	popd
 
 	mv $(DERIVED_TARGETS) $* $(DEST)/

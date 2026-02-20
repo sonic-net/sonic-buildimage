@@ -2791,13 +2791,20 @@ monitoring sessions for the vnet routes and is optional.
 ### VNET_ROUTE_TUNNEL
 
 VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
-- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
-- VNI: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+- MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
+- VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
+- CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
+        "Vnet_1000|100.200.1.1/32": {
+        "endpoint": "192.174.1.1,192.174.1.2",
+        "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
+        "vni": "10010,10011",
+        "consistent_hashing_buckets": "10"
+    },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
         "mac_address": "f9:22:83:99:22:a2"
@@ -2827,33 +2834,75 @@ VOQ_INBAND_INTERFACE holds the name of the inband system port dedicated for cpu 
 
 ### VXLAN
 
-VXLAN_TUNNEL holds the VTEP source ip configuration.
+VXLAN_TUNNEL holds the VTEP source ip configuration (maximum 2 tunnels).
 VXLAN_TUNNEL_MAP holds the vlan to vni and vni to vlan mapping configuration.
 VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered tunnels.
 
+Single tunnel example:
 ```
 {
-"VXLAN_TUNNEL": {
+    "VXLAN_TUNNEL": {
         "vtep1": {
             "src_ip": "10.10.10.10",
-            "dst_ip": "12.12.12.12"
+            "dst_ip": "12.12.12.12",
+            "ttl_mode": "pipe"
         }
-  }
-"VXLAN_TUNNEL_MAP" : {
+    },
+    "VXLAN_TUNNEL_MAP": {
         "vtep1|map_1000_Vlan100": {
-           "vni": "1000",
-           "vlan": "100"
-         },
-        "vtep1|testmap": {
-           "vni": "22000",
-           "vlan": "70"
-         },
-  }
-  "VXLAN_EVPN_NVO": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
         "nvo1": {
             "source_vtep": "vtep1"
         }
-  }
+    }
+}
+```
+
+Dual tunnel example:
+```
+{
+    "VXLAN_TUNNEL": {
+        "vtep1": {
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12",
+            "ttl_mode": "uniform"
+        },
+        "vtep2": {
+            "src_ip": "10.20.10.10",
+            "dst_ip": "20.20.20.20"
+        }
+    },
+    "VXLAN_TUNNEL_MAP": {
+        "vtep1|map_1000_Vlan100": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        },
+        "vtep2|map_2000_Vlan200": {
+            "vni": "2000",
+            "vlan": "200"
+        },
+        "vtep2|map_3000_Vlan300": {
+            "vni": "3000",
+            "vlan": "300"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
+        "nvo1": {
+            "source_vtep": "vtep1"
+        }
+    }
 }
 ```
 
@@ -3015,6 +3064,15 @@ In this table, we allow configuring ssh server global settings. This will featur
 -   ports - Ssh port numbers - string of port numbers seperated by ','
 -   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
 -   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
+-   permit_root_login - Whether or not to allow root login. Default value: "prohibit-password"
+    - "yes"
+    - "prohibit-password"
+    - "forced-commands-only"
+    - "no"
+-   password_authentication - Whether or not to allow password authentication. Boolean.
+-   ciphers - Ciphers to allow.  See `ssh -Q ciphers`
+-   kex_algorithms - Key Exchange algorithms to allow.  See `ssh -Q kex_algorithms`
+-   macs - MAC algorithms to allow.  See `ssh -Q macs`
 ```
 {
     "SSH_SERVER": {
@@ -3023,7 +3081,12 @@ In this table, we allow configuring ssh server global settings. This will featur
             "login_timeout": "120",
             "ports": "22",
             "inactivity_timeout": "15",
-            "max_sessions": "0"
+            "max_sessions": "0",
+            "permit_root_login": "false",
+            "password_authentication": "true",
+            "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+            "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+            "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
         }
     }
 }
@@ -3417,7 +3480,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
         "global": {
             "vnet_name": "Vnet55",
             "cp_data_channel_port": "11362",
-            "dp_channel_port": "11368",
+            "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
             "dp_channel_src_port_max": "53247",
             "dp_channel_probe_interval_ms": "100",
@@ -3433,7 +3496,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 
-**dp_channel_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
+**dp_channel_dst_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
 
 **dp_channel_src_port_min**: Minimum source port used when tunneling packets via DPU-to-DPU data plane channel.
 

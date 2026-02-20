@@ -1,0 +1,65 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-base-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update         && \
+    apt install -y        \
+        apt-utils         \
+        build-essential   \
+        python3-dev       \
+        python3-redis     \
+        python3-yaml
+
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+RUN apt install -y        \
+        libxslt-dev       \
+        libz-dev
+{%- endif %}
+
+# For sonic-config-engine Python 3 package
+# Explicitly install pyangbind here, as pyangbind causes enum34 to be installed.
+# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
+# https://github.com/robshakir/pyangbind/issues/232
+RUN pip3 install pyangbind==0.8.7
+RUN pip3 uninstall -y enum34
+
+{% if docker_config_engine_trixie_debs.strip() %}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_config_engine_trixie_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_config_engine_trixie_debs.split(' ')) }}
+{% endif %}
+
+{% if docker_config_engine_trixie_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_config_engine_trixie_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_config_engine_trixie_whls.split(' ')) }}
+{% endif %}
+
+# Copy files
+COPY ["files/swss_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["files/readiness_probe.sh", "/usr/bin/"]
+COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
+
+## Clean up
+
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+RUN apt purge -y        \
+        libxslt-dev     \
+        libz-dev
+{%- endif %}
+
+RUN apt purge -y        \
+        python3-dev     \
+        build-essential
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}

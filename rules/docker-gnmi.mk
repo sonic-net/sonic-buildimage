@@ -34,5 +34,27 @@ $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
+# For disk space monitoring.
+$(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro
+# For sonic binary image download.
+$(DOCKER_GNMI)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
+# For sonic binary image downloads to persistent file system.
+$(DOCKER_GNMI)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
+# For host command execution in gnoi.
+$(DOCKER_GNMI)_RUN_OPT += --pid=host
+# Container hardening: Replace --privileged with specific capabilities
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_ADMIN
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_BOOT
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=SYS_PTRACE
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=NET_ADMIN
+$(DOCKER_GNMI)_RUN_OPT += --cap-add=DAC_OVERRIDE
+# Security options needed for nsenter to access host namespaces from within container
+$(DOCKER_GNMI)_RUN_OPT += --security-opt apparmor=unconfined
+$(DOCKER_GNMI)_RUN_OPT += --security-opt seccomp=unconfined
+# For GNOI running sudo command in case of container NS remapping.
+$(DOCKER_GNMI)_RUN_OPT += --userns=host
+
+
+
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d

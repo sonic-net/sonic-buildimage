@@ -367,3 +367,7 @@ sai_mmu_max_buffer_profiles
 sai_crm_hw_nh_group_cnt
 sai_crm_hw_nh_group_member_cnt
 sai_legacy_ledproc_linkscan_cb
+appl_param_rcy_mirror_ports_range
+rcy_mirror_to_forward_port_map
+port_priorities_sch
+sai_lag_default_crc_hash

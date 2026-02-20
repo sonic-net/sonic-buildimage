@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.4 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -182,7 +183,6 @@ LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(BCM_GENL_LOCAL))
 all_targets +=$(LOCAL_TARGETS)
 endif
 endif
-
 
 ADD_TO_CFLAGS += -I$(SDK)/systems/linux/kernel/modules/include
 COND_KNET_LIBS = libuser.$(libext)

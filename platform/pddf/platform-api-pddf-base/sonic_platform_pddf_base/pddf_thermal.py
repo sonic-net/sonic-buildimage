@@ -98,6 +98,10 @@ class PddfThermal(ThermalBase):
 
     def get_high_threshold(self):
         if not self.is_psu_thermal:
+            # Hardcoded values in JSON take precedence over hwmon sysfs values
+            if json_value := self.thermal_obj['dev_info'].get('high_threshold'):
+                return float(json_value)
+
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_high_threshold")
             if not output:
                 return None
@@ -124,6 +128,10 @@ class PddfThermal(ThermalBase):
 
     def get_low_threshold(self):
         if not self.is_psu_thermal:
+            # Hardcoded values in JSON take precedence over hwmon sysfs values
+            if json_value := self.thermal_obj['dev_info'].get('low_threshold'):
+                return float(json_value)
+
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_low_threshold")
             if not output:
                 return None
@@ -180,6 +188,10 @@ class PddfThermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if not self.is_psu_thermal:
+            # Hardcoded values in JSON take precedence over hwmon sysfs values
+            if json_value := self.thermal_obj['dev_info'].get('high_crit_threshold'):
+                return float(json_value)
+
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_high_crit_threshold")
             if not output:
                 return None
@@ -205,6 +217,10 @@ class PddfThermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if not self.is_psu_thermal:
+            # Hardcoded values in JSON take precedence over hwmon sysfs values
+            if json_value := self.thermal_obj['dev_info'].get('low_crit_threshold'):
+                return float(json_value)
+
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_low_crit_threshold")
             if not output:
                 return None
@@ -247,7 +263,9 @@ class PddfThermal(ThermalBase):
         else:
             if self.thermal_obj_name in self.pddf_obj.data.keys():
                 dev = self.pddf_obj.data[self.thermal_obj_name]
-                if 'topo_info' in dev['i2c']:
+                if 'i2c' not in dev:
+                    label = self.get_name()
+                elif 'topo_info' in dev['i2c']:
                     topo_info = dev['i2c']['topo_info']
                     label = "%s-i2c-%d-%x" % (topo_info['dev_type'], int(topo_info['parent_bus'], 0),
                                           int(topo_info['dev_addr'], 0))

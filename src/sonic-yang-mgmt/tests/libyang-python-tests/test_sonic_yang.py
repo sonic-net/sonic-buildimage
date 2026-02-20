@@ -88,6 +88,22 @@ class Test_SonicYang(object):
         with pytest.raises(Exception):
              assert self.load_yang_model_file(yang_s, yang_dir, file, module)
 
+    # test load_module_str_name on test-acl.yang
+    def test_load_module_str_name(self, data, yang_s):
+        yang_dir = data['yang_dir']
+        file = "test-acl.yang"
+
+        try:
+            with open(f'{yang_dir}/test-acl.yang', 'r') as f:
+                content = f.read()
+
+            name = yang_s.load_module_str_name(content)
+        except Exception as e:
+            print(e)
+            raise
+
+        assert name == "test-acl"
+
     #test load yang modules in directory
     def test_load_yang_model_dir(self, data, yang_s):
         yang_dir = data['yang_dir']

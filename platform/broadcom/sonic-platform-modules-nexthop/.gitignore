@@ -38,3 +38,6 @@ __pycache__/
 # bash completion scripts
 !/common/bash_completion.d/
 !/nh-4010/bash_completion.d/
+
+# modprobe.d
+!/*/etc/modprobe.d/

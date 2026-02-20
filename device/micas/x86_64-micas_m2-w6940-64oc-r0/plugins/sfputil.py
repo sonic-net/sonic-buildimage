@@ -212,7 +212,21 @@ class SfpUtil(SfpUtilBase):
             print(traceback.format_exc())
 
         return False
+    def check_is_sfp(self, port_num):
+        try:
+            if self.get_presence(port_num) == False:
+                return False
 
+            eeprom_path = self._get_port_eeprom_path(port_num, 0x50)
+            with open(eeprom_path, mode="rb", buffering=0) as eeprom:
+                eeprom_raw = self._read_eeprom_specific_bytes(eeprom, 0, 1)
+                # according to sff-8024 A0h Byte 0 is '03' means the transceiver is sfp
+                if (eeprom_raw[0] == '03'):
+                    return True
+        except Exception as e:
+            print(traceback.format_exc())
+
+        return False
     def check_optoe_type(self, port_num, optoe_type):
         if self.get_presence(port_num) == False:
             return True
@@ -240,9 +254,12 @@ class SfpUtil(SfpUtilBase):
     def update_ports_list(self):
         self.qsfp_ports_list = []
         self.qsfp_dd_ports_list = []
+        self.sfp_ports_list = []
         for x in range(self.PORT_START, self.PORTS_IN_BLOCK):
             if (self.check_is_qsfpdd(x)):
                 self.qsfp_dd_ports_list.append(x)
+            elif (self.check_is_sfp(x)): 
+                self.sfp_ports_list.append(x)
             else:
                 self.qsfp_ports_list.append(x)
 
@@ -338,7 +355,7 @@ class SfpUtil(SfpUtilBase):
             elif port in self.qsfp_ports:
                 offset = 22
             else:
-                offset = 96
+                offset = 256 + 96
 
             eeprom_path = self._get_port_eeprom_path(port, 0x50)
             try:

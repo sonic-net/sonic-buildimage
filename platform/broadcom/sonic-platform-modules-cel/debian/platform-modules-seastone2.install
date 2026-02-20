@@ -1,6 +1,5 @@
 seastone2/cfg/seastone2-modules.conf etc/modules-load.d
 seastone2/systemd/platform-modules-seastone2.service lib/systemd/system
-seastone2/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_seastone_2-r0
 seastone2/scripts/seastone2_platform_shutdown.sh usr/local/bin
 seastone2/scripts/sensors usr/bin
 seastone2/scripts/platform_sensors.py usr/local/bin

@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "NH-4010",
+        "name": "NH-4010-F",
         "thermals": [
             {
                 "name": "Switch Card Lower Rear",
@@ -23,16 +23,6 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "ASIC Max",
-                "low-threshold": false,
-                "low-crit-threshold": false
-            },
-            {
-                "name": "ASIC Min",
-                "low-threshold": false,
-                "low-crit-threshold": false
-            },
-            {
                 "name": "PSU 1 Intake",
                 "low-threshold": false,
                 "low-crit-threshold": false
@@ -43,284 +33,383 @@
                 "low-crit-threshold": false
             },
             {
-                "name": "ASIC top.pvtmon0",
+                "name": "CPU",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "DCDC0",
                 "low-threshold": false,
                 "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC1",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC2",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC3",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "DCDC4",
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "ASIC top.pvtmon0",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon1",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon2",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon3",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon4",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon5",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon6",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon7",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon8",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon9",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon10",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon11",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon12",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC top.pvtmon13",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm_mgmt",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm0",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm1",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm2",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm3",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm4",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm5",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm6",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm7",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm8",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm9",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm10",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm11",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm12",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm13",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm14",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm15",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm16",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm17",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm18",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm19",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm20",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm21",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm22",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm23",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm24",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm25",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm26",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm27",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm28",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm29",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm30",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm31",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm32",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm33",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm34",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm35",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm36",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm37",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm38",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm39",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
             },
             {
                 "name": "ASIC pm40",
                 "low-threshold": false,
-                "low-crit-threshold": false
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC Min",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
+            },
+            {
+                "name": "ASIC Max",
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "controllable": false
             }
         ],
         "components": [

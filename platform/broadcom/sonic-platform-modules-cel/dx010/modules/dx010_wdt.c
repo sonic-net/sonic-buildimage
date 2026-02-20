@@ -174,13 +174,11 @@ err:
         return ret;
 }
 
-static int dx010_wdt_remove(struct platform_device *pdev)
+static void dx010_wdt_remove(struct platform_device *pdev)
 {
         struct dx010_wdt_drvdata *drvdata = platform_get_drvdata(pdev);
 
         watchdog_unregister_device(&drvdata->wdt);
-
-        return 0;
 }
 
 static struct platform_driver dx010_wdt_drv = {
