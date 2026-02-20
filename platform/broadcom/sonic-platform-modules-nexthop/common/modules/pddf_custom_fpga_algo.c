@@ -338,8 +338,19 @@ static void xiic_process(struct fpgalogic_i2c *i2c)
 		i2c->state =(msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
 		/* if it's the time sequence is 'start bit + address + read bit + stop bit' */
 		if (i2c->state == STATE_READ){
-			/* it's the last message so we include dynamic stop bit with length */
-			val = msg->len | XIIC_TX_DYN_STOP_MASK;
+			/*
+			 * Set RFD to 0 before starting read. This tells the controller
+			 * to signal ready after each byte received, which works with
+			 * our 1-byte-at-a-time read loop for any length transfer.
+			 */
+			xiic_setreg32(i2c, XIIC_RFD_REG_OFFSET, 0);
+
+			/* Only include dynamic stop bit if this is the last message */
+			if (i2c->nmsgs == 1) {
+				val = msg->len | XIIC_TX_DYN_STOP_MASK;
+			} else {
+				val = msg->len;
+			}
 			xiic_setreg32(i2c, XIIC_DTR_REG_OFFSET, val);
 			goto out;
 		}
