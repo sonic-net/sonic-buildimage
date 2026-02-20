@@ -58,12 +58,12 @@ POST_COPY_ACTIONS = {
 
 
 def _ensure_user_auth_cert() -> None:
-    cur = db_hget("GNMI|gnmi", "user_auth")
+    cur = db_hget("TELEMETRY|gnmi", "user_auth")
     if cur != "cert":
-        if db_hset("GNMI|gnmi", "user_auth", "cert"):
-            logger.log_notice(f"Set GNMI|gnmi.user_auth=cert (was: {cur or '<unset>'})")
+        if db_hset("TELEMETRY|gnmi", "user_auth", "cert"):
+            logger.log_notice(f"Set TELEMETRY|gnmi.user_auth=cert (was: {cur or '<unset>'})")
         else:
-            logger.log_error("Failed to set GNMI|gnmi.user_auth=cert")
+            logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
 
 
 def _ensure_cname_present(cname: str) -> None:
@@ -95,7 +95,7 @@ def reconcile_config_db_once() -> None:
     """
     Idempotent drift-correction for CONFIG_DB:
       - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
-          * Ensure GNMI|gnmi.user_auth=cert
+          * Ensure TELEMETRY|gnmi.user_auth=cert
           * Ensure GNMI_CLIENT_CERT|<CNAME> exists with role=<GNMI_CLIENT_ROLE>
       - When false: ensure the CNAME row is absent
     """
