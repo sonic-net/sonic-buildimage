@@ -336,7 +336,7 @@ module sonic-device_metadata {
                         enum enabled;
                         enum disabled;
                     }
-                    default disabled;
+                    default enabled;
                 }
             }
             /* end of container localhost */
