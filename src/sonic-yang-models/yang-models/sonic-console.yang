@@ -9,6 +9,10 @@ module sonic-console {
 
     description "SONiC CONSOLE";
 
+    revision 2026-02-12 {
+        description "Add escape_char config";
+    }
+
     revision 2022-08-22 {
         description "First Revision";
     }
@@ -17,6 +21,13 @@ module sonic-console {
         description "configuration to set if console switch is enabled or not";
         type string {
             pattern "yes|no";
+        }
+    }
+
+    typedef console-mgmt-escape-char {
+        description "configuration to set escape character when opening console line";
+        type string {
+            pattern '^(clear|[A-Za-z])$';
         }
     }
 
@@ -66,6 +77,11 @@ module sonic-console {
                     description "This configuration indicate if enable console management feature on SONiC";
                     type console-mgmt-enabled;
                     default "no";
+                }
+
+                leaf escape_char {
+                    description "This configuration provide the escape character for picocom";
+                    type console-mgmt-escape-char;
                 }
             }
 
