@@ -355,6 +355,13 @@
                 "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "TUNNEL_VNI": "45"
+            },
+            "FROM_HOST_DACL|RULE_2001": {
+                "PRIORITY": "10",
+                "PACKET_ACTION": "FORWARD",
+                "IP_PROTOCOL": "6",
+                "L4_SRC_PORT": "16500",
+                "TCP_FLAGS": "0x12/0x12"
             }
         },
         "SWITCH_HASH": {
@@ -1143,6 +1150,11 @@
                 ],
                 "stage": "EGRESS",
                 "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+            },
+            "FROM_HOST_DACL": {
+                "policy_desc": "Test ACL Table for TCP_FLAGS validation",
+                "stage": "INGRESS",
+                "type": "RNDATA"
             }
         }, 
         "PBH_HASH_FIELD": {
@@ -2810,6 +2822,27 @@
                 "BIND_POINTS": [
                     "PORT",
                     "PORTCHANNEL"
+                ]
+            },
+            "RNDATA": {
+                "ACTIONS": [
+                    "PACKET_ACTION",
+                    "COUNTER"
+                ],
+                "BIND_POINTS": [
+                    "PORT"
+                ],
+                "MATCHES": [
+                    "DST_IP",
+                    "DST_IPV6",
+                    "ETHER_TYPE",
+                    "IN_PORTS",
+                    "L4_DST_PORT",
+                    "L4_DST_PORT_RANGE",
+                    "IP_PROTOCOL",
+                    "IP_TYPE",
+                    "SRC_IP",
+                    "TCP_FLAGS"
                 ]
             }
         },
