@@ -857,6 +857,67 @@ class TestRebootCauseManager:
                 ),
             ]
 
+    def test_squash_sw_and_hw_causes_kernel_panic(self, reboot_cause_manager_module):
+        # Given
+        FULL_SW_CAUSE = (
+            "Kernel Panic - Out of memory [Time: Thu Oct  21 11:22:59 PM UTC 2025]"
+        )
+        DPM_RECORDS = [
+            create_raw_adm1266_blackbox_record(
+                uid=555,
+                powerup_counter=1,
+                pdio_in=0b0000_0001_0000_0000,  # PDI9
+                timestamp=datetime.datetime(
+                    2025, 10, 21, 23, 23, 9, tzinfo=datetime.timezone.utc  # 10 seconds after Kernel Panic
+                ),
+            ),
+        ]
+        with (
+            temp_file(content=FULL_SW_CAUSE) as sw_reboot_cause_filepath,
+            temp_file(content=b"".join(DPM_RECORDS)) as nvmem_path,
+            temp_file(content="") as rtc_epoch_offset_path,
+            temp_file(content="2") as powerup_counter_path,
+        ):
+            pddf_plugin_data = {
+                "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
+                "DPM": {
+                    "test-dpm": {
+                        "type": "adm1266",
+                        "nvmem_path": nvmem_path,
+                        "rtc_epoch_offset_path": rtc_epoch_offset_path,
+                        "powerup_counter_path": powerup_counter_path,
+                        "dpm_signal_to_fault_cause": [
+                            {
+                                "pdio_mask": "0b0000_0001_0000_0000",  # PDI9
+                                "gpio_mask": "0b0000_0000_0000_0000",
+                                "pdio_value": "0b0000_0001_0000_0000",  # PDI9
+                                "gpio_value": "0b0000_0000_0000_0000",
+                                "hw_cause": "CPU_CMD_PCYC",
+                                "hw_desc": "CPU card commanded power cycle",
+                                "reboot_cause": "REBOOT_CAUSE_POWER_LOSS",
+                            },
+                        ],
+                    }
+                },
+            }
+            # When
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_causes = reboot_cause_manager.summarize_reboot_causes()
+
+            # Then
+            assert reboot_causes == [
+                reboot_cause_manager_module.RebootCause(
+                    type=reboot_cause_manager_module.RebootCause.Type.SOFTWARE,
+                    source="SW",
+                    timestamp=datetime.datetime(
+                        2025, 10, 21, 23, 22, 59, tzinfo=datetime.timezone.utc
+                    ),
+                    cause="Kernel Panic - Out of memory",
+                    description=FULL_SW_CAUSE,
+                    chassis_reboot_cause_category="REBOOT_CAUSE_NON_HARDWARE",
+                ),
+            ]
+
     def test_squash_sw_and_hw_causes_longer_than_3m_10s(self, reboot_cause_manager_module):
         # Given
         FULL_SW_CAUSE = (

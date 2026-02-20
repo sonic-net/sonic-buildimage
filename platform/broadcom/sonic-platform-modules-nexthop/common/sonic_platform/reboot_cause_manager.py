@@ -224,12 +224,18 @@ def merge_sw_and_hw_causes(
 
 
 def squash_sw_and_hw_causes(sorted_causes: list[RebootCause]) -> list[RebootCause]:
-    """Squashes the SW cause and HW cause if they refer to the same reboot."""
+    """Squahes the SW cause and HW cause if they refer to the same reboot."""
 
     def time_diff(cause1: RebootCause, cause2: RebootCause) -> datetime.timedelta | None:
-        if not isinstance(cause1.timestamp, datetime.datetime):
+        if (
+            not isinstance(cause1.timestamp, datetime.datetime)
+            or cause1.timestamp == UNKNOWN_TIMESTAMP
+        ):
             return None
-        if not isinstance(cause2.timestamp, datetime.datetime):
+        if (
+            not isinstance(cause2.timestamp, datetime.datetime)
+            or cause2.timestamp == UNKNOWN_TIMESTAMP
+        ):
             return None
         return cause2.timestamp - cause1.timestamp
 
@@ -241,10 +247,11 @@ def squash_sw_and_hw_causes(sorted_causes: list[RebootCause]) -> list[RebootCaus
 
         ret.append(cause)
 
-        # Nexthop's SW "reboot" is always followed by a power cycle within 3m (10s for the buffer).
+        # Nexthop's SW cold "reboot" and "Kernel Panic" are always followed by a power cycle
+        # within 3m (10s for the buffer).
         if (
             cause.type == RebootCause.Type.SOFTWARE
-            and cause.cause == "reboot"
+            and (cause.cause == "reboot" or "Kernel Panic" in cause.cause)
             and next_cause
             and next_cause.type == RebootCause.Type.HARDWARE
             and (delta := time_diff(cause, next_cause))
