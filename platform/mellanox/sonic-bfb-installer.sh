@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -400,7 +400,7 @@ extract_bfb() {
             exit 1
         fi
         
-        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | grep "$(basename "$bfb_file")" | head -n 1)
+        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | head -n 1)
         if [ -z "$extracted_bfb" ]; then
             log_error "No BFB file found in tar archive"
             exit 1
