@@ -17,14 +17,6 @@ def watchdog_module():
     yield watchdog
 
 
-@pytest.fixture
-def watchdog_module():
-    """Loads the module before each test. This is to let conftest.py inject deps first."""
-    from sonic_platform import watchdog
-
-    yield watchdog
-
-
 class TestWatchdogHelpers:
 
     @pytest.fixture(scope="function", autouse=True)
