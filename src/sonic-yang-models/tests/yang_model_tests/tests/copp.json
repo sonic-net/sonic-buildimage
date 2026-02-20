@@ -25,5 +25,12 @@
     "COPP_GROUP_WHEN_SRTCM_WITH_PIR": {
     "desc": "Configure COPP_GROUP with srtcm and pir.",
     "eStrKey" : "When"
+    },
+    "COPP_TRAP_EXCLUDE_PORTS_ALL_VALID": {
+        "desc": "Configure CoPP trap exclusion list valid ports."
+    },
+    "COPP_TRAP_EXCLUDE_PORT_INVALID_PORT": {
+        "desc": "Reference invalid port",
+        "eStrKey": "LeafRef"
     }
 }
