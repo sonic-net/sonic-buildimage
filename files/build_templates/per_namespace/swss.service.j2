@@ -1,7 +1,8 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
 [Unit]
 Description=switch state service
-Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service
-After=database{% if multi_instance == 'true' %}@%i{% endif %}.service
+Requires=database{% if use_instance_deps %}@%i{% endif %}.service
+After=database{% if use_instance_deps %}@%i{% endif %}.service
 {% if multi_instance == 'true' and sonic_asic_platform == 'vs' %}
 Requires=topology.service
 After=topology.service
