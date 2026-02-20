@@ -24,3 +24,7 @@ deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-security main 
 deb-src [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-security main contrib {{ nonfree_component }}
 {% endif %}
 {% endfor %}
+
+# --- Added for Azure Profiler ---
+# deb http://archive.debian.org/debian buster main
+# deb http://archive.debian.org/debian-security buster/updates main
