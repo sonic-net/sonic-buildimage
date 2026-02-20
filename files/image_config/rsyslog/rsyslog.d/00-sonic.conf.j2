@@ -35,6 +35,12 @@ if $programname contains "teamd_" then {
     stop
 }
 
+
+if $programname contains "l2mc" then {
+    /var/log/l2mcd.log
+    stop
+}
+
 ## gnmi rules
 if $msg startswith " gnmi-native" then {
     /var/log/gnmi.log
