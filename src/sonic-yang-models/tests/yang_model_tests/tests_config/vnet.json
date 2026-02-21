@@ -292,7 +292,8 @@
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
                         "mac_address": "00:aa:bb:cc:dd:ee",
-                        "vni": "10011"
+                        "vni": "10011",
+                        "metric": 1
                     }
                 ]
             }
