@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,14 +81,21 @@ class TestBMC:
     @mock.patch('sonic_py_common.device_info.get_bmc_data', \
                 mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
     @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_set_min_password_length')
     @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_change_login_password')
-    def test_bmc_reset_password(self, mock_change_password):
+    @mock.patch('sonic_platform_base.redfish_client.RedfishClient.redfish_api_get_min_password_length')
+    def test_bmc_reset_password(self, mock_get_min_length, mock_change_password, mock_set_min_length):
         """Test reset_password method with successful password reset"""
-        mock_change_password.return_value = (RedfishClient.ERR_CODE_OK, 'Password changed successfully')
+        mock_get_min_length.return_value = (RedfishClient.ERR_CODE_OK, 12)
+        mock_set_min_length.return_value = (RedfishClient.ERR_CODE_OK, '')
+        mock_change_password.return_value = (RedfishClient.ERR_CODE_OK, '')
         bmc = BMC.get_instance()
         ret, msg = bmc.reset_root_password()
         assert ret == RedfishClient.ERR_CODE_OK
-        assert msg == 'Password changed successfully'
+        assert msg == ''
+        mock_get_min_length.assert_called_once()
+        mock_set_min_length.assert_any_call(8)
+        mock_set_min_length.assert_any_call(12)
         mock_change_password.assert_called_once_with('testpass', BMCBase.ROOT_ACCOUNT)
 
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
