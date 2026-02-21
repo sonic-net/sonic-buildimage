@@ -406,3 +406,111 @@ class TestChassis:
             chassis.get_dpu_id('ABC')
         DeviceDataManager.get_platform_dpus_data = orig_dpus_data
         DeviceDataManager.get_dpu_count = orig_dpu_count
+
+    @mock.patch('os.path.exists')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_change_sed_password_success(self, mock_logger, mock_subprocess, mock_exists):
+        """Test successful SED password change"""
+        mock_exists.return_value = True
+        mock_subprocess.return_value = None
+        chassis = Chassis()
+        result = chassis.change_sed_password('new_password123')
+        assert result is True
+        sed_script_path = '/usr/local/bin/sed_pw_change.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_subprocess.assert_called_once_with(
+            [sed_script_path, '-p', 'new_password123'], 
+            universal_newlines=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+        mock_logger.log_error.assert_not_called()
+
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_change_sed_password_script_not_exists(self, mock_logger, mock_exists):
+        """Test SED password change when script doesn't exist"""
+        mock_exists.return_value = False
+        chassis = Chassis()
+        result = chassis.change_sed_password('new_password123')
+        assert result is False
+        sed_script_path = '/usr/local/bin/sed_pw_change.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_logger.log_error.assert_called_once()
+        assert sed_script_path in str(mock_logger.log_error.call_args)
+
+    @mock.patch('os.path.exists')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_change_sed_password_subprocess_failure(self, mock_logger, mock_subprocess, mock_exists):
+        """Test SED password change when subprocess fails"""
+        mock_exists.return_value = True
+        mock_subprocess.side_effect = subprocess.CalledProcessError(1, 'sed_pw_change.sh')
+        chassis = Chassis()
+        result = chassis.change_sed_password('new_password123')
+        assert result is False
+        sed_script_path = '/usr/local/bin/sed_pw_change.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_subprocess.assert_called_once_with(
+            [sed_script_path, '-p', 'new_password123'], 
+            universal_newlines=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+        mock_logger.log_error.assert_called_once()
+        assert "Failed to change SED password" in str(mock_logger.log_error.call_args)
+
+    @mock.patch('os.path.exists')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reset_sed_password_success(self, mock_logger, mock_subprocess, mock_exists):
+        """Test successful SED password reset"""
+        mock_exists.return_value = True
+        mock_subprocess.return_value = None
+        chassis = Chassis()
+        result = chassis.reset_sed_password()
+        assert result is True
+        sed_script_path = '/usr/local/bin/sed_reset_factory.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_subprocess.assert_called_once_with(
+            [sed_script_path], 
+            universal_newlines=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+        mock_logger.log_error.assert_not_called()
+
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reset_sed_password_script_not_exists(self, mock_logger, mock_exists):
+        """Test SED password reset when script doesn't exist"""
+        mock_exists.return_value = False
+        chassis = Chassis()
+        result = chassis.reset_sed_password()
+        assert result is False
+        sed_script_path = '/usr/local/bin/sed_reset_factory.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_logger.log_error.assert_called_once()
+        assert sed_script_path in str(mock_logger.log_error.call_args)
+
+    @mock.patch('os.path.exists')
+    @mock.patch('subprocess.check_call')
+    @mock.patch('sonic_platform.chassis.logger')
+    def test_reset_sed_password_subprocess_failure(self, mock_logger, mock_subprocess, mock_exists):
+        """Test SED password reset when subprocess fails"""
+        mock_exists.return_value = True
+        mock_subprocess.side_effect = subprocess.CalledProcessError(1, 'sed_reset_factory.sh')
+        chassis = Chassis()
+        result = chassis.reset_sed_password()
+        assert result is False
+        sed_script_path = '/usr/local/bin/sed_reset_factory.sh'
+        mock_exists.assert_called_once_with(sed_script_path)
+        mock_subprocess.assert_called_once_with(
+            [sed_script_path], 
+            universal_newlines=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+        mock_logger.log_error.assert_called_once()
+        assert "Failed to reset SED password" in str(mock_logger.log_error.call_args)
