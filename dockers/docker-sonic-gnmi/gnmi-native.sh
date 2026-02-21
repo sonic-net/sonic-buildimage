@@ -91,6 +91,11 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100"
 fi
 
+GNMI_VRF=$(extract_field "$GNMI" '.vrf')
+if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
+    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+fi
+
 # Add VRF parameter when mgmt-vrf enabled
 MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
 if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then

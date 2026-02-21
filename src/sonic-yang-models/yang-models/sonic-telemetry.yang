@@ -8,6 +8,13 @@ module sonic-telemetry {
     import ietf-inet-types {
         prefix inet;
     }
+    import sonic-vrf {
+        prefix vrf;
+    }
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
 
     organization
         "SONiC";
@@ -17,8 +24,19 @@ module sonic-telemetry {
 
     description "TELEMETRY YANG Module for SONiC OS";
 
+    revision 2025-09-01 {
+        description "Add VRF support for Telemetry service";
+    }
     revision 2022-05-13 {
         description "First Revision";
+    }
+
+    typedef vrf-device {
+        description "Represents GNMI VRF device";
+        type enumeration {
+            enum default;
+            enum mgmt;
+        }
     }
 
     container sonic-telemetry {
@@ -91,6 +109,18 @@ module sonic-telemetry {
                         pattern 'password|jwt|cert|none';
                     }
                     description "Telemetry service user authorization type.";
+                }
+
+                leaf vrf {
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type vrf-device;
+                    }
+                    must "(current() != 'mgmt')
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
+                    description "VRF for Telemetry.";
                 }
             }
 
