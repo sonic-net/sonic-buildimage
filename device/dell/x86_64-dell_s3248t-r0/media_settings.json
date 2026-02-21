@@ -1,0 +1,111 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "49-52": {
+            "SFP\\+-CR-.*": {
+                "preemphasis": {
+                    "lane0": "0x002000"
+                }
+            }
+        },
+        "53-54": {
+            "(QSFP\\+-CR-.*)|(SFP\\+-CR-.*)": {
+                "preemphasis": {
+                    "lane0": "0x0c490f",
+                    "lane1": "0x0f490c",
+                    "lane2": "0x0c490f",
+                    "lane3": "0x0f490c"
+                }
+            },
+            "(QSFP28-CR-.*)|(SFP28-CR-.*)": {
+                "preemphasis": {
+                    "lane0": "0x0c490f",
+                    "lane1": "0x0f490c",
+                    "lane2": "0x0c490f",
+                    "lane3": "0x0f490c"
+                }
+            }
+        }
+    },
+    "PORT_MEDIA_SETTINGS": {
+        "49": {
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x082402"
+                }
+            }
+        },
+        "50": {
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x082402"
+                }
+            }
+        },
+        "51": {
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x082402"
+                }
+            }
+        },
+        "52": {
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x082402"
+                }
+            }
+        },
+        "53": {
+            "QSFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x194a01",
+                    "lane1": "0x194803",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            },
+            "(QSFP28-.*)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x194a01",
+                    "lane1": "0x194803",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            },
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x194a01",
+                    "lane1": "0x194803",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            }
+        },
+        "54": {
+            "QSFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x194902",
+                    "lane1": "0x194902",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            },
+            "(QSFP28-.*)|(SFP28-.*)": {
+                "preemphasis": {
+                    "lane0": "0x194902",
+                    "lane1": "0x194902",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            },
+            "SFP\\+-.*": {
+                "preemphasis": {
+                    "lane0": "0x194902",
+                    "lane1": "0x194902",
+                    "lane2": "0x194902",
+                    "lane3": "0x194902"
+                }
+            }
+        }
+    }
+}
