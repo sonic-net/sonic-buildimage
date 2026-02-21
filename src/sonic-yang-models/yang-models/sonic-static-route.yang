@@ -130,6 +130,11 @@ module sonic-static-route {
           description
             "blackhole refers to a route that, if matched, discards the message silently.";
         }
+        leaf segment {
+          type string;
+          description
+            "SRv6 SID list for traffic steering";
+        }
       } /* end of list STATIC_ROUTE_LIST */
     } /* end of container STATIC_ROUTE */
   } /* end of container sonic-static_route */
