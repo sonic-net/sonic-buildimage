@@ -32,8 +32,7 @@
         "eStrKey" : "Must"
     },
     "SRV6_MY_SID_UA_MISSING_ADJ": {
-        "desc": "A SID configured with action uA but missing adj",
-        "eStrKey" : "Must"
+        "desc": "Valid config with action uA (adj is optional)"
     },
     "SRV6_MY_SID_UA_MISSING_BOTH": {
         "desc": "A SID configured with action uA but missing both interface and adj",

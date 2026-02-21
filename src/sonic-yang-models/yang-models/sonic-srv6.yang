@@ -137,10 +137,6 @@ module sonic-srv6 {
                     type inet:ipv6-address;
                     description "IPv6 adjacency address";
                 }
-                // Constraint: adj is mandatory when action is uA
-                must "not(action = 'uA') or adj" {
-                    error-message "adj is mandatory when action is 'uA'";
-                }
             }
         }
 
