@@ -43,11 +43,11 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
         DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
     fi
 
-    DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
-    DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+    DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,$BUILD_SNAPSHOT_URL/debian/$DEBIAN_TIMESTAMP/
+    DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,$BUILD_SNAPSHOT_URL/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
 
 	if [ "$DISTRIBUTION" == "buster" ] || [ "$DISTRIBUTION" == "bullseye" ]; then
-		DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
+		DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,$BUILD_SNAPSHOT_URL/debian/$DEBIAN_TIMESTAMP/
 	fi
 
     mkdir -p target/versions/default
@@ -68,8 +68,10 @@ TEMPLATE=files/apt/sources.list.j2
 
 MIRROR_URLS=$MIRROR_URLS MIRROR_SECURITY_URLS=$MIRROR_SECURITY_URLS j2 $TEMPLATE | sed '/^$/N;/^\n$/D' > $CONFIG_PATH/sources.list.$ARCHITECTURE
 if [ "$MIRROR_SNAPSHOT" == y ]; then
+    # Escape special characters in BUILD_SNAPSHOT_URL for use in sed regex
+    ESCAPED_MIRROR_URL=$(echo "$BUILD_SNAPSHOT_URL" | sed 's/[\/&.]/\\&/g')
     # Set the snapshot mirror, and add the SET_REPR_MIRRORS flag
-    sed -i -e "/^#*deb.*packages.trafficmanager.net/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" $CONFIG_PATH/sources.list.$ARCHITECTURE
+    sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" $CONFIG_PATH/sources.list.$ARCHITECTURE
 fi
 
 # Handle apt retry count config

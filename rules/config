@@ -265,8 +265,16 @@ SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
-# PACKAGE_URL_PREFIX - the package url prefix
-PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
+
+# BUILD_SNAPSHOT_URL - Default debian snapshot mirror url
+# Mirror of https://snapshot.debian.org/archive
+BUILD_SNAPSHOT_URL ?= http://packages.trafficmanager.net/snapshot
+
+# BUILD_PUBLIC_URL - Default public mirror url
+BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
+
+# BUILD_PACKAGES_URL - Default packages mirror url
+BUILD_PACKAGES_URL ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
 TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc

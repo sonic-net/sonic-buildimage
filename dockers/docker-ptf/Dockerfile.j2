@@ -17,6 +17,9 @@ WORKDIR /root
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+# Install certificates by disabling the peer verification
+RUN apt -o Acquire::https::Verify-Peer=false update && \
+    apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive

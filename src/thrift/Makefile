@@ -10,7 +10,7 @@ DERIVED_TARGETS = libthrift-dev_$(THRIFT_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  python-thrift_$(THRIFT_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  thrift-compiler_$(THRIFT_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 
-THRIFT_LINK_PRE = https://packages.trafficmanager.net/public/debian
+THRIFT_LINK_PRE = $(BUILD_PUBLIC_URL)/debian
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf thrift-$(THRIFT_VERSION)

@@ -11,7 +11,6 @@ POST_VERSION_PATH=$BUILDINFO_PATH/post-versions
 VERSION_DEB_PREFERENCE=$BUILDINFO_PATH/versions/01-versions-deb
 WEB_VERSION_FILE=$VERSION_PATH/versions-web
 BUILD_WEB_VERSION_FILE=$BUILD_VERSION_PATH/versions-web
-REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 GET_RETRY_COUNT=5
 
@@ -34,7 +33,7 @@ PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
 . ${BUILDINFO_PATH}/scripts/utils.sh
 
 
-URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
+URL_PREFIX=$(echo "${BUILD_PACKAGES_URL}" | sed -E "s#(//[^/]*/).*#\1#")
 
 log_err()
 {
@@ -112,15 +111,15 @@ get_version_cache_option()
 set_reproducible_mirrors()
 {
     # Remove the charater # in front of the line if matched
-    local expression="s/^#\s*\(.*$REPR_MIRROR_URL_PATTERN\)/\1/"
+    local expression="s,^#\s*\(.*$BUILD_SNAPSHOT_URL\),\1,"
     # Add the character # in front of the line, if not match the URL pattern condition
-    local expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#*deb/#&/"
+    local expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#*deb,#&,"
     local expression3="\$a#SET_REPR_MIRRORS"
     if [ "$1" = "-d" ]; then
         # Add the charater # in front of the line if match
-        expression="s/^deb.*$REPR_MIRROR_URL_PATTERN/#\0/"
+        expression="s,^deb.*$BUILD_SNAPSHOT_URL,#\0,"
         # Remove the character # in front of the line, if not match the URL pattern condition
-        expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#\s*(#*deb)/\1/"
+        expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#\s*(#*deb),\1,"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
@@ -132,7 +131,7 @@ set_reproducible_mirrors()
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
     for mirror in $mirrors; do
-        if ! grep -iq "$REPR_MIRROR_URL_PATTERN" "$mirror"; then
+        if ! grep -iq "$BUILD_SNAPSHOT_URL" "$mirror"; then
             continue
         fi
 
@@ -212,7 +211,7 @@ download_packages()
                 else
 
                     local version_filename="${filename}-${version}"
-                    local proxy_url="${PACKAGE_URL_PREFIX}/${version_filename}"
+                    local proxy_url="${BUILD_PACKAGES_URL}/${version_filename}"
                     local url_exist=$(check_if_url_exist $proxy_url)
                     if [ "$url_exist" == y ]; then
                         parameters[$i]=$proxy_url
