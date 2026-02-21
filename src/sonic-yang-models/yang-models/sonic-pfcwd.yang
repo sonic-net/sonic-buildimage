@@ -85,7 +85,7 @@ module sonic-pfcwd {
                 leaf POLL_INTERVAL {
                     must "../ifname = 'GLOBAL'";
                     type uint32 {
-                        range 100..3000;
+                        range 100..1000;
                     }
                     description
                         "PFC watchdog global polling interval in msec.";
