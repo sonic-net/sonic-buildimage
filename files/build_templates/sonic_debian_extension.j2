@@ -442,6 +442,8 @@ echo "watchdog-control.service" | sudo tee -a $GENERATED_SERVICE_FILE
 # Copy rsyslog configuration files and templates
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog-config.sh $FILESYSTEM_ROOT/usr/bin/
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/rsyslog.service.d
+sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.service.d/override.conf $FILESYSTEM_ROOT/etc/systemd/system/rsyslog.service.d/
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog-container.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 j2 $IMAGE_CONFIGS/rsyslog/rsyslog.d/00-sonic.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/rsyslog.d/00-sonic.conf
