@@ -1,1 +1,0 @@
--w /usr/bin/dockerd -p wa -F auid>=1000 -F auid!=4294967295 -k docker_daemon
