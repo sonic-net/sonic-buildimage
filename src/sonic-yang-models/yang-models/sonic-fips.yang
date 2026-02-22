@@ -30,11 +30,6 @@ module sonic-fips {
                     default "false";
                 }
 
-                leaf enforce {
-                    description "This configuration identicates whether enforce fips";
-                    type stypes:boolean_type;
-                    default "false";
-                }
             }
             /* end of container global */
         }
