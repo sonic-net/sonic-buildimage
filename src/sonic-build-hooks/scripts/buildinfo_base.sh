@@ -181,7 +181,7 @@ download_packages()
             fi
             local result=0
             WEB_CACHE_PATH=${PKG_CACHE_PATH}/web
-            mkdir -p ${WEB_CACHE_PATH}
+            $SUDO mkdir -p ${WEB_CACHE_PATH}
             local WEB_FILENAME=$(echo $url | awk -F"/" '{print $NF}' | cut -d? -f1 | cut -d# -f1)
             if [ -z "${DST_FILENAME}" ];then
                 DST_FILENAME="${WEB_FILENAME}"
