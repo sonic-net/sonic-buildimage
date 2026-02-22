@@ -537,8 +537,8 @@ stop() {
         clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
         debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
     else
-        debug "Killing Docker swss..."
-        /usr/bin/docker kill swss &> /dev/null || debug "Docker swss is not running ($?) ..."
+        debug "Killing Docker ${SERVICE}$DEV..."
+        /usr/bin/docker kill ${SERVICE}$DEV &> /dev/null || debug "Docker ${SERVICE}$DEV is not running ($?) ..."
     fi
 
     # Flush FAST_REBOOT table when swss needs to stop. The only
