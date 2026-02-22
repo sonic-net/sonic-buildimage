@@ -764,8 +764,71 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             ## Overwriting the initrd image with uInitrd
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
         else
-            sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            # Check if sonic_fit.its uses placeholders (template-based)
+            if grep -q "__KERNEL_VERSION__\|__KERNEL_PATH__" $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its 2>/dev/null; then
+                # Generate sonic_fit.its with actual kernel version
+                # Detect the actual installed kernel version from the filesystem
+                # The kernel package may have a different version suffix than LINUX_KERNEL_VERSION
+                KERNEL_FILE=$(ls $FILESYSTEM_ROOT/boot/vmlinuz-* 2>/dev/null | head -1)
+                if [ -z "$KERNEL_FILE" ]; then
+                    echo "Error: No kernel found in $FILESYSTEM_ROOT/boot/"
+                    exit 1
+                fi
+                KERNEL_VERSION_FULL=$(basename "$KERNEL_FILE" | sed 's/^vmlinuz-//')
+
+                # Replace placeholders with actual paths
+                KERNEL_PATH="/boot/vmlinuz-${KERNEL_VERSION_FULL}"
+                INITRD_PATH="/boot/initrd.img-${KERNEL_VERSION_FULL}"
+
+                # For aspeed platform, construct DTB directory path
+                # The FIT image template contains multiple DTBs, we only substitute the directory path
+                if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/aspeed"
+                else
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/${CONFIGURED_PLATFORM}"
+                fi
+
+                # Substitute placeholders in sonic_fit.its template
+                sed -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
+                    -e "s|__INITRD_PATH__|${INITRD_PATH}|g" \
+                    -e "s|__DTB_PATH_ASPEED__|${DTB_DIR_PATH}|g" \
+                    $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its > /tmp/sonic_fit.its.tmp
+
+                sudo cp -v /tmp/sonic_fit.its.tmp $FILESYSTEM_ROOT/boot/sonic_fit.its
+                rm -f /tmp/sonic_fit.its.tmp
+            else
+                # Platform uses hardcoded paths - copy as-is
+                sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            fi
+
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
+        fi
+    fi
+
+    # Install platform-level scripts and services for aspeed platform
+    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+        echo "Installing platform scripts and services for aspeed..."
+
+        # Copy all scripts from platform/aspeed/scripts/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
+            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
+                if [ -f "$script" ]; then
+                    echo "Installing $(basename $script)..."
+                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
+                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
+                fi
+            done
+        fi
+
+        # Copy all systemd services from platform/aspeed/systemd/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
+            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
+                if [ -f "$service" ]; then
+                    echo "Installing and enabling $(basename $service)..."
+                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
+                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
+                fi
+            done
         fi
     fi
 fi

@@ -1,0 +1,14 @@
+[Unit]
+Description=NextHop USB Network Gadget Service
+Documentation=https://github.com/sonic-net/SONiC/wiki/
+After=local-fs.target
+Before=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sonic-usb-network-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
