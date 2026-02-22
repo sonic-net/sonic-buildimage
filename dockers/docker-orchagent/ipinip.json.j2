@@ -13,6 +13,13 @@
     {% set is_broadcom_t1 = true %}
 {% endif %}
 
+{# Check if the ASIC is Cisco GR2 #}
+{% set is_cisco_gr2 = false %}
+{%- set gr2_pid_list = ["x86_64-8122_64eh_o-r0", "x86_64-8122_64ehf_o-r0", "x86_64-8122_64ehf_g-r0", "x86_64-8121_16ehf_bp_o-r0", "x86_64-hf6100_64ed-r0"] %}
+{% if DEVICE_METADATA['localhost']['platform'] in gr2_pid_list %}
+  {% set is_cisco_gr2 = true %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -91,7 +98,11 @@
             "dscp_mode":"uniform",
 {% endif %}
 {% else %}
+{% if is_cisco_gr2 %}
+            "dscp_mode":"uniform",
+{% else %}
             "dscp_mode":"pipe",
+{% endif %}
 {% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
@@ -121,7 +132,11 @@
             "dscp_mode":"uniform",
 {% endif %}
 {% else %}
+{% if is_cisco_gr2 %}
+            "dscp_mode":"uniform",
+{% else %}
             "dscp_mode":"pipe",
+{% endif %}
 {% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
@@ -158,7 +173,11 @@
             "dscp_mode":"uniform",
 {% endif %}
 {% else %}
+{% if is_cisco_gr2 %}
+            "dscp_mode":"uniform",
+{% else %}
             "dscp_mode":"pipe",
+{% endif %}
 {% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
@@ -188,7 +207,11 @@
             "dscp_mode":"uniform",
 {% endif %}
 {% else %}
+{% if is_cisco_gr2 %}
+            "dscp_mode":"uniform",
+{% else %}
             "dscp_mode":"pipe",
+{% endif %}
 {% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
