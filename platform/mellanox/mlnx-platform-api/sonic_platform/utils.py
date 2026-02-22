@@ -24,6 +24,12 @@ import sys
 import threading
 import time
 import os
+
+# Inotify causes an exception when DEBUG env variable is set to a non-integer convertible
+# https://github.com/dsoprea/PyInotify/blob/0.2.10/inotify/adapters.py#L37
+os.environ['DEBUG'] = '0'
+import inotify.adapters
+import inotify.constants
 from sonic_py_common import device_info
 from sonic_py_common.logger import Logger
 
@@ -299,6 +305,49 @@ def extract_cpo_ports_index(num_of_asics=1):
     return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
 
 
+def wait_for_file_creation(file_path, timeout):
+    """
+    Wait for a file to be created using inotify
+
+    Args:
+        file_path: Path to the file to wait for
+        timeout: Timeout in seconds
+
+    Returns:
+        True if file was created and is readable, False otherwise
+    """
+    # If file already exists and is readable, return immediately
+    if os.access(file_path, os.R_OK):
+        return True
+
+    dir_path = os.path.dirname(file_path)
+    file_name = os.path.basename(file_path)
+
+    if not os.path.exists(dir_path):
+        logger.log_debug("Directory {} does not exist".format(dir_path))
+        return False
+
+    try:
+        notifier = inotify.adapters.Inotify()
+        notifier.add_watch(dir_path,
+                         mask=(inotify.constants.IN_CREATE
+                               | inotify.constants.IN_CLOSE_WRITE
+                               | inotify.constants.IN_MOVED_TO))
+
+        for event in notifier.event_gen(timeout_s=timeout, yield_nones=False):
+            (_, type_names, path, filename) = event
+            if filename == file_name:
+                if "IN_CREATE" in type_names or "IN_CLOSE_WRITE" in type_names or "IN_MOVED_TO" in type_names:
+                    if os.access(file_path, os.R_OK):
+                        logger.log_info("File {} created and readable".format(file_path))
+                        return True
+    except Exception as e:
+        logger.log_error("Inotify error while waiting for {}: {}".format(file_path, repr(e)))
+
+    if os.access(file_path, os.R_OK):
+        return True
+
+    return False
 def extract_asic_id_map(num_of_asics=1):
     asic_id_map = {}
 
