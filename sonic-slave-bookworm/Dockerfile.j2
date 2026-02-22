@@ -339,7 +339,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For initramfs
         shellcheck \
         bash-completion \
-{%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
         qemu-kvm \
@@ -348,7 +347,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For rasdaemon build
         libsqlite3-dev \
         libgettextpo-dev \
-{%- endif %}
 # For ntp
         autogen \
         libopts25-dev \
@@ -467,7 +465,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         hwdata \
         libzip-dev
 
-{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 RUN eatmydata apt-get install -y \
 # For p4 libraries
         libgrpc++-dev \
@@ -493,7 +490,6 @@ RUN eatmydata apt-get install -y \
         python3-ply \
         python3-scapy \
         python3-thrift
-{%- endif %}
 
 {%- if CONFIGURED_ARCH == "amd64" %}
 # Upgrade CMAKE version
