@@ -5,7 +5,7 @@
 CONFIGURED_ARCH=$1
 IMAGE_DISTRO=$2
 FILESYSTEM_ROOT=$3
-http_proxy=$4
+HTTP_PROXY=$4
 
 TARGET=$TARGET_PATH
 [ -z "$TARGET" ] && TARGET=target
@@ -100,7 +100,7 @@ do
         exit 1
     fi
     filename=$(basename "$url")
-    SKIP_BUILD_HOOK=y wget $url -O $ARCHIEVES/$filename
+    SKIP_BUILD_HOOK=y http_proxy=$HTTP_PROXY wget $url -O $ARCHIEVES/$filename
     echo $packagename >> $DEBOOTSTRAP_REQUIRED
     echo "$packagename /var/cache/apt/archives/$filename" >> $DEBPATHS
 done
