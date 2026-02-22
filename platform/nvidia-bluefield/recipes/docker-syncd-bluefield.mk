@@ -34,3 +34,4 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /var/log/bluefield/sdk-dumps:/var/log/bluefield/sdk-dumps
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /var/dump/flows/:/var/dump/flows/
