@@ -174,7 +174,7 @@ if [ "$FACTORY_TYPE" != "only-config" ]; then
     clear_sonic_dir
 
     echo "Clear warmboot folder"
-    find /host/warmboot/ -type f -delete
+    find /host/warmboot*/ -type f -delete
 
     echo "Delete reboot-cause files and symlinks"
     find /host/reboot-cause/ -type l,f -delete

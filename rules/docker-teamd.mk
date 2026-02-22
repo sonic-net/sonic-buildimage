@@ -35,7 +35,6 @@ $(DOCKER_TEAMD)_CONTAINER_NAME = teamd
 $(DOCKER_TEAMD)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
-$(DOCKER_TEAMD)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 $(DOCKER_TEAMD)_BASE_IMAGE_FILES += teamdctl:/usr/bin/teamdctl
 

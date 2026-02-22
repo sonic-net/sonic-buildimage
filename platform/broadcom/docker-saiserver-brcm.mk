@@ -22,7 +22,6 @@ $(DOCKER_SAISERVER_BRCM)_RUN_OPT += --privileged -t
 $(DOCKER_SAISERVER_BRCM)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SAISERVER_BRCM)_RUN_OPT += -v /var/run/docker-saiserver:/var/run/sswsyncd
 $(DOCKER_SAISERVER_BRCM)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SAISERVER_BRCM)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 $(DOCKER_SAISERVER_BRCM)_BASE_IMAGE_FILES += bcmcmd:/usr/bin/bcmcmd
 $(DOCKER_SAISERVER_BRCM)_BASE_IMAGE_FILES += bcmsh:/usr/bin/bcmsh

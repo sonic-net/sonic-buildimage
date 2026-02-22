@@ -102,10 +102,10 @@ function getBootType()
 function preStartAction()
 {
 {%- if docker_container_name == "database" %}
-    WARM_DIR=/host/warmboot
+    WARM_DIR=/host/warmboot$DEV
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
         if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
-            # Load redis content from /host/warmboot/dump.rdb
+            # Load redis content from /host/warmboot$DEV/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
             # Create an emtpy file and overwrite any RDB if already there
@@ -692,6 +692,7 @@ start() {
 {%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+        -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
 {%- endif %}
