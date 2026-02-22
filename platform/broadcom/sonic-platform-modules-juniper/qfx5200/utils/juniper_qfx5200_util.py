@@ -116,6 +116,12 @@ def device_install():
             if FORCE == 0:
                 return status
 
+def platform_install():
+    global FORCE
+    status, platform = log_os_system('/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform', 1)
+    if status==0:
+        log_os_system("pip3 install /usr/share/sonic/device/"+platform+"/sonic_platform-1.0-py3-none-any.whl",1)
+
 def do_install():
     status = driver_install()
     if status:
@@ -133,6 +139,8 @@ def do_install():
     return
     
 def main():
+
+    platform_install()
 
     hwmon_input_node_mapping = ['2c','2e','2f']
     PWM1FREQ_PATH = '/sys/bus/i2c/devices/7-00{0}/hwmon/{1}/pwm1_freq'
@@ -165,6 +173,10 @@ def main():
 
     time.sleep(1)
 
+    # Juniper QFX5200 platform drivers install
+    do_install()
+    time.sleep(2)
+    
     #Retrieve the Base MAC Address from EEPROM	
     status, macAddress = getstatusoutput_noshell(["decode-syseeprom", "-m", "0x24"])
     if status:
@@ -191,10 +203,6 @@ def main():
         print('Error: Could not make eth0 interface up')
         return False
 
-    # Juniper QFX5200 platform drivers install
-    do_install()
-    time.sleep(2)
-
     # Juniper SFP Intialization	
     JuniperSFPInitCmd = ['python', '/usr/share/sonic/device/x86_64-juniper_qfx5200-r0/plugins/qfx5200_sfp_init.py']
     try:
@@ -213,28 +221,27 @@ def main():
         return False
 
     for x in range(PWMINPUT_NUM):
-         hwmon_input_path_mapping[x] = HWMONINPUT_PATH.format(hwmon_input_node_mapping[x])
+        hwmon_input_path_mapping[x] = HWMONINPUT_PATH.format(hwmon_input_node_mapping[x])
+        hwmon_path = os.listdir(hwmon_input_path_mapping[x])
+        hwmon_dir = ''
+        for hwmon_name in hwmon_path:
+            hwmon_dir = hwmon_name
 
-	 hwmon_path = os.listdir(hwmon_input_path_mapping[x])
-	 hwmon_dir = ''
-	 for hwmon_name in hwmon_path:
-	     hwmon_dir = hwmon_name
-	    
-	 pwm_input_path_mapping[x] = PWM1FREQ_PATH.format(
-		                                 hwmon_input_node_mapping[x],
-				                 hwmon_dir)
-         device_path = pwm_input_path_mapping[x]
-         time.sleep(1)
-         cmd = "22500"
-         write_file(cmd, device_path)
+        pwm_input_path_mapping[x] = PWM1FREQ_PATH.format(
+                hwmon_input_node_mapping[x],
+                hwmon_dir)
+        device_path = pwm_input_path_mapping[x]
+        time.sleep(1)
+        cmd = "22500"
+        write_file(cmd, device_path)
 
-	 numsensors_input_path_mapping[x] = NUMSENSORS_PATH.format(
-		                                 hwmon_input_node_mapping[x],
-				                 hwmon_dir)
-         numsensors_path = numsensors_input_path_mapping[x]
-         time.sleep(1)
-         cmd = "0"
-         write_file(cmd, numsensors_path)
+        numsensors_input_path_mapping[x] = NUMSENSORS_PATH.format(
+                hwmon_input_node_mapping[x],
+                hwmon_dir)
+        numsensors_path = numsensors_input_path_mapping[x]
+        time.sleep(1)
+        cmd = "0"
+        write_file(cmd, numsensors_path)
 
     return True              
         
