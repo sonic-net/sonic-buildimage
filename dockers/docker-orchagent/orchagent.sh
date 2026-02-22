@@ -143,6 +143,9 @@ if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; t
     fi
 fi
 
+# Set 120 sec flex counter delay
+ORCHAGENT_ARGS+=" -D 120"
+
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
 trap '' SIGHUP
 
