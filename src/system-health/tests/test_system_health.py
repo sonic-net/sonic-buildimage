@@ -823,7 +823,9 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
 
 mock_srv_props={
 'mock_radv.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_radv.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'enabled'},
-'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'}
+'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'},
+'mock_swss_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_swss_generated.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'generated'},
+'mock_syncd_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_syncd_generated.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'generated'}
 }
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service', 'mock_bgp.service', 'mock_ns.service']))
@@ -889,6 +891,28 @@ def test_get_unit_status_not_ok():
     sysmon = Sysmonitor()
     result = sysmon.get_unit_status('mock_bgp.service')
     print("get_unit_status:{}".format(result))
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_swss_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_running_ok():
+    """Test that active/running services with UnitFileState=generated are reported as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_swss_generated.service')
+    print("get_unit_status for generated running service:{}".format(result))
+    assert result == 'OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_syncd_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_inactive_not_ok():
+    """Test that inactive services with UnitFileState=generated are reported as NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_syncd_generated.service')
+    print("get_unit_status for generated inactive service:{}".format(result))
     assert result == 'NOT OK'
 
 
