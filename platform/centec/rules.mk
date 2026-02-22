@@ -15,6 +15,8 @@ $(SYNCD)_DEPENDS += $(CENTEC_SAI) $(CENTEC_SAI_DEV)
 $(SYNCD)_UNINSTALLS += $(CENTEC_SAI_DEV) $(CENTEC_SAI)
 
 ifeq ($(ENABLE_SYNCD_RPC),y)
+# Remove the libthrift_0.11.0 dependency injected by rules/syncd.mk
+$(SYNCD)_DEPENDS := $(filter-out $(LIBTHRIFT_DEV),$($(SYNCD)_DEPENDS))
 $(SYNCD)_DEPENDS += $(LIBSAITHRIFT_DEV)
 endif
 
