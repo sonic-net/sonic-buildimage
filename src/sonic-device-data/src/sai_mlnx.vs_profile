@@ -3,3 +3,4 @@ SAI_VS_HOSTIF_USE_TAP_DEVICE=true
 SAI_VS_INTERFACE_LANE_MAP_FILE=/usr/share/sonic/hwsku/lanemap.ini
 SAI_VS_CORE_PORT_INDEX_MAP_FILE=/usr/share/sonic/hwsku/coreportindexmap.ini
 SAI_VS_INTERFACE_FABRIC_LANE_MAP_FILE=/usr/share/sonic/hwsku/fabriclanemap.ini
+SAI_VS_USE_CONFIGURED_SPEED_AS_OPER_SPEED=true
