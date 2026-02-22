@@ -716,7 +716,7 @@ start() {
         $ASIC_MNT \
 {%- elif docker_container_name == "pmon" %}
         $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
-        -v /sys/module/sx_core:/sys/module/sx_core:rw \
+        $(if [ -e /sys/module/sx_core:/sys/module/sx_core ]; then echo "-v /sys/module/sx_core:/sys/module/sx_core:rw"; fi) \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
         -v /tmp/nv-syncd-shared/:/tmp \

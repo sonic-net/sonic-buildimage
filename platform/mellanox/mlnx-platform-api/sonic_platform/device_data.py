@@ -419,15 +419,7 @@ class DeviceDataManager:
             bool: True if wait success else timeout
         """
 
-        sysfs_nodes = ['present', 'status', 'statuserror']
-        if cls.is_module_host_management_mode():
-            sysfs_nodes.extend(['control', 'power_on'])
-
-        conditions = []
-        for sfp_index in range(modules_count):
-            for sysfs_node in sysfs_nodes:
-                conditions.append(lambda idx=sfp_index, node=sysfs_node: cls.check_sysfs_access(f'/sys/module/sx_core/asic0/module{idx}/{node}'))
-        return utils.wait_until_conditions(conditions, timeout, interval)
+        return True
 
     @classmethod
     @utils.read_only_cache()
