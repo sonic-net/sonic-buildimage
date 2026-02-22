@@ -9,7 +9,7 @@
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
 auto mgmt
 iface mgmt
-    vrf-table 5000
+    vrf-table 6000
 # The loopback network interface for mgmt VRF that is required for applications like NTP
     up ip link add lo-m type dummy
     up ip link set dev lo-m master mgmt
@@ -84,7 +84,7 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     broadcast {{ prefix | broadcast }}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
-{%     set vrf_table = '5000' %}
+{%     set vrf_table = '6000' %}
     vrf mgmt
 {% endif %}
 {% set force_mgmt_route_priority = 32764 %}
