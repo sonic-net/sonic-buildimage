@@ -39,8 +39,9 @@ def main(argv):
         # os.scandir().close() is only available in python 3.6 and later
         if callable(getattr(it, "close", None)):
             it.close()
-    # dnx platform is special broadcom platform, add it manually
+    # dnx and legacy platforms are special broadcom platforms, add them manually
     platforms.add('broadcom-dnx')
+    platforms.add('broadcom-legacy')
 
     device_folder = os.path.normpath(args.device_folder)
     base_level = len(device_folder.split(os.sep))
