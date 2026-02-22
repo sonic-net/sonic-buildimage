@@ -1,6 +1,8 @@
 #!/bin/bash
 
-lockfile .screen
+# Avoid hanging if lock is held. Retry 3 times (default wait 8s), force unlock after 30s.
+# If still locked, skip update (do not block build).
+lockfile -r 3 -l 30 .screen || exit 0
 
 target_list_file=/tmp/target_list
 touch ${target_list_file}
@@ -29,8 +31,8 @@ done
 function remove_target {
 # Check if TERM is available
 local status="finished"
-[[ ! -z "${2}" ]] &&  status="cached"
-[[ "${TERM}" == "dumb" ]] && echo "[ ${status} ] [ $1 ] " && return
+[[ ! -z "${2}" ]] &&  status="cached  "
+[[ "${TERM}" == "dumb" ]] && echo "[ ${status} ] [ $(date +'%Y-%m-%dT%H:%M:%S%z') ] [ $1 ] " && return
 
 old_list=$(cat ${target_list_file})
 rm ${target_list_file}
@@ -44,7 +46,7 @@ touch ${target_list_file}
 
 function add_target {
 # Check if TERM is available
-[[ "${TERM}" == "dumb" ]] && echo "[ building ] [ $1 ] " && return
+[[ "${TERM}" == "dumb" ]] && echo "[ building ] [ $(date +'%Y-%m-%dT%H:%M:%S%z') ] [ $1 ] " && return
 
 echo $1 >> ${target_list_file}
 }

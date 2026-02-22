@@ -14,8 +14,37 @@
 SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
 FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
 
+# Detect SONIC_IMAGE_DIR
+SONIC_IMAGE_DIR=""
+for x in $(cat /proc/cmdline); do
+    case "$x" in
+        loop=*)
+            # x is like loop=/image-A/fs.squashfs
+            # We want /host/image-A
+            loop_path="${x#loop=}"
+            loop_dir=$(dirname "$loop_path")
+            # loop_dir is /image-A
+            SONIC_IMAGE_DIR="/host${loop_dir}"
+            ;;
+    esac
+done
+
+# Fallback checking
+if [ -z "$SONIC_IMAGE_DIR" ] || [ ! -d "$SONIC_IMAGE_DIR" ]; then
+    if [ -f "/host/image-A/sonic_version.yml" ] && grep -q "$SONIC_VERSION" "/host/image-A/sonic_version.yml"; then
+        SONIC_IMAGE_DIR="/host/image-A"
+    elif [ -f "/host/image-B/sonic_version.yml" ] && grep -q "$SONIC_VERSION" "/host/image-B/sonic_version.yml"; then
+        SONIC_IMAGE_DIR="/host/image-B"
+    else
+         # Fallback to legacy versioned path
+         SONIC_IMAGE_DIR="/host/image-${SONIC_VERSION}"
+    fi
+fi
+
+FIRST_BOOT_FILE="${SONIC_IMAGE_DIR}/platform/firsttime"
+
 # Move sonic-environment to /etc/sonic
-SONIC_CONFIG_DIR="/host/image-${SONIC_VERSION}/sonic-config"
+SONIC_CONFIG_DIR="${SONIC_IMAGE_DIR}/sonic-config"
 SONIC_ENV_FILE=${SONIC_CONFIG_DIR}/sonic-environment
 if [ -d ${SONIC_CONFIG_DIR} -a -f ${SONIC_ENV_FILE} ]; then
     echo "moving file ${SONIC_ENV_FILE} to /etc/sonic" 1>&2
@@ -198,25 +227,13 @@ program_console_speed()
     # Subsequent boots may have new baud rate without finding keep-baud argument
     grep agetty /lib/systemd/system/serial-getty@.service |grep keep-baud
     if [ $? = 0 ]; then
-        sed -i "s|\-\-keep\-baud .* -| $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|\-\-keep\-baud .* %I| $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
     else
-        sed -i "s|u' .* -|u' $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|u' .* %I|u' $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
     fi
 
     # Reload systemd config
     systemctl daemon-reload
-}
-
-request_dpu_midplane_ip()
-{
-    local INTERFACE="eth0-midplane"
-    if ip link show "$INTERFACE" 2> /dev/null; then
-        echo "dhclient -r $INTERFACE"
-        /usr/sbin/dhclient -r "$INTERFACE"
-        sleep 1
-        echo "timeout 5s dhclient $INTERFACE"
-        timeout 5s /usr/sbin/dhclient "$INTERFACE"
-    fi
 }
 
 #### Begin Main Body ####
@@ -228,49 +245,233 @@ logger "SONiC version ${SONIC_VERSION} starting up..."
 grub_installation_needed=""
 if [ ! -e /host/machine.conf ]; then
     onie_dev=$(blkid | grep ONIE-BOOT | head -n 1 | awk '{print $1}' |  sed -e 's/:.*$//')
-    mkdir -p /mnt/onie-boot
-    mount $onie_dev /mnt/onie-boot
-    onie_grub_cfg=/mnt/onie-boot/onie/grub/grub-machine.cfg
+    if [ -n "$onie_dev" ]; then
+        mkdir -p /mnt/onie-boot
+        mount $onie_dev /mnt/onie-boot
+        onie_grub_cfg=/mnt/onie-boot/onie/grub/grub-machine.cfg
 
-    if [ ! -e $onie_grub_cfg ]; then
-        log_migration "$onie_grub_cfg not found"
-    else
-        . ./$onie_grub_cfg
-        grep = $onie_grub_cfg | sed -e 's/onie_//' -e 's/=.*$//' | while read var ; do
-            eval val='$'onie_$var
-            echo "onie_${var}=${val}" >> /host/machine.conf
+        if [ ! -e $onie_grub_cfg ]; then
+            log_migration "$onie_grub_cfg not found"
+        else
+            . ./$onie_grub_cfg
+            grep = $onie_grub_cfg | sed -e 's/onie_//' -e 's/=.*$//' | while read var ; do
+                eval val='$'onie_$var
+                echo "onie_${var}=${val}" >> /host/machine.conf
+            done
+            grub_installation_needed="TRUE"
+        fi
+        umount /mnt/onie-boot
+    fi
+
+    # Fallback: if machine.conf is still missing, try to generate it from kernel cmdline
+    if [ ! -e /host/machine.conf ]; then
+        for x in $(cat /proc/cmdline); do
+            case "$x" in
+                onie_platform=*)
+                    echo "$x" >> /host/machine.conf
+                    ;;
+            esac
         done
-        grub_installation_needed="TRUE"
     fi
 
     migrate_nos_configuration
     umount /mnt/onie-boot
 fi
 
+# Fallback for QEMU/Direct Boot without ONIE
+if [ ! -e /host/machine.conf ]; then
+    # Parse /proc/cmdline for platform info
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+            onie_platform=*|aboot_platform=*)
+                echo "$x" >> /host/machine.conf
+                ;;
+        esac
+    done
+fi
+
 . /host/machine.conf
+
+# Mount XBOOTLDR/GRUB partition for inspection relative to /host
+# Check if we are running from RAM (installer/recovery) and not ONIE
+is_ram_root=0
+if [ -r /proc/mounts ]; then
+    root_fs=$(awk '$2 == "/" {print $3}' /proc/mounts)
+    case "$root_fs" in
+        rootfs|tmpfs|ramfs|overlay) is_ram_root=1 ;;
+    esac
+fi
+
+if [ "$is_ram_root" -eq 1 ] && [ ! -f /etc/onie-release ]; then
+    mkdir -p /host/grub
+    # Wait for block devices to settle
+    if command -v udevadm >/dev/null; then
+        echo "Waiting for udev to settle..."
+        udevadm settle --timeout=10 || true
+    fi
+
+    # Manual wait loop for ESP partition (max 10s)
+    # This ensures QEMU/Hypervisor disks are fully probed before we continue
+    echo "Waiting for ESP partition..."
+    for i in $(seq 1 10); do
+        # check if blkid finds anything relevant
+        if blkid | grep -q -E "ESP|c12a7328-f81f-11d2-ba4b-00a0c93ec93b"; then
+            echo "ESP partition detected."
+            break
+        fi
+        sleep 1
+    done
+
+    # Try to find XBOOTLDR partition by GUID first, then typical labels
+    # Verify devices are available before querying (prevents race conditions)
+    # Debug: dump blkid
+    echo "DEBUG: blkid output:"
+    blkid || true
+
+    # Mount ESP to /efi
+    # ESP Partition Type GUID: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+    ESP_DEV=$(blkid -l -o device -t PART_ENTRY_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b 2>/dev/null || \
+              blkid -L ESP 2>/dev/null || true)
+
+    # Fallback Loop for ESP detection if cache lookup failed
+    if [ -z "$ESP_DEV" ]; then
+        for dev in $(ls /dev/sd* /dev/vd* /dev/nvme* 2>/dev/null || true); do
+            if [ -b "$dev" ]; then
+                # Check for Label "ESP" or Partition Type GUID
+                if blkid -o value -s LABEL "$dev" 2>/dev/null | grep -q "^ESP$"; then
+                    ESP_DEV="$dev"
+                    break
+                fi
+                if blkid -o value -s PART_ENTRY_TYPE "$dev" 2>/dev/null | grep -qi "^c12a7328-f81f-11d2-ba4b-00a0c93ec93b$"; then
+                    ESP_DEV="$dev"
+                    break
+                fi
+            fi
+        done
+    fi
+
+    if [ -n "$ESP_DEV" ]; then
+        mkdir -p /efi
+        mount "$ESP_DEV" /efi
+        echo "Mounted $ESP_DEV to /efi"
+    fi
+
+    # XBOOTLDR Partition Type GUID: bc13c2ff-59e6-4262-a352-b275fd6f7172
+    XBOOTLDR_DEV=$(blkid -l -o device -t PART_ENTRY_TYPE=bc13c2ff-59e6-4262-a352-b275fd6f7172 2>/dev/null || \
+                   blkid -L XBOOTLDR || blkid -L SONIE-OS || blkid -L SONIE || true)
+
+    if [ -z "$XBOOTLDR_DEV" ]; then
+        # Fallback: check standard partition types if blkid by label fails
+        # Systemd XBOOTLDR GUID: bc13c2ff-59e6-4262-a352-b275fd6f7172
+        # ESP GUID: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+        # Try to find a partition that looks like it has grub
+        for dev in $(ls /dev/sd* /dev/vd* /dev/nvme* 2>/dev/null || true); do
+            # Skip ESP if detected
+            if [ -n "$ESP_DEV" ] && [ "$dev" = "$ESP_DEV" ]; then
+                continue
+            fi
+
+            if [ -b "$dev" ]; then
+                 mkdir -p /tmp/check_grub
+                 mount -o ro "$dev" /tmp/check_grub 2>/dev/null
+                 if [ -f /tmp/check_grub/grub/grub.cfg ] || [ -f /tmp/check_grub/boot/grub/grub.cfg ] || [ -f /tmp/check_grub/grub.cfg ]; then
+                     XBOOTLDR_DEV="$dev"
+                     umount /tmp/check_grub
+                     break
+                 fi
+                 umount /tmp/check_grub
+            fi
+        done
+    fi
+
+    if [ -n "$XBOOTLDR_DEV" ]; then
+        # Mount to /boot as requested/standard
+        mkdir -p /boot
+        mount "$XBOOTLDR_DEV" /boot
+        echo "Mounted $XBOOTLDR_DEV to /boot"
+
+        # Backwards compatibility: bind mount valid grub dir to /host/grub
+        # Many scripts (including this one later) expect /host/grub/grub.cfg
+        mkdir -p /host/grub
+        if [ -d /boot/grub ]; then
+             mount --bind /boot/grub /host/grub
+        elif [ -d /boot/boot/grub ]; then
+             mount --bind /boot/boot/grub /host/grub
+        else
+             # Fallback if grub.cfg is at root of partition
+             mount --bind /boot /host/grub
+        fi
+    else
+        echo "rc.local: Could not find XBOOTLDR/GRUB partition to mount"
+    fi
+fi
 
 program_console_speed
 
-platform=""
-if [ -n "$aboot_platform" ]; then
-    platform=$aboot_platform
-elif [ -n "$onie_platform" ]; then
-    platform=$onie_platform
-else
-    echo "Unknown SONiC platform"
-fi
+if [ -n "$(grep 'root=/dev/ram0' /proc/cmdline)" ]; then
+    echo "Boot from ramdisk"
+    # Fix for overlayfs on tmpfs/rootfs
+    # Ensure Docker is stopped before swapping its storage to prevent "upperdir is in-use" errors
+    if systemctl is-active --quiet docker; then
+        echo "rc.local: Stopping Docker to prepare storage..."
+        systemctl stop docker
+    fi
 
-# W/A for https://github.com/sonic-net/sonic-buildimage/issues/24086
-if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2>/dev/null; then
-    echo "DPU type detected. Requesting IP ..."
-    request_dpu_midplane_ip
+    if ! mountpoint -q /var/lib/docker; then
+        echo "Mounting tmpfs on /var/lib/docker"
+
+        # Create a temporary mount point to access the original data
+        mkdir -p /tmp/docker-orig
+        mount --bind /var/lib/docker /tmp/docker-orig
+
+        # Mount the new tmpfs for Docker (requires CONFIG_TMPFS_XATTR=y in kernel)
+        echo "rc.local: Mounting tmpfs on /var/lib/docker with user_xattr"
+        mount -t tmpfs -o size=4G tmpfs /var/lib/docker
+
+        # Restore data if any existed
+        # Optimize UKI: if we have a compressed dockerfs, unpack it.
+        # Otherwise, fall back to copying from existing directory (LEGACY)
+        if [ -f "/usr/share/docker/dockerfs.tar.gz" ]; then
+             echo "rc.local: Unpacking dockerfs.tar.gz to /var/lib/docker..."
+             tar -xzf /usr/share/docker/dockerfs.tar.gz -C /var/lib/docker/
+        elif [ "$(ls -A /tmp/docker-orig)" ]; then
+            echo "Restoring existing docker data..."
+            cp -a /tmp/docker-orig/. /var/lib/docker/
+            # Clean up stale overlayfs work directories to prevent "upperdir is in-use" errors
+            find /var/lib/docker/overlay2 -maxdepth 2 -name "work" -type d -exec rm -rf {} + 2>/dev/null || true
+        fi
+
+        # Configure Docker for RAMDISK environment
+        mkdir -p /etc/default
+        if [ -f /etc/default/docker ]; then
+            if ! grep -q "DOCKER_RAMDISK=true" /etc/default/docker; then
+                echo "DOCKER_RAMDISK=true" >> /etc/default/docker
+            fi
+        else
+            echo "DOCKER_RAMDISK=true" > /etc/default/docker
+        fi
+
+        # Cleanup
+        umount /tmp/docker-orig || umount -l /tmp/docker-orig || true
+
+        # Restart Docker now that storage is ready
+        echo "rc.local: Starting Docker..."
+        systemctl start docker
+        rmdir /tmp/docker-orig || true
+    fi
+    exit 0
 fi
 
 if [ -f $FIRST_BOOT_FILE ]; then
 
     echo "First boot detected. Performing first boot tasks..."
 
-    if [ -z "$platform" ]; then
+    if [ -n "$aboot_platform" ]; then
+        platform=$aboot_platform
+    elif [ -n "$onie_platform" ]; then
+        platform=$onie_platform
+    else
+        echo "Unknown SONiC platform"
         firsttime_exit
     fi
 
@@ -296,6 +497,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/migration/snmp.yml ] && mv /host/migration/snmp.yml /etc/sonic/old_config/
         [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
         touch /tmp/pending_config_migration
+        [ -f /etc/sonic/updategraph.conf ] && sed -i -e "s/enabled=false/enabled=true/g" /etc/sonic/updategraph.conf
     else
         touch /tmp/pending_config_initialization
     fi

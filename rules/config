@@ -53,7 +53,7 @@ CHANGE_DEFAULT_PASSWORD ?= n
 DEFAULT_USERNAME = admin
 
 # DEFAULT_PASSWORD - default password for installer build
-DEFAULT_PASSWORD = YourPaSsWoRd
+DEFAULT_PASSWORD = admin
 
 # BMC_NOS_ACCOUNT_USERNAME - default BMC NOS account username
 BMC_NOS_ACCOUNT_USERNAME ?= yormnAnb

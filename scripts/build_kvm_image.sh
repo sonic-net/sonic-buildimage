@@ -62,7 +62,7 @@ wait_kvm_ready()
     done
 }
 
-apt-get install -y net-tools
+# apt-get install -y net-tools
 create_disk
 prepare_installer_disk
 
