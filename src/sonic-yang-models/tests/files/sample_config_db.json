@@ -2288,7 +2288,7 @@
                 "type": "DWRR",
                 "weight": "10"
             }
-	},
+        },
 
         "WRED_PROFILE": {
             "Wred1": {
@@ -3078,12 +3078,12 @@
                 "dpu_bfd_probe_multiplier": "3"
             }
         },
-	"XCVRD_LOG": {
-	    "Y_CABLE": {
-		"log_verbosity": "notice"
-	    }
-	},
-	"GRPCCLIENT": {
+	    "XCVRD_LOG": {
+	        "Y_CABLE": {
+                "log_verbosity": "notice"
+	        }
+	    },
+	    "GRPCCLIENT": {
             "config": {
                 "type": "secure",
                 "auth_level": "server",
@@ -3095,7 +3095,7 @@
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
             }
-	},
+        },
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
@@ -3202,6 +3202,54 @@
                 "guard_time": "2",
                 "ber_threshold": "12"
             }
+        },
+        "ARS_PROFILE": {
+            "ars_profile_default": {
+                "algorithm": "ewma",
+                "ars_nhg_path_selector_mode": "interface",
+                "ars_lag_path_selector_mode": "interface",
+                "default_ars_object": "ars_obj_name",
+                "max_flows": "2048",
+                "sampling_interval": "10",
+                "past_load_min_value": "0",
+                "past_load_max_value": "10",
+                "past_load_weight": "6",
+                "future_load_min_value": "10",
+                "future_load_max_value": "50",
+                "future_load_weight": "10",
+                "current_load_min_value": "20",
+                "current_load_max_value": "30",
+                "ipv4_enable": "true",
+                "ipv6_enable": "true"
+            }
+        },
+        "ARS_OBJECT": {
+            "ars_obj_name": {
+                "assign_mode": "per_flowlet_quality",
+                "flowlet_idle_time": "256",
+                "max_flows": "512",
+                "primary_path_threshold": "100",
+                "alternative_path_cost": "250"
+            }
+        },
+        "ARS_NEXTHOP": {
+            "default|1.1.1.10": {
+                "ars_obj_name": "ars_obj_name"
+            },
+            "default|2.2.2.20": {
+                "ars_obj_name": "ars_obj_name",
+                "role": "alternative_path"
+            },
+            "default|3.3.3.30": {
+                "ars_obj_name": "ars_obj_name"
+            }
+        },
+        "ARS_INTERFACE": {
+            "Ethernet0": {
+                "scaling_factor": "100",
+                "ars_obj_name": "ars_obj_name"
+            },
+            "Ethernet8": {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
