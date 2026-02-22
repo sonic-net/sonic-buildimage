@@ -1,0 +1,7 @@
+{%- if disagg_chassis | lower == 'true' -%}
+chassis_db_address=240.127.1.1
+chassis_db_subnet=240.127.1.0/24
+{%- else -%}
+chassis_db_address=10.10.1.1
+chassis_db_subnet=10.10.1.0/24
+{%- endif -%}
