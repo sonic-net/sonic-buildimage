@@ -37,7 +37,6 @@ static int __init pciesvc_dev_init(void)
 	int ret;
 
 	ep = kpci_get_entry_points();
-	if (!ep) return -ENXIO;
 
 	/* call to Pensando SOC driver to copy the code to persistent memory */
 	ret = kpcimgr_module_register(THIS_MODULE, ep, relocate);
@@ -58,4 +57,3 @@ static void __exit pciesvc_dev_detach(void)
 {
 }
 module_exit(pciesvc_dev_detach);
-

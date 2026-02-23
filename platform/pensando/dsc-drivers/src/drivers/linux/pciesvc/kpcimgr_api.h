@@ -16,12 +16,11 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/interrupt.h>
-#include <linux/execmem.h>    /* Required for 6.12 executable memory */
-#include <linux/set_memory.h> /* Required for 6.12 W^X permissions */
 #include <linux/msi.h>
 #include <linux/mm.h>
 #include <linux/kallsyms.h>
 #include <linux/moduleloader.h>
+#include <linux/set_memory.h>
 #include <asm/insn.h>
 #include <asm/cacheflush.h>
 #endif
@@ -42,11 +41,12 @@
 #define K_NUM_ENTRIES 16
 
 struct kpcimgr_entry_points_t {
-    int expected_mgr_version;
-    int lib_version_major;
-    int lib_version_minor;
-    void *code_end;
-    void *entry_point[K_NUM_ENTRIES];
+	int expected_mgr_version;
+	int lib_version_major;
+	int lib_version_minor;
+	void *code_start;
+	void *code_end;
+	void *entry_point[K_NUM_ENTRIES];
 };
 
 /* upcalls */
@@ -65,70 +65,66 @@ struct kpcimgr_entry_points_t {
 #define NUM_MEMRANGES 32
 
 struct kpcimgr_state_t {
-    /* essential state */
-    int valid;
-    int debug;
-    int running;
-    int active_port;
-    int have_persistent_mem;
-    int lib_version_major;
-    int lib_version_minor;
+	/* essential state */
+	int valid;
+	int debug;
+	int running;
+	int active_port;
+	int have_persistent_mem;
+	int lib_version_major;
+	int lib_version_minor;
 
-    /* timestamps and general trace data */
-    long kexec_time;
-    long driver_start_time;
-    unsigned long trace_data[NUM_PHASES][DATA_SIZE];
+	/* timestamps and general trace data */
+	long kexec_time;
+	long driver_start_time;
+	unsigned long trace_data[NUM_PHASES][DATA_SIZE];
 
-    /* ADDED: Migration points for huge codebase to avoid ADRP errors in 6.12 */
-    int pciesvc_version_major;
-    int pciesvc_version_minor;
+	/* virtual addresses */
+	void *uart_addr;
+	void *code_base;
+	void *persistent_base;
+	void *upcall;
+	void *pfdev;
+	void *shmemva;
 
-    /* virtual addresses */
-    void *uart_addr;
-    void *code_base;
-    void *persistent_base;
-    void *upcall;
-    void *pfdev;
-    void *shmemva;
+	unsigned long shmembase, shmem_size, code_size;
+	struct mem_range_t {
+		unsigned long base, end;
+		void *vaddr;
+	} mem_ranges[NUM_MEMRANGES];
+	int nranges;
+	int hwmem_idx;
 
-    unsigned long shmembase, shmem_size, code_size;
-    struct mem_range_t {
-        unsigned long base, end;
-        void *vaddr;
-    } mem_ranges[NUM_MEMRANGES];
-    int nranges;
-    int hwmem_idx;
+	/* interrupt vectors */
+	struct msi_info {
+		unsigned long msgaddr;
+		unsigned int msgdata;
+	} msi[MSI_NVECTORS];
 
-    /* interrupt vectors */
-    struct msi_info {
-        unsigned long msgaddr;
-        unsigned int msgdata;
-    } msi[MSI_NVECTORS];
+	/* stats for work done */
+	int ind_cfgrd, ind_cfgwr;
+	int ind_memrd, ind_memwr;
+	int ncalls;
+	int ind_intr, not_intr, event_intr;
 
-    /* stats for work done */
-    int ind_cfgrd, ind_cfgwr;
-    int ind_memrd, ind_memwr;
-    int ncalls;
-    int ind_intr, not_intr, event_intr;
+	int unused1[7];	/* was version=2 code_offsets[], keep evq* compat */
 
-    int unused1[7]; 
+	/* Event queue handling */
+	int evq_head, evq_tail;
+	char evq[EVENT_QUEUE_LENGTH][EVENT_SIZE];
 
-    /* Event queue handling */
-    int evq_head, evq_tail;
-    char evq[EVENT_QUEUE_LENGTH][EVENT_SIZE];
+	/* debugging */
+	void *mod;
+	int msg_idx;
+	int cfgval;
 
-    /* debugging */
-    void *mod;
-    int msg_idx;
-    int cfgval;
-
-    /* offsets into relocated library code */
-    int code_offsets[K_NUM_ENTRIES];
+	/* offsets into relocated library code */
+	int code_offsets[K_NUM_ENTRIES];
 };
 
 typedef struct kpcimgr_state_t kstate_t;
 _Static_assert(sizeof(kstate_t) < SHMEM_KSTATE_SIZE,
-           "kstate size insufficient");
+	       "kstate size insufficient");
 
 /* trace_data[] elements */
 #define FIRST_CALL_TIME 0
@@ -150,36 +146,28 @@ _Static_assert(sizeof(kstate_t) < SHMEM_KSTATE_SIZE,
 
 #ifdef __KERNEL__
 int kpcimgr_module_register(struct module *mod,
-                struct kpcimgr_entry_points_t *ep, int relocate);
+			    struct kpcimgr_entry_points_t *ep, int relocate);
 void kpcimgr_start_running(void);
 void kpcimgr_stop_running(void);
 void kpcimgr_sysfs_setup(struct platform_device *pfdev);
-
-/* Hermetic Helper: Code MUST use this instead of kernel memcpy to avoid BL externals */
-static inline void *kpci_memcpy(void *dst, const void *src, size_t n) {
-    char *d = dst;
-    const char *s = src;
-    while (n--) *d++ = *s++;
-    return dst;
-}
-
+void *kpci_memcpy(void *dst, const void *src, size_t n);
 void wake_up_event_queue(void);
 int aarch64_insn_read(void *addr, u32 *insnp);
 extern spinlock_t kpcimgr_lock;
 
 #define reset_stats(k) \
-    kpci_memset((void *)&(k)->trace_data[0][0], 0, sizeof((k)->trace_data))
+	kpci_memset((void *)&(k)->trace_data[0][0], 0, sizeof((k)->trace_data))
 
 static inline void set_init_state(kstate_t *k)
 {
-    k->trace_data[NORMAL][FIRST_CALL_TIME] = 0;
-    k->ncalls = 0;
+	k->trace_data[NORMAL][FIRST_CALL_TIME] = 0;
+	k->ncalls = 0;
 }
 
 static inline kstate_t *get_kstate(void)
 {
-    extern kstate_t *kstate;
-    return kstate;
+	extern kstate_t *kstate;
+	return kstate;
 }
 #endif
 

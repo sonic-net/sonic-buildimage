@@ -83,6 +83,7 @@ mnic: KOPT+=$(ETH_KOPT)
 mnic:
 	@echo "===> Building MNIC driver "
 	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_SRC_DIR)/eth/ionic $(KOPT)
+	mkdir -p $(KMOD_OUT_DIR)
 	mv $(KMOD_SRC_DIR)/eth/ionic/Module.symvers \
            $(KMOD_OUT_DIR)/Module.symvers.mnic
 
