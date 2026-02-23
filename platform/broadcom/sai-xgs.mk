@@ -1,5 +1,5 @@
 # Broadcom XGS SAI definitions
-LIBSAIBCM_XGS_VERSION = 14.1.0.1.0.0.5.0
+LIBSAIBCM_XGS_VERSION = 14.1.0.1.0.0.9.0
 LIBSAIBCM_XGS_BRANCH_NAME = SAI_14.1.0_GA
 
 LIBSAIBCM_XGS_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/sai-broadcom/$(LIBSAIBCM_XGS_BRANCH_NAME)/$(LIBSAIBCM_XGS_VERSION)/xgs"
