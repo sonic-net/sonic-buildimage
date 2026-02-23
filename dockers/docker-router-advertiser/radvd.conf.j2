@@ -32,7 +32,8 @@ interface {{ name }}
     MaxRtrAdvInterval 180;
     AdvManagedFlag on;
     AdvOtherConfigFlag off;
-    AdvLinkMTU 9100;
+    AdvCurHopLimit 0;
+    AdvLinkMTU 0;
     AdvHomeAgentFlag off;
 {% for prefix in prefixes %}
     prefix {{ prefix | network }}/{{ prefix | prefixlen }} {
