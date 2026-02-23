@@ -423,7 +423,7 @@ check_dpkg_need_lock()
 # Print warning message if a debian package version not specified when debian version control enabled.
 check_apt_version()
 {
-    VERSION_FILE="${VERSION_PATH}/versions-deb"
+    local VERSION_FILE="${VERSION_PATH}/versions-deb"
     local install=$(check_apt_install "$@")
     if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ "$install" == "y" ]; then
         for para in "$@"
@@ -440,7 +440,7 @@ check_apt_version()
                 continue
             else
                 package=$para
-                if ! grep -q "^${package}=" $VERSION_FILE; then
+                if ! awk -F'==' -v pkg="$package" '$1==pkg {found=1; exit} END {exit !found}' "$VERSION_FILE"; then
                     echo "Warning: the version of the package ${package} is not specified." 1>&2
                 fi
             fi
