@@ -5,7 +5,7 @@
 {% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
 {% if mgmt_if.update({'ipv4' : mgmt_prefix|ip}) %} {% endif %}
 {% endif %}
-{% if mgmt_prefix|ipv6 %}
+{% if mgmt_prefix|ipv6 and (mgmt_if.ipv4 is not defined) %}
 {% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
 {% if mgmt_if.update({'ipv6' : mgmt_prefix|ip}) %} {% endif %}
 {% endif %}
