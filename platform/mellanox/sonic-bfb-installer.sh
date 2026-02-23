@@ -356,11 +356,10 @@ bfb_install_call() {
         cat "$result_file"
     fi
 
-    # Stop rshim application and reset DPU
+    # Stop rshim application.
     stop_rshim_daemon "$rid"
-    log_info "$rid: Resetting DPU $dpu"
 
-    reset_dpu "$dpu" "$verbose"
+    # The dpu will be reset in a later step.
 }
 
 file_cleanup(){
@@ -605,7 +604,7 @@ main() {
         validate_config_files "${sorted_devs[@]}" "${arr[@]}"
     fi
 
-    # Install BFB on each device
+    # Install BFB on each device (in parallel)
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
     
     for i in "${!sorted_devs[@]}"; do
@@ -614,6 +613,17 @@ main() {
         bfb_install_call "$rshim_name" "$dpu_name" "$EXTRACTED_BFB_PATH" "${arr[$i]}" &
     done
     wait
+
+    # Reset DPUs.
+    # Done one-by-one to avoid PCI race conditions.
+    for i in "${!sorted_devs[@]}"; do
+        rshim_name=${sorted_devs[$i]}
+        rid=${rshim_name#rshim}
+        dpu_name=${rshim2dpu[$rshim_name]}
+        log_info "$rid: Resetting DPU $dpu_name"
+        reset_dpu "$dpu_name" "$verbose"
+    done
+    log_info "Done resetting DPUs"
 }
 
 # Helper function to parse command line arguments
