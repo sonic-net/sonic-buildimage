@@ -10,3 +10,4 @@
 0010-Send-remote-address-in-TACACS-authorization-message.patch
 0011-Replace-popen-shell-execution-with-safer-execle.patch
 0012-fix-compile-error-conditionals.patch
+0013-Partial-memleak-fix-due-to-unfreed-strdup.patch

@@ -67,20 +67,45 @@ def config_tsa():
     num_asics = multi_asic.get_num_asics()
     tsa_ena = get_tsa_status(num_asics)
     if tsa_ena == True:
+        logger.log_info("Setting TSA-TSB service field in STATE_DB")
+        subprocess.check_output([
+            'sonic-db-cli', 'STATE_DB', 'HSET', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running', 'OK'
+        ]).strip()
         logger.log_info("Configuring TSA")
         subprocess.check_output(['TSA']).strip()
     else:
-        if num_asics > 1:
-            logger.log_info("Either TSA is already configured or switch sub_role is not Frontend - not configuring TSA")
+        #check if tsa_tsb service is already running, restart the timer
+        try:
+            startup_tsa_tsb_service_status = subprocess.check_output([
+                'sonic-db-cli', 'STATE_DB', 'HGET', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running'
+            ]).strip().decode('utf-8')  # Convert bytes to string
+        except subprocess.CalledProcessError:
+            startup_tsa_tsb_service_status = None  # Default if the field is missing
+
+        if startup_tsa_tsb_service_status == 'OK':
+            logger.log_info("TSA-TSB service is already running, just restart the timer")
+            # execute TSA again: this is to overcome race condition where in its previous run, TSA configuration didnt complete on all asics
+            subprocess.check_output(['TSA']).strip()
+            return True
         else:
-            logger.log_info("Either TSA is already configured - not configuring TSA")
+            if num_asics > 1:
+                logger.log_info("Either TSA is already configured or switch sub_role is not Frontend - not configuring TSA")
+            else:
+                logger.log_info("Either TSA is already configured - not configuring TSA")
     return tsa_ena
 
 def config_tsb():
     logger.log_info("Configuring TSB")
     subprocess.check_output(['TSB']).strip()
+
+    logger.log_info("Removing the TSA-TSB service field from STATE_DB")
+    subprocess.check_output([
+        'sonic-db-cli', 'STATE_DB', 'HDEL', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running'
+    ]).strip()
+
     tsb_issued = True
     return
+
 
 def start_tsb_timer(interval):
     global timer

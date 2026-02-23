@@ -1,0 +1,62 @@
+From b37f72d0272e727fd557948d6f115b0c9a38deab Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Mon, 7 Oct 2024 14:36:04 -0700
+Subject: [PATCH] Specify netlink recv buffer size to avoid a syscall
+
+For each message being received, the netlink library first does a peek to see
+what the buffer size is, and then does the actual recv call to get the message.
+This results in 2 syscalls being made for each message being received.
+On a system with a weak CPU and many events happening, this could
+potentially be a noticeable performance impact.
+
+To work around this, tell libnl to use a fixed buffer size of 32kB (8 pages
+assuming page size of 4096 bytes). This is the maximum size that a netlink
+message from the kernel can be today. For the CLI sockets, use a fixed
+buffer size of 16kB, as these messages tend to be smaller.
+---
+ libteam/libteam.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index 2fc3e5d..ee78aff 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -623,6 +623,17 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ 		return -nl2syserr(err);
+ 	}
+ 
++	err = nl_socket_set_msg_buf_size(th->nl_sock, 32768);
++	if (err) {
++		err(th, "Failed to set message buffer size of netlink sock.");
++		return -nl2syserr(err);
++	}
++	err = nl_socket_set_msg_buf_size(th->nl_sock_event, 32768);
++	if (err) {
++		err(th, "Failed to set message buffer size of netlink event sock.");
++		return -nl2syserr(err);
++	}
++
+ 	th->family = genl_ctrl_resolve(th->nl_sock, TEAM_GENL_NAME);
+ 	if (th->family < 0) {
+ 		err(th, "Failed to resolve netlink family.");
+@@ -658,6 +669,17 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ 		return err;
+ 	}
+ 
++	err = nl_socket_set_msg_buf_size(th->nl_cli.sock, 16384);
++	if (err) {
++		err(th, "Failed to set message buffer size of netlink cli sock.");
++		return -nl2syserr(err);
++	}
++	err = nl_socket_set_msg_buf_size(th->nl_cli.sock_event, 16384);
++	if (err) {
++		err(th, "Failed to set message buffer size of netlink cli event sock.");
++		return -nl2syserr(err);
++	}
++
+ 	err = nl_socket_add_membership(th->nl_cli.sock_event, RTNLGRP_LINK);
+ 	if (err < 0) {
+ 		err(th, "Failed to add netlink membership.");
+-- 
+2.34.1
+

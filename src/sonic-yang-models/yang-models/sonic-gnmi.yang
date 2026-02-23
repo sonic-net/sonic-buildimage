@@ -76,6 +76,22 @@ module sonic-gnmi {
                     description "Flag for enabling save on set.";
                 }
 
+                leaf enable_crl {
+                    type boolean;
+                    description "Flag for enable certificate revocation list.";
+                }
+
+                leaf crl_expire_duration {
+                    type uint32;
+                    description "Certificate revocation list cache expire duration.";
+                }
+
+                leaf user_auth {
+                    type string {
+                        pattern 'password|jwt|cert|none';
+                    }
+                    description "GNMI service user authorization type.";
+                }
             }
         }
 
@@ -83,7 +99,6 @@ module sonic-gnmi {
             description "GNMI client cert list";
 
             list GNMI_CLIENT_CERT_LIST {
-                max-elements 8;
                 key "cert_cname";
 
                 leaf cert_cname {
@@ -92,9 +107,9 @@ module sonic-gnmi {
                         "client cert common name";
                 }
 
-                leaf role {
+                leaf-list role {
                     type string;
-                    mandatory true;
+                    min-elements 1;
                     description
                         "role of client cert common name";
                 }

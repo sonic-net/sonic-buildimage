@@ -1,0 +1,29 @@
+diff --git a/swig/cpp/src/Tree_Schema.cpp b/swig/cpp/src/Tree_Schema.cpp
+index 3587320..8da206a 100644
+--- a/swig/cpp/src/Tree_Schema.cpp
++++ b/swig/cpp/src/Tree_Schema.cpp
+@@ -344,6 +344,7 @@ S_Schema_Node Schema_Node_Choice::dflt() {
+ Schema_Node_Leaf::~Schema_Node_Leaf() {};
+ S_Set Schema_Node_Leaf::backlinks() LY_NEW_CASTED(lys_node_leaf, node, backlinks, Set);
+ S_When Schema_Node_Leaf::when() LY_NEW_CASTED(lys_node_leaf, node, when, When);
++std::vector<S_Restr> Schema_Node_Leaf::must() LY_NEW_LIST_CASTED(lys_node_leaf, node, must, must_size, Restr);
+ S_Type Schema_Node_Leaf::type() {return std::make_shared<Type>(&((struct lys_node_leaf *)node)->type, deleter);}
+ S_Schema_Node_List Schema_Node_Leaf::is_key() {
+     uint8_t pos;
+diff --git a/swig/cpp/src/Tree_Schema.hpp b/swig/cpp/src/Tree_Schema.hpp
+index d506891..f8ecc50 100644
+--- a/swig/cpp/src/Tree_Schema.hpp
++++ b/swig/cpp/src/Tree_Schema.hpp
+@@ -683,8 +683,12 @@ public:
+     ~Schema_Node_Leaf();
+     /** get backlinks variable from [lys_node_leaf](@ref lys_node_leaf)*/
+     S_Set backlinks();
++    /** get must_size variable from [lys_node_leaf](@ref lys_node_leaf)*/
++    uint8_t must_size() {return ((struct lys_node_leaf *)node)->must_size;};
+     /** get when variable from [lys_node_leaf](@ref lys_node_leaf)*/
+     S_When when();
++    /** get must variable from [lys_node_leaf](@ref lys_node_leaf)*/
++    std::vector<S_Restr> must();
+     /** get type variable from [lys_node_leaf](@ref lys_node_leaf)*/
+     S_Type type();
+     /** get units variable from [lys_node_leaf](@ref lys_node_leaf)*/

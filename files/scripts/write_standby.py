@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import sys
 
 from sonic_py_common import logger as log
 from swsscommon.swsscommon import ConfigDBConnector, DBConnector, FieldValuePairs, ProducerStateTable, SonicV2Connector, Table
@@ -136,7 +137,7 @@ class MuxStateWriter(object):
         tunnel_key_pattern = 'ASIC_STATE:SAI_OBJECT_TYPE_TUNNEL:*'
         return len(self.asic_db.keys('ASIC_DB', tunnel_key_pattern)) > 0
 
-    def wait_for_tunnel(self, interval=1, timeout=90):
+    def wait_for_tunnel(self, interval=1, timeout=160):
         """
         Waits until the IP-in-IP tunnel has been created
 
@@ -160,8 +161,8 @@ class MuxStateWriter(object):
         Writes standby mux state to APP DB for all mux interfaces
         """
         if not self.is_dualtor:
-            # If not running on a dual ToR system, take no action
-            return
+            logger.log_warning("It is not a Dual-ToR system, do not start mux container")
+            sys.exit(1)
 
         if self.is_warmrestart and self.is_shutdwon:
             # If in warmrestart context, take no action

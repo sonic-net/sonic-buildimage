@@ -40,8 +40,24 @@ bcm_tunnel_term_compatible_mode=1
 ifp_inports_support_enable=1
 
 stable_size=0x5500000
+mem_cache_enable=0
+lpm_scaling_enable=0
+bcm_num_cos=10
+default_cpu_tx_queue=9
+host_as_route_disable=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+sai_fast_convergence_support=1
+flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
+use_all_splithorizon_groups=1
+riot_enable=1
+sai_tunnel_support=1
+riot_overlay_l3_intf_mem_size=8192
+riot_overlay_l3_egress_mem_size=32768
+riot_overlay_ecmp_resilient_hash_size=16384
 
 oversubscribe_mode=1
+oversubscribe_mixed_sister_25_50_enable=1
 pbmp_oversubscribe=0x6fffffffffffffffdfffffffffffffffe
 pbmp_xport_xe=0x6fffffffffffffffdfffffffffffffffe
 

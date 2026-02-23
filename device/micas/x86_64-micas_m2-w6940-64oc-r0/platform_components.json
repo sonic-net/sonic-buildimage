@@ -1,0 +1,18 @@
+{
+    "chassis": {
+        "M2-W6940-64OC": {
+            "component": {
+                "CPU_CPLD": { },
+                "CONNECT_CPLD": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "MAC_CPLDC": { },
+                "MGMT_CPLD": { },
+                "FAN_CPLD": { },
+                "MAC_FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

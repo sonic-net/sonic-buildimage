@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -248,7 +249,7 @@ static struct file_operations fops = {
  *
  * \return Nothing.
  */
-void __exit
+static void __exit
 ngbde_exit_module(void)
 {
     ngbde_intr_cleanup();
@@ -268,7 +269,7 @@ ngbde_exit_module(void)
  *
  * \return Nothing.
  */
-int __init
+static int __init
 ngbde_init_module(void)
 {
     int rv;

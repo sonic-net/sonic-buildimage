@@ -1,0 +1,36 @@
+From 87cef0051125ee068f38a17b0cab8f65f9b422e2 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Wed, 24 Sep 2025 16:04:54 +0000
+Subject: [PATCH] First poll is non blocking
+
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ supervisor/supervisord.py | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/supervisor/supervisord.py b/supervisor/supervisord.py
+index 0a4f3e6..8857274 100755
+--- a/supervisor/supervisord.py
++++ b/supervisor/supervisord.py
+@@ -173,11 +173,17 @@ class Supervisor:
+ 
+     def runforever(self):
+         events.notify(events.SupervisorRunningEvent())
+-        timeout = 1 # this cannot be fewer than the smallest TickEvent (5)
++        first_poll = True
+ 
+         socket_map = self.options.get_socket_map()
+ 
+         while 1:
++            if first_poll:
++                timeout = 0
++                first_poll = False
++            else:
++                timeout = 1 # this cannot not be fewer than the smallest TickEvent (5)
++
+             combined_map = {}
+             combined_map.update(socket_map)
+             combined_map.update(self.get_process_map())
+-- 
+2.39.5
+

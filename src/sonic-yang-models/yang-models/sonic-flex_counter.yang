@@ -41,6 +41,17 @@ module sonic-flex_counter {
                 }
             }
 
+            typedef bulk_chunk_size {
+                type uint32 {
+                    range 1..4294967295;
+                }
+            }
+
+            typedef bulk_chunk_size_per_prefix {
+                type string;
+                description "Bulk chunk size per counter name prefix";
+            }
+
             description "FLEX_COUNTER_TABLE part of config_db.json";
 
             /* below are in alphabetical order */
@@ -81,6 +92,19 @@ module sonic-flex_counter {
                 }
             }
 
+            container DASH_METER {
+                /* METER_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
             container PFCWD {
                 /* PFC_WD_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
@@ -102,6 +126,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container PG_WATERMARK {
@@ -115,6 +145,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container PORT {
@@ -127,6 +163,12 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
                 }
             }
 
@@ -151,6 +193,25 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container PORT_PHY_ATTR {
+                /* PORT_PHY_ATTR_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
             }
 
             container QUEUE {
@@ -164,6 +225,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container QUEUE_WATERMARK {
@@ -176,6 +243,12 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
                 }
             }
 
@@ -269,6 +342,32 @@ module sonic-flex_counter {
 
             container WRED_ECN_PORT {
                 /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container SRV6 {
+                /* SRV6_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container SWITCH {
+                /* SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
                     type flex_status;
                 }

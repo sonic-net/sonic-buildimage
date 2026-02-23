@@ -21,6 +21,8 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+BMC_DATA_FILE = 'bmc.json'
+BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -37,6 +39,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
+CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
 VS_PLATFORM = "x86_64-kvm_x86_64-r0"
@@ -168,6 +171,34 @@ def get_platform_and_hwsku():
     return (platform, hwsku)
 
 
+def get_platform_json_data():
+    """
+    Retrieve the data from platform.json file
+
+    Returns:
+        A dictionary containing the key/value pairs as found in the platform.json file
+    """
+    platform = get_platform()
+    if not platform:
+        return None
+
+    platform_path = get_path_to_platform_dir()
+    if not platform_path:
+        return None
+
+    platform_json = os.path.join(platform_path, PLATFORM_JSON_FILE)
+    if not os.path.isfile(platform_json):
+        return None
+
+    try:
+        with open(platform_json, 'r') as f:
+            platform_data = json.loads(f.read())
+            return platform_data
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+
 def get_asic_conf_file_path():
     """
     Retrieves the path to the ASIC configuration file on the device
@@ -211,6 +242,29 @@ def get_platform_env_conf_file_path():
     for platform_env_conf_file_path in platform_env_conf_path_candidates:
         if os.path.isfile(platform_env_conf_file_path):
             return platform_env_conf_file_path
+
+    return None
+
+
+def get_chassis_db_conf_file_path():
+    """
+    Retrieves the path to the Chassis DB configuration file on the device
+
+    Returns:
+        A string containing the path to the Chassis DB configuration file on success,
+        None on failure
+    """
+    chassis_db_conf_path_candidates = []
+
+    chassis_db_conf_path_candidates.append(os.path.join(CONTAINER_PLATFORM_PATH, CHASSIS_DB_CONF_FILENAME))
+
+    platform = get_platform()
+    if platform:
+        chassis_db_conf_path_candidates.append(os.path.join(HOST_DEVICE_PATH, platform, CHASSIS_DB_CONF_FILENAME))
+
+    for chassis_db_conf_file_path in chassis_db_conf_path_candidates:
+        if os.path.isfile(chassis_db_conf_file_path):
+            return chassis_db_conf_file_path
 
     return None
 
@@ -562,9 +616,19 @@ def is_multi_npu():
     return (num_npus > 1)
 
 
+def is_chassis_config_absent():
+    chassis_db_conf_file_path = get_chassis_db_conf_file_path()
+    if chassis_db_conf_file_path is None:
+        return True
+
+    return False
+
+
 def is_voq_chassis():
     switch_type = get_platform_info().get('switch_type')
-    return True if switch_type and (switch_type == 'voq' or switch_type == 'fabric') else False
+    single_voq = is_chassis_config_absent()
+
+    return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
@@ -572,8 +636,33 @@ def is_packet_chassis():
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
+def is_disaggregated_chassis():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    if platform_env_conf_file_path is None:
+        return False
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0] == 'disaggregated_chassis':
+                val = tokens[1].strip()
+                if val == '1':
+                    return True
+        return False
+
+
+def is_virtual_chassis():
+    switch_type = get_platform_info().get('switch_type')
+    asic_type = get_platform_info().get('asic_type')
+    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+        return True
+    else:
+        return False
+
+
 def is_chassis():
-    return is_voq_chassis() or is_packet_chassis()
+    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
 def is_smartswitch():
@@ -582,14 +671,26 @@ def is_smartswitch():
     if not platform:
         return False
 
-    # get platform.json file path
-    platform_json = os.path.join(HOST_DEVICE_PATH, platform, "platform.json")
-    try:
-        with open(platform_json, 'r') as f:
-            platform_cfg = json.loads(f.read())
-            return "DPUS" in platform_cfg
-    except IOError:
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if platform_data:
+        return "DPUS" in platform_data
+
+    return False
+
+
+def is_dpu():
+    # Get platform
+    platform = get_platform()
+    if not platform:
         return False
+
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if platform_data:
+        return 'DPU' in platform_data
+
+    return False
 
 
 def is_supervisor():
@@ -760,7 +861,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell'):
+    elif (version_info['asic_type'] == 'marvell-prestera'):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -792,8 +893,23 @@ def get_system_mac(namespace=None, hostname=None):
             profile_cmd = ["false"]
             (mac, err) = run_command(profile_cmd)
         hw_mac_entry_outputs.append((mac, err))
-        (mac, err) = run_command(syseeprom_cmd)
+        (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
+        mac_found = False
+        for (mac, err) in hw_mac_entry_outputs:
+            if err:
+                continue
+            mac = mac.strip()
+            if _valid_mac_address(mac):
+                mac_found = True
+                break
+        # If mac not found, fetch from syseeprom
+        if not mac_found:
+            hw_mac_entry_outputs = []
+            (mac, err) = run_command(syseeprom_cmd)
+            hw_mac_entry_outputs.append((mac, err))
+    elif (version_info['asic_type'] == 'pensando'):
+        iplink_cmd0 = ["ip", 'link', 'show', 'eth0-midplane']
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
     else:
@@ -819,7 +935,7 @@ def get_system_mac(namespace=None, hostname=None):
         mac_tmp = "{:012x}".format(int(mac_tmp, 16) + 1)
         mac_tmp = re.sub("(.{2})", "\\1:", mac_tmp, 0, re.DOTALL)
         mac = mac_tmp[:-1]
-    return mac
+    return mac.strip() if mac else None
 
 
 def get_system_routing_stack():
@@ -865,6 +981,35 @@ def is_warm_restart_enabled(container_name):
     return wr_enable_state
 
 
+def get_bmc_data():
+    json_file = None
+    try:
+        platform_path = get_path_to_platform_dir()
+        json_file = os.path.join(platform_path, BMC_DATA_FILE)
+        if os.path.exists(json_file):
+            with open(json_file, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
+
+
+def get_bmc_build_config():
+    """
+    Get BMC build-time configuration
+    
+    Returns:
+        A dictionary containing the BMC build configuration, or empty dict if not available
+    """
+    try:
+        if os.path.exists(BMC_BUILD_CONFIG_FILE):
+            with open(BMC_BUILD_CONFIG_FILE, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
+
+
 # Check if System fast reboot is enabled.
 def is_fast_reboot_enabled():
     state_db = SonicV2Connector(host='127.0.0.1')
@@ -892,37 +1037,63 @@ def is_frontend_port_present_in_host():
     return True
 
 
+def get_dpu_info():
+    """
+    Retrieves the DPU information from platform.json file.
+
+    Returns:
+        A dictionary containing the DPU information.
+    """
+
+    platform = get_platform()
+    if not platform:
+        return {}
+
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if not platform_data:
+        return {}
+
+    if "DPUS" in platform_data:
+        return platform_data["DPUS"]
+    elif 'DPU' in platform_data:
+        return platform_data['DPU']
+    else:
+        return {}
+
+
 def get_num_dpus():
     """
     Retrieves the number of DPUs from platform.json file.
-
-    Args:
 
     Returns:
         A integer to indicate the number of DPUs.
     """
 
-    platform = get_platform()
-    if not platform:
+    if is_dpu():
         return 0
 
-    # Get Platform path.
-    platform_path = get_path_to_platform_dir()
-
-    if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
-        json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
-
-        try:
-            with open(json_file, 'r') as file:
-                platform_data = json.load(file)
-        except (json.JSONDecodeError, IOError, TypeError, ValueError):
-            # Handle any file reading and JSON parsing errors
-            return 0
-
-        # Convert to lower case avoid case sensitive.
-        data = {k.lower(): v for k, v in platform_data.items()}
-        DPUs = data.get('dpus', None)
-        if DPUs is not None and len(DPUs) > 0:
-            return len(DPUs)
+    dpu_info = get_dpu_info()
+    if dpu_info is not None and len(dpu_info) > 0:
+        return len(dpu_info)
 
     return 0
+
+
+def get_dpu_list():
+    """
+    Retrieves the list of DPUs from platform.json file.
+
+    Returns:
+        A list indicating the list of DPUs.
+        For example, ['dpu0', 'dpu1', 'dpu2']
+    """
+
+    if is_dpu():
+        return []
+
+    dpu_info = get_dpu_info()
+    if dpu_info is not None and len(dpu_info) > 0:
+        return list(dpu_info)
+
+    return []

@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -45,7 +46,7 @@ bcmpkt_util_dev_type_get(const char *dev_name);
  * Device and variant names are case-insensitive.
  *
  * \param [in] dev_name Device name, e.g. "bcm56000_a0".
- * \param [in] var_name Variant name, e.g. "utltm".
+ * \param [in] var_name Variant name, e.g. "dna_6_5_30_1_1".
  *
  * \return Variant dispatch type or BCMLRD_VARIANT_T_NONE if not found.
  */

@@ -11,6 +11,9 @@ RUN apt-get update              \
     && apt-get install -y       \
     python3-pip             
 
+{% if PTF_ENV_PY_VER == "py3" %}
+RUN pip3 install setuptools==51.0.0
+{% endif %}
 RUN pip3 install crc16          \
         netifaces               \
         getmac                  \
@@ -24,24 +27,42 @@ RUN pip3 install crc16          \
 # 8.0.1 breaks build on 09/20/2023
 RUN pip3 install setuptools_scm==7.1.0
 
+# For py3 based on Bookworm we use the packages from the Debian repos.
+{% if PTF_ENV_PY_VER == "py3" %}
+{% set filtered_debs = docker_ptf_sai_debs.split(' ') | reject('in', ["libthrift0_0.14.1_amd64.deb", "python3-thrift_0.14.1_amd64.deb"]) | list %}
+{% if filtered_debs %}
+COPY \
+{% for deb in filtered_debs -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+RUN dpkg -i \
+{% for deb in docker_ptf_sai_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+{% endif %}
+{% else %}
 COPY \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor -%} 
 debs/
-
 RUN dpkg -i \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
+{% endif %}
 
 # Remove old ptf package
 RUN dpkg -r python-ptf
 
+{% if PTF_ENV_PY_VER == "py3" %}
+RUN pip3 install setuptools==51.0.0
+{% endif %}
 # Install new ptf package
 RUN git clone https://github.com/p4lang/ptf.git \
         && cd ptf                               \
-        && python3.7 setup.py install --single-version-externally-managed --record /tmp/ptf_install.txt
+        && python3 setup.py install --single-version-externally-managed --record /tmp/ptf_install.txt
 
 run echo "declare -x LANG=\"C.UTF-8\"" >> /root/.bashrc
 run echo "declare -x LC_ALL=\"C.UTF-8\"" >> /root/.bashrc

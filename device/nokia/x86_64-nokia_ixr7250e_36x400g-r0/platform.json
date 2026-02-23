@@ -1,4 +1,5 @@
 {
+    "fips_module": "Nokia-SONiC-MACsec-Version 1.0",
     "chassis": {
         "name": "Nokia-IXR7250E-36x400G",
         "components": [
@@ -275,5 +276,9 @@
             }
         ]
     },
-    "interfaces": {}
+    "interfaces": {},
+    "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
+    }
 }

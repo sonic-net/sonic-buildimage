@@ -85,6 +85,14 @@ module sonic-buffer-profile {
                     }
                     description "Profile is dynamically calculated or user configured";
                 }
+
+                leaf packet_discard_action {
+                    type enumeration {
+                        enum drop;
+                        enum trim;
+                    }
+                    description "Action on failure to admit a packet to Shared Buffer/MMU";
+                }
             }
         }
     }

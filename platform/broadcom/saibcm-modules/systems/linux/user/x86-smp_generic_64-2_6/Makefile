@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.2 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -50,5 +51,4 @@ export SDK
 override kernel_version=2_6
 platform=x86-smp_generic_64-$(kernel_version)
 
-LINUX_MAKE_USER=1
 include ${SDK}/make/Make.linux

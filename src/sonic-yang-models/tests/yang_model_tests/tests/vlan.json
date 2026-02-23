@@ -11,6 +11,10 @@
         "eStrKey" : "Pattern",
         "eStr": ["Vlan"]
     },
+    "INVALID_LONG_VLAN_NAME": {
+        "desc": "INVALID VLAN_NAME FIELD IN VLAN TABLE.",
+        "eStrKey" : "Pattern"
+    },
     "WRONG_FAMILY_WITH_IP_PREFIX": {
         "desc": "Configure Wrong family with ip-prefix for VLAN_Interface Table",
         "eStrKey" : "Must"
@@ -87,13 +91,23 @@
         "desc": "Enable the ipv6 link-local as true.",
         "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
     },
+    "VLAN_INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "VLAN_INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "VLAN_INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStrKey": "Pattern"
+    },
     "VLAN_MEMBERS_WITHOUT_CREATING_VLAN":{
         "desc": "Vlan members without Creating Vlan",
         "eStrKey": "LeafRef"
     },
     "VLAN_CREATE_VLAN_WITH_MISSMATCHING_NAME": {
         "desc": "Create Vlan so that name doesn't match id",
-        "eStr": "The vlanid must correspond to the VLAN name"        
+        "eStr": "The vlanid must correspond to the VLAN name"
     },
     "IP_PREFIX_WITHOUT_CREATNG_VLAN": {
         "desc": "Create IP on not created Vlan",
@@ -114,5 +128,16 @@
     "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
         "desc": "Add to Vlan port that is router interface",
         "eStr": "Port is a router interface"
+    },
+    "VLAN_INTERFACE_WITH_VNET_AND_IP_PREFIXES": {
+        "desc": "Configure a VLAN interface with VNET and both IPv4 and IPv6 prefixes."
+    },
+    "VLAN_INTERFACE_WITH_INVALID_VNET_NAME_REFERENCE": {
+        "desc": "Configure a VLAN interface with reference to a non-existent VNET.",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Attempt to reference VNET name without the VNET being present.",
+        "eStrKey": "LeafRef"
     }
 }

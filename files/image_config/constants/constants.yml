@@ -5,8 +5,14 @@ constants:
   bgp:
     traffic_shift_community: 12345:12345
     internal_community: 11111:11111
-    internal_community_match_tag: 1002
+    internal_fallback_community: 22222:22222
     sentinel_community: 12345:12346
+    internal_community_match_tag: 201
+    local_anchor_route_community: 12345:555
+    anchor_route_community: 12345:666
+    anchor_contributing_route_community: 12345:777
+    route_do_not_send_appdb_tag: 202
+    route_eligible_for_fallback_to_default_tag: 203
     families:
       - ipv4
       - ipv6
@@ -19,8 +25,8 @@ constants:
       enabled: true
     maximum_paths:
       enabled: true
-      ipv4: 64
-      ipv6: 64
+      ipv4: 514
+      ipv6: 514
     allow_list:
       enabled: true
       default_action: "permit"   # or "deny"

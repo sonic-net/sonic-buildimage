@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -35,7 +36,10 @@
 #define BCMPKT_FLEXHDR_PROFILE_NONE    -1
 
 /*! Max profile count. */
-#define BCMPKT_FLEXHDR_PROFILE_MAX     64
+#define BCMPKT_FLEXHDR_PROFILE_MAX     128
+
+/*! Max profile count. */
+#define BCMPKT_FLEXHDR_PROFILE_BITMAP_MAX     4
 
 /*! CELL Error status bitmap. */
 #define BCMPKT_RXFLEXMETA_ST_CELL_ERROR (0x1 << 18)
@@ -139,6 +143,11 @@ typedef struct bcmpkt_flex_field_info_s {
     /*! Header field names. */
     bcmpkt_flex_field_metadata_t *info;
 
+    /*! Profile bitmap count. */
+    int profile_bmp_cnt;
+
+    /*! Profile bitmap. */
+    uint32_t profile_bmp[BCMPKT_FLEXHDR_PROFILE_BITMAP_MAX];
 } bcmpkt_flex_field_info_t;
 
 /*! RXPMD data update function pointer. */

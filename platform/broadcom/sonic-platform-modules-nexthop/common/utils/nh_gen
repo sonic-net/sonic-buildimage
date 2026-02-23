@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+
+import os
+import os.path
+
+from nexthop import gen_cli
+from sonic_py_common import device_info
+
+
+def create_sonic_platform_symlink_if_not_exists():
+    if not os.path.exists("/usr/share/sonic/platform"):
+        platform, _ = device_info.get_platform_and_hwsku()
+        os.symlink("/usr/share/sonic/device/" + platform, "/usr/share/sonic/platform")
+
+
+if __name__ == "__main__":
+    create_sonic_platform_symlink_if_not_exists()
+    gen_cli.cli()

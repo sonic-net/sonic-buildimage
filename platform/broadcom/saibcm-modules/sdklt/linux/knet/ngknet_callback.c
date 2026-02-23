@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -29,6 +30,7 @@ static struct ngknet_callback_ctrl callback_ctrl;
 void
 ngknet_callback_init(struct ngknet_dev *devs)
 {
+    INIT_LIST_HEAD(&callback_ctrl.dev_init_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.netif_create_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.netif_destroy_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.filter_cb_list);
@@ -38,10 +40,16 @@ ngknet_callback_init(struct ngknet_dev *devs)
 void
 ngknet_callback_cleanup(void)
 {
+    dev_cb_t *dev_cb;
     netif_cb_t *netif_cb;
     filter_cb_t *filter_cb;
 
-    /* Destroy any create/destroy netif which is not unregistered */
+    while (!list_empty(&callback_ctrl.dev_init_cb_list)) {
+        dev_cb = list_entry(callback_ctrl.dev_init_cb_list.next,
+                            dev_cb_t, list);
+        list_del(&dev_cb->list);
+        kfree(dev_cb);
+    }
     while (!list_empty(&callback_ctrl.netif_create_cb_list)) {
         netif_cb = list_entry(callback_ctrl.netif_create_cb_list.next,
                               netif_cb_t, list);
@@ -77,10 +85,26 @@ ngknet_callback_control_get(struct ngknet_callback_ctrl **cbc)
 int
 ngknet_dev_init_cb_register(ngknet_dev_init_cb_f dev_init_cb)
 {
-    if (callback_ctrl.dev_init_cb != NULL) {
+    struct list_head *list;
+    dev_cb_t *dev_cb;
+
+    if (dev_init_cb == NULL) {
         return -1;
     }
-    callback_ctrl.dev_init_cb = dev_init_cb;
+
+    list_for_each(list, &callback_ctrl.dev_init_cb_list) {
+        dev_cb = list_entry(list, dev_cb_t, list);
+        if (dev_cb->cb == dev_init_cb) {
+            return -1;
+        }
+    }
+
+    dev_cb = kmalloc(sizeof(*dev_cb), GFP_KERNEL);
+    if (dev_cb == NULL) {
+        return -1;
+    }
+    dev_cb->cb = dev_init_cb;
+    list_add_tail(&dev_cb->list, &callback_ctrl.dev_init_cb_list);
 
     return 0;
 }
@@ -88,12 +112,23 @@ ngknet_dev_init_cb_register(ngknet_dev_init_cb_f dev_init_cb)
 int
 ngknet_dev_init_cb_unregister(ngknet_dev_init_cb_f dev_init_cb)
 {
-    if (dev_init_cb == NULL || callback_ctrl.dev_init_cb != dev_init_cb) {
+    struct list_head *list, *list_next;
+    dev_cb_t *dev_cb;
+
+    if (dev_init_cb == NULL) {
         return -1;
     }
-    callback_ctrl.dev_init_cb = NULL;
 
-    return 0;
+    list_for_each_safe(list, list_next, &callback_ctrl.dev_init_cb_list) {
+        dev_cb = list_entry(list, dev_cb_t, list);
+        if (dev_cb->cb == dev_init_cb) {
+            list_del(list);
+            kfree(dev_cb);
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 int
@@ -245,16 +280,22 @@ ngknet_netif_destroy_cb_unregister(ngknet_netif_cb_f netif_cb)
 int
 ngknet_filter_cb_register(ngknet_filter_cb_f filter_cb)
 {
-    if (callback_ctrl.filter_cb != NULL) {
-        return -1;
-    }
-    callback_ctrl.filter_cb = filter_cb;
-
-    return 0;
+    return ngknet_filter_cb_attr_register(filter_cb, NULL);
 }
 
 int
-ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc)
+ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb,
+                                  const char *desc)
+{
+    ngknet_filter_cb_attr_t filter_cb_attr;
+
+    memset(&filter_cb_attr, 0, sizeof(filter_cb_attr));
+    filter_cb_attr.name = desc;
+    return ngknet_filter_cb_attr_register(filter_cb, &filter_cb_attr);
+}
+
+int ngknet_filter_cb_attr_register(ngknet_filter_cb_f filter_cb,
+                                   ngknet_filter_cb_attr_t *filter_cb_attr)
 {
     struct ngknet_dev *dev;
     struct list_head *list;
@@ -262,10 +303,17 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
     filter_cb_t *fcb;
     unsigned long flags;
     int idx;
+    const char *desc;
 
-    if (filter_cb == NULL || desc == NULL) {
-        return -1;
+    if (filter_cb_attr == NULL || filter_cb_attr->name == NULL) {
+        if (callback_ctrl.filter_cb != NULL) {
+            return -1;
+        }
+        callback_ctrl.filter_cb = filter_cb;
+        return 0;
     }
+
+    desc = filter_cb_attr->name;
     if (desc[0] == '\0' || strlen(desc) >= NGKNET_FILTER_DESC_MAX) {
         return -1;
     }
@@ -281,7 +329,9 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
         return -1;
     }
     fcb->cb = filter_cb;
-    strcpy(fcb->desc, desc);
+    fcb->create_cb = filter_cb_attr->create_cb;
+    fcb->destroy_cb = filter_cb_attr->destroy_cb;
+    strscpy(fcb->desc, desc, sizeof(fcb->desc));
     list_add_tail(&fcb->list, &callback_ctrl.filter_cb_list);
 
     /* Check if any existing filter matches the registered name */
@@ -298,7 +348,9 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
                 fc->filt.dest_type == NGKNET_FILTER_DEST_T_CB &&
                 fc->filt.desc[0] != '\0') {
                 if (strcmp(fc->filt.desc, desc) == 0) {
-                    fc->filter_cb = filter_cb;
+                    fc->filter_cb = fcb->cb;
+                    fc->create_cb = fcb->create_cb;
+                    fc->destroy_cb = fcb->destroy_cb;
                 }
             }
         }
@@ -348,6 +400,8 @@ ngknet_filter_cb_unregister(ngknet_filter_cb_f filter_cb)
                     fc->filt.dest_type == NGKNET_FILTER_DEST_T_CB &&
                     fc->filter_cb == filter_cb) {
                     fc->filter_cb = NULL;
+                    fc->create_cb = NULL;
+                    fc->destroy_cb = NULL;
                 }
             }
             spin_unlock_irqrestore(&dev->lock, flags);
@@ -559,6 +613,7 @@ EXPORT_SYMBOL(ngknet_netif_destroy_cb_register);
 EXPORT_SYMBOL(ngknet_netif_destroy_cb_unregister);
 EXPORT_SYMBOL(ngknet_filter_cb_register);
 EXPORT_SYMBOL(ngknet_filter_cb_register_by_name);
+EXPORT_SYMBOL(ngknet_filter_cb_attr_register);
 EXPORT_SYMBOL(ngknet_filter_cb_unregister);
 EXPORT_SYMBOL(ngknet_ptp_rx_config_set_cb_register);
 EXPORT_SYMBOL(ngknet_ptp_rx_config_set_cb_unregister);

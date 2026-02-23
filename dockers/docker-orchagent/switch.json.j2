@@ -13,6 +13,10 @@
 {% set lag_hash_offset_value = 10 %}
 {% elif "SpineRouter" in DEVICE_METADATA.localhost.type %}
 {% set hash_seed = 25 %}
+{% elif "FabricSpineRouter" in DEVICE_METADATA.localhost.type %}
+{% set hash_seed = 40 %}
+{% elif "UpperSpineRouter" in DEVICE_METADATA.localhost.type %}
+{% set hash_seed = 50 %}
 {% endif %}
 {% endif %}
 {% if DEVICE_METADATA.localhost.namespace_id %}

@@ -38,6 +38,47 @@ module sonic-routing-policy-sets {
             "Routing policy action type permit or deny";
     }
 
+    grouping prefix-common-fields {
+        leaf name {
+            type leafref {
+                path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
+            }
+            description "Prefix name";
+        }
+
+        leaf ip_prefix {
+            /* TODO - Validate ip-prefix based on PREFIX_SET/mode */
+            type inet:ip-prefix;
+            description
+                "The prefix member in CIDR notation -- while the
+                prefix may be either IPv4 or IPv6, most
+                implementations require all members of the prefix set
+                to be the same address family.  Mixing address types in
+                the same prefix set is likely to cause an error.";
+        }
+
+        leaf masklength_range {
+            type string;
+            description
+                "Defines a range for the masklength, or 'exact' if
+                the prefix has an exact length.
+
+                Example: 10.3.192.0/21 through 10.3.192.0/24 would be
+                expressed as prefix: 10.3.192.0/21,
+                          masklength_range: 21..24.
+
+                              Example: 10.3.192.0/21 would be expressed as
+                              prefix: 10.3.192.0/21,
+                          masklength_range: exact";
+        }
+
+        leaf action {
+            type routing-policy-action-type;
+            description
+                "Permit/Deny action for the prefix list.";
+        }
+    }
+
     container sonic-routing-policy-sets {
 
         container PREFIX_SET {
@@ -56,6 +97,7 @@ module sonic-routing-policy-sets {
                         enum IPv6;
                     }
                     description "Address family of the prefix";
+                    default "IPv4";
                 }
             }
         }
@@ -66,54 +108,28 @@ module sonic-routing-policy-sets {
                 key "name sequence_number ip_prefix masklength_range";
                 //ext:custom-validation ValidateIpPrefixListCfg;
 
-                leaf name {
-                    type leafref {
-                        path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
-                    }
-                    description "Prefix name";
-                }
+                uses prefix-common-fields;
 
                 leaf sequence_number {
                     type uint32 {
                         range "1..4294967295";
                     }
                     description
-                        "The sequence number determines the order in which prefix-list entries are applied. It must be unique
-                        for each prefix in a prefix-list. Target devices should apply the prefixes in ascending order determined
-                            by sequence no (low to high), rather than relying only on order in the list.";
+                        "The sequence number determines the order in which prefix-list entries are applied. It must
+                         be unique for each prefix in a prefix-list. Target devices should apply the prefixes in
+                         ascending order determined by sequence no (low to high), rather than relying only on order
+                         in the list.";
+                    must "count(../../PREFIX_LIST[name=current()/../name and sequence_number=current()]) <= 1" {
+                        error-message "sequence_number required to be unique for each prefix-list";
+                    }
                 }
+            }
 
-                leaf ip_prefix {
-                    /* TODO - Validate ip-prefix based on PREFIX_SET/mode */
-                    type inet:ip-prefix;
-                    description
-                        "The prefix member in CIDR notation -- while the
-                        prefix may be either IPv4 or IPv6, most
-                        implementations require all members of the prefix set
-                        to be the same address family.  Mixing address types in
-                        the same prefix set is likely to cause an error.";
-                }
+            list PREFIX_NOSEQ_LIST {
+                key "name ip_prefix masklength_range";
+                //ext:custom-validation ValidateIpPrefixListCfg;
 
-                leaf masklength_range {
-                    type string;
-                    description
-                        "Defines a range for the masklength, or 'exact' if
-                        the prefix has an exact length.
-
-                        Example: 10.3.192.0/21 through 10.3.192.0/24 would be
-                        expressed as prefix: 10.3.192.0/21,
-                                  masklength_range: 21..24.
-
-                                      Example: 10.3.192.0/21 would be expressed as
-                                      prefix: 10.3.192.0/21,
-                                  masklength_range: exact";
-                }
-
-                leaf action {
-                    type routing-policy-action-type;
-                    description
-                        "Permit/Deny action for the prefix list.";
-                }
+                uses prefix-common-fields;
             }
         }
         container COMMUNITY_SET {
@@ -150,6 +166,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list community_member {
                     type string;
+                    ordered-by user;
                     description
                         "members of the community set.";
                 }
@@ -190,6 +207,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list community_member {
                     type string;
+                    ordered-by user;
                     description
                         "members of the community set.";
                 }
@@ -214,6 +232,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list as_path_set_member {
                     type string;
+                    ordered-by user;
                     description
                         "AS path expression -- list of ASes in the set";
                 }

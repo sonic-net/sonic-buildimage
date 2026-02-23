@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,14 +19,20 @@
 import redis
 import threading
 from sonic_platform_base.module_base import ModuleBase
-from sonic_py_common.logger import Logger
+from sonic_platform_base.chassis_base import ChassisBase
+from sonic_py_common.syslogger import SysLogger
+from .dpuctlplat import DpuCtlPlat, BootProgEnum, PCI_DEV_BASE
+import subprocess
+import os
 
 from . import utils
-from .device_data import DeviceDataManager
+from .device_data import DeviceDataManager, DpuInterfaceEnum
 from .vpd_parser import VpdParser
+from .dpu_vpd_parser import DpuVpdParser
+from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
 # Global logger class instance
-logger = Logger()
+logger = SysLogger()
 
 
 class Module(ModuleBase):
@@ -247,3 +254,318 @@ class Module(ModuleBase):
         with self.lock:
             self.initialize_single_sfp(index)
             return super(Module, self).get_sfp(index)
+
+
+class DpuModule(ModuleBase):
+
+    def __init__(self, dpu_id):
+        super(DpuModule, self).__init__()
+        self.dpu_id = dpu_id
+        self._name = f"DPU{self.dpu_id}"
+        self.dpuctl_obj = DpuCtlPlat(self._name.lower())
+        self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
+        self.fault_state = False
+        self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
+        self.CONFIG_DB_NAME = "CONFIG_DB"
+        self.midplane_interface = None
+        self.bus_info = None
+        self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
+        self.reboot_cause_map = {
+            f'{self.reboot_base_path}reset_aux_pwr_or_reload':
+                (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
+            f'{self.reboot_base_path}reset_comex_pwr_fail':
+                (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
+            f'{self.reboot_base_path}reset_from_main_board':
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
+            f'{self.reboot_base_path}reset_dpu_thermal':
+                (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            f'{self.reboot_base_path}reset_pwr_off':
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
+        }
+        self.MLX_DPU_REBOOT_CAUSE_WARM = 0
+        self.MLX_DPU_REBOOT_CAUSE_COLD = 1
+        self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
+        self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
+        self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+
+    def get_base_mac(self):
+        """
+        Retrieves the base MAC address for the module
+
+        Returns:
+            A string containing the MAC address in the format
+            'XX:XX:XX:XX:XX:XX'
+        """
+        return self.dpu_vpd_parser.get_dpu_base_mac()
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+
+        Returns:
+            string: Model/part number of device
+        """
+        return self.dpu_vpd_parser.get_dpu_model()
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+
+        Returns:
+            string: Serial number of device
+        """
+        return self.dpu_vpd_parser.get_dpu_serial()
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self.dpu_vpd_parser.get_dpu_revision()
+
+    def reboot(self, reboot_type=ModuleBase.MODULE_REBOOT_DPU):
+        """
+        Request to reboot the module
+
+        Args:
+            reboot_type: A string, the type of reboot requested from one of the
+            predefined reboot types: MODULE_REBOOT_DEFAULT, MODULE_REBOOT_CPU_COMPLEX,
+            MODULE_REBOOT_FPGA_COMPLEX or MODULE_REBOOT_DPU
+
+            MODULE_REBOOT_DPU is only applicable for smartswitch chassis.
+
+        Returns:
+            bool: True if the request has been issued successfully, False if not
+        """
+        logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
+        # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
+        if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
+            return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
+            # Do not wait for result if we are rebooting NPU + DPUs
+            return_value = self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
+        else:
+            raise RuntimeError(f"Reboot called with unsupported reboot_type = {reboot_type}")
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
+
+    def set_admin_state(self, up):
+        """
+        Request to keep the card in administratively up/down state.
+        The down state will power down the module and the status should show
+        MODULE_STATUS_OFFLINE.
+        The up state will take the module to MODULE_STATUS_FAULT or
+        MODULE_STATUS_ONLINE states.
+
+        Args:
+            up: A boolean, True to set the admin-state to UP. False to set the
+            admin-state to DOWN.
+
+        Returns:
+            bool: True if the request has been issued successfully, False if not
+        """
+        logger.log_notice(f"Setting the admin state for {self._name} to {up}")
+        if up:
+            if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
+                logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+                return True
+            logger.log_error(f"Failed to set the admin state for {self._name}")
+            return False
+        return_value = self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+        return return_value
+
+    def get_type(self):
+        """
+        Retrieves the type of the module.
+
+        Returns:
+            A string, the module-type from one of the predefined types:
+            MODULE_TYPE_SUPERVISOR, MODULE_TYPE_LINE or MODULE_TYPE_FABRIC
+            or MODULE_TYPE_DPU or MODULE_TYPE_SWITCH
+        """
+        return ModuleBase.MODULE_TYPE_DPU
+
+    def get_name(self):
+        """
+        Retrieves the type of the module.
+
+        Returns:
+            A string, the module-type from one of the predefined types:
+            MODULE_TYPE_SUPERVISOR, MODULE_TYPE_LINE or MODULE_TYPE_FABRIC
+            or MODULE_TYPE_DPU
+        """
+        return self._name
+
+    def get_description(self):
+        """
+        Retrieves the platform vendor's product description of the module
+
+        Returns:
+            A string, providing the vendor's product description of the module.
+        """
+        return "NVIDIA BlueField-3 DPU"
+
+    def get_oper_status(self):
+        boot_prog = self.dpuctl_obj.read_boot_prog()
+        if boot_prog == BootProgEnum.OS_RUN.value:
+            return ModuleBase.MODULE_STATUS_ONLINE
+        return ModuleBase.MODULE_STATUS_OFFLINE
+
+    ##############################################
+    # SmartSwitch methods
+    ##############################################
+
+    def get_dpu_id(self):
+        """
+        Retrieves the DPU ID. Returns None for non-smartswitch chassis.
+
+        Returns:
+            An integer, indicating the DPU ID. DPU0 returns 0, DPUX returns X
+            DPU ID can be greater than or equal to 0.
+        """
+        return self.dpu_id
+
+    def get_reboot_cause(self):
+        """
+        Retrieves the cause of the previous reboot of the DPU module
+        Returns:
+            A tuple (string, string) where the first element is a string
+            containing the cause of the previous reboot. This string must
+            be one of the predefined strings in this class. If the first
+            string is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be
+            used to pass a description of the reboot cause.
+            Some more causes are appended to the existing list to handle other
+            modules such as DPUs.
+            Ex: REBOOT_CAUSE_POWER_LOSS, REBOOT_CAUSE_HOST_RESET_DPU,
+            REBOOT_CAUSE_HOST_POWERCYCLED_DPU, REBOOT_CAUSE_SW_THERMAL,
+            REBOOT_CAUSE_DPU_SELF_REBOOT
+        """
+        # Check for Watchdog reboot first
+        pcie_dev_id = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        pcie_path = os.path.join(PCI_DEV_BASE, pcie_dev_id)
+        if os.path.exists(pcie_path):
+            try:
+                # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+                op = subprocess.check_output(['mlxreg', '-d', pcie_dev_id, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+            except subprocess.CalledProcessError as e:
+                logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+                op = b''
+            reset_reason_value = None
+            for line in op.decode().split('\n'):
+                if 'reset_reason' in line:
+                    # Extract the value after the '|'
+                    reset_reason_value = line.split('|')[1].strip()
+                    break
+            if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+                logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
+                return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        # Check for other reboot causes
+        for f, rd in self.reboot_cause_map.items():
+            if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
+                return rd
+        return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
+
+    def get_midplane_ip(self):
+        """
+        Retrieves the midplane IP-address of the module in a modular chassis
+        When called from the Supervisor, the module could represent the
+        line-card and return the midplane IP-address of the line-card.
+        When called from the line-card, the module will represent the
+        Supervisor and return its midplane IP-address.
+        When called from the DPU, returns the midplane IP-address of the dpu-card.
+        When called from the Switch returns the midplane IP-address of Switch.
+        Returns:
+            A string, the IP-address of the module reachable over the midplane
+        """
+        return f"169.254.200.{int(self.dpu_id) + 1}"
+
+    def is_midplane_reachable(self):
+        """
+        Retrieves the reachability status of the module from the Supervisor or
+        of the Supervisor from the module via the midplane of the modular chassis
+        Returns:
+            A bool value, should return True if module is reachable via midplane
+        """
+        if not self._is_midplane_up():
+            return False
+        command = ['ping', '-c', '1', '-W', '1', self.get_midplane_ip()]
+        try:
+            return subprocess.call(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+        except Exception as e:
+            logger.log_error(f"Failed to check midplane reachability for {self.get_name()}! {e}")
+            return False
+
+    def get_midplane_interface(self):
+        if not self.midplane_interface:
+            # Cache the data to prevent multiple platform.json parsing
+            self.midplane_interface = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.MIDPLANE_INT.value)
+            # If we are unable to parse platform.json for midplane interface raise RunTimeError
+            if not self.midplane_interface:
+                raise RuntimeError(f"Unable to obtain midplane interface information from platform.json for {self.get_name()}")
+        return self.midplane_interface
+
+    def _is_midplane_up(self):
+        # If rshim is not activated then the interface does not exist, do not log the error
+        return utils.read_int_from_file(f'/sys/class/net/{self.get_midplane_interface()}/carrier', log_func=None) == 1
+
+    def get_pci_bus_info(self):
+        """
+        Retrieves the bus information.
+
+        Returns:
+            Returns the PCI bus information in list of BDF format
+        """
+        if self.bus_info:
+            return self.bus_info
+        bus_paths = self.dpuctl_obj.get_pci_dev_path()
+        # Convert full paths to BDF format
+        self.bus_info = [path.split('/')[-1] for path in bus_paths]
+        return self.bus_info
+
+    def pci_detach(self):
+        """
+        Detaches the DPU PCI device specified by "module_name" on a SmartSwitch.
+
+        Returns: True once the PCI is successfully detached.
+        """
+        return self.dpuctl_obj.dpu_pre_shutdown()
+
+    def pci_reattach(self):
+        """
+        Rescans and reconnects the DPU PCI device specified by "module_name" on a SmartSwitch.
+
+        Returns: True once the PCI is successfully reconnected.
+        """
+        return self.dpuctl_obj.dpu_post_startup()
+
+    def get_hw_mgmt_id(self):
+        """
+        Obtains the id used by hw-mgmt API, so that we can use different APIs and access sysfs files provided
+        """
+        return self.dpu_id + 1
+
+    def get_temperature_dict(self):
+        """
+        This function is used to obtain the TEMPERATURE INFO TABLE from CHASSIS_STATE_DB
+        """
+        chassis_state_db_name = "CHASSIS_STATE_DB"
+        ddr = "DDR"
+        nvme = "NVME"
+        cpu = "CPU"
+        dpu_ddr_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{ddr}"
+        dpu_cpu_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{cpu}"
+        dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
+        return_dict = {}
+        try:
+            return_dict[ddr] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
+            return_dict[cpu] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
+            return_dict[nvme] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
+        except Exception as e:
+            logger.log_error(f"Failed to check obtain DPU temperature informatoin for {self.get_name()}! {e}")
+            return {}
+        return return_dict

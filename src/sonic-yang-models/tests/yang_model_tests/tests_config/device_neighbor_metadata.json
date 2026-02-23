@@ -54,7 +54,8 @@
                         "name": "dccsw03.nw",
                         "hwsku": "Arista",
                         "type": "SpineRouter",
-                        "deployment_id": "1"
+                        "deployment_id": "1",
+                        "slice_type": "AZNG_Production"
                     },
                     {
                         "cluster": "AAA00PrdStr00",

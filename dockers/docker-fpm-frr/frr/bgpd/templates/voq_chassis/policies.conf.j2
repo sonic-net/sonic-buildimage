@@ -1,7 +1,9 @@
 !
 ! template: bgpd/templates/voq_chassis/policies.conf.j2
 !
+bgp community-list standard LOCAL_ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.local_anchor_route_community }}
 bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
+bgp community-list standard DEVICE_INTERNAL_FALLBACK_COMMUNITY permit {{ constants.bgp.internal_fallback_community }}
 bgp community-list standard NO_EXPORT permit no-export
 !
 route-map FROM_VOQ_CHASSIS_V4_PEER permit 1
@@ -12,6 +14,17 @@ route-map FROM_VOQ_CHASSIS_V4_PEER permit 1
 route-map FROM_VOQ_CHASSIS_V4_PEER permit 2
   match community NO_EXPORT
   set local-preference 80
+  on-match next
+!
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC' %}
+route-map FROM_VOQ_CHASSIS_V4_PEER deny 3
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+{% else %}
+route-map FROM_VOQ_CHASSIS_V4_PEER permit 3
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+  set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
+{% endif %}
 !
 route-map FROM_VOQ_CHASSIS_V4_PEER permit 100
 !
@@ -19,8 +32,10 @@ route-map TO_VOQ_CHASSIS_V4_PEER permit 1
   match ip address prefix-list PL_LoopbackV4
   set community {{ constants.bgp.internal_community }}
 !
-route-map TO_VOQ_CHASSIS_V4_PEER permit 100
+route-map TO_VOQ_CHASSIS_V4_PEER deny 15
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
 !
+route-map TO_VOQ_CHASSIS_V4_PEER permit 100
 !
 route-map FROM_VOQ_CHASSIS_V6_PEER permit 1
  set ipv6 next-hop prefer-global
@@ -34,12 +49,26 @@ route-map FROM_VOQ_CHASSIS_V6_PEER permit 2
 route-map FROM_VOQ_CHASSIS_V6_PEER permit 3
   match community NO_EXPORT
   set local-preference 80
+  on-match next
+!
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC' %}
+route-map FROM_VOQ_CHASSIS_V6_PEER deny 4
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+{% else %}
+route-map FROM_VOQ_CHASSIS_V6_PEER permit 4
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+  set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
+{% endif %}
 !
 route-map FROM_VOQ_CHASSIS_V6_PEER permit 100
 !
 route-map TO_VOQ_CHASSIS_V6_PEER permit 1
   match ipv6 address prefix-list PL_LoopbackV6
   set community {{ constants.bgp.internal_community }}
+!
+route-map TO_VOQ_CHASSIS_V6_PEER deny 15
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
 !
 route-map TO_VOQ_CHASSIS_V6_PEER permit 100
 !

@@ -49,7 +49,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }} vrf {{ vnet_name }}
   address-family ipv4 unicast
     neighbor {{ neighbor_addr }} activate
     neighbor {{ neighbor_addr }} soft-reconfiguration inbound
-    maximum-paths 64
+    maximum-paths 514
   exit-address-family
 {%      endif %}
   address-family l2vpn evpn

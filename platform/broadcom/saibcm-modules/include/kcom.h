@@ -1,6 +1,7 @@
 /*
  * $Id: kcom.h,v 1.9 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -61,6 +62,7 @@
 #define KCOM_M_NETIF_DESTROY    12 /* Destroy network interface */
 #define KCOM_M_NETIF_LIST       13 /* Get list of network interface IDs */
 #define KCOM_M_NETIF_GET        14 /* Get network interface info */
+#define KCOM_M_NETIF_REPLACE    15 /* Replace network interface with ID */
 #define KCOM_M_FILTER_CREATE    21 /* Create Rx filter */
 #define KCOM_M_FILTER_DESTROY   22 /* Destroy Rx filter */
 #define KCOM_M_FILTER_LIST      23 /* Get list of Rx filter IDs */
@@ -72,7 +74,7 @@
 #define KCOM_M_CLOCK_CMD        52 /* Clock Commands */
 #define KCOM_M_PCIE_LINK_STATUS 53 /* PCIe link status */
 
-#define KCOM_VERSION            16 /* Protocol version */
+#define KCOM_VERSION            24 /* Protocol version */
 
 /*
  * Message status codes
@@ -126,10 +128,11 @@ typedef struct kcom_msg_hdr_s {
 #define KCOM_NETIF_T_PORT       1
 #define KCOM_NETIF_T_META       2
 
-#define KCOM_NETIF_F_ADD_TAG    (1U << 0)
-#define KCOM_NETIF_F_RCPU_ENCAP (1U << 1)
+#define KCOM_NETIF_F_ADD_TAG           (1U << 0)
+#define KCOM_NETIF_F_RCPU_ENCAP        (1U << 1)
 /* If a netif has this flag, the packet sent to the netif can't be stripped tag or added tag */
-#define KCOM_NETIF_F_KEEP_RX_TAG (1U << 2)
+#define KCOM_NETIF_F_KEEP_RX_TAG       (1U << 2)
+#define KCOM_NETIF_F_USE_SHARED_NDEV   (1U << 3)
 
 #define KCOM_NETIF_NAME_MAX     16
 
@@ -141,18 +144,18 @@ typedef struct kcom_msg_hdr_s {
 #define KCOM_NETIF_SYSTEM_HEADERS_SIZE_MAX     64
 
 typedef struct kcom_netif_s {
-    uint16 id;
-    uint8 type;
-    uint8 flags;
     uint32 cb_user_data;
+    uint16 id;
     uint16 port;
     uint16 vlan;
     uint16 qnum;
+    uint16 phys_port;
+    uint8 type;
+    uint8 flags;
     uint8 macaddr[6];
     uint8 system_headers[KCOM_NETIF_SYSTEM_HEADERS_SIZE_MAX];
     uint8 system_headers_size;
     char name[KCOM_NETIF_NAME_MAX];
-    uint8 phys_port;
 } kcom_netif_t;
 
 /*
@@ -331,7 +334,7 @@ typedef struct kcom_eth_hw_config_s {
 } kcom_eth_hw_config_t;
 
 #ifndef KCOM_HW_INFO_OAMP_PORT_MAX
-#define KCOM_HW_INFO_OAMP_PORT_MAX     4
+#define KCOM_HW_INFO_OAMP_PORT_MAX     8
 #endif
 
 /*
@@ -360,17 +363,31 @@ typedef struct kcom_msg_version_s {
 /*
  * Request KCOM interface clock info.
  */
-#define KSYNC_M_HW_INIT            0
-#define KSYNC_M_HW_DEINIT          1
-#define KSYNC_M_VERSION            2
-#define KSYNC_M_HW_TS_DISABLE      3
-#define KSYNC_M_MTP_TS_UPDATE_ENABLE  4
-#define KSYNC_M_MTP_TS_UPDATE_DISABLE 5
-#define KSYNC_M_DNX_JR2DEVS_SYS_CONFIG 6
+#define KSYNC_M_HW_INIT                 0
+#define KSYNC_M_HW_DEINIT               1
+#define KSYNC_M_VERSION                 2
+#define KSYNC_M_HW_TS_DISABLE           3
+#define KSYNC_M_MTP_TS_UPDATE_ENABLE    4
+#define KSYNC_M_MTP_TS_UPDATE_DISABLE   5
+#define KSYNC_M_DNX_JR2DEVS_SYS_CONFIG  6
+#define KSYNC_M_BS_CONFIG_SET           7
+#define KSYNC_M_BS_CONFIG_CLEAR         8
+#define KSYNC_M_BS_STATUS               9
+#define KSYNC_M_PTP_TOD_OFFSET_SET      10
+#define KSYNC_M_PTP_TOD_OFFSET_GET      11
+#define KSYNC_M_NTP_TOD_OFFSET_SET      12
+#define KSYNC_M_NTP_TOD_OFFSET_GET      13
+#define KSYNC_M_PTP_TOD_GET             14
+#define KSYNC_M_NTP_TOD_GET             15
+#define KSYNC_M_GPIO_CONFIG_SET         16
+#define KSYNC_M_GPIO_CONFIG_GET         17
+#define KSYNC_M_LEAP_SEC_SET            18
+#define KSYNC_M_LEAP_SEC_GET            19
+#define KSYNC_M_BS_PHASE_OFFSET_SET     20
 
 typedef struct kcom_clock_info_s {
     uint8 cmd;
-    int32 data[8];
+    int32 data[12];
 } kcom_clock_info_t;
 
 /*
@@ -587,10 +604,16 @@ typedef struct kcom_msg_hw_info_s {
     uint32 udh_length_type[4];
     uint32 udh_size;
     uint32 oamp_punted;
+    uint32 jr_mode_udh_size_compensation;
+    uint32 jr_mode_add_udh_base;
+    uint32 enet_channels;
     uint8 no_skip_udh_check;
     uint8 oam_dm_tod_exist;
     uint8 system_headers_mode;
     uint8 udh_enable;
+    uint16 up_mep_ingress_cpu_trap_id1;
+    uint16 up_mep_ingress_cpu_trap_id2;
+    uint8 spa_mode;
 } kcom_msg_hw_info_t;
 
 /*

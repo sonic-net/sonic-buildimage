@@ -1,4 +1,4 @@
 # This series applies on GIT commit dc9bc1c949125140d967edfc598dfad47eedc552
-0001-used_system_memory_sysdep-Use-MemAvailable-value-if-.patch
+#0001-used_system_memory_sysdep-Use-MemAvailable-value-if-.patch
 0002-change_monit_alert_log_error.patch
-0003-fix-yacc-header-file-naming.patch
+#0003-fix-yacc-header-file-naming.patch

@@ -32,12 +32,11 @@ endif
 $(DOCKER_SFLOW)_CONTAINER_NAME = sflow
 $(DOCKER_SFLOW)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_SFLOW)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SFLOW)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
+$(DOCKER_SFLOW)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_SFLOW)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 $(DOCKER_SFLOW)_BASE_IMAGE_FILES += psample:/usr/bin/psample
 $(DOCKER_SFLOW)_BASE_IMAGE_FILES += sflowtool:/usr/bin/sflowtool
-$(DOCKER_SFLOW)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SFLOW)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_SFLOW_DBG)

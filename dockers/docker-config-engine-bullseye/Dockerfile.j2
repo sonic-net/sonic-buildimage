@@ -1,5 +1,7 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-base-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-base-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -22,10 +24,6 @@ RUN apt-get install -y        \
 # https://github.com/robshakir/pyangbind/issues/232
 RUN pip3 install pyangbind==0.8.1
 RUN pip3 uninstall -y enum34
-
-# Fix armhf build failure
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-RUN pip3 install PyYAML==5.4.1 --no-build-isolation
 
 # Install python-redis
 RUN pip3 install redis==4.5.4
@@ -50,7 +48,6 @@ RUN pip3 install redis==4.5.4
 COPY ["files/swss_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["files/readiness_probe.sh", "/usr/bin/"]
 COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
-COPY ["00-load-omprog.conf", "/etc/rsyslog.d/"]
 
 ## Clean up
 RUN apt-get purge -y               \
@@ -60,3 +57,7 @@ RUN apt-get purge -y               \
     apt-get autoclean -y        && \
     apt-get autoremove -y       && \
     rm -rf /debs /python-wheels ~/.cache
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}

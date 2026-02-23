@@ -9,6 +9,7 @@ l4_protocols_load_balancing_enable=1
 fabric_logical_port_base=512
 trunk_group_max_members=16
 num_olp_tm_ports.BCM8869X=1
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 
 # nif
 port_init_cl72=0
@@ -862,3 +863,6 @@ dma_desc_aggregator_enable_specific_MDB_FEC.BCM8869X=1
 sai_pfc_dlr_init_capability=0 
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
+appl_param_active_links_thr_high=58
+appl_param_active_links_thr_low=1
+custom_feature_start_tx_threshold=20

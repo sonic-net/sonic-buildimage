@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +19,10 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-TMFIFO = tmfifo-${TMFIFO_DRIVER_VERSION}
-MODULE_DIR := $(shell pwd)/tmp/${TMFIFO}
+TMFIFO = tmfifo-1.7
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(TMFIFO_DRIVER)): $(DEST)/% :
+$(addprefix $(DEST)/, $(TMFIFO_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
@@ -32,8 +31,8 @@ $(addprefix $(DEST)/, $(TMFIFO_DRIVER)): $(DEST)/% :
 
 	pushd ${TMFIFO}
 
-	make -C /lib/modules/$(KVERSION)/build M=$(MODULE_DIR)
-	
-	mv ${TMFIFO_DRIVER} $(DEST)/
-	popd
+	# Build the package
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 
+	mv ../${TMFIFO_DRIVER_DKMS} $(DEST)/
+	popd

@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -181,9 +182,10 @@ def dpuctl_get_status(ctx, all_dpus=False, dpu_names=None):
                 dpu_status_list = [dpu_name,
                                    dpu_obj.dpu_ready_indication,
                                    dpu_obj.dpu_shtdn_ready_indication,
-                                   dpu_obj.boot_prog_indication]
+                                   dpu_obj.boot_prog_indication,
+                                   dpu_obj.dpu_force_pwr_indication]
                 status_list.append(dpu_status_list)
-        header = ['DPU', 'dpu ready', 'dpu shutdown ready', 'boot progress']
+        header = ['DPU', 'dpu ready', 'dpu shutdown ready', 'boot progress', 'Force Power Required']
         click.echo(tabulate(status_list, header))
     except Exception as error:
         print(f"An error occurred: {type(error).__name__} - {error}")

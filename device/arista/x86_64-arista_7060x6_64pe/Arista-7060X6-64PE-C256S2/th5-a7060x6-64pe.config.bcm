@@ -42,6 +42,7 @@ bcm_device:
             mmu_init_config: "\"TH5-MSFT-PROD\""
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
@@ -1907,14 +1908,25 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
+            sai_stats_support_mask: 0
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
 ...
 ---
 device:
     0:
         # Per pipe flex counter configuration
         CTR_EFLEX_CONFIG:
-            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 0
-            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 0
+            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
 
         # IFP mode
         FP_CONFIG:
@@ -1925,4 +1937,13 @@ device:
     0:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
+...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            SKIP_BUFFER_RESERVATION: 0
+            THRESHOLD_MODE: LOSSY
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_2
 ...

@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "NH-4010": {
+            "component": {
+                "SWITCHCARD_FPGA": {},
+                "CPUCARD_FPGA": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {}
+            }
+        }
+    }
+}

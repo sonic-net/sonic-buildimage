@@ -1,0 +1,173 @@
+[PATCH] bgpd: Fix JSON wrapper brace consistency in neighbor commands
+
+From: Vaideesh Ravi Shankar <vaideeshr@nvidia.com>
+Date: Mon, 15 Sep 2025 14:42:00 -0700
+Subject: [PATCH] bgpd: Fix JSON wrapper brace consistency in neighbor commands
+
+The BGP neighbor adj-route commands (advertised-routes, received-routes,
+filtered-routes) had inconsistent JSON wrapper brace handling. Only
+advertised-routes and received-routes got wrapper braces from the command
+handler, while filtered-routes used complete JSON objects.
+
+This caused malformed JSON output like:
+{ { warning: message } }
+
+Fix by conditionally handling JSON output based on route type:
+- advertised/received routes: output raw JSON fragments for CLI brace wrapping
+- filtered routes: output complete JSON objects with vty_json
+
+This ensures proper JSON formatting for all route types while maintaining
+backward compatibility.
+
+Signed-off-by: Vaideesh Ravi Shankar <vaideeshr@nvidia.com>
+---
+ bgpd/bgp_route.c                                   |   35 ++++++---
+ .../test_bgp_received_routes_with_soft_inbound.py  |   75 ++++++++++++++++++++
+ 2 files changed, 99 insertions(+), 11 deletions(-)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index a8427bc3b..d928588e2 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -6795,7 +6795,7 @@ static int clear_batch_rib_helper(struct bgp_clearing_info *cinfo)
+ 					/* This will resume the "inner" walk if necessary */
+ 					ret = walk_batch_table_helper(cinfo, table, true /*inner*/);
+ 					if (ret != 0) {
+-						/* The "inner" resume info will be set; 
++						/* The "inner" resume info will be set;
+ 						 * capture the resume info we need
+ 						 * from the outer afi/safi and dest
+ 						 */
+@@ -15692,11 +15692,18 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
+ 
+ 	if (!peer || !peer->afc[afi][safi]) {
+ 		if (use_json) {
+-			json_object_string_add(
+-				json, "warning",
+-				"No such neighbor or address family");
+-			vty_out(vty, "%s\n", json_object_to_json_string(json));
+-			json_object_free(json);
++			if (type == bgp_show_adj_route_advertised ||
++			    type == bgp_show_adj_route_received) {
++				/* Raw fragment for CLI brace wrapping */
++				vty_out(vty,
++					"\"warning\": \"No such neighbor or address family\"\n");
++				json_object_free(json);
++			} else {
++				/* Complete object for filtered/bestpath */
++				json_object_string_add(json, "warning",
++						       "No such neighbor or address family");
++				vty_json(vty, json);
++			}
+ 			json_object_free(json_ar);
+ 		} else
+ 			vty_out(vty, "%% No such neighbor or address family\n");
+@@ -15709,11 +15716,17 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
+ 	    && !CHECK_FLAG(peer->af_flags[afi][safi],
+ 			   PEER_FLAG_SOFT_RECONFIG)) {
+ 		if (use_json) {
+-			json_object_string_add(
+-				json, "warning",
+-				"Inbound soft reconfiguration not enabled");
+-			vty_out(vty, "%s\n", json_object_to_json_string(json));
+-			json_object_free(json);
++			if (type == bgp_show_adj_route_received) {
++				/* Raw fragment for CLI brace wrapping */
++				vty_out(vty,
++					"\"warning\": \"Inbound soft reconfiguration not enabled\"\n");
++				json_object_free(json);
++			} else {
++				/* Complete object for filtered routes */
++				json_object_string_add(json, "warning",
++						       "Inbound soft reconfiguration not enabled");
++				vty_json(vty, json);
++			}
+ 			json_object_free(json_ar);
+ 		} else
+ 			vty_out(vty,
+diff --git a/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py b/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
+index 0b933add2..07a14b276 100644
+--- a/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
++++ b/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
+@@ -98,6 +98,81 @@ def test_bgp_received_routes_with_soft_inbound():
+     assert result is None, "Can't converge"
+ 
+ 
++def test_bgp_adj_routes_json_error_paths():
++    """Test JSON formatting consistency for BGP adj-route error paths"""
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    r1 = tgen.gears["r1"]
++
++    # Disable soft-reconfiguration to trigger warning paths
++    r1.vtysh_cmd(
++        """
++        configure terminal
++        router bgp 65001
++        address-family ipv4 unicast
++        no neighbor 192.168.1.2 soft-reconfiguration inbound
++        end
++    """
++    )
++
++    def _check_adj_route_json_consistency():
++        """Check that all adj-route JSON outputs are well-formed"""
++        test_commands = [
++            "show bgp ipv4 unicast neighbors 192.168.1.2 received-routes json",
++            "show bgp ipv4 unicast neighbors 192.168.1.2 advertised-routes json",
++            "show bgp ipv4 unicast neighbors 192.168.1.2 filtered-routes json",
++        ]
++
++        for cmd in test_commands:
++            output = r1.vtysh_cmd(cmd)
++
++            # Critical: JSON should ALWAYS be valid after our fix
++            try:
++                parsed = json.loads(output)
++            except json.JSONDecodeError as e:
++                pytest.fail(f"Malformed JSON in command '{cmd}': {e}\nOutput: {output}")
++
++            # Test CONTENT for expected error messages
++            if "received-routes" in cmd or "filtered-routes" in cmd:
++                warning_msg = parsed.get("warning", "")
++                expected = "Inbound soft reconfiguration not enabled"
++                if warning_msg != expected:
++                    return (
++                        f"Expected soft reconfig warning in {cmd}, "
++                        f"got: '{warning_msg}'"
++                    )
++
++            # Verify JSON structure is a single object, not double-nested
++            if not isinstance(parsed, dict):
++                return f"Expected dict object for {cmd}"
++
++            # Critical: Should not have nested structure { { "warning": ... } }
++            warning_value = parsed.get("warning", "")
++            if isinstance(warning_value, dict):
++                # This indicates our fix failed - fail test immediately
++                pytest.fail(f"Warning should be string, not nested object in {cmd}")
++
++        return None
++
++    test_func = functools.partial(_check_adj_route_json_consistency)
++    _, result = topotest.run_and_expect(test_func, None, count=5, wait=3)
++    assert result is None, f"JSON consistency check failed: {result}"
++
++    # Restore original configuration
++    r1.vtysh_cmd(
++        """
++        configure terminal
++        router bgp 65001
++        address-family ipv4 unicast
++        neighbor 192.168.1.2 soft-reconfiguration inbound
++        end
++    """
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))

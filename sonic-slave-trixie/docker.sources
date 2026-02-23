@@ -1,0 +1,5 @@
+Types: deb
+Signed-By: /etc/apt/trusted.gpg.d/docker-stable.asc
+URIs: https://download.docker.com/linux/debian
+Enabled: yes
+Components: stable

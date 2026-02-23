@@ -50,6 +50,15 @@ module sonic-mux-cable {
                     description "SONiC DualToR interface cable type.";
                 }
 
+                leaf prober_type {
+                    type enumeration {
+                        enum hardware;
+                        enum software;
+                    }
+                    default software;
+                    description "DualToR LinkMrgrd Icmp Prober mode.";
+                }
+
                 leaf server_ipv4 {
                     type inet:ipv4-prefix;
 

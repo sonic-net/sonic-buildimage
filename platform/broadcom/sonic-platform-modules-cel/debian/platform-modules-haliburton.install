@@ -4,7 +4,6 @@ haliburton/systemd/cpu_wdt.service lib/systemd/system
 haliburton/script/fancontrol.sh etc/init.d
 haliburton/script/fancontrol.service lib/systemd/system
 services/fancontrol/fancontrol  usr/local/bin
-haliburton/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_e1031-r0
 services/platform_api/platform_api_mgnt.sh usr/local/bin
 haliburton/script/popmsg.sh usr/local/bin
 haliburton/script/udev_prefix.sh usr/local/bin

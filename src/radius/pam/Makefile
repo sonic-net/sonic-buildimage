@@ -3,6 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = libpam-radius-auth_$(PAM_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = libpam-radius-auth-dbgsym_$(PAM_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Build freeradius-server v1.1.x

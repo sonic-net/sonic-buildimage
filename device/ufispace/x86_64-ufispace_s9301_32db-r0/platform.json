@@ -286,8 +286,17 @@
             "lanes": "1,2,3,4",
             "breakout_modes": {
                 "1x200G": ["Eth0(Port0)"],
-                "2x100G": ["Eth0/1(Port0)", "Eth0/2(Port0)"],
-                "4x50G": ["Eth0/1(Port0)", "Eth0/2(Port0)", "Eth0/3(Port0)", "Eth0/4(Port0)"]
+                "1x100G(2)": ["Eth0(Port0)"],
+                "1x100G(4)": ["Eth0(Port0)"],
+                "1x50G(2)": ["Eth0(Port0)"],
+                "1x40G(4)": ["Eth0(Port0)"],
+                "1x25G(1)": ["Eth0(Port0)"],
+                "2x100G(4)": ["Eth0/1(Port0)", "Eth0/2(Port0)"],
+                "2x50G(2)": ["Eth0/1(Port0)", "Eth0/2(Port0)"],
+                "2x25G(2)": ["Eth0/1(Port0)", "Eth0/2(Port0)"],
+                "4x50G(4)": ["Eth0/1(Port0)", "Eth0/2(Port0)", "Eth0/3(Port0)", "Eth0/4(Port0)"],
+                "4x25G(4)": ["Eth0/1(Port0)", "Eth0/2(Port0)", "Eth0/3(Port0)", "Eth0/4(Port0)"],
+                "4x10G(4)": ["Eth0/1(Port0)", "Eth0/2(Port0)", "Eth0/3(Port0)", "Eth0/4(Port0)"]
             }
         },
 
@@ -296,8 +305,17 @@
             "lanes": "5,6,7,8",
             "breakout_modes": {
                 "1x200G": ["Eth1(Port1)"],
-                "2x100G": ["Eth1/1(Port1)", "Eth1/2(Port1)"],
-                "4x50G": ["Eth1/1(Port1)", "Eth1/2(Port1)", "Eth1/3(Port1)", "Eth1/4(Port1)"]
+                "1x100G(2)": ["Eth1(Port1)"],
+                "1x100G(4)": ["Eth1(Port1)"],
+                "1x50G(2)": ["Eth1(Port1)"],
+                "1x40G(4)": ["Eth1(Port1)"],
+                "1x25G(1)": ["Eth1(Port1)"],
+                "2x100G(4)": ["Eth1/1(Port1)", "Eth1/2(Port1)"],
+                "2x50G(2)": ["Eth1/1(Port1)", "Eth1/2(Port1)"],
+                "2x25G(2)": ["Eth1/1(Port1)", "Eth1/2(Port1)"],
+                "4x50G(4)": ["Eth1/1(Port1)", "Eth1/2(Port1)", "Eth1/3(Port1)", "Eth1/4(Port1)"],
+                "4x25G(4)": ["Eth1/1(Port1)", "Eth1/2(Port1)", "Eth1/3(Port1)", "Eth1/4(Port1)"],
+                "4x10G(4)": ["Eth1/1(Port1)", "Eth1/2(Port1)", "Eth1/3(Port1)", "Eth1/4(Port1)"]
             }
         },
 
@@ -306,8 +324,17 @@
             "lanes": "9,10,11,12",
             "breakout_modes": {
                 "1x200G": ["Eth2(Port2)"],
-                "2x100G": ["Eth2/1(Port2)", "Eth2/2(Port2)"],
-                "4x50G": ["Eth2/1(Port2)", "Eth2/2(Port2)", "Eth2/3(Port2)", "Eth2/4(Port2)"]
+                "1x100G(2)": ["Eth2(Port2)"],
+                "1x100G(4)": ["Eth2(Port2)"],
+                "1x50G(2)": ["Eth2(Port2)"],
+                "1x40G(4)": ["Eth2(Port2)"],
+                "1x25G(1)": ["Eth2(Port2)"],
+                "2x100G(4)": ["Eth2/1(Port2)", "Eth2/2(Port2)"],
+                "2x50G(2)": ["Eth2/1(Port2)", "Eth2/2(Port2)"],
+                "2x25G(2)": ["Eth2/1(Port2)", "Eth2/2(Port2)"],
+                "4x50G(4)": ["Eth2/1(Port2)", "Eth2/2(Port2)", "Eth2/3(Port2)", "Eth2/4(Port2)"],
+                "4x25G(4)": ["Eth2/1(Port2)", "Eth2/2(Port2)", "Eth2/3(Port2)", "Eth2/4(Port2)"],
+                "4x10G(4)": ["Eth2/1(Port2)", "Eth2/2(Port2)", "Eth2/3(Port2)", "Eth2/4(Port2)"]
             }
         },
 
@@ -316,8 +343,17 @@
             "lanes": "13,14,15,16",
             "breakout_modes": {
                 "1x200G": ["Eth3(Port3)"],
-                "2x100G": ["Eth3/1(Port3)", "Eth3/2(Port3)"],
-                "4x50G": ["Eth3/1(Port3)", "Eth3/2(Port3)", "Eth3/3(Port3)", "Eth3/4(Port3)"]
+                "1x100G(2)": ["Eth3(Port3)"],
+                "1x100G(4)": ["Eth3(Port3)"],
+                "1x50G(2)": ["Eth3(Port3)"],
+                "1x40G(4)": ["Eth3(Port3)"],
+                "1x25G(1)": ["Eth3(Port3)"],
+                "2x100G(4)": ["Eth3/1(Port3)", "Eth3/2(Port3)"],
+                "2x50G(2)": ["Eth3/1(Port3)", "Eth3/2(Port3)"],
+                "2x25G(2)": ["Eth3/1(Port3)", "Eth3/2(Port3)"],
+                "4x50G(4)": ["Eth3/1(Port3)", "Eth3/2(Port3)", "Eth3/3(Port3)", "Eth3/4(Port3)"],
+                "4x25G(4)": ["Eth3/1(Port3)", "Eth3/2(Port3)", "Eth3/3(Port3)", "Eth3/4(Port3)"],
+                "4x10G(4)": ["Eth3/1(Port3)", "Eth3/2(Port3)", "Eth3/3(Port3)", "Eth3/4(Port3)"]
             }
         },
 
@@ -326,8 +362,17 @@
             "lanes": "17,18,19,20",
             "breakout_modes": {
                 "1x200G": ["Eth4(Port4)"],
-                "2x100G": ["Eth4/1(Port4)", "Eth4/2(Port4)"],
-                "4x50G": ["Eth4/1(Port4)", "Eth4/2(Port4)", "Eth4/3(Port4)", "Eth4/4(Port4)"]
+                "1x100G(2)": ["Eth4(Port4)"],
+                "1x100G(4)": ["Eth4(Port4)"],
+                "1x50G(2)": ["Eth4(Port4)"],
+                "1x40G(4)": ["Eth4(Port4)"],
+                "1x25G(1)": ["Eth4(Port4)"],
+                "2x100G(4)": ["Eth4/1(Port4)", "Eth4/2(Port4)"],
+                "2x50G(2)": ["Eth4/1(Port4)", "Eth4/2(Port4)"],
+                "2x25G(2)": ["Eth4/1(Port4)", "Eth4/2(Port4)"],
+                "4x50G(4)": ["Eth4/1(Port4)", "Eth4/2(Port4)", "Eth4/3(Port4)", "Eth4/4(Port4)"],
+                "4x25G(4)": ["Eth4/1(Port4)", "Eth4/2(Port4)", "Eth4/3(Port4)", "Eth4/4(Port4)"],
+                "4x10G(4)": ["Eth4/1(Port4)", "Eth4/2(Port4)", "Eth4/3(Port4)", "Eth4/4(Port4)"]
             }
         },
 
@@ -336,8 +381,17 @@
             "lanes": "21,22,23,24",
             "breakout_modes": {
                 "1x200G": ["Eth5(Port5)"],
-                "2x100G": ["Eth5/1(Port5)", "Eth5/2(Port5)"],
-                "4x50G": ["Eth5/1(Port5)", "Eth5/2(Port5)", "Eth5/3(Port5)", "Eth5/4(Port5)"]
+                "1x100G(2)": ["Eth5(Port5)"],
+                "1x100G(4)": ["Eth5(Port5)"],
+                "1x50G(2)": ["Eth5(Port5)"],
+                "1x40G(4)": ["Eth5(Port5)"],
+                "1x25G(1)": ["Eth5(Port5)"],
+                "2x100G(4)": ["Eth5/1(Port5)", "Eth5/2(Port5)"],
+                "2x50G(2)": ["Eth5/1(Port5)", "Eth5/2(Port5)"],
+                "2x25G(2)": ["Eth5/1(Port5)", "Eth5/2(Port5)"],
+                "4x50G(4)": ["Eth5/1(Port5)", "Eth5/2(Port5)", "Eth5/3(Port5)", "Eth5/4(Port5)"],
+                "4x25G(4)": ["Eth5/1(Port5)", "Eth5/2(Port5)", "Eth5/3(Port5)", "Eth5/4(Port5)"],
+                "4x10G(4)": ["Eth5/1(Port5)", "Eth5/2(Port5)", "Eth5/3(Port5)", "Eth5/4(Port5)"]
             }
         },
 
@@ -346,8 +400,17 @@
             "lanes": "25,26,27,28",
             "breakout_modes": {
                 "1x200G": ["Eth6(Port6)"],
-                "2x100G": ["Eth6/1(Port6)", "Eth6/2(Port6)"],
-                "4x50G": ["Eth6/1(Port6)", "Eth6/2(Port6)", "Eth6/3(Port6)", "Eth6/4(Port6)"]
+                "1x100G(2)": ["Eth6(Port6)"],
+                "1x100G(4)": ["Eth6(Port6)"],
+                "1x50G(2)": ["Eth6(Port6)"],
+                "1x40G(4)": ["Eth6(Port6)"],
+                "1x25G(1)": ["Eth6(Port6)"],
+                "2x100G(4)": ["Eth6/1(Port6)", "Eth6/2(Port6)"],
+                "2x50G(2)": ["Eth6/1(Port6)", "Eth6/2(Port6)"],
+                "2x25G(2)": ["Eth6/1(Port6)", "Eth6/2(Port6)"],
+                "4x50G(4)": ["Eth6/1(Port6)", "Eth6/2(Port6)", "Eth6/3(Port6)", "Eth6/4(Port6)"],
+                "4x25G(4)": ["Eth6/1(Port6)", "Eth6/2(Port6)", "Eth6/3(Port6)", "Eth6/4(Port6)"],
+                "4x10G(4)": ["Eth6/1(Port6)", "Eth6/2(Port6)", "Eth6/3(Port6)", "Eth6/4(Port6)"]
             }
         },
 
@@ -356,8 +419,17 @@
             "lanes": "29,30,31,32",
             "breakout_modes": {
                 "1x200G": ["Eth7(Port7)"],
-                "2x100G": ["Eth7/1(Port7)", "Eth7/2(Port7)"],
-                "4x50G": ["Eth7/1(Port7)", "Eth7/2(Port7)", "Eth7/3(Port7)", "Eth7/4(Port7)"]
+                "1x100G(2)": ["Eth7(Port7)"],
+                "1x100G(4)": ["Eth7(Port7)"],
+                "1x50G(2)": ["Eth7(Port7)"],
+                "1x40G(4)": ["Eth7(Port7)"],
+                "1x25G(1)": ["Eth7(Port7)"],
+                "2x100G(4)": ["Eth7/1(Port7)", "Eth7/2(Port7)"],
+                "2x50G(2)": ["Eth7/1(Port7)", "Eth7/2(Port7)"],
+                "2x25G(2)": ["Eth7/1(Port7)", "Eth7/2(Port7)"],
+                "4x50G(4)": ["Eth7/1(Port7)", "Eth7/2(Port7)", "Eth7/3(Port7)", "Eth7/4(Port7)"],
+                "4x25G(4)": ["Eth7/1(Port7)", "Eth7/2(Port7)", "Eth7/3(Port7)", "Eth7/4(Port7)"],
+                "4x10G(4)": ["Eth7/1(Port7)", "Eth7/2(Port7)", "Eth7/3(Port7)", "Eth7/4(Port7)"]
             }
         },
 
@@ -366,8 +438,17 @@
             "lanes": "33,34,35,36",
             "breakout_modes": {
                 "1x200G": ["Eth8(Port8)"],
-                "2x100G": ["Eth8/1(Port8)", "Eth8/2(Port8)"],
-                "4x50G": ["Eth8/1(Port8)", "Eth8/2(Port8)", "Eth8/3(Port8)", "Eth8/4(Port8)"]
+                "1x100G(2)": ["Eth8(Port8)"],
+                "1x100G(4)": ["Eth8(Port8)"],
+                "1x50G(2)": ["Eth8(Port8)"],
+                "1x40G(4)": ["Eth8(Port8)"],
+                "1x25G(1)": ["Eth8(Port8)"],
+                "2x100G(4)": ["Eth8/1(Port8)", "Eth8/2(Port8)"],
+                "2x50G(2)": ["Eth8/1(Port8)", "Eth8/2(Port8)"],
+                "2x25G(2)": ["Eth8/1(Port8)", "Eth8/2(Port8)"],
+                "4x50G(4)": ["Eth8/1(Port8)", "Eth8/2(Port8)", "Eth8/3(Port8)", "Eth8/4(Port8)"],
+                "4x25G(4)": ["Eth8/1(Port8)", "Eth8/2(Port8)", "Eth8/3(Port8)", "Eth8/4(Port8)"],
+                "4x10G(4)": ["Eth8/1(Port8)", "Eth8/2(Port8)", "Eth8/3(Port8)", "Eth8/4(Port8)"]
             }
         },
 
@@ -376,8 +457,17 @@
             "lanes": "37,38,39,40",
             "breakout_modes": {
                 "1x200G": ["Eth9(Port9)"],
-                "2x100G": ["Eth9/1(Port9)", "Eth9/2(Port9)"],
-                "4x50G": ["Eth9/1(Port9)", "Eth9/2(Port9)", "Eth9/3(Port9)", "Eth9/4(Port9)"]
+                "1x100G(2)": ["Eth9(Port9)"],
+                "1x100G(4)": ["Eth9(Port9)"],
+                "1x50G(2)": ["Eth9(Port9)"],
+                "1x40G(4)": ["Eth9(Port9)"],
+                "1x25G(1)": ["Eth9(Port9)"],
+                "2x100G(4)": ["Eth9/1(Port9)", "Eth9/2(Port9)"],
+                "2x50G(2)": ["Eth9/1(Port9)", "Eth9/2(Port9)"],
+                "2x25G(2)": ["Eth9/1(Port9)", "Eth9/2(Port9)"],
+                "4x50G(4)": ["Eth9/1(Port9)", "Eth9/2(Port9)", "Eth9/3(Port9)", "Eth9/4(Port9)"],
+                "4x25G(4)": ["Eth9/1(Port9)", "Eth9/2(Port9)", "Eth9/3(Port9)", "Eth9/4(Port9)"],
+                "4x10G(4)": ["Eth9/1(Port9)", "Eth9/2(Port9)", "Eth9/3(Port9)", "Eth9/4(Port9)"]
             }
         },
 
@@ -386,8 +476,17 @@
             "lanes": "41,42,43,44",
             "breakout_modes": {
                 "1x200G": ["Eth10(Port10)"],
-                "2x100G": ["Eth10/1(Port10)", "Eth10/2(Port10)"],
-                "4x50G": ["Eth10/1(Port10)", "Eth10/2(Port10)", "Eth10/3(Port10)", "Eth10/4(Port10)"]
+                "1x100G(2)": ["Eth10(Port10)"],
+                "1x100G(4)": ["Eth10(Port10)"],
+                "1x50G(2)": ["Eth10(Port10)"],
+                "1x40G(4)": ["Eth10(Port10)"],
+                "1x25G(1)": ["Eth10(Port10)"],
+                "2x100G(4)": ["Eth10/1(Port10)", "Eth10/2(Port10)"],
+                "2x50G(2)": ["Eth10/1(Port10)", "Eth10/2(Port10)"],
+                "2x25G(2)": ["Eth10/1(Port10)", "Eth10/2(Port10)"],
+                "4x50G(4)": ["Eth10/1(Port10)", "Eth10/2(Port10)", "Eth10/3(Port10)", "Eth10/4(Port10)"],
+                "4x25G(4)": ["Eth10/1(Port10)", "Eth10/2(Port10)", "Eth10/3(Port10)", "Eth10/4(Port10)"],
+                "4x10G(4)": ["Eth10/1(Port10)", "Eth10/2(Port10)", "Eth10/3(Port10)", "Eth10/4(Port10)"]
             }
         },
 
@@ -396,8 +495,17 @@
             "lanes": "45,46,47,48",
             "breakout_modes": {
                 "1x200G": ["Eth11(Port11)"],
-                "2x100G": ["Eth11/1(Port11)", "Eth11/2(Port11)"],
-                "4x50G": ["Eth11/1(Port11)", "Eth11/2(Port11)", "Eth11/3(Port11)", "Eth11/4(Port11)"]
+                "1x100G(2)": ["Eth11(Port11)"],
+                "1x100G(4)": ["Eth11(Port11)"],
+                "1x50G(2)": ["Eth11(Port11)"],
+                "1x40G(4)": ["Eth11(Port11)"],
+                "1x25G(1)": ["Eth11(Port11)"],
+                "2x100G(4)": ["Eth11/1(Port11)", "Eth11/2(Port11)"],
+                "2x50G(2)": ["Eth11/1(Port11)", "Eth11/2(Port11)"],
+                "2x25G(2)": ["Eth11/1(Port11)", "Eth11/2(Port11)"],
+                "4x50G(4)": ["Eth11/1(Port11)", "Eth11/2(Port11)", "Eth11/3(Port11)", "Eth11/4(Port11)"],
+                "4x25G(4)": ["Eth11/1(Port11)", "Eth11/2(Port11)", "Eth11/3(Port11)", "Eth11/4(Port11)"],
+                "4x10G(4)": ["Eth11/1(Port11)", "Eth11/2(Port11)", "Eth11/3(Port11)", "Eth11/4(Port11)"]
             }
         },
 
@@ -406,8 +514,17 @@
             "lanes": "49,50,51,52",
             "breakout_modes": {
                 "1x200G": ["Eth12(Port12)"],
-                "2x100G": ["Eth12/1(Port12)", "Eth12/2(Port12)"],
-                "4x50G": ["Eth12/1(Port12)", "Eth12/2(Port12)", "Eth12/3(Port12)", "Eth12/4(Port12)"]
+                "1x100G(2)": ["Eth12(Port12)"],
+                "1x100G(4)": ["Eth12(Port12)"],
+                "1x50G(2)": ["Eth12(Port12)"],
+                "1x40G(4)": ["Eth12(Port12)"],
+                "1x25G(1)": ["Eth12(Port12)"],
+                "2x100G(4)": ["Eth12/1(Port12)", "Eth12/2(Port12)"],
+                "2x50G(2)": ["Eth12/1(Port12)", "Eth12/2(Port12)"],
+                "2x25G(2)": ["Eth12/1(Port12)", "Eth12/2(Port12)"],
+                "4x50G(4)": ["Eth12/1(Port12)", "Eth12/2(Port12)", "Eth12/3(Port12)", "Eth12/4(Port12)"],
+                "4x25G(4)": ["Eth12/1(Port12)", "Eth12/2(Port12)", "Eth12/3(Port12)", "Eth12/4(Port12)"],
+                "4x10G(4)": ["Eth12/1(Port12)", "Eth12/2(Port12)", "Eth12/3(Port12)", "Eth12/4(Port12)"]
             }
         },
 
@@ -416,8 +533,17 @@
             "lanes": "53,54,55,56",
             "breakout_modes": {
                 "1x200G": ["Eth13(Port13)"],
-                "2x100G": ["Eth13/1(Port13)", "Eth13/2(Port13)"],
-                "4x50G": ["Eth13/1(Port13)", "Eth13/2(Port13)", "Eth13/3(Port13)", "Eth13/4(Port13)"]
+                "1x100G(2)": ["Eth13(Port13)"],
+                "1x100G(4)": ["Eth13(Port13)"],
+                "1x50G(2)": ["Eth13(Port13)"],
+                "1x40G(4)": ["Eth13(Port13)"],
+                "1x25G(1)": ["Eth13(Port13)"],
+                "2x100G(4)": ["Eth13/1(Port13)", "Eth13/2(Port13)"],
+                "2x50G(2)": ["Eth13/1(Port13)", "Eth13/2(Port13)"],
+                "2x25G(2)": ["Eth13/1(Port13)", "Eth13/2(Port13)"],
+                "4x50G(4)": ["Eth13/1(Port13)", "Eth13/2(Port13)", "Eth13/3(Port13)", "Eth13/4(Port13)"],
+                "4x25G(4)": ["Eth13/1(Port13)", "Eth13/2(Port13)", "Eth13/3(Port13)", "Eth13/4(Port13)"],
+                "4x10G(4)": ["Eth13/1(Port13)", "Eth13/2(Port13)", "Eth13/3(Port13)", "Eth13/4(Port13)"]
             }
         },
 
@@ -426,8 +552,17 @@
             "lanes": "57,58,59,60",
             "breakout_modes": {
                 "1x200G": ["Eth14(Port14)"],
-                "2x100G": ["Eth14/1(Port14)", "Eth14/2(Port14)"],
-                "4x50G": ["Eth14/1(Port14)", "Eth14/2(Port14)", "Eth14/3(Port14)", "Eth14/4(Port14)"]
+                "1x100G(2)": ["Eth14(Port14)"],
+                "1x100G(4)": ["Eth14(Port14)"],
+                "1x50G(2)": ["Eth14(Port14)"],
+                "1x40G(4)": ["Eth14(Port14)"],
+                "1x25G(1)": ["Eth14(Port14)"],
+                "2x100G(4)": ["Eth14/1(Port14)", "Eth14/2(Port14)"],
+                "2x50G(2)": ["Eth14/1(Port14)", "Eth14/2(Port14)"],
+                "2x25G(2)": ["Eth14/1(Port14)", "Eth14/2(Port14)"],
+                "4x50G(4)": ["Eth14/1(Port14)", "Eth14/2(Port14)", "Eth14/3(Port14)", "Eth14/4(Port14)"],
+                "4x25G(4)": ["Eth14/1(Port14)", "Eth14/2(Port14)", "Eth14/3(Port14)", "Eth14/4(Port14)"],
+                "4x10G(4)": ["Eth14/1(Port14)", "Eth14/2(Port14)", "Eth14/3(Port14)", "Eth14/4(Port14)"]
             }
         },
 
@@ -436,8 +571,17 @@
             "lanes": "61,62,63,64",
             "breakout_modes": {
                 "1x200G": ["Eth15(Port15)"],
-                "2x100G": ["Eth15/1(Port15)", "Eth15/2(Port15)"],
-                "4x50G": ["Eth15/1(Port15)", "Eth15/2(Port15)", "Eth15/3(Port15)", "Eth15/4(Port15)"]
+                "1x100G(2)": ["Eth15(Port15)"],
+                "1x100G(4)": ["Eth15(Port15)"],
+                "1x50G(2)": ["Eth15(Port15)"],
+                "1x40G(4)": ["Eth15(Port15)"],
+                "1x25G(1)": ["Eth15(Port15)"],
+                "2x100G(4)": ["Eth15/1(Port15)", "Eth15/2(Port15)"],
+                "2x50G(2)": ["Eth15/1(Port15)", "Eth15/2(Port15)"],
+                "2x25G(2)": ["Eth15/1(Port15)", "Eth15/2(Port15)"],
+                "4x50G(4)": ["Eth15/1(Port15)", "Eth15/2(Port15)", "Eth15/3(Port15)", "Eth15/4(Port15)"],
+                "4x25G(4)": ["Eth15/1(Port15)", "Eth15/2(Port15)", "Eth15/3(Port15)", "Eth15/4(Port15)"],
+                "4x10G(4)": ["Eth15/1(Port15)", "Eth15/2(Port15)", "Eth15/3(Port15)", "Eth15/4(Port15)"]
             }
         },
 
@@ -446,8 +590,17 @@
             "lanes": "65,66,67,68",
             "breakout_modes": {
                 "1x200G": ["Eth16(Port16)"],
-                "2x100G": ["Eth16/1(Port16)", "Eth16/2(Port16)"],
-                "4x50G": ["Eth16/1(Port16)", "Eth16/2(Port16)", "Eth16/3(Port16)", "Eth16/4(Port16)"]
+                "1x100G(2)": ["Eth16(Port16)"],
+                "1x100G(4)": ["Eth16(Port16)"],
+                "1x50G(2)": ["Eth16(Port16)"],
+                "1x40G(4)": ["Eth16(Port16)"],
+                "1x25G(1)": ["Eth16(Port16)"],
+                "2x100G(4)": ["Eth16/1(Port16)", "Eth16/2(Port16)"],
+                "2x50G(2)": ["Eth16/1(Port16)", "Eth16/2(Port16)"],
+                "2x25G(2)": ["Eth16/1(Port16)", "Eth16/2(Port16)"],
+                "4x50G(4)": ["Eth16/1(Port16)", "Eth16/2(Port16)", "Eth16/3(Port16)", "Eth16/4(Port16)"],
+                "4x25G(4)": ["Eth16/1(Port16)", "Eth16/2(Port16)", "Eth16/3(Port16)", "Eth16/4(Port16)"],
+                "4x10G(4)": ["Eth16/1(Port16)", "Eth16/2(Port16)", "Eth16/3(Port16)", "Eth16/4(Port16)"]
             }
         },
 
@@ -456,8 +609,17 @@
             "lanes": "69,70,71,72",
             "breakout_modes": {
                 "1x200G": ["Eth17(Port17)"],
-                "2x100G": ["Eth17/1(Port17)", "Eth17/2(Port17)"],
-                "4x50G": ["Eth17/1(Port17)", "Eth17/2(Port17)", "Eth17/3(Port17)", "Eth17/4(Port17)"]
+                "1x100G(2)": ["Eth17(Port17)"],
+                "1x100G(4)": ["Eth17(Port17)"],
+                "1x50G(2)": ["Eth17(Port17)"],
+                "1x40G(4)": ["Eth17(Port17)"],
+                "1x25G(1)": ["Eth17(Port17)"],
+                "2x100G(4)": ["Eth17/1(Port17)", "Eth17/2(Port17)"],
+                "2x50G(2)": ["Eth17/1(Port17)", "Eth17/2(Port17)"],
+                "2x25G(2)": ["Eth17/1(Port17)", "Eth17/2(Port17)"],
+                "4x50G(4)": ["Eth17/1(Port17)", "Eth17/2(Port17)", "Eth17/3(Port17)", "Eth17/4(Port17)"],
+                "4x25G(4)": ["Eth17/1(Port17)", "Eth17/2(Port17)", "Eth17/3(Port17)", "Eth17/4(Port17)"],
+                "4x10G(4)": ["Eth17/1(Port17)", "Eth17/2(Port17)", "Eth17/3(Port17)", "Eth17/4(Port17)"]
             }
         },
 
@@ -466,8 +628,17 @@
             "lanes": "73,74,75,76",
             "breakout_modes": {
                 "1x200G": ["Eth18(Port18)"],
-                "2x100G": ["Eth18/1(Port18)", "Eth18/2(Port18)"],
-                "4x50G": ["Eth18/1(Port18)", "Eth18/2(Port18)", "Eth18/3(Port18)", "Eth18/4(Port18)"]
+                "1x100G(2)": ["Eth18(Port18)"],
+                "1x100G(4)": ["Eth18(Port18)"],
+                "1x50G(2)": ["Eth18(Port18)"],
+                "1x40G(4)": ["Eth18(Port18)"],
+                "1x25G(1)": ["Eth18(Port18)"],
+                "2x100G(4)": ["Eth18/1(Port18)", "Eth18/2(Port18)"],
+                "2x50G(2)": ["Eth18/1(Port18)", "Eth18/2(Port18)"],
+                "2x25G(2)": ["Eth18/1(Port18)", "Eth18/2(Port18)"],
+                "4x50G(4)": ["Eth18/1(Port18)", "Eth18/2(Port18)", "Eth18/3(Port18)", "Eth18/4(Port18)"],
+                "4x25G(4)": ["Eth18/1(Port18)", "Eth18/2(Port18)", "Eth18/3(Port18)", "Eth18/4(Port18)"],
+                "4x10G(4)": ["Eth18/1(Port18)", "Eth18/2(Port18)", "Eth18/3(Port18)", "Eth18/4(Port18)"]
             }
         },
 
@@ -476,8 +647,17 @@
             "lanes": "77,78,79,80",
             "breakout_modes": {
                 "1x200G": ["Eth19(Port19)"],
-                "2x100G": ["Eth19/1(Port19)", "Eth19/2(Port19)"],
-                "4x50G": ["Eth19/1(Port19)", "Eth19/2(Port19)", "Eth19/3(Port19)", "Eth19/4(Port19)"]
+                "1x100G(2)": ["Eth19(Port19)"],
+                "1x100G(4)": ["Eth19(Port19)"],
+                "1x50G(2)": ["Eth19(Port19)"],
+                "1x40G(4)": ["Eth19(Port19)"],
+                "1x25G(1)": ["Eth19(Port19)"],
+                "2x100G(4)": ["Eth19/1(Port19)", "Eth19/2(Port19)"],
+                "2x50G(2)": ["Eth19/1(Port19)", "Eth19/2(Port19)"],
+                "2x25G(2)": ["Eth19/1(Port19)", "Eth19/2(Port19)"],
+                "4x50G(4)": ["Eth19/1(Port19)", "Eth19/2(Port19)", "Eth19/3(Port19)", "Eth19/4(Port19)"],
+                "4x25G(4)": ["Eth19/1(Port19)", "Eth19/2(Port19)", "Eth19/3(Port19)", "Eth19/4(Port19)"],
+                "4x10G(4)": ["Eth19/1(Port19)", "Eth19/2(Port19)", "Eth19/3(Port19)", "Eth19/4(Port19)"]
             }
         },
 
@@ -486,8 +666,17 @@
             "lanes": "81,82,83,84",
             "breakout_modes": {
                 "1x200G": ["Eth20(Port20)"],
-                "2x100G": ["Eth20/1(Port20)", "Eth20/2(Port20)"],
-                "4x50G": ["Eth20/1(Port20)", "Eth20/2(Port20)", "Eth20/3(Port20)", "Eth20/4(Port20)"]
+                "1x100G(2)": ["Eth20(Port20)"],
+                "1x100G(4)": ["Eth20(Port20)"],
+                "1x50G(2)": ["Eth20(Port20)"],
+                "1x40G(4)": ["Eth20(Port20)"],
+                "1x25G(1)": ["Eth20(Port20)"],
+                "2x100G(4)": ["Eth20/1(Port20)", "Eth20/2(Port20)"],
+                "2x50G(2)": ["Eth20/1(Port20)", "Eth20/2(Port20)"],
+                "2x25G(2)": ["Eth20/1(Port20)", "Eth20/2(Port20)"],
+                "4x50G(4)": ["Eth20/1(Port20)", "Eth20/2(Port20)", "Eth20/3(Port20)", "Eth20/4(Port20)"],
+                "4x25G(4)": ["Eth20/1(Port20)", "Eth20/2(Port20)", "Eth20/3(Port20)", "Eth20/4(Port20)"],
+                "4x10G(4)": ["Eth20/1(Port20)", "Eth20/2(Port20)", "Eth20/3(Port20)", "Eth20/4(Port20)"]
             }
         },
 
@@ -496,8 +685,17 @@
             "lanes": "85,86,87,88",
             "breakout_modes": {
                 "1x200G": ["Eth21(Port21)"],
-                "2x100G": ["Eth21/1(Port21)", "Eth21/2(Port21)"],
-                "4x50G": ["Eth21/1(Port21)", "Eth21/2(Port21)", "Eth21/3(Port21)", "Eth21/4(Port21)"]
+                "1x100G(2)": ["Eth21(Port21)"],
+                "1x100G(4)": ["Eth21(Port21)"],
+                "1x50G(2)": ["Eth21(Port21)"],
+                "1x40G(4)": ["Eth21(Port21)"],
+                "1x25G(1)": ["Eth21(Port21)"],
+                "2x100G(4)": ["Eth21/1(Port21)", "Eth21/2(Port21)"],
+                "2x50G(2)": ["Eth21/1(Port21)", "Eth21/2(Port21)"],
+                "2x25G(2)": ["Eth21/1(Port21)", "Eth21/2(Port21)"],
+                "4x50G(4)": ["Eth21/1(Port21)", "Eth21/2(Port21)", "Eth21/3(Port21)", "Eth21/4(Port21)"],
+                "4x25G(4)": ["Eth21/1(Port21)", "Eth21/2(Port21)", "Eth21/3(Port21)", "Eth21/4(Port21)"],
+                "4x10G(4)": ["Eth21/1(Port21)", "Eth21/2(Port21)", "Eth21/3(Port21)", "Eth21/4(Port21)"]
             }
         },
 
@@ -506,8 +704,17 @@
             "lanes": "89,90,91,92",
             "breakout_modes": {
                 "1x200G": ["Eth22(Port22)"],
-                "2x100G": ["Eth22/1(Port22)", "Eth22/2(Port22)"],
-                "4x50G": ["Eth22/1(Port22)", "Eth22/2(Port22)", "Eth22/3(Port22)", "Eth22/4(Port22)"]
+                "1x100G(2)": ["Eth22(Port22)"],
+                "1x100G(4)": ["Eth22(Port22)"],
+                "1x50G(2)": ["Eth22(Port22)"],
+                "1x40G(4)": ["Eth22(Port22)"],
+                "1x25G(1)": ["Eth22(Port22)"],
+                "2x100G(4)": ["Eth22/1(Port22)", "Eth22/2(Port22)"],
+                "2x50G(2)": ["Eth22/1(Port22)", "Eth22/2(Port22)"],
+                "2x25G(2)": ["Eth22/1(Port22)", "Eth22/2(Port22)"],
+                "4x50G(4)": ["Eth22/1(Port22)", "Eth22/2(Port22)", "Eth22/3(Port22)", "Eth22/4(Port22)"],
+                "4x25G(4)": ["Eth22/1(Port22)", "Eth22/2(Port22)", "Eth22/3(Port22)", "Eth22/4(Port22)"],
+                "4x10G(4)": ["Eth22/1(Port22)", "Eth22/2(Port22)", "Eth22/3(Port22)", "Eth22/4(Port22)"]
             }
         },
 
@@ -516,8 +723,17 @@
             "lanes": "93,94,95,96",
             "breakout_modes": {
                 "1x200G": ["Eth23(Port23)"],
-                "2x100G": ["Eth23/1(Port23)", "Eth23/2(Port23)"],
-                "4x50G": ["Eth23/1(Port23)", "Eth23/2(Port23)", "Eth23/3(Port23)", "Eth23/4(Port23)"]
+                "1x100G(2)": ["Eth23(Port23)"],
+                "1x100G(4)": ["Eth23(Port23)"],
+                "1x50G(2)": ["Eth23(Port23)"],
+                "1x40G(4)": ["Eth23(Port23)"],
+                "1x25G(1)": ["Eth23(Port23)"],
+                "2x100G(4)": ["Eth23/1(Port23)", "Eth23/2(Port23)"],
+                "2x50G(2)": ["Eth23/1(Port23)", "Eth23/2(Port23)"],
+                "2x25G(2)": ["Eth23/1(Port23)", "Eth23/2(Port23)"],
+                "4x50G(4)": ["Eth23/1(Port23)", "Eth23/2(Port23)", "Eth23/3(Port23)", "Eth23/4(Port23)"],
+                "4x25G(4)": ["Eth23/1(Port23)", "Eth23/2(Port23)", "Eth23/3(Port23)", "Eth23/4(Port23)"],
+                "4x10G(4)": ["Eth23/1(Port23)", "Eth23/2(Port23)", "Eth23/3(Port23)", "Eth23/4(Port23)"]
             }
         },
 
@@ -526,9 +742,22 @@
             "lanes": "97,98,99,100,101,102,103,104",
             "breakout_modes": {
                 "1x400G": ["Eth24(Port24)"],
+                "1x200G(4)": ["Eth24(Port24)"],
+                "1x100G(2)": ["Eth24(Port24)"],
+                "1x100G(4)": ["Eth24(Port24)"],
+                "1x50G(2)": ["Eth24(Port24)"],
+                "1x40G(4)": ["Eth24(Port24)"],
+                "1x25G(1)": ["Eth24(Port24)"],
                 "2x200G": ["Eth24/1(Port24)", "Eth24/2(Port24)"],
+                "2x100G(8)": ["Eth24/1(Port24)", "Eth24/2(Port24)"],
+                "2x50G(2)": ["Eth24/1(Port24)", "Eth24/2(Port24)"],
+                "2x50G(4)": ["Eth24/1(Port24)", "Eth24/2(Port24)"],
+                "2x40G": ["Eth24/1(Port24)", "Eth24/2(Port24)"],
                 "4x100G": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)"],
-                "8x50G": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)", "Eth24/5(Port24)", "Eth24/6(Port24)", "Eth24/7(Port24)", "Eth24/8(Port24)"]
+                "4x25G(4)": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)"],
+                "4x10G(4)": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)"],
+                "8x50G": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)", "Eth24/5(Port24)", "Eth24/6(Port24)", "Eth24/7(Port24)", "Eth24/8(Port24)"],
+                "8x25G": ["Eth24/1(Port24)", "Eth24/2(Port24)", "Eth24/3(Port24)", "Eth24/4(Port24)", "Eth24/5(Port24)", "Eth24/6(Port24)", "Eth24/7(Port24)", "Eth24/8(Port24)"]
             }
         },
 
@@ -537,9 +766,22 @@
             "lanes": "105,106,107,108,109,110,111,112",
             "breakout_modes": {
                 "1x400G": ["Eth25(Port25)"],
+                "1x200G(4)": ["Eth25(Port25)"],
+                "1x100G(2)": ["Eth25(Port25)"],
+                "1x100G(4)": ["Eth25(Port25)"],
+                "1x50G(2)": ["Eth25(Port25)"],
+                "1x40G(4)": ["Eth25(Port25)"],
+                "1x25G(1)": ["Eth25(Port25)"],
                 "2x200G": ["Eth25/1(Port25)", "Eth25/2(Port25)"],
+                "2x100G(8)": ["Eth25/1(Port25)", "Eth25/2(Port25)"],
+                "2x50G(2)": ["Eth25/1(Port25)", "Eth25/2(Port25)"],
+                "2x50G(4)": ["Eth25/1(Port25)", "Eth25/2(Port25)"],
+                "2x40G": ["Eth25/1(Port25)", "Eth25/2(Port25)"],
                 "4x100G": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)"],
-                "8x50G": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)", "Eth25/5(Port25)", "Eth25/6(Port25)", "Eth25/7(Port25)", "Eth25/8(Port25)"]
+                "4x25G(4)": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)"],
+                "4x10G(4)": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)"],
+                "8x50G": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)", "Eth25/5(Port25)", "Eth25/6(Port25)", "Eth25/7(Port25)", "Eth25/8(Port25)"],
+                "8x25G": ["Eth25/1(Port25)", "Eth25/2(Port25)", "Eth25/3(Port25)", "Eth25/4(Port25)", "Eth25/5(Port25)", "Eth25/6(Port25)", "Eth25/7(Port25)", "Eth25/8(Port25)"]
             }
         },
 
@@ -548,9 +790,22 @@
             "lanes": "113,114,115,116,117,118,119,120",
             "breakout_modes": {
                 "1x400G": ["Eth26(Port26)"],
+                "1x200G(4)": ["Eth26(Port26)"],
+                "1x100G(2)": ["Eth26(Port26)"],
+                "1x100G(4)": ["Eth26(Port26)"],
+                "1x50G(2)": ["Eth26(Port26)"],
+                "1x40G(4)": ["Eth26(Port26)"],
+                "1x25G(1)": ["Eth26(Port26)"],
                 "2x200G": ["Eth26/1(Port26)", "Eth26/2(Port26)"],
+                "2x100G(8)": ["Eth26/1(Port26)", "Eth26/2(Port26)"],
+                "2x50G(2)": ["Eth26/1(Port26)", "Eth26/2(Port26)"],
+                "2x50G(4)": ["Eth26/1(Port26)", "Eth26/2(Port26)"],
+                "2x40G": ["Eth26/1(Port26)", "Eth26/2(Port26)"],
                 "4x100G": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)"],
-                "8x50G": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)", "Eth26/5(Port26)", "Eth26/6(Port26)", "Eth26/7(Port26)", "Eth26/8(Port26)"]
+                "4x25G(4)": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)"],
+                "4x10G(4)": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)"],
+                "8x50G": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)", "Eth26/5(Port26)", "Eth26/6(Port26)", "Eth26/7(Port26)", "Eth26/8(Port26)"],
+                "8x25G": ["Eth26/1(Port26)", "Eth26/2(Port26)", "Eth26/3(Port26)", "Eth26/4(Port26)", "Eth26/5(Port26)", "Eth26/6(Port26)", "Eth26/7(Port26)", "Eth26/8(Port26)"]
             }
         },
         
@@ -559,9 +814,22 @@
             "lanes": "121,122,123,124,125,126,127,128",
             "breakout_modes": {
                 "1x400G": ["Eth27(Port27)"],
+                "1x200G(4)": ["Eth27(Port27)"],
+                "1x100G(2)": ["Eth27(Port27)"],
+                "1x100G(4)": ["Eth27(Port27)"],
+                "1x50G(2)": ["Eth27(Port27)"],
+                "1x40G(4)": ["Eth27(Port27)"],
+                "1x25G(1)": ["Eth27(Port27)"],
                 "2x200G": ["Eth27/1(Port27)", "Eth27/2(Port27)"],
+                "2x100G(8)": ["Eth27/1(Port27)", "Eth27/2(Port27)"],
+                "2x50G(2)": ["Eth27/1(Port27)", "Eth27/2(Port27)"],
+                "2x50G(4)": ["Eth27/1(Port27)", "Eth27/2(Port27)"],
+                "2x40G": ["Eth27/1(Port27)", "Eth27/2(Port27)"],
                 "4x100G": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)"],
-                "8x50G": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)", "Eth27/5(Port27)", "Eth27/6(Port27)", "Eth27/7(Port27)", "Eth27/8(Port27)"]
+                "4x25G(4)": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)"],
+                "4x10G(4)": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)"],
+                "8x50G": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)", "Eth27/5(Port27)", "Eth27/6(Port27)", "Eth27/7(Port27)", "Eth27/8(Port27)"],
+                "8x25G": ["Eth27/1(Port27)", "Eth27/2(Port27)", "Eth27/3(Port27)", "Eth27/4(Port27)", "Eth27/5(Port27)", "Eth27/6(Port27)", "Eth27/7(Port27)", "Eth27/8(Port27)"]
             }
         },
 
@@ -570,9 +838,22 @@
             "lanes": "129,130,131,132,133,134,135,136",
             "breakout_modes": {
                 "1x400G": ["Eth28(Port28)"],
+                "1x200G(4)": ["Eth28(Port28)"],
+                "1x100G(2)": ["Eth28(Port28)"],
+                "1x100G(4)": ["Eth28(Port28)"],
+                "1x50G(2)": ["Eth28(Port28)"],
+                "1x40G(4)": ["Eth28(Port28)"],
+                "1x25G(1)": ["Eth28(Port28)"],
                 "2x200G": ["Eth28/1(Port28)", "Eth28/2(Port28)"],
+                "2x100G(8)": ["Eth28/1(Port28)", "Eth28/2(Port28)"],
+                "2x50G(2)": ["Eth28/1(Port28)", "Eth28/2(Port28)"],
+                "2x50G(4)": ["Eth28/1(Port28)", "Eth28/2(Port28)"],
+                "2x40G": ["Eth28/1(Port28)", "Eth28/2(Port28)"],
                 "4x100G": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)"],
-                "8x50G": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)", "Eth28/5(Port28)", "Eth28/6(Port28)", "Eth28/7(Port28)", "Eth28/8(Port28)"]
+                "4x25G(4)": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)"],
+                "4x10G(4)": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)"],
+                "8x50G": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)", "Eth28/5(Port28)", "Eth28/6(Port28)", "Eth28/7(Port28)", "Eth28/8(Port28)"],
+                "8x25G": ["Eth28/1(Port28)", "Eth28/2(Port28)", "Eth28/3(Port28)", "Eth28/4(Port28)", "Eth28/5(Port28)", "Eth28/6(Port28)", "Eth28/7(Port28)", "Eth28/8(Port28)"]
             }
         },
 
@@ -581,9 +862,22 @@
             "lanes": "137,138,139,140,141,142,143,144",
             "breakout_modes": {
                 "1x400G": ["Eth29(Port29)"],
+                "1x200G(4)": ["Eth29(Port29)"],
+                "1x100G(2)": ["Eth29(Port29)"],
+                "1x100G(4)": ["Eth29(Port29)"],
+                "1x50G(2)": ["Eth29(Port29)"],
+                "1x40G(4)": ["Eth29(Port29)"],
+                "1x25G(1)": ["Eth29(Port29)"],
                 "2x200G": ["Eth29/1(Port29)", "Eth29/2(Port29)"],
+                "2x100G(8)": ["Eth29/1(Port29)", "Eth29/2(Port29)"],
+                "2x50G(2)": ["Eth29/1(Port29)", "Eth29/2(Port29)"],
+                "2x50G(4)": ["Eth29/1(Port29)", "Eth29/2(Port29)"],
+                "2x40G": ["Eth29/1(Port29)", "Eth29/2(Port29)"],
                 "4x100G": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)"],
-                "8x50G": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)", "Eth29/5(Port29)", "Eth29/6(Port29)", "Eth29/7(Port29)", "Eth29/8(Port29)"]
+                "4x25G(4)": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)"],
+                "4x10G(4)": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)"],
+                "8x50G": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)", "Eth29/5(Port29)", "Eth29/6(Port29)", "Eth29/7(Port29)", "Eth29/8(Port29)"],
+                "8x25G": ["Eth29/1(Port29)", "Eth29/2(Port29)", "Eth29/3(Port29)", "Eth29/4(Port29)", "Eth29/5(Port29)", "Eth29/6(Port29)", "Eth29/7(Port29)", "Eth29/8(Port29)"]
             }
         },
 
@@ -592,20 +886,45 @@
             "lanes": "145,146,147,148,149,150,151,152",
             "breakout_modes": {
                 "1x400G": ["Eth30(Port30)"],
+                "1x200G(4)": ["Eth30(Port30)"],
+                "1x100G(2)": ["Eth30(Port30)"],
+                "1x100G(4)": ["Eth30(Port30)"],
+                "1x50G(2)": ["Eth30(Port30)"],
+                "1x40G(4)": ["Eth30(Port30)"],
+                "1x25G(1)": ["Eth30(Port30)"],
                 "2x200G": ["Eth30/1(Port30)", "Eth30/2(Port30)"],
+                "2x100G(8)": ["Eth30/1(Port30)", "Eth30/2(Port30)"],
+                "2x50G(2)": ["Eth30/1(Port30)", "Eth30/2(Port30)"],
+                "2x50G(4)": ["Eth30/1(Port30)", "Eth30/2(Port30)"],
+                "2x40G": ["Eth30/1(Port30)", "Eth30/2(Port30)"],
                 "4x100G": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)"],
-                "8x50G": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)", "Eth30/5(Port30)", "Eth30/6(Port30)", "Eth30/7(Port30)", "Eth30/8(Port30)"]
+                "4x25G(4)": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)"],
+                "4x10G(4)": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)"],
+                "8x50G": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)", "Eth30/5(Port30)", "Eth30/6(Port30)", "Eth30/7(Port30)", "Eth30/8(Port30)"],
+                "8x25G": ["Eth30/1(Port30)", "Eth30/2(Port30)", "Eth30/3(Port30)", "Eth30/4(Port30)", "Eth30/5(Port30)", "Eth30/6(Port30)", "Eth30/7(Port30)", "Eth30/8(Port30)"]
             }
         },
-
         "Ethernet152": {
             "index": "31,31,31,31,31,31,31,31",
             "lanes": "153,154,155,156,157,158,159,160",
             "breakout_modes": {
                 "1x400G": ["Eth31(Port31)"],
+                "1x200G(4)": ["Eth31(Port31)"],
+                "1x100G(2)": ["Eth31(Port31)"],
+                "1x100G(4)": ["Eth31(Port31)"],
+                "1x50G(2)": ["Eth31(Port31)"],
+                "1x40G(4)": ["Eth31(Port31)"],
+                "1x25G(1)": ["Eth31(Port31)"],
                 "2x200G": ["Eth31/1(Port31)", "Eth31/2(Port31)"],
+                "2x100G(8)": ["Eth31/1(Port31)", "Eth31/2(Port31)"],
+                "2x50G(2)": ["Eth31/1(Port31)", "Eth31/2(Port31)"],
+                "2x50G(4)": ["Eth31/1(Port31)", "Eth31/2(Port31)"],
+                "2x40G": ["Eth31/1(Port31)", "Eth31/2(Port31)"],
                 "4x100G": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)"],
-                "8x50G": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)", "Eth31/5(Port31)", "Eth31/6(Port31)", "Eth31/7(Port31)", "Eth31/8(Port31)"]
+                "4x25G(4)": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)"],
+                "4x10G(4)": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)"],
+                "8x50G": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)", "Eth31/5(Port31)", "Eth31/6(Port31)", "Eth31/7(Port31)", "Eth31/8(Port31)"],
+                "8x25G": ["Eth31/1(Port31)", "Eth31/2(Port31)", "Eth31/3(Port31)", "Eth31/4(Port31)", "Eth31/5(Port31)", "Eth31/6(Port31)", "Eth31/7(Port31)", "Eth31/8(Port31)"]
             }
         }
     }

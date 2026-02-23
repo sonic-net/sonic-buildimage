@@ -23,7 +23,13 @@ $(DOCKER_CONFIG_ENGINE_BULLSEYE)_FILES += $($(SONIC_CTRMGRD)_HEALTH_PROBE)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_FILES += $($(SONIC_CTRMGRD)_STARTUP_SCRIPT)
 
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DBG_DEPENDS = $($(DOCKER_BASE_BULLSEYE)_DBG_DEPENDS) \
-                                             $(LIBSWSSCOMMON_DBG)
+                                             $(LIBSWSSCOMMON_DBG) \
+                                             $(LIBYANG_DBG) \
+                                             $(LIBYANG_CPP_DBG) \
+                                             $(LIBYANG_PY3_DBG) \
+                                             $(PYTHON3_SWSSCOMMON_DBG) \
+                                             $(SONIC_DB_CLI_DBG) \
+                                             $(SONIC_EVENTD_DBG)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DBG_IMAGE_PACKAGES = $($(DOCKER_BASE_BULLSEYE)_DBG_IMAGE_PACKAGES)
 
 SONIC_DOCKER_IMAGES += $(DOCKER_CONFIG_ENGINE_BULLSEYE)

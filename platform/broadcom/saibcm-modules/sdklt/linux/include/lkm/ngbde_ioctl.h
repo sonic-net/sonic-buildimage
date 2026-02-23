@@ -9,7 +9,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -85,6 +86,9 @@
 /*! Initialize kernel interrupt driver. */
 #define NGBDE_IOC_IRQ_INIT      _IOW(NGBDE_IOC_MAGIC, 11, __u64)
 
+/*! Initialize kernel interrupt driver. */
+#define NGBDE_IOC_SLOT_INFO     _IOW(NGBDE_IOC_MAGIC, 12, __u64)
+
 /*! \} */
 
 /*! IOCTL command return code for success. */
@@ -138,6 +142,21 @@ struct ngbde_ioc_probe_info_s {
 
 /*! ARM AXI bus. */
 #define NGBDE_DEV_BT_AXI        1
+
+/*! \} */
+
+/*!
+ * \name Device flags.
+ * \anchor NGBDE_DEV_F_xxx
+ */
+
+/*! \{ */
+
+/*! PCI interrupts are operating in MSI mode. */
+#define NGBDE_DEV_F_MSI         (1 << 0)
+
+/*! Device is inactive (most likely removed). */
+#define NGBDE_DEV_F_INACTIVE    (1 << 1)
 
 /*! \} */
 
@@ -381,6 +400,22 @@ struct ngbde_ioc_irq_mask_wr_s {
     __u32 val;
 };
 
+/*! Hardware slot information (typically PCI) */
+struct ngbde_ioc_slot_info_s {
+
+    /*! Domain number. */
+    __u32 domain_no;
+
+    /*! Bus number. */
+    __u32 bus_no;
+
+    /*! Device number (a.k.a. PCI device number). */
+    __u32 slot_no;
+
+    /*! PCI function number (currently unused). */
+    __u32 func_no;
+};
+
 /*! IOCTL operation data. */
 union ngbde_ioc_op_s {
 
@@ -416,6 +451,9 @@ union ngbde_ioc_op_s {
 
     /*! Map device registers in kernel space. */
     struct ngbde_ioc_pio_win_s pio_win;
+
+    /*! Hardware slot information (typically PCI). */
+    struct ngbde_ioc_slot_info_s slot_info;
 };
 
 /*! IOCTL command message. */

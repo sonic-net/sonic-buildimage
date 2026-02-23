@@ -158,6 +158,23 @@ def get_chassis_type_and_hostname(root, hname):
                         chassis_hostname = value
     return chassis_type, chassis_hostname
 
+def is_chassis_lc_macsec_enabled(root, hname):
+    macsec_enble = None
+    for child in root:
+        if child.tag == str(QName(ns, "MetadataDeclaration")):
+            devices = child.find(str(QName(ns, "Devices")))
+            for device_meta in devices.findall(str(QName(ns1, "DeviceMetadata"))):
+                device_name = device_meta.find(str(QName(ns1, "Name"))).text
+                if device_name != hname:
+                    continue
+                properties = device_meta.find(str(QName(ns1, "Properties")))
+                for device_property in properties.findall(str(QName(ns1, "DeviceProperty"))):
+                    name = device_property.find(str(QName(ns1, "Name"))).text
+                    value = device_property.find(str(QName(ns1, "Value"))).text
+                    if name == "MacSecEnabled":
+                        macsec_enble = value
+    return macsec_enble
+
 def is_minigraph_for_chassis(chassis_type):
     if chassis_type in [CHASSIS_CARD_VOQ, CHASSIS_CARD_PACKET]:
         return True
@@ -2028,6 +2045,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     slot_index = None
     max_num_cores = None
     card_type = None
+    macsec_enabled = None
 
     hwsku_qn = QName(ns, "HwSku")
     hostname_qn = QName(ns, "Hostname")
@@ -2041,6 +2059,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             docker_routing_config_mode = child.text
 
     hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname = parse_global_info(root)
+    macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
 
@@ -2172,6 +2191,13 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
+    elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':
+        if macsec_enabled == 'True':
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'UpstreamLC'
+        elif macsec_enabled == 'False':
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'DownstreamLC'
+        else:
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'Supervisor'
 
     # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
     enable_tunnel_qos_map = False
@@ -2597,7 +2623,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if static_routes:
         # Enable static Route BFD by default for static route in chassis-packet
-        if switch_type == "chassis-packet":
+        if switch_type == "chassis-packet" or chassis_type == "chassis-packet":
             for pfx, data in static_routes.items():
                 data.update({"bfd":"true"})
         results['STATIC_ROUTE'] = static_routes
@@ -2877,9 +2903,12 @@ def parse_asic_sub_role(filename, asic_name):
             sub_role, _, _, _, _, _= parse_asic_meta(child, asic_name)
             return sub_role
 
-def parse_asic_switch_type(filename, asic_name):
+def parse_asic_switch_type(filename, asic_name, hostname):
     if os.path.isfile(filename):
         root = ET.parse(filename).getroot()
+        switch_type, _ = get_chassis_type_and_hostname(root, hostname)
+        if switch_type:
+            return switch_type
         for child in root:
             if child.tag == str(QName(ns, "MetadataDeclaration")):
                 _, _, switch_type, _, _, _ = parse_asic_meta(child, asic_name)

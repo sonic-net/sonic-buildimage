@@ -1,0 +1,345 @@
+From cfc94cc0d66524f453ccd781e9d252e8fc3ae711 Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Sun, 23 Feb 2025 12:25:04 -0500
+Subject: [PATCH] validation: Add LYD_VALIDATE_NOEXTDEPS to bypass
+ leafref/when/must
+
+In libyang v1, there was an LYD_OPT_NOEXTDEPS flag.  This was
+removed, and this patch re-adds a flag with similar functionality.
+---
+ src/parser_data.h |  3 +-
+ src/validation.c  | 85 ++++++++++++++++++++++++++---------------------
+ 2 files changed, 49 insertions(+), 39 deletions(-)
+
+diff --git a/src/parser_data.h b/src/parser_data.h
+index ddb22781e..292eda86f 100644
+--- a/src/parser_data.h
++++ b/src/parser_data.h
+@@ -222,7 +222,8 @@ struct ly_in;
+ #define LYD_VALIDATE_NOT_FINAL 0x0020       /**< Skip final validation tasks that require for all the data nodes to
+                                                  either exist or not, based on the YANG constraints. Once the data
+                                                  satisfy this requirement, the final validation should be performed. */
+-
++#define LYD_VALIDATE_NOEXTDEPS 0x0040       /**< Allow external dependencies (external leafrefs, instance-identifiers,
++                                                 must, and when) to not be resolved/satisfied during validation. */
+ #define LYD_VALIDATE_OPTS_MASK  0x0000FFFF  /**< Mask for all the LYD_VALIDATE_* options. */
+ 
+ /** @} datavalidationoptions */
+diff --git a/src/validation.c b/src/validation.c
+index a436816fe..ac1822ae9 100644
+--- a/src/validation.c
++++ b/src/validation.c
+@@ -41,18 +41,22 @@
+ #include "xpath.h"
+ 
+ /**
+- * @brief Check validation error taking into account multi-error validation.
++ * @brief Check validation error taking into account multi-error validation and
++ *        possible skipping of external dependency validation.
+  *
+  * @param[in] r Local return value.
+  * @param[in] err_cmd Command to perform on any error.
++ * @param[in] err_item Optional, may be NULL. Full error to evaluate.
+  * @param[in] val_opts Validation options.
+  * @param[in] label Label to go to on fatal error.
+  */
+-#define LY_VAL_ERR_GOTO(r, err_cmd, val_opts, label) \
++#define LY_VAL_ERR_GOTO(r, err_cmd, err_item, val_opts, label) \
+         if (r) { \
+-            err_cmd; \
+-            if ((r != LY_EVALID) || !(val_opts & LYD_VALIDATE_MULTI_ERROR)) { \
+-                goto label; \
++            if (!(val_opts & LYD_VALIDATE_NOEXTDEPS) || (r != LY_EVALID) || ((err_item) == NULL) || ((err_item)->apptag == NULL) || (strcmp((err_item)->apptag, "instance-required") != 0)) { \
++                err_cmd; \
++                if ((r != LY_EVALID) || !(val_opts & LYD_VALIDATE_MULTI_ERROR)) { \
++                    goto label; \
++                } \
+             } \
+         }
+ 
+@@ -412,7 +416,7 @@ lyd_validate_unres_when(struct lyd_node **tree, const struct lys_module *mod, st
+                     /* invalid data */
+                     LOGVAL(LYD_CTX(node), LY_VCODE_NOWHEN, disabled->cond->expr);
+                     r = LY_EVALID;
+-                    LY_VAL_ERR_GOTO(r, rc = r, val_opts, error);
++                    LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, error);
+                 }
+             } else {
+                 /* when true */
+@@ -423,7 +427,7 @@ lyd_validate_unres_when(struct lyd_node **tree, const struct lys_module *mod, st
+             ly_set_rm_index_ordered(node_when, i, NULL);
+         } else if (r != LY_EINCOMPLETE) {
+             /* error */
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, error);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, error);
+         }
+ 
+         LOG_LOCBACK(1, 1);
+@@ -454,7 +458,7 @@ lyd_validate_unres(struct lyd_node **tree, const struct lys_module *mod, enum ly
+ 
+             /* validate extension data */
+             r = ext_v->ext->def->plugin->validate(ext_v->ext, ext_v->sibling, *tree, data_type, val_opts, diff);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*tree)), val_opts, cleanup);
+ 
+             /* remove this item from the set */
+             ly_set_rm_index(ext_val, i, free);
+@@ -471,21 +475,21 @@ lyd_validate_unres(struct lyd_node **tree, const struct lys_module *mod, enum ly
+ 
+             /* validate the node */
+             r = ext_n->ext->def->plugin->node(ext_n->ext, ext_n->node, val_opts);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*tree)), val_opts, cleanup);
+ 
+             /* remove this item from the set */
+             ly_set_rm_index(ext_node, i, free);
+         } while (i);
+     }
+ 
+-    if (node_when) {
++    if (node_when && !(val_opts & LYD_VALIDATE_NOEXTDEPS)) {
+         /* evaluate all when conditions */
+         uint32_t prev_count;
+ 
+         do {
+             prev_count = node_when->count;
+             r = lyd_validate_unres_when(tree, mod, node_when, val_opts, when_xp_opts, node_types, diff);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*tree)), val_opts, cleanup);
+ 
+             /* there must have been some when conditions resolved */
+         } while (prev_count > node_when->count);
+@@ -513,7 +517,7 @@ lyd_validate_unres(struct lyd_node **tree, const struct lys_module *mod, enum ly
+             LOG_LOCSET(NULL, &node->node);
+             r = lyd_value_validate_incomplete(LYD_CTX(node), type, &node->value, &node->node, *tree);
+             LOG_LOCBACK(0, 1);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, cleanup);
+ 
+             /* remove this node from the set */
+             ly_set_rm_index(node_types, i, NULL);
+@@ -532,7 +536,7 @@ lyd_validate_unres(struct lyd_node **tree, const struct lys_module *mod, enum ly
+             /* validate and store the value of the metadata */
+             lyplg_ext_get_storage(meta->annotation, LY_STMT_TYPE, sizeof type, (const void **)&type);
+             r = lyd_value_validate_incomplete(LYD_CTX(meta->parent), type, &meta->value, meta->parent, *tree);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(meta->parent)), val_opts, cleanup);
+ 
+             /* remove this attr from the set */
+             ly_set_rm_index(meta_types, i, NULL);
+@@ -926,11 +930,11 @@ lyd_validate_choice_r(struct lyd_node **first, const struct lysc_node *sparent,
+     for (i = 0; *first && choices[i]; ++i) {
+         /* check case duplicites */
+         r = lyd_validate_cases(first, mod, (struct lysc_node_choice *)choices[i], diff);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*first)), val_opts, cleanup);
+ 
+         /* check for nested choice */
+         r = lyd_validate_choice_r(first, choices[i], mod, ext, val_opts, int_opts, getnext_ht, diff);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*first)), val_opts, cleanup);
+     }
+ 
+ cleanup:
+@@ -950,7 +954,7 @@ lyd_validate_new(struct lyd_node **first, const struct lysc_node *sparent, const
+ 
+     /* validate choices */
+     r = lyd_validate_choice_r(first, sparent, mod, ext, val_opts, int_opts, getnext_ht, diff);
+-    LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++    LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*first)), val_opts, cleanup);
+ 
+     node = *first;
+     while (node) {
+@@ -982,7 +986,7 @@ lyd_validate_new(struct lyd_node **first, const struct lysc_node *sparent, const
+         if (node->flags & LYD_NEW) {
+             /* then check new node instance duplicities */
+             r = lyd_validate_duplicates(*first, node, val_opts);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*first)), val_opts, cleanup);
+ 
+             /* this node is valid */
+             node->flags &= ~LYD_NEW;
+@@ -1100,7 +1104,7 @@ lyd_validate_mandatory(const struct lyd_node *first, const struct lyd_node *pare
+     }
+ 
+     disabled = NULL;
+-    if (lysc_has_when(snode)) {
++    if (lysc_has_when(snode) && !(val_opts & LYD_VALIDATE_NOEXTDEPS)) {
+         /* if there are any when conditions, they must be true for a validation error */
+         LY_CHECK_RET(lyd_validate_dummy_when(first, parent, snode, &disabled));
+     }
+@@ -1177,7 +1181,7 @@ lyd_validate_minmax(const struct lyd_node *first, const struct lyd_node *parent,
+         assert(count < min);
+ 
+         disabled = NULL;
+-        if (lysc_has_when(snode)) {
++        if (lysc_has_when(snode) && !(val_opts & LYD_VALIDATE_NOEXTDEPS)) {
+             /* if there are any when conditions, they must be true for a validation error */
+             LY_CHECK_RET(lyd_validate_dummy_when(first, parent, snode, &disabled));
+         }
+@@ -1553,7 +1557,7 @@ lyd_validate_siblings_schema_r(const struct lyd_node *first, const struct lyd_no
+         if (snode->flags & LYS_MAND_TRUE) {
+             /* check generic mandatory existence */
+             r = lyd_validate_mandatory(first, parent, snode, val_opts);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+         }
+ 
+         /* find the existing case, if any */
+@@ -1561,7 +1565,7 @@ lyd_validate_siblings_schema_r(const struct lyd_node *first, const struct lyd_no
+             if (lys_getnext_data(NULL, first, NULL, scase, NULL)) {
+                 /* validate only this case */
+                 r = lyd_validate_siblings_schema_r(first, parent, scase, mod, ext, val_opts, int_opts, getnext_ht);
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+                 break;
+             }
+         }
+@@ -1580,25 +1584,25 @@ lyd_validate_siblings_schema_r(const struct lyd_node *first, const struct lyd_no
+             slist = (struct lysc_node_list *)snode;
+             if (slist->min || (slist->max < UINT32_MAX)) {
+                 r = lyd_validate_minmax(first, parent, snode, slist->min, slist->max, val_opts);
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+             }
+ 
+             /* check unique */
+             if (slist->uniques) {
+                 r = lyd_validate_unique(first, snode, (const struct lysc_node_leaf ***)slist->uniques, val_opts);
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+             }
+         } else if (snode->nodetype == LYS_LEAFLIST) {
+             sllist = (struct lysc_node_leaflist *)snode;
+             if (sllist->min || (sllist->max < UINT32_MAX)) {
+                 r = lyd_validate_minmax(first, parent, snode, sllist->min, sllist->max, val_opts);
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+             }
+ 
+         } else if (snode->flags & LYS_MAND_TRUE) {
+             /* check generic mandatory existence */
+             r = lyd_validate_mandatory(first, parent, snode, val_opts);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+         }
+     }
+ 
+@@ -1649,6 +1653,11 @@ lyd_validate_must(const struct lyd_node *node, uint32_t val_opts, uint32_t int_o
+     const char *emsg, *eapptag;
+     LY_ARRAY_COUNT_TYPE u;
+ 
++    /* Must validation has been bypassed */
++    if (val_opts & LYD_VALIDATE_NOEXTDEPS) {
++        return LY_SUCCESS;
++    }
++
+     assert((int_opts & (LYD_INTOPT_RPC | LYD_INTOPT_REPLY)) != (LYD_INTOPT_RPC | LYD_INTOPT_REPLY));
+     assert((int_opts & (LYD_INTOPT_ACTION | LYD_INTOPT_REPLY)) != (LYD_INTOPT_ACTION | LYD_INTOPT_REPLY));
+ 
+@@ -1710,7 +1719,7 @@ lyd_validate_must(const struct lyd_node *node, uint32_t val_opts, uint32_t int_o
+                 }
+                 LOG_LOCBACK(0, 1);
+                 r = LY_EVALID;
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, cleanup);
+             }
+         }
+     }
+@@ -1794,12 +1803,12 @@ lyd_validate_final_r(struct lyd_node *first, const struct lyd_node *parent, cons
+         /* node value was checked by plugins */
+ 
+ next_iter:
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, cleanup);
+     }
+ 
+     /* validate schema-based restrictions */
+     r = lyd_validate_siblings_schema_r(first, parent, sparent, mod, ext, val_opts, int_opts, getnext_ht);
+-    LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++    LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(first)), val_opts, cleanup);
+ 
+     LY_LIST_FOR(first, node) {
+         if (!node->schema || (!node->parent && mod && (lyd_owner_module(node) != mod))) {
+@@ -1810,7 +1819,7 @@ lyd_validate_final_r(struct lyd_node *first, const struct lyd_node *parent, cons
+         /* validate all children recursively */
+         r = lyd_validate_final_r(lyd_child(node), node, node->schema, NULL, NULL, val_opts, int_opts, must_xp_opts,
+                 getnext_ht);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(node)), val_opts, cleanup);
+ 
+         /* set default for containers */
+         lyd_np_cont_dflt_set(node);
+@@ -1947,7 +1956,7 @@ lyd_validate_subtree(struct lyd_node *root, struct ly_set *node_when, struct ly_
+         } else if (node->schema->nodetype & LYD_NODE_INNER) {
+             /* new node validation, autodelete */
+             r = lyd_validate_new(lyd_node_child_p(node), node->schema, NULL, NULL, val_opts, int_opts, getnext_ht, diff);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(root)), val_opts, cleanup);
+ 
+             /* add nested defaults */
+             impl_opts = 0;
+@@ -2027,7 +2036,7 @@ lyd_validate(struct lyd_node **tree, const struct lys_module *module, const stru
+         /* validate new top-level nodes of this module, autodelete */
+         r = lyd_validate_new(first2, *first2 ? lysc_data_parent((*first2)->schema) : NULL, mod, NULL, val_opts, 0,
+                 getnext_ht, diff);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(ctx), val_opts, cleanup);
+ 
+         /* add all top-level defaults for this module, if going to validate subtree, do not add into unres sets
+          * (lyd_validate_subtree() adds all the nodes in that case) */
+@@ -2066,19 +2075,19 @@ lyd_validate(struct lyd_node **tree, const struct lys_module *module, const stru
+ 
+                 r = lyd_validate_subtree(iter, node_when_p, node_types_p, meta_types_p, ext_node_p, ext_val_p,
+                         val_opts, 0, getnext_ht, diff);
+-                LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++                LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(ctx), val_opts, cleanup);
+             }
+         }
+ 
+         /* finish incompletely validated terminal values/attributes and when conditions */
+         r = lyd_validate_unres(first2, mod, LYD_TYPE_DATA_YANG, node_when_p, 0, node_types_p, meta_types_p,
+                 ext_node_p, ext_val_p, val_opts, diff);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(ctx), val_opts, cleanup);
+ 
+         if (!(val_opts & LYD_VALIDATE_NOT_FINAL)) {
+             /* perform final validation that assumes the data tree is final */
+             r = lyd_validate_final_r(*first2, NULL, NULL, mod, NULL, val_opts, 0, 0, getnext_ht);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(ctx), val_opts, cleanup);
+         }
+ 
+         /* free the getnext hash table */
+@@ -2127,19 +2136,19 @@ lyd_validate_ext(struct lyd_node **tree, const struct lysc_ext_instance *ext, ui
+         LY_LIST_FOR(*tree, iter) {
+             r = lyd_validate_subtree(iter, node_when_p, node_types_p, meta_types_p, ext_node_p, ext_val_p,
+                     val_opts, 0, getnext_ht, diff);
+-            LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++            LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(iter)), val_opts, cleanup);
+         }
+     }
+ 
+     /* finish incompletely validated terminal values/attributes and when conditions */
+     r = lyd_validate_unres(tree, NULL, LYD_TYPE_DATA_YANG, node_when_p, 0, node_types_p, meta_types_p,
+             ext_node_p, ext_val_p, val_opts, diff);
+-    LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++    LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*tree)), val_opts, cleanup);
+ 
+     if (!(val_opts & LYD_VALIDATE_NOT_FINAL)) {
+         /* perform final validation that assumes the data tree is final */
+         r = lyd_validate_final_r(*tree, NULL, NULL, NULL, ext, val_opts, 0, 0, getnext_ht);
+-        LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++        LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(*tree)), val_opts, cleanup);
+     }
+ 
+ cleanup:
+@@ -2201,7 +2210,7 @@ lyd_validate_module_final(struct lyd_node *tree, const struct lys_module *module
+ 
+     /* perform final validation that assumes the data tree is final */
+     r = lyd_validate_final_r(first, NULL, NULL, mod, NULL, val_opts, 0, 0, getnext_ht);
+-    LY_VAL_ERR_GOTO(r, rc = r, val_opts, cleanup);
++    LY_VAL_ERR_GOTO(r, rc = r, ly_err_last(LYD_CTX(tree)), val_opts, cleanup);
+ 
+ cleanup:
+     lyd_val_getnext_ht_free(getnext_ht);

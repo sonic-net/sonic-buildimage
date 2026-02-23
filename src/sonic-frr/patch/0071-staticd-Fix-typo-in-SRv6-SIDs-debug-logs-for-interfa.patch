@@ -1,0 +1,61 @@
+From 2a329561d4b65d786e8bc81832b734afcdbb3316 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 13 Aug 2025 10:30:32 +0000
+Subject: staticd: Fix typo in SRv6 SIDs debug logs for interface UP/DOWN
+ events
+
+When an interface status changes from UP to DOWN or vice versa, staticd
+receives a notification and installs or uninstalls all SIDs that depend
+on that interface.
+
+A typo is present in the debug log message.
+
+This commit fixes the typo as shown in the examples below.
+
+Before:
+
+  r1# ip link set sr0 down
+  r1# ip link set sr0 up
+
+  r1# cat mgmtd.log
+  ...
+  2025/08/13 09:51:56.094801 STATIC: [P9961-ZG7PV] static_ifp_srv6_sids_update: Interface disabled disabled. sr0 SIDs that depend on the interface
+  2025/08/13 09:51:57.638533 STATIC: [P9961-ZG7PV] static_ifp_srv6_sids_update: Interface enabled Removing. sr0 SIDs that depend on the interface
+  ...
+
+After:
+
+  r1# ip link set sr0 down
+  r1# ip link set sr0 up
+
+  r1# cat mgmtd.log
+  ...
+  2025/08/13 10:19:34.357281 STATIC: [X9BAH-9VKGQ] static_ifp_srv6_sids_update: Received DOWN event for interface 'sr0': uninstalling dependent SRv6 SIDs
+  2025/08/13 10:19:34.824886 STATIC: [X9BAH-9VKGQ] static_ifp_srv6_sids_update: Received UP event for interface 'sr0': installing dependent SRv6 SIDs
+  ...
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 18a9691c37..b06ddda3ef 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -40,9 +40,9 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 	if (!srv6_sids || !ifp)
+ 		return;
+ 
+-	DEBUGD(&static_dbg_srv6, "%s: Interface %s %s. %s SIDs that depend on the interface",
+-	       __func__, (is_up) ? "enabled" : "disabled", (is_up) ? "Removing" : "disabled",
+-	       ifp->name);
++	DEBUGD(&static_dbg_srv6,
++	       "%s: Received %s event for interface '%s': %s dependent SRv6 SIDs", __func__,
++	       (is_up) ? "UP" : "DOWN", ifp->name, (is_up) ? "installing" : "uninstalling");
+ 
+ 	/*
+ 	 * iterate over the list of SRv6 SIDs and remove the SIDs that use this
+-- 
+2.48.1
+

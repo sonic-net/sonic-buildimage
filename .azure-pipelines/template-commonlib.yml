@@ -10,10 +10,7 @@ jobs:
 - ${{ each arch in parameters.archs }}:
   - job: Build_${{ arch }}
     timeoutInMinutes: 120
-    ${{ if eq(arch,'amd64') }}:
-      pool: sonicbld-1es
-    ${{ else }}:
-      pool: sonicbld-${{ arch }}
+    pool: sonicso1ES-${{ arch }}
     variables:
       - template: template-variables.yml
     steps:

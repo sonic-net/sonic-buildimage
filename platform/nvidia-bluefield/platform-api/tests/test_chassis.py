@@ -17,6 +17,8 @@
 
 import os
 import sys
+import socket
+from collections import namedtuple
 
 from unittest.mock import patch
 from unittest.mock import mock_open
@@ -83,3 +85,11 @@ class TestChassis:
         assert len(sfp_list) == 2
         assert id(sfp1) == id(sfp_list[0])
         assert id(sfp2) == id(sfp_list[1])
+
+
+    @patch('psutil.net_if_addrs', return_value={
+        'eth0-midplane': [namedtuple('snicaddr', ['family', 'address'])(family=socket.AF_INET, address='169.254.200.1')]})
+    def test_get_dpu_id(self, *args):
+        chassis = Chassis()
+
+        assert chassis.get_dpu_id() == 0

@@ -10,6 +10,12 @@
                         "ip": "fe80:1000:2000:3000::1"
                     }
                 ]
+            },
+            "sonic-dns:DNS_OPTIONS": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": 0,
+                "timeout": 1,
+                "attempts": 1
             }
         }
     },
@@ -41,6 +47,72 @@
                         "ip": "fe80:1000:2000:3000::4"
                     }
                 ]
+            }
+        }
+    },
+    "DNS_OPTIONS_NO_NAMESERVER": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_OPTIONS": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": 0,
+                "timeout": 1,
+                "attempts": 1
+            }
+        }
+    },
+    "DNS_OPTIONS_INVALID_SEARCH": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    }
+                ]
+            },
+            "sonic-dns:DNS_OPTIONS": {
+                "search": [ "d1*.example.com" ]
+            }
+        }
+    },
+    "DNS_OPTIONS_INVALID_NDOTS": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    }
+                ]
+            },
+            "sonic-dns:DNS_OPTIONS": {
+                "ndots": 100
+            }
+        }
+    },
+    "DNS_OPTIONS_INVALID_TIMEOUT": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    }
+                ]
+            },
+            "sonic-dns:DNS_OPTIONS": {
+                "timeout": 0
+            }
+        }
+    },
+    "DNS_OPTIONS_INVALID_ATTEMPTS": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    }
+                ]
+            },
+            "sonic-dns:DNS_OPTIONS": {
+                "attempts": 10
             }
         }
     }

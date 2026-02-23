@@ -12,8 +12,8 @@ exitcodes=0,3
 events=PROCESS_STATE
 buffer_size=1024
 
-[eventlistener:supervisor-proc-exit-script]
-command=/usr/bin/supervisor-proc-exit-listener --container-name radv
+[eventlistener:supervisor-proc-exit-listener]
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name radv
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
@@ -24,8 +24,10 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
 [program:start]
@@ -34,26 +36,25 @@ priority=1
 autostart=true
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
 {# Router advertiser should only run on ToR (T0) devices which have #}
-{# at least one VLAN interface which has an IPv6 address asigned #}
-{# But not for specific deployment_id #}
+{# at least one VLAN interface which has an IPv6 address assigned #}
 {%- set vlan_v6 = namespace(count=0) -%}
-{%- if DEVICE_METADATA.localhost.deployment_id != "8" -%}
-  {%- if DEVICE_METADATA.localhost.type -%}
-    {%- if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] -%}
-      {%- if VLAN_INTERFACE -%}
-        {%- for (name, prefix) in VLAN_INTERFACE|pfx_filter -%}
-          {# If this VLAN has an IPv6 address... #}
-          {%- if prefix | ipv6 -%}
-            {%- set vlan_v6.count = vlan_v6.count + 1 -%}
-          {%- endif -%}
-        {%- endfor -%}
-      {%- endif -%}
+{%- if DEVICE_METADATA.localhost.type -%}
+  {%- if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] -%}
+    {%- if VLAN_INTERFACE -%}
+      {%- for (name, prefix) in VLAN_INTERFACE|pfx_filter -%}
+        {# If this VLAN has an IPv6 address... #}
+        {%- if prefix | ipv6 -%}
+          {%- set vlan_v6.count = vlan_v6.count + 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
     {%- endif -%}
   {%- endif -%}
 {%- endif -%}
@@ -65,8 +66,10 @@ priority=3
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=start:exited
 
@@ -75,8 +78,10 @@ command=/usr/sbin/radvd -n
 priority=4
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=wait_for_link:exited
 {% endif -%}

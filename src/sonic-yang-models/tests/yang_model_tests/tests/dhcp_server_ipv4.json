@@ -12,7 +12,7 @@
     },
     "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
         "desc": "Add netmask which is not in correct ip-prefix format.",
-        "eStrKey": "Pattern"
+        "eStrKey": "IPv4"
     },
     "DHCP_SERVER_IPV4_STATE_WRONG_VALUE": {
         "desc": "Configure wrong value for state.",
@@ -49,6 +49,20 @@
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
         "desc": "Add ipv4-address type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
     },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_EMPTY": {
+        "desc": "Add option with always send empty."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_TRUE": {
+        "desc": "Add option with always send true."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_FALSE": {
+        "desc": "Add option with always send false."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_INVALID": {
+        "desc": "Add option with always send invalid.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["False"]
+    },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
         "desc": "Add uint8 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
     },
@@ -65,10 +79,6 @@
     "DHCP_SERVER_IPV4_RANGE_RANGES_WITH_IP": {
         "desc": "Configure both ip and ranges in DHCP_SERVER_IPV4_RANGE_RANGES",
         "eStr": ["Statement of 'ips' and 'ranges' cannot both exist"]
-    },
-    "DHCP_SERVER_IPV4_GATEWAY_ABSENT": {
-        "desc": "Missing gateway in DHCP_SERVER_IPV4",
-        "eStrKey" : "Mandatory"
     },
     "DHCP_SERVER_IPV4_LEASE_TIME_ABSENT": {
         "desc": "Missing lease_time in DHCP_SERVER_IPV4",

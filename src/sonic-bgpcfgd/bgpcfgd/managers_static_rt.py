@@ -43,7 +43,7 @@ class StaticRouteMgr(Manager):
         dist_list   = arg_list(data['distance']) if 'distance' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
         bfd_enable  = arg_list(data['bfd']) if 'bfd' in data else None
-        route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG 
+        route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG
 
         # bfd enabled route would be handled in staticroutebfd, skip here
         if bfd_enable and bfd_enable[0].lower() == "true":
@@ -231,6 +231,8 @@ class StaticRouteMgr(Manager):
         for af in ["ipv4", "ipv6"]:
             cmd_list.append(" address-family %s" % af)
             cmd_list.append("  redistribute static route-map STATIC_ROUTE_FILTER")
+            cmd_list.append(" exit-address-family")
+        cmd_list.append("exit")
         return cmd_list
 
     def disable_redistribution_command(self, vrf):
@@ -244,6 +246,8 @@ class StaticRouteMgr(Manager):
         for af in ["ipv4", "ipv6"]:
             cmd_list.append(" address-family %s" % af)
             cmd_list.append("  no redistribute static route-map STATIC_ROUTE_FILTER")
+            cmd_list.append(" exit-address-family")
+        cmd_list.append("exit")
         cmd_list.append("no route-map STATIC_ROUTE_FILTER")
         return cmd_list
 

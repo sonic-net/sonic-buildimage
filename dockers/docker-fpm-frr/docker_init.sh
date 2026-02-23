@@ -99,6 +99,18 @@ fi
 
 chown -R frr:frr /etc/frr/
 
+# Create sr0 interface for SRv6 support
+SONIC_ASIC_TYPE=$(sed -n 's/^asic_type:[[:space:]]*//p' /etc/sonic/sonic_version.yml)
+if [ "$SONIC_ASIC_TYPE" == "vpp" ]; then
+    if ! ip link show sr0 > /dev/null 2>&1; then
+        echo "Interface sr0 does not exist. Creating sr0..."
+        ip link add sr0 type dummy || true
+    else
+        echo "Interface sr0 already exists."
+    fi
+    ip link set sr0 up || true
+fi
+
 chown root:root /usr/sbin/bgp-isolate
 chmod 0755 /usr/sbin/bgp-isolate
 
@@ -107,12 +119,5 @@ chmod 0755 /usr/sbin/bgp-unisolate
 
 mkdir -p /var/sonic
 echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
-
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
-
-export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/bgp_events.conf
 
 exec /usr/local/bin/supervisord

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-set -x
 set -e
 
 WDIR=
@@ -43,7 +42,7 @@ GRUB_CFG="" # Common Grub Config
 BF2_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x01000000 earlycon=pl011,0x01800000"
 BF2_GRUB_CFG="$BF2_BOOT_ARGS isolcpus=1-7 nohz_full=1-7 rcu_nocbs=1-7"
 BF3_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x13010000"
-BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-13 nohz_full=1-13 rcu_nocbs=1-13"
+BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-10 nohz_full=1-10 rcu_nocbs=1-10"
 
 usage() {
 cat << EOF
@@ -184,34 +183,14 @@ add_sonic_to_initramfs() {
 cat > scripts/initrd-install << EOF
 #!/bin/bash
 
-printf_msg()
-{
-	echo "$@" | tee /dev/kmsg
-	return 0
-}
-
 depmod -a $KERNEL_VERSION > /dev/null 2>&1
-insmod /mlx-bootctl.ko
+insmod /mlxbf-bootctl.ko
 insmod /sdhci-of-dwcmshc.ko
 insmod /sbsa_gwdt.ko
 /usr/sbin/watchdog
 
-printf_msg "================================="
-printf_msg "Installing SONiC. Please wait..."
-printf_msg "================================="
-
 /bin/bash /debian/install.sh
-if [ \$? -eq 0 ]; then
-	printf_msg "==================================="
-	printf_msg "Installation finished. Rebooting..."
-	printf_msg "==================================="
-	printf_msg
-	reboot -f
-else
-	printf_msg "========================"
-	printf_msg "Failed to install SONiC"
-	printf_msg "========================"
-fi
+
 EOF
     chmod +x scripts/initrd-install
     sudo rm -f conf/conf.d/debian-core*
@@ -221,63 +200,37 @@ EOF
 
 copy_bin()
 {
-    from=$(realpath $1)
-
-    if [ -e $from/$2 ]; then
-        bin=$2
+    if [ -e $1 ]; then
+        bin=$1
     else
-        bin=$(sudo chroot $from bash -c "which $2 2> /dev/null")
+        bin=$(which $1 2> /dev/null || true)
     fi
-
-    echo "copy from" $from file: $bin
-
-    if [ -h $from/$bin ]; then
-        if [[ $from == "/" ]]; then
-            tbin=`readlink -f $bin`
-        else
-            tbin=`readlink -f $from/$bin | sed -e "s~$from~~"`
-        fi
-
-        if [ ! -e .$tbin ]; then
-            sudo mkdir -p .`dirname $tbin`
-            sudo cp $from/$tbin .$tbin
-        fi
-
-        if [ ! -e .${bin} ]; then
-            sudo mkdir -p .`dirname $bin`
-            sudo cp -a $from/$bin .${bin}
-        fi
-    elif [ -e $from/$bin ]; then
-        sudo mkdir -p .`dirname $bin`
-        sudo cp -a $from/$bin .${bin}
-    else
-        echo "ERROR: Cannot find $2"
-        exit 1
+    if [ -z "$bin" ]; then
+        echo "ERROR: Cannot find $1"
+        return 0
+    fi
+    sudo mkdir -p .$(dirname $bin)
+    if [ ! -e .${bin} ]; then
+        sudo cp -a $bin .${bin}
     fi
 
     # Copy dependencies
-    for lib in `ldd $from/$bin 2> /dev/null | grep '=>' | awk '{print $3}'`
+    for lib in  $(ldd $bin 2> /dev/null | grep '=>' | awk '{print $3}')
     do
         if [ -e .$lib ]; then
             continue
         fi
-
-        sudo mkdir -p .`dirname $lib`
-        sudo cp -a $from/$lib .$lib
-        echo sudo cp -a $from/$lib .$lib
-        if [ -h $from/.$lib ]; then
-            if [[ $from == "/" ]]; then
-                tlib=`readlink -f $lib`
-            else
-                tlib=`readlink -f $from/$lib | sed -e "s~$from~~"`
-            fi
+        sudo mkdir -p .$(dirname $lib)
+        sudo cp -a $lib .$lib
+        if [ -h $lib ]; then
+            tlib=$(readlink -f $lib)
             if [ ! -e .$tlib ]; then
-                sudo mkdir -p .`dirname $tlib`
-                sudo cp $from/$tlib .$tlib
+                sudo mkdir -p .$(dirname $tlib)
+                sudo cp $tlib .$tlib
             fi
         fi
     done
- }
+}
 
 create_bfb_image() {
 
@@ -336,7 +289,17 @@ create_bfb_image() {
         if [ -d $tool ]; then
             continue
         fi
-        copy_bin / $tool
+        copy_bin $tool
+    done
+
+    for tool in `dpkg -L mft` \
+            `dpkg -L mft-oem` \
+            `dpkg -L xmlstarlet | grep -v share`
+    do
+        if [ -d $tool ]; then
+            continue
+        fi
+        copy_bin $tool
     done
 
     sudo depmod -a -b ./ $KERNEL_VERSION
@@ -380,8 +343,24 @@ create_bfb_image() {
            --boot-args-v2 "$boot_args2" \
            --boot-path "$boot_path" \
            --boot-desc "$boot_desc" \
-            ${BFB} ${DDIR}/${OUTPUT_BFB_IMAGE}
+            ${BFB} ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate
+            
 
+    echo "Generating SHA256 hash for BFB file..."
+    sha256sum ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate | awk '{print $1}' > ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate.sha256
+    echo "SHA256 hash saved to: ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate.sha256"
+
+    echo "Creating tar package with BFB and SHA256 hash..."
+    local bfb_fullpath="${DDIR}/${OUTPUT_BFB_IMAGE}"
+    local bfb_dir=$(dirname "$bfb_fullpath")
+    local bfb_intermediate_fullpath="${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate"
+    local bfb_basename=$(basename "$bfb_fullpath")
+    local bfb_intermediate_basename=$(basename "$bfb_intermediate_fullpath")
+    
+    pushd "$bfb_dir"
+    tar -cf "$bfb_basename" "$bfb_intermediate_basename" "${bfb_intermediate_basename}.sha256"
+    popd
+    
     echo "BFB is ready: $(readlink -f  ${DDIR}/${OUTPUT_BFB_IMAGE})"
 
     popd
@@ -405,7 +384,7 @@ main() {
     VMLINUZ=$CDIR/$FILESYSTEM_ROOT/boot/vmlinuz-$KERNEL_VERSION
     MODULES_DIR=$CDIR/$FILESYSTEM_ROOT/lib/modules/$KERNEL_VERSION
     WATCHDOG=$MODULES_DIR/kernel/drivers/watchdog/sbsa_gwdt.ko
-    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlx-bootctl.ko
+    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-bootctl.ko
     TMFIFO_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-tmfifo.ko
     SDHCI_OF_DWCMSHC_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/sdhci-of-dwcmshc.ko
 

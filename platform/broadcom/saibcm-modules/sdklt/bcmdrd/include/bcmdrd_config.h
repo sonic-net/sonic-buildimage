@@ -26,7 +26,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -64,7 +65,7 @@
 
 /*! Maximum number of ports per chip supported. */
 #ifndef BCMDRD_CONFIG_MAX_PORTS
-#define BCMDRD_CONFIG_MAX_PORTS                    1088
+#define BCMDRD_CONFIG_MAX_PORTS                    2048
 #endif
 
 /*! Maximum number of pipes per chip supported. */

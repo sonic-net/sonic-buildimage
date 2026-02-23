@@ -11,7 +11,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -122,7 +123,7 @@ shr_bitop_str_decode(const char *str, SHR_BITDCL *dest, int max_bitdcl);
  * This size is useful when calling malloc, memcpy, etc.
  */
 #define SHR_BITALLOCSIZE(_max) \
-    (SHRi_BITDCLSIZE(_max) * sizeof (SHR_BITDCL))
+    (SHRi_BITDCLSIZE(_max) * sizeof(SHR_BITDCL))
 
 /*!
  * Declare bit array _name of size _max bits.

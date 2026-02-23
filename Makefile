@@ -2,9 +2,10 @@
 
 NOJESSIE ?= 1
 NOSTRETCH ?= 1
-NOBUSTER ?= 0
-NOBULLSEYE ?= 0
+NOBUSTER ?= 1
+NOBULLSEYE ?= 1
 NOBOOKWORM ?= 0
+NOTRIXIE ?= 0
 
 override Q := @
 ifeq ($(QUIET),n)
@@ -34,13 +35,14 @@ ifeq ($(NOBOOKWORM),0)
 BUILD_BOOKWORM=1
 endif
 
+ifeq ($(NOTRIXIE),0)
+BUILD_TRIXIE=1
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
-ifeq ($(SMARTSWITCH),1)
-PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM)-smartswitch.ini
-endif
-PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
+PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_REPO=$(PLATFORM_REPO) PLATFORM_REF=$(PLATFORM_REF) PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
 MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 
 %::
@@ -58,8 +60,12 @@ ifeq ($(NOBULLSEYE), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bullseye -f Makefile.work bullseye
 endif
 ifeq ($(NOBOOKWORM), 0)
-	$(MAKE_WITH_RETRY) BLDENV=bookworm -f Makefile.work $@
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bookworm -f Makefile.work bookworm
 endif
+ifeq ($(NOTRIXIE), 0)
+	$(MAKE_WITH_RETRY) BLDENV=trixie -f Makefile.work $@
+endif
+
 	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
 
 jessie:
@@ -86,6 +92,12 @@ ifeq ($(NOBUSTER), 0)
 	$(MAKE) -f Makefile.work bullseye
 endif
 
+trixie:
+	@echo "+++ Making $@ +++"
+ifeq ($(NOTRIXIE), 0)
+	$(MAKE) -f Makefile.work trixie
+endif
+
 init reset:
 	@echo "+++ Making $@ +++"
 	$(MAKE) -f Makefile.work $@
@@ -100,6 +112,7 @@ define make_work
 	$(if $(BUILD_BUSTER),BLDENV=buster $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_TRIXIE),BLDENV=trixie $(MAKE) -f Makefile.work $@,)
 endef
 
 .PHONY: $(PLATFORM_PATH)

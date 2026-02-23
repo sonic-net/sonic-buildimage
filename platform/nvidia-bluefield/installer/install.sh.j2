@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,28 +21,33 @@
 # This will setup the disk, grub etc for the actual SONiC to boot from
 
 # NOTE: Replace these flag at build time
-IMAGE_VERSION="{{IMAGE_VERSION}}"
-INSTALLER_PAYLOAD="{{INSTALLER_PAYLOAD}}"
-FILESYSTEM_DOCKERFS="{{FILESYSTEM_DOCKERFS}}"
-DOCKERFS_DIR="{{DOCKERFS_DIR}}"
-FILESYSTEM_SQUASHFS="{{FILESYSTEM_SQUASHFS}}"
-KERNEL_VERSION="{{KERNEL_VERSION}}"
-BF2_GRUB_CFG="{{BF2_GRUB_CFG}}"
-BF3_GRUB_CFG="{{BF3_GRUB_CFG}}"
+declare -r IMAGE_VERSION="{{IMAGE_VERSION}}"
+declare -r INSTALLER_PAYLOAD="{{INSTALLER_PAYLOAD}}"
+declare -r FILESYSTEM_DOCKERFS="{{FILESYSTEM_DOCKERFS}}"
+declare -r DOCKERFS_DIR="{{DOCKERFS_DIR}}"
+declare -r FILESYSTEM_SQUASHFS="{{FILESYSTEM_SQUASHFS}}"
+declare -r KERNEL_VERSION="{{KERNEL_VERSION}}"
+declare -r BF2_GRUB_CFG="{{BF2_GRUB_CFG}}"
+declare -r BF3_GRUB_CFG="{{BF3_GRUB_CFG}}"
 
-image_dir="image-$IMAGE_VERSION"
-demo_volume_revision_label="SONiC-OS-${IMAGE_VERSION}"
+declare -r image_dir="image-$IMAGE_VERSION"
+declare -r demo_volume_revision_label="SONiC-OS-${IMAGE_VERSION}"
 
-PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/mellanox/scripts"
-CHROOT_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+declare -r rshimlog=`which bfrshlog 2> /dev/null`
+declare -r distro="SONiC"
 
-rshimlog=`which bfrshlog 2> /dev/null`
-distro="SONiC"
+declare -r device_nvmv=/dev/nvme0n1
+declare -r device_emmc=/dev/mmcblk0
 
-device_nvmv=/dev/nvme0n1
-device_emmc=/dev/mmcblk0
+pn=$(dmidecode -t 4 | grep "Part Number" | awk '{split($NF,a,"-"); print tolower(a[1])}')
+declare -r platform=arm64-nvda_bf-$pn
 
-capsule=/lib/firmware/mellanox/boot/capsule/boot_update2.cap
+declare -r capsule=/lib/firmware/mellanox/boot/capsule/boot_update2.cap
+
+run_bash_session()
+{
+	/bin/bash </dev/ttyAMA0 >/dev/ttyAMA0 2>&1
+}
 
 rshim_log()
 {
@@ -71,7 +77,7 @@ function_exists()
 # Check auto configuration passed from boot-fifo
 #
 
-boot_fifo_path="/sys/bus/platform/devices/MLNXBF04:00/bootfifo"
+declare -r boot_fifo_path="/sys/bus/platform/devices/MLNXBF04:00/bootfifo"
 if [ -e "${boot_fifo_path}" ]; then
 	cfg_file=$(mktemp)
 	# Get 16KB assuming it's big enough to hold the config file.
@@ -92,6 +98,10 @@ fi
 if [ -e /etc/bf.cfg ]; then
 	. /etc/bf.cfg
 fi
+
+# Flags that can be overwritten by the bf.cfg
+declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
+declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"
 
 ex() {
     echo "Executing command: $@" > /dev/ttyAMA0
@@ -203,9 +213,6 @@ unzip -op /debian/$INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar xz --warning=n
 mkdir -p /mnt/$image_dir/platform
 unzip -op /debian/$INSTALLER_PAYLOAD "platform.tar.gz" | tar xz --warning=no-timestamp -f - -C /mnt/$image_dir/platform
 
-platform=$(dmidecode -t 4 | grep "Part Number" | awk '{split($NF,a,"-"); print tolower(a[1])}')
-platform=arm64-nvda_bf-$platform
-
 # Copy in the machine.conf file
 cat <<EOF > /mnt/machine.conf
 onie_arch=arm64
@@ -215,6 +222,51 @@ EOF
 chmod a+r /mnt/machine.conf
 
 sync
+
+if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
+	sonic_fs_path="/mnt/$image_dir/fs.squashfs"
+	sonic_fs_mountpoint="/tmp/$image_dir-fs"
+
+	ex mkdir -p $sonic_fs_mountpoint
+	ex mount -t squashfs $sonic_fs_path $sonic_fs_mountpoint
+
+	# Mount shared memory needed for FW manager
+	ex mkdir -m 1777 /dev/shm
+	ex mount -t tmpfs -o size=4G tmpfs /dev/shm
+
+	# Mount other filesystems needed for FW manager
+	ex mount -t proc /proc $sonic_fs_mountpoint/proc
+	ex mount -t sysfs /sys $sonic_fs_mountpoint/sys
+	ex mount --bind /dev $sonic_fs_mountpoint/dev
+	ex mount -t tmpfs -o rw tmpfs $sonic_fs_mountpoint/tmp
+	ex mount --bind /mnt $sonic_fs_mountpoint/host
+
+	if function_exists bfb_pre_fw_install; then
+		log "Running bfb_pre_fw_install from bf.cfg"
+		bfb_pre_fw_install
+	fi
+
+	ex chroot $sonic_fs_mountpoint mst start
+	ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --nosyslog --verbose
+
+	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
+		ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --reset --nosyslog --verbose
+	fi
+
+	ex umount $sonic_fs_mountpoint/host
+	ex umount $sonic_fs_mountpoint/tmp
+	ex umount $sonic_fs_mountpoint/proc
+	ex umount $sonic_fs_mountpoint/sys
+	ex umount $sonic_fs_mountpoint/dev
+	ex umount $sonic_fs_mountpoint
+	ex umount /dev/shm
+fi
+
+if function_exists bfb_post_sonic_install; then
+	log "Running bfb_post_sonic_install from bf.cfg"
+	bfb_post_sonic_install
+fi
+
 {% if SECURE_UPGRADE_MODE in ['dev', 'prod'] %}
 demo_volume_label="SONiC-OS"
 log "creating demo_volume_label=$demo_volume_label dir under EFI partition to include all boot related modules"
@@ -384,7 +436,10 @@ if function_exists bfb_post_install; then
 	ex bfb_post_install
 fi
 
+
 rshim_log "Installation finished"
-rshim_log "Rebooting..."
-# Wait for these messages to be pulled by the rshim service
-sleep 3
+
+rshim_log "Waiting for reset from the host..."
+while true; do
+	sleep 1
+done

@@ -112,6 +112,11 @@ generate_device_list()
             fi;
         fi;
     done
+
+    # Add kvm to the list
+    if [ "$TARGET_MACHINE" = "alpinevs" ] ; then
+      echo "x86_64-kvm_x86_64-r0" >> "$platforms_asic";
+    fi
 }
 
 if [ "$IMAGE_TYPE" = "onie" ]; then

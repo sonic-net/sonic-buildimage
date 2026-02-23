@@ -29,9 +29,11 @@
  * well as the fragmentation level of the system memory, i.e. the
  * sooner after system boot these memory block are requested, the more
  * likely these requests are to succeed.
+ *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -49,13 +51,12 @@
 
 #include <ngbde.h>
 
-
 /*******************************************************************************
  * Local definitions
  ******************************************************************************/
 
 /*! Maximum size the kernel can allocate in a single allocation. */
-#define MEM_CHUNK_SIZE_MAX      (1 << (MAX_ORDER - 1 + PAGE_SHIFT))
+#define MEM_CHUNK_SIZE_MAX      (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))
 
 /*! Default block size we wil request from the kernel. */
 #define MEM_CHUNK_SIZE_DEFAULT  (512 * ONE_KB)

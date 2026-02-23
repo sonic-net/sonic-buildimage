@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 0.1 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -70,7 +71,6 @@ export SDK
 override kernel_version=5_10
 platform=x86-5_10
 
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 
 # SHARED_LIBRARY_SUPPORT will enable the shared library creation - add a PIC to the compilation flags.

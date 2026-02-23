@@ -1,0 +1,13 @@
+{
+   "chassis": {
+      "DCS-7280R4K-32QF-32DF": {
+         "component": {
+            "Aboot()": {},
+            "Scd(addr=0000:04:00.0)": {},
+            "RedstartSysCpld(addr=13-0023)": {},
+            "Adm1266(addr=14-0040)": {},
+            "Scd(addr=0000:06:00.0)": {}
+         }
+      }
+   }
+}

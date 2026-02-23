@@ -20,9 +20,12 @@
     },
     "GNMI_CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE": {
         "desc": "CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE failure.",
-        "eStrKey": "Mandatory"
+        "eStrKey": "MinElements"
     },
     "GNMI_CLIENT_CERT_LIST_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
+    },
+    "GNMI_TABLE_WITH_VALID_USER_AUTH": {
+        "desc": "TABLE WITH VALID USER_AUTH."
     }
 }

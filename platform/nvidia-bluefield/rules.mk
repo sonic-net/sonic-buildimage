@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +20,7 @@ RECIPE_DIR = recipes
 
 override TARGET_BOOTLOADER=grub
 
+include $(PLATFORM_PATH)/fw-manager/fw-manager.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/bluefield-soc.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/mft.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/fw.mk
@@ -27,6 +29,7 @@ include $(PLATFORM_PATH)/$(RECIPE_DIR)/sdk.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/platform-api.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/docker-syncd-bluefield.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/installer-image.mk
+include $(PLATFORM_PATH)/$(RECIPE_DIR)/component-versions.mk
 
 # Inject DPU sai into syncd
 $(SYNCD)_DEPENDS += $(DPU_SAI)
@@ -37,3 +40,4 @@ $(SYNCD)_RDEPENDS += $(DPU_SAI)
 
 # Inject mft into platform monitor
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MFT)
+$(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MLXBF_BOOTCTL_DEB)

@@ -1,7 +1,8 @@
 #! /bin/bash
 
 echo "
-FROM $1
+ARG BASE=$1
+FROM \$BASE AS base
 
 ARG docker_container_name
 
@@ -17,10 +18,12 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
+RUN apt update
+
 RUN dpkg -i \
 {% for deb in $2.split(' ') -%}
 debs/{{ deb }}{{' '}}
-{%- endfor %}
+{%- endfor %} || apt -y install -f --no-remove
 
 {% endif %}
 {% endif %}
@@ -28,7 +31,7 @@ debs/{{ deb }}{{' '}}
 {% if $3 is defined %}
 {% if $3|length %}
 
-RUN apt-get update && apt-get install -f -y \
+RUN apt install -f -y \
 {% for dbg in $3.split(' ') -%}
 {{ dbg }}{{' '}}
 {%- endfor %}
@@ -40,5 +43,9 @@ RUN apt-get update && apt-get install -f -y \
 ## Clean up
 RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
 RUN rm -rf /debs
+
+FROM \$BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 "

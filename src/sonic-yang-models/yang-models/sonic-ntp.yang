@@ -50,6 +50,11 @@ module sonic-ntp {
             "Add extended configuration options";
     }
 
+    revision 2025-07-21 {
+        description
+            "Corrected NTP_KEY_LIST list name";
+    }
+
     typedef association-type {
         description "NTP server association type";
         type enumeration {
@@ -109,7 +114,7 @@ module sonic-ntp {
                             pattern 'eth0';
                         }
                     }
-
+                    ordered-by user;
                     description
                         "This is the interface whose IP address is used as the source IP address for
                          generating NTP traffic. User is required to make sure that the NTP server
@@ -192,7 +197,7 @@ module sonic-ntp {
                 leaf key {
                     description "NTP server key ID";
                     type leafref {
-                        path /ntp:sonic-ntp/ntp:NTP_KEY/ntp:NTP_KEYS_LIST/ntp:id;
+                        path /ntp:sonic-ntp/ntp:NTP_KEY/ntp:NTP_KEY_LIST/ntp:id;
                     }
                 }
 
@@ -234,7 +239,7 @@ module sonic-ntp {
 
             description "NTP authentication keys inventory";
 
-            list NTP_KEYS_LIST {
+            list NTP_KEY_LIST {
                 description "NTP authentication keys inventory";
                 key "id";
 
@@ -261,7 +266,7 @@ module sonic-ntp {
                     default md5;
                     description "NTP authentication key type";
                 }
-            } /* end of list NTP_KEYS_LIST */
+            } /* end of list NTP_KEY_LIST */
 
         } /* end of container NTP_KEY */
 

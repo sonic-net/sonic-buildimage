@@ -1,0 +1,780 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet1": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet2": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet3": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet4": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet5": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet6": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet7": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet8": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet9": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet10": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet11": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet12": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet13": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet14": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet15": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet16": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet17": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet18": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet19": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet20": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet21": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet22": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet23": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet24": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet25": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet26": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet27": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet28": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet29": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet30": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet31": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet32": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet33": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet34": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet35": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet36": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet37": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet38": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet39": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet40": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet41": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet42": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet43": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet44": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet45": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet46": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet47": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet48": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet49": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet50": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet51": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet52": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet53": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet54": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet55": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet56": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet57": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet58": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet59": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet60": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet61": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet62": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet63": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet64": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet65": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet66": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet67": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet68": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet69": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet70": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet71": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet72": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet73": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet74": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet75": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet76": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet77": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet78": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet79": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet80": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet81": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet82": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet83": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet84": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet85": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet86": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet87": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet88": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet89": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet90": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet91": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet92": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet93": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet94": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet95": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet96": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet97": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet98": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet99": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet100": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet101": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet102": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet103": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet104": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet105": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet106": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet107": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet108": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet109": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet110": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet111": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet112": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet113": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet114": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet115": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet116": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet117": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet118": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet119": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet120": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "1",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet121": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "2",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet122": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "3",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet123": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "4",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet124": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "5",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet125": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "6",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet126": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "7",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet127": {
+            "default_brkout_mode": "8x50G[25G,10G,1G]",
+            "subport": "8",
+            "autoneg": "on",
+            "fec": "rs"
+        },
+        "Ethernet128": {
+            "default_brkout_mode": "1x10G",
+            "autoneg": "off"
+        },
+        "Ethernet129": {
+            "default_brkout_mode": "1x10G",
+            "autoneg": "off"
+        }
+    }
+}

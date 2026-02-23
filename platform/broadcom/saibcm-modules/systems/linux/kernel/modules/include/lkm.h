@@ -1,6 +1,7 @@
 /*
  * $Id: lkm.h,v 1.22 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -40,13 +41,10 @@
 
 #include <linux/init.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
 #error Kernel too old
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
-/* The version kconfig.h became available in. */
 #include <linux/kconfig.h>
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #if defined(INCLUDE_KNET) && LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
 #ifdef CONFIG_NF_CONNTRACK_MODULE
@@ -54,9 +52,6 @@
 #endif
 #endif
 #include <linux/slab.h>
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39)
-#include <linux/smp_lock.h>
 #endif
 #include <linux/module.h>
 
@@ -73,6 +68,7 @@
 #include <linux/interrupt.h>
 #include <linux/stat.h>
 #include <linux/sched.h>
+#include <linux/cpumask.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
 #include <linux/sched/signal.h>
 #endif
@@ -143,6 +139,12 @@
 #define CONFIG_BMW
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+#define DMA_FORCE_CONTIGUOUS NULL
+#else
+#define DMA_FORCE_CONTIGUOUS DMA_ATTR_FORCE_CONTIGUOUS
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
 #define PROC_OWNER(_m)
 #else
@@ -187,6 +189,14 @@
     } while (0)
 
 #define PROC_PDE_DATA(_node) PROC_I(_node)->pde->data
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+#define strscpy strlcpy
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
+#define kernel_ethtool_ts_info ethtool_ts_info
 #endif
 
 #endif /* __COMMON_LINUX_KRN_LKM_H__ */

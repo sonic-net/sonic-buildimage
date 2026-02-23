@@ -26,7 +26,22 @@ class Fan(PddfFan):
             return Platform().get_chassis().get_psu(self.fans_psu_index-1).get_presence()
 
         return super().get_presence()
-   
+
+    def get_name(self):
+        """
+        Retrieves the fan name
+        Returns: String containing fan-name
+        """
+        fan_name = None
+
+        if self.is_psu_fan and "fan_name" in self.plugin_data['PSU']:
+            fan_name = self.plugin_data['PSU']['fan_name'][str(self.fans_psu_index)][str(self.fan_index)]
+
+        elif not self.is_psu_fan and "name" in self.plugin_data['FAN']:
+            fan_name = self.plugin_data['FAN']['name'][str(self.fantray_index)][str(self.fan_index)]
+
+        return super().get_name() if fan_name is None else fan_name
+
     def get_direction(self):
         """
           Retrieves the direction of fan
@@ -56,7 +71,7 @@ class Fan(PddfFan):
             raise NotImplementedError
         else:
             fan_name = self.get_name()
-            f_r_fan = "Front" if fan_name.endswith("1") else "Rear"
+            f_r_fan = "Front" if fan_name.endswith(("1", "Front")) else "Rear"
             speed_rpm = self.get_speed_rpm()
             if(self.plugin_data['FAN']['FAN_MAX_RPM_SPEED'][f_r_fan].isnumeric()):
                 max_fan_rpm = int(self.plugin_data['FAN']['FAN_MAX_RPM_SPEED'][f_r_fan])
@@ -108,7 +123,7 @@ class Fan(PddfFan):
             else:
                 speed = int(float(output['status']))
 
-            f_r_fan = "Front" if fan_name.endswith("1") else "Rear"
+            f_r_fan = "Front" if fan_name.endswith(("1", "Front")) else "Rear"
             if(self.plugin_data['FAN']['FAN_MAX_RPM_SPEED'][f_r_fan].isnumeric()):
                 max_speed = int(self.plugin_data['FAN']['FAN_MAX_RPM_SPEED'][f_r_fan])
             else:

@@ -2,7 +2,7 @@
 #
 # Linux Generic Netlink module.
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -22,8 +22,7 @@ KNETCB_CPPFLAGS += -DKPMD
 
 obj-m := linux_bcmgenl.o
 
-ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
-	     $(SDK_PMD_KFLAGS) \
+ccflags-y := $(SDK_PMD_KFLAGS) $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
 	     -I$(SDK)/shr/include \
 	     -I$(SDK)/bcmdrd/include \
 	     -I$(SDK)/bcmltd/include \

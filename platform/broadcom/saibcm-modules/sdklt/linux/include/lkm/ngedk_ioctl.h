@@ -9,7 +9,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -33,7 +34,7 @@
 
 /*! Module information */
 #define NGEDK_MODULE_NAME       "linux_ngedk"
-#define NGEDK_MODULE_MAJOR      119
+#define NGEDK_MODULE_MAJOR      62
 
 /*! Must be updated if backward compatibility is broken. */
 #define NGEDK_IOC_VERSION       1

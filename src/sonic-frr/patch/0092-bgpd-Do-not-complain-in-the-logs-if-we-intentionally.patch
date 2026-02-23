@@ -1,0 +1,129 @@
+From de1101e9d61116746a248995ae70cc44769f884c Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Thu, 23 Oct 2025 14:38:27 +0300
+Subject: bgpd: Do not complain in the logs if we intentionally withdraw
+ specific attrs
+
+If we have e.g., `neighbor X path-attributes treat-as-withdraw 6 7`, we have
+in the logs something like:
+
+```
+2025/10/23 13:55:07.608012 BGP: [NACZH-ZW0P0] 10.0.0.1(r1): Ignoring attribute ATOMIC_AGGREGATE (treat-as-withdraw)
+2025/10/23 13:55:07.608039 BGP: [RWQFK-BA2JR][EC 33554488] 10.0.0.1: Attribute ATOMIC_AGGREGATE, parse error - treating as withdrawal
+2025/10/23 13:55:07.608177 BGP: [QWG8G-NT6EJ][EC 33554455] 10.0.0.1(r1) rcvd UPDATE with errors in attr(s)!! Withdrawing route.
+```
+
+Which is a misleading information. It's not really a parsing error, because we
+intentionally said to withdraw the prefixes with these attributes.
+
+Fixes: e2863b4ff5963f1794ea176e9182bb235356d165 ("bgpd: Add `neighbor path-attribute treat-as-withdraw` command")
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_attr.c   | 13 +++++++------
+ bgpd/bgp_attr.h   |  9 +++++++--
+ bgpd/bgp_packet.c | 23 ++++++++++++++---------
+ 3 files changed, 28 insertions(+), 17 deletions(-)
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index cc4f605902..bf2412d4ce 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -4259,11 +4259,12 @@ enum bgp_attr_parse_ret bgp_attr_parse(struct peer *peer, struct attr *attr,
+ 				  lookup_msg(attr_str, type, NULL));
+ 			goto done;
+ 		}
+-		if (ret == BGP_ATTR_PARSE_WITHDRAW) {
+-			flog_warn(
+-				EC_BGP_ATTRIBUTE_PARSE_WITHDRAW,
+-				"%s: Attribute %s, parse error - treating as withdrawal",
+-				peer->host, lookup_msg(attr_str, type, NULL));
++		if (ret == BGP_ATTR_PARSE_WITHDRAW || ret == BGP_ATTR_PARSE_WITHDRAW_IGNORE) {
++			if (ret == BGP_ATTR_PARSE_WITHDRAW)
++				flog_warn(
++					EC_BGP_ATTRIBUTE_PARSE_WITHDRAW,
++					"%s: Attribute %s, parse error - treating as withdrawal",
++					peer->host, lookup_msg(attr_str, type, NULL));
+ 			stream_forward_getp(BGP_INPUT(peer), endp - BGP_INPUT_PNT(peer));
+ 			goto done;
+ 		}
+@@ -5824,7 +5825,7 @@ enum bgp_attr_parse_ret bgp_attr_ignore(struct peer *peer, uint8_t type)
+ 	 * bgp_update_receive().
+ 	 */
+ 	if (withdraw)
+-		return BGP_ATTR_PARSE_WITHDRAW;
++		return BGP_ATTR_PARSE_WITHDRAW_IGNORE;
+ 
+ 	peer->stat_pfx_discard++;
+ 	return BGP_ATTR_PARSE_PROCEED;
+diff --git a/bgpd/bgp_attr.h b/bgpd/bgp_attr.h
+index a238b1a38d..30c009d149 100644
+--- a/bgpd/bgp_attr.h
++++ b/bgpd/bgp_attr.h
+@@ -363,11 +363,16 @@ enum bgp_attr_parse_ret {
+ 	BGP_ATTR_PARSE_PROCEED = 0,
+ 	BGP_ATTR_PARSE_ERROR = -1,
+ 	BGP_ATTR_PARSE_WITHDRAW = -2,
++	/* Treat as withdraw, but do not complain in the logs.
++	 * This is used in bgp_attr_ignore() when we want to
++	 * withdraw the paths having the specified attribute.
++	 */
++	BGP_ATTR_PARSE_WITHDRAW_IGNORE = -3,
+ 
+ 	/* only used internally, send notify + convert to BGP_ATTR_PARSE_ERROR
+ 	 */
+-	BGP_ATTR_PARSE_ERROR_NOTIFYPLS = -3,
+-	BGP_ATTR_PARSE_MISSING_MANDATORY = -4,
++	BGP_ATTR_PARSE_ERROR_NOTIFYPLS = -4,
++	BGP_ATTR_PARSE_MISSING_MANDATORY = -5,
+ };
+ 
+ struct bpacket_attr_vec_arr;
+diff --git a/bgpd/bgp_packet.c b/bgpd/bgp_packet.c
+index e5b7e8e058..13d610e1bc 100644
+--- a/bgpd/bgp_packet.c
++++ b/bgpd/bgp_packet.c
+@@ -2370,7 +2370,11 @@ static int bgp_update_receive(struct peer_connection *connection,
+ /* This define morphs the update case into a withdraw when lower levels
+  * have signalled an error condition where this is best.
+  */
+-#define NLRI_ATTR_ARG (attr_parse_ret != BGP_ATTR_PARSE_WITHDRAW ? &attr : NULL)
++#define NLRI_ATTR_ARG                                                                             \
++	((attr_parse_ret != BGP_ATTR_PARSE_WITHDRAW &&                                            \
++	  attr_parse_ret != BGP_ATTR_PARSE_WITHDRAW_IGNORE)                                       \
++		 ? &attr                                                                          \
++		 : NULL)
+ 
+ 	/* Parse attribute when it exists. */
+ 	if (attribute_len) {
+@@ -2384,18 +2388,19 @@ static int bgp_update_receive(struct peer_connection *connection,
+ 	}
+ 
+ 	/* Logging the attribute. */
+-	if (attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW
+-	    || BGP_DEBUG(update, UPDATE_IN)
+-	    || BGP_DEBUG(update, UPDATE_PREFIX)) {
++	if (attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW ||
++	    attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW_IGNORE || BGP_DEBUG(update, UPDATE_IN) ||
++	    BGP_DEBUG(update, UPDATE_PREFIX)) {
+ 		ret = bgp_dump_attr(&attr, peer->rcvd_attr_str,
+ 				    sizeof(peer->rcvd_attr_str));
+ 
+-		if (attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW) {
++		if (attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW ||
++		    attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW_IGNORE) {
+ 			peer->stat_pfx_withdraw++;
+-			flog_err(
+-				EC_BGP_UPDATE_RCV,
+-				"%pBP rcvd UPDATE with errors in attr(s)!! Withdrawing route.",
+-				peer);
++			if (attr_parse_ret == BGP_ATTR_PARSE_WITHDRAW)
++				flog_err(EC_BGP_UPDATE_RCV,
++					 "%pBP rcvd UPDATE with errors in attr(s)!! Withdrawing route.",
++					 peer);
+ 		}
+ 
+ 		if (ret && bgp_debug_update(peer, NULL, NULL, 1) &&
+-- 
+2.48.1
+

@@ -1,0 +1,1486 @@
+From 2e6160d729c45bb18535b352908bbf32c18ee0ba Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 15 Aug 2025 06:50:52 +0000
+Subject: *: Generalize `zclient_send_localsid` and move to `lib/`
+
+Right now, each daemon (staticd, bgpd, isisd) has its own copy of
+`zclient_send_localsid`, the API responsible for sending SIDs to zebra.
+
+This commit generalizes `zclient_send_localsid` and relocates it to
+`lib/` so it can be shared across all daemons, reducing code
+duplication and improving maintainability.
+
+There is no functional change.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_mplsvpn.c     | 37 +++++++++++++++----
+ isisd/isis_zebra.c     | 83 ++++--------------------------------------
+ lib/zclient.c          | 22 +++++++----
+ lib/zclient.h          |  9 +++--
+ staticd/static_zebra.c | 70 ++---------------------------------
+ 5 files changed, 60 insertions(+), 161 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index b00f3d189c..5169b38666 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -361,6 +361,7 @@ void vpn_leak_zebra_vrf_sid_update_per_af(struct bgp *bgp, afi_t afi)
+ 	struct in6_addr *tovpn_sid = NULL;
+ 	struct in6_addr *tovpn_sid_ls = NULL;
+ 	struct vrf *vrf;
++	struct interface *ifp;
+ 
+ 	if (bgp->vrf_id == VRF_UNKNOWN) {
+ 		if (debug)
+@@ -386,6 +387,10 @@ void vpn_leak_zebra_vrf_sid_update_per_af(struct bgp *bgp, afi_t afi)
+ 	if (!vrf)
+ 		return;
+ 
++	ifp = if_get_vrf_loopback(bgp->vrf_id);
++	if (!ifp)
++		return;
++
+ 	if (bgp->vpn_policy[afi].tovpn_sid_locator) {
+ 		ctx.block_len =
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+@@ -403,7 +408,8 @@ void vpn_leak_zebra_vrf_sid_update_per_af(struct bgp *bgp, afi_t afi)
+ 	ctx.table = vrf->data.l.table_id;
+ 	act = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+ 		: ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
+-	zclient_send_localsid(bgp_zclient, tovpn_sid, bgp->vrf_id, act, &ctx);
++	zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_ADD, tovpn_sid, IPV6_MAX_BITLEN,
++			      ifp->ifindex, act, &ctx);
+ 
+ 	tovpn_sid_ls = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
+ 	*tovpn_sid_ls = *tovpn_sid;
+@@ -426,6 +432,7 @@ void vpn_leak_zebra_vrf_sid_update_per_vrf(struct bgp *bgp)
+ 	struct in6_addr *tovpn_sid = NULL;
+ 	struct in6_addr *tovpn_sid_ls = NULL;
+ 	struct vrf *vrf;
++	struct interface *ifp;
+ 
+ 	if (bgp->vrf_id == VRF_UNKNOWN) {
+ 		if (debug)
+@@ -451,6 +458,10 @@ void vpn_leak_zebra_vrf_sid_update_per_vrf(struct bgp *bgp)
+ 	if (!vrf)
+ 		return;
+ 
++	ifp = if_get_vrf_loopback(bgp->vrf_id);
++	if (!ifp)
++		return;
++
+ 	if (bgp->tovpn_sid_locator) {
+ 		ctx.block_len = bgp->tovpn_sid_locator->block_bits_length;
+ 		ctx.node_len = bgp->tovpn_sid_locator->node_bits_length;
+@@ -461,7 +472,8 @@ void vpn_leak_zebra_vrf_sid_update_per_vrf(struct bgp *bgp)
+ 	}
+ 	ctx.table = vrf->data.l.table_id;
+ 	act = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
+-	zclient_send_localsid(bgp_zclient, tovpn_sid, bgp->vrf_id, act, &ctx);
++	zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_ADD, tovpn_sid, IPV6_MAX_BITLEN,
++			      ifp->ifindex, act, &ctx);
+ 
+ 	tovpn_sid_ls = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
+ 	*tovpn_sid_ls = *tovpn_sid;
+@@ -499,6 +511,7 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_af(struct bgp *bgp, afi_t afi)
+ 	int debug = BGP_DEBUG(vpn, VPN_LEAK_LABEL);
+ 	struct srv6_sid_ctx ctx = {};
+ 	struct seg6local_context seg6localctx = {};
++	struct interface *ifp;
+ 
+ 	if (bgp->vrf_id == VRF_UNKNOWN) {
+ 		if (debug)
+@@ -511,6 +524,10 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_af(struct bgp *bgp, afi_t afi)
+ 		zlog_debug("%s: deleting sid for vrf %s afi (id=%d)", __func__,
+ 			   bgp->name_pretty, bgp->vrf_id);
+ 
++	ifp = if_get_vrf_loopback(bgp->vrf_id);
++	if (!ifp)
++		return;
++
+ 	if (bgp->vpn_policy[afi].tovpn_sid_locator) {
+ 		seg6localctx.block_len =
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+@@ -523,10 +540,9 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_af(struct bgp *bgp, afi_t afi)
+ 			bgp->vpn_policy[afi]
+ 				.tovpn_sid_locator->argument_bits_length;
+ 	}
+-	zclient_send_localsid(bgp_zclient,
+-			      bgp->vpn_policy[afi].tovpn_zebra_vrf_sid_last_sent,
+-			      bgp->vrf_id, ZEBRA_SEG6_LOCAL_ACTION_UNSPEC,
+-			      &seg6localctx);
++	zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_DELETE,
++			      bgp->vpn_policy[afi].tovpn_zebra_vrf_sid_last_sent, IPV6_MAX_BITLEN,
++			      ifp->ifindex, ZEBRA_SEG6_LOCAL_ACTION_UNSPEC, &seg6localctx);
+ 	XFREE(MTYPE_BGP_SRV6_SID,
+ 	      bgp->vpn_policy[afi].tovpn_zebra_vrf_sid_last_sent);
+ 	bgp->vpn_policy[afi].tovpn_zebra_vrf_sid_last_sent = NULL;
+@@ -546,6 +562,7 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_vrf(struct bgp *bgp)
+ 	int debug = BGP_DEBUG(vpn, VPN_LEAK_LABEL);
+ 	struct srv6_sid_ctx ctx = {};
+ 	struct seg6local_context seg6localctx = {};
++	struct interface *ifp;
+ 
+ 	if (bgp->vrf_id == VRF_UNKNOWN) {
+ 		if (debug)
+@@ -559,6 +576,10 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_vrf(struct bgp *bgp)
+ 		zlog_debug("%s: deleting sid for vrf %s (id=%d)", __func__,
+ 			   bgp->name_pretty, bgp->vrf_id);
+ 
++	ifp = if_get_vrf_loopback(bgp->vrf_id);
++	if (!ifp)
++		return;
++
+ 	if (bgp->tovpn_sid_locator) {
+ 		seg6localctx.block_len =
+ 			bgp->tovpn_sid_locator->block_bits_length;
+@@ -568,8 +589,8 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_vrf(struct bgp *bgp)
+ 		seg6localctx.argument_len =
+ 			bgp->tovpn_sid_locator->argument_bits_length;
+ 	}
+-	zclient_send_localsid(bgp_zclient, bgp->tovpn_zebra_vrf_sid_last_sent,
+-			      bgp->vrf_id, ZEBRA_SEG6_LOCAL_ACTION_UNSPEC,
++	zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_DELETE, bgp->tovpn_zebra_vrf_sid_last_sent,
++			      IPV6_MAX_BITLEN, ifp->ifindex, ZEBRA_SEG6_LOCAL_ACTION_UNSPEC,
+ 			      &seg6localctx);
+ 	XFREE(MTYPE_BGP_SRV6_SID, bgp->tovpn_zebra_vrf_sid_last_sent);
+ 	bgp->tovpn_zebra_vrf_sid_last_sent = NULL;
+diff --git a/isisd/isis_zebra.c b/isisd/isis_zebra.c
+index 70bc48a41e..a4f326c9d5 100644
+--- a/isisd/isis_zebra.c
++++ b/isisd/isis_zebra.c
+@@ -889,73 +889,6 @@ static int isis_zebra_client_close_notify(ZAPI_CALLBACK_ARGS)
+ 	return ret;
+ }
+ 
+-/**
+- * Send SRv6 SID to ZEBRA for installation or deletion.
+- *
+- * @param cmd		ZEBRA_ROUTE_ADD or ZEBRA_ROUTE_DELETE
+- * @param sid		SRv6 SID to install or delete
+- * @param prefixlen	Prefix length
+- * @param oif		Outgoing interface
+- * @param action	SID action
+- * @param context	SID context
+- */
+-static void isis_zebra_send_localsid(int cmd, const struct in6_addr *sid,
+-				     uint16_t prefixlen, ifindex_t oif,
+-				     enum seg6local_action_t action,
+-				     const struct seg6local_context *context)
+-{
+-	struct prefix_ipv6 p = {};
+-	struct zapi_route api = {};
+-	struct zapi_nexthop *znh;
+-
+-	if (cmd != ZEBRA_ROUTE_ADD && cmd != ZEBRA_ROUTE_DELETE) {
+-		flog_warn(EC_LIB_DEVELOPMENT, "%s: wrong ZEBRA command",
+-			  __func__);
+-		return;
+-	}
+-
+-	if (prefixlen > IPV6_MAX_BITLEN) {
+-		flog_warn(EC_LIB_DEVELOPMENT, "%s: wrong prefixlen %u",
+-			  __func__, prefixlen);
+-		return;
+-	}
+-
+-	sr_debug("  |- %s SRv6 SID %pI6 behavior %s",
+-		 cmd == ZEBRA_ROUTE_ADD ? "Add" : "Delete", sid,
+-		 seg6local_action2str(action));
+-
+-	p.family = AF_INET6;
+-	p.prefixlen = prefixlen;
+-	p.prefix = *sid;
+-
+-	api.vrf_id = VRF_DEFAULT;
+-	api.type = PROTO_TYPE;
+-	api.instance = 0;
+-	api.safi = SAFI_UNICAST;
+-	memcpy(&api.prefix, &p, sizeof(p));
+-
+-	if (cmd == ZEBRA_ROUTE_DELETE)
+-		return (void)zclient_route_send(ZEBRA_ROUTE_DELETE, isis_zclient,
+-						&api);
+-
+-	SET_FLAG(api.flags, ZEBRA_FLAG_ALLOW_RECURSION);
+-	SET_FLAG(api.message, ZAPI_MESSAGE_NEXTHOP);
+-
+-	znh = &api.nexthops[0];
+-
+-	memset(znh, 0, sizeof(*znh));
+-
+-	znh->type = NEXTHOP_TYPE_IFINDEX;
+-	znh->ifindex = oif;
+-	SET_FLAG(znh->flags, ZAPI_NEXTHOP_FLAG_SEG6LOCAL);
+-	znh->seg6local_action = action;
+-	memcpy(&znh->seg6local_ctx, context, sizeof(struct seg6local_context));
+-
+-	api.nexthop_num = 1;
+-
+-	zclient_route_send(ZEBRA_ROUTE_ADD, isis_zclient, &api);
+-}
+-
+ /**
+  * Install SRv6 SID in the forwarding plane through Zebra.
+  *
+@@ -1040,8 +973,8 @@ void isis_zebra_srv6_sid_install(struct isis_area *area,
+ 	}
+ 
+ 	/* Send the SID to zebra */
+-	isis_zebra_send_localsid(ZEBRA_ROUTE_ADD, &sid->sid, prefixlen,
+-				 ifp->ifindex, action, &ctx);
++	zclient_send_localsid(isis_zclient, ZEBRA_ROUTE_ADD, &sid->sid, prefixlen, ifp->ifindex,
++			      action, &ctx);
+ }
+ 
+ /**
+@@ -1108,8 +1041,8 @@ void isis_zebra_srv6_sid_uninstall(struct isis_area *area,
+ 	}
+ 
+ 	/* Send delete request to zebra */
+-	isis_zebra_send_localsid(ZEBRA_ROUTE_DELETE, &sid->sid, prefixlen,
+-				 ifp->ifindex, action, NULL);
++	zclient_send_localsid(isis_zclient, ZEBRA_ROUTE_DELETE, &sid->sid, prefixlen, ifp->ifindex,
++			      action, NULL);
+ }
+ 
+ void isis_zebra_srv6_adj_sid_install(struct srv6_adjacency *sra)
+@@ -1178,8 +1111,8 @@ void isis_zebra_srv6_adj_sid_install(struct srv6_adjacency *sra)
+ 
+ 	ifp = sra->adj->circuit->interface;
+ 
+-	isis_zebra_send_localsid(ZEBRA_ROUTE_ADD, &sra->sid, prefixlen,
+-				 ifp->ifindex, action, &ctx);
++	zclient_send_localsid(isis_zclient, ZEBRA_ROUTE_ADD, &sra->sid, prefixlen, ifp->ifindex,
++			      action, &ctx);
+ }
+ 
+ void isis_zebra_srv6_adj_sid_uninstall(struct srv6_adjacency *sra)
+@@ -1239,8 +1172,8 @@ void isis_zebra_srv6_adj_sid_uninstall(struct srv6_adjacency *sra)
+ 	sr_debug("ISIS-SRv6 (%s): delete End.X SID %pI6", area->area_tag,
+ 		 &sra->sid);
+ 
+-	isis_zebra_send_localsid(ZEBRA_ROUTE_DELETE, &sra->sid, prefixlen,
+-				 ifp->ifindex, action, NULL);
++	zclient_send_localsid(isis_zclient, ZEBRA_ROUTE_DELETE, &sra->sid, prefixlen, ifp->ifindex,
++			      action, NULL);
+ }
+ 
+ /**
+diff --git a/lib/zclient.c b/lib/zclient.c
+index fe5a931c10..abd559cac6 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -520,22 +520,28 @@ enum zclient_send_status zclient_send_vrf_label(struct zclient *zclient,
+ 	return zclient_send_message(zclient);
+ }
+ 
+-enum zclient_send_status zclient_send_localsid(struct zclient *zclient,
+-		const struct in6_addr *sid, vrf_id_t vrf_id,
+-		enum seg6local_action_t action,
+-		const struct seg6local_context *context)
++enum zclient_send_status zclient_send_localsid(struct zclient *zclient, uint8_t cmd,
++					       const struct in6_addr *sid, uint16_t prefixlen,
++					       ifindex_t oif, enum seg6local_action_t action,
++					       const struct seg6local_context *context)
+ {
+ 	struct prefix_ipv6 p = {};
+ 	struct zapi_route api = {};
+ 	struct zapi_nexthop *znh;
+ 	struct interface *ifp;
+ 
+-	ifp = if_get_vrf_loopback(vrf_id);
+-	if (ifp == NULL)
++	if (prefixlen > IPV6_MAX_BITLEN) {
++		flog_warn(EC_LIB_DEVELOPMENT, "%s: wrong prefixlen %u", __func__, prefixlen);
+ 		return ZCLIENT_SEND_FAILURE;
++	}
++
++	if (zclient_debug)
++		zlog_debug("%s:  |- %s SRv6 SID %pI6 behavior %s", __func__,
++			   cmd != ZEBRA_ROUTE_ADD ? "Add" : "Delete", sid,
++			   seg6local_action2str(action));
+ 
+ 	p.family = AF_INET6;
+-	p.prefixlen = IPV6_MAX_BITLEN;
++	p.prefixlen = prefixlen;
+ 	p.prefix = *sid;
+ 
+ 	api.vrf_id = VRF_DEFAULT;
+@@ -544,7 +550,7 @@ enum zclient_send_status zclient_send_localsid(struct zclient *zclient,
+ 	api.safi = SAFI_UNICAST;
+ 	memcpy(&api.prefix, &p, sizeof(p));
+ 
+-	if (action == ZEBRA_SEG6_LOCAL_ACTION_UNSPEC)
++	if (cmd == ZEBRA_ROUTE_DELETE)
+ 		return zclient_route_send(ZEBRA_ROUTE_DELETE, zclient, &api);
+ 
+ 	SET_FLAG(api.flags, ZEBRA_FLAG_ALLOW_RECURSION);
+diff --git a/lib/zclient.h b/lib/zclient.h
+index 49aa531c1b..de50e7d23e 100644
+--- a/lib/zclient.h
++++ b/lib/zclient.h
+@@ -972,10 +972,11 @@ extern enum zclient_send_status
+ zclient_send_vrf_label(struct zclient *zclient, vrf_id_t vrf_id, afi_t afi,
+ 		       mpls_label_t label, enum lsp_types_t ltype);
+ 
+-extern enum zclient_send_status
+-zclient_send_localsid(struct zclient *zclient, const struct in6_addr *sid,
+-		      vrf_id_t vrf_id, enum seg6local_action_t action,
+-		      const struct seg6local_context *context);
++extern enum zclient_send_status zclient_send_localsid(struct zclient *zclient, uint8_t cmd,
++						      const struct in6_addr *sid,
++						      uint16_t prefixlen, ifindex_t oif,
++						      enum seg6local_action_t action,
++						      const struct seg6local_context *context);
+ 
+ extern void zclient_send_reg_requests(struct zclient *, vrf_id_t);
+ extern void zclient_send_dereg_requests(struct zclient *, vrf_id_t);
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 82a2d41afa..b6757ed5b1 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -556,68 +556,6 @@ extern void static_zebra_route_add(struct static_path *pn, bool install)
+ 			   static_zclient, &api);
+ }
+ 
+-/**
+- * Send SRv6 SID to ZEBRA for installation or deletion.
+- *
+- * @param cmd		ZEBRA_ROUTE_ADD or ZEBRA_ROUTE_DELETE
+- * @param sid		SRv6 SID to install or delete
+- * @param prefixlen	Prefix length
+- * @param oif		Outgoing interface
+- * @param action	SID action
+- * @param context	SID context
+- */
+-static void static_zebra_send_localsid(int cmd, const struct in6_addr *sid, uint16_t prefixlen,
+-				       ifindex_t oif, enum seg6local_action_t action,
+-				       const struct seg6local_context *context)
+-{
+-	struct prefix_ipv6 p = {};
+-	struct zapi_route api = {};
+-	struct zapi_nexthop *znh;
+-
+-	if (cmd != ZEBRA_ROUTE_ADD && cmd != ZEBRA_ROUTE_DELETE) {
+-		flog_warn(EC_LIB_DEVELOPMENT, "%s: wrong ZEBRA command", __func__);
+-		return;
+-	}
+-
+-	if (prefixlen > IPV6_MAX_BITLEN) {
+-		flog_warn(EC_LIB_DEVELOPMENT, "%s: wrong prefixlen %u", __func__, prefixlen);
+-		return;
+-	}
+-
+-	DEBUGD(&static_dbg_srv6, "%s:  |- %s SRv6 SID %pI6 behavior %s", __func__,
+-	       cmd == ZEBRA_ROUTE_ADD ? "Add" : "Delete", sid, seg6local_action2str(action));
+-
+-	p.family = AF_INET6;
+-	p.prefixlen = prefixlen;
+-	p.prefix = *sid;
+-
+-	api.vrf_id = VRF_DEFAULT;
+-	api.type = ZEBRA_ROUTE_STATIC;
+-	api.instance = 0;
+-	api.safi = SAFI_UNICAST;
+-	memcpy(&api.prefix, &p, sizeof(p));
+-
+-	if (cmd == ZEBRA_ROUTE_DELETE)
+-		return (void)zclient_route_send(ZEBRA_ROUTE_DELETE, static_zclient, &api);
+-
+-	SET_FLAG(api.flags, ZEBRA_FLAG_ALLOW_RECURSION);
+-	SET_FLAG(api.message, ZAPI_MESSAGE_NEXTHOP);
+-
+-	znh = &api.nexthops[0];
+-
+-	memset(znh, 0, sizeof(*znh));
+-
+-	znh->type = NEXTHOP_TYPE_IFINDEX;
+-	znh->ifindex = oif;
+-	SET_FLAG(znh->flags, ZAPI_NEXTHOP_FLAG_SEG6LOCAL);
+-	znh->seg6local_action = action;
+-	memcpy(&znh->seg6local_ctx, context, sizeof(struct seg6local_context));
+-
+-	api.nexthop_num = 1;
+-
+-	zclient_route_send(ZEBRA_ROUTE_ADD, static_zclient, &api);
+-}
+-
+ /**
+  * Install SRv6 SID in the forwarding plane through Zebra.
+  *
+@@ -813,8 +751,8 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 	}
+ 
+ 	/* Send the SID to zebra */
+-	static_zebra_send_localsid(ZEBRA_ROUTE_ADD, &sid->addr.prefix, sid->addr.prefixlen,
+-				   ifp->ifindex, action, &ctx);
++	zclient_send_localsid(static_zclient, ZEBRA_ROUTE_ADD, &sid->addr.prefix,
++			      sid->addr.prefixlen, ifp->ifindex, action, &ctx);
+ 
+ 	SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ }
+@@ -952,8 +890,8 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 
+ 	ctx.function_len = sid->addr.prefixlen - (ctx.block_len + ctx.node_len);
+ 
+-	static_zebra_send_localsid(ZEBRA_ROUTE_DELETE, &sid->addr.prefix, sid->addr.prefixlen,
+-				   ifp->ifindex, action, &ctx);
++	zclient_send_localsid(static_zclient, ZEBRA_ROUTE_DELETE, &sid->addr.prefix,
++			      sid->addr.prefixlen, ifp->ifindex, action, &ctx);
+ 
+ 	UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ }
+-- 
+2.48.1
+
+
+From 59be3bdf1ad46736bd6bbbef96218bfea2d62d29 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 15 Aug 2025 07:17:26 +0000
+Subject: staticd: Move SID interface dependency check to separate function
+
+The `static_ifp_srv6_sids_update` function is invoked when an interface
+changes state (up or down). It iterates over all SIDs, checking if each
+SID depends on the interface whose status changed, and installs or
+uninstalls the SID in zebra accordingly.
+
+This commit moves the logic for determining SID dependency on an
+interface into a separate function, improving code readability and
+maintainability.
+
+This is a preparatory refactor for upcoming changes.
+There is no functional change.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 23 ++++++++++++++++-------
+ 1 file changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index b06ddda3ef..8f6012b82a 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -25,6 +25,21 @@ struct list *srv6_sids;
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_LOCATOR, "Static SRv6 locator");
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_SID, "Static SRv6 SID");
+ 
++static bool is_sid_update_required(struct interface *ifp, struct static_srv6_sid *sid)
++{
++	if ((strcmp(sid->attributes.vrf_name, ifp->name) == 0) ||
++	    ((sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
++	      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID) &&
++	     strcmp(sid->attributes.ifname, ifp->name) == 0) ||
++	    (strncmp(ifp->name, DEFAULT_SRV6_IFNAME, sizeof(ifp->name)) == 0 &&
++	     (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END ||
++	      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID))) {
++		return true;
++	}
++
++	return false;
++}
++
+ /*
+  * When an interface is enabled in the kernel, go through all the static SRv6 SIDs in
+  * the system that use this interface and install/remove them in the zebra RIB.
+@@ -49,13 +64,7 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 	 * VRF from the zebra RIB
+ 	 */
+ 	for (ALL_LIST_ELEMENTS_RO(srv6_sids, node, sid)) {
+-		if ((strcmp(sid->attributes.vrf_name, ifp->name) == 0) ||
+-		    ((sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
+-		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID) &&
+-		     strcmp(sid->attributes.ifname, ifp->name) == 0) ||
+-		    (strncmp(ifp->name, DEFAULT_SRV6_IFNAME, sizeof(ifp->name)) == 0 &&
+-		     (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END ||
+-		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID))) {
++		if (is_sid_update_required(ifp, sid)) {
+ 			if (is_up) {
+ 				static_zebra_srv6_sid_install(sid);
+ 				SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-- 
+2.48.1
+
+
+From 026f726f1d687ff25d3ca018cd0f1e3d35e86778 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 15 Aug 2025 07:19:38 +0000
+Subject: staticd: Refactor and add comments to SID interface dependency logic
+
+Refactor and add explanatory comments to the function that checks
+whether a SID depends on a given interface.
+This improves code clarity and ease of maintenance.
+
+This is a preparatory refactor for upcoming changes.
+There is no functional change.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 84 ++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 68 insertions(+), 16 deletions(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 8f6012b82a..3fdf883c18 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -25,18 +25,69 @@ struct list *srv6_sids;
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_LOCATOR, "Static SRv6 locator");
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_SID, "Static SRv6 SID");
+ 
++/*
++ * Determines if the specified SID needs to be installed or removed
++ * due to a state change (up/down) on the provided interface.
++ *
++ * Returns:
++ *   - true  : The SID is dependent on this interface and should be updated
++ *             (installed or uninstalled) when the interface changes state.
++ *   - false : The SID does not depend on this interface; no update needed.
++ */
+ static bool is_sid_update_required(struct interface *ifp, struct static_srv6_sid *sid)
+ {
+-	if ((strcmp(sid->attributes.vrf_name, ifp->name) == 0) ||
+-	    ((sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
+-	      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID) &&
+-	     strcmp(sid->attributes.ifname, ifp->name) == 0) ||
+-	    (strncmp(ifp->name, DEFAULT_SRV6_IFNAME, sizeof(ifp->name)) == 0 &&
+-	     (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END ||
+-	      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID))) {
+-		return true;
++	/* Check if the SID's behavior is one of the uDT* variants. */
++	bool is_udt = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT6 ||
++		       sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID ||
++		       sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT4 ||
++		       sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID ||
++		       sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT46 ||
++		       sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID);
++
++	/* Check if the SID's behavior is one of the uDT4/uDT46 variants. */
++	bool is_udt4_or_udt46 = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT4 ||
++				 sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID ||
++				 sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT46 ||
++				 sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID);
++
++	/* Check if the SID's behavior is one of the uA variants. */
++	bool is_ua = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
++		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID);
++
++	/* Check if the SID's behavior is one of the uN variants. */
++	bool is_un = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END ||
++		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID);
++
++	/* Check if the SID requires an update based on behavior and behavior-specific attributes */
++
++	if (is_un) {
++		/*
++		 * 1. SID is uN. uN SIDs are attached to 'sr0'.
++		 *    Therefore, an update is needed if the provided interface 'ifp' is 'sr0'.
++		 */
++		if (strmatch(ifp->name, DEFAULT_SRV6_IFNAME))
++			return true;
++	}
++
++	if (is_ua) {
++		/*
++		 * 2. SID is uA. uA SIDs are associated with a specific interface defined in their attributes.
++		 *    Therefore, an update is needed if the provided interface 'ifp' matches the SID's associated interface.
++		 */
++		if (strmatch(sid->attributes.ifname, ifp->name))
++			return true;
++	}
++
++	if (is_udt) {
++		/*
++		 * 3a. SID is uDT*. uDT* SIDs are associated with a VRF interface defined in their attributes.
++		 *     Therefore, an update is needed if the provided interface 'ifp' matches the SID's associated VRF.
++		 */
++		if (strmatch(sid->attributes.vrf_name, ifp->name))
++			return true;
+ 	}
+ 
++	/* No dependency found */
+ 	return false;
+ }
+ 
+@@ -64,14 +115,15 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 	 * VRF from the zebra RIB
+ 	 */
+ 	for (ALL_LIST_ELEMENTS_RO(srv6_sids, node, sid)) {
+-		if (is_sid_update_required(ifp, sid)) {
+-			if (is_up) {
+-				static_zebra_srv6_sid_install(sid);
+-				SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-			} else {
+-				static_zebra_srv6_sid_uninstall(sid);
+-				UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-			}
++		if (!is_sid_update_required(ifp, sid))
++			continue;
++
++		if (is_up) {
++			static_zebra_srv6_sid_install(sid);
++			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++		} else {
++			static_zebra_srv6_sid_uninstall(sid);
++			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 		}
+ 	}
+ }
+-- 
+2.48.1
+
+
+From eadfbfd2e583443f777b1c66f7104f661221b000 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sat, 16 Aug 2025 06:44:12 +0000
+Subject: staticd: Handle `uDT*` SIDs for default VRF on sr0 intf state changes
+
+`uDT*` SIDs associated with the default VRF are attached to the `sr0`
+interface. When `sr0` goes up or down, it is necessary to update these
+SIDs in zebra to install or uninstall them accordingly.
+
+This commit adds a case to the SID interface dependency check function
+to handle uDT* SIDs associated with the default VRF and ensure they are
+installed/uninstalled on `sr0` state changes.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 3fdf883c18..cf0b4f9610 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -85,6 +85,15 @@ static bool is_sid_update_required(struct interface *ifp, struct static_srv6_sid
+ 		 */
+ 		if (strmatch(sid->attributes.vrf_name, ifp->name))
+ 			return true;
++
++		/*
++		 * 3b. SID is uDT* and is associated with the default VRF.
++		 *     When associated with the default VRF, uDT* SIDs are attached to 'sr0'.
++		 *     Therefore, an update is needed if the provided interface 'ifp' is 'sr0'.
++		 */
++		if (strmatch(ifp->name, DEFAULT_SRV6_IFNAME) &&
++		    strmatch(sid->attributes.vrf_name, VRF_DEFAULT_NAME))
++			return true;
+ 	}
+ 
+ 	/* No dependency found */
+-- 
+2.48.1
+
+
+From a607efc880f9519178451929a25b283d1f9bb88f Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sat, 16 Aug 2025 06:44:22 +0000
+Subject: staticd: extend SID dependency check for uDT4/uDT46 default VRF case
+
+`uDT4` and `uDT46` SIDs associated with the default VRF require a VRF
+bound to the kernel main routing table (table ID 254). When the status
+of this VRF changes, these SIDs must be installed or removed in zebra.
+
+This commit adds a case to the SID interface dependency check function
+to properly handle updates for uDT4/uDT46 SIDs based on the status of
+the VRF associated with the main routing table.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index cf0b4f9610..6c1d5af54f 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -94,6 +94,17 @@ static bool is_sid_update_required(struct interface *ifp, struct static_srv6_sid
+ 		if (strmatch(ifp->name, DEFAULT_SRV6_IFNAME) &&
+ 		    strmatch(sid->attributes.vrf_name, VRF_DEFAULT_NAME))
+ 			return true;
++
++		/*
++		 * 3c. SID is uDT4 or uDT46 and is associated with the default VRF.
++		 *     These SIDs rely on any VRF bound to the main routing table (table ID 254) for
++		 *     decapsulation and forwarding.
++		 *     Therefore, an update is needed if the provided interface 'ifp' is a VRF interface
++		 *     bound to the main routing table.
++		 */
++		if (is_udt4_or_udt46 && strmatch(sid->attributes.vrf_name, VRF_DEFAULT_NAME) &&
++		    (ifp->vrf->data.l.table_id == 254))
++			return true;
+ 	}
+ 
+ 	/* No dependency found */
+-- 
+2.48.1
+
+
+From 8e3bbe185ef0fb8c7584990b291183857b9947cd Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 15 Aug 2025 06:53:05 +0000
+Subject: lib: Attach uDT* SIDs for default VRF to `sr0` instead of loopback
+
+Currently, `uDT*` SIDs associated with the default VRF are installed
+in zebra and attached to the loopback interface. However, the Linux
+kernel does not support attaching SRv6 SIDs to the loopback interface,
+so `sr0` must be used in these cases.
+
+This commit updates the logic to attach these SIDs to the `sr0`
+interface instead of the loopback interface to make the kernel happy.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ lib/zclient.c | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/lib/zclient.c b/lib/zclient.c
+index abd559cac6..f1524722a0 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -520,6 +520,27 @@ enum zclient_send_status zclient_send_vrf_label(struct zclient *zclient,
+ 	return zclient_send_message(zclient);
+ }
+ 
++static struct interface *select_oif_for_localsid(ifindex_t candidate_oif)
++{
++	struct interface *ifp;
++
++	ifp = if_lookup_by_index(candidate_oif, VRF_DEFAULT);
++
++	/*
++	 * If the candidate outgoing interface (oif) is the loopback interface,
++	 * select 'sr0' as the oif instead. The Linux kernel does not permit
++	 * attaching SRv6 SIDs to the loopback interface, so 'sr0' must be used
++	 * in this case.
++	 */
++	if (!ifp || if_is_loopback_exact(ifp)) {
++		ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
++		if (!ifp)
++			return NULL;
++	}
++
++	return ifp;
++}
++
+ enum zclient_send_status zclient_send_localsid(struct zclient *zclient, uint8_t cmd,
+ 					       const struct in6_addr *sid, uint16_t prefixlen,
+ 					       ifindex_t oif, enum seg6local_action_t action,
+@@ -540,6 +561,19 @@ enum zclient_send_status zclient_send_localsid(struct zclient *zclient, uint8_t
+ 			   cmd != ZEBRA_ROUTE_ADD ? "Add" : "Delete", sid,
+ 			   seg6local_action2str(action));
+ 
++	/*
++	 * Select a valid outgoing interface (oif) for attaching the SID.
++	 * If the provided oif is valid and not the loopback interface, it is used.
++	 * Otherwise, fall back to using the 'sr0' interface.
++	 */
++	ifp = select_oif_for_localsid(oif);
++	if (!ifp) {
++		zlog_err("Unable to obtain a valid outgoing interface for installing the SID.");
++		zlog_err(
++			"Please ensure that a dummy interface named 'sr0' exists and is operational.");
++		return ZCLIENT_SEND_FAILURE;
++	}
++
+ 	p.family = AF_INET6;
+ 	p.prefixlen = prefixlen;
+ 	p.prefix = *sid;
+-- 
+2.48.1
+
+
+From cbec128d35df45e9e8f706897f45f517958974a9 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 17 Aug 2025 06:44:20 +0000
+Subject: staticd: Ensure SIDs are allocated before installation on interface
+ up
+
+Right now, when an interface comes up, staticd installs all SIDs
+depending on that interface without verifying if the SID was allocated
+by the SID Manager.
+
+Before installation, SIDs should be requested to SID Manager and only
+after SID Manager confirms the allocation, SIDs can be installed in the
+RIB.
+
+This commit adds a check for SID allocation. If the SID has already
+been allocated, then the staticd installs the SID in the RIB.
+If the SID is not yet allocated, an allocation request is sent to the
+SID Manager and the SID is not installed until allocation is confirmed.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 6c1d5af54f..573b836136 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -138,7 +138,9 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 		if (!is_sid_update_required(ifp, sid))
+ 			continue;
+ 
+-		if (is_up) {
++		if (is_up && !CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
++			static_zebra_request_srv6_sid(sid);
++		} else if (is_up && CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+ 			static_zebra_srv6_sid_install(sid);
+ 			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 		} else {
+-- 
+2.48.1
+
+
+From 23eace6e3cfdf095966cae613b7d8785a0575e4b Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 17 Aug 2025 06:44:29 +0000
+Subject: staticd: Ensure SIDs are uninstalled before sending them to zebra
+
+When an interface comes up and a SID has already been allocated,
+staticd calls `static_zebra_srv6_sid_install` to install the SID in
+zebra. However, in some cases, the SID may have already been sent to
+zebra previously, causing `static_zebra_srv6_sid_install` to return
+early without action.
+
+This commit adds a check to ensure that if the SID was already sent to
+zebra, it is first uninstalled using `static_zebra_srv6_sid_uninstall`
+before attempting to install it again.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 573b836136..0e962e089c 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -141,6 +141,11 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 		if (is_up && !CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+ 			static_zebra_request_srv6_sid(sid);
+ 		} else if (is_up && CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
++			if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++				static_zebra_srv6_sid_uninstall(sid);
++				UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++			}
++
+ 			static_zebra_srv6_sid_install(sid);
+ 			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 		} else {
+-- 
+2.48.1
+
+
+From 8dbf549401b4b9884769404ba5eca7244b0904dd Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sat, 16 Aug 2025 08:03:59 +0000
+Subject: tests: Verify SRv6 SID installation for default VRF in staticd
+
+Add an SRv6 SID for the default VRF to the FRR config and verify the SID
+is installed in the RIB.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../static_srv6_sids/expected_srv6_sids.json  | 123 ++++++++++++++++++
+ .../expected_srv6_sids_sid_delete_1.json      | 123 ++++++++++++++++++
+ .../expected_srv6_sids_sid_delete_2.json      | 123 ++++++++++++++++++
+ .../expected_srv6_sids_sid_modify.json        | 123 ++++++++++++++++++
+ tests/topotests/static_srv6_sids/r1/frr.conf  |   3 +
+ tests/topotests/static_srv6_sids/r1/setup.sh  |   5 +
+ .../static_srv6_sids/test_static_srv6_sids.py |   6 +
+ 7 files changed, 506 insertions(+)
+
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids.json b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+index 1cdf3cd1d6..0980bfe80b 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+@@ -197,5 +197,128 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe60::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe60::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT4",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe70::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe70::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT6",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe80::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe80::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT46",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+index 573d8284da..92d5d988b5 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+@@ -156,5 +156,128 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe60::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe60::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT4",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe70::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe70::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT6",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe80::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe80::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT46",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+index 02748ccd35..e4051d9743 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+@@ -115,5 +115,128 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe60::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe60::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT4",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe70::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe70::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT6",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe80::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe80::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT46",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
+index ec5efb5297..0470f33c55 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
+@@ -197,5 +197,128 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe60::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe60::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT4",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe70::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe70::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT6",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe80::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe80::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT46",
++						"sidStructure": {
++							"blockLen": 32,
++							"nodeLen": 16,
++							"funcLen": 16,
++							"argLen": 0
++						}
++					},
++					"seg6localContext": {
++						"table": 254
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/r1/frr.conf b/tests/topotests/static_srv6_sids/r1/frr.conf
+index ce8fb88165..929aad9ed8 100644
+--- a/tests/topotests/static_srv6_sids/r1/frr.conf
++++ b/tests/topotests/static_srv6_sids/r1/frr.conf
+@@ -13,6 +13,9 @@ segment-routing
+    sid fcbb:bbbb:1:fe20::/64 locator MAIN behavior uDT6 vrf Vrf20
+    sid fcbb:bbbb:1:fe30::/64 locator MAIN behavior uDT46 vrf Vrf30
+    sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
++   sid fcbb:bbbb:1:fe60::/64 locator MAIN behavior uDT4 vrf default
++   sid fcbb:bbbb:1:fe70::/64 locator MAIN behavior uDT6 vrf default
++   sid fcbb:bbbb:1:fe80::/64 locator MAIN behavior uDT46 vrf default
+   !
+  !
+ !
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/r1/setup.sh b/tests/topotests/static_srv6_sids/r1/setup.sh
+index 99cbdee280..af3ed016a2 100644
+--- a/tests/topotests/static_srv6_sids/r1/setup.sh
++++ b/tests/topotests/static_srv6_sids/r1/setup.sh
+@@ -13,4 +13,9 @@ ip link set Vrf30 up
+ ip link add Vrf40 type vrf table 40
+ ip link set Vrf40 up
+ 
++# VRF associated with main routing table,
++# required for SRv6 uDT4/uDT46 SIDs
++ip link add vrfdefault type vrf table main
++ip link set vrfdefault up
++
+ sysctl -w net.vrf.strict_mode=1
+diff --git a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+index ef90e754de..bee612db25 100755
+--- a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
++++ b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+@@ -308,6 +308,9 @@ def test_srv6_static_sids_sid_readd_all():
+             sid fcbb:bbbb:1:fe20::/64 locator MAIN behavior uDT6 vrf Vrf20
+             sid fcbb:bbbb:1:fe30::/64 locator MAIN behavior uDT46 vrf Vrf30
+             sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
++            sid fcbb:bbbb:1:fe60::/64 locator MAIN behavior uDT4 vrf default
++            sid fcbb:bbbb:1:fe70::/64 locator MAIN behavior uDT6 vrf default
++            sid fcbb:bbbb:1:fe80::/64 locator MAIN behavior uDT46 vrf default
+         """
+     )
+ 
+@@ -391,6 +394,9 @@ def test_srv6_static_sids_srv6_reenable():
+             sid fcbb:bbbb:1:fe20::/64 locator MAIN behavior uDT6 vrf Vrf20
+             sid fcbb:bbbb:1:fe30::/64 locator MAIN behavior uDT46 vrf Vrf30
+             sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
++            sid fcbb:bbbb:1:fe60::/64 locator MAIN behavior uDT4 vrf default
++            sid fcbb:bbbb:1:fe70::/64 locator MAIN behavior uDT6 vrf default
++            sid fcbb:bbbb:1:fe80::/64 locator MAIN behavior uDT46 vrf default
+         """
+     )
+ 
+-- 
+2.48.1
+
