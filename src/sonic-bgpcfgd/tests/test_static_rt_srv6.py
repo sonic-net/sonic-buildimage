@@ -58,12 +58,12 @@ def test_set_ipv4_with_sidlist():
         mgr,
         "SET",
         ("default|10.1.3.0/24", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6",
+            "sidlist": "fcbb:bbbb:2:3:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6 tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:fedd:: tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -83,12 +83,12 @@ def test_set_ipv4_with_sidlist_multiple_sids():
         mgr,
         "SET",
         ("default|10.1.3.0/24", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -108,12 +108,12 @@ def test_set_ipv4_with_sidlist_non_default_vrf():
         mgr,
         "SET",
         ("vrfRED|10.1.3.0/24", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -133,13 +133,13 @@ def test_set_ipv4_with_sidlist_ecmp():
         mgr,
         "SET",
         ("vrfRED|10.1.3.0/24", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::|fcbb:bbbb:11:12:13:14:15:16,fcbb:bbbb:19:1a::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::|fcbb:bbbb:3:9:fedd::",
             "ifname": "Ethernet8,Ethernet16",
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: vrf vrfRED tag 1",
-            "ip route 10.1.3.0/24 Ethernet16 segments fcbb:bbbb:11:12:13:14:15:16/fcbb:bbbb:19:1a:: vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet16 segments fcbb:bbbb:3:9:fedd:: vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -159,12 +159,12 @@ def test_set_ipv6_with_sidlist():
         mgr,
         "SET",
         ("default|2001:db8:1:1::/64", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6",
+            "sidlist": "fcbb:bbbb:2:3:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6 tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:fedd:: tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -184,12 +184,12 @@ def test_set_ipv6_with_sidlist_multiple_sids():
         mgr,
         "SET",
         ("default|2001:db8:1:1::/64", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -209,12 +209,12 @@ def test_set_ipv6_with_sidlist_non_default_vrf():
         mgr,
         "SET",
         ("vrfRED|2001:db8:1:1::/64", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::",
             "ifname": "Ethernet8",
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -234,13 +234,13 @@ def test_set_ipv6_with_sidlist_ecmp():
         mgr,
         "SET",
         ("vrfRED|2001:db8:1:1::/64", {
-            "sidlist": "fcbb:bbbb:1:2:3:4:5:6,fcbb:bbbb:9:10::|fcbb:bbbb:11:12:13:14:15:16,fcbb:bbbb:19:1a::",
+            "sidlist": "fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::|fcbb:bbbb:3:9:fedd::",
             "ifname": "Ethernet8,Ethernet16",
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:9:10:: vrf vrfRED tag 1",
-            "ipv6 route 2001:db8:1:1::/64 Ethernet16 segments fcbb:bbbb:11:12:13:14:15:16/fcbb:bbbb:19:1a:: vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet16 segments fcbb:bbbb:3:9:fedd:: vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
