@@ -138,16 +138,18 @@ class Pin:
 class PinStatuses:
     """Statuses of ADM1266 pins of the same type (e.g. all are VH pins, or VP pins, or etc.)."""
 
-    raw_val: int
+    val: int
     pins: list[Pin]
 
     @classmethod
     def from_int(cls, raw_val: int, bitmask_to_pin: dict[int, PinName]):
+        val = 0
         pins = []
         for mask, pin_type in bitmask_to_pin.items():
             if raw_val & mask:
+                val |= mask
                 pins.append(Pin(pin_type))
-        return cls(raw_val, pins)
+        return cls(val, pins)
 
     def set_pin_nickname(self, pin_to_nickname: dict[str, str]):
         for pin_info in self.pins:
@@ -158,10 +160,10 @@ class PinStatuses:
         if self.pins:
             # Example: "0b0101 [VH3(3V3_WEST), VH1]"
             pins_str = ", ".join([str(pin_info) for pin_info in self.pins])
-            return f"0b{self.raw_val:0{bit_width}b} [{pins_str}]"
+            return f"0b{self.val:0{bit_width}b} [{pins_str}]"
         else:
             # Example: "0b0000"
-            return f"0b{self.raw_val:0{bit_width}b}"
+            return f"0b{self.val:0{bit_width}b}"
 
 
 @dataclass
@@ -386,8 +388,8 @@ class Adm1266BlackBoxRecord(DpmRecord):
             pdio_value = int(entry["pdio_value"], 0)
             gpio_mask = int(entry["gpio_mask"], 0)
             gpio_value = int(entry["gpio_value"], 0)
-            if (self.pdio_in.raw_val & pdio_mask) == pdio_value and \
-               (self.gpio_in.raw_val & gpio_mask) == gpio_value:
+            if (self.pdio_in.val & pdio_mask) == pdio_value and \
+               (self.gpio_in.val & gpio_mask) == gpio_value:
                 return RebootCause(
                     type=RebootCause.Type.HARDWARE,
                     source=self.dpm_name,

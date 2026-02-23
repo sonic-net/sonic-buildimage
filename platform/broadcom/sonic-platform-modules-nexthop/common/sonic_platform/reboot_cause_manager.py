@@ -318,14 +318,18 @@ class RebootCauseManager:
                 chassis_reboot_cause_category="REBOOT_CAUSE_NON_HARDWARE",
             )
 
+    def read_hw_reboot_causes(self) -> tuple[list[RebootCause], dict[DpmBase, list[DpmPowerUpEntry]]]:
+        """Reads blackbox records from DPMs and returns (HW reboot causes, DPM powerup records)."""
+        dpm_to_powerups = self._read_powerups_from_all_dpms()
+        return squash_dpms_powerups_to_cause_per_reboot(dpm_to_powerups), dpm_to_powerups
+
     def summarize_reboot_causes(self) -> list[RebootCause]:
         """Returns a list of reboot causes, one per reboot.
 
         Reboot causes are derived from the knowledge of DPM records (HW)
         and the reboot cause file (SW).
         """
-        dpm_to_powerups = self._read_powerups_from_all_dpms()
-        hw_reboot_causes = squash_dpms_powerups_to_cause_per_reboot(dpm_to_powerups)
+        hw_reboot_causes, dpm_to_powerups = self.read_hw_reboot_causes()
         sw_reboot_cause = self._read_sw_reboot_cause()
         ret_causes = merge_sw_and_hw_causes(sw_reboot_cause, hw_reboot_causes)
 

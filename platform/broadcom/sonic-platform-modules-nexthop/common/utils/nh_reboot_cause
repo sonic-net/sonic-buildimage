@@ -6,27 +6,23 @@ Reads persisted JSON files only - no device access or recomputation.
 """
 
 import click
+import os
+import sys
 
+from nexthop import pddf_config_parser
 from sonic_platform import adm1266
 from sonic_platform.dpm_base import DpmType
 from sonic_platform.dpm_logger import DpmLogger, DataBase, DataV1
+from sonic_platform.reboot_cause_manager import RebootCauseManager
 
 RECORD_NAME_WIDTH = 42
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-@click.option("-v", "verbosity", flag_value=1, help="Show debug fields from DPM records")
-@click.option("-vv", "verbosity", flag_value=2, help="Show all fields from DPM records")
-def reboot_cause(ctx, verbosity: int) -> None:
-    """Shows reboot-cause information and DPM records.
-
-    By default, displays the most recent reboot-cause.
-    Use history to show all saved historical records.
-    Use -v or -vv to show DPM records.
-    """
-    if ctx.invoked_subcommand is None:
-        show_current(verbosity)
+def check_root_privileges() -> None:
+    """Checks if the current user has root privileges, exits if not."""
+    if os.getuid() != 0:
+        click.secho("Root privileges required for this operation", fg="red")
+        sys.exit(1)
 
 
 def _show_dpm_record(name: str, record: dict[str, str]) -> None:
@@ -65,21 +61,30 @@ def _show_data_v1(data: DataV1, verbosity: int) -> None:
                     record_name = dpm.name
                 _show_dpm_record(record_name, record)
 
+
 def _show_data(data: DataBase, verbosity: int) -> None:
     if data.schema_version == 1 and isinstance(data, DataV1):
         _show_data_v1(data, verbosity)
 
 
-def show_current(verbosity: int) -> None:
-    """Displays the most recent reboot-cause history from saved data."""
-    dpm_logger = DpmLogger()
-    data = dpm_logger.load()
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.option("-v", "verbosity", flag_value=1, help="Show debug fields from DPM records")
+@click.option("-vv", "verbosity", flag_value=2, help="Show all fields from DPM records")
+def reboot_cause(ctx, verbosity: int) -> None:
+    """Shows reboot-cause information and DPM records.
 
-    if not data:
-        click.echo("No reboot-cause records found")
-        return
-
-    _show_data(data, verbosity)
+    By default, displays the most recent reboot-cause.
+    Use history to show all saved historical records.
+    Use -v or -vv to show DPM records.
+    Use read_blackbox to read DPM records directly from hardware.
+    """
+    if ctx.invoked_subcommand is None:
+        data = DpmLogger().load()
+        if data is None or data.is_empty():
+            click.secho("No reboot-cause records found")
+            return
+        _show_data(data, verbosity)
 
 
 @reboot_cause.command()
@@ -87,15 +92,30 @@ def show_current(verbosity: int) -> None:
 @click.option("-vv", "verbosity", flag_value=2, help="Show all fields from DPM records")
 def history(verbosity: int) -> None:
     """Displays reboot-cause history with most recent entry first."""
-    dpm_logger = DpmLogger()
-    datas = dpm_logger.load_all()
-
+    datas = DpmLogger().load_all()
     if not datas:
         click.echo("No reboot-cause records found")
         return
 
     for data in reversed(datas):
         _show_data(data, verbosity)
+
+
+@reboot_cause.command()
+def read_blackbox() -> None:
+    """Reads and displays blackbox records from all DPMs if available."""
+    check_root_privileges()
+
+    pd_plugin_data = pddf_config_parser.load_pd_plugin_config()
+    reboot_cause_manager = RebootCauseManager(pd_plugin_data)
+    hw_reboot_causes, dpm_to_powerups = reboot_cause_manager.read_hw_reboot_causes()
+
+    data, _ = DpmLogger().to_data(hw_reboot_causes, dpm_to_powerups)
+    if data.is_empty():
+        click.secho(f"{data.gen_time} - No blackbox records found from DPMs on the system")
+        return
+
+    _show_data(data, verbosity=2)
 
 
 if __name__ == "__main__":

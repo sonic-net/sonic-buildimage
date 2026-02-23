@@ -11,6 +11,7 @@ import datetime
 import json
 import os
 
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from sonic_platform.dpm_base import DpmBase, DpmPowerUpEntry, RebootCause, timestamp_as_string
@@ -18,9 +19,14 @@ from typing import Iterable
 
 
 @dataclass
-class DataBase:
+class DataBase(ABC):
     gen_time: str
     schema_version: int
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        """Returns True if this data object contains no reboot causes or DPM records."""
+        pass
 
 
 @dataclass
@@ -49,11 +55,17 @@ class DataV1(DataBase):
         # Convert dpms dicts into DpmV1 objects
         self.dpms = [d if isinstance(d, DpmV1) else DpmV1(**d) for d in self.dpms]
 
+    def is_empty(self) -> bool:
+        """Returns True if there are no causes and all DPMs have no records.
 
-UNKNOWN_DATA = DataBase(gen_time="", schema_version=-1)
+        A DataV1 instance is considered empty when both of the following hold:
+          - the causes list is empty, and
+          - for every DPM entry, its records list is empty.
+        """
+        return not self.causes and not any(dpm.records for dpm in self.dpms)
 
 
-def load_data_from_file(path: Path | str) -> DataBase:
+def load_data_from_file(path: Path | str) -> DataBase | None:
     """Loads and parses a JSON file into a structured Data object.
 
     Args:
@@ -70,9 +82,9 @@ def load_data_from_file(path: Path | str) -> DataBase:
         if data.get("schema_version") == 1:
             return DataV1(**data)
     except Exception:
-        return UNKNOWN_DATA
+        return None
 
-    return UNKNOWN_DATA
+    return None
 
 
 class DpmLogger:
@@ -96,7 +108,6 @@ class DpmLogger:
     def __init__(self) -> None:
         """Initializes the DPM logger."""
         self.prev_link = os.path.join(self.HISTORY_DIR, self.PREVIOUS_FILE)
-        os.makedirs(self.HISTORY_DIR, exist_ok=True)
 
     def _get_sorted_history_files(self) -> list[Path]:
         """Returns list of history files present on the system.
@@ -130,14 +141,12 @@ class DpmLogger:
             os.remove(self.prev_link)
         os.symlink(target, self.prev_link)
 
-    def save(
+    def to_data(
         self,
         causes: Iterable[RebootCause],
         dpm_to_powerups: dict[DpmBase, list[DpmPowerUpEntry]],
-    ) -> None:
-        """Saves causes and DPM records to a new history file.
-
-        Creates a DataV1 object and writes it to a timestamped file in JSON format.
+    ) -> tuple[DataBase, datetime.datetime]:
+        """Converts causes and DPM records to a DataBase object.
 
         Args:
             causes: List of RebootCause objects, as observed from
@@ -146,9 +155,6 @@ class DpmLogger:
                              where each powerup contains a list of DPM records.
         """
         gen_time = datetime.datetime.now(tz=datetime.timezone.utc)
-        filename = os.path.join(
-            self.HISTORY_DIR, f"reboot-cause-{gen_time.strftime('%Y_%m_%d_%H_%M_%S')}.json"
-        )
         data = DataV1(
             gen_time=gen_time.strftime("%Y-%m-%d %H:%M:%S %Z"),
             schema_version=1,
@@ -170,21 +176,43 @@ class DpmLogger:
                 for dpm, powerups in dpm_to_powerups.items()
             ],
         )
+        return data, gen_time
 
+    def save(
+        self,
+        causes: Iterable[RebootCause],
+        dpm_to_powerups: dict[DpmBase, list[DpmPowerUpEntry]],
+    ) -> None:
+        """Saves causes and DPM records to a new history file.
+
+        Creates a DataV1 object and writes it to a timestamped file in JSON format.
+
+        Args:
+            causes: List of RebootCause objects, as observed from
+                    SW reboot cause and HW DPM records.
+            dpm_to_powerups: Dictionary of DPM to list of powerups,
+                             where each powerup contains a list of DPM records.
+        """
+        data, gen_time = self.to_data(causes, dpm_to_powerups)
+        filename = os.path.join(
+            self.HISTORY_DIR, f"reboot-cause-{gen_time.strftime('%Y_%m_%d_%H_%M_%S')}.json"
+        )
+
+        os.makedirs(self.HISTORY_DIR, exist_ok=True)
         with open(filename, "w", encoding="utf-8") as file_handle:
             json.dump(asdict(data), file_handle)
 
         self._enforce_retention_policy()
         self._update_symlink_to(filename)
 
-    def load(self) -> DataBase:
+    def load(self) -> DataBase | None:
         """Loads log data from the most recent history file.
 
         Caller can try casting to DataV1 for schema_version 1, and etc.
 
         Returns:
             The newest DataBase decoded from the newest history file,
-            or UNKNOWN_DATA if no history files are present or if parsing fails.
+            or None if no history files are present or if parsing fails.
         """
         return load_data_from_file(self.prev_link)
 
@@ -195,5 +223,9 @@ class DpmLogger:
 
         Returns:
             List of DataBase objects, one per history file, sorted from oldest to newest.
+            The list won't include data from any files that failed to parse.
         """
-        return [load_data_from_file(path) for path in self._get_sorted_history_files()]
+        return [
+            data for path in self._get_sorted_history_files() 
+            if (data := load_data_from_file(path)) is not None
+        ]

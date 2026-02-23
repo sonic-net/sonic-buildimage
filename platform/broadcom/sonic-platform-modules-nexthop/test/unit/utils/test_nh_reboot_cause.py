@@ -9,13 +9,16 @@ This script sets up the necessary mocks and imports to test the CLI tool.
 """
 
 import importlib
+import datetime
 import os
 import pytest
+import re
 import textwrap
 import sys
 
 from click.testing import CliRunner
-from unittest.mock import Mock, patch
+from fixtures.test_helpers_adm1266 import create_raw_adm1266_blackbox_record
+from unittest.mock import patch, create_autospec
 
 # Prevent Python from writing .pyc files during test imports
 # This avoids __pycache__ directories in common/utils/ that interfere with builds
@@ -28,6 +31,22 @@ def dpm_logger_module():
     from sonic_platform import dpm_logger
 
     yield dpm_logger
+
+
+@pytest.fixture
+def dpm_base_module():
+    """Loads the module before each test. This is to let conftest.py run first."""
+    from sonic_platform import dpm_base
+
+    yield dpm_base
+
+
+@pytest.fixture
+def adm1266_module():
+    """Loads the module before each test. This is to let conftest.py run first."""
+    from sonic_platform import adm1266
+
+    yield adm1266
 
 
 @pytest.fixture
@@ -243,9 +262,10 @@ def create_data_v1_hw_watchdog(dpm_logger_module):
 def test_show_current(dpm_logger_module, nh_reboot_cause_module):
     # Given
     DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause)
 
@@ -260,12 +280,129 @@ def test_show_current(dpm_logger_module, nh_reboot_cause_module):
         )
 
 
+def test_read_blackbox(dpm_base_module, adm1266_module, nh_reboot_cause_module):
+    # Given
+    dpm_1 = create_autospec(dpm_base_module.DpmBase)
+    dpm_2 = create_autospec(dpm_base_module.DpmBase)
+    # Ensure DpmLogger.to_data sees real names/types instead of MagicMocks
+    dpm_1.get_name.return_value = "dpm1"
+    dpm_1.get_type.return_value = dpm_base_module.DpmType.ADM1266
+    dpm_2.get_name.return_value = "dpm2"
+    dpm_2.get_type.return_value = dpm_base_module.DpmType.ADM1266
+    DPM_TO_POWERUPS = {
+        dpm_1: [
+            dpm_base_module.DpmPowerUpEntry(
+                powerup_counter=2,
+                power_fault_cause=None,
+                dpm_records=[
+                    adm1266_module.Adm1266BlackBoxRecord.from_bytes(
+                        create_raw_adm1266_blackbox_record(
+                            uid=1234,
+                            empty=False,
+                            pdio_in=0b0000_0000_1000_0000,  # PDI8
+                            powerup_counter=456,
+                            timestamp=datetime.timedelta(seconds=1234),
+                            crc=0xAB,
+                        ),
+                        "dpm1",
+                    )
+                ],
+            ),
+        ],
+        dpm_2: [],
+    }
+
+    mock_manager = create_autospec(nh_reboot_cause_module.RebootCauseManager, instance=True)
+    mock_manager.read_hw_reboot_causes.return_value = ([], DPM_TO_POWERUPS)
+
+    with patch.object(
+        nh_reboot_cause_module, "check_root_privileges", autospec=True, return_value=None
+    ), patch.object(
+        nh_reboot_cause_module.pddf_config_parser,
+        "load_pd_plugin_config",
+        autospec=True,
+        return_value={},
+    ), patch.object(
+        nh_reboot_cause_module, "RebootCauseManager", autospec=True, return_value=mock_manager
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["read-blackbox"])
+
+        # Then
+        assert result.exit_code == 0
+        normalized_output = re.sub(
+            r"=== Captured at .*? ===", "=== Captured at IGNORED_TIMESTAMP ===", result.output
+        )
+        assert normalized_output == textwrap.dedent(
+            """\
+            === Captured at IGNORED_TIMESTAMP ===
+             DPM records:
+              dpm1:powerup_456:uid_1234                timestamp: 1234.000000s after power-on
+                                                       dpm_name: dpm1
+                                                       power_fault_cause: n/a; under_voltage: n/a; over_voltage: n/a
+                                                       uid: 1234
+                                                       byte_2: 0x00
+                                                       action_index: 0
+                                                       rule_index: 0
+                                                       vh_over_voltage_[4:1]: 0b0000
+                                                       vh_under_voltage_[4:1]: 0b0000
+                                                       current_state: 9
+                                                       last_state: 8
+                                                       vp_over_voltage_[13:1]: 0b0000000000000
+                                                       vp_under_voltage_[13:1]: 0b0000000000000
+                                                       gpio_in_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       gpio_out_[7:4,9:8,R,R,R,3:1]: 0b000000000000
+                                                       pdio_in_[16:1]: 0b0000000010000000 [PDI8]
+                                                       pdio_out_[16:1]: 0b0000000000000000
+                                                       powerup_counter: 456
+                                                       crc: 0xab
+                                                       raw: d2 04 00 00 00 00 09 00
+                                                            08 00 00 00 00 00 00 00
+                                                            00 00 80 00 00 00 c8 01
+                                                            00 00 d2 04 00 00 00 00
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ff
+                                                            ff ff ff ff ff ff ff ab
+
+            """
+        )
+
+
+def test_read_blackbox_empty(nh_reboot_cause_module):
+    # Given
+    mock_manager = create_autospec(nh_reboot_cause_module.RebootCauseManager, instance=True)
+    mock_manager.read_hw_reboot_causes.return_value = ([], {})
+
+    with patch.object(
+        nh_reboot_cause_module, "check_root_privileges", autospec=True, return_value=None
+    ), patch.object(
+        nh_reboot_cause_module.pddf_config_parser,
+        "load_pd_plugin_config",
+        autospec=True,
+        return_value={},
+    ), patch.object(
+        nh_reboot_cause_module, "RebootCauseManager", autospec=True, return_value=mock_manager
+    ):
+        # When
+        result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["read-blackbox"])
+
+        # Then
+        assert result.exit_code == 0
+        normalized_output = re.sub(r"^.*? - ", "IGNORED_TIMESTAMP - ", result.output)
+        assert (
+            normalized_output
+            == "IGNORED_TIMESTAMP - No blackbox records found from DPMs on the system\n"
+        )
+
+
 def test_show_current_verbosity_1(dpm_logger_module, nh_reboot_cause_module):
     # Given
     DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["-v"])
 
@@ -304,9 +441,10 @@ def test_show_current_verbosity_1(dpm_logger_module, nh_reboot_cause_module):
 def test_show_current_verbosity_2(dpm_logger_module, nh_reboot_cause_module):
     # Given
     DATA_V1 = create_data_v1_sw_reboot(dpm_logger_module)
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["-vv"])
 
@@ -400,9 +538,10 @@ def test_show_history(dpm_logger_module, nh_reboot_cause_module):
         create_data_v1_sw_reboot(dpm_logger_module),
         create_data_v1_hw_watchdog(dpm_logger_module),
     ]
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load_all.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history"])
 
@@ -425,9 +564,10 @@ def test_show_history_verbosity_1(dpm_logger_module, nh_reboot_cause_module):
         create_data_v1_sw_reboot(dpm_logger_module),
         create_data_v1_hw_watchdog(dpm_logger_module),
     ]
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load_all.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history", "-v"])
 
@@ -482,9 +622,10 @@ def test_show_history_verbosity_2(dpm_logger_module, nh_reboot_cause_module):
         create_data_v1_sw_reboot(dpm_logger_module),
         create_data_v1_hw_watchdog(dpm_logger_module),
     ]
-    with patch.object(
-        nh_reboot_cause_module, "DpmLogger", return_value=Mock(load_all=Mock(return_value=DATA_V1))
-    ):
+    mock_logger = create_autospec(nh_reboot_cause_module.DpmLogger, instance=True)
+    mock_logger.load_all.return_value = DATA_V1
+
+    with patch.object(nh_reboot_cause_module, "DpmLogger", autospec=True, return_value=mock_logger):
         # When
         result = CliRunner().invoke(nh_reboot_cause_module.reboot_cause, ["history", "-vv"])
 
