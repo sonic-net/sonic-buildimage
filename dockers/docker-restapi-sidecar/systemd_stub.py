@@ -6,6 +6,7 @@ import re
 import subprocess
 import time
 import argparse
+import traceback
 from typing import List
 
 from sonic_py_common.sidecar_common import (
@@ -70,9 +71,9 @@ def _get_branch_name() -> str:
         logger.log_notice(f"Detected internal branch from version: {version}")
         return "internal"
     
-    # Pattern 3: Official feature branch - [SONiC.]YYYYMMDD.XX
-    elif re.match(r'^(?:SONiC\.)?\d{8}\.\d+$', version, re.IGNORECASE):
-        date_match = re.search(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\.\d+$', version, re.IGNORECASE)
+    # Pattern 3: Official feature branch - [SONiC.]YYYYMMDD.* (e.g., 20241110.kw.24)
+    elif re.match(r'^(?:SONiC\.)?\d{8}\b', version, re.IGNORECASE):
+        date_match = re.search(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\b', version, re.IGNORECASE)
         if date_match:
             year, month = date_match.groups()
             branch = f"{year}{month}"
@@ -86,36 +87,6 @@ def _get_branch_name() -> str:
     else:
         logger.log_notice(f"Unmatched version pattern (private): {version}")
         return "private"
-
-branch_name = _get_branch_name()
-
-# Map to available branch-specific files: {202311,202405,202411,202505,202511}
-if branch_name not in ["202311", "202405", "202411", "202505", "202511"]:
-    logger.log_error(f"Unsupported branch: {branch_name}. Only 202311, 202405, 202411, 202505, 202511 are supported.")
-    raise SystemExit(1)
-
-# restapi.sh: per-branch when IS_V1_ENABLED, otherwise use common restapi.sh
-_RESTAPI_SRC = (
-    f"/usr/share/sonic/systemd_scripts/v1/restapi.sh_{branch_name}"
-    if IS_V1_ENABLED
-    else "/usr/share/sonic/systemd_scripts/restapi.sh"
-)
-logger.log_notice(f"restapi source set to {_RESTAPI_SRC} (branch: {branch_name})")
-
-# restapi.service: per-branch files
-_CONTAINER_RESTAPI_SERVICE = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
-logger.log_notice(f"restapi.service source set to {_CONTAINER_RESTAPI_SERVICE}")
-
-# container_checker: per-branch
-_CONTAINER_CHECKER_SRC = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-logger.log_notice(f"container_checker source set to {_CONTAINER_CHECKER_SRC}")
-
-SYNC_ITEMS: List[SyncItem] = [
-    SyncItem(_RESTAPI_SRC, "/usr/bin/restapi.sh", mode=0o755),
-    SyncItem(_CONTAINER_CHECKER_SRC, "/bin/container_checker", mode=0o755),
-    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"),
-    SyncItem(_CONTAINER_RESTAPI_SERVICE, HOST_RESTAPI_SERVICE, mode=0o644),
-]
 
 POST_COPY_ACTIONS = {
     "/lib/systemd/system/restapi.service": [
@@ -136,7 +107,32 @@ POST_COPY_ACTIONS = {
 
 
 def ensure_sync() -> bool:
-    return sync_items(SYNC_ITEMS, POST_COPY_ACTIONS)
+    # Evaluate branch and source paths each time to allow retry on runtime failures
+    branch_name = _get_branch_name()
+    
+    # Map to available branch-specific files: {202311,202405,202411,202505,202511}
+    if branch_name not in ["202311", "202405", "202411", "202505", "202511"]:
+        logger.log_error(f"Unsupported branch: {branch_name}. Only 202311, 202405, 202411, 202505, 202511 are supported.")
+        return False
+    
+    # restapi.sh: per-branch when IS_V1_ENABLED, otherwise use common restapi.sh
+    restapi_src = (
+        f"/usr/share/sonic/systemd_scripts/v1/restapi.sh_{branch_name}"
+        if IS_V1_ENABLED
+        else "/usr/share/sonic/systemd_scripts/restapi.sh"
+    )
+    
+    container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+    container_restapi_service = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
+    
+    # Construct SYNC_ITEMS with evaluated paths
+    sync_items_list: List[SyncItem] = [
+        SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
+        SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
+        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh", mode=0o755),
+        SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
+    ]
+    return sync_items(sync_items_list, POST_COPY_ACTIONS)
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -163,12 +159,27 @@ def main() -> int:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
 
-    ok = ensure_sync()
+    try:
+        ok = ensure_sync()
+        if not ok:
+            logger.log_error("Initial sync failed.")
+    except Exception as e:
+        logger.log_error(f"Initial sync failed: {e}")
+        logger.log_error(f"Traceback: {traceback.format_exc()}")
+        ok = False
+    
     if args.once:
         return 0 if ok else 1
     while True:
-        time.sleep(args.interval)
-        ensure_sync()
+        try:
+            time.sleep(args.interval)
+            ok = ensure_sync()
+            if not ok:
+                logger.log_error("Sync failed. Will retry in next iteration.")
+        except Exception as e:
+            logger.log_error(f"Sync loop iteration failed: {e}. Will retry in {args.interval} seconds.")
+            logger.log_error(f"Traceback: {traceback.format_exc()}")
+            # Continue to next iteration rather than crashing
 
 
 if __name__ == "__main__":
