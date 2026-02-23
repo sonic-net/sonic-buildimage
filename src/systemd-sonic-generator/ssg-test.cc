@@ -351,7 +351,7 @@ class SsgMainTest : public SsgFunctionTest {
          * test.service is no longer rewritten, so we should not expect 
          * common_dependency_list there.
          */
-        bool expect_common_deps = !(IS_SINGLE_ASIC(cfg.num_asics) && cfg.num_dpus > 0);
+        bool expect_common_deps = IS_MULTI_ASIC(cfg.num_asics);
 
         validate_output_dependency_list(common_dependency_list,
             test_service, expect_common_deps, cfg.num_asics);
