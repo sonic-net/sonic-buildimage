@@ -72,16 +72,16 @@ index e210efa18421..d7cddd598cf5 100644
  		}
 +		ctx.ifindex = ifp->ifindex;
  		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
- 		ctx.flv.lcblock_len = sid->locator->block_bits_length;
- 		ctx.flv.lcnode_func_len = sid->locator->node_bits_length;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
 @@ -901,6 +902,7 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
  				  &sid->addr, sid->attributes.ifname);
  			return;
  		}
 +		ctx.ifindex = ifp->ifindex;
+ 		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
  		break;
  	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
- 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
 index 8508e8eca6ed..32f2d72ac669 100644
 --- a/zebra/rt_netlink.c
