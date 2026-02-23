@@ -784,7 +784,9 @@ ENV RUSTUP_HOME=$RUST_ROOT
 ENV PATH=$PATH:$RUST_ROOT/bin
 
 # Install cargo-tarpaulin for code coverage
-RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+# Pin version to avoid dependency conflicts with Rust 1.86.0
+# (cargo-tarpaulin v0.35.2 pulled in gimli 0.33.0 which needs Rust 1.88+)
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='trixie' %}
