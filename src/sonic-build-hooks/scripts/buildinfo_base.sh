@@ -491,6 +491,22 @@ pin_apt_versions()
         # Use awk instead of grep to avoid regex issues with +/. in package names.
         local version=$(awk -F'==' -v pkg="$para" '$1==pkg {print $2; exit}' "$VERSION_FILE")
         if [ -n "$version" ]; then
+            # Strip +fips suffix unconditionally — FIPS packages are
+            # locally rebuilt and not available from Debian apt repos
+            # regardless of whether the current build enables FIPS.
+            version="${version%+fips}"
+
+            # Verify the pinned version is available for the current
+            # architecture.  versions-deb may have been generated on a
+            # different arch (e.g. arm64) whose binary NMU revisions
+            # (+b1, +b2 …) do not exist on amd64.
+            # Use apt-cache madison (not apt-cache show) because show
+            # returns exit 0 even when the specific version is absent.
+            if ! apt-cache madison "$para" 2>/dev/null | awk -F'|' -v ver="$version" '{gsub(/^ +| +$/,"",$2); if($2==ver) found=1} END{exit !found}'; then
+                args+=("$para")
+                continue
+            fi
+
             args+=("${para}=${version}")
             modified=true
         else
