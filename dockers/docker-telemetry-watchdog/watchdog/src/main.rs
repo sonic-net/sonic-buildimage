@@ -48,7 +48,7 @@ const CERT_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CERT_PROBE_ENABLED";
 
 // BAD (expected fail) probe
 const DEFAULT_BAD_CA: &str = "/etc/sonic/credentials/AME_ROOT_CERTIFICATE.pem";
-const DEFAULT_BAD_CERT: &str = "/etc/sonic/credentials/restapiserver.cer";
+const DEFAULT_BAD_CERT: &str = "/etc/sonic/credentials/restapiserver.crt";
 const DEFAULT_BAD_KEY: &str = "/etc/sonic/credentials/restapiserver.key";
 const DEFAULT_BAD_CNAME: &str = "badcert.ndastreaming.ap.gbl";
 
