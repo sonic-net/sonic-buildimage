@@ -1858,7 +1858,18 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
 ## Standard targets
 ###############################################################################
 
-.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_PHONIES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure
+###############################################################################
+## Build report — post-build timing and dependency analysis
+###############################################################################
+
+build-report:
+	@echo "=== Generating build timing report ==="
+	@bash $(PROJECT_ROOT)/scripts/build-timing-report.sh $(TARGET_PATH)
+	@echo ""
+	@echo "=== Generating dependency graph analysis ==="
+	@python3 $(PROJECT_ROOT)/scripts/build-dep-graph.py $(PROJECT_ROOT)
+
+.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_PHONIES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure build-report
 
 .INTERMEDIATE : $(SONIC_INSTALL_DEBS) $(SONIC_INSTALL_WHEELS) $(DOCKER_LOAD_TARGETS) docker-start .platform
 
