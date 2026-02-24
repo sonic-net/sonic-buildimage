@@ -501,6 +501,18 @@
             },
             {
                 "name": "NVMe"
+            },
+            {
+                "name": "DPM1"
+            },
+            {
+                "name": "DPM2"
+            },
+            {
+                "name": "DPM3"
+            },
+            {
+                "name": "DPM4"
             }
         ],
         "fans": [

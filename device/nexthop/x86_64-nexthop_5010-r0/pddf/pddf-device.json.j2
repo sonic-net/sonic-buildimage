@@ -8,7 +8,7 @@
     "num_asic_temps": 52,
     "num_voltage_sensors": 82,
     "num_current_sensors": 20,
-    "num_components": 7,
+    "num_components": 11,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -269,6 +269,126 @@
       {
         "attr_name": "update",
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} NVMe {}"
+      }
+    ]
+  },
+  "COMPONENT8": {
+    "comp_attr": {
+      "name": "DPM1",
+      "type": "dpm",
+      "description": "CPU card power management",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "adm1266_version 7-0041"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM1 {}"
+      }
+    ]
+  },
+  "COMPONENT9": {
+    "comp_attr": {
+      "name": "DPM2",
+      "type": "dpm",
+      "description": "Switch card power management 1",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "adm1266_version 9-0041"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM2 {}"
+      }
+    ]
+  },
+  "COMPONENT10": {
+    "comp_attr": {
+      "name": "DPM3",
+      "type": "dpm",
+      "description": "Switch card power management 2",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "adm1266_version 9-0043"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM3 {}"
+      }
+    ]
+  },
+  "COMPONENT11": {
+    "comp_attr": {
+      "name": "DPM4",
+      "type": "dpm",
+      "description": "Mezz card power management",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "adm1266_version 9-0045"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM4 {}"
       }
     ]
   },
