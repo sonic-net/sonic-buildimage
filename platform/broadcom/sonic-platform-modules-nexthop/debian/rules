@@ -78,6 +78,8 @@ override_dh_auto_install:
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
 			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
 				debian/$${pkg_name}/lib/systemd/system; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.timer \
+				debian/$${pkg_name}/lib/systemd/system; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEM_DIR) ]; then \
 			mkdir -p debian/$${pkg_name}/$(SYSTEM_DIR)/; \
@@ -126,6 +128,10 @@ override_dh_install:
 				if [ -f common/utils/nh_powercycle ]; then \
 					dh_install -p$${pkg_name} common/utils/nh_powercycle \
 						usr/lib/systemd/system-shutdown/; \
+				fi; \
+				if [ -f common/utils/platform_reboot ]; then \
+					dh_install -p$${pkg_name} common/utils/platform_reboot \
+						usr/share/sonic/device/$${device_name}/; \
 				fi; \
 				;; \
 		esac; \
