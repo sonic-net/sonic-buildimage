@@ -1,5 +1,6 @@
 {
         "skip_ledd": true,
+	"skip_xcvrd_cmis_mgr": true,
         "thermalctld": {
                 "enable_liquid_cooling": true,
                 "liquid_cooling_update_interval": 0.5
