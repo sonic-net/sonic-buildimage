@@ -1,0 +1,12 @@
+--- a/src/sonic-utilities/sfputil/main.py
++++ b/src/sonic-utilities/sfputil/main.py
+@@ -334,6 +334,9 @@
+ 
+ 
+ def convert_sfp_info_to_output_string(sfp_info_dict):
++    if sfp_info_dict is None:
++        return ""
++
+     indent = ' ' * 8
+     output = ''
+     is_sfp_cmis = is_transceiver_cmis(sfp_info_dict)
