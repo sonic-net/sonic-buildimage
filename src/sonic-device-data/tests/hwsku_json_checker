@@ -7,8 +7,10 @@ import sys
 
 # Global variable
 PORT_ATTRIBUTES = ["default_brkout_mode"]
-OPTIONAL_PORT_ATTRIBUTES = ["fec", "autoneg", "port_type", "subport", "role"]
+OPTIONAL_PORT_ATTRIBUTES = ["fec", "autoneg", "port_type", "subport", "role", "asic_port_name", "core_id", "core_port_id", "num_voq"]
 PORT_REG = r"Ethernet(\d+)"
+# Allow special port names like Ethernet-Rec0, Ethernet-IB0, etc.
+SPECIAL_PORT_REG = r"Ethernet-[A-Za-z0-9]+"
 HWSKU_JSON = '*hwsku.json'
 INTF_KEY = "interfaces"
 
@@ -37,8 +39,10 @@ def check_file(hwsku_json_file):
 
         for each_port in hwsku_dict[INTF_KEY]:
             # Validate port at top level
+            # Allow both regular ports (Ethernet0) and special ports (Ethernet-Rec0)
             port_id = re.search(PORT_REG, each_port)
-            if port_id is None:
+            special_port_id = re.search(SPECIAL_PORT_REG, each_port)
+            if port_id is None and special_port_id is None:
                 print("Error: Unknown Interface " + str(each_port) + " at top level")
                 return False
 

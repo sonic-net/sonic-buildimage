@@ -1,334 +1,675 @@
 {
     "interfaces": {
         "Ethernet0": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth0",
+            "core_id": "3",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet4": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth4",
+            "core_id": "3",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet8": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth8",
+            "core_id": "3",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet12": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth12",
+            "core_id": "3",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet16": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth16",
+            "core_id": "3",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet20": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth20",
+            "core_id": "3",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet24": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth24",
+            "core_id": "3",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet28": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth28",
+            "core_id": "3",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet32": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth32",
+            "core_id": "1",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet36": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth36",
+            "core_id": "1",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet40": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth40",
+            "core_id": "1",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet44": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth44",
+            "core_id": "1",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet48": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth48",
+            "core_id": "1",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet52": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth52",
+            "core_id": "1",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet56": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth56",
+            "core_id": "1",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet60": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth60",
+            "core_id": "1",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet64": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth64",
+            "core_id": "4",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet68": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth68",
+            "core_id": "4",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet72": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth72",
+            "core_id": "4",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet76": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth76",
+            "core_id": "4",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet80": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth80",
+            "core_id": "4",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet84": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth84",
+            "core_id": "4",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet88": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth88",
+            "core_id": "4",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet92": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth92",
+            "core_id": "4",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet96": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth96",
+            "core_id": "6",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet100": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth100",
+            "core_id": "6",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet104": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth104",
+            "core_id": "6",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet108": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth108",
+            "core_id": "6",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet112": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth112",
+            "core_id": "6",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet116": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth116",
+            "core_id": "6",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet120": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth120",
+            "core_id": "6",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet124": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth124",
+            "core_id": "6",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet128": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth128",
+            "core_id": "2",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet132": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth132",
+            "core_id": "2",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet136": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth136",
+            "core_id": "2",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet140": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth140",
+            "core_id": "2",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet144": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth144",
+            "core_id": "2",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet148": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth148",
+            "core_id": "2",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet152": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth152",
+            "core_id": "2",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet156": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth156",
+            "core_id": "2",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet160": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth160",
+            "core_id": "0",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet164": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth164",
+            "core_id": "0",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet168": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth168",
+            "core_id": "0",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet172": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth172",
+            "core_id": "0",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet176": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth176",
+            "core_id": "0",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet180": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth180",
+            "core_id": "0",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet184": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth184",
+            "core_id": "0",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet188": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth188",
+            "core_id": "0",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet192": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth192",
+            "core_id": "5",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet196": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth196",
+            "core_id": "5",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet200": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth200",
+            "core_id": "5",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet204": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth204",
+            "core_id": "5",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet208": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth208",
+            "core_id": "5",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet212": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth212",
+            "core_id": "5",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet216": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth216",
+            "core_id": "5",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet220": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth220",
+            "core_id": "5",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet224": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth224",
+            "core_id": "7",
+            "core_port_id": "25",
+            "num_voq": "8"
         },
         "Ethernet228": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth228",
+            "core_id": "7",
+            "core_port_id": "29",
+            "num_voq": "8"
         },
         "Ethernet232": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth232",
+            "core_id": "7",
+            "core_port_id": "17",
+            "num_voq": "8"
         },
         "Ethernet236": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth236",
+            "core_id": "7",
+            "core_port_id": "21",
+            "num_voq": "8"
         },
         "Ethernet240": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth240",
+            "core_id": "7",
+            "core_port_id": "9",
+            "num_voq": "8"
         },
         "Ethernet244": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth244",
+            "core_id": "7",
+            "core_port_id": "13",
+            "num_voq": "8"
         },
         "Ethernet248": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth248",
+            "core_id": "7",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet252": {
+            "default_brkout_mode": "1x400G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x400G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth252",
+            "core_id": "7",
+            "core_port_id": "5",
+            "num_voq": "8"
         },
         "Ethernet256": {
+            "default_brkout_mode": "1x100G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x100G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth256",
+            "core_id": "2",
+            "core_port_id": "33",
+            "num_voq": "8"
         },
         "Ethernet260": {
+            "default_brkout_mode": "1x100G(4)",
             "autoneg": "off",
-            "default_brkout_mode": "1x100G",
-            "fec": "rs"
+            "fec": "rs",
+            "role": "Ext",
+            "asic_port_name": "Eth260",
+            "core_id": "6",
+            "core_port_id": "33",
+            "num_voq": "8"
+        },
+        "Ethernet-Rec0": {
+            "default_brkout_mode": "1x400G(1)",
+            "autoneg": "off",
+            "fec": "none",
+            "role": "Rec",
+            "asic_port_name": "Rcy0",
+            "core_id": "0",
+            "core_port_id": "221",
+            "num_voq": "8"
         }
     }
 }
+

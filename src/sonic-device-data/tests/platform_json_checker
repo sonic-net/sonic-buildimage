@@ -9,6 +9,8 @@ import sys
 PORT_ATTRIBUTES = ["index", "lanes", "breakout_modes"]
 ATTR_LEN = len(PORT_ATTRIBUTES)
 PORT_REG = r"Ethernet(\d+)"
+# Allow special port names like Ethernet-Rec0, Ethernet-IB0, etc.
+SPECIAL_PORT_REG = r"Ethernet-[A-Za-z0-9]+"
 PLATFORM_JSON = '*platform.json'
 INTF_KEY = "interfaces"
 CHASSIS_KEY = "chassis"
@@ -122,8 +124,10 @@ def check_file(platform_json_file):
 
         for each_port in port_dict:
             # Validate port at top level
+            # Allow both regular ports (Ethernet0) and special ports (Ethernet-Rec0)
             port_id = re.search(PORT_REG, each_port)
-            if port_id is  None:
+            special_port_id = re.search(SPECIAL_PORT_REG, each_port)
+            if port_id is None and special_port_id is None:
                 print("Error: Unknown Interface " + str(each_port) + " at top level")
                 return False
 

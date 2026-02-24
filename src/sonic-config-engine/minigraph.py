@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import ipaddress
+import re
 import math
 import os
 import sys
@@ -1961,6 +1962,98 @@ def update_forced_mgmt_route(mgmt_intf, mgmt_routes):
 
 ###############################################################################
 #
+# Helper functions for platform-aware lane adjustment
+#
+###############################################################################
+def get_lane_count_from_breakout_mode(breakout_mode):
+    """
+    Extract lane count from breakout mode string.
+
+    Args:
+        breakout_mode: Breakout mode string (e.g., "1x100G(2)", "1x400G(4)")
+
+    Returns:
+        int: Lane count if found, None otherwise
+
+    Examples:
+        "1x100G(2)" -> 2
+        "1x100G(4)" -> 4
+        "1x400G(8)" -> 8
+        "1x100G" -> None (no explicit lane count)
+    """
+    # Match the (n) notation at the end of breakout mode
+    match = re.search(r'\((\d+)\)$', breakout_mode)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def find_breakout_mode_for_speed(port_name, target_speed, platform_json_file):
+    """
+    Find the breakout mode that matches the target speed from platform.json.
+
+    Args:
+        port_name: Port name (e.g., "Ethernet0")
+        target_speed: Target speed in Mbps as string (e.g., "100000" for 100G)
+        platform_json_file: Path to platform.json file
+
+    Returns:
+        tuple: (breakout_mode, lane_count) if found, (None, None) otherwise
+
+    Examples:
+        find_breakout_mode_for_speed("Ethernet0", "100000", "platform.json")
+        -> ("1x100G(2)", 2) for PAM4 platform
+        -> ("1x100G(4)", 4) for NRZ platform
+    """
+    if not platform_json_file or not platform_json_file.endswith('.json'):
+        return None, None
+
+    try:
+        with open(platform_json_file) as f:
+            platform_data = json.load(f)
+
+        if 'interfaces' not in platform_data:
+            return None, None
+
+        if port_name not in platform_data['interfaces']:
+            return None, None
+
+        port_data = platform_data['interfaces'][port_name]
+        if 'breakout_modes' not in port_data:
+            return None, None
+
+        # Convert speed from Mbps to Gbps for matching (e.g., "100000" -> "100G")
+        target_speed_int = int(target_speed)
+        target_speed_gbps = str(target_speed_int // 1000) + 'G'
+
+        # Search for matching breakout mode
+        for breakout_mode in port_data['breakout_modes'].keys():
+            # Match patterns like "1x100G(2)", "2x50G(2)", etc.
+            match = re.search(r'(\d+)x(\d+G)', breakout_mode)
+            if match:
+                num_ports = int(match.group(1))
+                speed = match.group(2)
+
+                # For single port breakout (1x), match the speed
+                if num_ports == 1 and speed == target_speed_gbps:
+                    lane_count = get_lane_count_from_breakout_mode(breakout_mode)
+                    return breakout_mode, lane_count
+
+        return None, None
+
+    except FileNotFoundError:
+        print("Warning: platform.json file not found: %s" % platform_json_file, file=sys.stderr)
+        return None, None
+    except json.JSONDecodeError as e:
+        print("Warning: Failed to parse platform.json for %s: %s" % (port_name, e), file=sys.stderr)
+        return None, None
+    except Exception as e:
+        print("Warning: Error reading platform.json for %s: %s" % (port_name, e), file=sys.stderr)
+        return None, None
+
+
+###############################################################################
+#
 # Main functions
 #
 ###############################################################################
@@ -2411,15 +2504,35 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         # set Port Speed before lane update
         ports.setdefault(port_name, {})['speed'] = port_png_speed
 
-        # when the port speed is changes from 400g to 100g/40g
-        # update the port lanes, use the first 4 lanes of the 400G port to support 100G/40G port
+        # when the port speed is changed from 400g to 100g/40g
+        # update the port lanes based on platform's supported breakout modes
         if port_default_speed == '400000' and (port_png_speed == '100000' or port_png_speed == '40000'):
             port_lanes =  ports[port_name].get('lanes', '').split(',')
-            # check if the 400g port has only 8 lanes
-            if len(port_lanes) != 8:
-                continue
-            updated_lanes = ",".join(port_lanes[:4])
-            ports[port_name]['lanes'] = updated_lanes
+            current_lane_count = len(port_lanes)
+
+            # Try to find the appropriate breakout mode from platform.json
+            breakout_mode, target_lane_count = find_breakout_mode_for_speed(
+                port_name, port_png_speed, port_config_file
+            )
+
+            if target_lane_count is not None:
+                # Platform.json specifies the lane count for this speed
+                if target_lane_count <= current_lane_count:
+                    updated_lanes = ",".join(port_lanes[:target_lane_count])
+                    ports[port_name]['lanes'] = updated_lanes
+                else:
+                    print("Warning: Cannot adjust %s lanes - target lane count %d >= current %d" %
+                          (port_name, target_lane_count, current_lane_count), file=sys.stderr)
+            else:
+                # Fallback to legacy hardcoded logic for backward compatibility
+                # This handles platforms using port_config.ini or old platform.json without explicit lane counts
+                if current_lane_count == 8:
+                    # Legacy NRZ: 400G (8 lanes) -> 100G/40G (4 lanes)
+                    updated_lanes = ",".join(port_lanes[:4])
+                    ports[port_name]['lanes'] = updated_lanes
+                else:
+                    print("Warning: Cannot adjust %s lanes - no breakout mode found in platform.json and current lane count (%d) != 8" %
+                          (port_name, current_lane_count), file=sys.stderr)
 
 
     for port_name, port in list(ports.items()):

@@ -37,7 +37,7 @@ PORT_STR = "Ethernet"
 BRKOUT_MODE = "default_brkout_mode"
 CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
-OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
+OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role", "asic_port_name", "core_id", "core_port_id", "num_voq"]
 
 BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
 BRKOUT_PATTERN_GROUPS = 6
@@ -307,7 +307,20 @@ class BreakoutCfg(object):
             return hash((self.num_ports, tuple(self.supported_speed), self.num_assigned_lanes))
 
     def __init__(self, name, bmode, properties):
-        self._interface_base_id = int(name.replace(PORT_STR, ''))
+        # Handle special port names like Ethernet-Rec0 that don't follow numeric naming convention
+        # These ports don't support breakout and should be treated as single ports
+        port_suffix = name.replace(PORT_STR, '')
+        if port_suffix and (not port_suffix.lstrip('-').isdigit()):
+            # Special port (e.g., Ethernet-Rec0) - use the full name as-is
+            self._interface_base_id = None
+            self._interface_name = name
+            self._is_special_port = True
+        else:
+            # Regular numeric port (e.g., Ethernet0, Ethernet128)
+            self._interface_base_id = int(port_suffix)
+            self._interface_name = None
+            self._is_special_port = False
+
         self._properties = properties
         self._lanes = properties ['lanes'].split(',')
         self._indexes = properties ['index'].split(',')
@@ -352,6 +365,29 @@ class BreakoutCfg(object):
         return [self._re_group_to_entry(group) for group in groups_list]
 
     def get_config(self):
+        # Special handling for non-breakout ports (e.g., Ethernet-Rec0)
+        if self._is_special_port:
+            # For special ports, return a single port configuration without breakout processing
+            ports = {}
+            entry = self._breakout_mode_entry[0]  # Should only have one entry
+
+            port_config = {
+                'alias': self._breakout_capabilities[0],
+                'lanes': ','.join(self._lanes),
+                'speed': str(entry.default_speed),
+                'index': self._indexes[0],
+                'subport': "0"
+            }
+
+            # If the lane speed is greater than 50G, enable FEC
+            lanes_per_port = len(self._lanes)
+            if lanes_per_port > 0 and entry.default_speed // lanes_per_port >= 50000:
+                port_config['fec'] = 'rs'
+
+            ports[self._interface_name] = port_config
+            return ports
+
+        # Regular breakout processing for numeric ports
         # Ensure that we have corret number of configured lanes
         lanes_used = 0
         total_num_ports = 0
