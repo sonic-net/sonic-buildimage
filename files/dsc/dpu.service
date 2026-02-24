@@ -7,12 +7,6 @@ After=local-fs.target
 Requires=ionic-modules.service
 After=ionic-modules.service
 
-# dpu.service creates eth0-midplane interface and runs dhclient on it
-# On Pensando DPU, systemd-networkd-wait-online is configured to:
-# 1. Depend on dpu.service (Requires/After)
-# 2. Wait for eth0-midplane interface to get an IP address
-# This ensures network-online.target is not reached until eth0-midplane is ready
-
 [Service]
 Type=oneshot
 ExecStart=/etc/init.d/dpu start
