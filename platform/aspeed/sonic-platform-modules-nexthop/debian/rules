@@ -15,11 +15,11 @@ override_dh_auto_install:
 		pkg_name=$(PACKAGE_PRE_NAME)-$${mod}; \
 		device_name=arm64-nexthop_$${mod}-r0; \
 		dh_installdirs -p$${pkg_name} usr/share/sonic/device/$${device_name}/; \
-		dh_installdirs -p$${pkg_name} etc/obmc-console/; \
-		dh_installdirs -p$${pkg_name} usr/bin/; \
+		dh_installdirs -p$${pkg_name} usr/share/sonic/device/$${device_name}/scripts/; \
 		dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/$${device_name}/; \
+		dh_installdirs -p$${pkg_name} etc/obmc-console/; \
 		dh_install -p$${pkg_name} $${mod}/obmc-console/server.tty.conf etc/obmc-console/; \
-		dh_install -p$${pkg_name} $${mod}/scripts/switch_cpu_utils.sh usr/bin/; \
+		dh_install -p$${pkg_name} $${mod}/scripts/switch_cpu_utils.sh usr/share/sonic/device/$${device_name}/scripts; \
 	done)
 
 override_dh_auto_test:
