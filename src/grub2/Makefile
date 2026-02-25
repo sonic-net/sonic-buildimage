@@ -18,14 +18,18 @@ endif
 SUFFIX := $(shell date +%Y%m%d\.%H%M%S)
 STG_BRANCH := stg_temp.$(SUFFIX)
 
+# Pinned commit hash for debian/2.06-13+deb13u1 tag.
+# We use a commit hash instead of a tarball because grub2 patches are applied
+# via stg (stacked git), which requires a git repository with history.
+GRUB2_COMMIT = f954d68d5e8dc7eb0081ad7bc1ced9ff5ca687a7
+
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	# Get grub2 debian packaging
+	# Get grub2 debian packaging (pinned to specific commit for reproducibility)
 	export
 	rm -rf ./grub2
 	git clone https://salsa.debian.org/grub-team/grub.git ./grub2
-
 	pushd ./grub2
-	git checkout debian/$(GRUB2_VERSION)
+	git checkout $(GRUB2_COMMIT)
 	git checkout -b $(STG_BRANCH)
 	stg init
 	stg import -s ../patch/series
