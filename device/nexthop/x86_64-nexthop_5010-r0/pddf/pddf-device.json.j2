@@ -8,7 +8,7 @@
     "num_asic_temps": 52,
     "num_voltage_sensors": 82,
     "num_current_sensors": 20,
-    "num_components": 11,
+    "num_components": 20,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -389,6 +389,276 @@
       {
         "attr_name": "update",
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM4 {}"
+      }
+    ]
+  },
+  "COMPONENT12": {
+    "comp_attr": {
+      "name": "DCDC2",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0060/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC2 {}"
+      }
+    ]
+  },
+  "COMPONENT13": {
+    "comp_attr": {
+      "name": "DCDC3",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0061/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC3 {}"
+      }
+    ]
+  },
+  "COMPONENT14": {
+    "comp_attr": {
+      "name": "DCDC4",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0072/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC4 {}"
+      }
+    ]
+  },
+  "COMPONENT15": {
+    "comp_attr": {
+      "name": "DCDC5",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0075/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC5 {}"
+      }
+    ]
+  },
+  "COMPONENT16": {
+    "comp_attr": {
+      "name": "DCDC6",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0076/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC6 {}"
+      }
+    ]
+  },
+  "COMPONENT17": {
+    "comp_attr": {
+      "name": "DCDC7",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/94-0060/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC7 {}"
+      }
+    ]
+  },
+  "COMPONENT18": {
+    "comp_attr": {
+      "name": "DCDC8",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/94-0061/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC8 {}"
+      }
+    ]
+  },
+  "COMPONENT19": {
+    "comp_attr": {
+      "name": "DCDC9",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/94-0072/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC9 {}"
+      }
+    ]
+  },
+  "COMPONENT20": {
+    "comp_attr": {
+      "name": "DCDC10",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "cat /sys/bus/i2c/devices/94-0075/hwmon/hwmon*/mfr_revision"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC10 {}"
       }
     ]
   },
