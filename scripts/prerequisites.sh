@@ -36,11 +36,12 @@ run_step "Installing prerequisites (python3-pip, git)" \
     sudo apt install -y python3-pip git
 
 run_step "Installing jinjanator (j2)" \
-    bash -c 'pip3 install --user jinjanator || sudo apt install j2cli'
+    bash -c 'pip3 install --user jinjanator || sudo apt-get install -y j2cli'
 
 echo "==> Testing j2 availability..."
 if ! command -v j2 >/dev/null 2>&1; then
     echo "[ERROR] j2 is not runnable."
+    echo "If installed via pip, ensure ~/.local/bin is in your PATH."
     echo "Please logout and login, then run the script again."
     exit 1
 else

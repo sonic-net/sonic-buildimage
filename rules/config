@@ -16,6 +16,21 @@ SONIC_CONFIG_BUILD_JOBS = 1
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
 SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 
+# SONIC_BUILD_MEMORY - set memory limit for the build container.
+# When set, passes --memory and --memory-swap flags to docker run.
+# This prevents the kernel OOM killer from silently killing build processes
+# (or unrelated host processes) when parallel builds exhaust system RAM.
+# The OOM will instead be contained within the build container.
+# Example: SONIC_BUILD_MEMORY = 24g
+# Set to "none" to explicitly disable.
+# SONIC_BUILD_MEMORY =
+
+# SONIC_BUILD_MEMORY_SWAP - set memory+swap limit for the build container.
+# Only takes effect when SONIC_BUILD_MEMORY is set. Defaults to double
+# the value of SONIC_BUILD_MEMORY if not specified (Docker default behavior).
+# Set to -1 for unlimited swap. Set equal to SONIC_BUILD_MEMORY to disable swap.
+# SONIC_BUILD_MEMORY_SWAP =
+
 # DEFAULT_BUILD_LOG_TIMESTAMP - add timestamp in build log
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
@@ -253,8 +268,16 @@ SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
-# PACKAGE_URL_PREFIX - the package url prefix
-PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
+
+# BUILD_SNAPSHOT_URL - Default debian snapshot mirror url
+# Mirror of https://snapshot.debian.org/archive
+BUILD_SNAPSHOT_URL ?= http://packages.trafficmanager.net/snapshot
+
+# BUILD_PUBLIC_URL - Default public mirror url
+BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
+
+# BUILD_PACKAGES_URL - Default packages mirror url
+BUILD_PACKAGES_URL ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
 TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc
