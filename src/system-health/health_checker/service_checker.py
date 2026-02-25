@@ -152,9 +152,23 @@ class ServiceChecker(HealthChecker):
             lst = ctrs.list(filters={"status": "running"})
 
             for ctr in lst:
-                running_containers.add(ctr.name)
-                if ctr.name not in self.container_critical_processes:
-                    self.fill_critical_process_by_container(ctr.name)
+                # Check if this is a Kubernetes-managed container
+                labels = ctr.labels or {}
+                ns = labels.get("io.kubernetes.pod.namespace")
+                dtype = labels.get("io.kubernetes.docker.type")
+                kname = labels.get("io.kubernetes.container.name")
+
+                if ns == "sonic":
+                    # Kubernetes-managed container - use the label name
+                    if dtype == "container" and kname and kname not in ("<no value>", "POD"):
+                        running_containers.add(kname)
+                        if kname not in self.container_critical_processes:
+                            self.fill_critical_process_by_container(kname)
+                elif not ns:
+                    # Regular Docker container - use the container name
+                    running_containers.add(ctr.name)
+                    if ctr.name not in self.container_critical_processes:
+                        self.fill_critical_process_by_container(ctr.name)
         except docker.errors.APIError as err:
             logger.log_error("Failed to retrieve the running container list. Error: '{}'".format(err))
 
