@@ -136,13 +136,13 @@ module sonic-static-route {
             "blackhole refers to a route that, if matched, discards the message silently.";
         }
         list sidlist {
-          key "sidlist_id";
+          key "name";
           description
             "List of SRv6 SID lists for ECMP traffic steering";
-          leaf sidlist_id {
-            type uint16;
+          leaf name {
+            type string;
             description
-              "Identifier of one SRv6 SID list for this route";
+              "Name of one SRv6 SID list for this route";
           }
           leaf-list sid {
             type inet:ipv6-address;

@@ -167,7 +167,7 @@
                         "ifname": "Ethernet0",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:FEDD::"
                                 ]
@@ -188,7 +188,7 @@
                         "ifname": "Ethernet0",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:4:5:6:7",
                                     "FCBB:BBBB:8:9:FEDD::"
@@ -210,14 +210,14 @@
                         "ifname": "Ethernet0,Ethernet4",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:4:5:6:7",
                                     "FCBB:BBBB:8:9:FEDD::"
                                 ]
                             },
                             {
-                                "sidlist_id": 2,
+                                "name": "2",
                                 "sid": [
                                     "FCBB:BBBB:3:9:FEDD::"
                                 ]
@@ -238,7 +238,7 @@
                         "ifname": "Ethernet0",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:FEDD::"
                                 ]
@@ -259,7 +259,7 @@
                         "ifname": "Ethernet0",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:4:5:6:7",
                                     "FCBB:BBBB:8:9:FEDD::"
@@ -281,14 +281,14 @@
                         "ifname": "Ethernet0,Ethernet4",
                         "sidlist": [
                             {
-                                "sidlist_id": 1,
+                                "name": "1",
                                 "sid": [
                                     "FCBB:BBBB:2:3:4:5:6:7",
                                     "FCBB:BBBB:8:9:FEDD::"
                                 ]
                             },
                             {
-                                "sidlist_id": 2,
+                                "name": "2",
                                 "sid": [
                                     "FCBB:BBBB:3:9:FEDD::"
                                 ]
