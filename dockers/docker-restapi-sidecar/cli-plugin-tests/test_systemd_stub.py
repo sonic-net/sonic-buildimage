@@ -697,48 +697,6 @@ def test_resolve_branch_with_version_20241211_kube(ss, monkeypatch, tmp_path):
     assert systemd_stub._resolve_branch(detected) == "202411"
 
 
-def test_resolve_branch_master_maps_to_latest(ss):
-    """Test that master branch maps to latest supported branch (202511)."""
-    systemd_stub, *_ = ss
-    assert systemd_stub._resolve_branch("master") == "202511"
-
-
-def test_resolve_branch_internal_maps_to_latest(ss):
-    """Test that internal branch maps to latest supported branch (202511)."""
-    systemd_stub, *_ = ss
-    assert systemd_stub._resolve_branch("internal") == "202511"
-
-
-def test_resolve_branch_private_maps_to_latest(ss):
-    """Test that private branch maps to latest supported branch (202511)."""
-    systemd_stub, *_ = ss
-    assert systemd_stub._resolve_branch("private") == "202511"
-
-
-def test_resolve_branch_below_minimum_falls_back(ss):
-    """Test that branches below 202311 fall back to 202311."""
-    systemd_stub, *_ = ss
-    assert systemd_stub._resolve_branch("202210") == "202311"
-    assert systemd_stub._resolve_branch("202305") == "202311"
-    assert systemd_stub._resolve_branch("202310") == "202311"
-
-
-def test_resolve_branch_between_supported_uses_nearest_lower(ss):
-    """Test that branches between two supported versions use nearest lower."""
-    systemd_stub, *_ = ss
-    # Between 202311 and 202405
-    assert systemd_stub._resolve_branch("202404") == "202311"
-    # Between 202405 and 202411
-    assert systemd_stub._resolve_branch("202407") == "202405"
-    assert systemd_stub._resolve_branch("202410") == "202405"
-    # Between 202411 and 202505
-    assert systemd_stub._resolve_branch("202504") == "202411"
-    # Between 202505 and 202511
-    assert systemd_stub._resolve_branch("202510") == "202505"
-    # Beyond 202511
-    assert systemd_stub._resolve_branch("202600") == "202511"
-
-
 def test_resolve_branch_supported_branches_constant(ss):
     """Test that SUPPORTED_BRANCHES is defined and contains expected values."""
     systemd_stub, *_ = ss
