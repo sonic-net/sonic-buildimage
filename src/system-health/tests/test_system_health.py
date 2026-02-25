@@ -367,7 +367,7 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     mock_db_data.get_table = mock_get_table
     mock_config_db.return_value = mock_db_data
     mock_get_table.return_value = {
-        'acms': {
+        'snmp': {
             'state': 'enabled',
             'has_global_scope': 'True',
             'has_per_asic_scope': 'False',
@@ -381,12 +381,12 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     
     # Mock Kubernetes containers with labels
     mock_containers = MagicMock()
-    mock_acms_container = MagicMock()
-    mock_acms_container.name = 'k8s_acms_acms-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
-    mock_acms_container.labels = {
+    mock_snmp_container = MagicMock()
+    mock_snmp_container.name = 'k8s_snmp_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_snmp_container.labels = {
         'io.kubernetes.pod.namespace': 'sonic',
         'io.kubernetes.docker.type': 'container',
-        'io.kubernetes.container.name': 'acms'
+        'io.kubernetes.container.name': 'snmp'
     }
     
     mock_restapi_container = MagicMock()
@@ -399,14 +399,14 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     
     # Mock POD container (should be ignored)
     mock_pod_container = MagicMock()
-    mock_pod_container.name = 'k8s_POD_acms-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_pod_container.name = 'k8s_POD_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
     mock_pod_container.labels = {
         'io.kubernetes.pod.namespace': 'sonic',
         'io.kubernetes.docker.type': 'container',
         'io.kubernetes.container.name': 'POD'
     }
     
-    mock_containers.list = MagicMock(return_value=[mock_acms_container, mock_restapi_container, mock_pod_container])
+    mock_containers.list = MagicMock(return_value=[mock_snmp_container, mock_restapi_container, mock_pod_container])
     mock_docker_client_object = MagicMock()
     mock_docker_client.return_value = mock_docker_client_object
     mock_docker_client_object.containers = mock_containers
@@ -419,13 +419,13 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     
     # Verify k8s containers are recognized by their label names
     running_containers = checker.get_current_running_containers()
-    assert 'acms' in running_containers
+    assert 'snmp' in running_containers
     assert 'restapi' in running_containers
     assert 'POD' not in running_containers
     
-    # Verify containers are added to critical processes
-    assert 'acms' in checker.container_critical_processes
-    assert 'restapi' in checker.container_critical_processes
+    # Verify k8s containers are NOT added to critical processes (k8s has its own health checks)
+    assert 'snmp' not in checker.container_critical_processes
+    assert 'restapi' not in checker.container_critical_processes
 
 
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
@@ -441,12 +441,12 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     mock_db_data.get_table = mock_get_table
     mock_config_db.return_value = mock_db_data
     mock_get_table.return_value = {
-        'snmp': {
+        'swss': {
             'state': 'enabled',
             'has_global_scope': 'True',
             'has_per_asic_scope': 'False',
         },
-        'acms': {
+        'database': {
             'state': 'enabled',
             'has_global_scope': 'True',
             'has_per_asic_scope': 'False',
@@ -456,20 +456,20 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     mock_containers = MagicMock()
     
     # Regular Docker container
-    mock_snmp_container = MagicMock()
-    mock_snmp_container.name = 'snmp'
-    mock_snmp_container.labels = {}
+    mock_swss_container = MagicMock()
+    mock_swss_container.name = 'swss'
+    mock_swss_container.labels = {}
     
     # Kubernetes container
-    mock_acms_container = MagicMock()
-    mock_acms_container.name = 'k8s_acms_acms-pod-test_sonic_12345678_0'
-    mock_acms_container.labels = {
+    mock_database_container = MagicMock()
+    mock_database_container.name = 'k8s_database_database-pod-test_sonic_12345678_0'
+    mock_database_container.labels = {
         'io.kubernetes.pod.namespace': 'sonic',
         'io.kubernetes.docker.type': 'container',
-        'io.kubernetes.container.name': 'acms'
+        'io.kubernetes.container.name': 'database'
     }
     
-    mock_containers.list = MagicMock(return_value=[mock_snmp_container, mock_acms_container])
+    mock_containers.list = MagicMock(return_value=[mock_swss_container, mock_database_container])
     mock_docker_client_object = MagicMock()
     mock_docker_client.return_value = mock_docker_client_object
     mock_docker_client_object.containers = mock_containers
@@ -482,12 +482,12 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     
     # Verify both types of containers are recognized
     running_containers = checker.get_current_running_containers()
-    assert 'snmp' in running_containers
-    assert 'acms' in running_containers
+    assert 'swss' in running_containers
+    assert 'database' in running_containers
     
-    # Verify both are added to critical processes
-    assert 'snmp' in checker.container_critical_processes
-    assert 'acms' in checker.container_critical_processes
+    # Verify only regular Docker containers are monitored for critical processes
+    assert 'swss' in checker.container_critical_processes
+    assert 'database' not in checker.container_critical_processes  # k8s container, not monitored
 
 
 def test_hardware_checker():
