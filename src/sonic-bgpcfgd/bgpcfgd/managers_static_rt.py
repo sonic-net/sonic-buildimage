@@ -312,7 +312,7 @@ class IpNextHop:
         if not (self.nh_vrf is None or self.nh_vrf == ''):
             ret_val += ' nexthop-vrf %s' % self.nh_vrf
         if not (self.sidlist is None or self.sidlist == ''):
-            ret_val += ' segments %s' % self.sidlist.replace(',', '/')
+            ret_val += ' segments %s encap-behavior H_Encaps_Red' % self.sidlist.replace(',', '/')
         return ret_val
 
 class IpNextHopSet(set):

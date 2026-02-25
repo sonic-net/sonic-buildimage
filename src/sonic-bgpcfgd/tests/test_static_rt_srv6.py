@@ -63,7 +63,7 @@ def test_set_ipv4_with_sidlist():
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:fedd:: tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:fedd:: encap-behavior H_Encaps_Red tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -88,7 +88,7 @@ def test_set_ipv4_with_sidlist_multiple_sids():
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -113,7 +113,7 @@ def test_set_ipv4_with_sidlist_non_default_vrf():
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -138,8 +138,8 @@ def test_set_ipv4_with_sidlist_ecmp():
         }),
         True,
         [
-            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
-            "ip route 10.1.3.0/24 Ethernet16 segments fcbb:bbbb:3:9:fedd:: vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
+            "ip route 10.1.3.0/24 Ethernet16 segments fcbb:bbbb:3:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -164,7 +164,7 @@ def test_set_ipv6_with_sidlist():
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:fedd:: tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:fedd:: encap-behavior H_Encaps_Red tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -189,7 +189,7 @@ def test_set_ipv6_with_sidlist_multiple_sids():
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100",
@@ -214,7 +214,7 @@ def test_set_ipv6_with_sidlist_non_default_vrf():
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
@@ -239,8 +239,8 @@ def test_set_ipv6_with_sidlist_ecmp():
         }),
         True,
         [
-            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: vrf vrfRED tag 1",
-            "ipv6 route 2001:db8:1:1::/64 Ethernet16 segments fcbb:bbbb:3:9:fedd:: vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet8 segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
+            "ipv6 route 2001:db8:1:1::/64 Ethernet16 segments fcbb:bbbb:3:9:fedd:: encap-behavior H_Encaps_Red vrf vrfRED tag 1",
             "route-map STATIC_ROUTE_FILTER permit 10",
             " match tag 1",
             "router bgp 65100 vrf vrfRED",
