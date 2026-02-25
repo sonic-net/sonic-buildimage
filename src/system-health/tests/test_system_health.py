@@ -362,6 +362,7 @@ def test_service_checker_check_by_monit(mock_run):
 @patch('swsscommon.swsscommon.ConfigDBConnector')
 def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_client):
     """Test that service checker recognizes Kubernetes-managed containers by labels"""
+    setup()
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
     mock_db_data.get_table = mock_get_table
@@ -436,6 +437,7 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
 @patch('swsscommon.swsscommon.ConfigDBConnector')
 def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_client):
     """Test that service checker handles both regular Docker and Kubernetes containers"""
+    setup()
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
     mock_db_data.get_table = mock_get_table
