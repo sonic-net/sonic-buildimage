@@ -721,6 +721,10 @@ sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.netdev
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-npu.service
 #echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
+for i in {0..7}; do
+    sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu${i}.service
+done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
