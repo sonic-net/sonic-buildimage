@@ -1,4 +1,3 @@
-#
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -16,14 +15,7 @@
 # limitations under the License.
 #
 
-# Mellanox Platform Utils package
-
-MELLANOX_PLATFORM_UTILS = mellanox_platform_utils-1.0.0-py3-none-any.whl
-$(MELLANOX_PLATFORM_UTILS)_SRC_PATH = $(PLATFORM_PATH)/platform-utils
-$(MELLANOX_PLATFORM_UTILS)_DEPENDS = $(SONIC_PLATFORM_API_PY3) $(SONIC_UTILITIES_PY3)
-$(MELLANOX_PLATFORM_UTILS)_DEBS_DEPENDS = $(PYTHON3_SWSSCOMMON)
-
-$(MELLANOX_PLATFORM_UTILS)_PYTHON_VERSION = 3
-SONIC_PYTHON_WHEELS += $(MELLANOX_PLATFORM_UTILS)
-
-export mellanox_platform_utils_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(MELLANOX_PLATFORM_UTILS))"
+[tool.black]
+# Allow longer lines in tests due to mocks, etc.
+# It ends up being more readable to not break up the lines.
+line-length = 120 
