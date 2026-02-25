@@ -132,7 +132,6 @@ class Chassis(ChassisBase):
         # Mapping from SFP index to ASIC ID
         self._asic_id_map = None
 
-        # Number of NPUs (from device_info); used for RJ45/CPO port extraction.
         self._num_npus = device_info.get_num_npus()
 
         self.liquid_cooling = None
