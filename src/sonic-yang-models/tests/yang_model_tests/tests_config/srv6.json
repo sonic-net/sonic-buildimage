@@ -165,7 +165,14 @@
                         "vrf_name": "default",
                         "prefix": "10.1.0.0/24",
                         "ifname": "Ethernet0",
-                        "sidlist": "FCBB:BBBB:2:3:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
@@ -179,7 +186,15 @@
                         "vrf_name": "default",
                         "prefix": "10.1.0.0/24",
                         "ifname": "Ethernet0",
-                        "sidlist": "FCBB:BBBB:2:3:4:5:6:7,FCBB:BBBB:8:9:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
@@ -193,7 +208,21 @@
                         "vrf_name": "default",
                         "prefix": "10.1.0.0/24",
                         "ifname": "Ethernet0,Ethernet4",
-                        "sidlist": "FCBB:BBBB:2:3:4:5:6:7,FCBB:BBBB:8:9:FEDD::|FCBB:BBBB:3:9:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            },
+                            {
+                                "sidlist_id": 2,
+                                "sid": [
+                                    "FCBB:BBBB:3:9:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
@@ -207,7 +236,14 @@
                         "vrf_name": "VrfA",
                         "prefix": "2001:db8:10::/64",
                         "ifname": "Ethernet0",
-                        "sidlist": "FCBB:BBBB:2:3:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
@@ -221,7 +257,15 @@
                         "vrf_name": "VrfA",
                         "prefix": "2001:db8:10::/64",
                         "ifname": "Ethernet0",
-                        "sidlist": "FCBB:BBBB:2:3:4:5:6:7,FCBB:BBBB:8:9:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
@@ -235,7 +279,21 @@
                         "vrf_name": "VrfA",
                         "prefix": "2001:db8:10::/64",
                         "ifname": "Ethernet0,Ethernet4",
-                        "sidlist": "FCBB:BBBB:2:3:4:5:6:7,FCBB:BBBB:8:9:FEDD::|FCBB:BBBB:3:9:FEDD::"
+                        "sidlist": [
+                            {
+                                "sidlist_id": 1,
+                                "sid": [
+                                    "FCBB:BBBB:2:3:4:5:6:7",
+                                    "FCBB:BBBB:8:9:FEDD::"
+                                ]
+                            },
+                            {
+                                "sidlist_id": 2,
+                                "sid": [
+                                    "FCBB:BBBB:3:9:FEDD::"
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
