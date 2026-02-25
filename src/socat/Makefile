@@ -10,9 +10,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./socat-1.7.4.1
 
 	# Get source package
-	wget -NO socat_$(SOCAT_VERSION).dsc "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1-3.dsc"
-	wget -NO socat_$(SOCAT_VERSION).debian.tar.xz "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1-3.debian.tar.xz"
-	wget -NO socat_1.7.4.1.orig.tar.gz "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1.orig.tar.gz"
+	wget -NO socat_$(SOCAT_VERSION).dsc "$(BUILD_PUBLIC_URL)/debian/socat_1.7.4.1-3.dsc"
+	wget -NO socat_$(SOCAT_VERSION).debian.tar.xz "$(BUILD_PUBLIC_URL)/debian/socat_1.7.4.1-3.debian.tar.xz"
+	wget -NO socat_1.7.4.1.orig.tar.gz "$(BUILD_PUBLIC_URL)/debian/socat_1.7.4.1.orig.tar.gz"
 
 	dpkg-source -x socat_$(SOCAT_VERSION).dsc
 

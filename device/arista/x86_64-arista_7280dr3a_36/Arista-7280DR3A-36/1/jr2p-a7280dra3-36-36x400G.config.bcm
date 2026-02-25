@@ -239,16 +239,16 @@ stable_size=800000000
 #########################
 #########################
 
-tm_port_header_type_in_0=INJECTED_2_PP
+tm_port_header_type_in_0=INJECTED
 tm_port_header_type_out_0=CPU
 
-tm_port_header_type_in_200=INJECTED_2_PP
+tm_port_header_type_in_200=INJECTED
 tm_port_header_type_out_200=ETH
-tm_port_header_type_in_201=INJECTED_2_PP
+tm_port_header_type_in_201=INJECTED
 tm_port_header_type_out_201=ETH
-tm_port_header_type_in_202=INJECTED_2_PP
+tm_port_header_type_in_202=INJECTED
 tm_port_header_type_out_202=ETH
-tm_port_header_type_in_203=INJECTED_2_PP
+tm_port_header_type_in_203=INJECTED
 tm_port_header_type_out_203=ETH
 
 ### RCY
@@ -984,3 +984,4 @@ xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=2
 sai_pfc_dlr_init_capability=0
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
+sai_lag_default_crc_hash=1

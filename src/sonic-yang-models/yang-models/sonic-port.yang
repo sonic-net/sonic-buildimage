@@ -170,7 +170,7 @@ module sonic-port{
 				leaf subport {
 					description "Logical subport(s) for physical port breakout";
 					type uint8 {
-						range 0..12;
+						range 0..8;
 					}
 				}
 
@@ -240,6 +240,13 @@ module sonic-port{
 						description "Target laser frequency(GHz) for the 400G ZR transceiver";
 						type int32;
 				}
+
+				leaf fast_linkup {
+					type boolean;
+					default "false";
+					description "Enable or disable fast link-up on the port";
+				}
+
 
 			} /* end of list PORT_LIST */
 

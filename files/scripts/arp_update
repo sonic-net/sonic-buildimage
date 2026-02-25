@@ -14,6 +14,44 @@ logger () {
     command logger -i "$$" -t "arp_update" "$@"
 }
 
+# Function to run a command with retries on failure
+run_with_retry_cmd() {
+    local desc="$1"; shift
+    local max_tries=1
+    local interval=3
+    local i=1
+
+    while [ $i -le $max_tries ]; do
+        "$@"
+        local rc=$?
+        if [ $rc -eq 0 ]; then
+            return 0
+        fi
+        if [ $i -lt $max_tries ]; then
+            logger -p warning "command '${desc}' failed on attempt ${i} (rc=${rc}); retrying (next attempt $((i + 1)) of ${max_tries})"
+            sleep $interval
+        fi
+        i=$((i + 1))
+    done
+
+    logger -p warning "command failed after ${max_tries} retries: ${desc}"
+    return 1
+}
+
+run_arping_with_retry() {
+    local ifname="$1"
+    local ip="$2"
+    run_with_retry_cmd "arping on ${ifname} to ${ip}" \
+        arping -q -w 1 -c 1 -i "$ifname" "$ip" >/dev/null 2>&1
+}
+
+run_ndisc6_with_retry() {
+    local ifname="$1"
+    local ip="$2"
+    run_with_retry_cmd "ndisc6 on ${ifname} to ${ip}" \
+        ndisc6 -q -w 1 -1 "$ip" "$ifname" >/dev/null 2>&1
+}
+
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
@@ -59,12 +97,11 @@ while /bin/true; do
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")
                   if [[ -n "$intf_up" ]]; then
-                      pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
-                      eval $pingcmd
-                      # STALE entries may appear more often, not logging to prevent periodic syslogs
                       if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
                           logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
                       fi
+                      run_with_retry_cmd "static route ping to $nexthop on $interface" \
+                          timeout 0.2 $ping_prefix -I "$interface" -n -q -i 0 -c 1 -W 1 "$nexthop" >/dev/null 2>&1
                   fi
               fi
           done
@@ -97,7 +134,8 @@ while /bin/true; do
         ip="$( cut -d ',' -f 1 <<< "$neigh" )"
         mac="$( cut -d ',' -f 2 <<< "$neigh" )"
         if [[ -z $(sonic-db-cli ASIC_DB keys "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY*${mac}*") ]]; then
-            timeout 0.2 ping -c1 -w1 $ip > /dev/null
+            run_with_retry_cmd "stale neighbor ping to $ip" \
+                timeout 0.2 ping -c1 -w1 "$ip" >/dev/null 2>&1
         fi
   done
 
@@ -111,7 +149,8 @@ while /bin/true; do
         if [[ $kernel_mac != $appl_db_mac ]]; then
             logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
             ip neigh flush $ip
-            timeout 0.2 ping -c1 -w1 $ip > /dev/null
+            run_with_retry_cmd "mac mismatch ping to $ip" \
+                timeout 0.2 ping -c1 -w1 "$ip" >/dev/null 2>&1
         fi
   done
 
@@ -119,25 +158,26 @@ while /bin/true; do
   SUBTYPE=$(sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
   for vlan in $VLAN; do
       # generate a list of arping commands:
-      #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 1>;
-      #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 2>;
+      #   arping -q -w 1 -c 1 -i <VLAN interface> <IP 1>;
+      #   arping -q -w 1 -c 1 -i <VLAN interface> <IP 2>;
       #   ...
-      arpingcmd="sed -e 's/ / -i /' -e 's/^/arping -q -w 0 -c 1 /' -e 's/$/;/'"
-      ipcmd="ip -4 neigh show | grep $vlan | cut -d ' ' -f 1,3 | $arpingcmd"
-
-      eval `eval $ipcmd`
+      while read -r ip ifname; do
+          [ -z "$ip" ] && continue
+          run_arping_with_retry "$ifname" "$ip"
+      done < <(ip -4 neigh show | grep "$vlan" | awk '{print $1, $3}')
 
       # send ipv6 multicast pings to Vlan interfaces to get/refresh link-local addrs
       ping6cmd="timeout 1 ping6 -I $vlan -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
       eval $ping6cmd
 
       # generate a list of ndisc6 commands (exclude link-local addrs since it is done above):
-      #   ndisc6 -q -w 0 -1 <IP 1> <VLAN interface>;
-      #   ndisc6 -q -w 0 -1 <IP 2> <VLAN interface>;
+      #   ndisc6 -q -w 1 -1 <IP 1> <VLAN interface>;
+      #   ndisc6 -q -w 1 -1 <IP 2> <VLAN interface>;
       #   ...
-      ndisc6cmd="sed -e 's/^/ndisc6 -q -w 0 -1 /' -e 's/$/;/'"
-      ip6cmd="ip -6 neigh show | grep -v fe80 | grep $vlan | cut -d ' ' -f 1,3 | $ndisc6cmd"
-      eval `eval $ip6cmd`
+      while read -r ip ifname; do
+          [ -z "$ip" ] && continue
+          run_ndisc6_with_retry "$ifname" "$ip"
+      done < <(ip -6 neigh show | grep -v fe80 | grep "$vlan" | awk '{print $1, $3}')
 
       if [[ $SUBTYPE == "dualtor" ]]; then
         # capture all current failed/incomplete IPv6 neighbors in the kernel to avoid situations where new neighbors are learned
@@ -162,9 +202,10 @@ while /bin/true; do
         # generates the following command for each FAILED or INCOMPLETE IPv6 neighbor
         # timeout 0.2 ping <neighbor IPv6> -n -q -i 0 -c 1 -W 1 -I <VLAN name> >/dev/null
         if [[ ! -z "$unresolved_kernel_neighbors" ]]; then
-            ping6_template="sed -e 's/^/timeout 0.2 ping /' -e 's/,/ -n -q -i 0 -c 1 -W 1 -I /' -e 's/$/ >\/dev\/null;/'"
-            failed_ip6_neigh_cmd="echo \"$unresolved_kernel_neighbors\" | cut -d ' ' -f 1,3 --output-delimiter=',' | $ping6_template"
-            eval `eval "$failed_ip6_neigh_cmd"`
+            while read -r ip ifname; do
+                run_with_retry_cmd "failed ipv6 neighbor ping to $ip on $ifname" \
+                    timeout 0.2 ping -n -q -i 0 -c 1 -W 1 -I "$ifname" "$ip" >/dev/null 2>&1
+            done < <(echo "$unresolved_kernel_neighbors" | awk '{print $1, $3}')
             # allow some time for any transient INCOMPLETE neighbors to transition to FAILED
             sleep 5
         fi
@@ -186,7 +227,7 @@ while /bin/true; do
 
 
   # sleep here before handling the mismatch as it is not required during startup
-  sleep 300
+  sleep 120
 
   # refresh neighbor entries from APP_DB in case of mismatch with kernel
   DBNEIGH=$(sonic-db-cli APPL_DB keys NEIGH_TABLE*)
@@ -210,13 +251,13 @@ while /bin/true; do
       ip="$( cut -d ':' -f 3- <<< "$neigh" )"
       if [[ $intf == *"Vlan"* ]]; then
           if [[ $ip == *"."* ]] && [[ ! $KERNEIGH4 =~ "${ip},${intf}" ]]; then
-              pingcmd="timeout 0.2 ping -I $intf -n -q -i 0 -c 1 -W 1 $ip >/dev/null"
-              eval $pingcmd
               logger "mismatch arp entry, pinging ${ip} on ${intf}"
+              run_with_retry_cmd "db/kernel mismatch ping to ${ip} on ${intf}" \
+                timeout 0.2 ping -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
           elif [[ $ip == *":"* ]] && [[ ! $KERNEIGH6 =~ "${ip},${intf}" ]]; then
-              ping6cmd="timeout 0.2 ping6 -I $intf -n -q -i 0 -c 1 -W 1 $ip >/dev/null"
-              eval $ping6cmd
               logger "mismatch v6 nbr entry, pinging ${ip} on ${intf}"
+              run_with_retry_cmd "db/kernel mismatch ping6 to ${ip} on ${intf}" \
+                timeout 0.2 ping6 -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
           fi
       fi
   done
