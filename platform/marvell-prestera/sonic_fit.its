@@ -117,7 +117,7 @@
                 algo = "sha1";
             };
         };
-	kernel_es1227 {
+        kernel_es1227 {
             description = "Linux Kernel";
             data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
             type = "kernel";
@@ -151,7 +151,7 @@
                 algo = "sha1";
             };
         };
-        fdt_es1227_36ts {
+        fdt_es1227_36ts_p {
             description = "Flattened Device Tree blob for Wistron ES1227-36TS-P";
             data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/es1227-36ts-p.dtb");
             type = "flat_dt";
@@ -191,7 +191,7 @@
                 algo = "sha1";
             };
         };
-	conf_es1227 {
+        conf_es1227 {
             description = "Boot Linux kernel with FDT blob + ramdisk for Wistron ES1227-54TS";
             kernel = "kernel_es1227";
             fdt = "fdt_es1227";
@@ -203,7 +203,7 @@
         conf_es1227_36ts_p {
             description = "Boot Linux kernel with FDT blob + ramdisk for Wistron ES1227-36TS-P";
             kernel = "kernel_es1227";
-            fdt = "fdt_es1227_36ts";
+            fdt = "fdt_es1227_36ts_p";
             ramdisk = "ramdisk_es1227";
             hash@1 {
                 algo = "sha1";
