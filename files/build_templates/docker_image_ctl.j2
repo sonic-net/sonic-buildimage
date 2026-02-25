@@ -726,7 +726,6 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-	# Provide PMON broad access/permissions to devices on the host for monitoring and management
     -v /dev:/dev \
 	--device-cgroup-rule='a *:* rw' \
 {%- endif %}
