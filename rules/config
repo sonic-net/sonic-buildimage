@@ -396,3 +396,10 @@ BUILD_SKIP_TEST ?= n
 # but may use stale layers if base images changed without version bumps.
 # Recommended for local development; CI should leave this disabled.
 # SONIC_CONFIG_USE_DOCKER_CACHE = y
+
+# SONIC_CONFIG_USE_CCACHE - use ccache to speed up C/C++ compilation
+# When enabled, ccache caches compilation results so that rebuilds of
+# unchanged source files are near-instant. The cache is stored in
+# target/ccache/ and persists across builds.
+# Default: disabled (no impact on clean builds without a warm cache)
+SONIC_CONFIG_USE_CCACHE ?= n
