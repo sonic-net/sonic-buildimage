@@ -142,8 +142,9 @@ configure :
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
 	$(Q)mkdir -p $(TARGET_PATH)/vcache
 	$(Q)# Clean up stale lock directories left by killed builds (see #25507)
-	$(Q)find $(TARGET_PATH) -maxdepth 3 -name dpkg_lock -type d -exec rm -d {} + 2>/dev/null || true
-	$(Q)find $(TARGET_PATH) -maxdepth 3 -name pip_lock -type d -exec rm -d {} + 2>/dev/null || true
+	$(Q)# Only removes empty lock dirs older than 10 minutes to avoid breaking concurrent builds
+	$(Q)find $(TARGET_PATH) -maxdepth 3 -name dpkg_lock -type d -mmin +10 -exec rm -d {} + 2>/dev/null || true
+	$(Q)find $(TARGET_PATH) -maxdepth 3 -name pip_lock -type d -mmin +10 -exec rm -d {} + 2>/dev/null || true
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
 
@@ -1070,6 +1071,7 @@ else
 	{ PATH=$(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION)):${PATH} sudo -E $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG) && $(if $(findstring $(SONIC_CONFIG_ENGINE_PY3),$*),(sudo ln -s $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/sonic-cfggen /usr/local/bin/sonic-cfggen 2>/dev/null || true), true ) && $(if $(findstring $(SONIC_YANG_MODELS_PY3),$*),(sudo ln -s $(VIRTENV_BASE_CROSS_PYTHON3)/yang-models /usr/local/yang-models 2>/dev/null || true), true ) && rm -d $(PYTHON_WHEELS_PATH)/pip_lock && break; } || { rm -d $(PYTHON_WHEELS_PATH)/pip_lock && exit 1 ; }
 endif
 	fi
+	sleep 10
 	done
 	$(FOOTER)
 
