@@ -30,6 +30,14 @@ iface lo inet loopback
 {% endblock loopback %}
 {% block mgmt_interface %}
 
+{%- if DEVICE_METADATA and 'bmc' in DEVICE_METADATA.keys() and ('bmc_if_name' in DEVICE_METADATA['bmc']) and ('bmc_if_addr' in DEVICE_METADATA['bmc']) and ('bmc_net_mask' in DEVICE_METADATA['bmc']) %}
+# BMC interface
+auto {{ DEVICE_METADATA['bmc']['bmc_if_name'] }}
+iface {{ DEVICE_METADATA['bmc']['bmc_if_name'] }} inet static
+    address {{ DEVICE_METADATA['bmc']['bmc_if_addr'] }}
+    netmask {{ DEVICE_METADATA['bmc']['bmc_net_mask'] }}
+{%- endif %}
+
 # The management network interface
 {% if (ZTP_DHCP_DISABLED is not defined) and (ZTP is defined) and (ZTP['mode'] is defined and ZTP['mode']['profile'] == 'active') %}
 auto eth0

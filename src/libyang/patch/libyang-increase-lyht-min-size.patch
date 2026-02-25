@@ -1,0 +1,13 @@
+diff --git a/src/hash_table.h b/src/hash_table.h
+--- a/src/hash_table.h
++++ b/src/hash_table.h
+@@ -53,7 +53,7 @@
+ #define LYHT_SHRINK_PERCENTAGE 25
+ 
+ /** never shrink beyond this size */
+-#define LYHT_MIN_SIZE 8
++#define LYHT_MIN_SIZE 65536
+ 
+ /**
+  * @brief Generic hash table record.
+
