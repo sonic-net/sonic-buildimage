@@ -23,10 +23,11 @@ generate_version_file()
     sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "dpkg-query -W -f '\${Package}==\${Version}\n'" > $TARGET_BASEIMAGE_PATH/versions-deb-${IMAGE_DISTRO}-${CONFIGURED_ARCH}
 }
 
-MIRROR_URL=http://deb.debian.org/debian
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     SNAPSHOT_TIMESTAMP=$(grep "^debian==" $TARGET/versions/default/versions-mirror | tail -n 1 | sed 's/.*==//')
-    MIRROR_URL=http://packages.trafficmanager.net/snapshot/debian/$SNAPSHOT_TIMESTAMP
+    MIRROR_URL=$BUILD_SNAPSHOT_URL/debian/$SNAPSHOT_TIMESTAMP
+else
+    MIRROR_URL=http://deb.debian.org/debian
 fi
 
 if [ "$ENABLE_VERSION_CONTROL_DEB" != "y" ] || [ ! -d files/build/versions/host-base-image ]; then
