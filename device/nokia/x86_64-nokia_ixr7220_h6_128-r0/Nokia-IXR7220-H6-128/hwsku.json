@@ -377,7 +377,7 @@
         },
         "Ethernet1000": {
             "default_brkout_mode": "1x800G"
-	},
+        },
         "Ethernet1008": {
             "default_brkout_mode": "1x800G"
         },

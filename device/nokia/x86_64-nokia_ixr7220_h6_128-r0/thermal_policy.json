@@ -1,4 +1,4 @@
-{   
+{
     "thermal_control_algorithm": {
         "run_at_boot_up": "false",
         "fan_speed_when_suspend": "60"
@@ -50,7 +50,7 @@
                 }
             ]
         },
-	{
+        {
             "name": "temp over high critical threshold",
             "conditions": [
                 {
