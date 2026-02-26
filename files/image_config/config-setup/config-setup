@@ -170,15 +170,37 @@ copy_config_files_and_directories()
     done
 }
 
-# Check if SONiC switch has booted after a warm reboot request
+# Check if SONiC switch has booted after a warm reboot request.
+# Prefers STATE_DB when available (reflects true warm boot state and
+# gets cleared after warm boot completes). Falls back to /proc/cmdline
+# only during the "boot" command when database services may not be up yet.
 check_system_warm_boot()
 {
-    SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
-    # SYSTEM_WARM_START could be empty, always make WARM_BOOT meaningful.
-    if [[ x"$SYSTEM_WARM_START" == x"true" ]]; then
-        WARM_BOOT="true"
-    else
-        WARM_BOOT="false"
+    WARM_BOOT="false"
+
+    # Try STATE_DB first — authoritative source that reflects current
+    # warm boot state and is cleared after warm boot completes.
+    SYSTEM_WARM_START=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable)
+    DB_RC=$?
+
+    if [ $DB_RC -eq 0 ]; then
+        # DB is reachable — use its answer exclusively
+        if [[ x"$SYSTEM_WARM_START" == x"true" ]]; then
+            WARM_BOOT="true"
+        fi
+        return
+    fi
+
+    # DB not available — fall back to /proc/cmdline only during boot,
+    # when database services may not have started yet.
+    # Outside of boot context, /proc/cmdline may contain a stale
+    # SONIC_BOOT_TYPE=warm from a previous warm reboot.
+    if [ "$CMD" = "boot" ]; then
+        case "$(cat /proc/cmdline)" in
+        *SONIC_BOOT_TYPE=warm*)
+            WARM_BOOT="true"
+            ;;
+        esac
     fi
 }
 
@@ -256,11 +278,24 @@ generate_config()
 }
 
 # Create SONiC configuration for first time bootup
-#  - If ZTP is enabled, ZTP configuraion is created
-#  - If ZTP is disabled, factory default configuration
+#  - If minigraph.xml is available, use it to generate configuration
+#  - If ZTP is enabled and no minigraph, ZTP configuration is created
+#  - If ZTP is disabled and no minigraph, factory default configuration
 #    is created
 do_config_initialization()
 {
+    # If minigraph.xml is available, prefer it over ZTP/factory default.
+    # This avoids ZTP triggering a config reload that removes management IP
+    # when the device has a valid minigraph but no config_db.json
+    # (e.g., during upgrade path tests).
+    if [ -r ${MINGRAPH_FILE} ]; then
+        echo "No config_db.json found but minigraph.xml is available, using minigraph..."
+        reload_minigraph
+        rm -f /tmp/pending_config_initialization
+        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        return 0
+    fi
+
     if ! ztp_is_enabled ; then
         echo "No configuration detected, generating factory default configuration..."
         generate_config factory ${CONFIG_DB_JSON}
@@ -412,6 +447,18 @@ boot_config()
         do_config_migration
     fi
 
+    # During warm boot the existing configuration must be preserved.
+    # Never run config initialization or ZTP — doing so would generate
+    # a new config and trigger config reload, wiping management IP.
+    if [ x"${WARM_BOOT}" == x"true" ]; then
+        echo "Warm boot detected, skipping config initialization and ZTP."
+        # Mark config as initialized so subsequent boots don't re-trigger
+        # initialization unnecessarily (warm-reboot to new image scenario).
+        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        rm -f /tmp/pending_config_initialization
+        return 0
+    fi
+
     # For multi-npu platfrom we don't support config initialization. Assumption
     # is there should be existing minigraph or config_db from previous image
     # file system to trigger. pending_config_initialization will remain set
@@ -424,11 +471,14 @@ boot_config()
         do_config_initialization
     fi
 
-    # If no startup configuration is found, create a configuration to be used
+    # If no startup configuration is found, create a configuration to be used.
+    # do_config_initialization() will prefer minigraph.xml if available,
+    # falling back to ZTP or factory default only when no minigraph exists.
     if [ ! -e ${CONFIG_DB_JSON} ]; then
         do_config_initialization
-        # force ZTP to restart
-        if  ztp_is_enabled ; then
+        # force ZTP to restart (only relevant when ZTP was actually used,
+        # i.e., when minigraph.xml was not available)
+        if [ ! -e ${MINGRAPH_FILE} ] && ztp_is_enabled ; then
             ztp_status=$(ztp status -c)
             if [ "$ztp_status" = "5:SUCCESS" ] || \
           [ "$ztp_status" = "6:FAILED" ]; then
