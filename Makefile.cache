@@ -97,13 +97,16 @@ ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
 ifneq ($(SONIC_DPKG_CACHE_METHOD),)
 $(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
 $(warning [CACHE] Review whether the change affects package build output:)
-$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache)
-$(warning [CACHE]   Then update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
 endif
 endif
 endif
 endif
 
+# SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
+# It includes common files like .platform, rules/functions, Makefile.cache etc.
+# NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
 SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
 SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
