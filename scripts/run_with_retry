@@ -5,7 +5,7 @@ run_with_retry(){
     (( SONIC_BUILD_RETRY_COUNT > 0 )) || SONIC_BUILD_RETRY_COUNT=0
     (( SONIC_BUILD_RETRY_INTERVAL > 0 )) || SONIC_BUILD_RETRY_INTERVAL=600
     [[ "$*" == "" ]] && { echo "run_with_retry: input command can't be empty." 1>&2;exit 1; }
-    for ((i=0; i<=$SONIC_BUILD_RETRY_COUNT; i++))
+    for ((i=0; i<=$0; i++))
     do
         if [[ $i != 0 ]];then
             echo "==============================================================================" 1>&2

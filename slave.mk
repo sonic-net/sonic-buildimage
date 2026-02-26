@@ -1348,6 +1348,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		$(call docker-image-save,$*-$(DBG_IMAGE_MARK),$@)
 
 		# Clean up
+		@echo "Removing docker image $(DOCKER_IMAGE_REF)" $(LOG)
 		docker rmi -f $(DOCKER_IMAGE_REF) &> /dev/null || true
 		if [ -f $($*.gz_PATH).patch/series ]; then pushd $($*.gz_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 

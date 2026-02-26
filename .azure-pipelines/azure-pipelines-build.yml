@@ -194,6 +194,13 @@ jobs:
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
+      - script: |
+          set -ex
+          logfiles=$(find target/ -name *.log)
+          [ -z "$logfiles" ] && exit 0
+          grep "Removing docker image" $logfiles || true
+        continueOnError: true
+        displayName: Log Scan
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
