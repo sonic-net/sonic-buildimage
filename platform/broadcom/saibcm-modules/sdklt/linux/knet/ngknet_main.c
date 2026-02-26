@@ -1860,7 +1860,7 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
                          NETDEV_XDP_ACT_XSK_ZEROCOPY;
 #endif
 #endif
-    
+
     dev_net_set(ndev, current->nsproxy->net_ns);
 
     /* Register the kernel network device */
@@ -3079,4 +3079,3 @@ ngknet_exit_module(void)
 
 module_init(ngknet_init_module);
 module_exit(ngknet_exit_module);
-
