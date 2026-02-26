@@ -253,13 +253,13 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 		bfb_pre_fw_install
 	fi
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v --no-mst
+	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
 	fi
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r --no-mst
+		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r
 	fi
 
 	ex umount $sonic_fs_mountpoint
