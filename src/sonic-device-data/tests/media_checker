@@ -7,12 +7,42 @@ import sys
 
 level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS"]
 
-si_param_list = ["preemphasis", "idriver", "ipredriver", \
-                 "main", "pre1", "pre2", "pre3", \
-                 "post1", "post2", "post3", "attn", \
-                 "ob_m2lp", "ob_alev_out", "obplev", "obnlev", \
-                 "regn_bfm1p", "regn_bfm1n", "unreliable_los", \
-                 "rxpolarity", "interface_type"]
+si_param_list = [
+    "preemphasis",
+    "idriver",
+    "ipredriver",
+    "main",
+    "pre1",
+    "pre2",
+    "pre3",
+    "post1",
+    "post2",
+    "post3",
+    "gb_line_pre1",
+    "gb_line_pre2",
+    "gb_line_pre3",
+    "gb_line_main",
+    "gb_line_post1",
+    "gb_line_post2",
+    "gb_line_post3",
+    "gb_system_pre1",
+    "gb_system_pre2",
+    "gb_system_pre3",
+    "gb_system_main",
+    "gb_system_post1",
+    "gb_system_post2",
+    "gb_system_post3",
+    "attn",
+    "ob_m2lp",
+    "ob_alev_out",
+    "obplev", 
+    "obnlev",
+    "regn_bfm1p",
+    "regn_bfm1n",
+    "unreliable_los",
+    "rxpolarity",
+    "interface_type"
+]
 lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
