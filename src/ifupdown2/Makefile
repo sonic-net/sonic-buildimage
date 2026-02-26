@@ -4,12 +4,15 @@ SHELL = /bin/bash
 
 MAIN_TARGET = $(IFUPDOWN2)
 
+IFUPDOWN2_SHA256 = 55ded1c60f720c81a5d4b5feeb48d893fd3f29d4ad0fe7d9cec508fe84b5f1b8
+
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files
 	rm -rf ./ifupdown2-$(IFUPDOWN2_VERSION) ./$(IFUPDOWN2_VERSION).tar.gz
 
 	# Get ifupdown2 release
-	wget --no-check-certificate https://github.com/CumulusNetworks/ifupdown2/archive/$(IFUPDOWN2_VERSION).tar.gz
+	wget -O $(IFUPDOWN2_VERSION).tar.gz https://github.com/CumulusNetworks/ifupdown2/archive/$(IFUPDOWN2_VERSION).tar.gz
+	echo "$(IFUPDOWN2_SHA256)  $(IFUPDOWN2_VERSION).tar.gz" | sha256sum -c -
 	tar -z -f $(IFUPDOWN2_VERSION).tar.gz -x
 	pushd ./ifupdown2-$(IFUPDOWN2_VERSION)
 
