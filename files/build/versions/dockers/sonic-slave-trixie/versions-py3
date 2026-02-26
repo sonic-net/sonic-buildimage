@@ -114,7 +114,7 @@ pooch==1.8.2
 prefixed==0.7.0
 prompt_toolkit==3.0.51
 protobuf==5.29.5
-psutil==7.0.0
+psutil==7.1.3
 psutils==3.3.8
 ptyprocess==0.7.0
 pure_eval==0.2.3

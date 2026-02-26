@@ -1,5 +1,5 @@
 # Agera2 PAI Library Package - URL-based download similar to broncos
-LIBSAI_AGERA2_VERSION = 3.14.0-2
+LIBSAI_AGERA2_VERSION = 3.14.0-3
 LIBSAI_AGERA2_BRANCH_NAME = REL_3.14
 
 LIBSAI_AGERA2_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/bcmpai/$(LIBSAI_AGERA2_BRANCH_NAME)/$(LIBSAI_AGERA2_VERSION)"
