@@ -272,6 +272,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "FilterLeaf"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -801,6 +811,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "syslog_counter": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "zebra_nexthop": "disabled"
                 }
             }
         }

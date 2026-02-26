@@ -1766,13 +1766,14 @@ instead of data network.
 ```
 ### MUX_CABLE
 
-The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type` and `soc_ipv4` objects are optional.
+The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type`, `soc_ipv4` and `neighbor_mode` objects are optional.
 
 ```
 {
     "MUX_CABLE": {
         "Ethernet4": {
             "cable_type": "active-active",
+            "neighbor_mode": "prefix-route",
             "server_ipv4": "192.168.0.2/32",
             "server_ipv6": "fc02:1000::30/128",
             "soc_ipv4": "192.168.0.3/32",
@@ -3480,7 +3481,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
         "global": {
             "vnet_name": "Vnet55",
             "cp_data_channel_port": "11362",
-            "dp_channel_port": "11368",
+            "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
             "dp_channel_src_port_max": "53247",
             "dp_channel_probe_interval_ms": "100",
@@ -3496,7 +3497,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 
-**dp_channel_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
+**dp_channel_dst_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
 
 **dp_channel_src_port_min**: Minimum source port used when tunneling packets via DPU-to-DPU data plane channel.
 

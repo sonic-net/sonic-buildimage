@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -297,6 +297,42 @@ def extract_RJ45_ports_index(num_of_asics=1):
 
 def extract_cpo_ports_index(num_of_asics=1):
     return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
+
+
+def extract_asic_id_map(num_of_asics=1):
+    asic_id_map = {}
+
+    hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
+    interface2asic = {}
+    for asic_id, hwsku_json in enumerate(hwsku_jsons):
+        interface2asic.update({interface: asic_id for interface in load_json_file(hwsku_json)['interfaces'].keys()})
+
+    platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
+    platform_dict = load_json_file(platform_file)['interfaces']
+
+    for inteface, value in platform_dict.items():
+        if PORT_INDEX_KEY in value:
+            index_raw = value[PORT_INDEX_KEY]
+            # The index could be "1" or "1, 1, 1, 1"
+            index = index_raw.split(',')[0]
+            asic_id_map[int(index)-1] = interface2asic[inteface]
+    return asic_id_map
+
+
+def get_path_to_hwsku_directory(asic_id=None):
+    platform_path = device_info.get_path_to_platform_dir()
+    hwsku = device_info.get_hwsku()
+    if asic_id is not None:
+        return os.path.join(platform_path, hwsku, str(asic_id))
+    else:
+        return os.path.join(platform_path, hwsku)
+
+
+def get_path_list_to_asic_hwsku_dir(num_of_asics):
+    if num_of_asics == 1:
+        return [os.path.join(get_path_to_hwsku_directory(), HWSKU_JSON)]
+    else:
+        return [os.path.join(get_path_to_hwsku_directory(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
 
 
 def wait_until(predict, timeout, interval=1, *args, **kwargs):
