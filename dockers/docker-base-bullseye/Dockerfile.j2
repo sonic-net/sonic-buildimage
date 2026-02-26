@@ -62,7 +62,7 @@ RUN apt-get update &&        \
 
 # default rsyslog version is 8.2110.0 which has a bug on log rate limit,
 # use backport version 8.2206.0-1~bpo11+1
-RUN apt-get -t bullseye-backports -y install rsyslog
+RUN apt-get -y install rsyslog
 
 # Upgrade pip via PyPI and uninstall the Debian version
 RUN pip3 install --upgrade pip
