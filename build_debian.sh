@@ -244,7 +244,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSIO
 install_kubernetes () {
     local ver="$1"
     ## Install k8s package from storage
-    local storage_prefix="https://packages.trafficmanager.net/public/kubernetes"
+    local storage_prefix="$BUILD_PUBLIC_URL/kubernetes"
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-tools.deb -fsSL \
         ${storage_prefix}/cri-tools_${KUBERNETES_CRI_TOOLS_VERSION}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubernetes-cni.deb -fsSL \
@@ -752,9 +752,9 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
         if [[ $CONFIGURED_PLATFORM == pensando ]]; then
             ## copy device tree file into boot (XXX: need to compile dtb from dts)
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci-lipari.dtb $FILESYSTEM_ROOT/boot/
-            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci-mtfuji.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci-lipari.dtb $FILESYSTEM_ROOT/boot/
+            sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci-mtfuji.dtb $FILESYSTEM_ROOT/boot/
             sudo cp -v $PLATFORM_DIR/pensando/install_file $FILESYSTEM_ROOT/boot/
             ## make kernel as gzip file
             sudo LANG=C chroot $FILESYSTEM_ROOT gzip /boot/${KERNEL_FILE}
