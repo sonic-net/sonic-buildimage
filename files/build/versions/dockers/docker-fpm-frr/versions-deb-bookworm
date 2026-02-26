@@ -16,7 +16,7 @@ libdebuginfod1==0.188-2.1
 libdw1==0.188-2.1
 libedit2==3.1-20221030-2
 libfido2-1==1.12.0-2+b1
-libglib2.0-0==2.74.6-2+deb12u7
+libglib2.0-0==2.74.6-2+deb12u8
 libgpm2==1.20.7-10+b1
 libicu72==72.1-3+deb12u1
 libipt2==2.0.5-1
@@ -26,12 +26,12 @@ libpci3==1:3.9.0-4
 libpcre2-posix3==10.42-1
 libsensors-config==1:3.6.0-7.1
 libsensors5==1:3.6.0-7.1
-libsnmp-base==5.9.3+dfsg-2
-libsnmp40==5.9.3+dfsg-2
+libsnmp-base==5.9.3+dfsg-2+deb12u1
+libsnmp40==5.9.3+dfsg-2+deb12u1
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
-libssl-dev==3.0.17-1~deb12u3
-libssl3==3.0.17-1~deb12u3
+libssl-dev==3.0.18-1~deb12u2
+libssl3==3.0.18-1~deb12u2
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
@@ -40,7 +40,7 @@ libyang3-dbgsym==3.12.2-1
 logrotate==3.21.0-1
 lsof==4.95.0-1
 openssh-client==1:9.2p1-2+deb12u7
-openssl==3.0.17-1~deb12u3
+openssl==3.0.18-1~deb12u2
 pci.ids==0.0~2023.04.11-1
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
