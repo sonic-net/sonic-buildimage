@@ -731,10 +731,26 @@ sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRu
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
-# Copy systemd-networkd-wait-online override configuration
-sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d
-sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd-wait-online.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d/override.conf
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-networkd-wait-online.service
+# For Pensando platform: mask systemd-networkd services since dpu.init handles everything
+# Must be done AFTER the generic enable command above
+if [[ $CONFIGURED_PLATFORM == pensando ]]; then
+    # Mask systemd-networkd and wait-online - dpu.init handles interface and DHCP
+    sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system/systemd-networkd.service
+    sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system/systemd-networkd-wait-online.service
+
+    # database.service must wait for dpu.service (interface + DHCP)
+    sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/database.service.d
+    cat <<EOF | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/database.service.d/pensando-dpu.conf > /dev/null
+[Unit]
+Requires=dpu.service
+After=dpu.service
+EOF
+else
+    # Copy systemd-networkd-wait-online override configuration
+    sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d
+    sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd-wait-online.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d/override.conf
+    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-networkd-wait-online.service
+fi
 
 # Copy backend-acl script and service file
 sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/backend-acl.service
