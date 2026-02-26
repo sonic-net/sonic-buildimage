@@ -12,6 +12,10 @@ from sonic_py_common import syslogger
 
 QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 apiHelper = APIHelper()
+LOCALHOST = "127.0.0.1"
+REDIS_PORT = 6379
+CONFIG_DB = 4
+DISABLE_CONTAINER_LIST = ["snmp", "dhcp_relay", "mgmt_framework"]
 
 SYSLOG_IDENTIFIER = 'dpu_pensando_util'
 logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
@@ -84,6 +88,19 @@ def setup_platform_components_json(slot_id):
     except Exception as e:
         log_err("failed to setup platform_components.json due to {}".format(e))
 
+def disable_unused_containers():
+    try:
+        import redis
+
+        r = redis.StrictRedis(host=LOCALHOST, port=REDIS_PORT, db=CONFIG_DB, decode_responses=True)
+
+        for feature in DISABLE_CONTAINER_LIST:
+            key = f"FEATURE|{feature}"
+            if r.exists(key):
+                r.hset(key, "state", "disabled")
+    except Exception as e:
+        log_err("failed to disable state of unused container due to {}".format(e))
+
 def config_setup():
     try:
         from sonic_platform.chassis import Chassis
@@ -91,13 +108,14 @@ def config_setup():
     except Exception as e:
         log_err("failed to get slot id due to {}".format(e))
 
-    try:
-        cmd = f'sonic-cfggen -a "{{\\"INTERFACE\\": {{\\"Ethernet0\\": {{}},\\"Ethernet0|18.{slot_id}.202.1/31\\": {{}}}}}}" --write-to-db'
-        run_cmd(cmd)
-    except Exception as e:
-        log_err("failed to set Ethernet0 ip due to {}".format(e))
+    #try:
+    #    cmd = f'sonic-cfggen -a "{{\\"INTERFACE\\": {{\\"Ethernet0\\": {{}},\\"Ethernet0|18.{slot_id}.202.1/31\\": {{}}}}}}" --write-to-db'
+    #    run_cmd(cmd)
+    #except Exception as e:
+    #    log_err("failed to set Ethernet0 ip due to {}".format(e))
 
     setup_platform_components_json(slot_id)
+    disable_unused_containers()
 
     try:
         run_cmd("mkdir -p /host/images")
