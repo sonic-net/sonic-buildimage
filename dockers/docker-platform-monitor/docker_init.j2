@@ -33,7 +33,7 @@ fi
 CTR_SCRIPT="/usr/share/sonic/scripts/container_startup.py"
 if test -f ${CTR_SCRIPT}
 then
-    ${CTR_SCRIPT} -f pmon -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
+    ${CTR_SCRIPT} -f pmon -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION:-0.0.0}
 fi
 
 mkdir -p /var/sonic
