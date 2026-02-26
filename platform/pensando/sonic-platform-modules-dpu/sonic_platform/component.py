@@ -53,7 +53,7 @@ def fetch_version_info(apiHelper):
         from sonic_installer.bootloader import get_bootloader
         bootloader = get_bootloader()
         curimage = bootloader.get_current_image()
-        curimage = curimage.split('-')[-1]
+        curimage = curimage.split('SONiC-OS-')[-1]
         fwupdate_version_list = []
         try:
             dpu_docker_name = apiHelper.get_dpu_docker_container_name()
