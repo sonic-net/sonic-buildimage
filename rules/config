@@ -42,6 +42,11 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 # in the dockers/ and platform/ subdirs to use a variable reference instead of an explicit image name.
 # SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD = y
 
+# SONIC_USE_DOCKER_BUILDKIT - use Docker BuildKit for image builds.
+# BuildKit builds individual layers in parallel and provides better caching.
+# Requires Docker 18.09+ (available on all supported build hosts).
+# SONIC_USE_DOCKER_BUILDKIT = y
+
 # SONIC_CONFIG_ENABLE_COLORS - enable colored output in build system.
 # Comment next line to disable:
 # SONIC_CONFIG_ENABLE_COLORS = y
