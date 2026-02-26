@@ -237,8 +237,8 @@ static_route_srv6_data = [
                    {'ifname': 'Ethernet8,Ethernet16',
                     'sidlist': 'fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::|fcbb:bbbb:3:9:fedd::'},
                    hdl_static_route_sidlist_cmd, False, None,
-                   [['ip route 10.1.3.0/24', 'Ethernet8', 'segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd:: encap-behavior H_Encaps_Red'],
-                    ['ip route 10.1.3.0/24', 'Ethernet16', 'segments fcbb:bbbb:3:9:fedd:: encap-behavior H_Encaps_Red']])
+                   [['ip route 10.1.3.0/24', 'Ethernet8', 'segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd::', 'encap-behavior H_Encaps_Red'],
+                    ['ip route 10.1.3.0/24', 'Ethernet16', 'segments fcbb:bbbb:3:9:fedd::', 'encap-behavior H_Encaps_Red']])
 ]
 
 @patch.dict('sys.modules', **mockmapping)
