@@ -3,16 +3,8 @@ module sonic-vxlan {
     namespace "http://github.com/sonic-net/sonic-vxlan";
     prefix svxlan;
 
-    import ietf-yang-types {
-        prefix yang;
-    }
-
     import ietf-inet-types {
         prefix inet;
-    }
-
-    import sonic-extension {
-        prefix sonic-ext;
     }
     // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
     //import sonic-vlan {
@@ -21,7 +13,6 @@ module sonic-vxlan {
     import sonic-types {
         prefix stypes;
     }
-
 
     organization
         "SONiC";

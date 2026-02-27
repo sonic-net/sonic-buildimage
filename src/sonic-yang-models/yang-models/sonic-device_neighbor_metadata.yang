@@ -5,10 +5,6 @@ module sonic-device_neighbor_metadata {
     namespace "http://github.com/sonic-net/sonic-device_neighbor_metadata";
     prefix device_neighbor_metadata;
 
-    import ietf-yang-types {
-        prefix yang;
-    }
-
     import ietf-inet-types {
         prefix inet;
     }
