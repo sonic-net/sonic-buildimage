@@ -8,6 +8,7 @@
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/msi.h>
+#include <linux/of_irq.h>
 #include <linux/interrupt.h>
 
 #include "ionic.h"
@@ -159,19 +160,34 @@ static void ionic_mnic_set_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 
 int ionic_bus_alloc_irq_vectors(struct ionic *ionic, unsigned int nintrs)
 {
-	int err = 0;
+    struct device *dev = ionic->dev;
+    struct irq_domain *domain;
+    int err;
 
-	err = platform_msi_domain_alloc_irqs(ionic->dev, nintrs,
-					     ionic_mnic_set_msi_msg);
-	if (err)
-		return err;
+    /* 1. Explicitly associate the Platform MSI domain if not already set */
+    if (!dev_get_msi_domain(dev)) {
+        domain = of_msi_get_domain(dev, dev->of_node, DOMAIN_BUS_PLATFORM_MSI);
+        if (domain) {
+            dev_set_msi_domain(dev, domain);
+        } else {
+            dev_err(dev, "Failed to find Platform MSI domain\n");
+            return -EINVAL;
+        }
+    }
 
-	return nintrs;
+    /* 2. Modern allocation helper with the required callback */
+    err = platform_device_msi_init_and_alloc_irqs(dev, nintrs, ionic_mnic_set_msi_msg);
+    if (err) {
+        dev_err(dev, "Platform MSI allocation failed: %d\n", err);
+        return err;
+    }
+
+    return nintrs;
 }
 
 void ionic_bus_free_irq_vectors(struct ionic *ionic)
 {
-	platform_msi_domain_free_irqs(ionic->dev);
+	platform_device_msi_free_irqs_all(ionic->dev);
 }
 
 struct net_device *ionic_alloc_netdev(struct ionic *ionic)
@@ -425,7 +441,7 @@ err_out_unmap_bars:
 }
 EXPORT_SYMBOL_GPL(ionic_probe);
 
-int ionic_remove(struct platform_device *pfdev)
+void ionic_remove(struct platform_device *pfdev)
 {
 	struct ionic *ionic = platform_get_drvdata(pfdev);
 
@@ -446,7 +462,7 @@ int ionic_remove(struct platform_device *pfdev)
 		dev_info(ionic->dev, "removed\n");
 	}
 
-	return 0;
+	return;
 }
 EXPORT_SYMBOL_GPL(ionic_remove);
 
@@ -484,3 +500,4 @@ void ionic_bus_unregister_driver(void)
 {
 	platform_driver_unregister(&ionic_driver);
 }
+
