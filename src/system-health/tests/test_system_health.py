@@ -17,7 +17,7 @@ import importlib.util
 import importlib.machinery
 from swsscommon import swsscommon
 
-from mock import Mock, MagicMock, patch
+from mock import Mock, MagicMock, patch, call
 from sonic_py_common import device_info
 
 from .mock_connector import MockConnector
@@ -352,6 +352,144 @@ def test_service_checker_check_by_monit(mock_run):
 
     assert 'diskCheck' in checker._info
     assert checker._info['diskCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker recognizes Kubernetes-managed containers by labels"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'snmp': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'restapi': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    
+    # Mock Kubernetes containers with labels
+    mock_containers = MagicMock()
+    mock_snmp_container = MagicMock()
+    mock_snmp_container.name = 'k8s_snmp_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_snmp_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'snmp'
+    }
+    
+    mock_restapi_container = MagicMock()
+    mock_restapi_container.name = 'k8s_restapi_restapi-pod-test_sonic_87654321-4321-4321-4321-cba987654321_0'
+    mock_restapi_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'restapi'
+    }
+    
+    # Mock POD container (should be ignored)
+    mock_pod_container = MagicMock()
+    mock_pod_container.name = 'k8s_POD_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_pod_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'POD'
+    }
+    
+    mock_containers.list = MagicMock(return_value=[mock_snmp_container, mock_restapi_container, mock_pod_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+    
+    mock_run.return_value = mock_supervisorctl_output
+    
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+    
+    # Verify k8s containers are recognized by their label names
+    running_containers = checker.get_current_running_containers()
+    assert 'snmp' in running_containers
+    assert 'restapi' in running_containers
+    assert 'POD' not in running_containers
+    
+    # Verify k8s containers are NOT added to critical processes (k8s has its own health checks)
+    assert 'snmp' not in checker.container_critical_processes
+    assert 'restapi' not in checker.container_critical_processes
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker handles both regular Docker and Kubernetes containers"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'swss': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'database': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    
+    mock_containers = MagicMock()
+    
+    # Regular Docker container
+    mock_swss_container = MagicMock()
+    mock_swss_container.name = 'swss'
+    mock_swss_container.labels = {}
+    
+    # Kubernetes container
+    mock_database_container = MagicMock()
+    mock_database_container.name = 'k8s_database_database-pod-test_sonic_12345678_0'
+    mock_database_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'database'
+    }
+    
+    mock_containers.list = MagicMock(return_value=[mock_swss_container, mock_database_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+    
+    mock_run.return_value = mock_supervisorctl_output
+    
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+    
+    # Verify both types of containers are recognized
+    running_containers = checker.get_current_running_containers()
+    assert 'swss' in running_containers
+    assert 'database' in running_containers
+    
+    # Verify only regular Docker containers are monitored for critical processes
+    assert 'swss' in checker.container_critical_processes
+    assert 'database' not in checker.container_critical_processes  # k8s container, not monitored
 
 
 def test_hardware_checker():
@@ -696,6 +834,40 @@ def test_utils():
     assert output
 
 
+@patch('health_checker.utils.logger.log_warning')
+@patch('health_checker.utils.logger.log_notice')
+@patch('health_checker.utils.logger.log_error')
+@patch('os.killpg')
+@patch('subprocess.Popen')
+def test_utils_timeout(mock_popen, mock_killpg, mock_log_error, mock_log_notice, mock_log_warning):
+    # Mock the spawned process
+    from subprocess import TimeoutExpired
+    mock_process = MagicMock()
+    mock_process.pid = 1234
+    mock_process.communicate.side_effect = [
+        TimeoutExpired(cmd='cmd', timeout=0.01), # first call triggers timeout
+        ('', '')                                 # second call during cleanup
+    ]
+    mock_popen.return_value = mock_process
+
+    # Execute with a timeout to trigger the TimeoutExpired path
+    output = utils.run_command('cmd', timeout=0.01)
+
+    # Expectations
+    assert output is None
+
+    assert mock_process.communicate.call_count == 2
+    mock_process.communicate.assert_has_calls([call(timeout=0.01), call(timeout=1)])
+
+    from signal import SIGKILL
+    mock_killpg.assert_called_once()
+    mock_killpg.assert_called_with(mock_process.pid, SIGKILL)
+
+    assert mock_log_notice.call_count == 2  # cleanup + done
+    mock_log_warning.assert_called_once() # command timeout
+    mock_log_error.assert_not_called() # no errors
+
+
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
 @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @patch('docker.DockerClient')
@@ -1016,3 +1188,22 @@ def test_healthd_check_interval(mock_log_warning, mock_log_notice, mock_time):
 
     daemon.stop_event.wait.return_value = True
     assert not daemon._run_checker(manager, chassis)
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_multi_dot_unit_name():
+    """Test that check_unit_status does not crash on unit names with multiple dots.
+
+    Systemd device/mount units can have names like 'sys-devices-pci0000:00.device'
+    which contain multiple dots. Using str.split('.') would raise ValueError
+    (too many values to unpack). Using rsplit('.', 1) correctly handles this.
+    Regression test for issue #25291.
+    """
+    sysmon = Sysmonitor()
+    # These should not raise ValueError
+    sysmon.check_unit_status('sys-devices-pci0000:00-0000:00:1f.0.device')
+    sysmon.check_unit_status('dev-disk-by\\x2did-wwn\\x2d0x5001.mount')
+    sysmon.check_unit_status('run-user-1000.mount')
+    # Normal service name should still work
+    sysmon.check_unit_status('mock_snmp.timer')
