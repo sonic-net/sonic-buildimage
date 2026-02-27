@@ -22,7 +22,7 @@ endif
 $(DOCKER_L2MCD)_VERSION = 1.0.0
 $(DOCKER_L2MCD)_PACKAGE_NAME = l2mcd
 $(DOCKER_L2MCD)_CONTAINER_NAME = l2mcd
-$(DOCKER_L2MCD)_RUN_OPT += --privileged -t
+$(DOCKER_L2MCD)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_L2MCD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_L2MCD)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
