@@ -66,9 +66,51 @@
 
 # Common files and FLAGS
 # Run the 'touch cache.skip.common' command in the base directory to exclude the common files from caching
-SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform slave.mk rules/functions Makefile.cache)
+#
+# Cache scope design:
+#   SONIC_COMMON_FILES_LIST tracks files whose changes affect ALL package outputs.
+#   slave.mk is intentionally excluded because:
+#     - It is 1800+ lines and changed ~20 times per 6 months
+#     - Most changes (new targets, platform additions, cosmetic) do NOT affect
+#       existing package outputs
+#     - Including it causes 100% cache invalidation on every slave.mk commit
+#     - Per-package .dep files already track package-specific dependencies
+#   Instead, SONIC_CACHE_RECIPE_VER acts as a manual version stamp.
+#   Bump it when a slave.mk change genuinely affects package build output
+#   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
+#
+SONIC_CACHE_RECIPE_VER := 1
+# Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
+# Used by the guard below to detect unreviewed slave.mk changes.
+SONIC_CACHE_RECIPE_VER_BASELINE := 348388b6882c0c90f4a1c7170d0e33cf9c0e645b
+
+# Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
+# This catches the case where someone modifies slave.mk build recipes without
+# bumping the cache version, which could serve stale cached packages.
+# To resolve: review whether the slave.mk change affects package output.
+#   - If yes: bump SONIC_CACHE_RECIPE_VER and update the baseline hash.
+#   - If no:  just update the baseline hash.
+SONIC_CACHE_SLAVE_HASH := $(if $(wildcard .git),$(shell git hash-object slave.mk 2>/dev/null))
+ifneq ($(SONIC_CACHE_SLAVE_HASH),)
+ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
+ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
+ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+$(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
+$(warning [CACHE] Review whether the change affects package build output:)
+$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+endif
+endif
+endif
+endif
+
+# SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
+# It includes common files like .platform, rules/functions, Makefile.cache etc.
+# NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
+SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
-SONIC_COMMON_FLAGS_LIST :=  $(CONFIGURED_PLATFORM) \
+SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
+                            $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
