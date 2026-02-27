@@ -1,6 +1,6 @@
 module sonic-mld-snooping {
-	namespace "http://github.com/Azure/sonic-mld-snooping";
-	prefix sigmps;
+	namespace "http://github.com/sonic-net/sonic-mld-snooping";
+	prefix smlds;
 	yang-version 1.1;
 
 	import ietf-inet-types {
