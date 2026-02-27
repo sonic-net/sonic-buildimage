@@ -1224,6 +1224,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
     load_data: load Config DB, crop, xlate and create data tree from it. (Public)
     input:    configdbJson - will NOT be modified
               debug Flag
+              error_log_level - syslog level for data loading failures
+                                (default: syslog.LOG_WARNING)
     returns:  True - success   False - failed
     """
     def loadData(self, configdbJson, debug=False, error_log_level=syslog.LOG_WARNING):
