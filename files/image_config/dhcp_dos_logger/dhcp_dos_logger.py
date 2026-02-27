@@ -56,8 +56,9 @@ def wait_for_port_init_done():
     Wait for PortInitDone event from APP_DB.
 
     Returns:
-        None (blocks until PortInitDone is received)
+        None (blocks until PortInitDone is received or timeout occurs)
     """
+    MAX_WAIT_SECONDS = 300
     appl_db = daemon_base.db_connect("APPL_DB")
 
     sel = swsscommon.Select()
@@ -65,8 +66,14 @@ def wait_for_port_init_done():
     sel.addSelectable(sst)
 
     logger.log_info("Waiting for PortInitDone...")
+    start_time = time.time()
     while True:
         (state, _) = sel.select(1000)
+        elapsed = time.time() - start_time
+
+        if elapsed >= MAX_WAIT_SECONDS:
+            logger.log_warning("Timed out waiting for PortInitDone, proceeding anyway")
+            return
 
         if state == swsscommon.Select.TIMEOUT:
             continue
@@ -75,7 +82,7 @@ def wait_for_port_init_done():
             continue
 
         while True:
-            (key, op, fvp) = sst.pop()
+            (key, _, _) = sst.pop()
             if not key:
                 break
 
