@@ -94,14 +94,16 @@ For convenience, you can use the automated prerequisites script to handle both p
 curl -sSL https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/scripts/prerequisites.sh | bash
 ```
 
-If you have already cloned the repo, you can run it locally instead:
+If you have already cloned the repo, run it locally to install only the prerequisites
+(the script detects an existing clone at `SONIC_DIR` and skips the clone/checkout step):
 ```shell
-bash scripts/prerequisites.sh
+cd ~/sonic-buildimage   # or wherever your clone lives
+SONIC_DIR=$(pwd) bash scripts/prerequisites.sh
 ```
 
-> **Note:** The script will skip cloning if `~/sonic-buildimage` already exists.
-> Override the target directory or branch via environment variables:
+> **Tip:** You can override clone location and branch:
 > `SONIC_DIR=~/my-sonic BRANCH=202511 bash scripts/prerequisites.sh`
+> When `SONIC_DIR` already exists, only prerequisites are installed — no second clone.
 
 This script will automatically:
 * Install required packages (pip, jinja, Docker)
@@ -173,13 +175,13 @@ make SONIC_BUILD_JOBS=4 all
 ### Build performance tips
 
 **Parallelism vs memory:** Each parallel job can use 4–6 GB RAM during C++ compilation,
-plus a ~4 GB base overhead. Rule of thumb: `(JOBS × 5 GB) + 4 GB ≤ available RAM`:
+plus a ~4 GB base overhead. Rule of thumb: `(JOBS × 6 GB) + 4 GB ≤ available RAM`:
 
 | JOBS | Approx RAM needed | Typical VS build time |
 |------|-------------------|----------------------|
 | 1    | ~10 GB            | ~3 hours             |
-| 4    | ~24 GB            | ~1.5 hours           |
-| 8    | ~48 GB            | ~1 hour              |
+| 4    | ~28 GB            | ~1.5 hours           |
+| 8    | ~52 GB            | ~1 hour              |
 
 **Contain OOM in the build container** (protects host processes):
 ```shell
