@@ -31,9 +31,15 @@ def patch_dependencies():
     modules.update(fake_swsscommon_modules())
 
     TEST_DIR = os.path.dirname(os.path.realpath(__file__))
-    sonic_py_common = os.path.join(TEST_DIR, "../../../../../src/sonic-py-common/")
-    sonic_platform_common = os.path.join(TEST_DIR, "../../../../../src/sonic-platform-common/")
-    pddf_base = os.path.join(TEST_DIR, "../../../../../platform/pddf/platform-api-pddf-base")
+    sonic_py_common = os.path.join(
+        TEST_DIR, "../../../../../src/sonic-py-common/"
+    )
+    sonic_platform_common = os.path.join(
+        TEST_DIR, "../../../../../src/sonic-platform-common/"
+    )
+    pddf_base = os.path.join(
+        TEST_DIR, "../../../../../platform/pddf/platform-api-pddf-base"
+    )
 
     with patch.dict(sys.modules, modules):
         with patch.object(sys, "path", [sonic_py_common, sonic_platform_common, pddf_base] + sys.path):
