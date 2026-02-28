@@ -6,7 +6,7 @@
 #   Designed to run alongside a build: start before, kill after.
 #
 # Output: CSV with timestamp, CPU%, memory_used_gb, memory_total_gb,
-#         load_avg_1m, docker_containers, active_make_jobs, disk_io_mb_s
+#         load_avg_1m, docker_containers, disk_io_mb_s
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ OUTPUT="${2:-./target/resource-monitor.csv}"
 
 mkdir -p "$(dirname "$OUTPUT")"
 
-echo "timestamp,epoch,cpu_pct,mem_used_gb,mem_total_gb,mem_pct,load_1m,load_5m,docker_containers,disk_read_mb,disk_write_mb" > "$OUTPUT"
+echo "timestamp,epoch,cpu_pct,mem_used_gb,mem_total_gb,mem_pct,load_1m,load_5m,docker_containers,disk_read_mb_s,disk_write_mb_s" > "$OUTPUT"
 
 echo "Resource monitor started (interval: ${INTERVAL}s, output: $OUTPUT)"
 echo "Kill with: kill $$"
@@ -29,11 +29,21 @@ while true; do
     ts=$(date +%H:%M:%S)
     epoch=$(date +%s)
 
-    # CPU - use /proc/stat snapshot (1 second sample)
-    cpu_pct=$(awk '/^cpu / {idle=$5; total=$2+$3+$4+$5+$6+$7+$8; printf "%.0f", (1-idle/total)*100}' /proc/stat)
+    # CPU - delta between two /proc/stat reads (1 second apart)
+    read_cpu_stats() { awk '/^cpu / {print $2, $3, $4, $5, $6, $7, $8}' /proc/stat; }
+    cpu1=$(read_cpu_stats)
+    sleep 1
+    cpu2=$(read_cpu_stats)
+    cpu_pct=$(echo "$cpu1" "$cpu2" | awk '{
+        u1=$1+$2+$3; i1=$4; s1=$5+$6+$7;
+        u2=$8+$9+$10; i2=$11; s2=$12+$13+$14;
+        total=(u2+i2+s2)-(u1+i1+s1);
+        if (total > 0) printf "%.0f", ((u2+s2)-(u1+s1))/total*100;
+        else print "0";
+    }')
 
     # Memory
-    mem_info=$(free -g | awk '/^Mem:/ {printf "%s,%s,%.0f", $3, $2, $3/$2*100}')
+    mem_info=$(free -m | awk '/^Mem:/ {printf "%.1f,%.1f,%.0f", $3/1024, $2/1024, $3/$2*100}')
 
     # Load average
     load=$(awk '{printf "%s,%s", $1, $2}' /proc/loadavg)
@@ -52,8 +62,13 @@ while true; do
         first=false
     else
         # Sectors are 512 bytes, convert to MB over interval
-        disk_read_mb=$(( (cur_read - prev_read) * 512 / 1048576 / INTERVAL ))
-        disk_write_mb=$(( (cur_write - prev_write) * 512 / 1048576 / INTERVAL ))
+        if [ "$INTERVAL" -gt 0 ]; then
+            disk_read_mb=$(( (cur_read - prev_read) * 512 / 1048576 / INTERVAL ))
+            disk_write_mb=$(( (cur_write - prev_write) * 512 / 1048576 / INTERVAL ))
+        else
+            disk_read_mb=$(( (cur_read - prev_read) * 512 / 1048576 ))
+            disk_write_mb=$(( (cur_write - prev_write) * 512 / 1048576 ))
+        fi
     fi
     prev_read=$cur_read
     prev_write=$cur_write

@@ -7,14 +7,18 @@
 # Parses HEADER/FOOTER timestamps from individual .log files and produces:
 #   1. Sorted table of packages by duration (longest first)
 #   2. Phase breakdown (bookworm vs trixie)
-#   3. Critical path estimate
+#   3. Build parallelism analysis
 #   4. Parallelism efficiency stats
 #   5. Gantt chart data (CSV)
 
 set -euo pipefail
 
+# Ensure scripts are executable
+for script in "$(dirname "$0")"/build-dep-graph.py "$(dirname "$0")"/build-resource-monitor.sh; do
+    [ -f "$script" ] && [ ! -x "$script" ] && chmod +x "$script"
+done
+
 TARGET_DIR="${1:-./target}"
-REPORT_FORMAT="${2:-text}"  # text or csv
 
 if [ ! -d "$TARGET_DIR" ]; then
     echo "Error: target directory '$TARGET_DIR' not found" >&2
@@ -34,9 +38,6 @@ collect_timings() {
         local start_line end_line
         start_line=$(grep -m1 '^Build start time:' "$logfile" 2>/dev/null || true)
         end_line=$(grep '^Build end time:' "$logfile" 2>/dev/null | tail -1 || true)
-        local elapsed_line
-        elapsed_line=$(grep '^Elapsed time:' "$logfile" 2>/dev/null | tail -1 || true)
-
         if [ -z "$start_line" ] || [ -z "$end_line" ]; then
             continue
         fi
@@ -158,7 +159,7 @@ done
 
 echo ""
 
-# ---- Section 3: Parallelism timeline (10-second buckets) ----
+# ---- Section 3: Parallelism timeline (60-second samples) ----
 echo "=============================================="
 echo "  PARALLELISM OVER TIME"
 echo "=============================================="

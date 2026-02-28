@@ -26,11 +26,11 @@ def parse_rules(rules_dir: str) -> dict:
     all_packages = set()
 
     dep_patterns = [
-        (r'\$\((\w+)\)_DEPENDS\s*[\+:]?=\s*(.*)', 'depends'),
-        (r'\$\((\w+)\)_DEBS_DEPENDS\s*[\+:]?=\s*(.*)', 'depends'),
-        (r'\$\((\w+)\)_WHEEL_DEPENDS\s*[\+:]?=\s*(.*)', 'depends'),
-        (r'\$\((\w+)\)_AFTER\s*[\+:]?=\s*(.*)', 'after'),
-        (r'\$\((\w+)\)_RDEPENDS\s*[\+:]?=\s*(.*)', 'rdeps'),
+        (r'\$\((\w+)\)_DEPENDS\s*[\?\+:]?=\s*(.*)', 'depends'),
+        (r'\$\((\w+)\)_DEBS_DEPENDS\s*[\?\+:]?=\s*(.*)', 'depends'),
+        (r'\$\((\w+)\)_WHEEL_DEPENDS\s*[\?\+:]?=\s*(.*)', 'depends'),
+        (r'\$\((\w+)\)_AFTER\s*[\?\+:]?=\s*(.*)', 'after'),
+        (r'\$\((\w+)\)_RDEPENDS\s*[\?\+:]?=\s*(.*)', 'rdeps'),
     ]
 
     pkg_var_pattern = re.compile(r'\$\((\w+)\)')
@@ -56,7 +56,7 @@ def parse_rules(rules_dir: str) -> dict:
 
                 # Extract variable references
                 for dep_var in pkg_var_pattern.findall(dep_str):
-                    if dep_var.endswith('_DBG') or dep_var == 'LIBSWSSCOMMON_DBG':
+                    if dep_var.endswith('_DBG'):
                         continue  # Skip debug variants
                     all_packages.add(dep_var)
                     if dep_type == 'depends':
@@ -65,7 +65,7 @@ def parse_rules(rules_dir: str) -> dict:
                     elif dep_type == 'after':
                         after[pkg_name].add(dep_var)
                     elif dep_type == 'rdeps':
-                        pass  # informational only
+                        rdeps[pkg_name].add(dep_var)
 
     return {
         'deps': {k: sorted(v) for k, v in deps.items()},
@@ -78,13 +78,18 @@ def parse_rules(rules_dir: str) -> dict:
 def find_critical_path(deps: dict, all_packages: list) -> list:
     """Find the longest dependency chain (critical path)."""
     memo = {}
+    in_progress = set()  # cycle detection
 
     def longest_chain(pkg):
         if pkg in memo:
             return memo[pkg]
+        if pkg in in_progress:
+            return [pkg]  # cycle detected, break recursion
+        in_progress.add(pkg)
         dep_list = deps.get(pkg, [])
         if not dep_list:
             memo[pkg] = [pkg]
+            in_progress.discard(pkg)
             return memo[pkg]
         best = []
         for d in dep_list:
@@ -92,6 +97,7 @@ def find_critical_path(deps: dict, all_packages: list) -> list:
             if len(chain) > len(best):
                 best = chain
         memo[pkg] = best + [pkg]
+        in_progress.discard(pkg)
         return memo[pkg]
 
     longest = []
@@ -103,10 +109,14 @@ def find_critical_path(deps: dict, all_packages: list) -> list:
     return longest
 
 
-def compute_fan_stats(deps: dict, rdeps: dict) -> list:
+def compute_fan_stats(deps: dict, rdeps: dict, after: dict = None) -> list:
     """Compute fan-out (dependents) and fan-in (dependencies) per package."""
     stats = []
     all_pkgs = set(deps.keys()) | set(rdeps.keys())
+    if after:
+        for k, v in after.items():
+            all_pkgs.add(k)
+            all_pkgs.update(v)
     for pkg in sorted(all_pkgs):
         fan_out = len(rdeps.get(pkg, []))
         fan_in = len(deps.get(pkg, []))
@@ -171,7 +181,7 @@ def main():
     print("=" * 60)
     print(f"  {'PACKAGE':<40} {'FAN-OUT':>8} {'FAN-IN':>8}")
     print(f"  {'-------':<40} {'--------':>8} {'------':>8}")
-    fan_stats = compute_fan_stats(graph['deps'], graph['rdeps'])
+    fan_stats = compute_fan_stats(graph['deps'], graph['rdeps'], graph['after'])
     for s in fan_stats[:20]:
         print(f"  {s['package']:<40} {s['fan_out']:>8} {s['fan_in']:>8}")
 
@@ -200,7 +210,7 @@ def main():
     with open(json_path, 'w') as f:
         json.dump({
             'deps': graph['deps'],
-            'rdeps': {k: sorted(v) for k, v in graph['rdeps'].items() if v},
+            'rdeps': {k: sorted(v) for k, v in graph['rdeps'].items()},
             'after': graph['after'],
             'critical_path': crit_path,
             'fan_stats': fan_stats[:30],
