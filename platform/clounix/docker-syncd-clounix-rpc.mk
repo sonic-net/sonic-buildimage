@@ -20,7 +20,8 @@ $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_diag:/usr/bin/clx_diag
 $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_ipython:/usr/bin/clx_ipython
 $(DOCKER_SYNCD_CLOUNIX_RPC)_BASE_IMAGE_FILES += clx_icling:/usr/bin/clx_icling
 
-$(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += --net=host --privileged -t
+$(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += --net=host --cap-add=SYS_RAWIO --cap-add=SYS_ADMIN --cap-add=NET_ADMIN --cap-add=NET_RAW -t
+$(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
 $(DOCKER_SYNCD_CLOUNIX_RPC)_RUN_OPT += -v /var/run/docker-syncd:/var/run/sswsyncd
