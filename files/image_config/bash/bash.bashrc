@@ -10,6 +10,10 @@
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
+# Save history after each command to prevent loss during warm-reboot/kexec
+shopt -s histappend
+PROMPT_COMMAND="history -a; ${PROMPT_COMMAND}"
+
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
