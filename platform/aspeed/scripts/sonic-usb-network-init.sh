@@ -8,7 +8,6 @@ set -e
 GADGET_NAME="g1"
 FUNCTION_TYPE="ncm"  # Options: ncm, ecm, eem, rndis
 INTERFACE_NAME="usb0"
-# BMC_IP="192.168.100.1"
 SUBNET_MASK="24"
 VENDOR_ID="0x1d6b"    # Linux Foundation
 PRODUCT_ID="0x0104"   # Multifunction Composite Gadget
