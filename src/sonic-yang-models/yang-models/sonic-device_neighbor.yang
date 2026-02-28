@@ -9,10 +9,6 @@ module sonic-device_neighbor {
         prefix inet;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     import sonic-port {
         prefix port;
         revision-date 2019-07-01;
