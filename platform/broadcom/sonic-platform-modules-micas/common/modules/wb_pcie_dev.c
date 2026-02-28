@@ -24,6 +24,7 @@
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/pci.h>
@@ -865,7 +866,7 @@ io_unmap:
     return ret;
 }
 
-static int pci_dev_remove(struct platform_device *pdev)
+static void pci_dev_remove(struct platform_device *pdev)
 {
     int i;
 
@@ -879,7 +880,6 @@ static int pci_dev_remove(struct platform_device *pdev)
         }
     }
 
-    return 0;
 }
 
 static struct of_device_id pci_dev_match[] = {

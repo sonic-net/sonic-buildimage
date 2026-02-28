@@ -226,7 +226,7 @@ static struct i2c_driver ct7318_driver = {
         .name   = "ct7318",
         .of_match_table = of_match_ptr(ct7318_of_match),
     },
-    .probe_new = ct7318_probe,
+    .probe = ct7318_probe,
     .id_table = ct7318_id,
 };
 

@@ -25,6 +25,7 @@
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
@@ -741,7 +742,7 @@ int i2c_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_
 }
 EXPORT_SYMBOL(i2c_device_func_write);
 
-static int i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int i2c_dev_probe(struct i2c_client *client)
 {
     int ret = 0;
     struct i2c_dev_info *i2c_dev;

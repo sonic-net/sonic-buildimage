@@ -1115,14 +1115,13 @@ out:
     return ret;
 };
 
-static int fpga_i2c_remove(struct platform_device *pdev)
+static void fpga_i2c_remove(struct platform_device *pdev)
 {
     fpga_i2c_dev_t *fpga_i2c;
 
     fpga_i2c = platform_get_drvdata(pdev);
     i2c_del_adapter(&fpga_i2c->adap);
     platform_set_drvdata(pdev, NULL);
-    return 0;
 };
 
 static struct of_device_id fpga_i2c_match[] = {

@@ -283,7 +283,7 @@ static struct attribute *ucd9081_hwmon_attrs[] = {
 };
 ATTRIBUTE_GROUPS(ucd9081_hwmon);
 
-static int ucd9081_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int ucd9081_probe(struct i2c_client *client)
 {
     int ret;
     struct ucd9081_data *data;

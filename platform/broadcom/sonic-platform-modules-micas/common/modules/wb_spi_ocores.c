@@ -506,7 +506,7 @@ static void spioc_chipselect(struct spi_device *spi, int is_active)
     u8 tx_conf;
     int ret;
 
-    spioc = spi_master_get_devdata(spi->master);
+    spioc = spi_controller_get_devdata(spi->controller);
     spioc->transfer_busy_flag = 0;
     ret = spioc_wait_trans(spioc, msecs_to_jiffies(100));
     if (ret < 0) {
@@ -514,7 +514,7 @@ static void spioc_chipselect(struct spi_device *spi, int is_active)
         spioc->transfer_busy_flag = 1;
         return;
     }
-    spioc->chip_select = spi->chip_select;
+    spioc->chip_select = spi_get_chipselect(spi, 0);
     SPI_OC_VERBOSE("spioc_chipselect:%u, value:%d.\n", spioc->chip_select, is_active);
     tx_conf = 0;
     tx_conf |= SPIOC_CSID(spioc->chip_select);
@@ -572,7 +572,7 @@ static int spioc_setup_transfer(struct spi_device *spi, struct spi_transfer *tra
     u32 hz;
     int div;
 
-    spioc = spi_master_get_devdata(spi->master);
+    spioc = spi_controller_get_devdata(spi->controller);
     ctrl = 0;
 
     if (spi->mode & SPI_LSB_FIRST) {
@@ -625,14 +625,14 @@ static int spioc_spi_setup(struct spi_device *spi)
         return -EINVAL;
     }
 
-    spioc = spi_master_get_devdata(spi->master);
-    if (spi->chip_select >= spioc->num_chipselect) {
+    spioc = spi_controller_get_devdata(spi->controller);
+    if (spi_get_chipselect(spi, 0) >= spioc->num_chipselect) {
         SPI_OC_ERROR("Spi device chipselect:%u, more than max chipselect:%u.\n",
-            spi->chip_select, spioc->num_chipselect);
+            spi_get_chipselect(spi, 0), spioc->num_chipselect);
         return -EINVAL;
     }
     SPI_OC_VERBOSE("Support spi device mode:0x%x, chip_select:%u.\n",
-        spi->mode, spi->chip_select);
+        spi->mode, spi_get_chipselect(spi, 0));
     return 0;
 }
 
@@ -776,7 +776,7 @@ static int spioc_spi_txrx_bufs(struct spi_device *spi, struct spi_transfer *t)
         return 0;
     }
 
-    spioc = spi_master_get_devdata(spi->master);
+    spioc = spi_controller_get_devdata(spi->controller);
     if (spioc->transfer_busy_flag) {
         ret = -EBUSY;
         goto err;
@@ -919,19 +919,19 @@ static int ocores_spi_config_init(struct spioc *spioc)
 
 static int spioc_probe(struct platform_device *pdev)
 {
-    struct spi_master *master;
+    struct spi_controller *master;
     struct spioc *spioc;
     int ret;
     bool be;
 
     ret = -1;
-    master = spi_alloc_master(&pdev->dev, sizeof(struct spioc));
+    master = spi_alloc_host(&pdev->dev, sizeof(struct spioc));
     if (!master) {
         dev_err(&pdev->dev, "Failed to alloc spi master.\n");
         goto out;
     }
 
-    spioc = spi_master_get_devdata(master);
+    spioc = spi_controller_get_devdata(master);
     platform_set_drvdata(pdev, spioc);
 
     spioc->dev = &pdev->dev;
@@ -990,7 +990,7 @@ static int spioc_probe(struct platform_device *pdev)
     }
 
     /* setup the state for the bitbang driver */
-    spioc->bitbang.master = master;
+    spioc->bitbang.ctlr = master;
     spioc->bitbang.setup_transfer = spioc_setup_transfer;
     spioc->bitbang.chipselect = spioc_chipselect;
     spioc->bitbang.txrx_bufs = spioc_spi_txrx_bufs;
@@ -1025,23 +1025,22 @@ static int spioc_probe(struct platform_device *pdev)
 
     return ret;
 free:
-    spi_master_put(master);
+    spi_controller_put(master);
 out:
     return ret;
 }
 
-static int spioc_remove(struct platform_device *pdev)
+static void spioc_remove(struct platform_device *pdev)
 {
     struct spioc *spioc;
-    struct spi_master *master;
+    struct spi_controller *master;
 
     spioc = platform_get_drvdata(pdev);
-    master = spioc->bitbang.master;
+    master = spioc->bitbang.ctlr;
     spi_bitbang_stop(&spioc->bitbang);
     platform_set_drvdata(pdev, NULL);
-    spi_master_put(master);
+    spi_controller_put(master);
 
-    return 0;
 }
 
 static const struct of_device_id spioc_match[] = {
