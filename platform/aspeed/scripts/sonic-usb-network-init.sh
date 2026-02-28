@@ -42,14 +42,8 @@ if [ -d "${GADGET_DIR}" ]; then
     if [ -f "${GADGET_DIR}/UDC" ]; then
         echo "" > "${GADGET_DIR}/UDC" 2>/dev/null || true
     fi
-    # Remove symlinks
-    rm -f "${GADGET_DIR}/configs/c.1/${FUNCTION_TYPE}.${INTERFACE_NAME}" 2>/dev/null || true
-    # Remove directories
-    rmdir "${GADGET_DIR}/functions/${FUNCTION_TYPE}.${INTERFACE_NAME}" 2>/dev/null || true
-    rmdir "${GADGET_DIR}/configs/c.1/strings/0x409" 2>/dev/null || true
-    rmdir "${GADGET_DIR}/configs/c.1" 2>/dev/null || true
-    rmdir "${GADGET_DIR}/strings/0x409" 2>/dev/null || true
-    rmdir "${GADGET_DIR}" 2>/dev/null || true
+    # Remove gadget directory and all contents
+    rm -rf "${GADGET_DIR}" 2>/dev/null || true
 fi
 
 # Create new gadget
