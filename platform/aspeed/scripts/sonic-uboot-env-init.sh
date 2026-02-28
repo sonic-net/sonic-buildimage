@@ -98,6 +98,12 @@ fi
 # PART 2: Set U-Boot environment variables (runs ONCE globally)
 #############################################################################
 
+# Check if ONIE partition is mounted and skip U-Boot env setup if found
+if blkid -L "ONIE" >/dev/null 2>&1 || blkid -L "ONIE-BOOT" >/dev/null 2>&1; then
+    echo "ONIE parition found. skipping uboot environment configurations."
+    exit 0
+fi
+
 # Check if already initialized
 if [ -f "$MARKER_FILE" ]; then
     log "U-Boot environment already initialized (marker file exists). Skipping U-Boot env setup."
@@ -106,6 +112,28 @@ if [ -f "$MARKER_FILE" ]; then
 fi
 
 log "U-Boot environment not yet initialized. Proceeding with first-time setup..."
+
+# Detect boot device from /host mount (assumes eMMC)
+boot_device=$(findmnt -n -o SOURCE /host)
+demo_dev=$(echo "$boot_device" | sed 's/p\?[0-9]*$//')
+demo_part=$(echo "$boot_device" | grep -o '[0-9]*$')
+
+# Fallback if detection fails
+if [ -z "$boot_device" ]; then
+    boot_device="/dev/mmcblk0p1"
+    demo_dev="/dev/mmcblk0"
+    demo_part=1
+    log "WARNING: Could not detect boot device, defaulting to $boot_device"
+fi
+
+# Determine storage interface type (mmc for eMMC, scsi for UFS)
+if echo "$demo_dev" | grep -q "mmc"; then
+    disk_interface="mmc"
+else
+    disk_interface="scsi"
+fi
+
+log "Detected boot device: ${boot_device}, partition: ${demo_part}, interface: ${disk_interface}"
 
 # Detect current image directory from /proc/cmdline
 # The kernel command line contains "loop=image-xxx/fs.squashfs"
@@ -124,10 +152,10 @@ else
 fi
 
 # Get filesystem UUID (not partition UUID)
-FS_UUID=$(blkid -s UUID -o value /dev/mmcblk0p1 2>/dev/null || echo "")
+FS_UUID=$(blkid -s UUID -o value ${boot_device} 2>/dev/null || echo "")
 if [ -z "$FS_UUID" ]; then
     log "WARNING: Cannot detect filesystem UUID, using device path instead"
-    ROOT_DEV="/dev/mmcblk0p1"
+    ROOT_DEV="${boot_device}"
 else
     ROOT_DEV="UUID=$FS_UUID"
 fi
@@ -160,11 +188,25 @@ fw_setenv sonic_version_2 "None" || log "ERROR: Failed to set sonic_version_2"
 fw_setenv linuxargs_old "" || log "ERROR: Failed to set linuxargs_old"
 
 # Kernel command line arguments
-fw_setenv linuxargs "console=ttyS12,115200n8 earlycon=uart8250,mmio32,0x14c33b00 loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=4096" || log "ERROR: Failed to set linuxargs"
+# Read device-specific configuration from installer.conf
+if [ -f ${IMAGE_DIR}/installer.conf ]; then
+    source ${IMAGE_DIR}/installer.conf
+fi
+
+# Set defaults if not specified in installer.conf
+CONSOLE_DEV=${CONSOLE_DEV:-12}
+CONSOLE_SPEED=${CONSOLE_SPEED:-115200}
+EARLYCON=${EARLYCON:-"earlycon=uart8250,mmio32,0x14c33b00"}
+VAR_LOG_SIZE=${VAR_LOG_SIZE:-512}
+
+# Construct console device name
+CONSOLE_PORT="ttyS${CONSOLE_DEV}"
+
+fw_setenv linuxargs "console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=${VAR_LOG_SIZE}" || log "ERROR: Failed to set linuxargs"
 
 # Boot commands
-fw_setenv sonic_boot_load "ext4load mmc 0:1 \${loadaddr} \${fit_name}" || log "ERROR: Failed to set sonic_boot_load"
-fw_setenv sonic_boot_load_old "ext4load mmc 0:1 \${loadaddr} \${fit_name_old}" || log "ERROR: Failed to set sonic_boot_load_old"
+fw_setenv sonic_boot_load "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name}" || log "ERROR: Failed to set sonic_boot_load"
+fw_setenv sonic_boot_load_old "ext4load ${disk_interface} 0:${demo_part} \${loadaddr} \${fit_name_old}" || log "ERROR: Failed to set sonic_boot_load_old"
 fw_setenv sonic_bootargs "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs}" || log "ERROR: Failed to set sonic_bootargs"
 fw_setenv sonic_bootargs_old "setenv bootargs root=$ROOT_DEV rw rootwait panic=1 \${linuxargs_old}" || log "ERROR: Failed to set sonic_bootargs_old"
 fw_setenv sonic_image_1 "run sonic_bootargs; run sonic_boot_load; bootm \${loadaddr}#conf-\${bootconf}" || log "ERROR: Failed to set sonic_image_1"
