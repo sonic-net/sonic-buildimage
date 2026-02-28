@@ -326,6 +326,15 @@ if [ -f $FIRST_BOOT_FILE ]; then
         fi
     fi
 
+    # Save the default_sku for factory reset
+    # This preserves the intended default SKU regardless of platform naming conventions
+    # Stored in /etc so it persists across image upgrades (backed up to /host/image-${SONIC_VERSION}/rw/etc)
+    if [ -f /usr/share/sonic/device/$platform/default_sku ]; then
+        mkdir -p /etc
+        cp /usr/share/sonic/device/$platform/default_sku /etc/factory_default_sku
+        logger "Saved factory default_sku during first boot to /etc/factory_default_sku"
+    fi
+
     sync
 
     # If the unit booted into SONiC from another NOS's grub,
