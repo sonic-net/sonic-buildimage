@@ -481,9 +481,9 @@ start() {
     fi
         HWSKU_MOUNT_MODE="ro"
         {%- if docker_container_name == "swss" %}
-        case "$PLATFORM" in
-            x86_64-nexthop_*) HWSKU_MOUNT_MODE="rw" ;;
-        esac
+        if [ -f "$MOUNTPATH/hwsku-init" ]; then
+            HWSKU_MOUNT_MODE="rw"
+        fi
         {%- endif %}
     {%- endif %}
 
