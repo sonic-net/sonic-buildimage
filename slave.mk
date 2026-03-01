@@ -1348,8 +1348,8 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		$(call docker-image-save,$*-$(DBG_IMAGE_MARK),$@)
 
 		# Clean up
-		@echo "Removing docker image $(DOCKER_IMAGE_REF)" $(LOG)
-		docker rmi -f $(DOCKER_IMAGE_REF) &> /dev/null || true
+		@echo "Removing docker image $(DOCKER_IMAGE_REF) and file $($*.gz-load)" $(LOG)
+		docker rmi -f $(DOCKER_IMAGE_REF) &> /dev/null && rm -rf $($*.gz-load) || true
 		if [ -f $($*.gz_PATH).patch/series ]; then pushd $($*.gz_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 
 		# Save the target deb into DPKG cache
@@ -1380,6 +1380,7 @@ endif
 $(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TARGET_PATH)/$$*.gz
 	$(HEADER)
 	$(call docker-image-load,$*)
+	mv $(LOG) $($*.gz-load)
 	$(FOOTER)
 
 ###############################################################################
