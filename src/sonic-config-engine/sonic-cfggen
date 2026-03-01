@@ -319,6 +319,14 @@ def _get_jinja2_env(paths):
             return False
     env.globals['template_exists'] = template_exists
 
+    # Expose is_smartswitch flag into Jinja globals
+    try:
+        smartswitch_flag = device_info.is_smartswitch()
+    except Exception as e:
+        smartswitch_flag = False
+        sys.stderr.write("sonic-cfggen: is_smartswitch() detection failed: {}\n".format(e))
+    env.globals['is_smartswitch'] = smartswitch_flag
+
     return env
 
 def main():

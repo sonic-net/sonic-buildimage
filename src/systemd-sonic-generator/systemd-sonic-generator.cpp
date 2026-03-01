@@ -1060,8 +1060,7 @@ int ssg_main(int argc, char **argv) {
 
         auto instance_name = unit_instance.substr(0, unit_instance.find('.'));
 
-        if(((num_asics > 1) && (!is_multi_instance_service(instance_name)))
-            || ((num_dpus > 0) && (!is_multi_instance_service_for_dpu(instance_name)))) {
+        if ((num_asics > 1) && !is_multi_instance_service(instance_name)) {
             replace_multi_inst_dep(install_dir, unit_instance);
         }
 
