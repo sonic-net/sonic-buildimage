@@ -1380,7 +1380,7 @@ endif
 $(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TARGET_PATH)/$$*.gz
 	$(HEADER)
 	$(call docker-image-load,$*)
-	mv $(LOG) $($*.gz-load)
+	mv $($*.log) $($*.gz-load)
 	$(FOOTER)
 
 ###############################################################################
