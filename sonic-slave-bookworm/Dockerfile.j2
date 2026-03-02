@@ -504,9 +504,11 @@ RUN eatmydata apt-get install -y \
 
 {%- if CONFIGURED_ARCH == "amd64" %}
 # Upgrade CMAKE version
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
-RUN chmod +x cmake-3.27.6-linux-x86_64.sh
-RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN wget -O cmake-3.27.6-linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh \
+ && echo "8c449dabb2b2563ec4e6d5e0fb0ae09e729680efab71527b59015131cea4a042  cmake-3.27.6-linux-x86_64.sh" | sha256sum -c - \
+ && chmod +x cmake-3.27.6-linux-x86_64.sh \
+ && sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr \
+ && rm cmake-3.27.6-linux-x86_64.sh
 RUN sudo apt-get update -y
 {%- endif %}
 
