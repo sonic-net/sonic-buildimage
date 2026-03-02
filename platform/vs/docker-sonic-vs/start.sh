@@ -34,6 +34,13 @@ popd
 
 [ -d /etc/sonic ] || mkdir -p /etc/sonic
 
+# Populate runtime fields in sonic_version.yml that are not available at build time
+if [ -f /etc/sonic/sonic_version.yml ]; then
+    if ! grep -q "^kernel_version:" /etc/sonic/sonic_version.yml; then
+        echo "kernel_version: '$(uname -r)'" >> /etc/sonic/sonic_version.yml
+    fi
+fi
+
 # Note: libswsscommon requires a dabase_config file in /var/run/redis/sonic-db/
 # Prepare this file before any dependent application, such as sonic-cfggen
 mkdir -p /var/run/redis/sonic-db
