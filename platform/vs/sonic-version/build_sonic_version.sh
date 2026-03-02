@@ -1,8 +1,11 @@
 export build_version="${sonic_version}"
+export debian_version="$(cat /etc/debian_version 2>/dev/null || echo 'N/A')"
+export kernel_version="$(uname -r)"
 export asic_type="${sonic_asic_platform}"
 export commit_id="$(git rev-parse --short HEAD)"
 export branch="$(git rev-parse --abbrev-ref HEAD)"
 export build_date="$(date -u)"
 export build_number="${BUILD_NUMBER:-0}"
 export built_by="$USER@$BUILD_HOSTNAME"
+export sonic_os_version="${debian_version%%.*}"
 j2 sonic_version.yml.j2 > $1
