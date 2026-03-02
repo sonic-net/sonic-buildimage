@@ -162,7 +162,11 @@ supervisorctl start zebra
 
 supervisorctl start mgmtd
 
+supervisorctl start bgpd
+
 supervisorctl start staticd
+
+supervisorctl start bgpcfgd
 
 supervisorctl start buffermgrd
 

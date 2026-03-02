@@ -133,6 +133,7 @@ COPY ["files/configdb-load.sh", "/usr/bin/"]
 COPY ["files/arp_update", "/usr/bin/"]
 COPY ["files/buffers_config.j2", "files/qos_config.j2", "files/arp_update_vars.j2", "files/copp_cfg.j2", "/usr/share/sonic/templates/"]
 COPY ["files/sonic_version.yml", "/etc/sonic/"]
+COPY ["constants.yml", "/etc/sonic/"]
 COPY ["port_breakout_config_db.json", "/etc/sonic/"]
 COPY ["database_config.json", "/etc/default/sonic-db/"]
 COPY ["hostname.j2", "/usr/share/sonic/templates/"]
@@ -164,6 +165,11 @@ RUN touch /etc/quagga/zebra.conf
 RUN rm /etc/frr/frr.conf
 
 COPY ["frr/zebra.conf", "/etc/frr/"]
+COPY ["frr/bgpd", "/usr/share/sonic/templates/bgpd/"]
+COPY ["frr/common", "/usr/share/sonic/templates/common/"]
+COPY ["frr/zebra", "/usr/share/sonic/templates/zebra/"]
+COPY ["frr/staticd", "/usr/share/sonic/templates/staticd/"]
+COPY ["frr/gen_frr.conf.j2", "frr/frr.conf.j2", "frr/frr_vars.j2", "frr/isolate.j2", "frr/unisolate.j2", "/usr/share/sonic/templates/"]
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd

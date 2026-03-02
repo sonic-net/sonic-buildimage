@@ -19,7 +19,8 @@ $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_YANG_MODELS_PY3) \
                                     $(SONIC_YANG_MGMT_PY3) \
                                     $(SONIC_UTILITIES_PY3) \
-                                    $(SONIC_HOST_SERVICES_PY3)
+                                    $(SONIC_HOST_SERVICES_PY3) \
+                                    $(SONIC_BGPCFGD)
 
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
@@ -52,3 +53,21 @@ $(DOCKER_SONIC_VS)_LOAD_DOCKERS += $(DOCKER_SWSS_LAYER_BOOKWORM)
 SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_VS)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)
+
+# Copy shared FRR bgpcfgd templates and constants.yml into build context
+# These files are shared with docker-fpm-frr to avoid duplication
+DOCKER_SONIC_VS_FRR_TEMPLATES = $(PLATFORM_PATH)/docker-sonic-vs/.frr-templates-stamp
+$(DOCKER_SONIC_VS_FRR_TEMPLATES): $(shell find dockers/docker-fpm-frr/frr -type f 2>/dev/null)
+	cp -rf dockers/docker-fpm-frr/frr/bgpd $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -rf dockers/docker-fpm-frr/frr/common $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -rf dockers/docker-fpm-frr/frr/zebra $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -rf dockers/docker-fpm-frr/frr/staticd $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f dockers/docker-fpm-frr/frr/gen_frr.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f dockers/docker-fpm-frr/frr/frr.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f dockers/docker-fpm-frr/frr/frr_vars.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f dockers/docker-fpm-frr/frr/isolate.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f dockers/docker-fpm-frr/frr/unisolate.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
+	cp -f files/image_config/constants/constants.yml $(PLATFORM_PATH)/docker-sonic-vs/
+	touch $@
+
+$(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_FRR_TEMPLATES)

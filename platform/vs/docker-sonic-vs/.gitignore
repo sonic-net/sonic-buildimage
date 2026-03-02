@@ -1,0 +1,13 @@
+# Copied at build time from dockers/docker-fpm-frr/frr/ and files/image_config/constants/
+# See docker-sonic-vs.mk for the copy rules
+frr/bgpd/
+frr/common/
+frr/zebra/
+frr/staticd/
+frr/gen_frr.conf.j2
+frr/frr.conf.j2
+frr/frr_vars.j2
+frr/isolate.j2
+frr/unisolate.j2
+constants.yml
+.frr-templates-stamp
