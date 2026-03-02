@@ -770,9 +770,17 @@ RUN eatmydata apt install -y python-is-python3
 
 # Install Bazel build system (amd64 and arm64 architectures are supported using this method)
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
+{%- if CONFIGURED_ARCH == "amd64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64
+ARG bazelisk_sha256=22e7d3a188699982f661cf4687137ee52d1f24fec1ec893d91a6c4d791a75de8
+{%- elif CONFIGURED_ARCH == "arm64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64
+ARG bazelisk_sha256=8ded44b58a0d9425a4178af26cf17693feac3b87bdcfef0a2a0898fcd1afc9f2
+{%- endif %}
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
-ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
-RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} \
+ && echo "${bazelisk_sha256}  /usr/local/bin/bazel" | sha256sum -c - \
+ && chmod 755 /usr/local/bin/bazel
 {% endif -%}
 
 # Install Rust
