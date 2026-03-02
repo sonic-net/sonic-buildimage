@@ -49,9 +49,8 @@ allow-hotplug eth0
 iface eth0 inet dhcp
 {% endif %}
 {% if ZTP['mode']['ipv6'] == 'true' %}
-iface eth0 inet6 manual
-    pre-up ip link set dev $IFACE up
-    up sysctl net.ipv6.conf.eth0.accept_ra=1
+iface eth0 inet6 dhcp
+    up sysctl net.ipv6.conf.eth0.accept_ra=2
     down sysctl net.ipv6.conf.eth0.accept_ra=0
 {% endif %}
 
@@ -82,9 +81,7 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     address {{ prefix | ip }}
     netmask {{ prefix | netmask if prefix | ipv4 else prefix | prefixlen }}
     network {{ prefix | network }}
-{% if prefix | broadcast %}
     broadcast {{ prefix | broadcast }}
-{% endif %}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
 {%     set vrf_table = '5000' %}
@@ -153,8 +150,7 @@ iface eth0 inet dhcp
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
     vrf mgmt
 {% endif %}
-iface eth0 inet6 manual
-    pre-up ip link set dev $IFACE up
+iface eth0 inet6 dhcp
     up sysctl net.ipv6.conf.eth0.accept_ra=1
     down sysctl net.ipv6.conf.eth0.accept_ra=0
 {% endif %}
