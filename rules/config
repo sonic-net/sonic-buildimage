@@ -10,7 +10,29 @@
 # SONIC_CONFIG_BUILD_JOBS - set number of jobs for parallel build.
 # Corresponding -j argument will be passed to make command inside docker
 # container.
-SONIC_CONFIG_BUILD_JOBS = 1
+# Default: auto-detect based on available CPU cores and RAM.
+# When SONIC_BUILD_MEMORY is set, uses that as the RAM limit instead of host RAM.
+# Formula: min(nproc/4, effective_ram_gb/8), clamped to [1, 8].
+# This balances parallelism with memory safety — each concurrent package
+# build can use up to ~8GB RAM (dpkg-buildpackage with nproc make jobs).
+# Override with a fixed number if needed, e.g. SONIC_CONFIG_BUILD_JOBS = 1
+# for sequential builds or higher values on machines with more RAM.
+SONIC_CONFIG_BUILD_JOBS = $(shell \
+	cores=$$(nproc 2>/dev/null || echo 4); \
+	host_ram=$$(awk '/^MemTotal/ {printf "%d", $$2/1048576}' /proc/meminfo 2>/dev/null || echo 8); \
+	ram_gb=$$host_ram; \
+	if [ -n "$(SONIC_BUILD_MEMORY)" ] && [ "$(SONIC_BUILD_MEMORY)" != "none" ]; then \
+		mem_val=$$(echo "$(SONIC_BUILD_MEMORY)" | sed 's/[gG]$$//'); \
+		if [ "$$mem_val" -gt 0 ] 2>/dev/null; then \
+			ram_gb=$$(( mem_val < host_ram ? mem_val : host_ram )); \
+		fi; \
+	fi; \
+	by_cores=$$(( cores / 4 )); \
+	by_ram=$$(( ram_gb / 8 )); \
+	jobs=$$(( by_cores < by_ram ? by_cores : by_ram )); \
+	[ $$jobs -lt 1 ] && jobs=1; \
+	[ $$jobs -gt 8 ] && jobs=8; \
+	echo $$jobs)
 
 # SONIC_CONFIG_MAKE_JOBS - set number of parallel make jobs per package.
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
