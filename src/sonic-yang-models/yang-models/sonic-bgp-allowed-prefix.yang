@@ -3,10 +3,6 @@ module sonic-bgp-allowed-prefix {
     prefix bgppre;
     yang-version 1.1;
 
-    import sonic-bgp-common {
-        prefix bgpcmn;
-    }
-
     import ietf-inet-types {
         prefix inet;
     }
