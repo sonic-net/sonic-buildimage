@@ -5,10 +5,6 @@ module sonic-stormond-config{
     namespace "http://github.com/sonic-net/sonic-stormond-config";
     prefix stormond-config;
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     description "STORMOND_CONFIG Table yang Module for SONiC";
 
     container sonic-stormond-config {

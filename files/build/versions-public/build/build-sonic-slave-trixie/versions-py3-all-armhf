@@ -1,5 +1,2 @@
 bitarray==2.8.1
-pexpect==4.9.0
-ptyprocess==0.7.0
-pyroute2==0.9.5
 scp==0.14.5
