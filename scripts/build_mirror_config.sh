@@ -34,6 +34,10 @@ if [ "$DISTRIBUTION" == "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
+if [ "$DISTRIBUTION" == "buster" ]; then
+    DEFAULT_MIRROR_SECURITY_URLS=http://archive.debian.org/debian-security/
+fi
+
 if [ "$MIRROR_SNAPSHOT" == y ]; then
     if [ -f "$MIRROR_VERSION_FILE" ]; then
         DEBIAN_TIMESTAMP=$(grep "^debian==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
