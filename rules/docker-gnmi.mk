@@ -17,9 +17,9 @@ $(DOCKER_GNMI)_PACKAGE_NAME = gnmi
 
 $(DOCKER_GNMI)_DBG_IMAGE_PACKAGES = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_IMAGE_PACKAGES)
 
-# Ensure docker-telemetry-watchdog (which uses docker-sonic-gnmi-sonic as its base image)
-# is built before the docker-sonicgnmi debug image, because the debug image build removes
-# the docker-sonic-gnmi-sonic image during cleanup.
+# Ensure docker-telemetry-watchdog (which uses a docker-sonic-gnmi-based image)
+# is built before the docker-sonic-gnmi debug image, because the debug image build removes
+# its docker-sonic-gnmi base image during cleanup.
 $(DOCKER_GNMI_DBG)_AFTER += $(DOCKER_TELEMETRY_WATCHDOG)
 
 SONIC_DOCKER_IMAGES += $(DOCKER_GNMI)
