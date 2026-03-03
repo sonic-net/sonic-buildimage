@@ -1,0 +1,40 @@
+#!/bin/bash
+usage="$(basename "$0") [-h] [-q] [-t timeout] -- interactive shell for bcm service
+
+where:
+    -h  show this help text
+    -t  inactivity timeout in seconds (default 300 seconds, 0 for no timeout)
+    -q  quite, no banner (default: verbose)"
+
+banner="Press Enter to show prompt.
+Press Ctrl+C to exit.
+NOTICE: Only one bcmsh or bcmcmd can connect to the shell at same time.
+"
+
+# Default verbose
+quiet=false
+timeout=300
+
+while getopts 'hqt:' option; do
+  case "$option" in
+    h) echo "$usage"
+       exit
+       ;;
+    q) quiet=true
+       ;;
+    t) timeout=$OPTARG
+       ;;
+   \?) printf "illegal option: -%s\n" "$OPTARG" >&2
+       echo "$usage" >&2
+       exit 1
+       ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [ "$quiet" = false ]; then
+    echo "$banner"
+fi
+
+/usr/bin/socat -T$timeout readline UNIX-CONNECT:/var/run/sswsyncd/sswsyncd.socket
+
