@@ -180,6 +180,21 @@ supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd
 
+# Generate LLDP configuration
+sonic-cfggen -d -y /etc/sonic/sonic_version.yml \
+    -t /usr/share/sonic/templates/lldpd.conf.j2 \
+    -t /usr/share/sonic/templates/lldpdSysDescr.conf.j2 > /etc/lldpd.conf
+mkdir -p /var/sonic
+rm -f /var/run/lldpd.socket
+# Configure lldpd to advertise interface name (not MAC) as port ID
+mkdir -p /etc/lldpd.d
+echo 'configure lldp portidsubtype ifname' > /etc/lldpd.d/port_id.conf
+
+supervisorctl start lldpd
+supervisorctl start waitfor_lldp_ready
+supervisorctl start lldp-syncd
+supervisorctl start lldpmgrd
+
 supervisorctl start rebootbackend
 
 # Start arp_update when VLAN exists

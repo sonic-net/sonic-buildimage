@@ -165,6 +165,13 @@ RUN rm /etc/frr/frr.conf
 
 COPY ["frr/zebra.conf", "/etc/frr/"]
 
+# Copy LLDP configuration files
+COPY ["lldpmgrd", "/usr/bin/lldpmgrd"]
+COPY ["lldpd.conf.j2", "/usr/share/sonic/templates/lldpd.conf.j2"]
+COPY ["lldpdSysDescr.conf.j2", "/usr/share/sonic/templates/lldpdSysDescr.conf.j2"]
+COPY ["waitfor_lldp_ready.sh", "/usr/bin/waitfor_lldp_ready.sh"]
+RUN chmod +x /usr/bin/lldpmgrd /usr/bin/waitfor_lldp_ready.sh
+
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
 

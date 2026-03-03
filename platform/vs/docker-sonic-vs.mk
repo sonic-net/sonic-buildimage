@@ -12,14 +12,16 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
-                              $(SYSMGR)
+                              $(SYSMGR) \
+                              $(LLDPD)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
                                     $(SONIC_YANG_MODELS_PY3) \
                                     $(SONIC_YANG_MGMT_PY3) \
                                     $(SONIC_UTILITIES_PY3) \
-                                    $(SONIC_HOST_SERVICES_PY3)
+                                    $(SONIC_HOST_SERVICES_PY3) \
+                                    $(DBSYNCD_PY3)
 
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
@@ -52,3 +54,13 @@ $(DOCKER_SONIC_VS)_LOAD_DOCKERS += $(DOCKER_SWSS_LAYER_BOOKWORM)
 SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_VS)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)
+
+# Copy LLDP files into build context
+DOCKER_SONIC_VS_LLDP_FILES = $(PLATFORM_PATH)/docker-sonic-vs/.lldp-files-stamp
+$(DOCKER_SONIC_VS_LLDP_FILES):
+	cp -f dockers/docker-lldp/lldpmgrd $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/lldpd.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/lldpdSysDescr.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/waitfor_lldp_ready.sh $(PLATFORM_PATH)/docker-sonic-vs/
+	touch $@
+$(DOCKER_SONIC_VS)_DEPENDS += $(DOCKER_SONIC_VS_LLDP_FILES)
