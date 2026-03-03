@@ -12,10 +12,6 @@ import glob
 
 # Services to REMOVE for BMC platform (not needed)
 BMC_EXCLUDED_SERVICES = {
-    # AAA/TACACS - not needed on BMC
-    'tacacs-config.service',
-    'tacacs-config.timer',
-
     # Backend ACL - not needed on BMC
     'backend-acl.service',
 
@@ -36,8 +32,6 @@ BMC_EXCLUDED_SERVICES = {
 
     # SONiC NOS services - not needed for BMC
     'sonic-hostservice.service',     # SONiC host services (VLAN, LAG, etc.) - NOS-specific
-    'hostcfgd.service',              # SONiC host config daemon - NOS-specific
-    'hostcfgd.timer',                # Timer for hostcfgd service
 
     # UUID daemon - not needed
     'uuidd.service',                 # UUID daemon - kernel provides UUID generation
@@ -46,12 +40,14 @@ BMC_EXCLUDED_SERVICES = {
     # Console - not needed if no local display
     'getty@tty1.service',            # Local console - only if VGA/HDMI available
 
-    # Optional services - can be excluded for minimal BMC
-    'auditd.service',                # Security audit - only needed for compliance
 }
 
 # Services to ENSURE are included for BMC
 BMC_REQUIRED_SERVICES = {
+    # AAA/TACACS - needed on BMC
+    'tacacs-config.service',
+    'tacacs-config.timer',
+
     # Feature management (required to start services based on CONFIG_DB)
     'featured.service',               # SONiC feature management daemon
     'featured.timer',                 # Timer for featured service
@@ -63,7 +59,7 @@ BMC_REQUIRED_SERVICES = {
     'procdockerstatsd.service',       # Container resource monitoring
 
     # Time synchronization
-    'ntp.service',                    # NTP time synchronization
+    'chrony.service',                 # Chrony time synchronization
 
     # Zero Touch Provisioning
     'ztp.service',                    # ZTP for automated device provisioning
@@ -76,6 +72,11 @@ BMC_REQUIRED_SERVICES = {
 
     # Telemetry and monitoring
     'gnmi.service',                   # gNMI telemetry service
+
+    'hostcfgd.service',              # SONiC host config daemon
+    'hostcfgd.timer',                # Timer for hostcfgd service
+    'auditd.service',                # Security audit - only needed for compliance
+    'sysmgr.service',                # SONiC system manager
 }
 
 def create_service_override(filesystem_root, service_name, override_content, enable=True):
@@ -157,6 +158,24 @@ After=
 
     return create_service_override(filesystem_root, 'determine-reboot-cause.service', override_content, enable=False)
 
+def create_sysmgr_bmc_override(filesystem_root):
+    """Create systemd drop-in override for sysmgr to remove swss dependency on BMC."""
+    override_content = """[Unit]
+# BMC override: Remove ASIC/switch dependency (swss)
+# Sysmgr on BMC doesn't need swss
+After=database.service
+"""
+    return create_service_override(filesystem_root, 'sysmgr.service', override_content, enable=False)
+
+def create_telemetry_bmc_override(filesystem_root):
+    """Create systemd drop-in override for telemetry to remove swss/syncd dependencies on BMC."""
+    override_content = """[Unit]
+# BMC override: Remove ASIC/switch dependencies (swss, syncd)
+# Telemetry on BMC doesn't need swss or syncd
+After=database.service
+"""
+    return create_service_override(filesystem_root, 'telemetry.service', override_content, enable=False)
+
 def mask_services_in_filesystem(filesystem_root):
     """Mask excluded services by removing symlinks and creating mask files."""
 
@@ -222,6 +241,8 @@ def filter_services(input_file, output_file, filesystem_root=None):
         create_gnmi_bmc_override(filesystem_root)
         create_watchdog_control_bmc_override(filesystem_root)
         create_determine_reboot_cause_bmc_override(filesystem_root)
+        create_sysmgr_bmc_override(filesystem_root)
+        create_telemetry_bmc_override(filesystem_root)
 
     # Print summary to build log (not to file)
     print("=" * 80)
