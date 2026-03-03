@@ -55,9 +55,9 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'up')
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'oper_status', 'up')
         # Assert STATE_DB was updated with field that was not present in CONFIG_DB
-        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'speed', '1000') 
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'speed', '1000')
         # Assert STATE_DB was updated with alias with updated value from CONFIG_DB
-        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'alias', 'mgmt')      
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'alias', 'mgmt')
         # Assert STATE_DB was NOT updated with field is already present and value is not modified
         assert not any(call[0] == (mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'admin_status', 'up') for call in mock_db.set.call_args_list)
 
@@ -79,6 +79,24 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
 
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'down')
 
+
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
+    def test_main_with_mgmt_speed_change(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
+        mock_db = MagicMock()
+        mock_SonicV2Connector.return_value = mock_db
+        mgmt_ports_keys = ['MGMT_PORT|eth0']
+        mock_db.keys.return_value = mgmt_ports_keys
+        mock_db.set.return_value = None
+
+        mock_subprocess.return_value = subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/speed'], returncode=0, stdout='40000', stderr='')
+
+        mgmt_oper_status.main()
+
+        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_speed: 40000')
+
+        mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'speed', '40000')
 
     @patch('mgmt_oper_status.SonicV2Connector')
     @patch('mgmt_oper_status.subprocess.run')
