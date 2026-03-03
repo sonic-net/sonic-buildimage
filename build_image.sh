@@ -541,7 +541,7 @@ build_recovery_image() {
     if [ -z "${LINUX_KERNEL_VERSION}" ]; then
         # Look for vmlinuz file in boot directory
         # Expected format: vmlinuz-<version>-<arch>
-        kernel_file=$(find "${FILESYSTEM_ROOT}/boot" -name "vmlinuz-*-${CONFIGURED_ARCH}" -print -quit)
+        kernel_file=$(sudo find "${FILESYSTEM_ROOT}/boot" -name "vmlinuz-*-${CONFIGURED_ARCH}" -print -quit)
 
         if [ -n "${kernel_file}" ]; then
             kernel_fname=$(basename "${kernel_file}")
