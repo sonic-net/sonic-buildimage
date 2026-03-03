@@ -27,6 +27,7 @@ class TestJ2Files(TestCase):
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
         self.t0_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-nomgmt.xml')
         self.t0_minigraph_two_mgmt = os.path.join(self.test_dir, 't0-sample-graph-two-mgmt.xml')
+        self.t0_minigraph_mgmt31 = os.path.join(self.test_dir, 't0-sample-graph-mgmt31.xml')
         self.t0_mvrf_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-mvrf-nomgmt.xml')
         self.pc_minigraph = os.path.join(self.test_dir, 'pc-test-graph.xml')
         self.sonic_dhcp4relay_minigraph = os.path.join(self.test_dir, 't0-sonic-dhcp4relay-graph.xml')
@@ -148,6 +149,11 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_minigraph_two_mgmt, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'two_mgmt_interfaces'), self.output_file), self.output_file)
+
+        # ZTP disabled, MGMT_INTERFACE with /31 subnet (no broadcast address)
+        argument = ['-m', self.t0_minigraph_mgmt31, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_mgmt31'), self.output_file), self.output_file)
 
         # ZTP disabled, no MGMT_INTERFACE defined
         argument = ['-m', self.t0_minigraph_nomgmt, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
