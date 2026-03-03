@@ -92,7 +92,13 @@ touch $FILESYSTEM_ROOT/$PLATFORM_DIR/firsttime
 bootloader_packages=""
 if [[ "$TARGET_BOOTLOADER" != "aboot" && "$TARGET_BOOTLOADER" != "systemd-boot" ]]; then
     mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-    bootloader_packages="grub2-common"
+    efi_grub_pkg=""
+    if [[ $CONFIGURED_ARCH == amd64 ]]; then
+        efi_grub_pkg="grub-efi-amd64-bin"
+    elif [[ $CONFIGURED_ARCH == arm64 ]]; then
+        efi_grub_pkg="grub-efi-arm64-bin"
+    fi
+    bootloader_packages="grub2-common $efi_grub_pkg"
 fi
 
 ## ensure proc is mounted
@@ -374,7 +380,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     e2fsprogs               \
     squashfs-tools          \
     dosfstools              \
-    grub-efi-amd64-bin      \
     $bootloader_packages    \
     systemd-boot            \
     systemd-boot-efi        \
@@ -476,10 +481,10 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub-common*.deb $debs_path/grub2-common*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub-common*.deb $debs_path/grub2-common*.deb | sed 's,^,./,')
+	sudo cp $debs_path/grub*.deb $FILESYSTEM_ROOT
+	basename_deb_packages=$(basename -a $debs_path/grub*.deb | sed 's,^,./,')
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub-common*.deb $FILESYSTEM_ROOT/grub2-common*.deb
+	sudo rm $FILESYSTEM_ROOT/grub*.deb
 	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
@@ -489,13 +494,6 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
     fi
 
     sudo cp $debs_path/${GRUB_PKG}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
-elif [[ $TARGET_BOOTLOADER == systemd-boot ]]; then
-    echo "Installing systemd-boot..."
-    # systemd-boot is part of systemd package which is already installed.
-    # We install refind to get the ext4 EFI driver.
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get install -y refind
-    # Ensure standard ESP structure for drivers
-    # We will copy the driver during installation in default_platform.conf
 fi
 
 ## Disable kexec supported reboot which was installed by default
