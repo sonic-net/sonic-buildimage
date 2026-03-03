@@ -244,7 +244,6 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 
 	ex ln -s /mnt/$image_dir/platform/fw/asic/fw-BF3.mfa /etc/mlnx/fw-BF3.mfa
 
-	ex mst start
 
         cp -R $sonic_fs_mountpoint/usr/bin/asic_detect/ /usr/bin/
 
@@ -253,13 +252,13 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 		bfb_pre_fw_install
 	fi
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
+	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -m -v
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
 	fi
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r
+		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -m -v -r
 	fi
 
 	ex umount $sonic_fs_mountpoint
