@@ -1,0 +1,164 @@
+From 81f0527f7fe2a62d53624c4181d5f4b59ec40881 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 2 Jul 2025 09:57:36 +0200
+Subject: [PATCH 1/2] bgpd: add output support for srv6 l3vpn attribute option
+
+The sub sub tlv options of the srv6 prefix sid option is partially
+visible hen compiling with enable-bgp-vnc, but not in json neither in
+other parts of the code.
+
+> # show bgp ipv6 vpn
+> [..]
+>  *>  2001:db9:10::/64 ::@8<                    0         32768 ?
+>    UN=:: EC{99:99} label=3 sid=fc05:0:5:cece:2345:: sid_structure=[32,16,32,0] type=bgp, subtype=5
+
+> # show bgp ipv6 vpn detail json
+> [..]
+> ,"2001:db9:10::/64": [{"aspath":{"string":"Local","segments":[],"length":0},"nhVrfName":"vrf10","nhVrfId":8,
+> "announceNexthopSelf":true,"origin":"incomplete","metric":0,"weight":32768,"valid":true,"version":1,"sourced":true,
+> "local":true,"bestpath":{"overall":true,"selectionReason":"First path received"},"extendedCommunity":{"string":"RT:99:99"},
+> "originatorId":"5.5.5.5","remoteLabel":3,"	id":"fc05:0:5:cece:2345::",
+> "lastUpdate":{"epoch":1751440457,"string":"Wed Jul  2 09:14:17 2025"},
+> "nexthops":[{"ip":"::","hostname":"rt5","afi":"ipv6","scope":"global",
+> "linkLocalOnly":false,"length":16,"metric":0,"accessible":true,"used":true}],
+> "peer":{"peerId":"::","routerId":"5.5.5.5"}}]
+
+Add json attributes to display the attribute values in a
+remoteSidStructure entry.
+Display the attribute values in a show command with detailed
+information.
+
+> rt5# show bgp ipv6 vpn 2001:db9:10::/64
+> BGP routing table entry for 5:10:2001:db9:10::/64, version 2
+> not allocated
+> Paths: (1 available, best #1)
+>   Advertised to peers:
+>   fc00:0:1::1
+>   Local
+>     :: from :: (5.5.5.5) vrf vrf10(8) announce-nh-self
+>       Origin incomplete, metric 0, weight 32768, valid, sourced, local, best (First path received)
+>       Extended Community: RT:99:99
+>       Originator: 5.5.5.5
+>       Remote label: 3
+>       Remote SID: fc05:0:5:cece:2345::, sid structure=[32 16 32 0 0 0]
+>       Last update: Wed Jul  2 09:53:59 2025
+
+> rt5# show bgp ipv6 vpn detail json
+> [..]
+>   "remoteSid":"fc05:0:5:cece:2345::",
+>   "remoteSidStructure":{
+>     "locatorBlockLen":32,
+>     "locatorNodeLen":16,
+>     "functionLen":32,
+>     "argumentLen":0,
+>     "transpositionLen":0,
+>     "transpositionOffset":0
+>   },
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_route.c | 36 +++++++++++++++++++++++++++++++++---
+ 1 file changed, 33 insertions(+), 3 deletions(-)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 69141ae2c917..d69c097d1779 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -12116,14 +12116,44 @@ void route_vty_out_detail(struct vty *vty, struct bgp *bgp, struct bgp_dest *bn,
+ 	/* Remote SID */
+ 	if ((path->attr->srv6_l3vpn || path->attr->srv6_vpn) &&
+ 	    safi != SAFI_EVPN) {
++		json_object *json_sid_attr;
+ 		struct in6_addr *sid_tmp =
+ 			path->attr->srv6_l3vpn ? (&path->attr->srv6_l3vpn->sid)
+ 					       : (&path->attr->srv6_vpn->sid);
+-		if (json_paths)
++
++		if (json_paths) {
+ 			json_object_string_addf(json_path, "remoteSid", "%pI6",
+ 						sid_tmp);
+-		else
+-			vty_out(vty, "      Remote SID: %pI6\n", sid_tmp);
++			if (path->attr->srv6_l3vpn) {
++				json_sid_attr = json_object_new_object();
++				json_object_object_add(json_path, "remoteSidStructure",
++						       json_sid_attr);
++				json_object_int_add(json_sid_attr, "locatorBlockLen",
++						    path->attr->srv6_l3vpn->loc_block_len);
++				json_object_int_add(json_sid_attr, "locatorNodeLen",
++						    path->attr->srv6_l3vpn->loc_node_len);
++				json_object_int_add(json_sid_attr, "functionLen",
++						    path->attr->srv6_l3vpn->func_len);
++				json_object_int_add(json_sid_attr, "argumentLen",
++						    path->attr->srv6_l3vpn->arg_len);
++				json_object_int_add(json_sid_attr, "transpositionLen",
++						    path->attr->srv6_l3vpn->transposition_len);
++				json_object_int_add(json_sid_attr, "transpositionOffset",
++						    path->attr->srv6_l3vpn->transposition_offset);
++			}
++		} else {
++			vty_out(vty, "      Remote SID: %pI6", sid_tmp);
++			if (path->attr->srv6_l3vpn) {
++				vty_out(vty, ", sid structure=[%u %u %u %u %u %u]",
++					path->attr->srv6_l3vpn->loc_block_len,
++					path->attr->srv6_l3vpn->loc_node_len,
++					path->attr->srv6_l3vpn->func_len,
++					path->attr->srv6_l3vpn->arg_len,
++					path->attr->srv6_l3vpn->transposition_len,
++					path->attr->srv6_l3vpn->transposition_offset);
++			}
++			vty_out(vty, "\n");
++		}
+ 	}
+ 
+ 	/* Label Index */
+
+From d71f0802a40ccf4e58b13450444dd5ff97450caf Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 2 Jul 2025 15:53:43 +0200
+Subject: [PATCH 2/2] doc: add info on BGP SRv6 structure from BGP updates
+
+Explain what do the srv6 structure include, when dumping detailed
+information for a given BGP update with SRv6 options.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ doc/user/bgp.rst | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index 23dcba2518f1..82efeb529180 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -5054,6 +5054,31 @@ Segment-Routing IPv6
+      vpn_policy[AFI_IP].tovpn_sid: none
+      vpn_policy[AFI_IP6].tovpn_sid: 2001:db8:1:1::200
+ 
++.. clicmd:: show bgp ipv6 vpn detail
++
++The SID can be advertised along with other SRv6 fields in the BGP prefix sid
++attribute defined in RFC-9252. The below output displays the SRv6 SID structure
++Sub-Sub-TLV, as per chapter 3.2.1. The `[32 16 32 0 0 0]` values respectively
++stand for the locator block length, node length, function length, argument
++length, and the transposition length and offset.
++
++.. code-block:: frr
++
++   r1# show bgp ipv6 vpn 2001:db9:10::/64
++   BGP routing table entry for 5:10:2001:db9:10::/64, version 2
++   not allocated
++   Paths: (1 available, best #1)
++     Advertised to peers:
++     fc00:0:1::1
++     Local
++       :: from :: (5.5.5.5) vrf vrf10(8) announce-nh-self
++         Origin incomplete, metric 0, weight 32768, valid, sourced, local, best (First path received)
++         Extended Community: RT:99:99
++         Originator: 5.5.5.5
++         Remote label: 3
++         Remote SID: fc05:0:5:cece:2345::, sid structure=[32 16 32 0 0 0]
++         Last update: Wed Jul  2 09:53:59 2025
++
+ AS-notation support
+ -------------------
+ 

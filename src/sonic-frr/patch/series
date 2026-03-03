@@ -61,3 +61,13 @@
 0099-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
 0100-bgpd-Allow-proper-shutdown-of-bgp-dynamic-peers.patch
 0101-bgpd-send-EOR-during-GR-only-when-FIB-install-comple.patch
+0102-explicit-SRv6-address-configurable-per-address-family.patch
+0103-bgpd-add-output-support-for-srv6-l3vpn-attribute-option.patch
+0104-BGP-SRv6-locator-per-vrf.patch
+0105-bgpd-various-fixes-related-to-VPN-SRv6-entries-updates.patch
+0106-SRv6-MPLS-L3-Services-Co-existence.patch
+0107-bgpd-Fix-incorrect-flag-checks-for-SRv6-SID-allocation.patch
+0108-SRv6-MPLS-Coexistence-in-L3VPN-formatting-fixes.patch
+0109-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
+0110-bgpd-improve-clarify-bgp-static-tables.patch
+0111-bgpd-add-SRv6-unicast-at-default-VRF.patch

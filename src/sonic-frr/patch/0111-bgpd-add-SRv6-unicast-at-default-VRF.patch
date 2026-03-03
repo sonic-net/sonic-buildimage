@@ -1,0 +1,3518 @@
+From 9b6415c6c21b2eaa9422dedafc2493bd09e82f42 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Thu, 14 Aug 2025 16:03:11 +0200
+Subject: [PATCH 1/9] bgpd: srv6 vpn enabled api
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Let's move those checks into functions.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c |  8 ++------
+ bgpd/bgp_mplsvpn.h | 19 +++++++++++++++++++
+ bgpd/bgp_vty.c     | 18 ++++--------------
+ 3 files changed, 25 insertions(+), 20 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index c3d924899bf9..352ea9eae705 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -952,15 +952,11 @@ void ensure_vrf_tovpn_sid_per_vrf(struct bgp *bgp_vpn, struct bgp *bgp_vrf)
+ void ensure_vrf_tovpn_sid(struct bgp *bgp_vpn, struct bgp *bgp_vrf, afi_t afi)
+ {
+ 	/* per-af sid */
+-	if (bgp_vrf->vpn_policy[afi].tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) ||
+-	    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
++	if (is_srv6_vpn_afi_enabled(bgp_vrf, afi))
+ 		return ensure_vrf_tovpn_sid_per_af(bgp_vpn, bgp_vrf, afi);
+ 
+ 	/* per-vrf sid */
+-	if (bgp_vrf->tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) ||
+-	    CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT))
++	if (is_srv6_vpn_vrf_enabled(bgp_vrf))
+ 		return ensure_vrf_tovpn_sid_per_vrf(bgp_vpn, bgp_vrf);
+ }
+ 
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index 2f7692b7d8ed..df5f3288f518 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -385,6 +385,25 @@ static inline bool is_pi_srv6_valid(struct bgp_path_info *pi, struct bgp *bgp_ne
+ 	return true;
+ }
+ 
++static inline bool is_srv6_vpn_afi_enabled(struct bgp *bgp, afi_t afi)
++{
++	if (CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) ||
++	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT) ||
++	    bgp->vpn_policy[afi].tovpn_sid_index)
++		return true;
++
++	return false;
++}
++
++static inline bool is_srv6_vpn_vrf_enabled(struct bgp *bgp)
++{
++	if (CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) ||
++	    CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT) || bgp->tovpn_sid_index)
++		return true;
++
++	return false;
++}
++
+ extern void vpn_policy_routemap_event(const char *rmap_name);
+ 
+ extern vrf_id_t get_first_vrf_for_redirect_with_rt(struct ecommunity *eckey);
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 85275fcd9118..84d09d7a2592 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10350,9 +10350,7 @@ DEFPY (af_sid_vpn_export,
+ 
+ 	if (!yes) {
+ 		/* when SID is not set, do nothing */
+-		if ((bgp->vpn_policy[afi].tovpn_sid_index == 0) &&
+-		    !CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) &&
+-		    !CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
++		if (!is_srv6_vpn_afi_enabled(bgp, afi))
+ 			return CMD_SUCCESS;
+ 
+ 		/* pre-change */
+@@ -10370,8 +10368,7 @@ DEFPY (af_sid_vpn_export,
+ 		return CMD_SUCCESS;
+ 	}
+ 
+-	if (bgp->tovpn_sid_index != 0 || CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) ||
+-	    CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT)) {
++	if (is_srv6_vpn_vrf_enabled(bgp)) {
+ 		vty_out(vty,
+ 			"per-vrf sid and per-af sid are mutually exclusive\n"
+ 			"Failed: per-vrf sid is configured. Remove per-vrf sid before configuring per-af sid\n");
+@@ -10459,9 +10456,7 @@ DEFPY (bgp_sid_vpn_export,
+ 
+ 	if (no) {
+ 		/* when per-VRF SID is not set, do nothing */
+-		if (bgp->tovpn_sid_index == 0 &&
+-		    !CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) &&
+-		    !CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT))
++		if (!is_srv6_vpn_vrf_enabled(bgp))
+ 			return CMD_SUCCESS;
+ 
+ 		sid_idx = 0;
+@@ -10472,12 +10467,7 @@ DEFPY (bgp_sid_vpn_export,
+ 		UNSET_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT);
+ 	}
+ 
+-	if (bgp->vpn_policy[AFI_IP].tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp->vpn_policy[AFI_IP].flags,
+-		       BGP_VPN_POLICY_TOVPN_SID_AUTO) ||
+-	    bgp->vpn_policy[AFI_IP6].tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp->vpn_policy[AFI_IP6].flags,
+-		       BGP_VPN_POLICY_TOVPN_SID_AUTO)) {
++	if (is_srv6_vpn_afi_enabled(bgp, AFI_IP) || is_srv6_vpn_afi_enabled(bgp, AFI_IP6)) {
+ 		vty_out(vty,
+ 			"per-vrf sid and per-af sid are mutually exclusive\n"
+ 			"Failed: per-af sid is configured. Remove per-af sid before configuring per-vrf sid\n");
+
+From 349046f200c3e3c1b77129777a33507dab7f56c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Thu, 7 Aug 2025 12:06:51 +0200
+Subject: [PATCH 2/9] bgpd: rework bgp_attr_srv6_l3vpn structure
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Move bgp_attr_srv6_l3vpn to bgp_attr_srv6.h and rename it to
+bgp_attr_srv6_l3service.
+
+Rename *srv6_l3vpn* APIs to *srv6_l3service*.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_attr.c        | 175 ++++++++++++++++++++---------------------
+ bgpd/bgp_attr.h        |  23 +-----
+ bgpd/bgp_attr_srv6.h   |  28 +++++++
+ bgpd/bgp_memory.c      |   2 +-
+ bgpd/bgp_memory.h      |   2 +-
+ bgpd/bgp_mplsvpn.c     |  71 +++++++++--------
+ bgpd/bgp_mplsvpn.h     |   2 +-
+ bgpd/bgp_nht.c         |  18 ++---
+ bgpd/bgp_route.c       |  43 +++++-----
+ bgpd/bgp_routemap.c    |   2 +-
+ bgpd/bgp_zebra.c       |  21 +++--
+ bgpd/rfapi/rfapi_vty.c |  19 +++--
+ bgpd/subdir.am         |   1 +
+ 13 files changed, 209 insertions(+), 198 deletions(-)
+ create mode 100644 bgpd/bgp_attr_srv6.h
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index 4837e55872ea..ce9c71b96a03 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -200,7 +200,7 @@ static struct hash *encap_hash = NULL;
+ #ifdef ENABLE_BGP_VNC
+ static struct hash *vnc_hash = NULL;
+ #endif
+-static struct hash *srv6_l3vpn_hash;
++static struct hash *srv6_l3service_hash;
+ static struct hash *srv6_vpn_hash;
+ static struct hash *evpn_overlay_hash;
+ static struct hash *bgp_nhc_hash;
+@@ -736,42 +736,42 @@ static void nhc_finish(void)
+ 	hash_clean_and_free(&bgp_nhc_hash, (void (*)(void *))bgp_nhc_free);
+ }
+ 
+-static void *srv6_l3vpn_hash_alloc(void *p)
++static void *srv6_l3service_hash_alloc(void *p)
+ {
+ 	return p;
+ }
+ 
+-static void srv6_l3vpn_free(struct bgp_attr_srv6_l3vpn *l3vpn)
++static void srv6_l3service_free(struct bgp_attr_srv6_l3service *l3service)
+ {
+-	XFREE(MTYPE_BGP_SRV6_L3VPN, l3vpn);
++	XFREE(MTYPE_BGP_SRV6_L3SERVICE, l3service);
+ }
+ 
+-static struct bgp_attr_srv6_l3vpn *
+-srv6_l3vpn_intern(struct bgp_attr_srv6_l3vpn *l3vpn)
++static struct bgp_attr_srv6_l3service *
++srv6_l3service_intern(struct bgp_attr_srv6_l3service *l3service)
+ {
+-	struct bgp_attr_srv6_l3vpn *find;
++	struct bgp_attr_srv6_l3service *find;
+ 
+-	find = hash_get(srv6_l3vpn_hash, l3vpn, srv6_l3vpn_hash_alloc);
+-	if (find != l3vpn)
+-		srv6_l3vpn_free(l3vpn);
++	find = hash_get(srv6_l3service_hash, l3service, srv6_l3service_hash_alloc);
++	if (find != l3service)
++		srv6_l3service_free(l3service);
+ 	find->refcnt++;
+ 	return find;
+ }
+ 
+-static void srv6_l3vpn_unintern(struct bgp_attr_srv6_l3vpn **l3vpnp)
++static void srv6_l3service_unintern(struct bgp_attr_srv6_l3service **l3servicep)
+ {
+-	struct bgp_attr_srv6_l3vpn *l3vpn = *l3vpnp;
++	struct bgp_attr_srv6_l3service *l3service = *l3servicep;
+ 
+-	if (!*l3vpnp)
++	if (!*l3servicep)
+ 		return;
+ 
+-	if (l3vpn->refcnt)
+-		l3vpn->refcnt--;
++	if (l3service->refcnt)
++		l3service->refcnt--;
+ 
+-	if (l3vpn->refcnt == 0) {
+-		hash_release(srv6_l3vpn_hash, l3vpn);
+-		srv6_l3vpn_free(l3vpn);
+-		*l3vpnp = NULL;
++	if (l3service->refcnt == 0) {
++		hash_release(srv6_l3service_hash, l3service);
++		srv6_l3service_free(l3service);
++		*l3servicep = NULL;
+ 	}
+ }
+ 
+@@ -813,43 +813,44 @@ static void srv6_vpn_unintern(struct bgp_attr_srv6_vpn **vpnp)
+ 	}
+ }
+ 
+-static uint32_t srv6_l3vpn_hash_key_make(const void *p)
++static uint32_t srv6_l3service_hash_key_make(const void *p)
+ {
+-	const struct bgp_attr_srv6_l3vpn *l3vpn = p;
++	const struct bgp_attr_srv6_l3service *l3service = p;
+ 	uint32_t key = 0;
+ 
+-	key = jhash(&l3vpn->sid, 16, key);
+-	key = jhash_3words(l3vpn->sid_flags, l3vpn->endpoint_behavior, l3vpn->loc_block_len, key);
+-	key = jhash_3words(l3vpn->loc_node_len, l3vpn->func_len, l3vpn->arg_len, key);
+-	key = jhash_2words(l3vpn->transposition_len, l3vpn->transposition_offset, key);
++	key = jhash(&l3service->sid, 16, key);
++	key = jhash_3words(l3service->sid_flags, l3service->endpoint_behavior,
++			   l3service->loc_block_len, key);
++	key = jhash_3words(l3service->loc_node_len, l3service->func_len, l3service->arg_len, key);
++	key = jhash_2words(l3service->transposition_len, l3service->transposition_offset, key);
+ 	return key;
+ }
+ 
+-static bool srv6_l3vpn_hash_cmp(const void *p1, const void *p2)
++static bool srv6_l3service_hash_cmp(const void *p1, const void *p2)
+ {
+-	const struct bgp_attr_srv6_l3vpn *l3vpn1 = p1;
+-	const struct bgp_attr_srv6_l3vpn *l3vpn2 = p2;
++	const struct bgp_attr_srv6_l3service *l3service1 = p1;
++	const struct bgp_attr_srv6_l3service *l3service2 = p2;
+ 
+-	return sid_same(&l3vpn1->sid, &l3vpn2->sid)
+-	       && l3vpn1->sid_flags == l3vpn2->sid_flags
+-	       && l3vpn1->endpoint_behavior == l3vpn2->endpoint_behavior
+-	       && l3vpn1->loc_block_len == l3vpn2->loc_block_len
+-	       && l3vpn1->loc_node_len == l3vpn2->loc_node_len
+-	       && l3vpn1->func_len == l3vpn2->func_len
+-	       && l3vpn1->arg_len == l3vpn2->arg_len
+-	       && l3vpn1->transposition_len == l3vpn2->transposition_len
+-	       && l3vpn1->transposition_offset == l3vpn2->transposition_offset;
++	return sid_same(&l3service1->sid, &l3service2->sid) &&
++	       l3service1->sid_flags == l3service2->sid_flags &&
++	       l3service1->endpoint_behavior == l3service2->endpoint_behavior &&
++	       l3service1->loc_block_len == l3service2->loc_block_len &&
++	       l3service1->loc_node_len == l3service2->loc_node_len &&
++	       l3service1->func_len == l3service2->func_len &&
++	       l3service1->arg_len == l3service2->arg_len &&
++	       l3service1->transposition_len == l3service2->transposition_len &&
++	       l3service1->transposition_offset == l3service2->transposition_offset;
+ }
+ 
+-static bool srv6_l3vpn_same(const struct bgp_attr_srv6_l3vpn *h1,
+-			    const struct bgp_attr_srv6_l3vpn *h2)
++static bool srv6_l3service_same(const struct bgp_attr_srv6_l3service *h1,
++				const struct bgp_attr_srv6_l3service *h2)
+ {
+ 	if (h1 == h2)
+ 		return true;
+ 	else if (h1 == NULL || h2 == NULL)
+ 		return false;
+ 	else
+-		return srv6_l3vpn_hash_cmp((const void *)h1, (const void *)h2);
++		return srv6_l3service_hash_cmp((const void *)h1, (const void *)h2);
+ }
+ 
+ static unsigned int srv6_vpn_hash_key_make(const void *p)
+@@ -884,17 +885,15 @@ static bool srv6_vpn_same(const struct bgp_attr_srv6_vpn *h1,
+ 
+ static void srv6_init(void)
+ {
+-	srv6_l3vpn_hash =
+-		hash_create(srv6_l3vpn_hash_key_make, srv6_l3vpn_hash_cmp,
+-			    "BGP Prefix-SID SRv6-L3VPN-Service-TLV");
++	srv6_l3service_hash = hash_create(srv6_l3service_hash_key_make, srv6_l3service_hash_cmp,
++					  "BGP Prefix-SID SRv6-L3-Service-TLV");
+ 	srv6_vpn_hash = hash_create(srv6_vpn_hash_key_make, srv6_vpn_hash_cmp,
+ 				    "BGP Prefix-SID SRv6-VPN-Service-TLV");
+ }
+ 
+ static void srv6_finish(void)
+ {
+-	hash_clean_and_free(&srv6_l3vpn_hash,
+-			    (void (*)(void *))srv6_l3vpn_free);
++	hash_clean_and_free(&srv6_l3service_hash, (void (*)(void *))srv6_l3service_free);
+ 	hash_clean_and_free(&srv6_vpn_hash, (void (*)(void *))srv6_vpn_free);
+ }
+ 
+@@ -968,8 +967,8 @@ unsigned int attrhash_key_make(const void *p)
+ 		MIX(transit_hash_key_make(bgp_attr_get_transit(attr)));
+ 	if (attr->encap_subtlvs)
+ 		MIX(encap_hash_key_make(attr->encap_subtlvs));
+-	if (attr->srv6_l3vpn)
+-		MIX(srv6_l3vpn_hash_key_make(attr->srv6_l3vpn));
++	if (attr->srv6_l3service)
++		MIX(srv6_l3service_hash_key_make(attr->srv6_l3service));
+ 	if (bgp_attr_get_evpn_overlay(attr))
+ 		MIX(evpn_overlay_hash_key_make(bgp_attr_get_evpn_overlay(attr)));
+ 	if (attr->srv6_vpn)
+@@ -1034,7 +1033,7 @@ bool attrhash_cmp(const void *p1, const void *p2)
+ 		    attr1->nh_ifindex == attr2->nh_ifindex &&
+ 		    attr1->nh_lla_ifindex == attr2->nh_lla_ifindex &&
+ 		    attr1->nh_flags == attr2->nh_flags && attr1->distance == attr2->distance &&
+-		    srv6_l3vpn_same(attr1->srv6_l3vpn, attr2->srv6_l3vpn) &&
++		    srv6_l3service_same(attr1->srv6_l3service, attr2->srv6_l3service) &&
+ 		    srv6_vpn_same(attr1->srv6_vpn, attr2->srv6_vpn) &&
+ 		    attr1->srte_color == attr2->srte_color && attr1->nh_type == attr2->nh_type &&
+ 		    attr1->bh_type == attr2->bh_type && attr1->otc == attr2->otc &&
+@@ -1084,8 +1083,8 @@ static void attr_show_all_iterator(struct hash_bucket *bucket, void *args[])
+ 	if (summary)
+ 		return;
+ 
+-	if (attr->srv6_l3vpn)
+-		sid = &attr->srv6_l3vpn->sid;
++	if (attr->srv6_l3service)
++		sid = &attr->srv6_l3service->sid;
+ 	else if (attr->srv6_vpn)
+ 		sid = &attr->srv6_vpn->sid;
+ 
+@@ -1254,11 +1253,11 @@ struct attr *bgp_attr_intern(struct attr *attr)
+ 			bre->refcnt++;
+ 	}
+ 
+-	if (attr->srv6_l3vpn) {
+-		if (!attr->srv6_l3vpn->refcnt)
+-			attr->srv6_l3vpn = srv6_l3vpn_intern(attr->srv6_l3vpn);
++	if (attr->srv6_l3service) {
++		if (!attr->srv6_l3service->refcnt)
++			attr->srv6_l3service = srv6_l3service_intern(attr->srv6_l3service);
+ 		else
+-			attr->srv6_l3vpn->refcnt++;
++			attr->srv6_l3service->refcnt++;
+ 	}
+ 	if (attr->srv6_vpn) {
+ 		if (!attr->srv6_vpn->refcnt)
+@@ -1496,7 +1495,7 @@ void bgp_attr_unintern_sub(struct attr *attr)
+ 	bgp_attr_set_vnc_subtlvs(attr, NULL);
+ #endif
+ 
+-	srv6_l3vpn_unintern(&attr->srv6_l3vpn);
++	srv6_l3service_unintern(&attr->srv6_l3service);
+ 	srv6_vpn_unintern(&attr->srv6_vpn);
+ 
+ 	bre = bgp_attr_get_evpn_overlay(attr);
+@@ -1577,9 +1576,9 @@ void bgp_attr_flush(struct attr *attr)
+ 		encap_free(attr->encap_subtlvs);
+ 		attr->encap_subtlvs = NULL;
+ 	}
+-	if (attr->srv6_l3vpn && !attr->srv6_l3vpn->refcnt) {
+-		srv6_l3vpn_free(attr->srv6_l3vpn);
+-		attr->srv6_l3vpn = NULL;
++	if (attr->srv6_l3service && !attr->srv6_l3service->refcnt) {
++		srv6_l3service_free(attr->srv6_l3service);
++		attr->srv6_l3service = NULL;
+ 	}
+ 	if (attr->srv6_vpn && !attr->srv6_vpn->refcnt) {
+ 		srv6_vpn_free(attr->srv6_vpn);
+@@ -3172,12 +3171,12 @@ bgp_attr_srv6_service_data(struct bgp_attr_parser_args *args)
+ 				transposition_offset);
+ 		}
+ 
+-		attr->srv6_l3vpn->loc_block_len = loc_block_len;
+-		attr->srv6_l3vpn->loc_node_len = loc_node_len;
+-		attr->srv6_l3vpn->func_len = func_len;
+-		attr->srv6_l3vpn->arg_len = arg_len;
+-		attr->srv6_l3vpn->transposition_len = transposition_len;
+-		attr->srv6_l3vpn->transposition_offset = transposition_offset;
++		attr->srv6_l3service->loc_block_len = loc_block_len;
++		attr->srv6_l3service->loc_node_len = loc_node_len;
++		attr->srv6_l3service->func_len = func_len;
++		attr->srv6_l3service->arg_len = arg_len;
++		attr->srv6_l3service->transposition_len = transposition_len;
++		attr->srv6_l3service->transposition_offset = transposition_offset;
+ 	}
+ 
+ 	else {
+@@ -3251,23 +3250,23 @@ bgp_attr_srv6_service(struct bgp_attr_parser_args *args)
+ 				endpoint_behavior);
+ 
+ 		/* Configure from Info */
+-		if (attr->srv6_l3vpn) {
++		if (attr->srv6_l3service) {
+ 			flog_err(EC_BGP_ATTRIBUTE_REPEATED,
+-				 "Prefix SID SRv6 L3VPN field repeated");
++				 "Prefix SID SRv6 L3 Service field repeated");
+ 			return bgp_attr_malformed(
+ 				args, BGP_NOTIFY_UPDATE_MAL_ATTR, args->total);
+ 		}
+-		attr->srv6_l3vpn = XCALLOC(MTYPE_BGP_SRV6_L3VPN,
+-					   sizeof(struct bgp_attr_srv6_l3vpn));
+-		sid_copy(&attr->srv6_l3vpn->sid, &ipv6_sid);
+-		attr->srv6_l3vpn->sid_flags = sid_flags;
+-		attr->srv6_l3vpn->endpoint_behavior = endpoint_behavior;
+-		attr->srv6_l3vpn->loc_block_len = 0;
+-		attr->srv6_l3vpn->loc_node_len = 0;
+-		attr->srv6_l3vpn->func_len = 0;
+-		attr->srv6_l3vpn->arg_len = 0;
+-		attr->srv6_l3vpn->transposition_len = 0;
+-		attr->srv6_l3vpn->transposition_offset = 0;
++		attr->srv6_l3service = XCALLOC(MTYPE_BGP_SRV6_L3SERVICE,
++					       sizeof(struct bgp_attr_srv6_l3service));
++		sid_copy(&attr->srv6_l3service->sid, &ipv6_sid);
++		attr->srv6_l3service->sid_flags = sid_flags;
++		attr->srv6_l3service->endpoint_behavior = endpoint_behavior;
++		attr->srv6_l3service->loc_block_len = 0;
++		attr->srv6_l3service->loc_node_len = 0;
++		attr->srv6_l3service->func_len = 0;
++		attr->srv6_l3service->arg_len = 0;
++		attr->srv6_l3service->transposition_len = 0;
++		attr->srv6_l3service->transposition_offset = 0;
+ 
+ 		// Sub-Sub-TLV found
+ 		if (length > BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_INFO_LENGTH) {
+@@ -3277,7 +3276,7 @@ bgp_attr_srv6_service(struct bgp_attr_parser_args *args)
+ 				return err;
+ 		}
+ 
+-		attr->srv6_l3vpn = srv6_l3vpn_intern(attr->srv6_l3vpn);
++		attr->srv6_l3service = srv6_l3service_intern(attr->srv6_l3service);
+ 	}
+ 
+ 	/* Placeholder code for unsupported type */
+@@ -5281,7 +5280,7 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 
+ 	/* SRv6 Service Information Attribute. */
+ 	if ((afi == AFI_IP || afi == AFI_IP6) && safi == SAFI_MPLS_VPN) {
+-		if (attr->srv6_l3vpn) {
++		if (attr->srv6_l3service) {
+ 			uint8_t subtlv_len =
+ 				BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_STRUCTURE_LENGTH
+ 				+ BGP_ATTR_MIN_LEN
+@@ -5298,11 +5297,11 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 			stream_putc(s, BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_INFO);
+ 			stream_putw(s, subtlv_len);
+ 			stream_putc(s, 0);      /* reserved */
+-			stream_put(s, &attr->srv6_l3vpn->sid,
+-				   sizeof(attr->srv6_l3vpn->sid)); /* sid */
++			stream_put(s, &attr->srv6_l3service->sid,
++				   sizeof(attr->srv6_l3service->sid)); /* sid */
+ 			stream_putc(s, 0);      /* sid_flags */
+ 			stream_putw(s,
+-				    attr->srv6_l3vpn
++				    attr->srv6_l3service
+ 					    ->endpoint_behavior); /* endpoint */
+ 			stream_putc(s, 0);      /* reserved */
+ 			stream_putc(
+@@ -5311,12 +5310,12 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 			stream_putw(
+ 				s,
+ 				BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_STRUCTURE_LENGTH);
+-			stream_putc(s, attr->srv6_l3vpn->loc_block_len);
+-			stream_putc(s, attr->srv6_l3vpn->loc_node_len);
+-			stream_putc(s, attr->srv6_l3vpn->func_len);
+-			stream_putc(s, attr->srv6_l3vpn->arg_len);
+-			stream_putc(s, attr->srv6_l3vpn->transposition_len);
+-			stream_putc(s, attr->srv6_l3vpn->transposition_offset);
++			stream_putc(s, attr->srv6_l3service->loc_block_len);
++			stream_putc(s, attr->srv6_l3service->loc_node_len);
++			stream_putc(s, attr->srv6_l3service->func_len);
++			stream_putc(s, attr->srv6_l3service->arg_len);
++			stream_putc(s, attr->srv6_l3service->transposition_len);
++			stream_putc(s, attr->srv6_l3service->transposition_offset);
+ 		} else if (attr->srv6_vpn) {
+ 			stream_putc(s, BGP_ATTR_FLAG_OPTIONAL
+ 					       | BGP_ATTR_FLAG_TRANS);
+diff --git a/bgpd/bgp_attr.h b/bgpd/bgp_attr.h
+index b585f850c583..f1289e412027 100644
+--- a/bgpd/bgp_attr.h
++++ b/bgpd/bgp_attr.h
+@@ -9,6 +9,7 @@
+ #include "mpls.h"
+ #include "bgp_attr_evpn.h"
+ #include "bgpd/bgp_encap_types.h"
++#include "bgpd/bgp_attr_srv6.h"
+ #include "srte.h"
+ 
+ /* Simple bit mapping. */
+@@ -118,24 +119,6 @@ struct bgp_attr_srv6_vpn {
+ 	struct in6_addr sid;
+ };
+ 
+-/*
+- * Prefix-SID type-5
+- * SRv6-L3VPN-Service-TLV
+- * draft-dawra-idr-srv6-vpn-05
+- */
+-struct bgp_attr_srv6_l3vpn {
+-	unsigned long refcnt;
+-	uint8_t sid_flags;
+-	uint16_t endpoint_behavior;
+-	struct in6_addr sid;
+-	uint8_t loc_block_len;
+-	uint8_t loc_node_len;
+-	uint8_t func_len;
+-	uint8_t arg_len;
+-	uint8_t transposition_len;
+-	uint8_t transposition_offset;
+-};
+-
+ /* BGP core attribute structure. */
+ struct attr {
+ 	/* AS Path structure */
+@@ -269,8 +252,8 @@ struct attr {
+ 	/* SRv6 VPN SID */
+ 	struct bgp_attr_srv6_vpn *srv6_vpn;
+ 
+-	/* SRv6 L3VPN SID */
+-	struct bgp_attr_srv6_l3vpn *srv6_l3vpn;
++	/* SRv6 L3 service SID */
++	struct bgp_attr_srv6_l3service *srv6_l3service;
+ 
+ 	struct bgp_attr_encap_subtlv *encap_subtlvs; /* rfc5512 */
+ 
+diff --git a/bgpd/bgp_attr_srv6.h b/bgpd/bgp_attr_srv6.h
+new file mode 100644
+index 000000000000..c0a83edae2cc
+--- /dev/null
++++ b/bgpd/bgp_attr_srv6.h
+@@ -0,0 +1,28 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * SRv6 definitions
++ * Copyright (C) 2025 6WIND
++ * Loïc SANG <loic.sang@6wind.com>
++ */
++
++#ifndef _BGP_ATTR_SRV6_H_
++#define _BGP_ATTR_SRV6_H_
++
++/*
++ * Prefix-SID type-5
++ * SRv6-L3-Service-TLV
++ * RFC 9252
++ */
++struct bgp_attr_srv6_l3service {
++	unsigned long refcnt;
++	uint8_t sid_flags;
++	uint16_t endpoint_behavior;
++	struct in6_addr sid;
++	uint8_t loc_block_len;
++	uint8_t loc_node_len;
++	uint8_t func_len;
++	uint8_t arg_len;
++	uint8_t transposition_len;
++	uint8_t transposition_offset;
++};
++#endif /* _BGP_ATTR_SRV6_H_ */
+diff --git a/bgpd/bgp_memory.c b/bgpd/bgp_memory.c
+index 550e772cd100..4a3fe0a8fcbf 100644
+--- a/bgpd/bgp_memory.c
++++ b/bgpd/bgp_memory.c
+@@ -126,7 +126,7 @@ DEFINE_MTYPE(BGPD, BGP_EVPN_ES_VRF, "BGP EVPN ES-per-VRF Information");
+ DEFINE_MTYPE(BGPD, BGP_EVPN_IMPORT_RT, "BGP EVPN Import RT");
+ DEFINE_MTYPE(BGPD, BGP_EVPN_VRF_IMPORT_RT, "BGP EVPN VRF Import RT");
+ 
+-DEFINE_MTYPE(BGPD, BGP_SRV6_L3VPN, "BGP prefix-sid srv6 l3vpn servcie");
++DEFINE_MTYPE(BGPD, BGP_SRV6_L3SERVICE, "BGP prefix-sid SRV6 L3 Service");
+ DEFINE_MTYPE(BGPD, BGP_SRV6_VPN, "BGP prefix-sid srv6 vpn service");
+ DEFINE_MTYPE(BGPD, BGP_SRV6_SID, "BGP srv6 segment-id");
+ DEFINE_MTYPE(BGPD, BGP_SRV6_FUNCTION, "BGP srv6 function");
+diff --git a/bgpd/bgp_memory.h b/bgpd/bgp_memory.h
+index 9ea3c7e4c5bf..558b5d44ec8d 100644
+--- a/bgpd/bgp_memory.h
++++ b/bgpd/bgp_memory.h
+@@ -123,7 +123,7 @@ DECLARE_MTYPE(BGP_EVPN);
+ DECLARE_MTYPE(BGP_EVPN_IMPORT_RT);
+ DECLARE_MTYPE(BGP_EVPN_VRF_IMPORT_RT);
+ 
+-DECLARE_MTYPE(BGP_SRV6_L3VPN);
++DECLARE_MTYPE(BGP_SRV6_L3SERVICE);
+ DECLARE_MTYPE(BGP_SRV6_VPN);
+ DECLARE_MTYPE(BGP_SRV6_SID);
+ DECLARE_MTYPE(BGP_SRV6_FUNCTION);
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 352ea9eae705..f583923b5778 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -1234,13 +1234,13 @@ leak_update(struct bgp *to_bgp, struct bgp_dest *bn,
+ 		if (!bpi->extra || !bpi->extra->vrfleak ||
+ 		    bpi->extra->vrfleak->parent != source_bpi)
+ 			continue;
+-		if (new_attr->srv6_l3vpn && !bpi->attr->srv6_l3vpn &&
++		if (new_attr->srv6_l3service && !bpi->attr->srv6_l3service &&
+ 		    !bgp_labels_is_implicit_null(bpi))
+ 			/* SRv6 path can not overwrite MPLS path */
+ 			continue;
+-		if ((!new_attr->srv6_l3vpn && num_labels == 1 &&
++		if ((!new_attr->srv6_l3service && num_labels == 1 &&
+ 		     decode_label(&label[0]) != MPLS_LABEL_NONE) &&
+-		    bpi->attr->srv6_l3vpn)
++		    bpi->attr->srv6_l3service)
+ 			/* MPLS path can not overwrite Srv6 path */
+ 			continue;
+ 		/* MPLS or SRv6 path found or path with LABEL_NONE*/
+@@ -1722,31 +1722,31 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		struct srv6_locator *locator = from_bgp->vpn_policy[afi].tovpn_sid_locator;
+ 
+ 		encode_label(from_bgp->vpn_policy[afi].tovpn_sid_transpose_label, label);
+-		attr->srv6_l3vpn = XCALLOC(MTYPE_BGP_SRV6_L3VPN,
+-					   sizeof(struct bgp_attr_srv6_l3vpn));
+-		attr->srv6_l3vpn->sid_flags = 0x00;
+-		attr->srv6_l3vpn->endpoint_behavior =
++		attr->srv6_l3service = XCALLOC(MTYPE_BGP_SRV6_L3SERVICE,
++					       sizeof(struct bgp_attr_srv6_l3service));
++		attr->srv6_l3service->sid_flags = 0x00;
++		attr->srv6_l3service->endpoint_behavior =
+ 			afi == AFI_IP ? (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
+ 						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID
+ 						 : SRV6_ENDPOINT_BEHAVIOR_END_DT4)
+ 				      : (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
+ 						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID
+ 						 : SRV6_ENDPOINT_BEHAVIOR_END_DT6);
+-		attr->srv6_l3vpn->loc_block_len =
++		attr->srv6_l3service->loc_block_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+-		attr->srv6_l3vpn->loc_node_len =
++		attr->srv6_l3service->loc_node_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+-		attr->srv6_l3vpn->func_len =
++		attr->srv6_l3service->func_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3vpn->arg_len =
++		attr->srv6_l3service->arg_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->argument_bits_length;
+-		attr->srv6_l3vpn->transposition_len =
++		attr->srv6_l3service->transposition_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3vpn->transposition_offset =
++		attr->srv6_l3service->transposition_offset =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length +
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+ 		;
+-		memcpy(&attr->srv6_l3vpn->sid,
++		memcpy(&attr->srv6_l3service->sid,
+ 		       &from_bgp->vpn_policy[afi].tovpn_sid_locator->prefix.prefix,
+ 		       sizeof(struct in6_addr));
+ 		return true;
+@@ -1755,22 +1755,24 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		struct srv6_locator *locator = from_bgp->tovpn_sid_locator;
+ 
+ 		encode_label(from_bgp->tovpn_sid_transpose_label, label);
+-		attr->srv6_l3vpn = XCALLOC(MTYPE_BGP_SRV6_L3VPN,
+-					   sizeof(struct bgp_attr_srv6_l3vpn));
+-		attr->srv6_l3vpn->sid_flags = 0x00;
+-		attr->srv6_l3vpn->endpoint_behavior = CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
+-							      ? SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID
+-							      : SRV6_ENDPOINT_BEHAVIOR_END_DT46;
+-		attr->srv6_l3vpn->loc_block_len = from_bgp->tovpn_sid_locator->block_bits_length;
+-		attr->srv6_l3vpn->loc_node_len = from_bgp->tovpn_sid_locator->node_bits_length;
+-		attr->srv6_l3vpn->func_len = from_bgp->tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3vpn->arg_len = from_bgp->tovpn_sid_locator->argument_bits_length;
+-		attr->srv6_l3vpn->transposition_len =
++		attr->srv6_l3service = XCALLOC(MTYPE_BGP_SRV6_L3SERVICE,
++					       sizeof(struct bgp_attr_srv6_l3service));
++		attr->srv6_l3service->sid_flags = 0x00;
++		attr->srv6_l3service->endpoint_behavior =
++			CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
++				? SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID
++				: SRV6_ENDPOINT_BEHAVIOR_END_DT46;
++		attr->srv6_l3service->loc_block_len =
++			from_bgp->tovpn_sid_locator->block_bits_length;
++		attr->srv6_l3service->loc_node_len = from_bgp->tovpn_sid_locator->node_bits_length;
++		attr->srv6_l3service->func_len = from_bgp->tovpn_sid_locator->function_bits_length;
++		attr->srv6_l3service->arg_len = from_bgp->tovpn_sid_locator->argument_bits_length;
++		attr->srv6_l3service->transposition_len =
+ 			from_bgp->tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3vpn->transposition_offset =
++		attr->srv6_l3service->transposition_offset =
+ 			from_bgp->tovpn_sid_locator->block_bits_length +
+ 			from_bgp->tovpn_sid_locator->node_bits_length;
+-		memcpy(&attr->srv6_l3vpn->sid, &from_bgp->tovpn_sid_locator->prefix.prefix,
++		memcpy(&attr->srv6_l3service->sid, &from_bgp->tovpn_sid_locator->prefix.prefix,
+ 		       sizeof(struct in6_addr));
+ 		return true;
+ 	}
+@@ -2060,6 +2062,7 @@ void vpn_leak_from_vrf_update(struct bgp *to_bgp,	     /* to */
+ 						    path_vrf, nexthop_self_flag, debug, &label);
+ 
+ 	if (vpn_leak_from_vrf_fill_srv6(&static_attr, from_bgp, afi, &label))
++
+ 		/* SRv6 */
+ 		_vpn_leak_from_vrf_update_leak_attr(&static_attr, to_bgp, from_bgp, afi, safi,
+ 						    path_vrf, nexthop_self_flag, debug, &label);
+@@ -2123,13 +2126,13 @@ void vpn_leak_from_vrf_withdraw(struct bgp *to_bgp,		/* to */
+ 	for (bpi = bgp_dest_get_bgp_path_info(bn); bpi; bpi = bpi->next) {
+ 		if (!bpi->extra || !bpi->extra->vrfleak || bpi->extra->vrfleak->parent != path_vrf)
+ 			continue;
+-		if (path_vrf->attr->srv6_l3vpn && !bpi->attr->srv6_l3vpn &&
++		if (path_vrf->attr->srv6_l3service && !bpi->attr->srv6_l3service &&
+ 		    !bgp_labels_is_implicit_null(bpi))
+ 			/* SRv6 path can not overwrite MPLS path */
+ 			continue;
+-		if ((!path_vrf->attr->srv6_l3vpn && BGP_PATH_INFO_NUM_LABELS(path_vrf) == 1 &&
++		if ((!path_vrf->attr->srv6_l3service && BGP_PATH_INFO_NUM_LABELS(path_vrf) == 1 &&
+ 		     decode_label(&path_vrf->extra->labels->label[0]) != MPLS_LABEL_NONE) &&
+-		    bpi->attr->srv6_l3vpn)
++		    bpi->attr->srv6_l3service)
+ 			/* MPLS path can not overwrite Srv6 path */
+ 			continue;
+ 		/* MPLS or SRv6 path found or path with LABEL_NONE*/
+@@ -2366,14 +2369,14 @@ static void vpn_leak_to_vrf_update_onevrf(struct bgp *to_bgp,	/* to */
+ 			if (!bpi->extra || !bpi->extra->vrfleak ||
+ 			    bpi->extra->vrfleak->parent != path_vpn)
+ 				continue;
+-			if (path_vpn->attr->srv6_l3vpn && !bpi->attr->srv6_l3vpn &&
++			if (path_vpn->attr->srv6_l3service && !bpi->attr->srv6_l3service &&
+ 			    !bgp_labels_is_implicit_null(bpi))
+ 				/* SRv6 path can not overwrite MPLS path */
+ 				continue;
+-			if ((!path_vpn->attr->srv6_l3vpn &&
++			if ((!path_vpn->attr->srv6_l3service &&
+ 			     BGP_PATH_INFO_NUM_LABELS(path_vpn) == 1 &&
+ 			     decode_label(&path_vpn->extra->labels->label[0]) != MPLS_LABEL_NONE) &&
+-			    bpi->attr->srv6_l3vpn)
++			    bpi->attr->srv6_l3service)
+ 				/* MPLS path can not overwrite Srv6 path */
+ 				continue;
+ 			/* MPLS or SRv6 path found or path with LABEL_NONE*/
+@@ -4392,7 +4395,7 @@ struct bgp_mplsvpn_nh_label_bind_cache *bgp_mplsvpn_nh_label_bind_find(
+  */
+ bool bgp_mplsvpn_path_uses_valid_mpls_label(struct bgp_path_info *pi)
+ {
+-	if (pi->attr && pi->attr->srv6_l3vpn)
++	if (pi->attr && pi->attr->srv6_l3service)
+ 		/* srv6 sid */
+ 		return false;
+ 
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index df5f3288f518..643b6cf0f646 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -362,7 +362,7 @@ static inline bool is_pi_family_vpn(struct bgp_path_info *pi)
+ static inline bool is_pi_srv6_valid(struct bgp_path_info *pi, struct bgp *bgp_nexthop, afi_t afi,
+ 				    safi_t safi)
+ {
+-	if (!pi->attr->srv6_l3vpn && !pi->attr->srv6_vpn)
++	if (!pi->attr->srv6_l3service && !pi->attr->srv6_vpn)
+ 		return !bgp_nexthop->srv6_only;
+ 
+ 	/* imported paths from VPN: srv6 enabled and nht reachability
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index b9be40d471da..34d69230f22f 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -133,7 +133,7 @@ static bool bgp_isvalid_nexthop_for_l3vpn(struct bgp_nexthop_cache *bnc,
+ 	if (bgp_zebra_num_connects() == 0)
+ 		return 1;
+ 
+-	if (path->attr->srv6_l3vpn || path->attr->srv6_vpn) {
++	if (path->attr->srv6_l3service || path->attr->srv6_vpn) {
+ 		/* In the case of SRv6-VPN, we need to track the reachability to the
+ 		 * SID (in other words, IPv6 address). We check that the SID is
+ 		 * available in the BGP update; then if it is available, we check
+@@ -1075,10 +1075,10 @@ static bool make_prefix(int afi, struct bgp_path_info *pi, struct prefix *p,
+ 		break;
+ 	case AFI_IP6:
+ 		p->family = AF_INET6;
+-		if (pi->attr->srv6_l3vpn) {
++		if (pi->attr->srv6_l3service) {
+ 			tmp_prefix.family = AF_INET6;
+ 			tmp_prefix.prefixlen = IPV6_MAX_BITLEN;
+-			tmp_prefix.prefix = pi->attr->srv6_l3vpn->sid;
++			tmp_prefix.prefix = pi->attr->srv6_l3service->sid;
+ 			if (bgp_nexthop->vpn_policy[afi].tovpn_sid_locator &&
+ 			    bgp_nexthop->vpn_policy[afi].tovpn_sid)
+ 				local_sid = prefix_match(&bgp_nexthop->vpn_policy[afi]
+@@ -1088,17 +1088,17 @@ static bool make_prefix(int afi, struct bgp_path_info *pi, struct prefix *p,
+ 				local_sid = prefix_match(&bgp_nexthop->tovpn_sid_locator->prefix,
+ 							 &tmp_prefix);
+ 		}
+-		if (local_sid == false && pi->attr->srv6_l3vpn) {
++		if (local_sid == false && pi->attr->srv6_l3service) {
+ 			p->prefixlen = IPV6_MAX_BITLEN;
+-			if (pi->attr->srv6_l3vpn->transposition_len != 0 &&
++			if (pi->attr->srv6_l3service->transposition_len != 0 &&
+ 			    BGP_PATH_INFO_NUM_LABELS(pi)) {
+-				IPV6_ADDR_COPY(&p->u.prefix6, &pi->attr->srv6_l3vpn->sid);
++				IPV6_ADDR_COPY(&p->u.prefix6, &pi->attr->srv6_l3service->sid);
+ 				transpose_sid(&p->u.prefix6,
+ 					      decode_label(&pi->extra->labels->label[0]),
+-					      pi->attr->srv6_l3vpn->transposition_offset,
+-					      pi->attr->srv6_l3vpn->transposition_len);
++					      pi->attr->srv6_l3service->transposition_offset,
++					      pi->attr->srv6_l3service->transposition_len);
+ 			} else
+-				IPV6_ADDR_COPY(&(p->u.prefix6), &(pi->attr->srv6_l3vpn->sid));
++				IPV6_ADDR_COPY(&(p->u.prefix6), &(pi->attr->srv6_l3service->sid));
+ 		} else if (is_bgp_static) {
+ 			p->u.prefix6 = p_orig->u.prefix6;
+ 			p->prefixlen = p_orig->prefixlen;
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 6e4285d45bad..5a3bf3f06612 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -2623,13 +2623,13 @@ bool subgroup_announce_check(struct bgp_dest *dest, struct bgp_path_info *pi,
+ 	if (safi == SAFI_MPLS_VPN) {
+ 		if (CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
+ 		    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
+-		    !pi->attr->srv6_l3vpn && !pi->attr->srv6_vpn)
++		    !pi->attr->srv6_l3service && !pi->attr->srv6_vpn)
+ 			/* MPLS update not advertised if SRv6 is autorised, but not MPLS */
+ 			return false;
+ 
+ 		if (CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
+ 		    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
+-		    (pi->attr->srv6_l3vpn || pi->attr->srv6_vpn))
++		    (pi->attr->srv6_l3service || pi->attr->srv6_vpn))
+ 			/* SRv6 update not advertised if MPLS is autorised, but not SRv6 */
+ 			return false;
+ 	}
+@@ -5072,7 +5072,7 @@ void bgp_update_check_valid_flags(struct bgp *bgp, struct peer *peer, struct bgp
+ 				bgp_path_info_set_flag(dest, pi, BGP_PATH_ACCEPT_OWN);
+ 			if (safi == SAFI_MPLS_VPN && pi->peer &&
+ 			    pi->peer->bgp->peer_self != pi->peer) {
+-				if (pi->attr->srv6_l3vpn || pi->attr->srv6_vpn) {
++				if (pi->attr->srv6_l3service || pi->attr->srv6_vpn) {
+ 					if (peergroup_af_flag_check(peer, afi, SAFI_MPLS_VPN,
+ 								    PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) ||
+ 					    !peergroup_af_flag_check(peer, afi, SAFI_MPLS_VPN,
+@@ -12452,43 +12452,42 @@ void route_vty_out_detail(struct vty *vty, struct bgp *bgp, struct bgp_dest *bn,
+ 	}
+ 
+ 	/* Remote SID */
+-	if ((path->attr->srv6_l3vpn || path->attr->srv6_vpn) &&
+-	    safi != SAFI_EVPN) {
++	if ((path->attr->srv6_l3service || path->attr->srv6_vpn) && safi != SAFI_EVPN) {
+ 		json_object *json_sid_attr;
+-		struct in6_addr *sid_tmp =
+-			path->attr->srv6_l3vpn ? (&path->attr->srv6_l3vpn->sid)
+-					       : (&path->attr->srv6_vpn->sid);
++		struct in6_addr *sid_tmp = path->attr->srv6_l3service
++						   ? (&path->attr->srv6_l3service->sid)
++						   : (&path->attr->srv6_vpn->sid);
+ 
+ 		if (json_paths) {
+ 			json_object_string_addf(json_path, "remoteSid", "%pI6",
+ 						sid_tmp);
+-			if (path->attr->srv6_l3vpn) {
++			if (path->attr->srv6_l3service) {
+ 				json_sid_attr = json_object_new_object();
+ 				json_object_object_add(json_path, "remoteSidStructure",
+ 						       json_sid_attr);
+ 				json_object_int_add(json_sid_attr, "locatorBlockLen",
+-						    path->attr->srv6_l3vpn->loc_block_len);
++						    path->attr->srv6_l3service->loc_block_len);
+ 				json_object_int_add(json_sid_attr, "locatorNodeLen",
+-						    path->attr->srv6_l3vpn->loc_node_len);
++						    path->attr->srv6_l3service->loc_node_len);
+ 				json_object_int_add(json_sid_attr, "functionLen",
+-						    path->attr->srv6_l3vpn->func_len);
++						    path->attr->srv6_l3service->func_len);
+ 				json_object_int_add(json_sid_attr, "argumentLen",
+-						    path->attr->srv6_l3vpn->arg_len);
++						    path->attr->srv6_l3service->arg_len);
+ 				json_object_int_add(json_sid_attr, "transpositionLen",
+-						    path->attr->srv6_l3vpn->transposition_len);
++						    path->attr->srv6_l3service->transposition_len);
+ 				json_object_int_add(json_sid_attr, "transpositionOffset",
+-						    path->attr->srv6_l3vpn->transposition_offset);
++						    path->attr->srv6_l3service->transposition_offset);
+ 			}
+ 		} else {
+ 			vty_out(vty, "      Remote SID: %pI6", sid_tmp);
+-			if (path->attr->srv6_l3vpn) {
++			if (path->attr->srv6_l3service) {
+ 				vty_out(vty, ", sid structure=[%u %u %u %u %u %u]",
+-					path->attr->srv6_l3vpn->loc_block_len,
+-					path->attr->srv6_l3vpn->loc_node_len,
+-					path->attr->srv6_l3vpn->func_len,
+-					path->attr->srv6_l3vpn->arg_len,
+-					path->attr->srv6_l3vpn->transposition_len,
+-					path->attr->srv6_l3vpn->transposition_offset);
++					path->attr->srv6_l3service->loc_block_len,
++					path->attr->srv6_l3service->loc_node_len,
++					path->attr->srv6_l3service->func_len,
++					path->attr->srv6_l3service->arg_len,
++					path->attr->srv6_l3service->transposition_len,
++					path->attr->srv6_l3service->transposition_offset);
+ 			}
+ 			vty_out(vty, "\n");
+ 		}
+diff --git a/bgpd/bgp_routemap.c b/bgpd/bgp_routemap.c
+index ba0adc97632e..0747cfbb7ceb 100644
+--- a/bgpd/bgp_routemap.c
++++ b/bgpd/bgp_routemap.c
+@@ -4588,7 +4588,7 @@ route_match_vpn_dataplane(void *rule, const struct prefix *prefix, void *object)
+ 		return RMAP_MATCH;
+ 
+ 	if (*bgp_encap_type == BGP_ENCAP_TYPE_SRV6 &&
+-	    (path_vpn->attr->srv6_l3vpn || path_vpn->attr->srv6_vpn))
++	    (path_vpn->attr->srv6_l3service || path_vpn->attr->srv6_vpn))
+ 		return RMAP_MATCH;
+ 
+ 	return RMAP_NOMATCH;
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index adfd4a73de41..cde11a1cadc4 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -1421,22 +1421,22 @@ static void bgp_zebra_announce_parse_nexthop(
+ 
+ 		api_nh->weight = nh_weight;
+ 
+-		if (((mpinfo->attr->srv6_l3vpn &&
+-		      !sid_zero_ipv6(&mpinfo->attr->srv6_l3vpn->sid)) ||
++		if (((mpinfo->attr->srv6_l3service &&
++		      !sid_zero_ipv6(&mpinfo->attr->srv6_l3service->sid)) ||
+ 		     (mpinfo->attr->srv6_vpn &&
+ 		      !sid_zero_ipv6(&mpinfo->attr->srv6_vpn->sid))) &&
+ 		    !is_evpn && bgp_is_valid_label(&labels[0])) {
+ 			struct in6_addr *sid_tmp =
+-				mpinfo->attr->srv6_l3vpn
+-					? (&mpinfo->attr->srv6_l3vpn->sid)
++				mpinfo->attr->srv6_l3service
++					? (&mpinfo->attr->srv6_l3service->sid)
+ 					: (&mpinfo->attr->srv6_vpn->sid);
+ 
+ 			memcpy(&api_nh->seg6_segs[0], sid_tmp,
+ 			       sizeof(api_nh->seg6_segs[0]));
+ 			api_nh->srv6_encap_behavior = bgp_orig->srv6_encap_behavior;
+ 
+-			if (mpinfo->attr->srv6_l3vpn &&
+-			    mpinfo->attr->srv6_l3vpn->transposition_len != 0) {
++			if (mpinfo->attr->srv6_l3service &&
++			    mpinfo->attr->srv6_l3service->transposition_len != 0) {
+ 				mpls_lse_decode(labels[0], &nh_label, &ttl,
+ 						&exp, &bos);
+ 
+@@ -1448,10 +1448,8 @@ static void bgp_zebra_announce_parse_nexthop(
+ 				}
+ 
+ 				transpose_sid(&api_nh->seg6_segs[0], nh_label,
+-					      mpinfo->attr->srv6_l3vpn
+-						      ->transposition_offset,
+-					      mpinfo->attr->srv6_l3vpn
+-						      ->transposition_len);
++					      mpinfo->attr->srv6_l3service->transposition_offset,
++					      mpinfo->attr->srv6_l3service->transposition_len);
+ 			}
+ 
+ 			api_nh->seg_num = 1;
+@@ -2376,7 +2374,8 @@ void bgp_zebra_update_srv6_encap_routes(struct bgp *bgp, afi_t afi, struct bgp *
+ 			if (pi->extra->vrfleak->bgp_orig != from_bgp)
+ 				continue;
+ 
+-			if ((pi->attr->srv6_l3vpn && !sid_zero_ipv6(&pi->attr->srv6_l3vpn->sid)) ||
++			if ((pi->attr->srv6_l3service &&
++			     !sid_zero_ipv6(&pi->attr->srv6_l3service->sid)) ||
+ 			    (pi->attr->srv6_vpn && !sid_zero_ipv6(&pi->attr->srv6_vpn->sid)))
+ 				bgp_zebra_route_install(dest, pi, bgp, add, NULL, false);
+ 		}
+diff --git a/bgpd/rfapi/rfapi_vty.c b/bgpd/rfapi/rfapi_vty.c
+index 90e61f1acec6..d65ae0cbd11a 100644
+--- a/bgpd/rfapi/rfapi_vty.c
++++ b/bgpd/rfapi/rfapi_vty.c
+@@ -421,19 +421,18 @@ void rfapi_vty_out_vncinfo(struct vty *vty, const struct prefix *p,
+ 				decode_label(&bpi->extra->labels->label[0]));
+ 	}
+ 
+-	if (bpi->attr->srv6_l3vpn || bpi->attr->srv6_vpn) {
+-		struct in6_addr *sid_tmp =
+-			bpi->attr->srv6_l3vpn ? (&bpi->attr->srv6_l3vpn->sid)
+-					      : (&bpi->attr->srv6_vpn->sid);
++	if (bpi->attr->srv6_l3service || bpi->attr->srv6_vpn) {
++		struct in6_addr *sid_tmp = bpi->attr->srv6_l3service
++						   ? (&bpi->attr->srv6_l3service->sid)
++						   : (&bpi->attr->srv6_vpn->sid);
+ 		vty_out(vty, " sid=%pI6", sid_tmp);
+ 
+-		if (bpi->attr->srv6_l3vpn &&
+-		    bpi->attr->srv6_l3vpn->loc_block_len != 0) {
++		if (bpi->attr->srv6_l3service && bpi->attr->srv6_l3service->loc_block_len != 0) {
+ 			vty_out(vty, " sid_structure=[%d,%d,%d,%d]",
+-				bpi->attr->srv6_l3vpn->loc_block_len,
+-				bpi->attr->srv6_l3vpn->loc_node_len,
+-				bpi->attr->srv6_l3vpn->func_len,
+-				bpi->attr->srv6_l3vpn->arg_len);
++				bpi->attr->srv6_l3service->loc_block_len,
++				bpi->attr->srv6_l3service->loc_node_len,
++				bpi->attr->srv6_l3service->func_len,
++				bpi->attr->srv6_l3service->arg_len);
+ 		}
+ 	}
+ 
+diff --git a/bgpd/subdir.am b/bgpd/subdir.am
+index c59a669b384b..69b3cc9ba53d 100644
+--- a/bgpd/subdir.am
++++ b/bgpd/subdir.am
+@@ -163,6 +163,7 @@ noinst_HEADERS += \
+ 	bgpd/bgpd.h \
+ 	bgpd/bgp_trace.h \
+ 	bgpd/bgp_nhg.h \
++	bgpd/bgp_attr_srv6.h \
+ 	\
+ 	bgpd/rfapi/bgp_rfapi_cfg.h \
+ 	bgpd/rfapi/rfapi_import.h \
+
+From ec6231e3d206eeed4d83f671d02e94122ed2ed27 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Mon, 25 Aug 2025 09:48:28 +0200
+Subject: [PATCH 3/9] bgpd: add sid allocation for unicast in the default vrf
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add "sid export <auto|index|explicit> [route-map]" command for unicast
+in the default vrf. This will allocate a sid for the default vrf,
+similar to 6b99a6c1510f ("lib: Attach uDT* SIDs for default VRF to `sr0`
+instead of loopback"), due to a Linux limitation, main table and "sr0"
+interface should be created to successfully install DT rule.
+
+It will be used in the next commit to send updates with the srv6
+attribute over unicast
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c |   3 +-
+ bgpd/bgp_mplsvpn.h |  12 +++
+ bgpd/bgp_srv6.c    | 201 +++++++++++++++++++++++++++++++++++++++++++++
+ bgpd/bgp_srv6.h    |  26 ++++++
+ bgpd/bgp_vty.c     | 164 +++++++++++++++++++++++++++++++++++-
+ bgpd/bgp_zebra.c   | 109 ++++++++++++++++--------
+ bgpd/bgpd.c        |  19 ++++-
+ bgpd/bgpd.h        |  17 +++-
+ bgpd/subdir.am     |   2 +
+ 9 files changed, 515 insertions(+), 38 deletions(-)
+ create mode 100644 bgpd/bgp_srv6.c
+ create mode 100644 bgpd/bgp_srv6.h
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index f583923b5778..d9f1720fb075 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -697,8 +697,7 @@ static bool sid_exist(struct bgp *bgp, const struct in6_addr *sid)
+  * @param sid_func Function part of the SID
+  * @return True if success, False otherwise
+  */
+-static bool srv6_sid_compose(struct in6_addr *sid_value,
+-			     struct srv6_locator *locator, uint32_t sid_func)
++bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator, uint32_t sid_func)
+ {
+ 	int debug = BGP_DEBUG(vpn, VPN_LEAK_LABEL);
+ 	int label = 0;
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index 643b6cf0f646..5ad5f7cfd414 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -93,6 +93,7 @@ extern void vrf_import_from_vrf(struct bgp *to_bgp, struct bgp *from_bgp,
+ 				afi_t afi, safi_t safi);
+ void vrf_unimport_from_vrf(struct bgp *to_bgp, struct bgp *from_bgp,
+ 			   afi_t afi, safi_t safi);
++bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator, uint32_t sid_func);
+ 
+ static inline bool is_bgp_vrf_mplsvpn(struct bgp *bgp)
+ {
+@@ -404,6 +405,17 @@ static inline bool is_srv6_vpn_vrf_enabled(struct bgp *bgp)
+ 	return false;
+ }
+ 
++static inline bool is_srv6_vpn_enabled(struct bgp *bgp)
++{
++	if (is_srv6_vpn_vrf_enabled(bgp))
++		return true;
++
++	if (is_srv6_vpn_afi_enabled(bgp, AFI_IP) || is_srv6_vpn_afi_enabled(bgp, AFI_IP6))
++		return true;
++
++	return false;
++}
++
+ extern void vpn_policy_routemap_event(const char *rmap_name);
+ 
+ extern vrf_id_t get_first_vrf_for_redirect_with_rt(struct ecommunity *eckey);
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+new file mode 100644
+index 000000000000..d7a2b3f77738
+--- /dev/null
++++ b/bgpd/bgp_srv6.c
+@@ -0,0 +1,201 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * SRv6 definitions
++ * Copyright (C) 2025 6WIND
++ * Loïc SANG <loic.sang@6wind.com>
++ */
++
++#include <zebra.h>
++
++#include "log.h"
++#include "zclient.h"
++
++#include "bgpd/bgp_debug.h"
++#include "bgpd/bgp_mplsvpn.h"
++#include "bgpd/bgp_srv6.h"
++#include "bgpd/bgpd.h"
++
++extern struct zclient *bgp_zclient;
++
++void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi)
++{
++	uint32_t sid_func;
++	safi_t safi = SAFI_UNICAST;
++	struct srv6_sid_ctx ctx = {};
++	bool unicast_sid_auto = false;
++	uint32_t unicast_sid_index = 0;
++	struct in6_addr unicast_sid = {};
++	struct srv6_locator *locator_bgp;
++	bool unicast_sid_explicit = false;
++
++	/* no configured */
++	if (!is_srv6_unicast_enabled(bgp, afi))
++		return;
++
++	/* already allocated */
++	if (bgp->srv6_unicast[afi].sid)
++		return;
++
++	locator_bgp = bgp->srv6_locator;
++	/* locator no set */
++	if (!locator_bgp)
++		return;
++
++	unicast_sid_index = bgp->srv6_unicast[afi].sid_index;
++	unicast_sid_auto = CHECK_FLAG(bgp->af_flags[afi][safi],
++				      BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++	unicast_sid_explicit = bgp->srv6_unicast[afi].sid_explicit;
++
++	if ((unicast_sid_index != 0 && unicast_sid_auto) ||
++	    (unicast_sid_index != 0 && unicast_sid_explicit) ||
++	    (unicast_sid_auto && unicast_sid_explicit)) {
++		zlog_err("%s: more than one mode selected among index-mode, auto-mode and explicit-mode. ignored.",
++			 __func__);
++		return;
++	}
++
++	if (!unicast_sid_auto && !unicast_sid_explicit) {
++		if (!srv6_sid_compose(&unicast_sid, locator_bgp, unicast_sid_index)) {
++			zlog_err("%s: failed to compose unicast sid %s: afi %s",
++				 __func__, bgp->name_pretty, afi2str(afi));
++			return;
++		}
++	} else if (unicast_sid_explicit) {
++		unicast_sid = *(bgp->srv6_unicast[afi].sid_explicit);
++	} else if (!unicast_sid_auto) {
++		zlog_err("%s: neither index, auto, nor explicit mode is selected.",  __func__);
++		return;
++	}
++
++	ctx.vrf_id = bgp->vrf_id;
++	ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
++				     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++	if (!bgp_zebra_request_srv6_sid(&ctx, &unicast_sid, locator_bgp->name, &sid_func)) {
++		zlog_err("%s: failed to request sid for bgp %s: afi %s", __func__,
++			 bgp->name_pretty, afi2str(afi));
++	}
++}
++
++void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
++				   struct interface *ifp, bool install)
++{
++	enum seg6local_action_t act;
++	struct seg6local_context ctx = {};
++	struct in6_addr *unicast_sid_ls = NULL;
++
++	if (!bgp->srv6_unicast[afi].sid)
++		return;
++
++	ctx.block_len = bgp->srv6_unicast[afi].sid_locator->block_bits_length;
++	ctx.node_len = bgp->srv6_unicast[afi].sid_locator->node_bits_length;
++	ctx.function_len = bgp->srv6_unicast[afi].sid_locator->function_bits_length;
++	ctx.argument_len = bgp->srv6_unicast[afi].sid_locator->argument_bits_length;
++
++	if (install) {
++		if (CHECK_FLAG(bgp->srv6_unicast[afi].sid_locator->flags, SRV6_LOCATOR_USID))
++			SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
++		ctx.table = ifp->vrf->data.l.table_id;
++		act = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4 :
++			ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++		zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_ADD, bgp->srv6_unicast[afi].sid,
++				      IPV6_MAX_BITLEN, ifp->ifindex, act, &ctx);
++		unicast_sid_ls = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
++		*unicast_sid_ls = *bgp->srv6_unicast[afi].sid;
++		if (bgp->srv6_unicast[afi].zebra_sid_last_sent)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].zebra_sid_last_sent);
++		bgp->srv6_unicast[afi].zebra_sid_last_sent = unicast_sid_ls;
++
++	} else {
++		zclient_send_localsid(bgp_zclient, ZEBRA_ROUTE_DELETE,
++				      bgp->srv6_unicast[afi].zebra_sid_last_sent, IPV6_MAX_BITLEN,
++				      ifp->ifindex, ZEBRA_SEG6_LOCAL_ACTION_UNSPEC, &ctx);
++		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].zebra_sid_last_sent);
++		bgp->srv6_unicast[afi].zebra_sid_last_sent = NULL;
++	}
++}
++
++void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi)
++{
++	struct interface *ifp;
++	struct srv6_sid_ctx ctx = {};
++	int debug = BGP_DEBUG(zebra, ZEBRA);
++
++	if (bgp->vrf_id != VRF_DEFAULT)
++		return;
++
++	if (debug)
++		zlog_debug("%s: vrf %s: deleting sid %pI6 for vrf id %d", __func__,
++			   bgp->name_pretty, bgp->srv6_unicast[afi].sid, bgp->vrf_id);
++
++	ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
++	if (!ifp) {
++		zlog_warn("%s interface not found, nothing to uninstall",
++			  DEFAULT_SRV6_IFNAME);
++		return;
++	}
++
++	if (bgp->srv6_unicast[afi].zebra_sid_last_sent)
++		bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, false);
++
++	ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
++				     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++	ctx.vrf_id = bgp->vrf_id;
++	bgp_zebra_release_srv6_sid(&ctx, bgp->srv6_unicast[afi].sid_locator->name);
++}
++
++void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi)
++{
++	struct interface *ifp;
++	struct srv6_sid_ctx ctx = {};
++
++	if (!bgp || bgp->vrf_id != VRF_DEFAULT)
++		return;
++
++	if (!is_srv6_unicast_enabled(bgp, afi))
++		return;
++
++	if (bgp->srv6_unicast[afi].sid) {
++		ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
++		if (ifp && bgp->srv6_unicast[afi].zebra_sid_last_sent)
++			bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, false);
++
++		ctx.vrf_id = bgp->vrf_id;
++		ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
++					     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++		bgp_zebra_release_srv6_sid(&ctx, bgp->srv6_unicast[afi].sid_locator->name);
++
++		sid_unregister(bgp, bgp->srv6_unicast[afi].sid);
++		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid);
++	}
++
++	if (bgp->srv6_unicast[afi].sid_explicit)
++		XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
++
++	if (bgp->srv6_unicast[afi].rmap_name)
++		XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++
++	srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
++	bgp->srv6_unicast[afi].sid_locator = NULL;
++	UNSET_FLAG(bgp->af_flags[afi][SAFI_UNICAST],
++		   BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++}
++
++void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi)
++{
++	struct interface *ifp;
++
++	if (!bgp->srv6_unicast[afi].sid)
++		return;
++
++	ifp = if_lookup_by_name(DEFAULT_SRV6_IFNAME, VRF_DEFAULT);
++	if (!ifp) {
++		zlog_warn("%s interface not found, can not install SRV6 endpoint behavior",
++			  DEFAULT_SRV6_IFNAME);
++		return;
++	}
++	if (!if_is_up(ifp))
++		return;
++
++	bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, true);
++}
++
+diff --git a/bgpd/bgp_srv6.h b/bgpd/bgp_srv6.h
+new file mode 100644
+index 000000000000..17e49db91259
+--- /dev/null
++++ b/bgpd/bgp_srv6.h
+@@ -0,0 +1,26 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * SRv6 definitions
++ * Copyright (C) 2025 6WIND
++ * Loïc SANG <loic.sang@6wind.com>
++ */
++
++#ifndef _BGP_SRV6_H_
++#define _BGP_SRV6_H_
++
++static inline bool is_srv6_unicast_enabled(struct bgp *bgp, afi_t afi)
++{
++	if (CHECK_FLAG(bgp->af_flags[afi][SAFI_UNICAST], BGP_CONFIG_SRV6_UNICAST_SID_AUTO)
++	    || bgp->srv6_unicast[afi].sid_explicit || bgp->srv6_unicast[afi].sid_index)
++		return true;
++
++	return false;
++}
++
++void bgp_srv6_unicast_ensure_afi_sid(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_sid_withdraw(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
++				   struct interface *ifp, bool install);
++#endif /* _BGP_SRV6_H_ */
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 84d09d7a2592..321e6771eb40 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -66,6 +66,7 @@
+ #include "bgpd/bgp_mac.h"
+ #include "bgpd/bgp_flowspec.h"
+ #include "bgpd/bgp_conditional_adv.h"
++#include "bgpd/bgp_srv6.h"
+ #ifdef ENABLE_BGP_VNC
+ #include "bgpd/rfapi/bgp_rfapi_cfg.h"
+ #endif
+@@ -296,9 +297,26 @@ static void bgp_srv6_sids_unset(struct bgp *bgp)
+ 	struct bgp *bgp_vrf;
+ 	struct srv6_sid_ctx ctx = {};
+ 
++	/* withdraw srv6 unicast and refresh srv6 unicast sid locator */
++	if (bgp->inst_type == BGP_INSTANCE_TYPE_DEFAULT) {
++		if (is_srv6_unicast_enabled(bgp, AFI_IP)) {
++			bgp_srv6_unicast_sid_withdraw(bgp, AFI_IP);
++			/* locator deleted after this call, free the sid */
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[AFI_IP].sid);
++			srv6_locator_free(bgp->srv6_unicast[AFI_IP].sid_locator);
++			bgp->srv6_unicast[AFI_IP].sid_locator = NULL;
++		}
++		if (is_srv6_unicast_enabled(bgp, AFI_IP6)) {
++			bgp_srv6_unicast_sid_withdraw(bgp, AFI_IP6);
++			/* locator deleted after this call, free the sid */
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[AFI_IP6].sid);
++			srv6_locator_free(bgp->srv6_unicast[AFI_IP6].sid_locator);
++			bgp->srv6_unicast[AFI_IP6].sid_locator = NULL;
++		}
++	}
++
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+ 		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
+-			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
+@@ -9926,6 +9944,117 @@ DEFPY(no_neighbor_path_attribute_treat_as_withdraw,
+ 	return CMD_SUCCESS;
+ }
+ 
++DEFPY(sid_export,
++      sid_export_cmd,
++      "[no] sid export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value> [route-map RMAP$rmap_str]",
++      NO_STR
++      "Sid value for VRF\n"
++      "Encapsulation SRv6 over default vrf\n"
++      "Sid allocation index\n"
++      "Automatically assign a label\n"
++      "Explicitly assign a sid value\n"
++      "Sid value\n"
++      "Specify route-map name\n"
++      "Name of route-map\n")
++{
++	safi_t safi = SAFI_UNICAST;
++	afi_t afi = bgp_node_afi(vty);
++	struct in6_addr *unicast_sid_explicit = NULL;
++
++	VTY_DECLVAR_CONTEXT(bgp, bgp);
++	if (bgp->vrf_id != VRF_DEFAULT) {
++		vty_out(vty, "SRv6 unicast is only supported on default vrf");
++
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	if (is_srv6_vpn_afi_enabled(bgp, afi)) {
++		vty_out(vty,
++			"sid vpn per afi is configured.\n"
++			"Remove it first before configuring encapsulation SRv6 over default vrf");
++
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	if (is_srv6_vpn_vrf_enabled(bgp)) {
++		vty_out(vty,
++			"sid vpn per-vrf is configured.\n"
++			"Remove it first before configuring encapsulation SRv6 over default vrf.\n");
++
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	if (no) {
++		if (!is_srv6_unicast_enabled(bgp, afi))
++			return CMD_SUCCESS;
++
++		if (bgp->srv6_unicast[afi].rmap_name) {
++			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++			bgp->srv6_unicast[afi].rmap_name = NULL;
++		}
++		if (bgp->srv6_unicast[afi].sid_explicit) {
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
++			bgp->srv6_unicast[afi].sid_explicit = NULL;
++		}
++		bgp->srv6_unicast[afi].sid_index = 0;
++		UNSET_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++
++		bgp_srv6_unicast_sid_withdraw(bgp, afi);
++
++		return CMD_SUCCESS;
++	}
++
++	/* configured */
++	if ((sid_auto && CHECK_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO)) ||
++	    (sid_idx != 0 && bgp->srv6_unicast[afi].sid_index != 0) ||
++	    (sid_explicit && bgp->srv6_unicast[afi].sid_explicit)) {
++		/* no rmap change */
++		if (!rmap_str || (bgp->srv6_unicast[afi].rmap_name &&
++				  !strcmp(rmap_str, bgp->srv6_unicast[afi].rmap_name)))
++			return CMD_SUCCESS;
++
++		/* TODO: apply route-map change */
++
++		return CMD_SUCCESS;
++	}
++
++	/*
++	 * mode change between sid_idx and sid_auto isn't supported.
++	 * user must negate sid vpn export when they want to change the mode
++	 */
++	if ((sid_auto || sid_explicit) && bgp->srv6_unicast[afi].sid_index != 0) {
++		vty_out(vty, "it's already configured as idx-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if ((sid_auto || sid_idx != 0) && bgp->srv6_unicast[afi].sid_explicit) {
++		vty_out(vty, "it's already configured as explicit-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if ((sid_idx != 0 || sid_explicit) &&
++	    CHECK_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO)) {
++		vty_out(vty, "it's already configured as auto-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	if (rmap_str)
++		bgp->srv6_unicast[afi].rmap_name = XSTRDUP(MTYPE_ROUTE_MAP_NAME, rmap_str);
++
++	if (sid_auto) {
++		SET_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO);
++	} else if (sid_idx) {
++		bgp->srv6_unicast[afi].sid_index = sid_idx;
++	} else if (sid_explicit) {
++		unicast_sid_explicit = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
++		IPV6_ADDR_COPY(unicast_sid_explicit, &sid_value);
++		bgp->srv6_unicast[afi].sid_explicit = unicast_sid_explicit;
++	}
++
++	/* request srv6 sid */
++	bgp_srv6_unicast_ensure_afi_sid(bgp, afi);
++
++	return CMD_SUCCESS;
++}
++
+ DEFPY(neighbor_damp,
+       neighbor_damp_cmd,
+       "neighbor <A.B.C.D|X:X::X:X|WORD>$neighbor dampening [(1-45)$half [(1-20000)$reuse (1-20000)$suppress (1-255)$max]]",
+@@ -10370,11 +10499,18 @@ DEFPY (af_sid_vpn_export,
+ 
+ 	if (is_srv6_vpn_vrf_enabled(bgp)) {
+ 		vty_out(vty,
+-			"per-vrf sid and per-af sid are mutually exclusive\n"
++			"sid vpn per-vrf sid and per-af sid are mutually exclusive\n"
+ 			"Failed: per-vrf sid is configured. Remove per-vrf sid before configuring per-af sid\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
++	if (is_srv6_unicast_enabled(bgp, afi)) {
++		vty_out(vty, "sid export is configured on unicast\n"
++			     "Remove it before configuring sid vpn");
++
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
+ 	/* skip when it's already configured */
+ 	if ((sid_idx != 0 && bgp->vpn_policy[afi].tovpn_sid_index != 0) ||
+ 	    (sid_auto && CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO)) ||
+@@ -10474,6 +10610,13 @@ DEFPY (bgp_sid_vpn_export,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
++	if (is_srv6_unicast_enabled(bgp, AFI_IP) || is_srv6_unicast_enabled(bgp, AFI_IP6)) {
++		vty_out(vty, "sid export is configured on unicast\n"
++			     "Remove it before configuring sid vpn");
++
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
+ 	/* skip when it's already configured */
+ 	if ((sid_idx != 0 && bgp->tovpn_sid_index != 0) ||
+ 	    (sid_auto && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO)) ||
+@@ -11402,6 +11545,8 @@ DEFPY (show_bgp_srv6,
+ 		vty_out(vty, "  vpn_policy[AFI_IP6].tovpn_sid: %pI6\n",
+ 			bgp->vpn_policy[AFI_IP6].tovpn_sid);
+ 		vty_out(vty, "  per-vrf tovpn_sid: %pI6\n", bgp->tovpn_sid);
++		vty_out(vty, "  srv6_unicast[AFI_IP].sid: %pI6\n", bgp->srv6_unicast[AFI_IP].sid);
++		vty_out(vty, "  srv6_unicast[AFI_IP6].sid: %pI6\n", bgp->srv6_unicast[AFI_IP6].sid);
+ 	}
+ 
+ 	return CMD_SUCCESS;
+@@ -19844,6 +19989,19 @@ static void bgp_config_write_family(struct vty *vty, struct bgp *bgp, afi_t afi,
+ 				     name))
+ 				vty_out(vty, "  import vrf %s\n", name);
+ 		}
++
++		if (is_srv6_unicast_enabled(bgp, afi)) {
++			if (CHECK_FLAG(bgp->af_flags[afi][safi], BGP_CONFIG_SRV6_UNICAST_SID_AUTO))
++				vty_out(vty, "  sid export auto");
++			else if (bgp->srv6_unicast[afi].sid_explicit)
++				vty_out(vty, "  sid export explicit %pI6",
++					bgp->srv6_unicast[afi].sid_explicit);
++			else if (bgp->srv6_unicast[afi].sid_index)
++				vty_out(vty, "  sid export %u", bgp->srv6_unicast[afi].sid_index);
++			if (bgp->srv6_unicast[afi].rmap_name)
++				vty_out(vty, " route-map %s", bgp->srv6_unicast[afi].rmap_name);
++			vty_out(vty, "\n");
++		}
+ 	}
+ 
+ 	vty_endframe(vty, " exit-address-family\n");
+@@ -22507,6 +22665,8 @@ void bgp_vty_init(void)
+ 	install_element(BGP_IPV4_NODE, &af_sid_vpn_export_cmd);
+ 	install_element(BGP_IPV6_NODE, &af_sid_vpn_export_cmd);
+ 	install_element(BGP_NODE, &bgp_sid_vpn_export_cmd);
++	install_element(BGP_IPV4_NODE, &sid_export_cmd);
++	install_element(BGP_IPV6_NODE, &sid_export_cmd);
+ 	install_element(BGP_NODE, &no_bgp_sid_vpn_export_cmd);
+ 
+ 	bgp_vty_if_init();
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index cde11a1cadc4..15aa50a3ab26 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -55,6 +55,7 @@
+ #include "bgpd/bgp_trace.h"
+ #include "bgpd/bgp_community.h"
+ #include "bgpd/bgp_lcommunity.h"
++#include "bgpd/bgp_srv6.h"
+ 
+ /* All information about zebra. */
+ struct zclient *bgp_zclient = NULL;
+@@ -243,6 +244,12 @@ static int bgp_ifp_up(struct interface *ifp)
+ 		vpn_leak_postchange_all();
+ 	}
+ 
++	if (ifp->vrf->data.l.table_id == 254 && strmatch(ifp->name, DEFAULT_SRV6_IFNAME) &&
++	    bgp->vrf_id == VRF_DEFAULT) {
++		bgp_srv6_unicast_sid_endpoint(bgp, AFI_IP, ifp, true);
++		bgp_srv6_unicast_sid_endpoint(bgp, AFI_IP6, ifp, true);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -298,6 +305,12 @@ static int bgp_ifp_down(struct interface *ifp)
+ 		vpn_leak_postchange_all();
+ 	}
+ 
++	if (ifp->vrf->data.l.table_id == 254 && strmatch(ifp->name, DEFAULT_SRV6_IFNAME) &&
++	    bgp->vrf_id == VRF_DEFAULT) {
++		bgp_srv6_unicast_sid_endpoint(bgp, AFI_IP, ifp, false);
++		bgp_srv6_unicast_sid_endpoint(bgp, AFI_IP6, ifp, false);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -3570,12 +3583,15 @@ static int bgp_zebra_process_srv6_locator_internal(struct srv6_locator *locator,
+ 	 * and SIDs.
+ 	 */
+ 	vpn_leak_postchange_all();
++	bgp_srv6_unicast_ensure_afi_sid(bgp, AFI_IP);
++	bgp_srv6_unicast_ensure_afi_sid(bgp, AFI_IP6);
+ 
+ 	return 0;
+ }
+ 
+ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ {
++	afi_t afi = AFI_UNSPEC;
+ 	struct bgp *bgp;
+ 	struct srv6_locator *locator, *locator_bgp;
+ 	struct srv6_sid_ctx ctx;
+@@ -3685,10 +3701,10 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		int label = sid_func << shift_len;
+ 
+ 		/* Un-export VPN to VRF routes */
+-		vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP, bgp,
+-				   bgp_vrf);
+-		vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP6, bgp,
+-				   bgp_vrf);
++		if (is_srv6_vpn_enabled(bgp_vrf)) {
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP, bgp, bgp_vrf);
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP6, bgp, bgp_vrf);
++		}
+ 
+ 		locator = srv6_locator_alloc(locator_bgp->name);
+ 		srv6_locator_copy(locator, locator_bgp);
+@@ -3697,27 +3713,41 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		tovpn_sid = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
+ 		*tovpn_sid = sid_addr;
+ 		if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT6) {
+-			srv6_locator_free(
+-				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator);
+-			sid_unregister(bgp,
+-				       bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
+-			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
+-
+-			bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid = tovpn_sid;
+-			bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator = locator;
+-			bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_transpose_label =
+-				label;
++			afi = AFI_IP6;
++			if (is_srv6_vpn_afi_enabled(bgp_vrf, AFI_IP6)) {
++				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator);
++				sid_unregister(bgp, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++
++				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid = tovpn_sid;
++				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator = locator;
++				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_transpose_label = label;
++			} else if (is_srv6_unicast_enabled(bgp_vrf, AFI_IP6)) {
++				srv6_locator_free(bgp_vrf->srv6_unicast[AFI_IP6].sid_locator);
++				sid_unregister(bgp, bgp_vrf->srv6_unicast[AFI_IP6].sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->srv6_unicast[AFI_IP6].sid);
++
++				bgp_vrf->srv6_unicast[AFI_IP6].sid = tovpn_sid;
++				bgp_vrf->srv6_unicast[AFI_IP6].sid_locator = locator;
++			}
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT4) {
+-			srv6_locator_free(
+-				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator);
+-			sid_unregister(bgp,
+-				       bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
+-			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
+-
+-			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid = tovpn_sid;
+-			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator = locator;
+-			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_transpose_label =
+-				label;
++			afi = AFI_IP;
++			if (is_srv6_vpn_afi_enabled(bgp_vrf, AFI_IP)) {
++				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator);
++				sid_unregister(bgp, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++
++				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid = tovpn_sid;
++				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator = locator;
++				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_transpose_label = label;
++			} else if (is_srv6_unicast_enabled(bgp_vrf, AFI_IP)) {
++				srv6_locator_free(bgp_vrf->srv6_unicast[AFI_IP].sid_locator);
++				sid_unregister(bgp, bgp_vrf->srv6_unicast[AFI_IP].sid);
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->srv6_unicast[AFI_IP].sid);
++
++				bgp_vrf->srv6_unicast[AFI_IP].sid = tovpn_sid;
++				bgp_vrf->srv6_unicast[AFI_IP].sid_locator = locator;
++			}
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46) {
+ 			srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+ 			sid_unregister(bgp, bgp_vrf->tovpn_sid);
+@@ -3741,6 +3771,11 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		/* Export VPN to VRF routes */
+ 		vpn_leak_postchange_all();
+ 
++		/* SRv6 unicast */
++		if (is_srv6_unicast_enabled(bgp_vrf, afi)) {
++			bgp_srv6_unicast_sid_update(bgp_vrf, afi);
++		}
++
+ 		break;
+ 	case ZAPI_SRV6_SID_RELEASED:
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+@@ -3748,10 +3783,12 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 				   srv6_sid_ctx2str(buf, sizeof(buf), &ctx));
+ 
+ 		if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT6 &&
+-		    !sid_same(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid, &sid_addr))
++		    !sid_same(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid, &sid_addr) &&
++		    !sid_same(bgp_vrf->srv6_unicast[AFI_IP6].sid, &sid_addr))
+ 			break;
+ 		else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT4 &&
+-			 !sid_same(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid, &sid_addr))
++			 !sid_same(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid, &sid_addr) &&
++			 !sid_same(bgp_vrf->srv6_unicast[AFI_IP].sid, &sid_addr))
+ 			break;
+ 		else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46 &&
+ 			 !sid_same(bgp_vrf->tovpn_sid, &sid_addr))
+@@ -3769,6 +3806,9 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator);
+ 				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator =
+ 					NULL;
++			} else if (bgp_vrf->srv6_unicast[AFI_IP6].sid_locator) {
++				srv6_locator_free(bgp_vrf->srv6_unicast[AFI_IP6].sid_locator);
++				bgp_vrf->srv6_unicast[AFI_IP6].sid_locator = NULL;
+ 			}
+ 			bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_transpose_label =
+ 				0;
+@@ -3776,19 +3816,24 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 			/* Unregister the SID */
+ 			sid_unregister(bgp, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++			sid_unregister(bgp_vrf, bgp_vrf->srv6_unicast[AFI_IP6].sid);
++			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->srv6_unicast[AFI_IP6].sid);
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT4) {
+ 			if (bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator) {
+ 				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator);
+-				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator =
+-					NULL;
++				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator = NULL;
++			} else if (bgp_vrf->srv6_unicast[AFI_IP].sid_locator) {
++				srv6_locator_free(bgp_vrf->srv6_unicast[AFI_IP].sid_locator);
++				bgp_vrf->srv6_unicast[AFI_IP].sid_locator = NULL;
+ 			}
+-			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_transpose_label =
+-				0;
++			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_transpose_label = 0;
+ 
+ 			/* Unregister the SID */
+-			sid_unregister(bgp,
+-				       bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++			sid_unregister(bgp, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++			sid_unregister(bgp_vrf, bgp_vrf->srv6_unicast[AFI_IP].sid);
++			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->srv6_unicast[AFI_IP].sid);
++
+ 		} else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46) {
+ 			if (bgp_vrf->tovpn_sid_locator) {
+ 				srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index c95b4eaaf16d..ce777e04468d 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -79,6 +79,7 @@
+ #include "bgpd/bgp_evpn_mh.h"
+ #include "bgpd/bgp_mac.h"
+ #include "bgp_trace.h"
++#include "bgpd/bgp_srv6.h"
+ 
+ DEFINE_MTYPE_STATIC(BGPD, PEER_TX_SHUTDOWN_MSG, "Peer shutdown message (TX)");
+ DEFINE_QOBJ_TYPE(bgp_master);
+@@ -1526,6 +1527,7 @@ static void bgp_srv6_init(struct bgp *bgp)
+ 	bgp->srv6_functions = list_new();
+ 	bgp->srv6_functions->del = (void (*)(void *))srv6_function_free;
+ 	bgp->srv6_only = true;
++	memset(bgp->srv6_unicast, 0, sizeof(bgp->srv6_unicast));
+ }
+ 
+ static void bgp_srv6_cleanup(struct bgp *bgp)
+@@ -1546,6 +1548,17 @@ static void bgp_srv6_cleanup(struct bgp *bgp)
+ 		}
+ 		if (bgp->vpn_policy[afi].tovpn_sid_explicit)
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp->vpn_policy[afi].tovpn_sid_explicit);
++
++		if (bgp->srv6_unicast[afi].sid_locator) {
++			srv6_locator_free(bgp->srv6_unicast[afi].sid_locator);
++			bgp->srv6_unicast[afi].sid_locator = NULL;
++		}
++		if (bgp->srv6_unicast[afi].zebra_sid_last_sent)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].zebra_sid_last_sent);
++		if (bgp->srv6_unicast[afi].sid)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid);
++		if (bgp->srv6_unicast[afi].sid_explicit)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[afi].sid_explicit);
+ 	}
+ 
+ 	if (bgp->tovpn_sid_locator != NULL) {
+@@ -4190,7 +4203,8 @@ int bgp_delete(struct bgp *bgp)
+ 
+ 	/*
+ 	 * Release SRv6 SIDs, like it's done in `vpn_leak_postchange()`
+-	 * and bgp_sid_vpn_export_cmd/af_sid_vpn_export_cmd commands.
++	 * and bgp_sid_vpn_export_cmd/af_sid_vpn_export_cmd/af_sid_export
++	 * commands.
+ 	 */
+ 	bgp->tovpn_sid_index = 0;
+ 	UNSET_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO);
+@@ -4202,6 +4216,9 @@ int bgp_delete(struct bgp *bgp)
+ 		delete_vrf_tovpn_sid_per_af(bgp_default, bgp, afi);
+ 
+ 		vpn_leak_zebra_vrf_sid_withdraw(bgp, afi);
++
++		/* SRv6 unicast */
++		bgp_srv6_unicast_delete(bgp_default, afi);
+ 	}
+ 
+ 	/* release auto vpn labels */
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 18a3e1ebeeb8..872afc9c182b 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -261,6 +261,15 @@ enum vpn_policy_direction {
+ 	BGP_VPN_POLICY_DIR_MAX = 2
+ };
+ 
++struct srv6_policy {
++	uint32_t sid_index; /* unset => set to 0 */
++	struct in6_addr *sid_explicit;
++	struct in6_addr *sid;
++	struct srv6_locator *sid_locator;
++	struct in6_addr *zebra_sid_last_sent;
++	char *rmap_name;
++};
++
+ struct vpn_policy {
+ 	struct bgp *bgp; /* parent */
+ 	afi_t afi;
+@@ -701,6 +710,8 @@ struct bgp {
+ #define BGP_CONFIG_VRF_TO_VRF_EXPORT (1 << 10)
+ /* vpnvx retain flag */
+ #define BGP_VPNVX_RETAIN_ROUTE_TARGET_ALL (1 << 11)
++/* SRv6 unicast flag */
++#define BGP_CONFIG_SRV6_UNICAST_SID_AUTO (1 << 12)
+ 
+ 	/* BGP per AF peer count */
+ 	uint32_t af_peer_count[AFI_MAX][SAFI_MAX];
+@@ -952,7 +963,8 @@ struct bgp {
+ 	uint32_t condition_filter_count;
+ 	struct event *t_condition_check;
+ 
+-	/* BGP VPN SRv6 backend */
++
++	/* BGP L3 service VPN SRv6 backend */
+ 	char srv6_locator_name[SRV6_LOCNAME_SIZE];
+ 	enum srv6_headend_behavior srv6_encap_behavior;
+ 	struct srv6_locator *srv6_locator;
+@@ -966,6 +978,9 @@ struct bgp {
+ 	struct in6_addr *tovpn_zebra_vrf_sid_last_sent;
+ 	bool srv6_only;
+ 
++	/* BGP L3 service IPv4/v6 SRv6 backend */
++	struct srv6_policy srv6_unicast[AFI_MAX];
++
+ 	/* TCP keepalive parameters for BGP connection */
+ 	uint16_t tcp_keepalive_idle;
+ 	uint16_t tcp_keepalive_intvl;
+diff --git a/bgpd/subdir.am b/bgpd/subdir.am
+index 69b3cc9ba53d..07a9df979c7c 100644
+--- a/bgpd/subdir.am
++++ b/bgpd/subdir.am
+@@ -79,6 +79,7 @@ bgpd_libbgp_a_SOURCES = \
+ 	bgpd/bgp_trace.c \
+ 	bgpd/bgp_nhg.c \
+ 	bgpd/bgp_nhc.c \
++	bgpd/bgp_srv6.c \
+ 	# end
+ 
+ if ENABLE_BGP_VNC
+@@ -164,6 +165,7 @@ noinst_HEADERS += \
+ 	bgpd/bgp_trace.h \
+ 	bgpd/bgp_nhg.h \
+ 	bgpd/bgp_attr_srv6.h \
++	bgpd/bgp_srv6.h \
+ 	\
+ 	bgpd/rfapi/bgp_rfapi_cfg.h \
+ 	bgpd/rfapi/rfapi_import.h \
+
+From 4fefabe11f2b05b23d951d20fac7c6b54dfc41bf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Mon, 25 Aug 2025 10:21:19 +0200
+Subject: [PATCH 4/9] bgpd: register route for srv6 unicast
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Register/unregister route for srv6 unicast.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_route.c | 30 ++++++++++++++++++-
+ bgpd/bgp_srv6.c  | 76 ++++++++++++++++++++++++++++++++++++++++++++++++
+ bgpd/bgp_srv6.h  |  3 ++
+ bgpd/bgp_table.h |  3 ++
+ 4 files changed, 111 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 5a3bf3f06612..8457d7146e42 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -64,6 +64,7 @@
+ #include "bgpd/bgp_network.h"
+ #include "bgpd/bgp_trace.h"
+ #include "bgpd/bgp_rpki.h"
++#include "bgpd/bgp_srv6.h"
+ 
+ #ifdef ENABLE_BGP_VNC
+ #include "bgpd/rfapi/rfapi_backend.h"
+@@ -3850,6 +3851,9 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
+ 	old_select = old_and_new.old;
+ 	new_select = old_and_new.new;
+ 
++	if (safi == SAFI_UNICAST && is_srv6_unicast_enabled(bgp, afi))
++		bgp_srv6_unicast_register_route(bgp, afi, dest, new_select);
++
+ 	if (safi == SAFI_UNICAST || safi == SAFI_LABELED_UNICAST)
+ 		/* label unicast path :
+ 		 * Do we need to allocate or free labels?
+@@ -7363,7 +7367,10 @@ static void bgp_cleanup_table(struct bgp *bgp, struct bgp_table *table, afi_t af
+ 	struct bgp_path_info *pi;
+ 	struct bgp_path_info *next;
+ 
+-	for (dest = bgp_table_top(table); dest; dest = bgp_route_next(dest))
++	for (dest = bgp_table_top(table); dest; dest = bgp_route_next(dest)) {
++		if (dest->srv6_unicast)
++			bgp_srv6_unicast_unregister_route(dest);
++
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); pi; pi = next) {
+ 			const struct prefix *p = bgp_dest_get_prefix(dest);
+ 
+@@ -7387,6 +7394,7 @@ static void bgp_cleanup_table(struct bgp *bgp, struct bgp_table *table, afi_t af
+ 			dest = bgp_path_info_reap(dest, pi);
+ 			assert(dest);
+ 		}
++	}
+ }
+ 
+ /* Delete all kernel routes. */
+@@ -8260,6 +8268,9 @@ void bgp_static_delete(struct bgp *bgp)
+ 	FOREACH_AFI_SAFI (afi, safi)
+ 		for (dest = bgp_table_top(bgp->static_routes[afi][safi]); dest;
+ 		     dest = bgp_route_next(dest)) {
++			if (dest->srv6_unicast)
++				bgp_srv6_unicast_unregister_route(dest);
++
+ 			if (!bgp_dest_has_bgp_path_info_data(dest))
+ 				continue;
+ 
+@@ -10190,6 +10201,9 @@ void bgp_redistribute_withdraw(struct bgp *bgp, afi_t afi, int type,
+ 	table = bgp->rib[afi][SAFI_UNICAST];
+ 
+ 	for (dest = bgp_table_top(table); dest; dest = bgp_route_next(dest)) {
++		if (dest->srv6_unicast)
++			bgp_srv6_unicast_unregister_route(dest);
++
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); pi; pi = pi->next)
+ 			if (pi->peer == bgp->peer_self && pi->type == type
+ 			    && pi->instance == instance)
+@@ -13445,6 +13459,7 @@ void route_vty_out_detail_header(struct vty *vty, struct bgp *bgp,
+ 	int no_peer = 0;
+ 	int first = 1;
+ 	int has_valid_label = 0;
++	struct bgp_attr_srv6_l3service *srv6_l3service;
+ 	mpls_label_t label = 0;
+ 	json_object *json_adv_to = NULL;
+ 	uint32_t ttl = 0;
+@@ -13454,6 +13469,7 @@ void route_vty_out_detail_header(struct vty *vty, struct bgp *bgp,
+ 	mpls_lse_decode(dest->local_label, &label, &ttl, &exp, &bos);
+ 
+ 	has_valid_label = bgp_is_valid_label(&dest->local_label);
++	srv6_l3service = dest->srv6_unicast;
+ 
+ 	if (safi == SAFI_EVPN) {
+ 		if (!json) {
+@@ -13509,6 +13525,18 @@ void route_vty_out_detail_header(struct vty *vty, struct bgp *bgp,
+ 			vty_out(vty, "Local label: %d\n", label);
+ 	}
+ 
++	if (srv6_l3service) {
++		if (json) {
++			if (incremental_print)
++				vty_out(vty, "\"localSID\": \"%pI6\",\n", &srv6_l3service->sid);
++			else
++				json_object_string_addf(json, "localSID", "%pI6",
++							&srv6_l3service->sid);
++		} else {
++			vty_out(vty, "Local SID: %pI6\n", &srv6_l3service->sid);
++		}
++	}
++
+ 	if (!json)
+ 		if (bgp_labeled_safi(safi) && safi != SAFI_EVPN)
+ 			vty_out(vty, "not allocated\n");
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index d7a2b3f77738..3964e29af68e 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -199,3 +199,79 @@ void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi)
+ 	bgp_srv6_unicast_sid_endpoint(bgp, afi, ifp, true);
+ }
+ 
++void bgp_srv6_unicast_unregister_route(struct bgp_dest *dest)
++{
++	XFREE(MTYPE_BGP_SRV6_L3SERVICE, dest->srv6_unicast);
++	dest->srv6_unicast = NULL;
++}
++
++void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest *dest,
++				     struct bgp_path_info *bpi)
++{
++	struct attr attr_tmp;
++	const struct prefix *p;
++	struct route_map *rmap;
++	route_map_result_t ret;
++	struct bgp_path_info info;
++	struct srv6_locator *locator;
++
++	if (!bpi) {
++		if (dest->srv6_unicast)
++			bgp_srv6_unicast_unregister_route(dest);
++
++		return;
++	}
++
++	if (bpi->attr->srv6_l3service)
++		return;
++
++	if (!bgp->srv6_unicast[afi].sid_locator)
++		return;
++
++	if (bgp->srv6_unicast[afi].rmap_name) {
++		rmap = route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name);
++		if (rmap) {
++			attr_tmp = *bpi->attr;
++			info.attr = &attr_tmp;
++			info.peer = bgp->peer_self;
++			memset(&info, 0, sizeof(info));
++			p = bgp_dest_get_prefix(bpi->net);
++
++			ret = route_map_apply(rmap, p, &info);
++
++			if (ret == RMAP_DENYMATCH) {
++				if (dest->srv6_unicast)
++					bgp_srv6_unicast_unregister_route(dest);
++
++				if (BGP_DEBUG(update, UPDATE_OUT))
++					zlog_debug("srv6 unicast prefix %pBD denied", dest);
++
++				return;
++			}
++		} else {
++			zlog_warn("route-map %s was no found, ignored",
++				  bgp->srv6_unicast[afi].rmap_name);
++		}
++	}
++
++	if (dest->srv6_unicast && sid_same(bgp->srv6_unicast[afi].sid, &dest->srv6_unicast->sid))
++		return;
++
++	locator = bgp->srv6_unicast[afi].sid_locator;
++	dest->srv6_unicast = XCALLOC(MTYPE_BGP_SRV6_L3SERVICE,
++				     sizeof(struct bgp_attr_srv6_l3service));
++	dest->srv6_unicast->sid_flags = 0x00;
++	dest->srv6_unicast->endpoint_behavior =
++			afi == AFI_IP ? (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
++						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID
++						 : SRV6_ENDPOINT_BEHAVIOR_END_DT4)
++				      : (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)
++						 ? SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID
++						 : SRV6_ENDPOINT_BEHAVIOR_END_DT6);
++	dest->srv6_unicast->loc_block_len = locator->block_bits_length;
++	dest->srv6_unicast->loc_node_len = locator->node_bits_length;
++	dest->srv6_unicast->func_len = locator->function_bits_length;
++	dest->srv6_unicast->arg_len = locator->argument_bits_length;
++	memcpy(&dest->srv6_unicast->sid, bgp->srv6_unicast[afi].sid,
++	       sizeof(struct in6_addr));
++}
+diff --git a/bgpd/bgp_srv6.h b/bgpd/bgp_srv6.h
+index 17e49db91259..8f9197505abf 100644
+--- a/bgpd/bgp_srv6.h
++++ b/bgpd/bgp_srv6.h
+@@ -23,4 +23,7 @@ void bgp_srv6_unicast_sid_update(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_delete(struct bgp *bgp, afi_t afi);
+ void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
+ 				   struct interface *ifp, bool install);
++void bgp_srv6_unicast_unregister_route(struct bgp_dest *dest);
++void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest *dest,
++				     struct bgp_path_info *bpi);
+ #endif /* _BGP_SRV6_H_ */
+diff --git a/bgpd/bgp_table.h b/bgpd/bgp_table.h
+index c3964433e68a..54c8edd8612a 100644
+--- a/bgpd/bgp_table.h
++++ b/bgpd/bgp_table.h
+@@ -12,6 +12,7 @@
+ #include "linklist.h"
+ #include "bgpd.h"
+ #include "bgp_advertise.h"
++#include "bgp_attr_srv6.h"
+ 
+ struct bgp_table {
+ 	/* table belongs to this instance */
+@@ -85,6 +86,8 @@ struct bgp_dest {
+ 
+ 	mpls_label_t local_label;
+ 
++	struct bgp_attr_srv6_l3service *srv6_unicast;
++
+ 	uint16_t flags;
+ #define BGP_NODE_PROCESS_SCHEDULED	(1 << 0)
+ #define BGP_NODE_USER_CLEAR             (1 << 1)
+
+From 0e1ec43c58021398d769307583a62f9bb9fed9dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Mon, 25 Aug 2025 10:40:52 +0200
+Subject: [PATCH 5/9] bgpd: announce bgp srv6 unicast
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+add new command "neighbor <X:X::X:X|WORD> <encapsulation-srv6|
+encapsulation-srv6-relax>":
+- At activation, it will re-announce unicast routes that contain srv6
+  attribute to the concerned neighbors.
+- announce srv6 unicast routes only to neighbors with
+"encapsulation-srv6*" enbaled.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_attr.c          | 40 +++++++++++++++++----------
+ bgpd/bgp_attr.h          | 12 ++++----
+ bgpd/bgp_bmp.c           |  2 +-
+ bgpd/bgp_route.c         |  6 ++++
+ bgpd/bgp_srv6.c          | 56 ++++++++++++++++++++++++++++++++++++++
+ bgpd/bgp_srv6.h          |  3 ++
+ bgpd/bgp_updgrp.h        |  3 +-
+ bgpd/bgp_updgrp_packet.c |  5 ++--
+ bgpd/bgp_vty.c           | 59 +++++++++++++++++++++++++++++++++++++++-
+ bgpd/bgp_zebra.c         |  4 +++
+ bgpd/bgpd.c              |  1 +
+ bgpd/bgpd.h              |  3 +-
+ 12 files changed, 167 insertions(+), 27 deletions(-)
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index ce9c71b96a03..d9ddb68bfce0 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -4938,8 +4938,8 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 				struct attr *attr, struct bpacket_attr_vec_arr *vecarr,
+ 				struct prefix *p, afi_t afi, safi_t safi, struct peer *from,
+ 				struct prefix_rd *prd, mpls_label_t *label, uint8_t num_labels,
+-				bool addpath_capable, uint32_t addpath_tx_id,
+-				struct bgp_path_info *bpi)
++				struct bgp_attr_srv6_l3service *srv6_unicast, bool addpath_capable,
++				uint32_t addpath_tx_id, struct bgp_path_info *bpi)
+ {
+ 	size_t cp;
+ 	size_t aspath_sizep;
+@@ -5279,8 +5279,21 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 	}
+ 
+ 	/* SRv6 Service Information Attribute. */
+-	if ((afi == AFI_IP || afi == AFI_IP6) && safi == SAFI_MPLS_VPN) {
+-		if (attr->srv6_l3service) {
++	if ((afi == AFI_IP || afi == AFI_IP6)) {
++		struct bgp_attr_srv6_l3service *srv6_l3service = NULL;
++
++		if (safi == SAFI_MPLS_VPN && attr->srv6_l3service)
++			srv6_l3service = attr->srv6_l3service;
++		else if (peer_af_flag_check(peer, afi, safi,
++					    PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX) ||
++			 peer_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6)) {
++			if (attr->srv6_l3service)
++				srv6_l3service = attr->srv6_l3service;
++			else
++				srv6_l3service = srv6_unicast;
++		}
++
++		if (srv6_l3service) {
+ 			uint8_t subtlv_len =
+ 				BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_STRUCTURE_LENGTH
+ 				+ BGP_ATTR_MIN_LEN
+@@ -5297,12 +5310,9 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 			stream_putc(s, BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_INFO);
+ 			stream_putw(s, subtlv_len);
+ 			stream_putc(s, 0);      /* reserved */
+-			stream_put(s, &attr->srv6_l3service->sid,
+-				   sizeof(attr->srv6_l3service->sid)); /* sid */
++			stream_put(s, &srv6_l3service->sid, sizeof(srv6_l3service->sid)); /* sid */
+ 			stream_putc(s, 0);      /* sid_flags */
+-			stream_putw(s,
+-				    attr->srv6_l3service
+-					    ->endpoint_behavior); /* endpoint */
++			stream_putw(s, srv6_l3service->endpoint_behavior); /* endpoint */
+ 			stream_putc(s, 0);      /* reserved */
+ 			stream_putc(
+ 				s,
+@@ -5310,12 +5320,12 @@ bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct strea
+ 			stream_putw(
+ 				s,
+ 				BGP_PREFIX_SID_SRV6_L3_SERVICE_SID_STRUCTURE_LENGTH);
+-			stream_putc(s, attr->srv6_l3service->loc_block_len);
+-			stream_putc(s, attr->srv6_l3service->loc_node_len);
+-			stream_putc(s, attr->srv6_l3service->func_len);
+-			stream_putc(s, attr->srv6_l3service->arg_len);
+-			stream_putc(s, attr->srv6_l3service->transposition_len);
+-			stream_putc(s, attr->srv6_l3service->transposition_offset);
++			stream_putc(s, srv6_l3service->loc_block_len);
++			stream_putc(s, srv6_l3service->loc_node_len);
++			stream_putc(s, srv6_l3service->func_len);
++			stream_putc(s, srv6_l3service->arg_len);
++			stream_putc(s, srv6_l3service->transposition_len);
++			stream_putc(s, srv6_l3service->transposition_offset);
+ 		} else if (attr->srv6_vpn) {
+ 			stream_putc(s, BGP_ATTR_FLAG_OPTIONAL
+ 					       | BGP_ATTR_FLAG_TRANS);
+diff --git a/bgpd/bgp_attr.h b/bgpd/bgp_attr.h
+index f1289e412027..dd37440dad03 100644
+--- a/bgpd/bgp_attr.h
++++ b/bgpd/bgp_attr.h
+@@ -377,12 +377,12 @@ extern struct attr *bgp_attr_aggregate_intern(
+ 	struct community *community, struct ecommunity *ecommunity,
+ 	struct lcommunity *lcommunity, struct bgp_aggregate *aggregate,
+ 	uint8_t atomic_aggregate, const struct prefix *p);
+-extern bgp_size_t bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct stream *s,
+-				       struct attr *attr, struct bpacket_attr_vec_arr *vecarr,
+-				       struct prefix *p, afi_t afi, safi_t safi, struct peer *from,
+-				       struct prefix_rd *prd, mpls_label_t *label,
+-				       uint8_t num_labels, bool addpath_capable,
+-				       uint32_t addpath_tx_id, struct bgp_path_info *bpi);
++extern bgp_size_t
++bgp_packet_attribute(struct bgp *bgp, struct peer *peer, struct stream *s, struct attr *attr,
++		     struct bpacket_attr_vec_arr *vecarr, struct prefix *p, afi_t afi, safi_t safi,
++		     struct peer *from, struct prefix_rd *prd, mpls_label_t *label,
++		     uint8_t num_labels, struct bgp_attr_srv6_l3service *srv6_unicast,
++		     bool addpath_capable, uint32_t addpath_tx_id, struct bgp_path_info *bpi);
+ extern void bgp_dump_routes_attr(struct stream *s, struct bgp_path_info *bpi,
+ 				 const struct prefix *p);
+ extern bool attrhash_cmp(const void *arg1, const void *arg2);
+diff --git a/bgpd/bgp_bmp.c b/bgpd/bgp_bmp.c
+index 1a83a935782f..3a06faa6700b 100644
+--- a/bgpd/bgp_bmp.c
++++ b/bgpd/bgp_bmp.c
+@@ -1118,7 +1118,7 @@ static struct stream *bmp_update(const struct prefix *p, struct prefix_rd *prd,
+ 
+ 	/* 5: Encode all the attributes, except MP_REACH_NLRI attr. */
+ 	total_attr_len = bgp_packet_attribute(NULL, peer, s, attr, &vecarr, NULL, afi, safi, peer,
+-					      NULL, NULL, 0, 0, 0, NULL);
++					      NULL, NULL, 0, 0, 0, 0, NULL);
+ 
+ 	/* space check? */
+ 
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 8457d7146e42..9bfb9845922b 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -2226,6 +2226,12 @@ bool subgroup_announce_check(struct bgp_dest *dest, struct bgp_path_info *pi,
+ 		samepeer_safe = 1;
+ 	}
+ 
++	if (safi == SAFI_UNICAST &&
++	    CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
++	    (!pi->attr->srv6_l3service && !dest->srv6_unicast)) {
++		return false;
++	}
++
+ 	/* With addpath we may be asked to TX all kinds of paths so make sure
+ 	 * pi is valid */
+ 	if (!CHECK_FLAG(pi->flags, BGP_PATH_VALID)
+diff --git a/bgpd/bgp_srv6.c b/bgpd/bgp_srv6.c
+index 3964e29af68e..7142457a9f11 100644
+--- a/bgpd/bgp_srv6.c
++++ b/bgpd/bgp_srv6.c
+@@ -275,3 +275,59 @@ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest
+ 	memcpy(&dest->srv6_unicast->sid, bgp->srv6_unicast[afi].sid,
+ 	       sizeof(struct in6_addr));
+ }
++
++void bgp_srv6_unicast_announce(struct bgp *bgp, afi_t afi)
++{
++	struct peer *peer;
++	struct bgp_dest *pdest;
++	struct bgp_path_info *bpi;
++	safi_t safi = SAFI_UNICAST;
++	struct listnode *node, *nnode;
++
++	if (!bgp->srv6_unicast[afi].sid_locator)
++		return;
++
++	for (pdest = bgp_table_top(bgp->rib[afi][safi]); pdest; pdest = bgp_route_next(pdest)) {
++		for (bpi = bgp_dest_get_bgp_path_info(pdest); bpi; bpi = bpi->next) {
++			if (!CHECK_FLAG(bpi->flags, BGP_PATH_SELECTED))
++				continue;
++
++			if (bpi->attr->srv6_l3service)
++				continue;
++
++			bgp_srv6_unicast_register_route(bgp, afi, pdest, bpi);
++			break;
++		}
++	}
++
++	/* force to resend all routes */
++	for (ALL_LIST_ELEMENTS(bgp->peer, node, nnode, peer)) {
++		if (peergroup_af_flag_check(peer, afi, safi,
++					    PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX) ||
++		    peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6))
++			bgp_announce_route(peer, afi, safi, true);
++	}
++}
++
++void bgp_srv6_unicast_withdraw(struct bgp *bgp, afi_t afi)
++{
++	struct peer *peer;
++	struct bgp_dest *pdest;
++	safi_t safi = SAFI_UNICAST;
++	struct listnode *node, *nnode;
++
++	for (pdest = bgp_table_top(bgp->rib[afi][safi]); pdest; pdest = bgp_route_next(pdest)) {
++		if (!pdest->srv6_unicast)
++			continue;
++
++		bgp_srv6_unicast_unregister_route(pdest);
++	}
++
++	/* force to resend all routes */
++	for (ALL_LIST_ELEMENTS(bgp->peer, node, nnode, peer)) {
++		if (peergroup_af_flag_check(peer, afi, safi,
++					    PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX) ||
++		    peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6))
++			bgp_announce_route(peer, afi, safi, true);
++	}
++}
+diff --git a/bgpd/bgp_srv6.h b/bgpd/bgp_srv6.h
+index 8f9197505abf..a0c278ccda01 100644
+--- a/bgpd/bgp_srv6.h
++++ b/bgpd/bgp_srv6.h
+@@ -26,4 +26,7 @@ void bgp_srv6_unicast_sid_endpoint(struct bgp *bgp, afi_t afi,
+ void bgp_srv6_unicast_unregister_route(struct bgp_dest *dest);
+ void bgp_srv6_unicast_register_route(struct bgp *bgp, afi_t afi, struct bgp_dest *dest,
+ 				     struct bgp_path_info *bpi);
++void bgp_srv6_unicast_announce(struct bgp *bgp, afi_t afi);
++void bgp_srv6_unicast_withdraw(struct bgp *bgp, afi_t afi);
++
+ #endif /* _BGP_SRV6_H_ */
+diff --git a/bgpd/bgp_updgrp.h b/bgpd/bgp_updgrp.h
+index b8e3fd152376..50fb4a24bbaa 100644
+--- a/bgpd/bgp_updgrp.h
++++ b/bgpd/bgp_updgrp.h
+@@ -48,7 +48,8 @@
+ 	 PEER_FLAG_NEXTHOP_LOCAL_UNCHANGED | PEER_FLAG_REMOVE_PRIVATE_AS |                        \
+ 	 PEER_FLAG_REMOVE_PRIVATE_AS_ALL | PEER_FLAG_REMOVE_PRIVATE_AS_REPLACE |                  \
+ 	 PEER_FLAG_REMOVE_PRIVATE_AS_ALL_REPLACE | PEER_FLAG_AS_OVERRIDE |                        \
+-	 PEER_FLAG_CONFIG_ENCAPSULATION_SRV6 | PEER_FLAG_CONFIG_ENCAPSULATION_MPLS)
++	 PEER_FLAG_CONFIG_ENCAPSULATION_SRV6 | PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX |        \
++	 PEER_FLAG_CONFIG_ENCAPSULATION_MPLS)
+ 
+ #define PEER_UPDGRP_CAP_FLAGS (PEER_CAP_AS4_RCV)
+ 
+diff --git a/bgpd/bgp_updgrp_packet.c b/bgpd/bgp_updgrp_packet.c
+index 141cb81efc74..d0d87f714997 100644
+--- a/bgpd/bgp_updgrp_packet.c
++++ b/bgpd/bgp_updgrp_packet.c
+@@ -757,7 +757,8 @@ struct bpacket *subgroup_update_packet(struct update_subgroup *subgrp)
+ 			 * attr. */
+ 			total_attr_len = bgp_packet_attribute(NULL, peer, s, adv->baa->attr,
+ 							      &vecarr, NULL, afi, safi, from, NULL,
+-							      NULL, 0, 0, 0, path);
++							      NULL, 0, dest->srv6_unicast, 0, 0,
++							      path);
+ 
+ 			space_remaining =
+ 				STREAM_CONCAT_REMAIN(s, snlri, STREAM_SIZE(s))
+@@ -1169,7 +1170,7 @@ void subgroup_default_update_packet(struct update_subgroup *subgrp,
+ 	pos = stream_get_endp(s);
+ 	stream_putw(s, 0);
+ 	total_attr_len = bgp_packet_attribute(NULL, peer, s, attr, &vecarr, &p, afi, safi, from,
+-					      NULL, &label, num_labels, addpath_capable,
++					      NULL, &label, num_labels, 0, addpath_capable,
+ 					      BGP_ADDPATH_TX_ID_FOR_DEFAULT_ORIGINATE, NULL);
+ 
+ 	/* Set Total Path Attribute Length. */
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 321e6771eb40..84239d1f74ed 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -300,6 +300,7 @@ static void bgp_srv6_sids_unset(struct bgp *bgp)
+ 	/* withdraw srv6 unicast and refresh srv6 unicast sid locator */
+ 	if (bgp->inst_type == BGP_INSTANCE_TYPE_DEFAULT) {
+ 		if (is_srv6_unicast_enabled(bgp, AFI_IP)) {
++			bgp_srv6_unicast_withdraw(bgp, AFI_IP);
+ 			bgp_srv6_unicast_sid_withdraw(bgp, AFI_IP);
+ 			/* locator deleted after this call, free the sid */
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[AFI_IP].sid);
+@@ -307,6 +308,7 @@ static void bgp_srv6_sids_unset(struct bgp *bgp)
+ 			bgp->srv6_unicast[AFI_IP].sid_locator = NULL;
+ 		}
+ 		if (is_srv6_unicast_enabled(bgp, AFI_IP6)) {
++			bgp_srv6_unicast_withdraw(bgp, AFI_IP6);
+ 			bgp_srv6_unicast_sid_withdraw(bgp, AFI_IP6);
+ 			/* locator deleted after this call, free the sid */
+ 			XFREE(MTYPE_BGP_SRV6_SID, bgp->srv6_unicast[AFI_IP6].sid);
+@@ -9944,6 +9946,55 @@ DEFPY(no_neighbor_path_attribute_treat_as_withdraw,
+ 	return CMD_SUCCESS;
+ }
+ 
++DEFPY(neighbor_encap_srv6,
++      neighbor_encap_srv6_cmd,
++      "[no] neighbor <X:X::X:X|WORD>$neighbor <encapsulation-srv6|encapsulation-srv6-relax>$encap",
++      NO_STR
++      NEIGHBOR_STR
++      "Neighbor IPv6 address\n"
++      "Neighbor tag\n"
++      "Advertise routes with SRv6 prefix SID to the neighbor\n"
++      "Advertise routes with and without SRv6 prefix SID the neighbor\n")
++{
++	int ret;
++	afi_t afi;
++	uint64_t flag;
++	struct peer *peer;
++	safi_t safi = SAFI_UNICAST;
++
++
++	peer = peer_and_group_lookup_vty(vty, neighbor);
++	if (!peer)
++		return CMD_WARNING_CONFIG_FAILED;
++
++	afi = bgp_node_afi(vty);
++	if (strncmp(encap, "encapsulation-srv6-relax", 25))
++		flag = PEER_FLAG_CONFIG_ENCAPSULATION_SRV6;
++	else
++		flag = PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX;
++
++	if (no) {
++		if (!peergroup_af_flag_check(peer, afi, safi, flag)) {
++			vty_out(vty, "%% Peer is not configured.\n");
++			return CMD_WARNING_CONFIG_FAILED;
++		}
++
++		ret = peer_af_flag_unset_vty(vty, neighbor, afi, safi, flag);
++
++		return ret;
++	}
++
++	if (peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) ||
++	    peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX)) {
++		vty_out(vty, "%% Peer is already configured, unset it first.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	ret = peer_af_flag_set_vty(vty, neighbor, afi, safi, flag);
++
++	return ret;
++}
++
+ DEFPY(sid_export,
+       sid_export_cmd,
+       "[no] sid export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value> [route-map RMAP$rmap_str]",
+@@ -10013,7 +10064,8 @@ DEFPY(sid_export,
+ 				  !strcmp(rmap_str, bgp->srv6_unicast[afi].rmap_name)))
+ 			return CMD_SUCCESS;
+ 
+-		/* TODO: apply route-map change */
++		/* apply route-map change */
++		bgp_srv6_unicast_announce(bgp, afi);
+ 
+ 		return CMD_SUCCESS;
+ 	}
+@@ -19835,6 +19887,9 @@ static void bgp_config_write_peer_af(struct vty *vty, struct bgp *bgp,
+ 	/* encapsulation-srv6|encapsulation-mpls */
+ 	if (peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_SRV6))
+ 		vty_out(vty, "  neighbor %s encapsulation-srv6\n", addr);
++	else if (peergroup_af_flag_check(peer, afi, safi,
++					 PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX))
++		vty_out(vty, "  neighbor %s encapsulation-srv6-relax\n", addr);
+ 	else if (peergroup_af_flag_check(peer, afi, safi, PEER_FLAG_CONFIG_ENCAPSULATION_MPLS))
+ 		vty_out(vty, "  neighbor %s encapsulation-mpls\n", addr);
+ 
+@@ -22667,6 +22722,8 @@ void bgp_vty_init(void)
+ 	install_element(BGP_NODE, &bgp_sid_vpn_export_cmd);
+ 	install_element(BGP_IPV4_NODE, &sid_export_cmd);
+ 	install_element(BGP_IPV6_NODE, &sid_export_cmd);
++	install_element(BGP_IPV6_NODE, &neighbor_encap_srv6_cmd);
++	install_element(BGP_IPV4_NODE, &neighbor_encap_srv6_cmd);
+ 	install_element(BGP_NODE, &no_bgp_sid_vpn_export_cmd);
+ 
+ 	bgp_vty_if_init();
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 15aa50a3ab26..130412c62db5 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3774,6 +3774,7 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		/* SRv6 unicast */
+ 		if (is_srv6_unicast_enabled(bgp_vrf, afi)) {
+ 			bgp_srv6_unicast_sid_update(bgp_vrf, afi);
++			bgp_srv6_unicast_announce(bgp_vrf, afi);
+ 		}
+ 
+ 		break;
+@@ -3856,6 +3857,9 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 
+ 		/* Export VPN to VRF routes*/
+ 		vpn_leak_postchange_all();
++		bgp_srv6_unicast_withdraw(bgp_vrf, ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT4
++							   ? AFI_IP
++							   : AFI_IP6);
+ 		break;
+ 	case ZAPI_SRV6_SID_FAIL_ALLOC:
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index ce777e04468d..262d465201dc 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -5139,6 +5139,7 @@ static const struct peer_flag_action peer_af_flag_action_list[] = {
+ 	{ PEER_FLAG_SEND_EXT_COMMUNITY_RPKI, 1, peer_change_reset_out },
+ 	{ PEER_FLAG_ADDPATH_RX_PATHS_LIMIT, 0, peer_change_none },
+ 	{ PEER_FLAG_CONFIG_ENCAPSULATION_SRV6, 0, peer_change_best_path },
++	{ PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX, 0, peer_change_best_path },
+ 	{ PEER_FLAG_CONFIG_ENCAPSULATION_MPLS, 0, peer_change_best_path },
+ 	{ 0, 0, 0 }
+ };
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 872afc9c182b..55b9c13ee5c2 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -1787,7 +1787,8 @@ struct peer {
+ #define PEER_FLAG_ADDPATH_RX_PATHS_LIMIT (1ULL << 30)
+ #define PEER_FLAG_CONFIG_DAMPENING (1ULL << 31)
+ #define PEER_FLAG_CONFIG_ENCAPSULATION_SRV6	(1ULL << 32)
+-#define PEER_FLAG_CONFIG_ENCAPSULATION_MPLS	(1ULL << 33)
++#define PEER_FLAG_CONFIG_ENCAPSULATION_SRV6_RELAX (1ULL << 33)
++#define PEER_FLAG_CONFIG_ENCAPSULATION_MPLS	  (1ULL << 34)
+ #define PEER_FLAG_ACCEPT_OWN (1ULL << 63)
+ 
+ 	enum bgp_addpath_strat addpath_type[AFI_MAX][SAFI_MAX];
+
+From 21d634b443f2a9f9c95898236847d0f8bf7af6bc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Mon, 25 Aug 2025 10:42:24 +0200
+Subject: [PATCH 6/9] bgpd: install srv6 encap nexhtop
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Like others srv6 service, check the sid for the nexthop tracking and
+allow install route using sid as nexhtop at the reception.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_nht.c   |  5 +++++
+ bgpd/bgp_zebra.c | 18 ++++++++----------
+ 2 files changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index 34d69230f22f..b509c92bc551 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -1087,6 +1087,11 @@ static bool make_prefix(int afi, struct bgp_path_info *pi, struct prefix *p,
+ 			else if (bgp_nexthop->tovpn_sid_locator && bgp_nexthop->tovpn_sid)
+ 				local_sid = prefix_match(&bgp_nexthop->tovpn_sid_locator->prefix,
+ 							 &tmp_prefix);
++			else if (bgp_nexthop->srv6_unicast[afi].sid_locator &&
++				 bgp_nexthop->srv6_unicast[afi].sid)
++				local_sid = prefix_match(&bgp_nexthop->srv6_unicast[afi]
++								  .sid_locator->prefix,
++							 &tmp_prefix);
+ 		}
+ 		if (local_sid == false && pi->attr->srv6_l3service) {
+ 			p->prefixlen = IPV6_MAX_BITLEN;
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 130412c62db5..c32c265d01fa 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -1261,6 +1261,7 @@ static void bgp_zebra_announce_parse_nexthop(
+ 	uint32_t ttl = 0;
+ 	uint32_t bos = 0;
+ 	uint32_t exp = 0;
++
+ 	struct bgp_route_evpn *bre = NULL;
+ 
+ 	/* Determine if we're doing weighted ECMP or not */
+@@ -1269,8 +1270,7 @@ static void bgp_zebra_announce_parse_nexthop(
+ 	/*
+ 	 * vrf leaking support (will have only one nexthop)
+ 	 */
+-	if (info->extra && info->extra->vrfleak &&
+-	    info->extra->vrfleak->bgp_orig)
++	if (info->extra && info->extra->vrfleak && info->extra->vrfleak->bgp_orig)
+ 		nh_othervrf = 1;
+ 
+ 	/* EVPN MAC-IP routes are installed with a L3 NHG id */
+@@ -1436,19 +1436,17 @@ static void bgp_zebra_announce_parse_nexthop(
+ 
+ 		if (((mpinfo->attr->srv6_l3service &&
+ 		      !sid_zero_ipv6(&mpinfo->attr->srv6_l3service->sid)) ||
+-		     (mpinfo->attr->srv6_vpn &&
+-		      !sid_zero_ipv6(&mpinfo->attr->srv6_vpn->sid))) &&
+-		    !is_evpn && bgp_is_valid_label(&labels[0])) {
+-			struct in6_addr *sid_tmp =
+-				mpinfo->attr->srv6_l3service
+-					? (&mpinfo->attr->srv6_l3service->sid)
+-					: (&mpinfo->attr->srv6_vpn->sid);
++		     (mpinfo->attr->srv6_vpn && !sid_zero_ipv6(&mpinfo->attr->srv6_vpn->sid))) &&
++		    !is_evpn) {
++			struct in6_addr *sid_tmp = mpinfo->attr->srv6_l3service
++							   ? (&mpinfo->attr->srv6_l3service->sid)
++							   : (&mpinfo->attr->srv6_vpn->sid);
+ 
+ 			memcpy(&api_nh->seg6_segs[0], sid_tmp,
+ 			       sizeof(api_nh->seg6_segs[0]));
+ 			api_nh->srv6_encap_behavior = bgp_orig->srv6_encap_behavior;
+ 
+-			if (mpinfo->attr->srv6_l3service &&
++			if (mpinfo->attr->srv6_l3service && bgp_is_valid_label(&labels[0]) &&
+ 			    mpinfo->attr->srv6_l3service->transposition_len != 0) {
+ 				mpls_lse_decode(labels[0], &nh_label, &ttl,
+ 						&exp, &bos);
+
+From 15b8f7deed1cd0e391e53c2243174ec81b503c52 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Wed, 20 Aug 2025 17:47:35 +0200
+Subject: [PATCH 7/9] topotests: add bgp srv6 unicast topotests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Test bgp srv6 unicast tests on default vrf. The topo consist of 4
+routers:
+1. R1 <-> R2, R1 is peering with encapsulation-srv6-relax enabled
+2. R1 <-> R3, R1 and R3 are peering with encapsulation-srv6 enabled
+3. R1 <-> R4, normal bgp peering.
+4. "sid export auto"" command is activated on R1 and R3
+5. C1 and cC are both client to test datapath:
+c1 <-> R2 <-> R1 <-> R3 <-> c2
+
+Tests are:
+- test_bgp_srv6_encap: static network 10.0.0.1/32 is configured on R1,
+  check route on R2, R3 and R4.
+- test_bgp_srv6_update1: static network 10.0.0.2/32 is configured on R2,
+  check route on R3 and R4.
+- test_bgp_srv6_update2: static network 10.0.0.3/32 is configured on R3,
+  check rotue on R1, R2 and R4.
+- test_bgp_srv6_sid_rmap: check prefix 172.16.0.0/24 is filtered.
+- test_bgp_srv6_sid_unexport: unexport sid, check route on R2-R3.
+- test_bgp_srv_sid_export: re-enabled sid export, check srv6 encap
+  routes are re-installed.
+- test_bgp_srv6_sid_v6_update: check srv6 ipv6 unicast sid allocation
+  adn updates.
+- test_srv6_withdraw: withdraw ipv4 and ipv6 prefixes and check routes
+  are uninstalled.
+- test_ping: check c1 <-> c2 pings.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ tests/topotests/bgp_srv6_unicast/c1/frr.conf  |   7 +
+ tests/topotests/bgp_srv6_unicast/c2/frr.conf  |   7 +
+ tests/topotests/bgp_srv6_unicast/r1/frr.conf  |  53 ++
+ tests/topotests/bgp_srv6_unicast/r2/frr.conf  |  24 +
+ tests/topotests/bgp_srv6_unicast/r3/frr.conf  |  36 ++
+ tests/topotests/bgp_srv6_unicast/r4/frr.conf  |  19 +
+ .../bgp_srv6_unicast/test_bgp_srv6_unicast.py | 469 ++++++++++++++++++
+ 7 files changed, 615 insertions(+)
+ create mode 100644 tests/topotests/bgp_srv6_unicast/c1/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/c2/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/r1/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/r2/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/r3/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/r4/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+
+diff --git a/tests/topotests/bgp_srv6_unicast/c1/frr.conf b/tests/topotests/bgp_srv6_unicast/c1/frr.conf
+new file mode 100644
+index 000000000000..818d61280915
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/c1/frr.conf
+@@ -0,0 +1,7 @@
++int c1-eth0
++ ipv6 address fd00:100::2/64
++ ip address 10.100.1.2/24
++!
++
++ip route 10.100.3.0/24 10.100.1.1
++ipv6 route fd00:300::/64 fd00:100::1
+diff --git a/tests/topotests/bgp_srv6_unicast/c2/frr.conf b/tests/topotests/bgp_srv6_unicast/c2/frr.conf
+new file mode 100644
+index 000000000000..cb5394771259
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/c2/frr.conf
+@@ -0,0 +1,7 @@
++int c2-eth0
++ ipv6 address fd00:300::2/64
++ ip address 10.100.3.2/24
++!
++
++ip route 10.100.1.0/24 10.100.3.1
++ipv6 route fd00:100::/64 fd00:300::1
+diff --git a/tests/topotests/bgp_srv6_unicast/r1/frr.conf b/tests/topotests/bgp_srv6_unicast/r1/frr.conf
+new file mode 100644
+index 000000000000..b8357780ad5a
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/r1/frr.conf
+@@ -0,0 +1,53 @@
++!debug zebra kernel
++!debug zebra srv6
++!debug bgp zebra
++
++int r1-eth0
++ ipv6 address fd00:0:0:2::1/64
++ ip address 10.125.2.1/24
++int r1-eth1
++ ipv6 address fd00:0:0:3::1/64
++ ip address 10.125.3.1/24
++int r1-eth2
++ ipv6 address fd00:0:0:4::1/64
++ ip address 10.125.4.1/24
++!
++
++ipv6 route 2001:db8:1:3::/64 fd00:0:0:3::2
++
++ip prefix-list BLOCK seq 1 deny 172.16.0.0/24
++ip prefix-list BLOCK seq 255 permit any
++route-map filter permit 20
++ match ip address prefix-list BLOCK
++exit
++
++segment-routing
++srv6
++ locators
++  locator default
++   prefix 2001:db8:1:1::/64 block-len 40 node-len 24 func-bits 16
++
++router bgp 65001
++ bgp router-id 10.125.1.1
++ no bgp ebgp-requires-policy
++ no bgp network import-check
++ neighbor fd00:0:0:2::2 remote-as external
++ neighbor fd00:0:0:3::2 remote-as external
++ neighbor fd00:0:0:4::2 remote-as external
++ neighbor fd00:0:0:2::2 capability extended-nexthop
++ segment-routing srv6
++  locator default
++ address-family ipv4 unicast
++  network 10.0.0.1/32
++  neighbor fd00:0:0:3::2 encapsulation-srv6
++  neighbor fd00:0:0:2::2 encapsulation-srv6-relax
++  sid export auto route-map filter
++ exit-address-family
++ address-family ipv6 unicast
++  neighbor fd00:0:0:2::2 activate
++  neighbor fd00:0:0:2::2 encapsulation-srv6-relax
++  neighbor fd00:0:0:3::2 activate
++  neighbor fd00:0:0:3::2 encapsulation-srv6
++  neighbor fd00:0:0:4::2 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_srv6_unicast/r2/frr.conf b/tests/topotests/bgp_srv6_unicast/r2/frr.conf
+new file mode 100644
+index 000000000000..1804523baf78
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/r2/frr.conf
+@@ -0,0 +1,24 @@
++!debug zebra kernel
++!debug zebra nexthop
++!debug zebra srv6
++
++int r2-eth0
++ ipv6 address fd00:0:0:2::2/64
++ ip address 10.125.2.2/24
++int r2-eth1
++ ipv6 address fd00:100::1/64
++ ip address 10.100.1.1/24
++!
++ipv6 route 2001:db8:1:1::/64 fd00:0:0:2::1
++ipv6 route 2001:db8:1:3::/64 fd00:0:0:2::1
++!
++router bgp 65002
++ bgp router-id 10.125.2.2
++ no bgp ebgp-requires-policy
++ no bgp network import-check
++ neighbor fd00:0:0:2::1 remote-as external
++ neighbor fd00:0:0:2::1 capability extended-nexthop
++ address-family ipv6 unicast
++  neighbor fd00:0:0:2::1 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_srv6_unicast/r3/frr.conf b/tests/topotests/bgp_srv6_unicast/r3/frr.conf
+new file mode 100644
+index 000000000000..b584e62bea36
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/r3/frr.conf
+@@ -0,0 +1,36 @@
++!debug zebra kernel
++!debug zebra nexthop
++!debug zebra srv6
++
++int r3-eth0
++ ipv6 address fd00:0:0:3::2/64
++ ip address 10.125.3.2/24
++int r3-eth1
++ ipv6 address fd00:300::1/64
++ ip address 10.100.3.1/24
++!
++ipv6 route 2001:db8:1:1::/64 fd00:0:0:3::1
++
++segment-routing
++srv6
++ locators
++  locator default
++   prefix 2001:db8:1:3::/64 block-len 40 node-len 24 func-bits 16
++
++router bgp 65003
++ bgp router-id 10.125.3.2
++ no bgp ebgp-requires-policy
++ no bgp network import-check
++ neighbor fd00:0:0:3::1 remote-as external
++ neighbor fd00:0:0:3::1 capability extended-nexthop
++ segment-routing srv6
++  locator default
++ address-family ipv4 unicast
++  neighbor fd00:0:0:3::1 encapsulation-srv6
++  sid export auto
++ exit-address-family
++ address-family ipv6 unicast
++  neighbor fd00:0:0:3::1 activate
++  neighbor fd00:0:0:3::1 encapsulation-srv6
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_srv6_unicast/r4/frr.conf b/tests/topotests/bgp_srv6_unicast/r4/frr.conf
+new file mode 100644
+index 000000000000..7dd303827dcd
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/r4/frr.conf
+@@ -0,0 +1,19 @@
++!debug zebra kernel
++!debug zebra nexthop
++!debug zebra srv6
++int r4-eth0
++ ip address fd00:0:0:4::2/64
++ ip address 10.125.4.2/24
++!
++
++router bgp 65004
++ bgp router-id 10.125.4.2
++ no bgp ebgp-requires-policy
++ no bgp network import-check
++ neighbor fd00:0:0:4::1 remote-as external
++ address-family ipv4 unicast
++ exit-address-family
++ address-family ipv6 unicast
++  neighbor fd00:0:0:4::1 activate
++ exit-address-family
++!
+diff --git a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+new file mode 100644
+index 000000000000..be30329105c0
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+@@ -0,0 +1,469 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++# Copyright 2025 6WIND S.A.
++# Loïc SANG <loic.sang@6wind.com>
++#
++
++"""
++test_bgp_srv6_unicast.py: Test BGP SRv6 encapsulation at default VRF
++                                +-------+
++                                |       |
++                                |   R4  |
++                                |       |
++                                +---+---+
++                                    |
++                                    |
++                                    |
++  +----+    +------+            +---+---+           +------+    +----+
++  |    |    |      |            |       |           |      |    |    |
++  | c1 |----|  R2  |------------|   R1  |-----------|  R3  |----| c2 |
++  |    |    |      |            |       |           |      |    |    |
++  +----+    +------+            +-------+           +------+    +----+
++
++- R1 <-> R2, R1 sends updates with srv6 attributes to R2.
++- R1 <-> R3, exchange updates with srv6 attributes only.
++- R1 <-> R4, normal BGP peering, no updates with srv6 attributes exchanged.
++- Ping test c1 <--> c2.
++"""
++
++import os
++import re
++import sys
++import json
++import pytest
++import functools
++
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++from lib.common_config import retry
++from lib import topotest
++from lib.topogen import Topogen, get_topogen, TopoRouter
++from lib.topolog import logger
++from lib.checkping import check_ping
++
++pytestmark = [pytest.mark.bgpd]
++
++r1_unicast_sid = None
++r3_unicast_sid = None
++
++def setup_module(mod):
++    topodef = {"s1": ("r1", "r2"), "s2": ("r1", "r3"), "s3": ("r1", "r4"),
++               "s4": ("c1", "r2"), "s5": ("r3", "c2")}
++    tgen = Topogen(topodef, mod.__name__)
++    tgen.start_topology()
++
++    router_list = tgen.routers()
++    tgen.net["r1"].cmd(
++        """
++        sysctl -w net.vrf.strict_mode=1
++        ip link add vrfdefault type vrf table 254
++        ip link set up dev vrfdefault
++        ip link add sr0 type dummy
++        ip link set up dev sr0
++        """
++    )
++    tgen.net["r3"].cmd(
++        """
++        sysctl -w net.vrf.strict_mode=1
++        ip link add vrfdefault type vrf table 254
++        ip link set up dev vrfdefault
++        ip link add sr0 type dummy
++        ip link set up dev sr0
++        """
++    )
++
++    for _, (rname, router) in enumerate(router_list.items()):
++        router.load_frr_config(
++            os.path.join(CWD, "{}/frr.conf".format(rname)),
++            [(TopoRouter.RD_ZEBRA, None), (TopoRouter.RD_BGP, "-M bmp")],
++        )
++
++    tgen.start_router()
++
++@retry(retry_timeout=10)
++def get_unicast_sid(afi):
++    global r1_unicast_sid, r3_unicast_sid
++    tgen = get_topogen()
++
++    output = tgen.gears["r1"].vtysh_cmd("show bgp segment-routing srv6")
++    match = re.search(r"srv6_unicast\[%s\].sid: ([0-9a-fA-F:]+::)" % afi, output)
++
++    if not match:
++        return "R1 sid[%s] is null" % afi
++
++    r1_unicast_sid = match.group().split()[-1]
++
++    output = tgen.gears["r3"].vtysh_cmd("show bgp segment-routing srv6")
++    match = re.search(r"srv6_unicast\[%s\].sid: ([0-9a-fA-F:]+::)" % afi, output)
++
++    if not match:
++        return "R3 sid[%s] is null" % afi
++
++    r3_unicast_sid = match.group().split()[-1]
++
++    return True
++
++@retry(retry_timeout=10)
++def check_route(router, cmd, expect_route, expect_sid, expect_installed=True):
++    tgen = get_topogen()
++
++    output = json.loads(router.vtysh_cmd(cmd))
++
++    route = output.get(expect_route, None)
++    if route is None:
++        if not expect_installed:
++            return True
++
++        return "route %s is not installed on %s" % (expect_route, router.name)
++
++    if not expect_installed:
++        return "route is installed on %s" % router.name
++
++    route = route[0]
++    if expect_sid and route["nexthops"][0].get("seg6", {}).get("segs", "") != expect_sid:
++        error =  "%s: expecting" % router.name
++        if expect_sid:
++            error = "%s %s sid" % (error, expect_sid)
++
++        error = "%s on route %s" % (error, expect_route)
++
++        return error
++
++    return True
++
++def test_bgp_srv6_encap():
++    """
++    For static prefix 10.0.0.1/32:
++    - check encapsulation-srv6-relax R1 <-> R2
++    - check encapsulation-srv6 R1 <-> R3
++    - check no srv6 encap on R4
++    """
++
++    tgen = get_topogen()
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    logger.info("R1 sid[AFI_IP]: %s, R3 sid[AFI_IP]: %s" % (r1_unicast_sid, r3_unicast_sid))
++
++    logger.info("Check prefix 10.0.0.1/32 SRv6 encap on R2")
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.1/32 SRv6 encap on R3")
++    res = check_route(tgen.gears["r3"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.1/32 no SRv6 encap on R4")
++    res = check_route(tgen.gears["r4"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", "")
++    assert res is True, res
++
++
++
++def test_bgp_srv6_update1():
++    """
++    Configure a static prefix 10.0.0.2/32 on R2:
++    - check no srv6 encap on R1
++    - check srv6 encap R1 <-> R3
++    - check no srv6 encap on r4
++    """
++
++    tgen = get_topogen()
++    tgen.gears["r2"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65002
++        address-family ipv4 unicast
++        network 10.0.0.2/32
++        """
++    )
++
++    logger.info("Check prefix 10.0.0.2/32 no SRv6 encap on R1")
++    res = check_route(tgen.gears["r1"], "show ip route 10.0.0.2/32 json", "10.0.0.2/32", "")
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.2/32 SRv6 encap on R3")
++    res = check_route(tgen.gears["r3"], "show ip route 10.0.0.2/32 json", "10.0.0.2/32", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.2/32 no SRv6 encap on R4")
++    res = check_route(tgen.gears["r4"], "show ip route 10.0.0.2/32 json", "10.0.0.2/32", "")
++    assert res is True, res
++
++
++def test_bgp_srv6_update2():
++    """
++    Configure a static prefix 10.0.0.3/32 on R3:
++    - check srv6 encap R1 <-> R3
++    - check srv6 encap R1 <-> R2, using sid from R3
++    - check no srv6 encap on R4
++    """
++
++    tgen = get_topogen()
++    tgen.gears["r3"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65003
++        address-family ipv4 unicast
++        network 10.0.0.3/32
++        """
++    )
++
++    logger.info("Check prefix 10.0.0.3/32 SRv6 encap on R1")
++    res = check_route(tgen.gears["r1"], "show ip route 10.0.0.3/32 json", "10.0.0.3/32", r3_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.3/32 SRv6 encap on R2")
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.3/32 json", "10.0.0.3/32", r3_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.3/32 no SRv6 encap on R4")
++    res = check_route(tgen.gears["r4"], "show ip route 10.0.0.3/32 json", "10.0.0.3/32", "")
++    assert res is True, res
++
++def test_bgp_srv6_sid_rmap():
++    """
++    Configure prefix 172.16.0.0/24 on r1 and check it is blocked.
++    """
++    tgen = get_topogen()
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        network 172.16.0.0/24
++        """
++    )
++
++    logger.info("Check prefix 172.16.0.0/24 no SRv6 encap on R2")
++    res = check_route(tgen.gears["r2"], "show ip route 172.16.0.0/24 json",
++                      "172.16.0.0/24", "")
++    assert res is True, res
++
++    logger.info("Check prefix 172.16.0.0/24 is not installed on R3")
++    res = check_route(tgen.gears["r3"], "show ip route 172.16.0.0/24 json",
++                      "172.16.0.0/24", "", expect_installed=False)
++    assert res is True, res
++
++
++def test_bgp_srv6_sid_unexport():
++    """
++    Unconfigure sid export on R1, then check prefixes 10.0.0.1-3/32
++    - R2: install routes via R1
++    - R3: no prefixes are installed
++    - R4: no changes
++    """
++
++    tgen = get_topogen()
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no sid export auto
++        """
++    )
++    prefixes = ["10.0.0.1/32", "10.0.0.3/32"]
++
++    logger.info("Check 10.0.0.1/32 and 10.0.0.3/32 are installed on R2")
++    for prefix in prefixes:
++        res = check_route(tgen.gears["r2"], "show ip route %s json" % prefix, prefix, "")
++        assert res is True, res
++
++    prefixes = ["10.0.0.1/32", "10.0.0.2/32", "10.0.0.3/32"]
++    logger.info("Check 10.0.0.1-3/32 are not installed on R3")
++    for prefix in prefixes:
++        res = check_route(tgen.gears["r3"], "show ip route %s json" % prefix, prefix,
++                          "", expect_installed=False)
++        assert res is True, res
++
++def test_bgp_srv6_sid_export():
++    """
++    Enable sid export explicit on R1 and recheck prefixes 10.0.0.1-3/32 srv6 encap.
++    """
++
++    tgen = get_topogen()
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export explicit 2001:db8:1:1:a1::
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP")
++    assert res is True, res
++    logger.info("R1 sid[AFI_IP]: %s, R3 sid[AFI_IP]: %s" % (r1_unicast_sid, r3_unicast_sid))
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R2" % r1_unicast_sid)
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check 10.0.0.1/32 sid %s installed on R3" % r1_unicast_sid)
++    res = check_route(tgen.gears["r3"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", r1_unicast_sid)
++    assert res is True, res
++
++
++    logger.info("Check 10.0.0.3/32 sid %s installed on R2" % r3_unicast_sid)
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.3/32 json", "10.0.0.3/32", r3_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check 10.0.0.3/32 sid %s installed on R1" % r3_unicast_sid)
++    res = check_route(tgen.gears["r1"], "show ip route 10.0.0.3/32 json", "10.0.0.3/32", r3_unicast_sid)
++    assert res is True, res
++
++
++def test_bgp_srv6_sid_v6_update():
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv6 unicast
++        network fd00:200::/64
++        sid export 55
++        """
++    )
++
++    tgen.gears["r3"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65003
++        address-family ipv6 unicast
++        network fd00:300::/64
++        sid export auto
++        """
++    )
++
++    res = get_unicast_sid("AFI_IP6")
++    assert res is True, res
++    logger.info("R1 sid[AFI_IP6]: %s, R3 sid[AFI_IP6]: %s" % (r1_unicast_sid, r3_unicast_sid))
++
++    logger.info("Check fd00:200::/64 sid %s installed on R2" % r1_unicast_sid)
++    res = check_route(tgen.gears["r2"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s installed on R3" % r1_unicast_sid)
++    res = check_route(tgen.gears["r3"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", r1_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check fd00:300::/64 sid %s installed on R1" % r3_unicast_sid)
++    res = check_route(tgen.gears["r1"], "show ipv6 route fd00:300::/64 json",
++                      "fd00:300::/64", r3_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check fd00:300::/64 sid %s installed on R2" % r3_unicast_sid)
++    res = check_route(tgen.gears["r2"], "show ipv6 route fd00:300::/64 json",
++                      "fd00:300::/64", r3_unicast_sid)
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 sid %s is not installed on R4" % r1_unicast_sid)
++
++    res = check_route(tgen.gears["r4"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", "")
++    assert res is True, res
++
++    logger.info("Check fd00:300::/64 sid %s is not installed on R4" % r3_unicast_sid)
++    res = check_route(tgen.gears["r4"], "show ipv6 route fd00:300::/64 json",
++                      "fd00:300::/64", "")
++    assert res is True, res
++
++
++def test_srv6_withdraw():
++    """
++    Withdraw static prefixes:
++    - 10.0.0.1/32, fd00:200::/64 on R1
++    - 10.0.0.3/32, fd00:300::/64 on R3
++    """
++
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        no network 10.0.0.1/32
++        exit-address-family
++        address-family ipv6 unicast
++        no network fd00:200::/64
++        """
++    )
++    tgen.gears["r3"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65003
++        address-family ipv4 unicast
++        no network 10.0.0.3/32
++        exit-address-family
++        address-family ipv6 unicast
++        no network fd00:300::/64
++        """
++    )
++
++    logger.info("Check 10.0.0.1/32 is withdrawn on R3")
++    res = check_route(tgen.gears["r3"], "show ip route 10.0.0.1/32 json",
++                      "10.0.0.1/32", r1_unicast_sid, expect_installed=False)
++    assert res is True, res
++
++    logger.info("Check 10.0.0.3/32 is withdrawn on R2")
++    res = check_route(tgen.gears["r2"], "show ip route 10.0.0.3/32 json",
++                      "10.0.0.3/32", r3_unicast_sid, expect_installed=False)
++    assert res is True, res
++
++    logger.info("Check fd00:200::/64 is withdrawn on R3")
++    res = check_route(tgen.gears["r3"], "show ipv6 route fd00:200::/64 json",
++                      "fd00:200::/64", r1_unicast_sid, expect_installed=False)
++    assert res is True, res
++
++    logger.info("Check fd00:300::/64 is withdrawn on R2")
++    res = check_route(tgen.gears["r2"], "show ipv6 route fd00:300::/64 json",
++                      "fd00:300::/64", r3_unicast_sid, expect_installed=False)
++    assert res is True, res
++
++
++def test_ping():
++    """
++    Check pings C1 <-> R2 <-> R1 <-> R3 <-> C2.
++    """
++    tgen = get_topogen()
++    tgen.gears["r3"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65003
++        address-family ipv4 unicast
++        redistribute connected
++        address-family ipv6 unicast
++        redistribute connected
++        """
++    )
++    tgen.gears["r2"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65002
++        address-family ipv4 unicast
++        redistribute connected
++        address-family ipv6 unicast
++        redistribute connected
++        """
++    )
++
++    check_ping("c1", "10.100.3.2", True, 3, 3)
++    check_ping("c2", "10.100.1.2", True, 3, 3)
++    check_ping("c1", "fd00:300::2", True, 3, 3)
++    check_ping("c2", "fd00:100::2", True, 3, 3)
++
++
++def teardown_module(mod):
++    tgen = get_topogen()
++    tgen.stop_topology()
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
+
+From 09e92a47ccdfc55749c1a926366b4404fc96867d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Mon, 25 Aug 2025 16:43:09 +0200
+Subject: [PATCH 8/9] doc: add doc about IPv4/6 over SRv6
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- change "L3VPN SRv6" section to "BGP-Based L3 Service over SRv6".
+- rework L3VPN SRV6 as a sub section.
+- add doc about IPv4/v6 over SRv6.
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ doc/user/bgp.rst | 65 +++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 48 insertions(+), 17 deletions(-)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index 4f9f5e05749a..f625180e067e 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -3417,24 +3417,29 @@ the next-hop attribute). The labeled L3VPN routes received on this interface are
+ re-advertised with local labels and an MPLS table swap entry is set to bind
+ the local label to the received label.
+ 
+-.. _bgp-l3vpn-srv6:
++.. _bgp-l3-service-over-srv6:
+ 
+-L3VPN SRv6
+-----------
++BGP-Based L3 Service over SRv6
++------------------------------
++
++This https://www.ietf.org/rfc/rfc9252#name-bgp-based-l3-service-over-s explains
++the use SRv6 backend for BGP VPNs and Global tables.
++
++Note: A VRF can have at most one L3 service enabled simultaneously.
+ 
+ .. clicmd:: segment-routing srv6
+ 
+-   Use SRv6 backend with BGP L3VPN, and go to its configuration node.
++   Use SRv6 backend with BGP Global IPv4/6 or IPv4/6 VPN, go to its configuration node.
+ 
+ .. clicmd:: locator NAME
+ 
+-   Specify the SRv6 locator to be used for SRv6 L3VPN. The Locator name must
++   Specify the SRv6 locator to be used for SRv6 L3 service. The Locator name must
+    be set in zebra, but user can set it in any order.
+ 
+ .. clicmd:: encap-behavior <H_Encaps|H_Encaps_Red>
+ 
+-   Specify the encapsulation instruction to use for incoming BGP L3VPN SRv6 routes
+-   to install to RIB. By default, a segment-routing-header is added, in addition to
++   Specify the encapsulation instruction to use for incoming BGP SRv6 routes to
++   install to RIB. By default, a segment-routing-header is added, in addition to
+    the IPv6 header. With `H_Encaps_Red`, if the number of segments is only 1, and
+    there are no other specific options, then the segment-routing-header is removed,
+    and only the IPv6 header is appended to the original packet.
+@@ -3448,15 +3453,13 @@ L3VPN SRv6
+    this command will also consider BGP updates with no srv6 options, thus making possible
+    to have both MPLS and SRv6 updates.
+ 
+-L3VPN SRv6 SID reachability
+----------------------------
+-
+-In the context of IPv4 L3VPN over SRv6 specific usecase, 2001:db8:12::2
+-is the peer IPv6 address of r2, and 2001:db8:2:2:: is the SRv6 SID
+-advertised by router r2 for prefix P. On r1, the SID reachability is
+-checked in order to install the prefix P. The below output indicates
+-that the 2001:db8:2:2:: prefix is valid.
++SRv6 SID reachability for L3 service
++------------------------------------
+ 
++In the context of IPv4 over SRv6 specific usecase, 2001:db8:12::2 is the peer
++IPv6 address of r2, and 2001:db8:2:2:: is the SRv6 SID advertised by router r2
++for prefix P. On r1, the SID reachability is checked in order to install the
++prefix P. The below output indicates that the 2001:db8:2:2:: prefix is valid.
+ 
+ .. code-block:: frr
+ 
+@@ -3473,8 +3476,8 @@ that the 2001:db8:2:2:: prefix is valid.
+      Last update: Tue Nov 14 10:36:26 2023
+      Paths:
+ 
+-General configuration
+-^^^^^^^^^^^^^^^^^^^^^
++L3VPN SRv6 configuration
++^^^^^^^^^^^^^^^^^^^^^^^^
+ 
+ Configuration of the SRv6 SID used to advertise a L3VPN for both IPv4 and IPv6
+ is accomplished via the following command in the context of a VRF:
+@@ -3520,6 +3523,34 @@ Filtering SRv6/MPLS per neighbor
+    Reversely, the ``encapsulation-mpls`` command can be used to invalidate
+    incoming SRv6 BGP updates from a given peer.
+ 
++Global IPv4/6 SRv6 configuration
++^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++
++Configuration of the SRv6 SID used to advertise the Global IPv4/v6 Table is
++accomplished via the following command, which lives under ``address-family ipv4
++unicast``/``address-family ipv6 unicast`` only in the default VRF:
++
++.. clicmd:: sid export <(1..1048575)|auto|explicit X:X::X:X> [route-map RNAME]
++   Enables a SRv6 SID to be attached to routes in the current unicast
++   address-family, received routes that already have a SID attached are ignored.
++   If the value is ``auto``, the SID value is automatically assigned
++   from a pool maintained by the zebra daemon. If the value specified is
++   ``explicit X:X::X:X``, SID allocation with the explicit value is requested
++   from the zebra daemon. If zebra is not running, or if this command is not
++   configured or if SID allocation is failed, automatic or explicit SID
++   assignment will not complete, which will block corresponding routes SID
++   assignment.
++   If the ``route-map RNAME`` is configured, routes are filtered according to
++   its rules.
++
++.. clicmd:: neighbor <X:X::X:X|WORD> <encapsulation-srv6|encapsulation-srv6-relax>
++   Enables SRv6 for neighbor in the current unicast address family, this allows
++   sending BGP prefix-sid attribute to this neighbor.
++   If ``encapsulation-srv6`` is enabled, only BGP prefix-sid is sent to this
++   neighbor.
++   If ``encapsulation-srv6-relax`` is enabled, BGP prefix and prefix-sid both are
++   sent to this neighbor.
++
+ .. _bgp-evpn:
+ 
+ Ethernet Virtual Network - EVPN
+
+From 7e08c898e29266c4f9ddcc3feaa9030017a1a582 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lo=C3=AFc=20Sang?= <loic.sang@6wind.com>
+Date: Sun, 28 Sep 2025 18:47:07 +0200
+Subject: [PATCH 9/9] bgpd: re-install srv6-unicast route for encap behavior
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Re-install also srv6 unicast route when encap-behavior changes
+
+Signed-off-by: Loïc Sang <loic.sang@6wind.com>
+---
+ bgpd/bgp_vty.c   | 3 ---
+ bgpd/bgp_zebra.c | 9 ---------
+ 2 files changed, 12 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 84239d1f74ed..ee02725edec8 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -11399,9 +11399,6 @@ static void bgp_segment_routing_srv6_hencaps_refresh(struct bgp *bgp)
+ 	struct listnode *node;
+ 
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_inst)) {
+-		if (!bgp_fibupd_safi(SAFI_UNICAST))
+-			continue;
+-
+ 		bgp_zebra_update_srv6_encap_routes(bgp_inst, AFI_IP, bgp, false);
+ 		bgp_zebra_update_srv6_encap_routes(bgp_inst, AFI_IP6, bgp, false);
+ 
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index c32c265d01fa..6869045a5806 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -2376,15 +2376,6 @@ void bgp_zebra_update_srv6_encap_routes(struct bgp *bgp, afi_t afi, struct bgp *
+ 			if (!CHECK_FLAG(pi->flags, BGP_PATH_SELECTED) || pi->type != ZEBRA_ROUTE_BGP)
+ 				continue;
+ 
+-			if (pi->sub_type != BGP_ROUTE_IMPORTED)
+-				continue;
+-
+-			if (!pi->extra || !pi->extra->vrfleak)
+-				continue;
+-
+-			if (pi->extra->vrfleak->bgp_orig != from_bgp)
+-				continue;
+-
+ 			if ((pi->attr->srv6_l3service &&
+ 			     !sid_zero_ipv6(&pi->attr->srv6_l3service->sid)) ||
+ 			    (pi->attr->srv6_vpn && !sid_zero_ipv6(&pi->attr->srv6_vpn->sid)))
