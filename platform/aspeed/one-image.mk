@@ -1,6 +1,6 @@
 # ONIE installer for Aspeed BMC platform with U-Boot
 
-SONIC_ONE_IMAGE = sonic-aspeed-arm64.bin
+SONIC_ONE_IMAGE = sonic-aspeed.bin
 $(SONIC_ONE_IMAGE)_ARCH = arm64
 $(SONIC_ONE_IMAGE)_MACHINE = aspeed
 $(SONIC_ONE_IMAGE)_PLATFORM = aspeed
