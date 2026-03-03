@@ -416,3 +416,44 @@ stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+[program:lldpd]
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]*,eth0 -C eth0
+priority=28
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:waitfor_lldp_ready]
+command=/usr/bin/waitfor_lldp_ready.sh
+priority=29
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:lldp-syncd]
+command=/usr/bin/env python3 -m lldp_syncd
+priority=30
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:lldpmgrd]
+command=/usr/bin/lldpmgrd
+priority=31
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true

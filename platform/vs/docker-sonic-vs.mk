@@ -12,7 +12,8 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
-                              $(SYSMGR)
+                              $(SYSMGR) \
+                              $(LLDPD)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
@@ -20,7 +21,8 @@ $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_YANG_MGMT_PY3) \
                                     $(SONIC_UTILITIES_PY3) \
                                     $(SONIC_HOST_SERVICES_PY3) \
-                                    $(SONIC_BGPCFGD)
+                                    $(SONIC_BGPCFGD) \
+                                    $(DBSYNCD_PY3)
 
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
@@ -68,6 +70,10 @@ $(DOCKER_SONIC_VS_FRR_TEMPLATES): $(shell find dockers/docker-fpm-frr/frr -type 
 	cp -f dockers/docker-fpm-frr/frr/isolate.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
 	cp -f dockers/docker-fpm-frr/frr/unisolate.j2 $(PLATFORM_PATH)/docker-sonic-vs/frr/
 	cp -f files/image_config/constants/constants.yml $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/lldpmgrd $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/lldpd.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/lldpdSysDescr.conf.j2 $(PLATFORM_PATH)/docker-sonic-vs/
+	cp -f dockers/docker-lldp/waitfor_lldp_ready.sh $(PLATFORM_PATH)/docker-sonic-vs/
 	touch $@
 
 $(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_FRR_TEMPLATES)
