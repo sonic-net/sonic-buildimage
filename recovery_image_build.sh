@@ -527,7 +527,7 @@ build_custom_grub() {
 
   # Check if grub-mkstandalone exists in chroot
   if ! sudo chroot "${FILESYSTEM_ROOT}" sh -c "command -v grub-mkstandalone" &>/dev/null; then
-      echo "Error: grub-mkstandalone not found in chroot. Is grub-efi-amd64-bin installed?"
+      echo "Error: grub-mkstandalone not found in chroot. Is grub-efi-amd64-bin or grub-efi-arm64-bin installed?"
       return 1
   fi
 
