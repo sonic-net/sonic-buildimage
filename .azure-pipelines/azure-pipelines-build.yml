@@ -121,7 +121,7 @@ jobs:
 
     buildSteps:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
-      - template: .azure-pipelines/template-daemon.yml@buildimage
+      - template: template-daemon.yml
       - bash: |
           set -ex
           if echo $(GROUP_NAME) | grep mellanox; then
