@@ -67,9 +67,8 @@ module sonic-console {
                 }
 
                 leaf escape_char {
-                    description "Override the global escape_char config";
+                    description "Override the global default_escape_char config";
                     type console-mgmt-escape-char;
-                    default "a";
                 }
             }
 
@@ -88,7 +87,6 @@ module sonic-console {
                 leaf default_escape_char {
                     description "This configuration provides the escape character for picocom";
                     type console-mgmt-escape-char;
-                    default "a";
                 }
             }
 
