@@ -15,6 +15,7 @@ def mock_unimportant_modules():
     """Mock modules that aren't important for integration testing."""
     modules = {}
     modules["sonic_py_common"] = Mock()
+    modules["sonic_py_common.logger"] = Mock()
     modules["sonic_platform.dpm"] = Mock()
     modules["sonic_platform.dpm"].SystemDPMLogHistory = Mock()
     modules.update(mock_syslog_modules())
