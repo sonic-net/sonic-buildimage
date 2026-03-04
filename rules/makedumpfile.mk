@@ -1,0 +1,5 @@
+MAKEDUMPFILE_VERSION = 1.7.7-1+b1
+MAKEDUMPFILE = makedumpfile_$(MAKEDUMPFILE_VERSION)_$(CONFIGURED_ARCH).deb
+$(MAKEDUMPFILE)_URL = https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_$(MAKEDUMPFILE_VERSION)_$(CONFIGURED_ARCH).deb
+SONIC_ONLINE_DEBS += $(MAKEDUMPFILE)
+export MAKEDUMPFILE
