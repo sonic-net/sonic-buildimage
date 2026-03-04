@@ -113,5 +113,8 @@
     "SYSLOG_CONFIG_SEVERITY_INVALID": {
         "desc": "Global invalid syslog severity",
         "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_PRESERVE_FQDN_ENABLED": {
+        "desc": "Global syslog preserve FQDN flag"
     }
 }
