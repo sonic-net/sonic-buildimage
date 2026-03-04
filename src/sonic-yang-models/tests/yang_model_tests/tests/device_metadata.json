@@ -45,6 +45,9 @@
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
+        "desc": "DEVICE_METADATA value as FilterLeaf for Type field"
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
     },
