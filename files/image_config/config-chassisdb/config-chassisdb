@@ -1,4 +1,13 @@
 #!/bin/bash
+###########################################################################
+# SONiC chassis_db configuration                                          #
+#                                                                         #
+# This script is used to add chassis_db address in local hosts and        #
+# indicate to start database-chassis service. It should be excuted before #
+# database-chassis.service started.                                       #
+#                                                                         #
+###########################################################################
+
 config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
     chassisdb_address_file="/etc/sonic/chassisdb_address"
@@ -43,7 +52,7 @@ config_chassis_db() {
     if [[ -n "$midplane_interface_ip" ]]; then
         chassis_db_address="$midplane_interface_ip" j2 /usr/share/sonic/templates/chassisdb_address.j2 > "$chassisdb_address_file"
     else
-        echo "Error: No IP address configured on $midplane_interface"
+        echo "Error: No IP address configured on midplane_interface"
         exit 0
     fi
 
@@ -68,7 +77,7 @@ config_chassis_db() {
               in ipaddress.ip_network('$midplane_subnet'))")
         # Exit as error if chassis_db_address not in the midplane subnet
         if [[ $result == False ]]; then
-            echo "Error: chassis_db address does not belog to midplane subnet"
+            echo "Error: chassis_db address does not belong to midplane subnet"
             [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
             exit 0
         fi

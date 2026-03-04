@@ -733,7 +733,7 @@ def get_chassis_db_address():
     chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
     chassis_db_address = None
 
-    # platform_env.conf file not present for platform
+    # The file /etc/sonic/chassisdb_address is not present
     if not os.path.isfile(chassis_db_address_file_path):
         return chassis_db_address
 
