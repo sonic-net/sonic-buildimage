@@ -35,7 +35,6 @@ RUN apt-get install -y libjudy-dev libpcap0.8 libjsoncpp25 libasan6 pciutils
 {{ install_debian_packages(docker_syncd_xsight_debs.split(' ')) }}
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 RUN ln -s /usr/lib/x86_64-linux-gnu/libjsoncpp.so.25 /usr/lib/x86_64-linux-gnu/libjsoncpp.so.1
 
