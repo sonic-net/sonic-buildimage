@@ -11,7 +11,7 @@ setup(
     url="https://github.com/nexthop-ai/sonic-buildimage",
     packages=["sonic_platform"],
     package_dir={
-        "sonic_platform": "b27/sonic_platform",
+        "sonic_platform": "common/sonic_platform",
     },
     classifiers=[
         "Development Status :: 3 - Alpha",

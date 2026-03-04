@@ -6,33 +6,25 @@ set -e
 
 # Configuration
 GADGET_NAME="g1"
-FUNCTION_TYPE="ncm"  # Options: ncm, ecm, eem, rndis
+FUNCTION_TYPE="ncm"
 INTERFACE_NAME="usb0"
-SUBNET_MASK="24"
 VENDOR_ID="0x1d6b"    # Linux Foundation
 PRODUCT_ID="0x0104"   # Multifunction Composite Gadget
 SERIAL_NUMBER="0123456789"
-MANUFACTURER="ASPEED BMC"
+MANUFACTURER="Nexthop Inc."
 PRODUCT_NAME="USB Network Device"
 DEV_MAC="02:00:00:00:00:01"
 HOST_MAC="02:00:00:00:00:02"
 
 logger -t usb-network "Starting USB network gadget initialization..."
 
-# Step 1: Load kernel modules
-logger -t usb-network "Loading kernel modules..."
-modprobe libcomposite 2>/dev/null || true
-modprobe usb_f_${FUNCTION_TYPE} 2>/dev/null || true
-modprobe u_ether 2>/dev/null || true
-modprobe aspeed_vhub 2>/dev/null || true
-
-# Step 2: Mount ConfigFS
+# Step 1: Mount ConfigFS
 if ! mountpoint -q /sys/kernel/config 2>/dev/null; then
     mount -t configfs none /sys/kernel/config
     logger -t usb-network "ConfigFS mounted at /sys/kernel/config"
 fi
 
-# Step 3: Create gadget configuration
+# Step 2: Create gadget configuration
 GADGET_DIR="/sys/kernel/config/usb_gadget/${GADGET_NAME}"
 
 # Remove existing gadget if present
