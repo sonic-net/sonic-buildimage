@@ -64,7 +64,7 @@ config_chassis_db() {
     fi
     # if the midplane subnet is defined make sure the IP address is part of the midplane subnet
     if [[ -n "$midplane_subnet" ]]; then
-        match=$(python3 -c "import ipaddress; print(ipaddress.ip_address('$chassis_db_address') \
+        result=$(python3 -c "import ipaddress; print(ipaddress.ip_address('$chassis_db_address') \
               in ipaddress.ip_network('$midplane_subnet'))")
         # Exit as error if chassis_db_address not in the midplane subnet
         if [[ $result == False ]]; then
