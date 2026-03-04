@@ -34,7 +34,14 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:28.2.2-1~debian.13~$IMAGE_DISTRO
+case "$IMAGE_DISTRO" in
+    trixie)     DBIAN_VER="13" ;;
+    bookworm)   DBIAN_VER="12" ;;
+    bullseye)   DBIAN_VER="11" ;;
+    buster)     DBIAN_VER="10" ;;
+    *)          DBIAN_VER="12" ;;
+esac
+DOCKER_VERSION=5:28.2.2-1~debian.${DBIAN_VER}~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.7.27-1
 LINUX_KERNEL_VERSION=6.12.41+deb13
 
@@ -190,7 +197,7 @@ fi
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
 
 ## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
+sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./target/debs/${BLDENV:-bookworm}/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
 
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
@@ -335,7 +342,7 @@ if [[ $CONFIGURED_ARCH == amd64 ]]; then
     ## Pre-install hardware drivers
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install      \
         firmware-linux-nonfree \
-        firmware-intel-misc
+        $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "firmware-intel-misc")
 fi
 
 ## Pre-install the fundamental packages
@@ -398,9 +405,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32t64        \
-    libgrpc29t64            \
-    libgrpc++1.51t64        \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "libprotobuf32t64 libgrpc29t64 libgrpc++1.51t64" || echo "libprotobuf32 libgrpc29 libgrpc++1.51") \
     haveged                 \
     gpg                     \
     dmidecode               \
@@ -414,7 +419,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    tzdata-legacy           \
+    $([[ "$IMAGE_DISTRO" == "trixie" ]] && echo "tzdata-legacy") \
     nvme-cli
 
 if [[ "${IMAGE_TYPE}" == "recovery" ]]; then
@@ -481,11 +486,17 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
-	sudo cp $debs_path/grub*.deb $FILESYSTEM_ROOT
-	basename_deb_packages=$(basename -a $debs_path/grub*.deb | sed 's,^,./,')
+    grub_debs=($debs_path/grub*.deb)
+    if [ -e "${grub_debs[0]}" ]; then
+	sudo cp "${grub_debs[@]}" $FILESYSTEM_ROOT
+	basename_deb_packages=""
+	for deb in "${grub_debs[@]}"; do
+	    basename_deb_packages="$basename_deb_packages ./$(basename "$deb")"
+	done
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
-	sudo rm $FILESYSTEM_ROOT/grub*.deb
+	sudo rm -f $FILESYSTEM_ROOT/grub*.deb
 	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
+    fi
 
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
         GRUB_PKG=grub-pc-bin
@@ -493,7 +504,10 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
         GRUB_PKG=grub-efi-arm64-bin
     fi
 
-    sudo cp $debs_path/${GRUB_PKG}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    grub_efi_debs=($debs_path/${GRUB_PKG}*.deb)
+    if [ -e "${grub_efi_debs[0]}" ]; then
+        sudo cp "${grub_efi_debs[@]}" $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    fi
 fi
 
 ## Disable kexec supported reboot which was installed by default

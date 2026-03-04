@@ -1,1 +1,0 @@
-../sonie-installer/utils.sh
