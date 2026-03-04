@@ -322,66 +322,66 @@ main() {
 
     log_info "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 
+    # Ensure XBOOTLDR is mounted at /boot for subsequent installers (sonic-installer)
+    # log_info "Preparing environment for subsequent installers..."
+
+    if is_mounted /boot; then
+        log_info "/boot is already mounted (likely in SONIE environment)."
+    else
+        log_error "/boot is not mounted. Exiting."
+        exit 1
+    fi
+
+    if [ ! -d /boot/grub ]; then
+        log_error "/boot/grub not found. Exiting."
+        exit 1
+    else
+        log_info "/boot/grub found."
+    fi
+
+    log_info "Ensuring ${demo_mnt} is mounted to /host"
+    # unmount /host/grub first
+    if is_mounted /host/grub; then
+        log_info "/host/grub is mounted, unmounting..."
+        umount /host/grub || log_warn "Failed to unmount /host/grub"
+    fi
+    # Ensure /host is mounted so sonic-installer can find image-A/B
+    if is_mounted /host; then
+        log_info "/host is already mounted. Remounting to ensure it points to ${demo_mnt}..."
+        umount /host || log_warn "Failed to unmount /host"
+    fi
+
     if [ "$install_env" = "sonie" ]; then
-        # Ensure XBOOTLDR is mounted at /boot for subsequent installers (sonic-installer)
-        # log_info "Preparing environment for subsequent installers..."
-
-        if is_mounted /boot; then
-            log_info "/boot is already mounted (likely in SONIE environment)."
-        else
-            log_error "/boot is not mounted. Exiting."
-            exit 1
-        fi
-
-        if [ ! -d /boot/grub ]; then
-            log_error "/boot/grub not found. Exiting."
-            exit 1
-        else
-            log_info "/boot/grub found."
-        fi
-
-        log_info "Ensuring ${demo_mnt} is mounted to /host"
-        # unmount /host/grub first
-        if is_mounted /host/grub; then
-            log_info "/host/grub is mounted, unmounting..."
-            umount /host/grub || log_warn "Failed to unmount /host/grub"
-        fi
-        # Ensure /host is mounted so sonic-installer can find image-A/B
-        if is_mounted /host; then
-            log_info "/host is already mounted. Remounting to ensure it points to ${demo_mnt}..."
-            umount /host || log_warn "Failed to unmount /host"
-        fi
-
         mount --make-rprivate / || log_warn "Failed to make / rprivate"
-        mount --move "${demo_mnt}" /host
-        demo_mnt="/host"
+    fi
+    mount --move "${demo_mnt}" /host
+    demo_mnt="/host"
 
-        # Ensure /host/grub points to /boot/grub
-        if [ ! -d /host/grub ]; then
-            log_info "Creating /host/grub directory..."
-            mkdir -p /host/grub || log_error "Failed to create /host/grub"
-        else
-            log_info "/host/grub already exists, preserving it."
-        fi
-        # Ensure /boot/grub exists to support binding it to /host/grub
-        if [ ! -d /boot/grub ]; then
-            mkdir -p /boot/grub
-        fi
+    # Ensure /host/grub points to /boot/grub
+    if [ ! -d /host/grub ]; then
+        log_info "Creating /host/grub directory..."
+        mkdir -p /host/grub || log_error "Failed to create /host/grub"
+    else
+        log_info "/host/grub already exists, preserving it."
+    fi
+    # Ensure /boot/grub exists to support binding it to /host/grub
+    if [ ! -d /boot/grub ]; then
+        mkdir -p /boot/grub
+    fi
 
+    if [ -d /boot/grub ]; then
+        log_info "/boot/grub found."
+    fi
+
+    if ! is_mounted /host/grub; then
         if [ -d /boot/grub ]; then
-            log_info "/boot/grub found."
-        fi
-
-        if ! is_mounted /host/grub; then
-            if [ -d /boot/grub ]; then
-                log_info "Mounting /boot/grub to /host/grub"
-                mount --bind /boot/grub /host/grub || log_error "Failed to bind /boot/grub to /host/grub"
-            else
-                log_warn "/boot/grub not found, skipping /host/grub bind"
-            fi
+            log_info "Mounting /boot/grub to /host/grub"
+            mount --bind /boot/grub /host/grub || log_error "Failed to bind /boot/grub to /host/grub"
         else
-            log_info "/host/grub is already mounted, preserving it."
+            log_warn "/boot/grub not found, skipping /host/grub bind"
         fi
+    else
+        log_info "/host/grub is already mounted, preserving it."
     fi
 
     # Update Bootloader Menu with installed image
