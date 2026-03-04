@@ -1,0 +1,271 @@
+#!/usr/bin/python3
+
+"""
+    Script to show SFP IRQ status and actions.
+    This script gets the SFP data from State DB.
+"""
+
+import ast
+import os
+import re
+import sys
+
+import click
+from natsort import natsorted
+from sonic_py_common.interface import front_panel_prefix, backplane_prefix
+from sonic_py_common import multi_asic
+from sonic_py_common import device_info
+from tabulate import tabulate
+from utilities_common import multi_asic as multi_asic_util
+from portconfig import get_port_config
+
+irq_dict_keys = [
+    'DP1State', 'DP2State', 'DP3State', 'DP4State', 'DP5State', 'DP6State', 'DP7State', 'DP8State',
+    'Interrupt',
+    'config_state_hostlane1', 'config_state_hostlane2', 'config_state_hostlane3', 'config_state_hostlane4',
+    'config_state_hostlane5', 'config_state_hostlane6', 'config_state_hostlane7', 'config_state_hostlane8',
+    'datapath_firmware_fault',
+    'dpinit_pending_hostlane',
+    'dpinit_pending_hostlane1', 'dpinit_pending_hostlane2', 'dpinit_pending_hostlane3', 'dpinit_pending_hostlane4',
+    'dpinit_pending_hostlane5', 'dpinit_pending_hostlane6', 'dpinit_pending_hostlane7', 'dpinit_pending_hostlane8',
+    'dpstatechanged_flag',
+    'lasertemphighalarm_flag', 'lasertemphighwarning_flag', 'lasertemplowalarm_flag', 'lasertemplowwarning_flag',
+    'module_fault_cause', 'module_firmware_fault', 'module_state', 'module_state_changed',
+    'rxcdrlol',
+    #'rxcdrlol1', 'rxcdrlol2', 'rxcdrlol3', 'rxcdrlol4', 'rxcdrlol5', 'rxcdrlol6', 'rxcdrlol7', 'rxcdrlol8',
+    'rxlos',
+    #'rxlos1', 'rxlos2', 'rxlos3', 'rxlos4', 'rxlos5', 'rxlos6', 'rxlos7', 'rxlos8',
+    'rxoutput_status_hostlane',
+    #'rxoutput_status_hostlane1', 'rxoutput_status_hostlane2',
+    #'rxoutput_status_hostlane3', 'rxoutput_status_hostlane4', 'rxoutput_status_hostlane5',
+    #'rxoutput_status_hostlane6', 'rxoutput_status_hostlane7', 'rxoutput_status_hostlane8',
+    'rxpowerhighalarm_flag',
+    #'rxpowerhighalarm_flag1', 'rxpowerhighalarm_flag2',
+    #'rxpowerhighalarm_flag3', 'rxpowerhighalarm_flag4', 'rxpowerhighalarm_flag5',
+    #'rxpowerhighalarm_flag6', 'rxpowerhighalarm_flag7', 'rxpowerhighalarm_flag8',
+    'rxpowerhighwarning_flag',
+    #'rxpowerhighwarning_flag1', 'rxpowerhighwarning_flag2',
+    #'rxpowerhighwarning_flag3', 'rxpowerhighwarning_flag4', 'rxpowerhighwarning_flag5',
+    #'rxpowerhighwarning_flag6', 'rxpowerhighwarning_flag7', 'rxpowerhighwarning_flag8',
+    'rxpowerlowalarm_flag',
+    #'rxpowerlowalarm_flag1', 'rxpowerlowalarm_flag2',
+    #'rxpowerlowalarm_flag3', 'rxpowerlowalarm_flag4', 'rxpowerlowalarm_flag5',
+    #'rxpowerlowalarm_flag6', 'rxpowerlowalarm_flag7', 'rxpowerlowalarm_flag8',
+    'rxpowerlowwarning_flag',
+    #'rxpowerlowwarning_flag1', 'rxpowerlowwarning_flag2',
+    #'rxpowerlowwarning_flag3', 'rxpowerlowwarning_flag4', 'rxpowerlowwarning_flag5',
+    #'rxpowerlowwarning_flag6', 'rxpowerlowwarning_flag7', 'rxpowerlowwarning_flag8',
+    'temphighalarm_flag', 'temphighwarning_flag', 'templowalarm_flag', 'templowwarning_flag',
+    'txadaptiveinputeqfault_flag',
+    'txbiashighalarm_flag',
+    #'txbiashighalarm_flag1', 'txbiashighalarm_flag2',
+    #'txbiashighalarm_flag3', 'txbiashighalarm_flag4', 'txbiashighalarm_flag5',
+    #'txbiashighalarm_flag6', 'txbiashighalarm_flag7', 'txbiashighalarm_flag8',
+    'txbiashighwarning_flag',
+    #'txbiashighwarning_flag1', 'txbiashighwarning_flag2',
+    #'txbiashighwarning_flag3', 'txbiashighwarning_flag4', 'txbiashighwarning_flag5',
+    #'txbiashighwarning_flag6', 'txbiashighwarning_flag7', 'txbiashighwarning_flag8',
+    'txbiaslowalarm_flag',
+    #'txbiaslowalarm_flag1', 'txbiaslowalarm_flag2',
+    #'txbiaslowalarm_flag3', 'txbiaslowalarm_flag4', 'txbiaslowalarm_flag5',
+    #'txbiaslowalarm_flag6', 'txbiaslowalarm_flag7', 'txbiaslowalarm_flag8',
+    'txbiaslowwarning_flag',
+    #'txbiaslowwarning_flag1', 'txbiaslowwarning_flag2',
+    #'txbiaslowwarning_flag3', 'txbiaslowwarning_flag4', 'txbiaslowwarning_flag5',
+    #'txbiaslowwarning_flag6', 'txbiaslowwarning_flag7', 'txbiaslowwarning_flag8',
+    'txcdrlol_hostlane',
+    #'txcdrlol_hostlane1', 'txcdrlol_hostlane2',
+    #'txcdrlol_hostlane3', 'txcdrlol_hostlane4', 'txcdrlol_hostlane5',
+    #'txcdrlol_hostlane6', 'txcdrlol_hostlane7', 'txcdrlol_hostlane8',
+    'txfault',
+    # 'txfault1', 'txfault2', 'txfault3', 'txfault4', 'txfault5', 'txfault6', 'txfault7', 'txfault8',
+    'txlos_hostlane',
+    #'txlos_hostlane1', 'txlos_hostlane2',
+    #'txlos_hostlane3', 'txlos_hostlane4', 'txlos_hostlane5',
+    #'txlos_hostlane6', 'txlos_hostlane7', 'txlos_hostlane8',
+    'txoutput_status',
+    #'txoutput_status1', 'txoutput_status2',
+    #'txoutput_status3', 'txoutput_status4', 'txoutput_status5',
+    #'txoutput_status6', 'txoutput_status7', 'txoutput_status8',
+    'txpowerhighalarm_flag',
+    #'txpowerhighalarm_flag1', 'txpowerhighalarm_flag2',
+    #'txpowerhighalarm_flag3', 'txpowerhighalarm_flag4', 'txpowerhighalarm_flag5',
+    #'txpowerhighalarm_flag6', 'txpowerhighalarm_flag7', 'txpowerhighalarm_flag8',
+    'txpowerhighwarning_flag',
+    #'txpowerhighwarning_flag1', 'txpowerhighwarning_flag2',
+    #'txpowerhighwarning_flag3', 'txpowerhighwarning_flag4', 'txpowerhighwarning_flag5',
+    #'txpowerhighwarning_flag6', 'txpowerhighwarning_flag7', 'txpowerhighwarning_flag8',
+    'txpowerlowalarm_flag',
+    #'txpowerlowalarm_flag1', 'txpowerlowalarm_flag2',
+    #'txpowerlowalarm_flag3', 'txpowerlowalarm_flag4', 'txpowerlowalarm_flag5',
+    #'txpowerlowalarm_flag6', 'txpowerlowalarm_flag7', 'txpowerlowalarm_flag8',
+    'txpowerlowwarning_flag',
+    #'txpowerlowwarning_flag1', 'txpowerlowwarning_flag2',
+    #'txpowerlowwarning_flag3', 'txpowerlowwarning_flag4', 'txpowerlowwarning_flag5',
+    #'txpowerlowwarning_flag6', 'txpowerlowwarning_flag7', 'txpowerlowwarning_flag8',
+    'vcchighalarm_flag', 'vcchighwarning_flag', 'vcclowalarm_flag', 'vcclowwarning_flag'
+]
+
+class SFPIRQShow(object):
+
+    def __init__(self, intf_name):
+        super(SFPIRQShow, self).__init__()
+        self.db = None
+        self.intf_name = intf_name
+        self.table = []
+        self.output = ''
+        self.multi_asic = multi_asic_util.MultiAsic()
+        (platform, hwsku) = device_info.get_platform_and_hwsku()
+        self.ports, _, _ = get_port_config(hwsku, platform)
+
+    # Convert sfp info in DB to cli output string
+    def output_irq_info_detail(self, sfp_info_dict):
+        indent = ' ' * 8
+        output = ''
+        extkeys = ["Port", "Action", "timestamp"]
+        showkeys = []
+
+        if sfp_info_dict.get('Interrupt') == 'Interrupt asserted':
+            showkeys = irq_dict_keys + extkeys
+        #else:
+        #    showkeys = extkeys
+
+        for key in showkeys:
+            output += '{}{}: {}\n'.format(indent, key, sfp_info_dict[key])
+
+        return output
+
+    # Convert sfp info and dom sensor info in DB to cli output string
+    def output_irq_info(self, state_db, interface_name):
+        output = ''
+
+        sfp_info_dict = state_db.get_all(state_db.STATE_DB, 'TRANSCEIVER_IRQ_INFO|{}'.format(self.master_port(interface_name)))
+        if sfp_info_dict.get('Interrupt') == 'Interrupt asserted':
+            output = interface_name + ': ' + 'Interrupt asserted' + '\n'
+            sfp_info_output = self.output_irq_info_detail(sfp_info_dict)
+            output += sfp_info_output
+        else:
+            output = interface_name + ': ' + 'Interrupt not asserted' + '\n'
+            sfp_info_output = self.output_irq_info_detail(sfp_info_dict)
+            output += sfp_info_output
+
+        return output
+
+    def master_port(self, interface_name):
+        port_index = self.ports[interface_name]['index']
+        split_ports = natsorted([p for p in self.ports if self.ports[p]['index'] == str(port_index)])
+        master_port = split_ports[0]
+        return master_port
+
+    @multi_asic_util.run_on_multi_asic
+    def get_detail(self):
+        if self.intf_name is not None:
+            presence = self.db.exists(self.db.STATE_DB, 'TRANSCEIVER_IRQ_INFO|{}'.format(self.master_port(self.intf_name)))
+            if presence:
+                self.output = self.output_irq_info(self.db, self.intf_name)
+            else:
+                self.output += (self.intf_name + ': ' + 'SFP IRQ Information Not Avaliable' + '\n')
+        else:
+            port_table_keys = self.db.keys(self.db.APPL_DB, "PORT_TABLE:*")
+            sorted_table_keys = natsorted(port_table_keys)
+            for i in sorted_table_keys:
+                interface = re.split(':', i, maxsplit=1)[-1].strip()
+                if interface and interface.startswith(front_panel_prefix()) and not interface.startswith(backplane_prefix()):
+                    presence = self.db.exists(self.db.STATE_DB, 'TRANSCEIVER_IRQ_INFO|{}'.format(self.master_port(interface)))
+                    if presence:
+                        self.output += self.output_irq_info(self.db, interface)
+                    else:
+                        self.output += (interface + ': ' + 'SFP IRQ Information Not Avaliable' + '\n')
+
+                    self.output += '\n'
+
+    def display_detail(self):
+        click.echo(self.output)
+
+    @multi_asic_util.run_on_multi_asic
+    def get_summary(self):
+        port_table = []
+
+        port_table_keys = self.db.keys(self.db.APPL_DB, "PORT_TABLE:*")
+        for i in port_table_keys:
+            key = re.split(':', i, maxsplit=1)[-1].strip()
+            if key and key.startswith(front_panel_prefix()) and not key.startswith(backplane_prefix()):
+                presence = self.db.exists(self.db.STATE_DB, 'TRANSCEIVER_IRQ_INFO|{}'.format(self.master_port(key)))
+                if presence:
+                    sfp_info_dict = self.db.get_all(self.db.STATE_DB, 'TRANSCEIVER_IRQ_INFO|{}'.format(self.master_port(key)))
+                    if sfp_info_dict.get('Interrupt') == 'Interrupt asserted':
+                        irq = 'Yes'
+
+                        if sfp_info_dict.get('vcchighalarm_flag') == 'True':
+                            vcc = 'High Alarm'
+                        elif sfp_info_dict.get('vcchighwarning_flag') == 'True':
+                            vcc = 'High Warning'
+                        elif sfp_info_dict.get('vcclowalarm_flag') == 'True':
+                            vcc = 'Low Alarm'
+                        elif sfp_info_dict.get('vcclowwarning_flag') == 'True':
+                            vcc = 'Low Warning'
+                        else:
+                            vcc = 'Normal'
+
+                        if sfp_info_dict.get('temphighalarm_flag') == 'True':
+                            temp = 'High Alarm'
+                        elif sfp_info_dict.get('temphighwarning_flag') == 'True':
+                            temp = 'High Warning'
+                        elif sfp_info_dict.get('templowalarm_flag') == 'True':
+                            temp = 'Low Alarm'
+                        elif sfp_info_dict.get('templowwarning_flag') == 'True':
+                            temp = 'Low Warning'
+                        else:
+                            temp = 'Normal'
+                        #txlos = sfp_info_dict.get('L-Tx LOS flag')
+                        #rxlos = sfp_info_dict.get('L-Rx LOS')
+                    else:
+                        irq = 'No'
+                        vcc = 'N/A'
+                        temp = 'N/A'
+                        #txlos = 'N/A'
+                        #rxlos = 'N/A'
+                    port = sfp_info_dict.get('Port')
+                    action = sfp_info_dict.get('Action')
+                    ts = sfp_info_dict.get('timestamp')
+                    #port_table.append((key, port, irq, vcc, temp, txlos, rxlos, action, ts))
+                    port_table.append((key, port, irq, vcc, temp, action, ts))
+                else:
+                    port_table.append((key, port, 'Not present'))
+
+        self.table += port_table
+
+    def display_summary(self):
+        header = ['Interface', 'Port', 'IRQ', 'Vcc', 'Temp',
+        #          'Tx LOS', 'Rx LOS', 'Action', 'Timestamp']
+                  'Action', 'Timestamp']
+        sorted_port_table = natsorted(self.table)
+        click.echo(tabulate(sorted_port_table, header))
+
+
+# This is our main entrypoint - the main 'sfpshow' command
+
+@click.group()
+def cli():
+    """qsfpdd-irq-show - Command line utility for display SFP transceivers IRQ status"""
+    pass
+
+# 'detail' subcommand
+@cli.command()
+@click.option('-p', '--port', metavar='<port_name>', help="Display SFP transceiver IRQ status port <port_name> only")
+def detail(port):
+    """Show SFP transceiver IRQ detail status"""
+    irq = SFPIRQShow(port)
+    irq.get_detail()
+    irq.display_detail()
+
+# 'status' subcommand
+@cli.command()
+def status():
+    """Show SFP transceiver IRQ summary status"""
+    irq = SFPIRQShow(None)
+    irq.get_summary()
+    irq.display_summary()
+
+if __name__ == "__main__":
+    cli()
