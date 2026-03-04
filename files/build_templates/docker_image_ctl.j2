@@ -727,7 +727,10 @@ start() {
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
     -v /dev:/dev \
-	--device-cgroup-rule='a *:* rw' \
+    --device-cgroup-rule='a *:* rw' \
+    -v /dev/null:/dev/log \
+    -v /dev/null:/dev/kmsg \
+    -v /dev/null:/dev/console \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
