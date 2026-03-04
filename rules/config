@@ -196,6 +196,13 @@ INCLUDE_DHCP_SERVER ?= n
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
 
+# INCLUDE_PTF - build docker-ptf and docker-ptf-sai test containers.
+# These are only needed for PTF (Packet Test Framework) testing and are
+# not included in the final switch image. Disabling saves ~28 minutes
+# of build time by skipping p4lang-pi, p4lang-bmv2, p4lang-p4c, and
+# their dependencies.
+INCLUDE_PTF ?= y
+
 # INCLUDE_VS_DASH_SAI - build dash-sai for VS
 INCLUDE_VS_DASH_SAI ?= y
 
