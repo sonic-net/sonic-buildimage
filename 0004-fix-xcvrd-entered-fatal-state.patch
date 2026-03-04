@@ -1,0 +1,54 @@
+diff --git a/src/sonic-platform-daemons/sonic-xcvrd/xcvrd/xcvrd.py b/src/sonic-platform-daemons/sonic-xcvrd/xcvrd/xcvrd.py
+index c53d2fc..4f0c47c 100644
+--- a/src/sonic-platform-daemons/sonic-xcvrd/xcvrd/xcvrd.py
++++ b/src/sonic-platform-daemons/sonic-xcvrd/xcvrd/xcvrd.py
+@@ -209,34 +209,26 @@ def post_port_sfp_info_to_db(logical_port_name, port_mapping, table, transceiver
+                 is_replaceable = _wrapper_is_replaceable(physical_port)
+                 # if cmis is supported by the module
+                 if 'cmis_rev' in port_info_dict:
+-                    fvs = swsscommon.FieldValuePairs(
++                    all_fvs_data_as_list = (
+                         [(field, str(value)) for field, value in port_info_dict.items()] +
+                         [('is_replaceable', str(is_replaceable))]
+                     )
++                    fvs = swsscommon.FieldValuePairs()
++                    for key, value in all_fvs_data_as_list:
++                        fvs.push_back((key,value))
+                 # else cmis is not supported by the module
+                 else:
+-                    fvs = swsscommon.FieldValuePairs([
+-                        ('type', port_info_dict['type']),
+-                        ('vendor_rev', port_info_dict['vendor_rev']),
+-                        ('serial', port_info_dict['serial']),
+-                        ('manufacturer', port_info_dict['manufacturer']),
+-                        ('model', port_info_dict['model']),
+-                        ('vendor_oui', port_info_dict['vendor_oui']),
+-                        ('vendor_date', port_info_dict['vendor_date']),
+-                        ('connector', port_info_dict['connector']),
+-                        ('encoding', port_info_dict['encoding']),
+-                        ('ext_identifier', port_info_dict['ext_identifier']),
+-                        ('ext_rateselect_compliance', port_info_dict['ext_rateselect_compliance']),
+-                        ('cable_type', port_info_dict['cable_type']),
+-                        ('cable_length', str(port_info_dict['cable_length'])),
+-                        ('specification_compliance', port_info_dict['specification_compliance']),
+-                        ('nominal_bit_rate', str(port_info_dict['nominal_bit_rate'])),
+-                        ('application_advertisement', port_info_dict['application_advertisement']
+-                        if 'application_advertisement' in port_info_dict else 'N/A'),
+-                        ('is_replaceable', str(is_replaceable)),
+-                        ('dom_capability', port_info_dict['dom_capability']
+-                        if 'dom_capability' in port_info_dict else 'N/A')
+-                    ])
++                    fvs = swsscommon.FieldValuePairs()
++                    fields_to_process = [
++                        'type', 'vendor_rev', 'serial', 'manufacturer', 'model',
++                        'vendor_oui', 'vendor_date', 'connector', 'encoding', 'ext_identifier',
++                        'ext_rateselect_compliance', 'cable_type', 'cable_length', 'specification_compliance',
++                        'nominal_bit_rate', 'application_advertisement', 'dom_capability'
++                    ]
++                    for key in fields_to_process:
++                        value = port_info_dict.get(key, 'N/A')
++                        fvs.push_back((key, str(value)))
++                    fvs.push_back(('is_replaceable', str(is_replaceable)))
+                 table.set(port_name, fvs)
+             else:
+                 return SFP_EEPROM_NOT_READY
