@@ -94,8 +94,7 @@ class TestBMC:
         assert ret == RedfishClient.ERR_CODE_OK
         assert msg == ''
         mock_get_min_length.assert_called_once()
-        mock_set_min_length.assert_any_call(8)
-        mock_set_min_length.assert_any_call(12)
+        assert mock_set_min_length.call_args_list == [mock.call(8), mock.call(12)]
         mock_change_password.assert_called_once_with('testpass', BMCBase.ROOT_ACCOUNT)
 
     @mock.patch('sonic_py_common.device_info.get_bmc_build_config', \
