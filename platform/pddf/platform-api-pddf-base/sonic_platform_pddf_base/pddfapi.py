@@ -408,7 +408,74 @@ class PddfApi():
         return ret
 
     def show_attr_voltage_sensor_device(self, dev, ops):
+        sensor_type = dev.get('i2c', {}).get('dev_attr', {}).get('sensor_type', '')
+        if sensor_type == 'iio':
+            return self.show_attr_iio_device(dev, ops, "voltage-sensors")
+        # hwmon (default) and smbus both return sysfs paths;
+        # smbus reads are handled in PddfVoltageSensor.get_value() directly.
         return self.show_attr_hwmon_device(dev, ops, "voltage-sensors")
+
+    def show_attr_iio_device(self, dev, ops, data_sysfs_key):
+        """Resolve IIO sysfs path for voltage/current sensors on ADC chips.
+
+        IIO ADCs (e.g. max1139, max11613) expose voltage readings at:
+            /sys/bus/i2c/devices/{bus}-{addr}/iio:device*/in_voltageN_raw
+        where N is the ADC channel_id from dev_attr.
+        """
+        def _path_expand(*path):
+            full_path = glob.glob(os.path.join(*path))
+            if not full_path:
+                return None
+            return full_path[0]
+
+        ret = []
+        if 'i2c' not in dev.keys():
+            return ret
+        attr_name = ops['attr']
+        attr_list = dev['i2c']['attr_list'] if 'attr_list' in dev.get('i2c', {}) else []
+        KEY = data_sysfs_key
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        # Determine which device has the I2C topology info
+        if "virt_parent" in dev['dev_info']:
+            i2c_dev = self.data[dev['dev_info']['virt_parent']]
+        else:
+            i2c_dev = dev
+
+        dev_attr = dev.get('i2c', {}).get('dev_attr', {})
+        channel_id = dev_attr.get('channel_id', '0')
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                # For IIO, drv_attr_name overrides the default IIO path component
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = 'in_voltage{}_raw'.format(channel_id)
+
+                if 'topo_info' in i2c_dev['i2c']:
+                    path = self.show_device_sysfs(i2c_dev, ops) + "/%d-00%02x/" % (
+                        int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
+                        int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
+                    full_path = _path_expand(path, 'iio:device*', real_name)
+                elif 'path_info' in i2c_dev['i2c']:
+                    path = i2c_dev['i2c']['path_info']['sysfs_base_path']
+                    full_path = _path_expand(path, real_name)
+                else:
+                    full_path = None
+
+                if full_path is None:
+                    return []
+
+                dsysfs_path = full_path
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(full_path)
+
+        return ret
 
     def show_attr_current_sensor_device(self, dev, ops):
         return self.show_attr_hwmon_device(dev, ops, "current-sensors")
