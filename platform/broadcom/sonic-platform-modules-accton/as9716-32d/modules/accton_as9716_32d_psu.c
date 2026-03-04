@@ -34,8 +34,13 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 
-#define MAX_MODEL_NAME          16
+#define MAX_MODEL_NAME          19
 #define MAX_SERIAL_NUMBER       19
+#define FAN_DIR_LEN 3
+
+const char FAN_DIR_F2B[] = "F2B";
+const char FAN_DIR_B2F[] = "B2F";
+const char FAN_DIR_UNKNOWN[] = "";
 
 static ssize_t show_status(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_string(struct device *dev, struct device_attribute *da, char *buf);
@@ -55,8 +60,9 @@ struct as9716_32d_psu_data {
     unsigned long       last_updated;    /* In jiffies */
     u8  index;           /* PSU index */
     u8  status;          /* Status(present/power_good) register read from CPLD */
-    char model_name[MAX_MODEL_NAME]; /* Model name, read from eeprom */
-    char serial_number[MAX_SERIAL_NUMBER];
+    char model_name[MAX_MODEL_NAME+1]; /* Model name, read from eeprom */
+    char serial_number[MAX_SERIAL_NUMBER+1];
+    const char* fan_dir;
 };
 
 static struct as9716_32d_psu_data *as9716_32d_psu_update_device(struct device *dev);
@@ -65,7 +71,8 @@ enum as9716_32d_psu_sysfs_attributes {
     PSU_PRESENT,
     PSU_MODEL_NAME,
     PSU_POWER_GOOD,
-    PSU_SERIAL_NUMBER
+    PSU_SERIAL_NUMBER,
+    PSU_FAN_DIR
 };
 
 /* sysfs attributes for hwmon
@@ -74,13 +81,14 @@ static SENSOR_DEVICE_ATTR(psu_present,    S_IRUGO, show_status,    NULL, PSU_PRE
 static SENSOR_DEVICE_ATTR(psu_model_name, S_IRUGO, show_string,    NULL, PSU_MODEL_NAME);
 static SENSOR_DEVICE_ATTR(psu_power_good, S_IRUGO, show_status,    NULL, PSU_POWER_GOOD);
 static SENSOR_DEVICE_ATTR(psu_serial_number, S_IRUGO, show_string, NULL, PSU_SERIAL_NUMBER);
-
+static SENSOR_DEVICE_ATTR(psu_fan_dir, S_IRUGO, show_string, NULL, PSU_FAN_DIR);
 
 static struct attribute *as9716_32d_psu_attributes[] = {
     &sensor_dev_attr_psu_present.dev_attr.attr,
     &sensor_dev_attr_psu_model_name.dev_attr.attr,
     &sensor_dev_attr_psu_power_good.dev_attr.attr,
     &sensor_dev_attr_psu_serial_number.dev_attr.attr,
+    &sensor_dev_attr_psu_fan_dir.dev_attr.attr,
     NULL
 };
 
@@ -106,7 +114,7 @@ static ssize_t show_string(struct device *dev, struct device_attribute *da,
 {
    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
     struct as9716_32d_psu_data *data = as9716_32d_psu_update_device(dev);
-    char *ptr = NULL;
+    const char *ptr = NULL;
 
     if (!data->valid) {
         return -EIO;
@@ -118,6 +126,9 @@ static ssize_t show_string(struct device *dev, struct device_attribute *da,
 		break;
 	case PSU_SERIAL_NUMBER:
 		ptr = data->serial_number;
+		break;
+	case PSU_FAN_DIR:
+		ptr = data->fan_dir;
 		break;
 	default:
 		return -EINVAL;
@@ -243,6 +254,44 @@ static int as9716_32d_psu_read_block(struct i2c_client *client, u8 command, u8 *
     return result;
 }
 
+enum psu_type {
+    PSU_TYPE_AC_ACBEL_FSF019_F2B, // FSF019
+    PSU_TYPE_AC_ACBEL_FSH082_F2B, // FSH082-610G
+    PSU_TYPE_AC_ACBEL_FSH095_B2F, // FSH095-610G
+    PSU_TYPE_3Y_YESM1300AM // YESM1300AM-2A01P10(F2B) or YESM1300AM-2R01P10(B2F)
+};
+
+struct model_name_info {
+    enum psu_type type;
+    u8 offset;
+    u8 length;
+    u8 chk_length;
+    char* model_name;
+    const char* fan_dir;
+};
+
+struct serial_number_info {
+    enum psu_type type;
+    u8 offset;
+    u8 length;
+    u8 chk_length;
+    char* serial_number;
+};
+
+struct model_name_info models[] = {
+    { PSU_TYPE_AC_ACBEL_FSF019_F2B, 0x20, 13, 6, "FSF019", FAN_DIR_F2B },
+    { PSU_TYPE_AC_ACBEL_FSH082_F2B, 0x20, 13, 6, "FSH082", FAN_DIR_F2B },
+    { PSU_TYPE_AC_ACBEL_FSH095_B2F, 0x20, 13, 6, "FSH095", FAN_DIR_B2F },
+    { PSU_TYPE_3Y_YESM1300AM, 0x20, 19, 8, "YESM1300", NULL }
+};
+
+struct serial_number_info serials[] = {
+    { PSU_TYPE_AC_ACBEL_FSF019_F2B, 0x2e, 16, 16, "FSF019" },
+    { PSU_TYPE_AC_ACBEL_FSH082_F2B, 0x35, 18, 18, "FSH082" },
+    { PSU_TYPE_AC_ACBEL_FSH095_B2F, 0x35, 18, 18, "FSH095" },
+    { PSU_TYPE_3Y_YESM1300AM, 0x35, 19, 19, "YESM1300" }
+};
+
 static struct as9716_32d_psu_data *as9716_32d_psu_update_device(struct device *dev)
 {
     struct i2c_client *client = to_i2c_client(dev);
@@ -252,53 +301,102 @@ static struct as9716_32d_psu_data *as9716_32d_psu_update_device(struct device *d
 
     if (time_after(jiffies, data->last_updated + HZ + HZ / 2)
             || !data->valid) {
-        int status;
+        int i, status;
         int power_good = 0;
 
         dev_dbg(&client->dev, "Starting as9716_32d update\n");
+        data->valid = 0;
 
         /* Read psu status */
         status = as9716_32d_cpld_read(0x60, 0x3);
 
         if (status < 0) {
             dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);
+            goto exit;
         }
         else {
             data->status = status;
         }
 
         /* Read model name */
-        memset(data->model_name, 0, sizeof(data->model_name));
-        memset(data->serial_number, 0, sizeof(data->serial_number));
+        data->model_name[0] = '\0';
+        data->serial_number[0] = '\0';
+        data->fan_dir = FAN_DIR_UNKNOWN;
         power_good = (data->status >> (3-data->index) & 0x1);
-       
+
         if (power_good) {
-            status = as9716_32d_psu_read_block(client, 0x20, data->model_name,
-                                               ARRAY_SIZE(data->model_name)-1);                                               
-            if (status < 0) {
-                data->model_name[0] = '\0';
-                dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
+            for (i = 0; i < ARRAY_SIZE(models); i++) {
+                memset(data->model_name, 0, sizeof(data->model_name));
+                memset(data->serial_number, 0, sizeof(data->serial_number));
+
+                status = as9716_32d_psu_read_block(client, models[i].offset,
+                                                data->model_name, models[i].length);
+                if (status < 0) {
+                    data->model_name[0] = '\0';
+                    dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x%x)\n",
+                                        client->addr, models[i].offset);
+                    goto exit;
+                }
+                else {
+                    data->model_name[models[i].length] = '\0';
+                }
+
+                /* Determine if the model name is known, if not, read next index
+                */
+                if (strncmp(data->model_name, models[i].model_name, models[i].chk_length) == 0) {
+                    status = as9716_32d_psu_read_block(client, serials[i].offset,
+                                                data->serial_number, serials[i].length);
+                    if (models[i].type == PSU_TYPE_3Y_YESM1300AM) {
+                        // Adjust model name for PSU_TYPE_3Y_YESM1300AM
+                        char buf[10] = {0};
+                        memcpy(buf, &data->model_name[9], 10);
+                        memcpy(&data->model_name[8], buf, 10);
+                        data->model_name[models[i].length-1] = '\0';
+
+                        if (data->model_name[12] == 'A')
+                            data->fan_dir = FAN_DIR_F2B; // YESM1300AM-2A01P10
+                        else
+                            data->fan_dir = FAN_DIR_B2F; // YESM1300AM-2R01P10
+                    }
+                    else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH082_F2B) ||
+                             (models[i].type == PSU_TYPE_AC_ACBEL_FSH095_B2F) ||
+                             (models[i].type == PSU_TYPE_AC_ACBEL_FSF019_F2B)) {
+                        // Adjust model name for FSH082 / FSH095 / FSF019
+                        char buf[4] = {0};
+                        memcpy(buf, &data->model_name[9], 4);
+                        memcpy(&data->model_name[7], buf, 4);
+                        data->model_name[6] = '-';
+                        data->model_name[11] = '\0';
+                        data->fan_dir = models[i].fan_dir;
+                    }
+                    else {
+                        data->fan_dir = models[i].fan_dir;
+                    }
+
+                    // Read serial number
+                    if (status < 0) {
+                        data->serial_number[0] = '\0';
+                        dev_dbg(&client->dev, "unable to read serial num from (0x%x) offset(0x%x)\n",
+                                        client->addr, serials[i].offset);
+                        goto exit;
+                    }
+                    else {
+                        data->serial_number[serials[i].length] = '\0';
+                        break;
+                    }
+                }
+                else {
+                    data->serial_number[0] = '\0'; // model does not match, read next model
+                }
             }
-            else {
-                data->model_name[ARRAY_SIZE(data->model_name)-1] = '\0';
-                
-            }
-             /* Read from offset 0x2e ~ 0x3d (16 bytes) */
-            status = as9716_32d_psu_read_block(client, 0x2e,data->serial_number, MAX_SERIAL_NUMBER);
-            if (status < 0)
-            {
-                data->serial_number[0] = '\0';
-                dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
-            }
-            data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
         }
 
         data->last_updated = jiffies;
         data->valid = 1;
     }
 
+exit:
     mutex_unlock(&data->update_lock);
-
     return data;
 }
 
@@ -307,4 +405,3 @@ module_i2c_driver(as9716_32d_psu_driver);
 MODULE_AUTHOR("Jostar Yang <jostar_yang@accton.com.tw>");
 MODULE_DESCRIPTION("as9716_32d_psu driver");
 MODULE_LICENSE("GPL");
-
