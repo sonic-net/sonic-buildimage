@@ -1,12 +1,21 @@
+]633;E;cat <<'HEADER'\x0a[PATCH] From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001\x0a\x0aFrom: Vasily Titskiy <vasily.titskiy@broadcom.com>\x0a\x0aSubject: [PATCH] Don't skip kernel routes uninstall\x0a\x0aSONiC ONLY: Remove !RIB_KERNEL_ROUTE condition so kernel routes\x0aalso get uninstalled properly.\x0a---\x0aHEADER\x0a;5757e206-5fad-4269-85f4-c9ede50a6217]633;C[PATCH] From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+
+From: Vasily Titskiy <vasily.titskiy@broadcom.com>
+
+Subject: [PATCH] Don't skip kernel routes uninstall
+
+SONiC ONLY: Remove !RIB_KERNEL_ROUTE condition so kernel routes
+also get uninstalled properly.
+---
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index da49dc7e2..edc348d21 100644
+index 2b09fa9a9..a56dc893f 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
-@@ -1509,7 +1509,7 @@ static void rib_process(struct route_node *rn)
+@@ -1498,7 +1498,7 @@ static void rib_process(struct route_node *rn)
  		rib_process_update_fib(zvrf, rn, old_fib, new_fib);
  	else if (new_fib)
  		rib_process_add_fib(zvrf, rn, new_fib);
--	else if (old_fib && !RIB_SYSTEM_ROUTE(old_fib))
+-	else if (old_fib && !RIB_KERNEL_ROUTE(old_fib))
 +	else if (old_fib)
  		rib_process_del_fib(zvrf, rn, old_fib);
  
