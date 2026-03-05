@@ -344,6 +344,12 @@
                 "BTH_OPCODE": "0x11/0xbf",
                 "AETH_SYNDROME": "0x60/0x60"
             },
+            "DATAACL|RULE2": {
+                "PRIORITY": "998",
+                "PACKET_ACTION": "COPY",
+                "IP_TYPE": "IPv4ANY",
+                "SRC_IP": "2.2.2.2/32"
+            },
             "DATAACL|RULE0": {
                 "PRIORITY": "999",
                 "PACKET_ACTION": "FORWARD",
