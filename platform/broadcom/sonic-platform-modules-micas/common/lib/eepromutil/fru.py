@@ -1,7 +1,22 @@
 #!/usr/bin/python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import collections
 from datetime import datetime, timedelta
-from bitarray import bitarray
 
 
 __DEBUG__ = "N"
@@ -27,17 +42,19 @@ def d_print(debug_info):
 class FruUtil():
     @staticmethod
     def decodeLength(value):
-        a = bitarray(8)
-        a.setall(True)
-        a[0:1] = 0
-        a[1:2] = 0
-        x = ord(a.tobytes())
-        return x & ord(value)
+        return 0x3f & ord(value)
 
     @staticmethod
-    def minToData():
+    def minToData(endtime = None):
         starttime = datetime(1996, 1, 1, 0, 0, 0)
-        endtime = datetime.now()
+        if isinstance(endtime, str):
+            try:
+                endtime = datetime.strptime(endtime, "%Y-%m-%d %H:%M:%S")
+            except Exception as e:
+                d_print("Invalid endtime format, endtime: %s, errmsg: %s, used datetime.now" % (endtime, str(e)))
+                endtime = datetime.now()
+        else:
+            endtime = datetime.now()
         seconds = (endtime - starttime).total_seconds()
         mins = seconds // 60
         m = int(round(mins))
@@ -51,12 +68,7 @@ class FruUtil():
     def getTypeLength(value):
         if value is None or len(value) == 0:
             return 0
-        a = bitarray(8)
-        a.setall(False)
-        a[0:1] = 1
-        a[1:2] = 1
-        x = ord(a.tobytes())
-        return x | len(value)
+        return 0xc0 | len(value)
 
     @staticmethod
     def checksum(b):
@@ -146,7 +158,7 @@ class BoardInfoArea(BaseArea):
     def __str__(self):
         formatstr = "version             : %x\n" \
                     "length              : %d \n" \
-                    "language            : %x \n" \
+                    "language            : %d \n" \
                     "mfg_date            : %s \n" \
                     "boardManufacturer   : %s \n" \
                     "boardProductName    : %s \n" \
@@ -247,8 +259,9 @@ class BoardInfoArea(BaseArea):
     def recalcute(self):
         d_print("boardInfoArea version:%x" % ord(self.boardversion))
         d_print("boardInfoArea length:%d" % self.size)
-        d_print("boardInfoArea language:%x" % self.language)
-        self.mfg_date = FruUtil.minToData()
+        d_print("boardInfoArea language:%d" % self.language)
+
+        self.mfg_date = FruUtil.minToData(self.mfg_date)
         d_print("boardInfoArea mfg_date:%x" % self.mfg_date)
 
         self.data = chr(ord(self.boardversion)) + \
@@ -396,7 +409,7 @@ class ProductInfoArea(BaseArea):
     def __str__(self):
         formatstr = "version             : %x\n" \
                     "length              : %d \n" \
-                    "language            : %x \n" \
+                    "language            : %d \n" \
                     "productManufacturer : %s \n" \
                     "productName         : %s \n" \
                     "productPartModelName: %s \n" \
@@ -576,7 +589,7 @@ class ProductInfoArea(BaseArea):
     def recalcute(self):
         d_print("product version:%x" % ord(self.areaversion))
         d_print("product length:%d" % self.size)
-        d_print("product language:%x" % self.language)
+        d_print("product language:%d" % self.language)
         self.data = chr(ord(self.areaversion)) + \
             chr(self.size // 8) + chr(self.language)
 
@@ -928,7 +941,7 @@ class ipmifru(BaseArea):
         if totallen < self._frusize:
             self.bindata = self.bindata.ljust(self._frusize, chr(self.INITVALUE[0]))
         else:
-            raise FruException('bin data more than %d' % self._frusize, -2)
+            raise FruException("Generate fru value failed, totallen: %d more than e2_size: %d" % (totallen, self._frusize), -2)
 
     def recalcutebin(self):
         self.bodybin = ""

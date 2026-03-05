@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# chassisbase.py
-# Python implementation of the Class chassisbase
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 from plat_hal.dcdc import dcdc
 from plat_hal.onie_e2 import onie_e2
 from plat_hal.psu import psu
 from plat_hal.led import led
-from plat_hal.temp import temp
+from plat_hal.temp import temp, temp_s3ip
 from plat_hal.fan import fan
 from plat_hal.cpld import cpld
 from plat_hal.component import component
 from plat_hal.cpu import cpu
 from plat_hal.baseutil import baseutil
-
+from plat_hal.osutil import osutil
 
 class chassisbase(object):
     __onie_e2_list = []
@@ -89,6 +99,52 @@ class chassisbase(object):
             temptemp.append(temp1)
         self.temp_list = temptemp
 
+        '''
+        sensor print source select
+        '''
+        self.__sensor_print_src = __confTemp.get("sensor_print_src", None)
+
+        # temp_data_source. the following is example:
+        '''
+        "temp_data_source": [
+        {
+            "path": "/sys/s3ip/temp_sensor/",
+            "type": "temp",
+            "Unit": Unit.Temperature,
+            "read_times": 3,
+            "format": "float(float(%s)/1000)"
+        },
+        ],
+        '''
+        tmp_list = []
+        temp_data_source_conf = __confTemp.get("temp_data_source", {})
+        for item in temp_data_source_conf:
+            try:
+                path = item.get("path", None)
+                if path is None:
+                    continue
+                sensor_type = item.get("type", None)
+                if sensor_type is None:
+                    continue
+                number_path = "%s/%s" % (path, "number")
+                ret, number = osutil.readsysfs(number_path)
+                if ret is True:
+                    for index in range(1, int(number) + 1):
+                        sensor_dir = "%s%d" % (sensor_type, index)
+                        # only monitored sensor add to list
+                        monitor_flag_path = "%s/%s/%s" % (path, sensor_dir, "monitor_flag")
+                        if os.path.exists(monitor_flag_path):
+                            ret, monitor_flag = osutil.readsysfs(monitor_flag_path)
+                            if ret is True and int(monitor_flag) == 0:
+                                continue
+                        s3ip_conf = item.copy()
+                        s3ip_conf["sensor_dir"] = sensor_dir
+                        obj = temp_s3ip(s3ip_conf)
+                        tmp_list.append(obj)
+            except Exception:
+                pass
+        self.temp_list_s3ip = tmp_list
+
         # fan
         fantemp = []
         fanconfig = __confTemp.get('fans', [])
@@ -104,6 +160,54 @@ class chassisbase(object):
             dcdc1 = dcdc(item)
             dcdctemp.append(dcdc1)
         self.dcdc_list = dcdctemp
+
+        # dcdc_data_source. the following is example:
+        '''
+        "dcdc_data_source": [
+        {
+            "path": "/sys/s3ip/vol_sensor/",
+            "type": "vol",
+            "Unit": Unit.Voltage,
+            "read_times": 3,
+            "format": "float(float(%s)/1000)"
+        },
+        {
+            "path": "/sys/s3ip/curr_sensor/",
+            "type": "curr",
+            "Unit": Unit.Current,
+            "read_times": 3,
+            "format": "float(float(%s)/1000)"
+        },
+        ],
+        '''
+        dcdc_data_source_conf = __confTemp.get("dcdc_data_source", {})
+        tmp_list = []
+        for item in dcdc_data_source_conf:
+            try:
+                path = item.get("path", None)
+                if path is None:
+                    continue
+                sensor_type = item.get("type", None)
+                if sensor_type is None:
+                    continue
+                number_path = "%s/%s" % (path, "number")
+                ret, number = osutil.readsysfs(number_path)
+                if ret is True:
+                    for index in range(1, int(number) + 1):
+                        sensor_dir = "%s%d" % (sensor_type, index)
+                        # only monitored sensor add to list
+                        monitor_flag_path = "%s/%s/%s" % (path, sensor_dir, "monitor_flag")
+                        if os.path.exists(monitor_flag_path):
+                            ret, monitor_flag = osutil.readsysfs(monitor_flag_path)
+                            if ret is True and int(monitor_flag) == 0:
+                                continue
+                        s3ip_conf = item.copy()
+                        s3ip_conf["sensor_dir"] = sensor_dir
+                        dcdc_obj = dcdc(s3ip_conf = s3ip_conf)
+                        tmp_list.append(dcdc_obj)
+            except Exception:
+                pass
+        self.dcdc_list.extend(tmp_list)
 
         # cpld
         cpldtemp = []
@@ -316,3 +420,7 @@ class chassisbase(object):
 
     def get_cpu_byname(self, name):
         return self.cpu
+
+    @property
+    def sensor_print_src(self):
+        return self.__sensor_print_src
