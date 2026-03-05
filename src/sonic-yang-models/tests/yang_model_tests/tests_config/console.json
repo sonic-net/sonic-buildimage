@@ -158,6 +158,10 @@
                         "name": "2",
                         "baud_rate": "9600",
                         "escape_char": "z"
+                    },
+                    {
+                        "name": "3",
+                        "baud_rate": "115200"
                     }
                 ]
             }
