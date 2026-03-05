@@ -673,6 +673,35 @@ build_sonie_image() {
 
 
 #######################################
+# Builds the BFB installer target.
+# Globals:
+#   OUTPUT_BFB_IMAGE
+#   SECURE_UPGRADE_MODE
+#   SECURE_UPGRADE_DEV_SIGNING_KEY
+#   SECURE_UPGRADE_SIGNING_CERT
+#   CONFIGURED_PLATFORM
+#   kversion
+#   USER
+# Arguments:
+#   None
+# Returns:
+#   0 on success, non-zero on failure.
+#######################################
+build_bfb_image() {
+    echo "Build BFB installer"
+
+    local secure_upgrade_keys=""
+    if [[ $SECURE_UPGRADE_MODE != "no_sign" ]]; then
+         secure_upgrade_keys="--signing-key $SECURE_UPGRADE_DEV_SIGNING_KEY --signing-cert $SECURE_UPGRADE_SIGNING_CERT"
+    fi
+
+    sudo -E ./platform/${CONFIGURED_PLATFORM}/installer/create_sonic_image --kernel $kversion $secure_upgrade_keys
+
+    sudo chown $USER $OUTPUT_BFB_IMAGE
+}
+
+
+#######################################
 # Main execution entry point.
 # Globals:
 #   IMAGE_TYPE
@@ -717,6 +746,9 @@ main() {
             ;;
         sonie)
             build_sonie_image "$@"
+            ;;
+        bfb)
+            build_bfb_image
             ;;
         *)
             echo "Error: Non supported image type $IMAGE_TYPE"
