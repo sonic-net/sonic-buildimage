@@ -59,6 +59,7 @@ jobs:
             asan_image: yes
 
         - name: alpinevs
+          timeoutInMinutes: 1440
 
         - name: barefoot
           variables:
