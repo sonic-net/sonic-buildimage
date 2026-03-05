@@ -56,6 +56,13 @@
         "eStrKey" : "Pattern",
         "eStr": ["drop|forward"]
     },
+    "VLAN_SUB_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local."
+    },
+    "VLAN_SUB_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local as true.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
     "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_VLAN_CHECK_MUST_CONDITION_FALSE_TEST": {
         "desc": "Configure valid short name format vlan sub interface vlan must check condition false.",
         "eStrKey": "Must"
