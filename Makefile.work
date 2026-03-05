@@ -229,11 +229,6 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
-$(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
-	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
-	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
-	j2 $(SLAVE_DIR)/Dockerfile.user.j2 > $(SLAVE_DIR)/Dockerfile.user)
-
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 $(shell SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV))
@@ -262,16 +257,6 @@ SLAVE_BASE_TAG = $(shell \
 	cat $(SLAVE_DIR)/Dockerfile \
 		$(SLAVE_DIR)/sources.list.* \
 		$(SLAVE_DIR)/buildinfo/versions/versions-* 2>/dev/null \
-	| sha1sum \
-	| awk '{print substr($$1,0,11);}')
-
-# Calculate the slave TAG based on $(USER)/$(PWD)/$(CONFIGURED_PLATFORM) to get unique SHA ID
-SLAVE_TAG = $(shell \
-	(cat $(SLAVE_DIR)/Dockerfile.user \
-		 $(SLAVE_DIR)/Dockerfile \
-		 $(SLAVE_DIR)/sources.list.* \
-		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-	&& echo $(USER)/$(PWD)/$(CONFIGURED_ARCH)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
@@ -383,7 +368,7 @@ endif
 # User name and tag for "docker-*" images created by native dockerd mode.
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_USERNAME = $(USER_LC)
-DOCKER_USERTAG = $(SLAVE_TAG)
+DOCKER_USERTAG = $(SLAVE_BASE_TAG)
 else
 DOCKER_USERNAME = sonic
 DOCKER_USERTAG = latest
@@ -454,8 +439,6 @@ endif
 SPLIT_LOG = 2>&1 | tee
 
 DOCKER_BASE_LOG = $(SLAVE_DIR)/$(SLAVE_BASE_IMAGE)_$(SLAVE_BASE_TAG).log
-DOCKER_LOG = $(SLAVE_DIR)/$(SLAVE_IMAGE)_$(SLAVE_TAG).log
-
 
 DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 		    -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
@@ -469,19 +452,6 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
-
-DOCKER_USER_BUILD = docker build --no-cache \
-	       --build-arg user=$(USER) \
-	       --build-arg uid=$(shell id -u) \
-	       --build-arg guid=$(shell id -g) \
-	       --build-arg hostname=$(shell echo $$HOSTNAME) \
-               --build-arg slave_base_tag_ref=$(SLAVE_BASE_TAG) \
-	       -t $(SLAVE_IMAGE):$(SLAVE_TAG) \
-	       -f $(SLAVE_DIR)/Dockerfile.user \
-	       $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_LOG)
-
-DOCKER_USER_PULL = docker pull \
-			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG)
 
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
@@ -515,36 +485,6 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(COLLECT_DOCKER) ; \
 	}
 
-DOCKER_SLAVE_USER_INSPECT = \
-	{ \
-		echo Checking sonic-slave-user image: $(SLAVE_IMAGE):$(SLAVE_TAG); \
-		docker inspect --type image $(SLAVE_IMAGE):$(SLAVE_TAG) &> /dev/null; \
-	}
-
-DOCKER_SLAVE_USER_PULL_REGISTRY = \
-	[ $(ENABLE_DOCKER_BASE_PULL) == y ] && \
-	{ \
-		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Pulling...; \
-		$(DOCKER_USER_PULL); \
-	} && \
-	{ \
-		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_IMAGE):$(SLAVE_TAG) $(SLAVE_IMAGE):$(SLAVE_TAG) && \
-		$(COLLECT_DOCKER); \
-	}\
-
-SONIC_SLAVE_USER_BUILD = \
-	{ \
-		$(DOCKER_SLAVE_USER_INSPECT); \
-	} || \
-	{ \
-		$(DOCKER_SLAVE_USER_PULL_REGISTRY); \
-	} || \
-	{ \
-		set -o pipefail ; \
-		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
-		$(DOCKER_USER_BUILD) ; \
-	}
-
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
                            PLATFORM=$(PLATFORM) \
@@ -555,7 +495,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_NUMBER=$(BUILD_NUMBER) \
                            BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) \
                            SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION) \
-                           SLAVE_TAG=$(SLAVE_TAG) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
@@ -636,7 +575,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
-.PHONY: sonic-slave-build sonic-slave-bash init reset
+.PHONY: sonic-slave-bash init reset
 
 
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
@@ -671,10 +610,11 @@ endif
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
 
 	$(Q)$(DOCKER_RUN) \
-		$(SLAVE_IMAGE):$(SLAVE_TAG) \
+		--user 1000 \
+		--group-add 1000 \
+		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
@@ -694,17 +634,13 @@ endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
-sonic-slave-build : sonic-slave-base-build
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
+sonic-slave-bash : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) --user 1000 --group-add 1000 -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash
 
-sonic-slave-bash : sonic-slave-build
-	$(Q)$(DOCKER_RUN) -t $(SLAVE_IMAGE):$(SLAVE_TAG) bash
-
-sonic-slave-run : sonic-slave-build
-	$(Q)$(DOCKER_RUN) $(SLAVE_IMAGE):$(SLAVE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+sonic-slave-run : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) --user 1000 --group-add 1000 $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(SONIC_RUN_CMDS)"
 
 showtag:
-	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
 init :
