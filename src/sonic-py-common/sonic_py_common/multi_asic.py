@@ -152,6 +152,21 @@ def get_asic_device_id(asic_id):
 
     return None
 
+def get_asic_sub_role(asic_id):
+    asic_conf_file_path = get_asic_conf_file_path()
+    if asic_conf_file_path is None:
+        return None
+
+    with open(asic_conf_file_path) as asic_conf_file:
+        for line in asic_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0] == f"SUB_ROLE_ASIC_{asic_id}":
+                return tokens[1].strip()
+
+    return None
+
 def get_current_namespace(pid=None):
     """
     This API returns the network namespace in which it is
