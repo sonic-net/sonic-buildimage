@@ -192,6 +192,8 @@ function postStartAction()
         supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
     fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
         SYSCTL_NET_CONFIG="/usr/lib/sysctl.d/90-sonic.conf"
@@ -605,6 +607,8 @@ start() {
     chassis_db_address=""
     chassisdb_config="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $chassisdb_config ] && source $chassisdb_config
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     DB_OPT=" -v /var/run/redis-chassis:/var/run/redis-chassis:ro "
     if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
         DB_OPT=""
