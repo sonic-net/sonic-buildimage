@@ -121,3 +121,7 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# Prefer mirror snapshot packages
+prefer-snapshots.*
+!prefer-snapshots*.j2
