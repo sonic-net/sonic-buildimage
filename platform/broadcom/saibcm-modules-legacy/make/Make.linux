@@ -1,0 +1,78 @@
+#
+# $Id: Make.linux,v 1.18 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+# 
+# Common make targets for Linux user and kernel builds included by top
+# level Linux makefiles
+#
+# Variables referenced:
+#
+# LINUX_MAKE_FLAGS
+#   Additional flags passed to Make
+#
+# LINUX_MAKE_DIR
+#   Common makefile location, if it is not ../common
+#
+#
+
+export DEST_DIR_SUFFIX :=$(subst $(realpath $(SDK))/systems,,$(realpath $(CURDIR)/$(dir ($(firstword $(MAKEFILE_LIST))))))
+
+LINUX_MAKE_DIR ?= $(SDK)/systems/linux/user/common
+
+CMD = $(LINUX_MAKE_FLAGS) -C $(LINUX_MAKE_DIR) \
+      platform=$(platform) kernel_version=$(kernel_version) \
+      bldroot_suffix=/$(platform)
+
+ifneq (,$(MIPS_TOOLS_DIR))
+  CMD += MIPS_TOOLS_DIR=$(MIPS_TOOLS_DIR)
+endif
+
+ifneq (,$(MIPS_CROSS_COMPILE))
+  CMD += MIPS_CROSS_COMPILE=$(MIPS_CROSS_COMPILE)
+endif
+
+ifneq (,$(LINUX_INCLUDE))
+  CMD += LINUX_INCLUDE=$(LINUX_INCLUDE)
+endif
+
+# gmake does not understand $(CMD) to be a submake
+# options are to +$(CMD) or $(MAKE) $(CMD)
+# trying the latter
+build:
+	$(MAKE) $(CMD)
+
+DELIVER clean C_COMPILER CXX_COMPILER variable mod bcm user issu libopennsa:
+	$(MAKE) $(CMD) $@
+
+clean_d: clean
+
+distclean:
+	$(MAKE) $(CMD) $@
+        
+.PHONY: build clean distclean clean_d DELIVER variable mod bcm user issu
+

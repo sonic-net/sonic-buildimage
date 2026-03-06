@@ -34,15 +34,8 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-case "$IMAGE_DISTRO" in
-    trixie)     DBIAN_VER="13" ;;
-    bookworm)   DBIAN_VER="12" ;;
-    bullseye)   DBIAN_VER="11" ;;
-    buster)     DBIAN_VER="10" ;;
-    *)          DBIAN_VER="12" ;;
-esac
-DOCKER_VERSION=5:28.2.2-1~debian.${DBIAN_VER}~$IMAGE_DISTRO
-CONTAINERD_IO_VERSION=1.7.27-1
+DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
 LINUX_KERNEL_VERSION=6.12.41+deb13
 
 ## Working directory to prepare the file system
@@ -412,6 +405,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     jq                      \
     auditd                  \
     linux-perf              \
+    util-linux-extra        \
     resolvconf              \
     lsof                    \
     sysstat                 \

@@ -539,11 +539,12 @@ $(eval $(rfs_target)_MACHINE=$($(1)_MACHINE))
 $(eval SONIC_RFS_TARGETS+=$(rfs_target))
 
 $(if $($(1)_DEPENDENT_MACHINE),\
-	$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$($(1)_DEPENDENT_MACHINE)))
-	$(eval $(dependent_rfs_target)_INSTALLER=$(1))
-	$(eval $(dependent_rfs_target)_MACHINE=$($(1)_DEPENDENT_MACHINE))
-	$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
-	$(eval $(rfs_target)_DEPENDENT_RFS=$(dependent_rfs_target)))
+	$(foreach dep,$($(1)_DEPENDENT_MACHINE),\
+		$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$(dep)))
+		$(eval $(dependent_rfs_target)_INSTALLER=$(1))
+		$(eval $(dependent_rfs_target)_MACHINE=$(dep))
+		$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
+		$(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
 endef
 
 $(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
@@ -1888,7 +1889,18 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
 ## Standard targets
 ###############################################################################
 
-.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_PHONIES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure
+###############################################################################
+## Build report — post-build timing and dependency analysis
+###############################################################################
+
+build-report:
+	@echo "=== Generating build timing report ==="
+	@bash $(PROJECT_ROOT)/scripts/build-timing-report.sh $(TARGET_PATH)
+	@echo ""
+	@echo "=== Generating dependency graph analysis ==="
+	@python3 $(PROJECT_ROOT)/scripts/build-dep-graph.py $(PROJECT_ROOT)
+
+.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_PHONIES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure build-report
 
 .INTERMEDIATE : $(SONIC_INSTALL_DEBS) $(SONIC_INSTALL_WHEELS) $(DOCKER_LOAD_TARGETS) docker-start .platform
 
