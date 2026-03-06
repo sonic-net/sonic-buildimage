@@ -139,6 +139,7 @@ def _ensure_user_auth_cert() -> None:
             logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
 
 
+
 def _ensure_cname_present(cname: str) -> None:
     if not cname:
         logger.log_warning("TELEMETRY_CLIENT_CNAME not set; skip CNAME creation")
