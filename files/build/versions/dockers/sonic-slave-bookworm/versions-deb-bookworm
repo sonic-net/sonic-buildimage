@@ -726,7 +726,7 @@ libgme0==0.6.3-6
 libgmock-dev==1.12.1-0.2
 libgmp-dev==2:6.2.1+dfsg1-1.1
 libgmpxx4ldbl==2:6.2.1+dfsg1-1.1
-libgnutls-dane0==3.7.9-2+deb12u5
+libgnutls-dane0==3.7.9-2+deb12u6
 libgomp1==12.2.0-14+deb12u1
 libgomp1-armhf-cross==12.2.0-14cross1
 libgoogle-perftools4==2.10-1
@@ -1034,7 +1034,7 @@ libnsl-dev==1.3.0-2
 libnsl2==1.3.0-2
 libnspr4==2:4.35-1
 libnss-systemd==252.39-1~deb12u1
-libnss3==2:3.87.1-1+deb12u1
+libnss3==2:3.87.1-1+deb12u2
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libnumber-compare-perl==0.03-3
@@ -1137,9 +1137,9 @@ libplexus-velocity-java==1.2-3.1
 libpmem1==1.12.1-2
 libpmix-dev==4.2.2-1+deb12u1
 libpmix2==4.2.2-1+deb12u1
-libpng-dev==1.6.39-2+deb12u1
-libpng-tools==1.6.39-2+deb12u1
-libpng16-16==1.6.39-2+deb12u1
+libpng-dev==1.6.39-2+deb12u3
+libpng-tools==1.6.39-2+deb12u3
+libpng16-16==1.6.39-2+deb12u3
 libpocketsphinx3==0.8+5prealpha+1-15
 libpod-constants-perl==0.19-2
 libpod-parser-perl==1.65-1
@@ -1423,7 +1423,7 @@ libvisual-0.4-0==0.4.0-19
 libvorbis0a==1.3.7-1
 libvorbisenc2==1.3.7-1
 libvorbisfile3==1.3.7-1
-libvpx7==1.12.0-1+deb12u4
+libvpx7==1.12.0-1+deb12u5
 libvte-2.91-0==0.70.6-2~deb12u1
 libvte-2.91-common==0.70.6-2~deb12u1
 libvulkan-dev==1.3.239.0-1

@@ -56,5 +56,5 @@ sonic-bmp==0.1
 sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 stp==1.0.0
-sys-sdk-dev==1.mlnx.4.8.3404
-sys-sdk-main==1.mlnx.4.8.3404
+sys-sdk-dev==1.mlnx.4.8.3412
+sys-sdk-main==1.mlnx.4.8.3412

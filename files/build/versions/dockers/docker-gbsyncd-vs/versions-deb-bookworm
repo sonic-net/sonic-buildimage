@@ -167,7 +167,7 @@ libnl-3-dev==3.7.0-0.2+b1sonic1
 libnl-route-3-dev==3.7.0-0.2+b1sonic1
 libnsl-dev==1.3.0-2
 libnspr4==2:4.35-1
-libnss3==2:3.87.1-1+deb12u1
+libnss3==2:3.87.1-1+deb12u2
 libnuma-dev==2.0.16-1
 libnuma1==2.0.16-1
 libobjc-12-dev==12.2.0-14+deb12u1
