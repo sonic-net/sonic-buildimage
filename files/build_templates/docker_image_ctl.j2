@@ -5,7 +5,6 @@
 # commands being sent to the base container name. E.g. `docker start database$DEV` simply starts
 # the container `database` if no instance number is passed since `$DEV` is not defined
 
-
 {%- if docker_container_name == "database" %}
 link_namespace() {
     # Makes namespace of a docker container available in
