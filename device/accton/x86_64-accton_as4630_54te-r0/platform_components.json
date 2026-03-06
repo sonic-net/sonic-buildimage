@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "AS4630-54TE-O-AC-F": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "BIOS": { }
+            }
+        }
+    }
+}

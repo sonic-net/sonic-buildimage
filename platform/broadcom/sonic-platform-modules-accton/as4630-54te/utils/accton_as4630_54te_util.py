@@ -137,11 +137,11 @@ mknod = [
 
     # PSU-1
     'echo as4630_54te_psu1 0x50 > /sys/bus/i2c/devices/i2c-10/new_device',
-    'echo ype1200am 0x58 > /sys/bus/i2c/devices/i2c-10/new_device',
+    'echo ym1151d 0x58 > /sys/bus/i2c/devices/i2c-10/new_device',
 
     # PSU-2
     'echo as4630_54te_psu2 0x51> /sys/bus/i2c/devices/i2c-11/new_device',
-    'echo ype1200am 0x59 > /sys/bus/i2c/devices/i2c-11/new_device',
+    'echo ym1151d 0x59 > /sys/bus/i2c/devices/i2c-11/new_device',
 
     # EERPOM
     'echo 24c02 0x57 > /sys/bus/i2c/devices/i2c-1/new_device',
