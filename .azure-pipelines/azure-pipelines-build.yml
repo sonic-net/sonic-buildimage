@@ -146,7 +146,7 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/sonie-vs.bin target/docker-sonic-vs.gz target/sonic-vs.img.gz
             make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz

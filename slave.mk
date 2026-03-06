@@ -289,7 +289,23 @@ PDDF_SUPPORT = n
 endif
 export PDDF_SUPPORT
 
-include $(RULES_PATH)/*.mk
+ifneq ($(GCP_ADC_CREDS_FILE),)
+DOCKER_SECRET_ARGS += --secret id=google_application_credentials,src=$(GCP_ADC_CREDS_FILE)
+DOCKER_BUILD_ENV += DOCKER_BUILDKIT=1
+endif
+
+# Explicitly include sonie-uki.mk first to ensure its targets are defined before
+# any rules that might depend on them.
+include $(RULES_PATH)/sonie-uki.mk
+
+# Include all other .mk files from the rules directory, excluding the sonie-specific
+# ones which are handled explicitly.
+include $(filter-out $(RULES_PATH)/sonie-%.mk, $(wildcard $(RULES_PATH)/*.mk))
+
+# Explicitly include sonie-image.mk last to ensure it is processed after its
+# dependencies have been defined.
+include $(RULES_PATH)/sonie-image.mk
+
 ifneq ($(CONFIGURED_PLATFORM), undefined)
 ifeq ($(PDDF_SUPPORT), y)
 PDDF_DIR = pddf
@@ -1521,7 +1537,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_kernel_cafile="$(SECURE_UPGRADE_KERNEL_CAFILE)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
-	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
+	export sonic_su_prod_signing_tool="$(if $(SECURE_UPGRADE_PROD_SIGNING_TOOL),/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_otel="$(INCLUDE_SYSTEM_OTEL)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
@@ -1660,7 +1676,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
-		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
+		IMAGE_TYPE=$($*_IMAGE_TYPE) j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
 		chmod +x sonic_debian_extension.sh,
 	)
 
@@ -1686,8 +1702,19 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
+		SONIC_ENABLE_SECUREBOOT_SIGNATURE="$(SONIC_ENABLE_SECUREBOOT_SIGNATURE)" \
+		SIGNING_KEY="$(SIGNING_KEY)" \
+		SIGNING_CERT="$(SIGNING_CERT)" \
+		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
+		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
+		SECURE_UPGRADE_SIGNING_CERT="$(SECURE_UPGRADE_SIGNING_CERT)" \
+		SECURE_UPGRADE_PROD_SIGNING_TOOL="$(SECURE_UPGRADE_PROD_SIGNING_TOOL)" \
+		SECURE_UPGRADE_PROD_TOOL_ARGS="$(SECURE_UPGRADE_PROD_TOOL_ARGS)" \
+		SECURE_UPGRADE_PROD_TOOL_CONFIG="$(SECURE_UPGRADE_PROD_TOOL_CONFIG)" \
+		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
 		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -1714,6 +1741,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		TARGET_MACHINE=$(dep_machine) \
 		IMAGE_TYPE=$($*_IMAGE_TYPE) \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
+		XBOOTLDR_PART_SIZE=$(XBOOTLDR_PART_SIZE) \
 		SONIC_ENABLE_IMAGE_SIGNATURE="$(SONIC_ENABLE_IMAGE_SIGNATURE)" \
 		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
 		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
@@ -1729,7 +1757,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 
 	$(foreach docker, $($*_DOCKERS), \
-		rm -f *$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		$(if $($(docker:-dbg.gz=.gz)_MACHINE),\
+			rm -f $($(docker:-dbg.gz=.gz)_MACHINE)_$($(docker:-dbg.gz=.gz)_CONTAINER_NAME).sh
+		)
 		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME).service
 		rm -f $($(docker:-dbg.gz=.gz)_CONTAINER_NAME)@.service
 	)

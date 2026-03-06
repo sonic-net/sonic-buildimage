@@ -1,4 +1,5 @@
 # OS-generated files
+
 .DS_Store
 
 # Build system related
@@ -44,7 +45,11 @@ dockers/*/*manifest*
 platform/*/docker-*/*manifest*
 
 # Installer-related files and directories
+installer/platforms
+installer/platforms_asic
 installer/x86_64/platforms/
+sonie-installer/platforms
+sonie-installer/platforms_asic
 
 # Misc. files
 asic_config_checksum
@@ -97,6 +102,8 @@ platform/broadcom/sonic-platform-modules-dell/z9100/modules/dell_mailbox.c
 platform/broadcom/sonic-platform-modules-dell/z9264f/sonic_platform/ipmihelper.py
 platform/cisco-8000
 platform/pensando/pensando-sonic-artifacts
+platform/barefoot
+platform/broadcom
 
 # buildinfo
 files/build/buildinfo

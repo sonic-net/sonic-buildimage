@@ -19,6 +19,7 @@ secureboot=false
 bootloader=generic
 in_kdump=false
 varlog_size=0
+overlay_tmpfs=false
 
 # Extract kernel parameters
 for x in $(cat /proc/cmdline); do
@@ -51,8 +52,17 @@ for x in $(cat /proc/cmdline); do
         systemd.unit=kdump-tools.service)
             in_kdump=true
             ;;
+        overlay_tmpfs=on)
+            overlay_tmpfs=true
+            ;;
+        tmpfs_size=*)
+            tmpfs_size="${x#tmpfs_size=}"
+            ;;
     esac
 done
+
+# DEBUG: Print overlay_tmpfs status
+echo "DEBUG: union-mount: overlay_tmpfs=$overlay_tmpfs" > /dev/console
 
 set_tmpfs_log_partition_size()
 {
@@ -168,8 +178,29 @@ mount_docker()
 
 ## Mount the overlay file system: rw layer over squashfs
 image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
-rw_dir=${rootmnt}/host/$image_dir/rw
-work_dir=${rootmnt}/host/$image_dir/work
+
+# Check if already mounted to prevent "upperdir is in-use" errors
+if grep -q "${rootmnt} .*overlay" /proc/mounts; then
+    echo "DEBUG: union-mount: OverlayFS already mounted on ${rootmnt}, skipping." > /dev/console
+    exit 0
+fi
+
+if [ "$overlay_tmpfs" = true ]; then
+    echo "DEBUG: union-mount: Enabling tmpfs overlay..." > /dev/console
+    # Use tmpfs for overlay upperdir to support xattrs (needed for opaque/whiteouts)
+    # Use independent path in /run to avoid conflicts with rootmnt
+    overlay_storage="/run/sonic-overlay"
+    mkdir -p "${overlay_storage}"
+    mount -t tmpfs -o rw,nodev,nosuid,user_xattr,size=${tmpfs_size:-50%} tmpfs "${overlay_storage}"
+
+    rw_dir="${overlay_storage}/rw"
+    work_dir="${overlay_storage}/work"
+else
+    # Standard Sonic behavior: use image directory on rootfs
+    rw_dir=${rootmnt}/host/$image_dir/rw
+    work_dir=${rootmnt}/host/$image_dir/work
+fi
+
 mkdir -p "$rw_dir"
 mkdir -p "$work_dir"
 
