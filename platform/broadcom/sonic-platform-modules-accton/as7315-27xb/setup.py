@@ -11,6 +11,6 @@ setup(
    description='Module to initialize Accton AS7315-27XB platforms',
    
    packages=['as7315_27xb'],
-   package_dir={'as7315_27xb': 'as7315-27xb/classes'},
+   package_dir={'as7315_27xb': 'classes'},
 )
 
