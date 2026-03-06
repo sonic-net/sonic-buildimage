@@ -192,6 +192,9 @@ supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd
 
+# Start LLDP (uses docker-lldp's start.sh)
+/usr/bin/start-lldp.sh
+
 supervisorctl start rebootbackend
 
 # Start arp_update when VLAN exists
