@@ -5,10 +5,6 @@ module sonic-heartbeat {
     namespace "http://github.com/sonic-net/sonic-heartbeat";
     prefix heartbeat;
 
-    import ietf-inet-types {
-        prefix inet;
-    }
-
     organization
         "SONiC";
 
