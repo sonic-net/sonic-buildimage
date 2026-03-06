@@ -10,3 +10,6 @@ User={{ sonicadmin_user }}
 ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start
 ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop
+
+[Install]
+WantedBy=sonic.target
