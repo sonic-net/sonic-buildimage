@@ -130,7 +130,11 @@ endif
 ifeq ($(CONFIGURED_ARCH),amd64)
 TARGET_BOOTLOADER = grub
 else
+ifeq ($(CONFIGURED_PLATFORM),vs)
+TARGET_BOOTLOADER = grub
+else
 TARGET_BOOTLOADER = uboot
+endif
 endif
 
 ifeq ($(BLDENV), trixie)

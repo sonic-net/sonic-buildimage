@@ -343,16 +343,14 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For installing the linux image for kernel module builds
         tiny-initramfs \
         linux-base \
-{%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
-        qemu-kvm \
+        qemu-system-native \
         libvirt-clients \
         python3-pexpect \
 # For rasdaemon build
         libsqlite3-dev \
         libgettextpo-dev \
-{%- endif %}
 # For ntp
         autogen \
         libopts25-dev \
@@ -503,7 +501,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         hwdata \
         libzip-dev
 
-{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 RUN eatmydata apt-get install -y \
 # For p4 libraries
         libgrpc++-dev \
@@ -529,7 +526,6 @@ RUN eatmydata apt-get install -y \
         python3-ply \
         python3-scapy \
         python3-thrift
-{%- endif %}
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
