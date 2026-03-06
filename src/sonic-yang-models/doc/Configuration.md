@@ -21,7 +21,7 @@
   * [Buffer port egress profile list](#buffer-port-egress-profile-list)
   * [Cable length](#cable-length)
   * [Chassis module](#chassis-module)
-  * [COPP_TABLE](#copp_table)
+  * [COPP](#copp)
   * [Console](#console)
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
@@ -816,7 +816,9 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ```
 
-### COPP_TABLE
+### COPP
+
+#### COPP_TABLE
 
 ```
 {
@@ -867,6 +869,23 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 	 "trap_ids": "ip2me",
 	 "trap_priority": "1"
       }
+    }
+}
+```
+
+#### COPP_TRAP_EXCLUDE_PORTS
+
+Exclude ports from CoPP Traps.  In some cases, such as sonic-mgmt testbeds, LACP and LLDP packets may be trapped
+instead of being relayed to the desired endpoint.  This allows configuration to exclude ports from traps to allow
+these packets to flow all the way to the desired endpoint.  By default all ports on a switch will have the standard
+traps applied.
+
+```
+{
+    "COPP_TRAP_EXCLUDE_PORTS": {
+        "GLOBAL": {
+            "ports": [ "Ethernet0", "Ethernet4"]
+        }
     }
 }
 ```
