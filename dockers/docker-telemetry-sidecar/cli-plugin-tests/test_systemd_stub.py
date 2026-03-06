@@ -2,15 +2,16 @@
 import sys
 import os
 import types
+import subprocess
 import importlib
 
 import pytest
 
 # Add docker-telemetry-sidecar directory to path so we can import systemd_stub
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Add sonic-py-common to path so we can import the real sidecar_common
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../src/sonic-py-common")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../src/sonic-py-common")))
 
 
 # ===== Create fakes BEFORE importing sidecar_common =====
@@ -188,6 +189,14 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
+    # Mock _get_branch_name to return "202412" by default (avoids real file/nsenter I/O)
+    monkeypatch.setattr(ss, "_get_branch_name", lambda: "202412")
+
+    # Provide a default container_checker in both filesystems so the auto-appended
+    # SyncItem from ensure_sync() is always satisfied and is a no-op.
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"default-checker"
+    host_fs["/bin/container_checker"] = b"default-checker"
+
     return ss, container_fs, host_fs, commands, config_db
 
 
@@ -209,14 +218,16 @@ def test_sync_no_change_fast_path(ss):
 
 def test_sync_updates_and_post_actions(ss):
     ss, container_fs, host_fs, commands, config_db = ss
-    item = ss.SyncItem("/container/container_checker", "/bin/container_checker", 0o755)
+    # Use telemetry.sh path (not /bin/container_checker) to avoid conflict
+    # with the container_checker item that ensure_sync() appends automatically.
+    item = ss.SyncItem("/container/telemetry.sh", "/usr/local/bin/telemetry.sh", 0o755)
     container_fs[item.src_in_container] = b"NEW"
     host_fs[item.dst_on_host] = b"OLD"
     ss.SYNC_ITEMS[:] = [item]
 
     ss.POST_COPY_ACTIONS[item.dst_on_host] = [
         ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "monit"],
+        ["sudo", "systemctl", "restart", "telemetry"],
     ]
 
     ok = ss.ensure_sync()
@@ -225,7 +236,7 @@ def test_sync_updates_and_post_actions(ss):
 
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
-    assert ("sudo", "systemctl", "restart", "monit") in post_cmds
+    assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
 
 
 def test_sync_missing_src_returns_false(ss):
@@ -350,3 +361,149 @@ def test_reconcile_disabled_removes_cname(ss):
     ss.reconcile_config_db_once()
 
     assert f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}" not in config_db
+
+
+# ─────────────────────────── Tests for _get_branch_name ───────────────────────────
+
+class TestGetBranchName:
+    """Tests for _get_branch_name() version-string parsing."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_module(self, monkeypatch):
+        """Re-import systemd_stub fresh and expose the real _get_branch_name."""
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        self.ss = importlib.import_module("systemd_stub")
+        self.monkeypatch = monkeypatch
+
+    def _set_version_file(self, tmp_path, version_str):
+        """Create a fake sonic_version.yml and patch the path."""
+        vfile = tmp_path / "sonic_version.yml"
+        vfile.write_text(f'build_version: "{version_str}"\n')
+        self.monkeypatch.setattr(os.path, "exists", lambda p: p == str(vfile) or os.path.isfile(p))
+        # Patch the version_file path inside _get_branch_name
+        original_fn = self.ss._get_branch_name
+        def patched():
+            import types
+            # Temporarily replace the hard-coded path
+            src = original_fn.__code__
+            # Simpler: just write to the expected path
+            return original_fn()
+        # Instead of complex patching, write to a temp file and patch open/exists
+        return str(vfile)
+
+    def _mock_version(self, version_str):
+        """Mock _get_branch_name by patching the file read to return a specific version."""
+        original_open = open
+        version_file = "/etc/sonic/sonic_version.yml"
+
+        def fake_exists(path):
+            if path == version_file:
+                return True
+            return os.path.isfile(path)
+
+        def fake_open(path, *args, **kwargs):
+            if path == version_file:
+                import io
+                return io.StringIO(f'build_version: "{version_str}"\n')
+            return original_open(path, *args, **kwargs)
+
+        self.monkeypatch.setattr(os.path, "exists", fake_exists)
+        self.monkeypatch.setattr("builtins.open", fake_open)
+
+    def test_master_branch(self):
+        self._mock_version("SONiC.master.921927-18199d73f")
+        assert self.ss._get_branch_name() == "master"
+
+    def test_master_branch_no_prefix(self):
+        self._mock_version("master.100000-abcdef1234")
+        assert self.ss._get_branch_name() == "master"
+
+    def test_internal_branch(self):
+        self._mock_version("SONiC.internal.135691748-dbb8d29985")
+        assert self.ss._get_branch_name() == "internal"
+
+    def test_internal_branch_no_prefix(self):
+        self._mock_version("internal.999999-1234abcdef")
+        assert self.ss._get_branch_name() == "internal"
+
+    def test_feature_branch_202411(self):
+        self._mock_version("SONiC.20241110.kw.24")
+        assert self.ss._get_branch_name() == "202411"
+
+    def test_feature_branch_202412(self):
+        self._mock_version("SONiC.20241215.99")
+        assert self.ss._get_branch_name() == "202412"
+
+    def test_feature_branch_202505(self):
+        self._mock_version("20250501.1")
+        assert self.ss._get_branch_name() == "202505"
+
+    def test_private_unmatched(self):
+        self._mock_version("my-custom-build-v3")
+        assert self.ss._get_branch_name() == "private"
+
+    def test_no_version_file(self):
+        """When no version file and nsenter also fails, returns 'private'."""
+        self.monkeypatch.setattr(os.path, "exists", lambda p: False)
+        self.monkeypatch.setattr(
+            subprocess, "run",
+            lambda *a, **kw: types.SimpleNamespace(returncode=1, stdout="", stderr="")
+        )
+        assert self.ss._get_branch_name() == "private"
+
+
+# ─────────── Tests for branch-conditional container_checker in ensure_sync ───────────
+
+def test_ensure_sync_uses_202411_checker(ss):
+    """When branch is 202411, ensure_sync uses the branch-specific container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    # Override _get_branch_name to return 202411
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Provide the 202411-specific checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Clear SYNC_ITEMS to focus only on the container_checker logic
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-202411"
+
+
+def test_ensure_sync_uses_default_checker(ss):
+    """When branch is not 202411, ensure_sync uses the default container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    # _get_branch_name already returns "202412" from fixture default
+
+    # Provide the default checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"checker-default"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Clear SYNC_ITEMS to focus only on the container_checker logic
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-default"
+
+
+def test_ensure_sync_202411_missing_checker_fails(ss):
+    """When branch is 202411 but the branch-specific checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Don't provide the 202411 checker in container_fs
+    # Remove default checker too
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202411", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False

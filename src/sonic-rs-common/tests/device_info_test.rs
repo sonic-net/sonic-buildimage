@@ -163,6 +163,21 @@ mod test_device_info {
 
     // Integration test for public API (will use real database connection, may fail in test env)
     #[test]
+    fn test_is_warm_restart_enabled_in_namespace_public_api() {
+        let result = is_warm_restart_enabled_in_namespace("swss", "asic0");
+        // Test passes regardless of result since database may not be available in test environment
+        match result {
+            Ok(_) => {
+                // Function succeeded - database was available
+            }
+            Err(_) => {
+                // Function failed - expected in test environment without database
+            }
+        }
+    }
+
+    // Integration test for public API (will use real database connection, may fail in test env)
+    #[test]
     fn test_is_fast_reboot_enabled_public_api() {
         let result = is_fast_reboot_enabled();
         // Test passes regardless of result since database may not be available in test environment

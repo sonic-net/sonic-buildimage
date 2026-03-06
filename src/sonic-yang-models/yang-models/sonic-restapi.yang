@@ -5,10 +5,6 @@ module sonic-restapi {
     namespace "http://github.com/sonic-net/sonic-restapi";
     prefix restapi;
 
-    import ietf-inet-types {
-        prefix inet;
-    }
-
     organization
         "SONiC";
 
