@@ -1064,13 +1064,13 @@ def parse_dpg(dpg, hname):
             # containing a list of DHCP server IPs
             vintf_node = vintf.find(str(QName(ns, "DhcpRelays")))
             if vintf_node is not None and vintf_node.text is not None:
-                vintfdhcpservers = vintf_node.text
+                vintfdhcpservers = vintf_node.text.strip()
                 vdhcpserver_list = vintfdhcpservers.split(';')
                 vlan_attributes['dhcp_servers'] = vdhcpserver_list
 
             vintf_node = vintf.find(str(QName(ns, "Dhcpv6Relays")))
             if vintf_node is not None and vintf_node.text is not None:
-                vintfdhcpservers = vintf_node.text
+                vintfdhcpservers = vintf_node.text.strip()
                 vdhcpserver_list = vintfdhcpservers.split(';')
                 vlan_attributes['dhcpv6_servers'] = vdhcpserver_list
                 dhcp_attributes['dhcpv6_servers'] = vdhcpserver_list
