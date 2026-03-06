@@ -83,7 +83,7 @@ libpangocairo-1.0-0==1.50.12+ds-1
 libpangoft2-1.0-0==1.50.12+ds-1
 libpci3==1:3.9.0-4
 libpixman-1-0==0.42.2-1
-libpng16-16==1.6.39-2+deb12u1
+libpng16-16==1.6.39-2+deb12u3
 libpython3-dev==3.11.2-1+b1
 libpython3.11-dev==3.11.2-6+deb12u6
 libquadmath0==12.2.0-14+deb12u1
