@@ -73,3 +73,14 @@ if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then
         exit
     fi
 fi
+
+# Aliases for redis-cli with correct database and port for each SONiC DB
+alias redis-appdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("APPL_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("APPL_DB")))')"
+alias redis-asicdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("ASIC_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("ASIC_DB")))')"
+alias redis-counterdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("COUNTERS_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("COUNTERS_DB")))')"
+alias redis-logleveldb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("LOGLEVEL_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("LOGLEVEL_DB")))')"
+alias redis-configdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("CONFIG_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("CONFIG_DB")))')"
+alias redis-flexcounterdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("FLEX_COUNTER_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("FLEX_COUNTER_DB")))')"
+alias redis-statedb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("STATE_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("STATE_DB")))')"
+alias redis-sysmondb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("SYSMON_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("SYSMON_DB")))')"
+alias redis-appstatedb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("APPL_STATE_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("APPL_STATE_DB")))')"
