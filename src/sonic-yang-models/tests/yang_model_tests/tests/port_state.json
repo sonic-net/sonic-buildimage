@@ -1,0 +1,97 @@
+{
+    "PORT_STATE_VALID_BASIC_TEST": {
+        "desc": "PORT_STATE_VALID_BASIC_TEST no failure."
+    },
+    "PORT_STATE_VALID_ALL_FIELDS_TEST": {
+        "desc": "PORT_STATE_VALID_ALL_FIELDS_TEST no failure."
+    },
+    "PORT_STATE_VALID_OPER_STATUS_UP_TEST": {
+        "desc": "PORT_STATE_VALID_OPER_STATUS_UP_TEST no failure."
+    },
+    "PORT_STATE_VALID_OPER_STATUS_DOWN_TEST": {
+        "desc": "PORT_STATE_VALID_OPER_STATUS_DOWN_TEST no failure."
+    },
+    "PORT_STATE_VALID_STATE_OK_TEST": {
+        "desc": "PORT_STATE_VALID_STATE_OK_TEST no failure."
+    },
+    "PORT_STATE_VALID_ADMIN_STATUS_TEST": {
+        "desc": "PORT_STATE_VALID_ADMIN_STATUS_TEST no failure."
+    },
+    "PORT_STATE_VALID_SPEED_TEST": {
+        "desc": "PORT_STATE_VALID_SPEED_TEST no failure."
+    },
+    "PORT_STATE_VALID_SPEED_NA_TEST": {
+        "desc": "PORT_STATE_VALID_SPEED_NA_TEST no failure."
+    },
+    "PORT_STATE_VALID_MTU_TEST": {
+        "desc": "PORT_STATE_VALID_MTU_TEST no failure."
+    },
+    "PORT_STATE_VALID_FEC_TEST": {
+        "desc": "PORT_STATE_VALID_FEC_TEST no failure."
+    },
+    "PORT_STATE_VALID_SUPPORTED_SPEEDS_TEST": {
+        "desc": "PORT_STATE_VALID_SUPPORTED_SPEEDS_TEST no failure."
+    },
+    "PORT_STATE_VALID_SUPPORTED_FECS_TEST": {
+        "desc": "PORT_STATE_VALID_SUPPORTED_FECS_TEST no failure."
+    },
+    "PORT_STATE_VALID_SUPPORTED_FECS_NA_TEST": {
+        "desc": "PORT_STATE_VALID_SUPPORTED_FECS_NA_TEST no failure."
+    },
+    "PORT_STATE_VALID_HOST_TX_READY_TRUE_TEST": {
+        "desc": "PORT_STATE_VALID_HOST_TX_READY_TRUE_TEST no failure."
+    },
+    "PORT_STATE_VALID_HOST_TX_READY_FALSE_TEST": {
+        "desc": "PORT_STATE_VALID_HOST_TX_READY_FALSE_TEST no failure."
+    },
+    "PORT_STATE_VALID_LINK_TRAINING_STATUS_TEST": {
+        "desc": "PORT_STATE_VALID_LINK_TRAINING_STATUS_TEST no failure."
+    },
+    "PORT_STATE_VALID_RMT_ADV_SPEEDS_TEST": {
+        "desc": "PORT_STATE_VALID_RMT_ADV_SPEEDS_TEST no failure."
+    },
+    "PORT_STATE_VALID_NETDEV_OPER_STATUS_TEST": {
+        "desc": "PORT_STATE_VALID_NETDEV_OPER_STATUS_TEST no failure."
+    },
+    "PORT_STATE_VALID_PHY_CTRL_UNRELIABLE_LOS_TEST": {
+        "desc": "PORT_STATE_VALID_PHY_CTRL_UNRELIABLE_LOS_TEST no failure."
+    },
+    "PORT_STATE_VALID_MULTIPLE_PORTS_TEST": {
+        "desc": "PORT_STATE_VALID_MULTIPLE_PORTS_TEST no failure."
+    },
+    "PORT_STATE_INVALID_OPER_STATUS_TEST": {
+        "desc": "PORT_STATE_INVALID_OPER_STATUS_TEST invalid oper_status value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["oper_status"]
+    },
+    "PORT_STATE_INVALID_STATE_TEST": {
+        "desc": "PORT_STATE_INVALID_STATE_TEST invalid state value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["state"]
+    },
+    "PORT_STATE_INVALID_ADMIN_STATUS_TEST": {
+        "desc": "PORT_STATE_INVALID_ADMIN_STATUS_TEST invalid admin_status value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["admin_status"]
+    },
+    "PORT_STATE_INVALID_SPEED_TEST": {
+        "desc": "PORT_STATE_INVALID_SPEED_TEST pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["speed"]
+    },
+    "PORT_STATE_INVALID_MTU_TEST": {
+        "desc": "PORT_STATE_INVALID_MTU_TEST range failure.",
+        "eStrKey": "Range"
+    },
+    "PORT_STATE_INVALID_FEC_TEST": {
+        "desc": "PORT_STATE_INVALID_FEC_TEST pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["fec"]
+    },
+    "PORT_STATE_INVALID_HOST_TX_READY_TEST": {
+        "desc": "PORT_STATE_INVALID_HOST_TX_READY_TEST invalid host_tx_ready value.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["host_tx_ready"]
+    }
+}
+
