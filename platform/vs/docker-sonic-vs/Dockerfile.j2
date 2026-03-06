@@ -129,6 +129,9 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
 COPY ["start.sh", "orchagent.sh", "files/update_chassisdb_config", "/usr/bin/"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
+COPY --from=lldp start.sh /usr/bin/start-lldp.sh
+RUN chmod +x /usr/bin/start-lldp.sh
 COPY ["files/configdb-load.sh", "/usr/bin/"]
 COPY ["files/arp_update", "/usr/bin/"]
 COPY ["files/buffers_config.j2", "files/qos_config.j2", "files/arp_update_vars.j2", "files/copp_cfg.j2", "/usr/share/sonic/templates/"]
@@ -150,7 +153,7 @@ COPY ["hwsku.json", "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/Mellanox-SN270
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
-RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2
+RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
 
 {%- if ENABLE_ASAN == "y" %}
 RUN mkdir -p /var/log/asan
@@ -164,6 +167,10 @@ RUN touch /etc/quagga/zebra.conf
 RUN rm /etc/frr/frr.conf
 
 COPY ["frr/zebra.conf", "/etc/frr/"]
+
+# LLDP feature (from docker-lldp via --build-context)
+{% set copy_from = "lldp" %}
+{% include "Dockerfile.common.j2" %}
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
