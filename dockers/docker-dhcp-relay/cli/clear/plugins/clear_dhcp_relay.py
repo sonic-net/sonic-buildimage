@@ -14,7 +14,7 @@ import utilities_common.cli as clicommon
 
 DHCPV4_CLEAR_COUNTER_LOCK_FILE = "/tmp/clear_dhcpv4_counter.lock"
 SUPPORTED_DHCP_TYPE = [
-    "Unknown", "Discover", "Offer", "Request", "Decline", "Ack", "Nak", "Release", "Inform", "Bootp"
+    "Unknown", "Discover", "Offer", "Request", "Decline", "Ack", "Nak", "Release", "Inform", "Bootp", "Malformed"
 ]
 SUPPORTED_DIR = ["TX", "RX"]
 DHCPV4_COUNTER_TABLE_PREFIX = "DHCPV4_COUNTER_TABLE"
