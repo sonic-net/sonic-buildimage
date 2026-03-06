@@ -69,6 +69,14 @@ module sonic-console {
                 }
             }
 
+            container controlled_device {
+                leaf enabled {
+                    description "This configuration indicate if enable controlled device feature on SONiC";
+                    type console-mgmt-enabled;
+                    default "no";
+                }
+            }
+
         } /* end of container CONSOLE_SWITCH */
 
     } /* end of top level container */
