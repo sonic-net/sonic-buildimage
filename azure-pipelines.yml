@@ -111,6 +111,10 @@ stages:
         pool: sonicso1ES-arm64
         variables:
           PLATFORM_ARCH: arm64
+      - name: aspeed
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_ARCH: arm64
 
 - stage: Test
   dependsOn: BuildVS
