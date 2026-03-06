@@ -39,7 +39,34 @@ popd
 mkdir -p /var/run/redis/sonic-db
 cp /etc/default/sonic-db/database_config.json /var/run/redis/sonic-db/
 
-SYSTEM_MAC_ADDRESS=$(ip link show eth0 | grep ether | awk '{print $2}')
+# Generate system MAC address
+# For VS platform, prefer hostname-based deterministic MAC generation to ensure
+# unique MACs for cloned VMs
+# Falls back to eth0 MAC if hostname-based generation fails
+SYSTEM_MAC_ADDRESS=$(python3 -c "
+from sonic_py_common.device_info import get_system_mac
+import socket
+try:
+    hostname = socket.gethostname()
+    mac = get_system_mac(hostname=hostname)
+    if mac:
+        print(mac)
+    else:
+        raise Exception('get_system_mac returned None')
+except Exception as e:
+    import subprocess
+    result = subprocess.run(['ip', 'link', 'show', 'eth0'], capture_output=True, text=True)
+    for line in result.stdout.split('\n'):
+        if 'ether' in line:
+            print(line.split()[1])
+            break
+" 2>/dev/null)
+
+# Fallback to eth0 MAC if Python script failed
+if [ -z "$SYSTEM_MAC_ADDRESS" ]; then
+    SYSTEM_MAC_ADDRESS=$(ip link show eth0 | grep ether | awk '{print $2}')
+fi
+
 sonic-cfggen -t /usr/share/sonic/templates/init_cfg.json.j2 -a "{\"system_mac\": \"$SYSTEM_MAC_ADDRESS\", \"switch_type\": \"$SWITCH_TYPE\"}" > /etc/sonic/init_cfg.json
 
 if [[ -f /usr/share/sonic/virtual_chassis/default_config.json ]]; then
