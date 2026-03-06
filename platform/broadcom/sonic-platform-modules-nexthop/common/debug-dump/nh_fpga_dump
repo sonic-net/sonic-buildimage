@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+import sys
+import subprocess
+
+
+def main():
+    """Dump all FPGA resource0 memory for tech-support"""
+    result = subprocess.run(["fpga", "dump", "--all"], check=False)
+    return result.returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())
