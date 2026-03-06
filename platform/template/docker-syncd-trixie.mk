@@ -25,10 +25,6 @@ $(DOCKER_SYNCD_BASE)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 
-$(DOCKER_SYNCD_BASE)_EXTRA_CFLAGS += -Wno-error=incompatible-pointer-types \
-                                     -Wno-error=int-conversion \
-                                     -Wno-error=implicit-function-declaration
-
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SYNCD_BASE)
 SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_SYNCD_BASE_DBG)
 
