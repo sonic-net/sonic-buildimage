@@ -1,0 +1,8 @@
+{
+    "name": "gcu-watchdog",
+    "has_per_asic_scope": false,
+    "has_global_scope": true,
+    "auto_restart": "enabled",
+    "high_mem_alert": "disabled",
+    "set_owner": "local"
+}

@@ -1,0 +1,55 @@
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+
+# Install toolchain prerequisites for building Rust + protobuf code generation.
+# protobuf-compiler is required by tonic-build to compile watchdog.proto.
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+# tonic-build uses the PROTOC env var to locate the protobuf compiler.
+# On Bookworm this must be set explicitly; without it 'cargo build' fails
+# with "could not find `protoc` installation".
+ENV PROTOC=/usr/bin/protoc
+
+# Install Rust/Cargo via rustup (pinned toolchain for reproducible builds).
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c \
+    'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.85.0 -y'
+ENV RUSTUP_HOME=$RUST_ROOT
+ENV PATH=$PATH:$RUST_ROOT/bin
+
+# Copy the GCU watchdog Rust source into the build stage.
+# The 'watchdog/' directory inside the docker build context is populated from
+# src/gcu-watchdog/ by the SONiC build system before 'docker build' is invoked.
+WORKDIR /watchdog
+COPY watchdog/ ./
+
+# Build the release binary.  tonic-build will invoke protoc to compile
+# proto/watchdog.proto into Rust gRPC server stubs during this step.
+RUN cargo build --release
+
+# ---------------------------------------------------------------------------
+# Final (runtime) stage
+# ---------------------------------------------------------------------------
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IMAGE_VERSION=$image_version
+
+# How often (seconds) the watchdog re-checks the venv checksum.
+# Override at container runtime with -e GCU_WATCHDOG_INTERVAL_SECS=<n>.
+ENV GCU_WATCHDOG_INTERVAL_SECS=30
+
+# Copy supervisord configuration
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+# Copy the compiled watchdog binary from the builder stage
+COPY --from=builder /watchdog/target/release/gcu_watchdog /usr/bin/gcu_watchdog
+RUN chmod +x /usr/bin/gcu_watchdog
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

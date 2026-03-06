@@ -1,0 +1,4 @@
+# The 'watchdog/' directory is a build-time copy of src/gcu-watchdog/ made by
+# rules/docker-gcu-watchdog.mk so Docker's COPY instruction can reach the Rust
+# source.  It must not be tracked in git.
+watchdog/

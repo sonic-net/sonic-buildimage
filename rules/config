@@ -225,6 +225,12 @@ INCLUDE_GBSYNCD ?= y
 # INCLUDE_TEAMD - build docker-teamd for LAG protocol support
 INCLUDE_TEAMD ?= y
 
+# INCLUDE_GCU - build docker-gcu for Generic Config Updater venv support
+INCLUDE_GCU ?= y
+
+# INCLUDE_GCU_WATCHDOG - build docker-gcu-watchdog for GCU venv integrity monitoring
+INCLUDE_GCU_WATCHDOG ?= y
+
 # INCLUDE_ROUTER_ADVERTISER - build docker-router-advertiser for router advertisements support
 INCLUDE_ROUTER_ADVERTISER ?= y
 

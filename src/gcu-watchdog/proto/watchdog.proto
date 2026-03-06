@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package watchdog;
+
+// WatchdogService exposes a health/status endpoint for the GCU watchdog.
+// The gRPC server is lightweight and intended to be queried by monitoring
+// agents or other SONiC containers (e.g., a sidecar health aggregator).
+service WatchdogService {
+  // GetStatus returns the current health of the GCU venv.
+  rpc GetStatus (StatusRequest) returns (StatusResponse);
+}
+
+// StatusRequest carries no fields — the watchdog checks the venv
+// on every call and returns a fresh result each time.
+message StatusRequest {}
+
+// StatusResponse indicates whether the monitored venv is intact.
+message StatusResponse {
+  // healthy is true when the current venv MD5 matches the baseline recorded
+  // at container startup.
+  bool healthy = 1;
+
+  // detail provides a human-readable explanation: "OK" when healthy,
+  // or a description of the drift (e.g. "checksum mismatch: expected
+  // <baseline_md5>, got <current_md5>") when unhealthy.
+  string detail = 2;
+}
