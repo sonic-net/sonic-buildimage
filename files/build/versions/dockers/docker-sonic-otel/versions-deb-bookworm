@@ -23,7 +23,7 @@ libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
 openssh-client==1:9.2p1-2+deb12u7
 openssl==3.0.18-1~deb12u2
-otelcol-contrib==0.114.0
+otelcol-contrib==0.144.0
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
 sensible-utils==0.0.17+nmu1

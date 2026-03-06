@@ -262,7 +262,7 @@ icu-devtools==76.1-4
 imagemagick==8:7.1.1.43+dfsg1-1+deb13u5
 imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u5
 imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u5
-inetutils-telnet==2:2.6-3+deb13u1
+inetutils-telnet==2:2.6-3+deb13u2
 inkscape==1.4-6
 install-info==7.1.1-1+b1
 intel-media-va-driver==25.2.3+dfsg1-1
@@ -823,10 +823,10 @@ libgme0==0.6.3-7+b2
 libgmock-dev==1.16.0-1
 libgmp-dev==2:6.3.0+dfsg-3
 libgmpxx4ldbl==2:6.3.0+dfsg-3
-libgnutls-dane0t64==3.8.9-3+deb13u1
-libgnutls-openssl27t64==3.8.9-3+deb13u1
-libgnutls28-dev==3.8.9-3+deb13u1
-libgnutls30t64==3.8.9-3+deb13u1
+libgnutls-dane0t64==3.8.9-3+deb13u2
+libgnutls-openssl27t64==3.8.9-3+deb13u2
+libgnutls28-dev==3.8.9-3+deb13u2
+libgnutls30t64==3.8.9-3+deb13u2
 libgomp1==14.2.0-19
 libgomp1-armhf-cross==14.2.0-19cross1
 libgoogle-perftools4t64==2.16-1
@@ -1159,7 +1159,7 @@ libnpth0t64==1.8-3
 libnsl2==1.3.0-3+b3
 libnspr4==2:4.36-1
 libnss-systemd==257.9-1~deb13u1
-libnss3==2:3.110-1
+libnss3==2:3.110-1+deb13u1
 libnuma-dev==2.0.19-1
 libnuma1==2.0.19-1
 libnumber-compare-perl==0.03-3
@@ -1266,9 +1266,9 @@ libplexus-xml-java==3.0.1-2
 libpmem1==1.13.1-1.1+b1
 libpmix-dev==5.0.7-1
 libpmix2t64==5.0.7-1
-libpng-dev==1.6.48-1+deb13u1
-libpng-tools==1.6.48-1+deb13u1
-libpng16-16t64==1.6.48-1+deb13u1
+libpng-dev==1.6.48-1+deb13u3
+libpng-tools==1.6.48-1+deb13u3
+libpng16-16t64==1.6.48-1+deb13u3
 libpocketsphinx3==0.8+5prealpha+1-15+b4
 libpod-constants-perl==0.19-2
 libpod-parser-perl==1.67-1
@@ -1575,7 +1575,7 @@ libvorbis0a==1.3.7-3
 libvorbisenc2==1.3.7-3
 libvorbisfile3==1.3.7-3
 libvpl2==1:2.14.0-1+b1
-libvpx9==1.15.0-2.1
+libvpx9==1.15.0-2.1+deb13u1
 libvte-2.91-0==0.80.1-1
 libvte-2.91-common==0.80.1-1
 libvulkan-dev==1.4.309.0-1
@@ -1746,7 +1746,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12
-linux-libc-dev==6.12.69-1
+linux-libc-dev==6.12.73-1
 linux-sysctl-defaults==4.12
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -2026,8 +2026,8 @@ python3-paramiko==3.5.1-3
 python3-parse==1.20.2-1
 python3-parso==0.8.4-1
 python3-pexpect==4.9-3
-python3-pil==11.1.0-5+b1
-python3-pil.imagetk==11.1.0-5+b1
+python3-pil==11.1.0-5+deb13u1
+python3-pil.imagetk==11.1.0-5+deb13u1
 python3-pip==25.1.1+dfsg-1
 python3-pip-whl==25.1.1+dfsg-1
 python3-pkg-resources==78.1.1-0.1
@@ -2187,7 +2187,7 @@ tcl-expect==5.45.4-4
 tcl8.6==8.6.16+dfsg-1
 tcpdump==4.99.5-2
 teckit==2.5.12+ds1-1+b1
-telnet==0.17+2.6-3+deb13u1
+telnet==0.17+2.6-3+deb13u2
 tex-common==6.19
 tex-gyre==20180621-6
 texi2html==1.82+dfsg1-7
