@@ -4,15 +4,26 @@ logfile_maxbytes=1MB
 logfile_backups=2
 nodaemon=true
 
-[program:start.sh]
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[program:start]
 command=/usr/bin/start.sh
 priority=1
-autostart=true
+autostart=false
 autorestart=false
+startsecs=0
 stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
+dependent_startup=true
 
 [program:rsyslogd]
 command=/usr/sbin/rsyslogd -n
@@ -405,3 +416,6 @@ stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+{% set lldp_priority_base = 28 %}
+{% include "supervisord.conf.lldp.j2" %}

@@ -14,6 +14,10 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(SONIC_HOST_SERVICES_DATA) \
                               $(SYSMGR)
 
+# Include feature dockers — auto-merges DEPENDS, PYTHON_WHEELS,
+# and provides --build-context for COPY --from=<feature> in Dockerfile.j2
+$(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_LLDP)
+
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
                                     $(SONIC_YANG_MODELS_PY3) \
