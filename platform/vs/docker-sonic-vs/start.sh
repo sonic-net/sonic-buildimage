@@ -47,6 +47,11 @@ if [[ -f /usr/share/sonic/virtual_chassis/default_config.json ]]; then
     mv /tmp/init_cfg.json /etc/sonic/init_cfg.json
 fi
 
+# If a config_db.json is provided on the persistent volume, use it
+if [ -f /var/sonic/config_db.json ]; then
+    cp /var/sonic/config_db.json /etc/sonic/config_db.json
+fi
+
 if [ -f /etc/sonic/config_db.json ]; then
     sonic-cfggen -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db.json --print-data > /tmp/config_db.json
     mv /tmp/config_db.json /etc/sonic/config_db.json
