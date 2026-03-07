@@ -244,8 +244,8 @@ install_deb_package $debs_path/sonic-utilities-data_*.deb
 # Install customized bash version to patch bash plugin support.
 install_deb_package $debs_path/bash_*.deb
 
-# sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
-# in bash.bashrc, so we copy a version of the file with it enabled here.
+# Bash completion is disabled by default in bash.bashrc, so we copy a version
+# of the file with it enabled here.
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bashrc $FILESYSTEM_ROOT/etc/
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bash_logout $FILESYSTEM_ROOT/etc/
 
