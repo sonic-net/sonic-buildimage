@@ -21,6 +21,8 @@ RUN chmod +x /usr/bin/config_checker.py
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Make apt-get non-interactive
