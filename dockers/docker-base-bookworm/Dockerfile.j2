@@ -56,6 +56,28 @@ RUN apt update &&            \
         libwrap0            \
         libatomic1
 
+# Security fixes: upgrade vulnerable base packages (S360 scan remediation)
+RUN apt-get update && apt-get install -y --only-upgrade \
+        gcc-12-base          \
+        gpgv                 \
+        libc-bin             \
+        libc6                \
+        libcap2              \
+        libgcc-s1            \
+        libgnutls30          \
+        liblzma5             \
+        libpam-modules       \
+        libpam-modules-bin   \
+        libpam-runtime       \
+        libpam0g             \
+        libstdc++6           \
+        libsystemd0          \
+        libudev1             \
+        login                \
+        passwd               \
+        perl-base            \
+    && rm -rf /var/lib/apt/lists/*
+
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
 
