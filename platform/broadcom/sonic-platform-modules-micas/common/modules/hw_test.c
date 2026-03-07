@@ -48,7 +48,7 @@
 
 #include "hw_test.h"
 
-extern struct bus_type mdio_bus_type;
+extern const struct bus_type mdio_bus_type;
 
 struct board_mdio_dev {
     struct list_head list;

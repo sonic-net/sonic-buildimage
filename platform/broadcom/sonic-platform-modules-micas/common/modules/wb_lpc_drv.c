@@ -23,6 +23,7 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/pci.h>
@@ -133,7 +134,7 @@ static int wb_lpc_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int wb_lpc_remove(struct platform_device *pdev)
+static void wb_lpc_remove(struct platform_device *pdev)
 {
     wb_lpc_dev_t *wb_lpc_dev;
 
@@ -144,7 +145,6 @@ static int wb_lpc_remove(struct platform_device *pdev)
     }
     LPC_DEV_DEBUG_VERBOSE("lpc remove.\n");
 
-    return 0;
 }
 
 static struct of_device_id lpc_dev_match[] = {

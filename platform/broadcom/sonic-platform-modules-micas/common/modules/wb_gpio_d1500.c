@@ -24,6 +24,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/gpio.h>
+#include <linux/gpio/driver.h>
+#include <linux/of.h>
 #include <linux/io.h>
 #include <linux/errno.h>
 #include <linux/ioport.h>
@@ -351,10 +353,9 @@ static int wb_gpio_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int wb_gpio_remove(struct platform_device *pdev)
+static void wb_gpio_remove(struct platform_device *pdev)
 {
     dev_info(&pdev->dev, "unregister d1500 gpio success\n");
-    return 0;
 }
 
 static const struct of_device_id gpio_d1500_match[] = {

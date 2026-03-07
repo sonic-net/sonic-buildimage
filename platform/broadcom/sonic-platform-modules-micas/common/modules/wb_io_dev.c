@@ -24,6 +24,7 @@
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
@@ -638,7 +639,7 @@ static int io_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int io_dev_remove(struct platform_device *pdev)
+static void io_dev_remove(struct platform_device *pdev)
 {
     int i;
 
@@ -649,7 +650,6 @@ static int io_dev_remove(struct platform_device *pdev)
         }
     }
 
-    return 0;
 }
 
 static struct of_device_id io_dev_match[] = {

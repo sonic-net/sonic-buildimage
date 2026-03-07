@@ -246,7 +246,7 @@ free_mem:
     return ret;
 }
 
-static int dfd_irq_remove(struct platform_device *pdev)
+static void dfd_irq_remove(struct platform_device *pdev)
 {
     dfd_irq_t *dfd_irq;
     struct uio_info *dfd_irq_info;
@@ -259,7 +259,6 @@ static int dfd_irq_remove(struct platform_device *pdev)
 
     sysfs_remove_group(&pdev->dev.kobj, &dfd_irq->attr_group);
 
-    return 0;
 }
 
 static struct of_device_id dfd_irq_match[] = {
