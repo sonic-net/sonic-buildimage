@@ -1,0 +1,1995 @@
+From b7df0227b7a3957c9c2370939b6459d37d517811 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 4 Nov 2025 15:23:36 +0000
+Subject: [PATCH 01/14] zebra: Handle ZEBRA_NEIGH_GET message type
+
+We have a ZAPI message type, ZEBRA_NEIGH_GET, but it is currently not
+handled by zebra.
+
+This commit extends zebra to handle ZEBRA_NEIGH_GET, allowing daemons
+to request and retrieve information about neighbors on a specific
+interface.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/zapi_msg.c | 62 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
+index b0b01a8924c5..f6ba3d99939b 100644
+--- a/zebra/zapi_msg.c
++++ b/zebra/zapi_msg.c
+@@ -52,6 +52,7 @@
+ #include "zebra/zebra_opaque.h"
+ #include "zebra/zebra_srte.h"
+ #include "zebra/zebra_srv6.h"
++#include "zebra/zebra_neigh.h"
+ 
+ DEFINE_MTYPE_STATIC(ZEBRA, RE_OPAQUE, "Route Opaque Data");
+ 
+@@ -3769,6 +3770,66 @@ static inline void zread_ipset_entry(ZAPI_HANDLER_ARGS)
+ 	return;
+ }
+ 
++/* Send neighbor info to client */
++static void zsend_neighbor(struct zserv *client, struct interface *ifp,
++			   struct zebra_neigh_ent *neigh)
++{
++	struct stream *s;
++	union sockunion ip, lladdr;
++
++	/* Convert ipaddr to sockunion */
++	sockunion_family(&ip) = neigh->ip.ipa_type;
++	if (neigh->ip.ipa_type == AF_INET)
++		memcpy(&ip.sin.sin_addr, &neigh->ip.ipaddr_v4, sizeof(struct in_addr));
++	else
++		memcpy(&ip.sin6.sin6_addr, &neigh->ip.ipaddr_v6, sizeof(struct in6_addr));
++
++	/* Convert lladdr to sockunion */
++	sockunion_family(&lladdr) = AF_UNSPEC;
++
++	s = stream_new(ZEBRA_MAX_PACKET_SIZ);
++	zclient_neigh_ip_encode(s, ZEBRA_NEIGH_ADDED, &ip, &lladdr, ifp,
++				ZEBRA_NEIGH_STATE_REACHABLE, 0);
++	stream_putw_at(s, 0, stream_get_endp(s));
++	zserv_send_message(client, s);
++}
++
++static void zebra_neigh_get(ZAPI_HANDLER_ARGS)
++{
++	ifindex_t ifindex;
++	struct interface *ifp;
++	struct zebra_neigh_ent *n;
++	afi_t afi;
++
++	STREAM_GETL(msg, ifindex);
++	STREAM_GETW(msg, afi);
++
++	if (!(IS_VALID_AFI(afi))) {
++		zlog_warn("Failed to get neighbors: invalid AFI %u", afi);
++		return;
++	}
++
++	ifp = if_lookup_by_index(ifindex, zvrf_id(zvrf));
++	if (!ifp) {
++		zlog_warn("Failed to get neighbors: interface with index %u not found", ifindex);
++		return;
++	}
++
++	/* Send all neighbors for this interface */
++	RB_FOREACH (n, zebra_neigh_rb_head, &zneigh_info->neigh_rb_tree) {
++		if (n->ifindex != ifindex)
++			continue;
++
++		if ((afi == AFI_IP && n->ip.ipa_type != AF_INET) ||
++		    (afi == AFI_IP6 && n->ip.ipa_type != AF_INET6))
++			continue;
++
++		zsend_neighbor(client, ifp, n);
++	}
++
++stream_failure:
++	return;
++}
+ 
+ static inline void zebra_neigh_register(ZAPI_HANDLER_ARGS)
+ {
+@@ -4159,6 +4220,7 @@ void (*const zserv_handlers[])(ZAPI_HANDLER_ARGS) = {
+ 	[ZEBRA_NEIGH_IP_DEL] = zebra_neigh_ip_del,
+ 	[ZEBRA_NEIGH_REGISTER] = zebra_neigh_register,
+ 	[ZEBRA_NEIGH_UNREGISTER] = zebra_neigh_unregister,
++	[ZEBRA_NEIGH_GET] = zebra_neigh_get,
+ 	[ZEBRA_CONFIGURE_ARP] = zebra_configure_arp,
+ 	[ZEBRA_GRE_GET] = zebra_gre_get,
+ 	[ZEBRA_GRE_SOURCE_SET] = zebra_gre_source_set,
+
+From d4f40bb1ffc4515102a9e811b587c574c82c872b Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 4 Nov 2025 15:47:26 +0000
+Subject: [PATCH 02/14] lib: Add zclient API to request neighbor information
+
+This commit introduces a zclient API that enables daemons to request
+neighbor information for a specific interface from zebra.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ lib/zclient.c | 20 ++++++++++++++++++++
+ lib/zclient.h |  2 ++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/lib/zclient.c b/lib/zclient.c
+index 52b425873d7e..26555eaab09f 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -5416,3 +5416,23 @@ void zclient_register_neigh(struct zclient *zclient, vrf_id_t vrf_id, afi_t afi,
+ 	stream_putw_at(s, 0, stream_get_endp(s));
+ 	zclient_send_message(zclient);
+ }
++
++void zclient_neigh_get(struct zclient *zclient, struct interface *ifp, afi_t afi)
++{
++	struct stream *s;
++
++	if (!zclient || zclient->sock < 0) {
++		zlog_err("%s : zclient not connected", __func__);
++		return;
++	}
++
++	s = zclient->obuf;
++	stream_reset(s);
++
++	zclient_create_header(s, ZEBRA_NEIGH_GET, VRF_DEFAULT);
++	stream_putl(s, ifp->ifindex);
++	stream_putw(s, afi);
++
++	stream_putw_at(s, 0, stream_get_endp(s));
++	zclient_send_message(zclient);
++}
+diff --git a/lib/zclient.h b/lib/zclient.h
+index 9e1170534d3d..ec55ce1ed488 100644
+--- a/lib/zclient.h
++++ b/lib/zclient.h
+@@ -1410,6 +1410,8 @@ extern enum zclient_send_status zclient_send_hello(struct zclient *client);
+ extern void zclient_register_neigh(struct zclient *zclient, vrf_id_t vrf_id,
+ 				   afi_t afi, bool reg);
+ 
++extern void zclient_neigh_get(struct zclient *zclient, struct interface *ifp, afi_t afi);
++
+ extern enum zclient_send_status
+ zclient_send_neigh_discovery_req(struct zclient *zclient,
+ 				 const struct interface *ifp,
+
+From eb43e0059ee7df56019cb14f07bc64f853addbc9 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 4 Nov 2025 17:13:43 +0000
+Subject: [PATCH 03/14] staticd: Add infrastructure to track neighbors
+
+This commit adds infrastructure to track neighbors of interest and
+store their information.
+
+Neighbor information includes:
+- The interface to which the neighbor is attached
+- IP address
+- State (e.g., reachable, stale, etc.)
+
+Future commits will extend staticd to retrieve neighbor information
+from zebra and populate the neighbor hash table accordingly.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 89 +++++++++++++++++++++++++++++++++++++++++++
+ staticd/static_srv6.h | 49 ++++++++++++++++++++++++
+ 2 files changed, 138 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 0e962e089c62..e79754c76d4d 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -24,6 +24,20 @@ struct list *srv6_sids;
+ 
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_LOCATOR, "Static SRv6 locator");
+ DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_SID, "Static SRv6 SID");
++DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_NEIGH, "Static SRv6 Neighbor");
++DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_NEIGH_CACHE, "Static SRv6 Neighbor Cache");
++DEFINE_MTYPE_STATIC(STATIC, STATIC_SRV6_IF_NEIGH, "Static SRv6 Interface Neighbors");
++
++/* Comparison and hash functions for neighbor table */
++static int static_srv6_neigh_table_cmp(const struct static_srv6_if_neigh *n1,
++				       const struct static_srv6_if_neigh *n2);
++static uint32_t static_srv6_neigh_table_hash(const struct static_srv6_if_neigh *neigh);
++
++DECLARE_HASH(static_srv6_neigh_table, struct static_srv6_if_neigh, item,
++	     static_srv6_neigh_table_cmp, static_srv6_neigh_table_hash);
++
++/* Global neighbor cache instance */
++struct static_srv6_neigh_cache *neigh_cache;
+ 
+ /*
+  * Determines if the specified SID needs to be installed or removed
+@@ -253,6 +267,79 @@ void static_zebra_request_srv6_sids(void)
+ 		static_zebra_request_srv6_sid(sid);
+ }
+ 
++/*
++ * Neighbor Cache Functions
++ */
++
++/* Comparison function for neighbor table */
++int static_srv6_neigh_table_cmp(const struct static_srv6_if_neigh *ifn1,
++				const struct static_srv6_if_neigh *ifn2)
++{
++	if (ifn1->ifindex < ifn2->ifindex)
++		return -1;
++
++	if (ifn1->ifindex > ifn2->ifindex)
++		return 1;
++
++	return 0;
++}
++
++/* Hash function for neighbor table */
++uint32_t static_srv6_neigh_table_hash(const struct static_srv6_if_neigh *ifn)
++{
++	return jhash_1word(ifn->ifindex, 0);
++}
++
++/* Free neighbor */
++static void static_srv6_neigh_free(struct static_srv6_neigh *neigh)
++{
++	XFREE(MTYPE_STATIC_SRV6_NEIGH, neigh);
++}
++
++/*
++ * Initialize the neighbor cache
++ */
++void static_srv6_neigh_cache_init(void)
++{
++	if (neigh_cache)
++		return;
++
++	neigh_cache = XCALLOC(MTYPE_STATIC_SRV6_NEIGH_CACHE,
++			      sizeof(struct static_srv6_neigh_cache));
++
++	static_srv6_neigh_table_init(&neigh_cache->neigh_table);
++	neigh_cache->resolve_sids_cnt = 0;
++	neigh_cache->registered = false;
++}
++
++/*
++ * Clean up the neighbor cache
++ */
++void static_srv6_neigh_cache_cleanup(void)
++{
++	struct static_srv6_if_neigh *ifn;
++	struct static_srv6_neigh *neigh;
++	struct static_srv6_neigh *next;
++
++	if (!neigh_cache)
++		return;
++
++	/* Clean up hash table - free all interface neighbors */
++	while ((ifn = static_srv6_neigh_table_pop(&neigh_cache->neigh_table)) != NULL) {
++		neigh = ifn->neighbors;
++		while (neigh) {
++			next = neigh->next;
++			static_srv6_neigh_free(neigh);
++			neigh = next;
++		}
++		XFREE(MTYPE_STATIC_SRV6_IF_NEIGH, ifn);
++	}
++	static_srv6_neigh_table_fini(&neigh_cache->neigh_table);
++
++	XFREE(MTYPE_STATIC_SRV6_NEIGH_CACHE, neigh_cache);
++	neigh_cache = NULL;
++}
++
+ /*
+  * Initialize SRv6 data structures.
+  */
+@@ -262,6 +349,7 @@ void static_srv6_init(void)
+ 	srv6_locators->del = delete_static_srv6_locator;
+ 	srv6_sids = list_new();
+ 	srv6_sids->del = delete_static_srv6_sid;
++	static_srv6_neigh_cache_init();
+ }
+ 
+ /*
+@@ -269,6 +357,7 @@ void static_srv6_init(void)
+  */
+ void static_srv6_cleanup(void)
+ {
++	static_srv6_neigh_cache_cleanup();
+ 	list_delete(&srv6_locators);
+ 	list_delete(&srv6_sids);
+ }
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index 2cf5f010ce95..c99ba49d02f2 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -46,6 +46,52 @@ struct static_srv6_sid {
+ 	struct static_srv6_locator *locator;
+ };
+ 
++/* Hash table to keep per-interface neighbors used for SRv6 SID nexthop resolution */
++PREDECL_HASH(static_srv6_neigh_table);
++
++/*
++ * Neighbor information.
++ */
++struct static_srv6_neigh {
++	struct in6_addr addr; /* IPv6 address */
++	ifindex_t ifindex;    /* Interface index */
++	uint32_t ndm_state;   /* Neighbor state */
++
++	/* For linked list: next neighbor on the same interface */
++	struct static_srv6_neigh *next;
++};
++
++/*
++ * Per-interface neighbor list container for hash table.
++ * Maps interface index to list of neighbors on that interface.
++ */
++struct static_srv6_if_neigh {
++	/* Linkage for neighbors hash table */
++	struct static_srv6_neigh_table_item item;
++
++	/* Interface index (hash key) */
++	ifindex_t ifindex;
++
++	/* Linked list of neighbors on this interface */
++	struct static_srv6_neigh *neighbors;
++
++	/* Flag to indicate if a neighbor request has been sent */
++	bool neigh_request_sent;
++};
++
++/*
++ * Neighbor cache for SRv6 SID nexthop resolution.
++ * Maintains per-interface neighbor lists.
++ */
++struct static_srv6_neigh_cache {
++	/* Hash table: ifindex -> neighbor list */
++	struct static_srv6_neigh_table_head neigh_table;
++	/* Number of SIDs requiring nexthop resolution */
++	uint32_t resolve_sids_cnt;
++	/* Whether we are registered for neighbor notifications */
++	bool registered;
++};
++
+ struct static_srv6_locator {
+ 	char name[SRV6_LOCNAME_SIZE];
+ 	struct prefix_ipv6 prefix;
+@@ -103,6 +149,9 @@ void delete_static_srv6_locator(void *val);
+ 
+ void static_zebra_request_srv6_sids(void);
+ 
++void static_srv6_neigh_cache_init(void);
++void static_srv6_neigh_cache_cleanup(void);
++
+ #ifdef __cplusplus
+ }
+ #endif
+
+From b6baf83e9077d61add71c9ac3a9e28413238b1fb Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:09:20 +0000
+Subject: [PATCH 04/14] staticd: Set a flag to indicate that a SID requires
+ nexthop resolution
+
+In staticd, you can create a uA SID using the following CLI:
+
+```
+segment-routing
+ srv6
+  static-sids
+   sid fcbb:bbbb:fe10::/48 behavior uA interface eth10 [nexthop 2001::2]
+```
+
+When a user configures a uA SID without specifying the nexthop, staticd
+should set the STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION flag.
+This flag indicates that the SID requires nexthop resolution before it
+can be installed in the RIB.
+
+Future commits will extend staticd to resolve the nexthop when this
+flag is set, before installing the SID into the RIB.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_nb_config.c | 34 ++++++++++++++++++++++++++++++++++
+ staticd/static_srv6.c      |  4 ++++
+ staticd/static_srv6.h      |  2 ++
+ 3 files changed, 40 insertions(+)
+
+diff --git a/staticd/static_nb_config.c b/staticd/static_nb_config.c
+index 5648b37e97a2..dcdb68f47e47 100644
+--- a/staticd/static_nb_config.c
++++ b/staticd/static_nb_config.c
+@@ -1229,6 +1229,7 @@ void routing_control_plane_protocols_control_plane_protocol_staticd_segment_rout
+ {
+ 	struct static_srv6_sid *sid;
+ 	struct static_srv6_locator *locator;
++	bool is_ua, has_interface, has_nexthop;
+ 
+ 	sid = nb_running_get_entry(args->dnode, NULL, true);
+ 
+@@ -1243,6 +1244,39 @@ void routing_control_plane_protocols_control_plane_protocol_staticd_segment_rout
+ 
+ 	sid->locator = locator;
+ 
++	/* Determine if this is a SID that requires nexthop resolution */
++
++	/* Check if SID is uA or End.X that may require nexthop resolution */
++	is_ua = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
++		 sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID);
++
++	/* Check if interface is configured */
++	has_interface = (sid->attributes.ifname[0] != '\0');
++
++	/* Check if nexthop is configured (not all zeros) */
++	has_nexthop = !IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.nh6);
++
++	if (is_ua && has_interface && !has_nexthop) {
++		/* This is a uA SID with interface but no explicit nexthop - enable nexthop resolution */
++		if (!CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION)) {
++			DEBUGD(&static_dbg_srv6,
++			       "%s: Enabling nexthop resolution for SID %pFX on interface %s",
++			       __func__, &sid->addr, sid->attributes.ifname);
++
++			/* Set nexthop resolution flag */
++			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++		}
++	} else {
++		/* This is a SID that does not require nexthop resolution - disable nexthop resolution */
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION)) {
++			DEBUGD(&static_dbg_srv6, "%s: Disabling nexthop resolution for SID %pFX",
++			       __func__, &sid->addr);
++
++			/* Clear nexthop resolution flag */
++			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++		}
++	}
++
+ 	static_zebra_request_srv6_sid(sid);
+ }
+ 
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index e79754c76d4d..d2f9b2710190 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -240,6 +240,10 @@ void delete_static_srv6_locator(void *val)
+  */
+ void static_srv6_sid_del(struct static_srv6_sid *sid)
+ {
++	/* Clean up nexthop resolution flag if set */
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION))
++		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++
+ 	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+ 		static_zebra_release_srv6_sid(sid);
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index c99ba49d02f2..444c6d4d2b32 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -41,6 +41,8 @@ struct static_srv6_sid {
+ #define STATIC_FLAG_SRV6_SID_VALID (1 << 0)
+ /* this SRv6 SID has been installed in the zebra RIB */
+ #define STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA (1 << 1)
++/* this SRv6 SID requires nexthop resolution */
++#define STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION (1 << 2)
+ 
+ 	char locator_name[SRV6_LOCNAME_SIZE];
+ 	struct static_srv6_locator *locator;
+
+From 7dfd8cfac1071b7391533716e7df416e6e887815 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:15:56 +0000
+Subject: [PATCH 05/14] staticd: Register and unregister for neighbor
+ notifications
+
+This commit implements the following behavior:
+
+- When a user configures a SID that requires nexthop resolution,
+  staticd registers for neighbor notifications (if not already
+  registered) and increments the counter of SIDs requiring nexthop
+  resolution.
+- When a user removes a SID that required nexthop resolution, staticd
+  decrements the counter and unregisters from neighbor notifications if
+  no other SIDs require nexthop resolution.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_nb_config.c |  9 ++++--
+ staticd/static_srv6.c      | 60 ++++++++++++++++++++++++++++++++++++--
+ staticd/static_srv6.h      |  2 ++
+ staticd/static_zebra.c     |  8 +++++
+ staticd/static_zebra.h     |  2 ++
+ 5 files changed, 77 insertions(+), 4 deletions(-)
+
+diff --git a/staticd/static_nb_config.c b/staticd/static_nb_config.c
+index dcdb68f47e47..9c4489e480ea 100644
+--- a/staticd/static_nb_config.c
++++ b/staticd/static_nb_config.c
+@@ -1263,8 +1263,9 @@ void routing_control_plane_protocols_control_plane_protocol_staticd_segment_rout
+ 			       "%s: Enabling nexthop resolution for SID %pFX on interface %s",
+ 			       __func__, &sid->addr, sid->attributes.ifname);
+ 
+-			/* Set nexthop resolution flag */
++			/* Set nexthop resolution flag and register for neighbor notifications */
+ 			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++			static_srv6_neigh_register_if_needed();
+ 		}
+ 	} else {
+ 		/* This is a SID that does not require nexthop resolution - disable nexthop resolution */
+@@ -1272,8 +1273,12 @@ void routing_control_plane_protocols_control_plane_protocol_staticd_segment_rout
+ 			DEBUGD(&static_dbg_srv6, "%s: Disabling nexthop resolution for SID %pFX",
+ 			       __func__, &sid->addr);
+ 
+-			/* Clear nexthop resolution flag */
++			/*
++			 * Clear the nexthop resolution flag and unregister from neighbor notifications
++			 * if there are no other SIDs requiring nexthop resolution.
++			 */
+ 			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++			static_srv6_neigh_unregister_if_needed();
+ 		}
+ 	}
+ 
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index d2f9b2710190..b0cbf44b659f 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -236,13 +236,15 @@ void delete_static_srv6_locator(void *val)
+ 
+ /*
+  * Remove an SRv6 SID from the zebra RIB (if it was previously installed) and
+- * release the memory previously allocated for the SID.
++ * release the memory previously allocated for the SID.<<<
+  */
+ void static_srv6_sid_del(struct static_srv6_sid *sid)
+ {
+ 	/* Clean up nexthop resolution flag if set */
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION))
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION)) {
++		static_srv6_neigh_unregister_if_needed();
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION);
++	}
+ 
+ 	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+ 		static_zebra_release_srv6_sid(sid);
+@@ -328,6 +330,10 @@ void static_srv6_neigh_cache_cleanup(void)
+ 	if (!neigh_cache)
+ 		return;
+ 
++	/* Unregister from neighbor notifications if needed */
++	if (neigh_cache->registered)
++		static_srv6_neigh_unregister_if_needed();
++
+ 	/* Clean up hash table - free all interface neighbors */
+ 	while ((ifn = static_srv6_neigh_table_pop(&neigh_cache->neigh_table)) != NULL) {
+ 		neigh = ifn->neighbors;
+@@ -344,6 +350,56 @@ void static_srv6_neigh_cache_cleanup(void)
+ 	neigh_cache = NULL;
+ }
+ 
++/*
++ * Register for neighbor notifications if we have SIDs requiring nexthop resolution
++ */
++void static_srv6_neigh_register_if_needed(void)
++{
++	if (!neigh_cache) {
++		DEBUGD(&static_dbg_srv6, "%s: Initializing neighbor cache", __func__);
++		static_srv6_neigh_cache_init();
++	}
++
++	neigh_cache->resolve_sids_cnt++;
++	DEBUGD(&static_dbg_srv6, "%s: SRv6 SID resolve count increased to %u", __func__,
++	       neigh_cache->resolve_sids_cnt);
++
++	if (!neigh_cache->registered && neigh_cache->resolve_sids_cnt > 0) {
++		DEBUGD(&static_dbg_srv6, "%s: Registering for IPv6 neighbor notifications",
++		       __func__);
++		static_zebra_neigh_register(AFI_IP6, true);
++		neigh_cache->registered = true;
++	} else if (neigh_cache->registered) {
++		DEBUGD(&static_dbg_srv6, "%s: Already registered for neighbor notifications",
++		       __func__);
++	}
++}
++
++/*
++ * Unregister from neighbor notifications if there are no other SIDs requiring
++ * nexthop resolution
++ */
++void static_srv6_neigh_unregister_if_needed(void)
++{
++	if (!neigh_cache) {
++		DEBUGD(&static_dbg_srv6, "%s: Cache not initialized during unregister", __func__);
++		return;
++	}
++
++	if (neigh_cache->resolve_sids_cnt > 0) {
++		neigh_cache->resolve_sids_cnt--;
++		DEBUGD(&static_dbg_srv6, "%s: SRv6 SID resolve count decreased to %u", __func__,
++		       neigh_cache->resolve_sids_cnt);
++	}
++
++	if (neigh_cache->registered && neigh_cache->resolve_sids_cnt == 0) {
++		DEBUGD(&static_dbg_srv6, "%s: Unregistering from IPv6 neighbor notifications",
++		       __func__);
++		static_zebra_neigh_register(AFI_IP6, false);
++		neigh_cache->registered = false;
++	}
++}
++
+ /*
+  * Initialize SRv6 data structures.
+  */
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index 444c6d4d2b32..d42b864837ca 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -153,6 +153,8 @@ void static_zebra_request_srv6_sids(void);
+ 
+ void static_srv6_neigh_cache_init(void);
+ void static_srv6_neigh_cache_cleanup(void);
++void static_srv6_neigh_register_if_needed(void);
++void static_srv6_neigh_unregister_if_needed(void);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index d7cddd598cf5..a6af9f3a13b1 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -1459,6 +1459,14 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 	return 0;
+ }
+ 
++void static_zebra_neigh_register(afi_t afi, bool reg)
++{
++	DEBUGD(&static_dbg_events, "%s: Sending neighbor %s request for afi %u", __func__,
++	       reg ? "register" : "unregister", afi);
++
++	zclient_register_neigh(static_zclient, VRF_DEFAULT, afi, reg);
++}
++
+ static zclient_handler *const static_handlers[] = {
+ 	[ZEBRA_INTERFACE_ADDRESS_ADD] = interface_address_add,
+ 	[ZEBRA_INTERFACE_ADDRESS_DELETE] = interface_address_delete,
+diff --git a/staticd/static_zebra.h b/staticd/static_zebra.h
+index 2a94c6dad95b..96998afde1a1 100644
+--- a/staticd/static_zebra.h
++++ b/staticd/static_zebra.h
+@@ -32,6 +32,8 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_install(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid);
+ 
++extern void static_zebra_neigh_register(afi_t afi, bool reg);
++
+ #ifdef __cplusplus
+ }
+ #endif
+
+From 4df7de3fc9215ceaac91418885bca0ec4db4fd34 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:34:48 +0000
+Subject: [PATCH 06/14] staticd: Use resolved nexthop for SIDs that require
+ nexthop resolution
+
+In staticd, you can create a uA SID using the following CLI:
+
+```
+segment-routing
+ srv6
+  static-sids
+   sid fcbb:bbbb:fe10::/48 behavior uA interface eth10 [nexthop 2001::2]
+```
+
+The nexthop parameter is optional.
+
+- If a nexthop is provided, staticd stores it in `sid->attributes.nh6`.
+- If a nexthop is not provided, staticd resolves the nexthop and stores
+  it in `sid->attributes.resolved_nh6`.
+
+Currently, when installing a uA SID, staticd always uses the configured
+nexthop (`sid->attributes.nh6`). While this works when a nexthop is
+specified, it leads to incorrect routing entry when the nexthop is
+omitted, resulting in an empty nexthop (::) in the RIB:
+
+```
+router# sh ip -6 route show
+...
+fcbb:bbbb:fe10::/48  encap seg6local action End.X nh6 :: flavors next-csid lblen 32 nflen 16 dev eth10 metric 1024 pref medium
+...
+```
+
+This commit fixes the issue by checking the
+`STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION` flag.
+If the flag is set, staticd uses the resolved nexthop
+(`sid->attributes.resolved_nh6`) for installation in the RIB instead of
+the configured one (`sid->attributes.nh6`).
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c  | 31 +++++++++++++++++++++++++++++
+ staticd/static_srv6.h  |  6 ++++++
+ staticd/static_zebra.c | 44 ++++++++++++++++++++++++++++++++++++++++--
+ staticd/static_zebra.h |  1 +
+ 4 files changed, 80 insertions(+), 2 deletions(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index b0cbf44b659f..c2cabcc2b6a0 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -400,6 +400,37 @@ void static_srv6_neigh_unregister_if_needed(void)
+ 	}
+ }
+ 
++/**
++ * Get the effective nexthop to use for SID installation
++ * Returns pointer to attributes.resolved_nh6 for SIDs
++ * requiring nexthop resolution, or attributes.nh6 for SIDs
++ * that provide an explicit nexthop.
++ */
++const struct in6_addr *static_srv6_sid_get_nexthop(const struct static_srv6_sid *sid)
++{
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION)) {
++		return IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.resolved_nh6)
++			       ? NULL
++			       : &sid->attributes.resolved_nh6;
++	}
++
++	return &sid->attributes.nh6;
++}
++
++/**
++ * Clear resolved nexthop for a SID
++ */
++void static_srv6_sid_clear_resolution(struct static_srv6_sid *sid)
++{
++	if (IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.resolved_nh6))
++		return;
++
++	DEBUGD(&static_dbg_srv6, "%s: Clearing resolved nexthop for SID %pFX", __func__,
++	       &sid->addr);
++
++	sid->attributes.resolved_nh6 = in6addr_any;
++}
++
+ /*
+  * Initialize SRv6 data structures.
+  */
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index d42b864837ca..5a6320db94b3 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -21,6 +21,9 @@ struct static_srv6_sid_attributes {
+ 	char vrf_name[VRF_NAMSIZ];
+ 	char ifname[IFNAMSIZ];
+ 	struct in6_addr nh6;
++
++	/* Resolved nexthop IPv6 address */
++	struct in6_addr resolved_nh6;
+ };
+ 
+ /* Static SRv6 SID */
+@@ -156,6 +159,9 @@ void static_srv6_neigh_cache_cleanup(void);
+ void static_srv6_neigh_register_if_needed(void);
+ void static_srv6_neigh_unregister_if_needed(void);
+ 
++const struct in6_addr *static_srv6_sid_get_nexthop(const struct static_srv6_sid *sid);
++void static_srv6_sid_clear_resolution(struct static_srv6_sid *sid);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index a6af9f3a13b1..6316dab15b42 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -569,6 +569,7 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 	struct interface *ifp = NULL;
+ 	struct vrf *vrf;
+ 	struct prefix_ipv6 sid_locator = {};
++	const struct in6_addr *nexthop;
+ 
+ 	if (!sid)
+ 		return;
+@@ -699,7 +700,18 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END_X;
+-		ctx.nh6 = sid->attributes.nh6;
++
++		/* Get effective nexthop (resolved or configured) */
++		nexthop = static_srv6_sid_get_nexthop(sid);
++		if (!nexthop) {
++			DEBUGD(&static_dbg_srv6,
++			       "%s: Cannot install SID %pFX - nexthop not available", __func__,
++			       &sid->addr);
++			return;
++		}
++		ctx.nh6 = *nexthop;
++
++		/* Lookup interface */
+ 		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
+ 		if (!ifp) {
+ 			zlog_warn("Failed to install SID %pFX: failed to get interface %s",
+@@ -765,6 +777,7 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 	struct prefix_ipv6 sid_block = {};
+ 	struct prefix_ipv6 locator_block = {};
+ 	struct prefix_ipv6 sid_locator = {};
++	const struct in6_addr *nexthop;
+ 
+ 	if (!sid)
+ 		return;
+@@ -895,7 +908,12 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END_X;
+-		ctx.nh6 = sid->attributes.nh6;
++
++		/* Use same nexthop that was used during installation */
++		nexthop = static_srv6_sid_get_nexthop(sid);
++		assert(nexthop != NULL);
++		ctx.nh6 = *nexthop;
++
+ 		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
+ 		if (!ifp) {
+ 			zlog_warn("Failed to install SID %pFX: failed to get interface %s",
+@@ -963,6 +981,9 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 	zclient_send_localsid(static_zclient, ZEBRA_ROUTE_DELETE, &sid->addr.prefix,
+ 			      sid->addr.prefixlen, ifp->ifindex, action, &ctx);
+ 
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION))
++		static_srv6_sid_clear_resolution(sid);
++
+ 	UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ }
+ 
+@@ -1459,6 +1480,25 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 	return 0;
+ }
+ 
++void static_zebra_neigh_get(struct interface *ifp, afi_t afi)
++{
++	if (!static_zclient || static_zclient->sock < 0) {
++		zlog_err("%s: Cannot send neighbor GET request - zclient not connected", __func__);
++		return;
++	}
++
++	if (!ifp) {
++		zlog_err("%s: Cannot send neighbor GET request - interface is NULL", __func__);
++		return;
++	}
++
++	DEBUGD(&static_dbg_events,
++	       "%s: Sending neighbor GET request for interface %s (index %u), afi %u", __func__,
++	       ifp->name, ifp->ifindex, afi);
++
++	zclient_neigh_get(static_zclient, ifp, afi);
++}
++
+ void static_zebra_neigh_register(afi_t afi, bool reg)
+ {
+ 	DEBUGD(&static_dbg_events, "%s: Sending neighbor %s request for afi %u", __func__,
+diff --git a/staticd/static_zebra.h b/staticd/static_zebra.h
+index 96998afde1a1..504d48937473 100644
+--- a/staticd/static_zebra.h
++++ b/staticd/static_zebra.h
+@@ -32,6 +32,7 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_install(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid);
+ 
++extern void static_zebra_neigh_get(struct interface *ifp, afi_t afi);
+ extern void static_zebra_neigh_register(afi_t afi, bool reg);
+ 
+ #ifdef __cplusplus
+
+From d57689dcec418d25ef86ff75792f25245fef3bd4 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:44:02 +0000
+Subject: [PATCH 07/14] staticd: Handle neighbor add and neighbor delete
+ notifications
+
+This commit introduces the following behavior:
+
+- When staticd receives a notification about a new neighbor, it adds
+  the neighbor to the neighbor table and checks if any SIDs requiring
+  nexthop resolution are waiting for this neighbor to become available.
+  If so, staticd installs all of these SIDs in the RIB.
+- When staticd receives a notification that a neighbor has been
+  deleted, it removes the neighbor from the neighbor table and
+  updates any affected SIDs. For each affected SID, staticd searches
+  for an alternative neighbor in the table. If a replacement neighbor
+  is found, staticd uninstalls the SID from the RIB and reinstalls it
+  with the new nexthop. If no replacement is found, the SID is
+  uninstalled from the RIB until a new neighbor becomes available.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c  | 428 +++++++++++++++++++++++++++++++++++++++++
+ staticd/static_srv6.h  |   7 +
+ staticd/static_zebra.c |  57 ++++++
+ 3 files changed, 492 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index c2cabcc2b6a0..31c5553e47ac 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -350,6 +350,377 @@ void static_srv6_neigh_cache_cleanup(void)
+ 	neigh_cache = NULL;
+ }
+ 
++/*
++ * Check if a neighbor state is usable for SID resolution
++ * Returns true if the neighbor can be used
++ */
++static bool static_srv6_neigh_state_is_usable(uint32_t ndm_state)
++{
++	/* States that indicate the neighbor is reachable/usable */
++	if (ndm_state &
++	    (ZEBRA_NEIGH_STATE_REACHABLE | ZEBRA_NEIGH_STATE_PERMANENT | ZEBRA_NEIGH_STATE_NOARP))
++		return true;
++
++	/* States that indicate problems */
++	if (ndm_state & (ZEBRA_NEIGH_STATE_FAILED | ZEBRA_NEIGH_STATE_INCOMPLETE))
++		return false;
++
++	/*
++	 * For other states (STALE, DELAY, PROBE), be conservative
++	 * and consider them usable - the kernel will handle revalidation
++	 */
++	if (ndm_state &
++	    (ZEBRA_NEIGH_STATE_STALE | ZEBRA_NEIGH_STATE_DELAY | ZEBRA_NEIGH_STATE_PROBE))
++		return true;
++
++	/* If no state bits set, assume not usable */
++	return false;
++}
++
++/**
++ * Refresh SIDs when a neighbor is added
++ * Try to resolve and install previously unresolved SIDs
++ */
++void static_srv6_refresh_sids_on_neigh_change(struct interface *ifp, struct in6_addr *nexthop,
++					      bool is_add)
++{
++	struct listnode *node;
++	struct static_srv6_sid *sid;
++	int processed = 0;
++
++	if (!srv6_sids) {
++		DEBUGD(&static_dbg_srv6, "%s: No SIDs available for refresh", __func__);
++		return;
++	}
++
++	DEBUGD(&static_dbg_srv6, "%s: Refreshing SIDs after neighbor %s to interface %u", __func__,
++	       is_add ? "added" : "removed", ifp->ifindex);
++
++	for (ALL_LIST_ELEMENTS_RO(srv6_sids, node, sid)) {
++		/* Skip SIDs that don't require nexthop resolution */
++		if (!static_srv6_sid_needs_resolution(sid))
++			continue;
++
++		/* Check if this SID is for this interface */
++		if (!strmatch(sid->attributes.ifname, ifp->name))
++			continue;
++
++		processed++;
++
++		/* Check if this SID is already resolved */
++		if (is_add && !IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.resolved_nh6))
++			continue;
++
++		/* Check if this SID was using the removed neighbor */
++		if (!is_add && nexthop && !IPV6_ADDR_SAME(&sid->attributes.resolved_nh6, nexthop))
++			continue;
++
++		/* If neighbor has been removed and SID was using it, uninstall the SID from zebra */
++		if (!is_add) {
++			/* Uninstall SID that was using the removed neighbor */
++			if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++				if (nexthop)
++					DEBUGD(&static_dbg_srv6,
++					       "%s: Uninstalling SID %pFX - using removed neighbor %pI6",
++					       __func__, &sid->addr, nexthop);
++				else
++					DEBUGD(&static_dbg_srv6, "%s: Uninstalling SID %pFX",
++					       __func__, &sid->addr);
++				static_zebra_srv6_sid_uninstall(sid);
++			}
++
++			/* Clear resolved nexthop */
++			memset(&sid->attributes.resolved_nh6, 0, sizeof(struct in6_addr));
++		}
++
++		/* Try to resolve with the new neighbor */
++		if (static_srv6_sid_resolve_nexthop(sid)) {
++			/* Install with resolved nexthop */
++			if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID) &&
++			    !CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++				DEBUGD(&static_dbg_srv6,
++				       "%s: Installing previously unresolved SID %pFX with nexthop %pI6",
++				       __func__, &sid->addr, &sid->attributes.resolved_nh6);
++				static_zebra_srv6_sid_install(sid);
++			}
++		} else {
++			DEBUGD(&static_dbg_srv6, "%s: No alternative neighbor for SID %pFX",
++			       __func__, &sid->addr);
++		}
++	}
++
++	DEBUGD(&static_dbg_srv6, "%s: Refresh complete after neighbor %s - processed %d SIDs",
++	       __func__, is_add ? "add" : "delete", processed);
++}
++
++/*
++ * Add a neighbor to the cache
++ */
++void static_srv6_neigh_add(struct interface *ifp, struct in6_addr *addr, uint32_t ndm_state)
++{
++	struct static_srv6_neigh *new_neigh, *existing;
++	struct static_srv6_if_neigh *ifn;
++	bool state_changed = false;
++	uint32_t old_state = 0;
++	bool is_new = false;
++	struct static_srv6_if_neigh lookup_key = { .ifindex = ifp->ifindex };
++
++	if (!neigh_cache) {
++		DEBUGD(&static_dbg_srv6, "%s: Cache not initialized, ignoring neighbor add",
++		       __func__);
++		return;
++	}
++
++	DEBUGD(&static_dbg_srv6,
++	       "%s: Adding neighbor %pI6 on interface %s (index %u) with state 0x%x", __func__,
++	       addr, ifp->name, ifp->ifindex, ndm_state);
++
++	/* Look up bucket for this interface */
++	ifn = static_srv6_neigh_table_find(&neigh_cache->neigh_table, &lookup_key);
++
++	/* Create bucket if it doesn't exist */
++	if (!ifn) {
++		ifn = XCALLOC(MTYPE_STATIC_SRV6_IF_NEIGH, sizeof(struct static_srv6_if_neigh));
++		ifn->ifindex = ifp->ifindex;
++		ifn->neighbors = NULL;
++		static_srv6_neigh_table_add(&neigh_cache->neigh_table, ifn);
++		DEBUGD(&static_dbg_srv6, "%s: Created new bucket for interface %s (index %u)",
++		       __func__, ifp->name, ifp->ifindex);
++	}
++
++	/* Check if neighbor already exists - update state if so */
++	existing = ifn->neighbors;
++	while (existing) {
++		if (IPV6_ADDR_SAME(&existing->addr, addr)) {
++			DEBUGD(&static_dbg_srv6,
++			       "%s: Neighbor %pI6 already exists on interface %s (index %u), updating state 0x%x->0x%x",
++			       __func__, addr, ifp->name, ifp->ifindex, existing->ndm_state,
++			       ndm_state);
++
++			/* Update state if changed */
++			if (existing->ndm_state != ndm_state) {
++				old_state = existing->ndm_state;
++				existing->ndm_state = ndm_state;
++				state_changed = true;
++			}
++
++			/* Refresh SIDs if state changed to a usable or unusable state */
++			if (state_changed) {
++				/* Refresh if transitioning to/from usable state */
++				bool was_usable = static_srv6_neigh_state_is_usable(old_state);
++				bool is_usable = static_srv6_neigh_state_is_usable(ndm_state);
++
++				if (was_usable != is_usable)
++					static_srv6_refresh_sids_on_neigh_change(ifp, addr, true);
++			}
++			return;
++		}
++		if (!existing->next)
++			break;
++		existing = existing->next;
++	}
++
++	/* Create new neighbor entry */
++	new_neigh = XCALLOC(MTYPE_STATIC_SRV6_NEIGH, sizeof(struct static_srv6_neigh));
++	new_neigh->addr = *addr;
++	new_neigh->ifindex = ifp->ifindex;
++	new_neigh->ndm_state = ndm_state;
++	new_neigh->next = NULL;
++
++	if (!existing) {
++		/* First neighbor for this interface */
++		ifn->neighbors = new_neigh;
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Added first neighbor %pI6 for interface %s (index %u) with state 0x%x",
++		       __func__, addr, ifp->name, ifp->ifindex, ndm_state);
++		is_new = true;
++	} else {
++		/* Add to existing list */
++		existing->next = new_neigh;
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Added additional neighbor %pI6 for interface %s (index %u) with state 0x%x",
++		       __func__, addr, ifp->name, ifp->ifindex, ndm_state);
++		is_new = true;
++	}
++
++	/* Refresh SIDs for this interface if new usable neighbor */
++	if (is_new && static_srv6_neigh_state_is_usable(ndm_state)) {
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Refreshing SIDs for interface %s (index %u) after neighbor add",
++		       __func__, ifp->name, ifp->ifindex);
++		static_srv6_refresh_sids_on_neigh_change(ifp, addr, true);
++	}
++}
++
++/*
++ * Remove a neighbor from the cache
++ */
++void static_srv6_neigh_remove(struct interface *ifp, struct in6_addr *addr)
++{
++	struct static_srv6_neigh *neigh, *prev = NULL;
++	struct static_srv6_if_neigh *ifn;
++	struct static_srv6_if_neigh lookup_key = { .ifindex = ifp->ifindex };
++
++	if (!neigh_cache) {
++		DEBUGD(&static_dbg_srv6, "%s: Cache not initialized, ignoring neighbor remove",
++		       __func__);
++		return;
++	}
++
++	DEBUGD(&static_dbg_srv6, "%s: Removing neighbor %pI6 from interface %s (index %u)",
++	       __func__, addr, ifp->name, ifp->ifindex);
++
++	ifn = static_srv6_neigh_table_find(&neigh_cache->neigh_table, &lookup_key);
++	if (!ifn) {
++		DEBUGD(&static_dbg_srv6, "%s: No neighbors found for interface %s (index %u)",
++		       __func__, ifp->name, ifp->ifindex);
++		return;
++	}
++
++	neigh = ifn->neighbors;
++	while (neigh) {
++		if (IPV6_ADDR_SAME(&neigh->addr, addr)) {
++			/* Found the entry to remove */
++			DEBUGD(&static_dbg_srv6,
++			       "%s: Found neighbor %pI6 to remove from interface %s (index %u)",
++			       __func__, addr, ifp->name, ifp->ifindex);
++			if (prev) {
++				prev->next = neigh->next;
++			} else {
++				/* First entry in the list */
++				ifn->neighbors = neigh->next;
++			}
++			static_srv6_neigh_free(neigh);
++
++			/* If no more neighbors, remove the bucket */
++			if (!ifn->neighbors) {
++				DEBUGD(&static_dbg_srv6,
++				       "%s: No more neighbors for interface %s (index %u), removing bucket",
++				       __func__, ifp->name, ifp->ifindex);
++				static_srv6_neigh_table_del(&neigh_cache->neigh_table, ifn);
++				XFREE(MTYPE_STATIC_SRV6_IF_NEIGH, ifn);
++			}
++			break;
++		}
++		prev = neigh;
++		neigh = neigh->next;
++	}
++
++	/* Refresh SIDs for this interface after neighbor removal */
++	DEBUGD(&static_dbg_srv6,
++	       "%s: Refreshing SIDs for interface %s (index %u) after neighbor remove", __func__,
++	       ifp->name, ifp->ifindex);
++	static_srv6_refresh_sids_on_neigh_change(ifp, addr, false);
++}
++
++/*
++ * Look up best neighbor for an interface based on state and type
++ * Priority:
++ * 1. REACHABLE/PERMANENT state neighbors
++ * 2. Link-local addresses (preferred for SRv6)
++ * 3. First usable neighbor found
++ */
++struct in6_addr *static_srv6_neigh_lookup(struct interface *ifp)
++{
++	struct static_srv6_if_neigh *ifn;
++	struct static_srv6_neigh *neigh;
++	struct static_srv6_neigh *best = NULL;
++	struct static_srv6_neigh *best_linklocal = NULL;
++	struct static_srv6_neigh *best_reachable = NULL;
++	struct static_srv6_if_neigh lookup_key = { .ifindex = ifp->ifindex };
++
++	if (!neigh_cache)
++		return NULL;
++
++	ifn = static_srv6_neigh_table_find(&neigh_cache->neigh_table, &lookup_key);
++	/* If no neighbors cached for this interface, request from zebra */
++	if (!ifn) {
++		ifn = XCALLOC(MTYPE_STATIC_SRV6_IF_NEIGH, sizeof(struct static_srv6_if_neigh));
++		ifn->ifindex = ifp->ifindex;
++		ifn->neighbors = NULL;
++		static_srv6_neigh_table_add(&neigh_cache->neigh_table, ifn);
++	}
++
++	if (!ifn->neighbors) {
++		/* No neighbors available, request from zebra */
++		if (!ifn->neigh_request_sent) {
++			DEBUGD(&static_dbg_srv6,
++			       "%s: No cached neighbors for interface %s (index %u), requesting from zebra",
++			       __func__, ifp->name, ifp->ifindex);
++			static_zebra_neigh_get(ifp, AFI_IP6);
++			ifn->neigh_request_sent = true;
++		} else {
++			/* Neighbors request already sent, waiting for response */
++			DEBUGD(&static_dbg_srv6,
++			       "%s: Neighbors request already sent for interface %s (index %u), waiting for response",
++			       __func__, ifp->name, ifp->ifindex);
++		}
++
++		return NULL;
++	}
++
++	DEBUGD(&static_dbg_srv6, "%s: Looking up best neighbor for interface %s (index %u)",
++	       __func__, ifp->name, ifp->ifindex);
++
++	/* Scan all neighbors and categorize them */
++	for (neigh = ifn->neighbors; neigh; neigh = neigh->next) {
++		DEBUGD(&static_dbg_srv6, "%s:   Candidate %pI6 state=0x%x", __func__, &neigh->addr,
++		       neigh->ndm_state);
++
++		/* Skip neighbors with failed/incomplete state */
++		if (!static_srv6_neigh_state_is_usable(neigh->ndm_state)) {
++			DEBUGD(&static_dbg_srv6, "%s:   Skipping %pI6 - unusable state 0x%x",
++			       __func__, &neigh->addr, neigh->ndm_state);
++			continue;
++		}
++
++		/* Track best reachable/permanent neighbor */
++		if (neigh->ndm_state & (ZEBRA_NEIGH_STATE_REACHABLE | ZEBRA_NEIGH_STATE_PERMANENT)) {
++			if (IN6_IS_ADDR_LINKLOCAL(&neigh->addr)) {
++				if (!best_linklocal) {
++					best_linklocal = neigh;
++					DEBUGD(&static_dbg_srv6, "%s:   New best link-local: %pI6",
++					       __func__, &neigh->addr);
++				}
++			} else if (!best_reachable) {
++				best_reachable = neigh;
++				DEBUGD(&static_dbg_srv6, "%s:   New best reachable: %pI6",
++				       __func__, &neigh->addr);
++			}
++		}
++
++		/* Track first usable neighbor as fallback */
++		if (!best)
++			best = neigh;
++	}
++
++	/* Return best match in priority order */
++	if (best_linklocal) {
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Selected link-local neighbor %pI6 for interface %s (index %u)",
++		       __func__, &best_linklocal->addr, ifp->name, ifp->ifindex);
++		return &best_linklocal->addr;
++	}
++
++	if (best_reachable) {
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Selected reachable neighbor %pI6 for interface %s (index %u)",
++		       __func__, &best_reachable->addr, ifp->name, ifp->ifindex);
++		return &best_reachable->addr;
++	}
++
++	if (best) {
++		DEBUGD(&static_dbg_srv6,
++		       "%s: Selected fallback neighbor %pI6 (state=0x%x) for interface %s (index %u)",
++		       __func__, &best->addr, best->ndm_state, ifp->name, ifp->ifindex);
++		return &best->addr;
++	}
++
++	DEBUGD(&static_dbg_srv6, "%s: No usable neighbor found for interface %s (index %u)",
++	       __func__, ifp->name, ifp->ifindex);
++	return NULL;
++}
++
+ /*
+  * Register for neighbor notifications if we have SIDs requiring nexthop resolution
+  */
+@@ -417,6 +788,63 @@ const struct in6_addr *static_srv6_sid_get_nexthop(const struct static_srv6_sid
+ 	return &sid->attributes.nh6;
+ }
+ 
++/**
++ * Check if a SID needs nexthop resolution
++ */
++bool static_srv6_sid_needs_resolution(const struct static_srv6_sid *sid)
++{
++	bool is_ua = (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
++		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID);
++
++	return is_ua && CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_NEEDS_NH_RESOLUTION) &&
++	       sid->attributes.ifname[0] != '\0' && IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.nh6);
++}
++
++/**
++ * Resolve nexthop for a SID
++ * Returns true if resolution succeeded, false otherwise
++ */
++bool static_srv6_sid_resolve_nexthop(struct static_srv6_sid *sid)
++{
++	struct interface *ifp;
++	struct in6_addr *resolved_addr;
++
++	if (!static_srv6_sid_needs_resolution(sid))
++		return false;
++
++	/* If already resolved, nothing to do */
++	if (!IN6_IS_ADDR_UNSPECIFIED(&sid->attributes.resolved_nh6)) {
++		DEBUGD(&static_dbg_srv6, "%s: SID %pFX already has resolved nexthop %pI6",
++		       __func__, &sid->addr, &sid->attributes.resolved_nh6);
++		return true;
++	}
++
++	/* Look up interface */
++	ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++	if (!ifp) {
++		DEBUGD(&static_dbg_srv6, "%s: Interface %s not found for SID %pFX", __func__,
++		       sid->attributes.ifname, &sid->addr);
++		return false;
++	}
++
++	/* Look up best neighbor */
++	resolved_addr = static_srv6_neigh_lookup(ifp);
++	if (!resolved_addr) {
++		DEBUGD(&static_dbg_srv6,
++		       "%s: No usable neighbor found for SID %pFX on interface %s", __func__,
++		       &sid->addr, sid->attributes.ifname);
++		return false;
++	}
++
++	/* Update resolved nexthop */
++	sid->attributes.resolved_nh6 = *resolved_addr;
++
++	DEBUGD(&static_dbg_srv6, "%s: Resolved SID %pFX nexthop to %pI6 on interface %s", __func__,
++	       &sid->addr, &sid->attributes.resolved_nh6, sid->attributes.ifname);
++
++	return true;
++}
++
+ /**
+  * Clear resolved nexthop for a SID
+  */
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index 5a6320db94b3..071db9e9e531 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -156,11 +156,18 @@ void static_zebra_request_srv6_sids(void);
+ 
+ void static_srv6_neigh_cache_init(void);
+ void static_srv6_neigh_cache_cleanup(void);
++void static_srv6_neigh_add(struct interface *ifp, struct in6_addr *addr, uint32_t ndm_state);
++void static_srv6_neigh_remove(struct interface *ifp, struct in6_addr *addr);
++struct in6_addr *static_srv6_neigh_lookup(struct interface *ifp);
+ void static_srv6_neigh_register_if_needed(void);
+ void static_srv6_neigh_unregister_if_needed(void);
++void static_srv6_refresh_sids_on_neigh_change(struct interface *ifp, struct in6_addr *nexthop,
++					      bool is_add);
+ 
+ const struct in6_addr *static_srv6_sid_get_nexthop(const struct static_srv6_sid *sid);
++bool static_srv6_sid_needs_resolution(const struct static_srv6_sid *sid);
+ void static_srv6_sid_clear_resolution(struct static_srv6_sid *sid);
++bool static_srv6_sid_resolve_nexthop(struct static_srv6_sid *sid);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 6316dab15b42..66e72c38238d 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -1480,6 +1480,61 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 	return 0;
+ }
+ 
++/*
++ * Handle neighbor notifications from zebra
++ */
++static int static_zebra_process_neigh(ZAPI_CALLBACK_ARGS)
++{
++	struct zapi_neigh_ip api = {};
++	struct in6_addr addr;
++	ifindex_t ifindex;
++	uint32_t ndm_state;
++	struct interface *ifp;
++
++	DEBUGD(&static_dbg_events, "%s: Received neighbor event, cmd=%s", __func__,
++	       zserv_command_string(cmd));
++
++	zclient_neigh_ip_decode(zclient->ibuf, &api);
++
++	/* Only handle IPv6 neighbors for now */
++	if (api.ip_in.ipa_type != AF_INET6) {
++		DEBUGD(&static_dbg_events, "%s: Ignoring non-IPv6 neighbor (ipa_type=%u)",
++		       __func__, api.ip_in.ipa_type);
++		return 0;
++	}
++
++	memcpy(&addr, &api.ip_in.ip.addr, sizeof(struct in6_addr));
++	ifindex = api.index;
++	ndm_state = api.ndm_state;
++
++	ifp = if_lookup_by_index(ifindex, VRF_DEFAULT);
++	if (!ifp) {
++		DEBUGD(&static_dbg_events, "%s: Ignoring neighbor on unknown interface index %u",
++		       __func__, ifindex);
++		return 0;
++	}
++
++	DEBUGD(&static_dbg_events,
++	       "%s: Processing IPv6 neighbor %pI6 on interface %s (index %u) with state 0x%x",
++	       __func__, &addr, ifp->name, ifindex, ndm_state);
++
++	switch (cmd) {
++	case ZEBRA_NEIGH_ADDED:
++		DEBUGD(&static_dbg_events, "%s: Received neighbor added notification", __func__);
++		if (ndm_state == ZEBRA_NEIGH_STATE_FAILED)
++			static_srv6_neigh_remove(ifp, &addr);
++		else
++			static_srv6_neigh_add(ifp, &addr, ndm_state);
++		break;
++	case ZEBRA_NEIGH_REMOVED:
++		DEBUGD(&static_dbg_events, "%s: Received neighbor removed notification", __func__);
++		static_srv6_neigh_remove(ifp, &addr);
++		break;
++	}
++
++	return 0;
++}
++
+ void static_zebra_neigh_get(struct interface *ifp, afi_t afi)
+ {
+ 	if (!static_zclient || static_zclient->sock < 0) {
+@@ -1514,6 +1569,8 @@ static zclient_handler *const static_handlers[] = {
+ 	[ZEBRA_SRV6_LOCATOR_ADD] = static_zebra_process_srv6_locator_add,
+ 	[ZEBRA_SRV6_LOCATOR_DELETE] = static_zebra_process_srv6_locator_delete,
+ 	[ZEBRA_SRV6_SID_NOTIFY] = static_zebra_srv6_sid_notify,
++	[ZEBRA_NEIGH_ADDED] = static_zebra_process_neigh,
++	[ZEBRA_NEIGH_REMOVED] = static_zebra_process_neigh,
+ };
+ 
+ void static_zebra_init(void)
+
+From 064aa130952756bd899c4483fee65bbee779b1e1 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:51:14 +0000
+Subject: [PATCH 08/14] staticd: Cleanup all associated neighbors on interface
+ down
+
+When staticd receives a notification that an interface has gone down,
+it should remove all neighbors associated with that interface.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c  | 35 +++++++++++++++++++++++++++++++++++
+ staticd/static_srv6.h  |  1 +
+ staticd/static_zebra.c |  3 +++
+ 3 files changed, 39 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 31c5553e47ac..acbd778d276b 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -721,6 +721,41 @@ struct in6_addr *static_srv6_neigh_lookup(struct interface *ifp)
+ 	return NULL;
+ }
+ 
++/*
++ * Clean up all neighbors for a specific interface (when interface goes down)
++ */
++void static_srv6_neigh_cleanup_interface(struct interface *ifp)
++{
++	struct static_srv6_if_neigh *ifn;
++	struct static_srv6_neigh *neighbor;
++	struct static_srv6_neigh *next;
++	struct static_srv6_if_neigh lookup_key = { .ifindex = ifp->ifindex };
++
++	if (!neigh_cache)
++		return;
++
++	DEBUGD(&static_dbg_srv6, "%s: Cleaning up neighbors for interface %s (index %u)", __func__,
++	       ifp->name, ifp->ifindex);
++
++	ifn = static_srv6_neigh_table_find(&neigh_cache->neigh_table, &lookup_key);
++	if (!ifn)
++		return;
++
++	/* Remove all neighbors for this interface */
++	neighbor = ifn->neighbors;
++	while (neighbor) {
++		next = neighbor->next;
++		DEBUGD(&static_dbg_srv6, "%s: Removing neighbor %pI6 from interface %s (index %u)",
++		       __func__, &neighbor->addr, ifp->name, ifp->ifindex);
++		XFREE(MTYPE_STATIC_SRV6_NEIGH, neighbor);
++		neighbor = next;
++	}
++	ifn->neighbors = NULL;
++
++	/* Refresh all SIDs that might be using this interface for auto-resolution */
++	static_srv6_refresh_sids_on_neigh_change(ifp, NULL, false);
++}
++
+ /*
+  * Register for neighbor notifications if we have SIDs requiring nexthop resolution
+  */
+diff --git a/staticd/static_srv6.h b/staticd/static_srv6.h
+index 071db9e9e531..682b6da5015a 100644
+--- a/staticd/static_srv6.h
++++ b/staticd/static_srv6.h
+@@ -161,6 +161,7 @@ void static_srv6_neigh_remove(struct interface *ifp, struct in6_addr *addr);
+ struct in6_addr *static_srv6_neigh_lookup(struct interface *ifp);
+ void static_srv6_neigh_register_if_needed(void);
+ void static_srv6_neigh_unregister_if_needed(void);
++void static_srv6_neigh_cleanup_interface(struct interface *ifp);
+ void static_srv6_refresh_sids_on_neigh_change(struct interface *ifp, struct in6_addr *nexthop,
+ 					      bool is_add);
+ 
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 66e72c38238d..35e5403e5298 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -127,6 +127,9 @@ static int static_ifp_down(struct interface *ifp)
+ 
+ 	static_ifp_srv6_sids_update(ifp, false);
+ 
++	/* Clean up neighbor table entries for this interface */
++	static_srv6_neigh_cleanup_interface(ifp);
++
+ 	return 0;
+ }
+ 
+
+From b8fc3f649f75251640abb5db56001e0db29ae10e Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 07:57:30 +0000
+Subject: [PATCH 09/14] staticd: Do not attempt to install SIDs when nexthop is
+ unavailable
+
+When staticd receives a notification that an interface has come up, it
+iterates over all SIDs and attempts to install each one in the RIB by
+calling static_zebra_srv6_sid_install.
+
+However, if a SID requires nexthop resolution and the nexthop has not
+yet been resolved (because no nexthop is currently available),
+attempting installation is unnecessary and will fail.
+
+This commit adds a check to ensure the nexthop is resolved before
+calling static_zebra_srv6_sid_install. If the nexthop is not available,
+the installation is skipped.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index acbd778d276b..c94a1e018132 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -136,6 +136,7 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ {
+ 	struct static_srv6_sid *sid;
+ 	struct listnode *node;
++	bool needs_install = true;
+ 
+ 	if (!srv6_sids || !ifp)
+ 		return;
+@@ -160,8 +161,14 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 				UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 			}
+ 
+-			static_zebra_srv6_sid_install(sid);
+-			SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++			if (static_srv6_sid_needs_resolution(sid))
++				if (!static_srv6_sid_resolve_nexthop(sid))
++					needs_install = false; /* Can't install without neighbor */
++
++			if (needs_install) {
++				static_zebra_srv6_sid_install(sid);
++				SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++			}
+ 		} else {
+ 			static_zebra_srv6_sid_uninstall(sid);
+ 			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+
+From f849253792c1c13ffaeb76bc96a137b8ce7c8942 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 08:00:12 +0000
+Subject: [PATCH 10/14] staticd: Send neighbor discovery messages to verify
+ stale neighbors
+
+When there is no traffic to a neighbor for some time, the Linux kernel
+may mark that neighbor as STALE, indicating the entry is valid but
+possibly outdated.
+
+This commit updates staticd to handle this scenario as follows:
+
+- When a neighbor becomes stale, staticd triggers a neighbor discovery
+  message to check if the neighbor is still reachable. The Linux kernel
+  sends this message.
+- If the neighbor responds, it is marked as REACHABLE in the neighbor
+  table, and staticd continues to use it for the SID.
+- If the neighbor does not respond, it is considered unavailable. Staticd
+  removes the neighbor from its table and updates any affected SIDs to
+  use an alternative neighbor, if one is available.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_srv6.c  | 43 ++++++++++++++++++++++++++++++++++++++++++
+ staticd/static_zebra.c | 25 ++++++++++++++++++++++++
+ staticd/static_zebra.h |  1 +
+ 3 files changed, 69 insertions(+)
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index c94a1e018132..44c71cd8b468 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -460,6 +460,30 @@ void static_srv6_refresh_sids_on_neigh_change(struct interface *ifp, struct in6_
+ 	       __func__, is_add ? "add" : "delete", processed);
+ }
+ 
++/*
++ * Check if there are any SIDs that need auto-resolution for this interface
++ */
++static bool static_srv6_has_sids_for_interface(ifindex_t ifindex)
++{
++	struct listnode *node;
++	struct static_srv6_sid *sid;
++	struct interface *ifp;
++
++	if (!srv6_sids)
++		return false;
++
++	for (ALL_LIST_ELEMENTS_RO(srv6_sids, node, sid)) {
++		if (!static_srv6_sid_needs_resolution(sid))
++			continue;
++
++		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++		if (ifp && ifp->ifindex == ifindex)
++			return true;
++	}
++
++	return false;
++}
++
+ /*
+  * Add a neighbor to the cache
+  */
+@@ -511,6 +535,25 @@ void static_srv6_neigh_add(struct interface *ifp, struct in6_addr *addr, uint32_
+ 				state_changed = true;
+ 			}
+ 
++			/*
++			 * If neighbor is STALE and we have SIDs using this interface,
++			 * request neighbor discovery to verify if neighbor is still alive
++			 */
++			if (ndm_state & ZEBRA_NEIGH_STATE_STALE) {
++				if (static_srv6_has_sids_for_interface(ifp->ifindex)) {
++					struct ipaddr ipaddr;
++
++					DEBUGD(&static_dbg_srv6,
++					       "%s: Requesting neighbor discovery for STALE neighbor %pI6 on interface %s (index %u)",
++					       __func__, addr, ifp->name, ifp->ifindex);
++
++					SET_IPADDR_V6(&ipaddr);
++					ipaddr.ipaddr_v6 = *addr;
++
++					static_zebra_send_neigh_discovery_req(ifp, &ipaddr);
++				}
++			}
++
+ 			/* Refresh SIDs if state changed to a usable or unusable state */
+ 			if (state_changed) {
+ 				/* Refresh if transitioning to/from usable state */
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 35e5403e5298..069e20cdc39a 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -1538,6 +1538,31 @@ static int static_zebra_process_neigh(ZAPI_CALLBACK_ARGS)
+ 	return 0;
+ }
+ 
++/*
++ * Request neighbor discovery from zebra for a specific neighbor
++ */
++void static_zebra_send_neigh_discovery_req(struct interface *ifp, struct ipaddr *addr)
++{
++	struct prefix p = {};
++
++	DEBUGD(&static_dbg_events,
++	       "%s: Sending neighbor discovery request for %pIA on interface %s (index %u)",
++	       __func__, addr, ifp->name, ifp->ifindex);
++
++	if (addr->ipa_type != IPADDR_V6) {
++		zlog_err("%s: Unsupported address family %d for neighbor discovery request",
++			 __func__, addr->ipa_type);
++		return;
++	}
++
++	p.family = AF_INET6;
++	p.prefixlen = IPV6_MAX_BITLEN;
++	memcpy(&p.u.prefix6, &addr->ipaddr_v6, sizeof(struct in6_addr));
++
++	/* Send neighbor discovery request to zebra */
++	zclient_send_neigh_discovery_req(static_zclient, ifp, &p);
++}
++
+ void static_zebra_neigh_get(struct interface *ifp, afi_t afi)
+ {
+ 	if (!static_zclient || static_zclient->sock < 0) {
+diff --git a/staticd/static_zebra.h b/staticd/static_zebra.h
+index 504d48937473..4d2c7332313b 100644
+--- a/staticd/static_zebra.h
++++ b/staticd/static_zebra.h
+@@ -32,6 +32,7 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_install(struct static_srv6_sid *sid);
+ extern void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid);
+ 
++extern void static_zebra_send_neigh_discovery_req(struct interface *ifp, struct ipaddr *addr);
+ extern void static_zebra_neigh_get(struct interface *ifp, afi_t afi);
+ extern void static_zebra_neigh_register(afi_t afi, bool reg);
+ 
+
+From 2139861123f6d0f5015754ff19b2ddd14ce19d2d Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 4 Nov 2025 14:58:14 +0000
+Subject: [PATCH 11/14] zebra: Remove the nexthop resolution logic from the
+ SRv6 SID Manager
+
+Since nexthop resolution is already performed by staticd, there is no
+need to duplicate this logic in the SRv6 SID Manager.
+
+This commit removes the nexthop resolution logic from the SID Manager.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/zebra_srv6.c | 45 ---------------------------------------------
+ 1 file changed, 45 deletions(-)
+
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index 174602dba13f..47a05a3e4b2a 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -2025,13 +2025,6 @@ int get_srv6_sid(struct zebra_srv6_sid **sid, struct srv6_sid_ctx *ctx, struct i
+ 	int ret = -1;
+ 	struct srv6_locator *locator = NULL;
+ 	char buf[256];
+-	struct nhg_connected *rb_node_dep = NULL;
+-	struct listnode *node;
+-	struct nexthop *nexthop;
+-	struct nbr_connected *nc;
+-	bool found = false;
+-	struct interface *ifp;
+-	struct zebra_if *zebra_if;
+ 
+ 	enum srv6_sid_alloc_mode alloc_mode =
+ 		(sid_value) ? SRV6_SID_ALLOC_MODE_EXPLICIT
+@@ -2042,44 +2035,6 @@ int get_srv6_sid(struct zebra_srv6_sid **sid, struct srv6_sid_ctx *ctx, struct i
+ 			   __func__, srv6_sid_ctx2str(buf, sizeof(buf), ctx),
+ 			   sid_value, srv6_sid_alloc_mode2str(alloc_mode));
+ 
+-	if (ctx->ifindex != 0 && IPV6_ADDR_SAME(&ctx->nh6, &in6addr_any)) {
+-		ifp = if_lookup_by_index(ctx->ifindex, VRF_DEFAULT);
+-		if (!ifp) {
+-			zlog_err("%s: interface %u does not exist", __func__, ctx->ifindex);
+-			return -1;
+-		}
+-
+-		for (ALL_LIST_ELEMENTS_RO(ifp->nbr_connected, node, nc))
+-			if (nc->address && nc->address->family == AF_INET6 &&
+-			    IN6_IS_ADDR_LINKLOCAL(&nc->address->u.prefix6)) {
+-				ctx->nh6 = nc->address->u.prefix6;
+-				found = true;
+-				break;
+-			}
+-
+-		if (!found) {
+-			zebra_if = ifp->info;
+-
+-			frr_each (nhg_connected_tree, &zebra_if->nhg_dependents, rb_node_dep) {
+-				for (ALL_NEXTHOPS(rb_node_dep->nhe->nhg, nexthop)) {
+-					/* skip non link-local addresses */
+-					if (!IPV6_ADDR_SAME(&nexthop->gate.ipv6, &in6addr_any)) {
+-						ctx->nh6 = nexthop->gate.ipv6;
+-						found = true;
+-						break;
+-					}
+-				}
+-				if (found)
+-					break;
+-			}
+-			if (!found) {
+-				zlog_err("%s: cannot get SID, interface (ifindex %u) not found",
+-					 __func__, ctx->ifindex);
+-				return -1;
+-			}
+-		}
+-	}
+-
+ 	if (alloc_mode == SRV6_SID_ALLOC_MODE_EXPLICIT) {
+ 		/*
+ 		 * Explicit SID allocation: allocate a specific SID value
+
+From 4ecc7a793cb18a2e693ad909f4114bf6c3fca390 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 5 Nov 2025 08:04:12 +0000
+Subject: [PATCH 12/14] staticd: Only set flag when the SID is actually sent to
+ zebra
+
+In several places, staticd calls `static_zebra_srv6_sid_install` and
+then immediately sets the `STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA` flag.
+However, this is unnecessary because the flag is already set within
+`static_zebra_srv6_sid_install` just before the function returns.
+
+Moreover, explicitly setting `STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA` after
+calling `static_zebra_srv6_sid_install` - without checking its return
+value - is incorrect. If `static_zebra_srv6_sid_install` fails, the SID
+is not actually sent to zebra, and the flag should not be set.
+
+The same logic applies to `static_zebra_srv6_sid_uninstall`: we should
+not unset the `STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA` flag explicitly
+after calling this function.
+
+This commit updates staticd to no longer manually set or unset the flag
+after calling `static_zebra_srv6_sid_install` or
+`static_zebra_srv6_sid_uninstall`.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_nb_config.c | 20 +++++---------------
+ staticd/static_srv6.c      | 13 +++----------
+ staticd/static_zebra.c     | 10 ++--------
+ 3 files changed, 10 insertions(+), 33 deletions(-)
+
+diff --git a/staticd/static_nb_config.c b/staticd/static_nb_config.c
+index 9c4489e480ea..a9214d801866 100644
+--- a/staticd/static_nb_config.c
++++ b/staticd/static_nb_config.c
+@@ -1305,10 +1305,8 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 		static_zebra_srv6_sid_uninstall(sid);
+-		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-	}
+ 
+ 	sid->behavior = yang_dnode_get_enum(args->dnode, "../behavior");
+ 
+@@ -1342,10 +1340,8 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 		static_zebra_srv6_sid_uninstall(sid);
+-		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-	}
+ 
+ 	vrf_name = yang_dnode_get_string(args->dnode, "../vrf-name");
+ 	snprintf(sid->attributes.vrf_name, sizeof(sid->attributes.vrf_name), "%s", vrf_name);
+@@ -1397,10 +1393,8 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 		static_zebra_srv6_sid_uninstall(sid);
+-		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-	}
+ 
+ 	ifname = yang_dnode_get_string(args->dnode, "../interface");
+ 	snprintf(sid->attributes.ifname, sizeof(sid->attributes.ifname), "%s", ifname);
+@@ -1445,10 +1439,8 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 		}
+ 
+-		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 			static_zebra_srv6_sid_uninstall(sid);
+-			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-		}
+ 
+ 		yang_dnode_get_ip(&nexthop, args->dnode, "../next-hop");
+ 		sid->attributes.nh6 = nexthop.ipaddr_v6;
+@@ -1486,10 +1478,8 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 		static_zebra_srv6_sid_uninstall(sid);
+-		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-	}
+ 
+ 	loc_name = yang_dnode_get_string(args->dnode, "../locator-name");
+ 	snprintf(sid->locator_name, sizeof(sid->locator_name), "%s", loc_name);
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index 44c71cd8b468..0aba74511e85 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -156,22 +156,17 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 		if (is_up && !CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+ 			static_zebra_request_srv6_sid(sid);
+ 		} else if (is_up && CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
+-			if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++			if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 				static_zebra_srv6_sid_uninstall(sid);
+-				UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-			}
+ 
+ 			if (static_srv6_sid_needs_resolution(sid))
+ 				if (!static_srv6_sid_resolve_nexthop(sid))
+ 					needs_install = false; /* Can't install without neighbor */
+ 
+-			if (needs_install) {
++			if (needs_install)
+ 				static_zebra_srv6_sid_install(sid);
+-				SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-			}
+ 		} else {
+ 			static_zebra_srv6_sid_uninstall(sid);
+-			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 		}
+ 	}
+ }
+@@ -258,10 +253,8 @@ void static_srv6_sid_del(struct static_srv6_sid *sid)
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+-	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 		static_zebra_srv6_sid_uninstall(sid);
+-		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-	}
+ 
+ 	XFREE(MTYPE_STATIC_SRV6_SID, sid);
+ }
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 069e20cdc39a..eba019bed0d5 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -1367,10 +1367,8 @@ static int static_zebra_process_srv6_locator_delete(ZAPI_CALLBACK_ARGS)
+ 		 * Uninstall the SRv6 SID from the forwarding plane
+ 		 * through Zebra
+ 		 */
+-		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 			static_zebra_srv6_sid_uninstall(sid);
+-			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-		}
+ 	}
+ 
+ 	listnode_delete(srv6_locators, locator);
+@@ -1437,8 +1435,6 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		 */
+ 		static_zebra_srv6_sid_install(sid);
+ 
+-		SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-
+ 		break;
+ 	case ZAPI_SRV6_SID_RELEASED:
+ 
+@@ -1460,10 +1456,8 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 
+-		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA))
+ 			static_zebra_srv6_sid_uninstall(sid);
+-			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+-		}
+ 
+ 		break;
+ 	case ZAPI_SRV6_SID_FAIL_ALLOC:
+
