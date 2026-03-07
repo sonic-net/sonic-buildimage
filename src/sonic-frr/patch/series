@@ -61,3 +61,6 @@
 0099-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
 0100-bgpd-Allow-proper-shutdown-of-bgp-dynamic-peers.patch
 0101-bgpd-send-EOR-during-GR-only-when-FIB-install-comple.patch
+0102-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
+0103-lib-fix-display-vrf-name-in-srv6-context.patch
+0104-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
