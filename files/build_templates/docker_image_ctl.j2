@@ -591,14 +591,11 @@ start() {
     else
         DB_OPT=$DB_OPT" --add-host=redis_chassis.server:$chassis_db_address "
     fi
-    {%- elif docker_container_name == "dash-ha" %}
-    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
-    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
-    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
         NET="host"
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
@@ -609,7 +606,9 @@ start() {
         # The below logic extracts the base DIR's where database_config.json's for various namespaces exist.
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
-        {%- if docker_container_name != "database" %}
+        {%- if docker_container_name == "dash-ha" %}
+        REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+        {%- elif docker_container_name != "database" %}
 
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
