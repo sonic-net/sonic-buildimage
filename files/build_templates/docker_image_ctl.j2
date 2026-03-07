@@ -661,9 +661,11 @@ start() {
         # /var/run/redis1 ---> mounted as --> /var/run/redis1
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
         if [ -n "$redis_dir_list" ]; then
-            id=`expr $DEV + 1`
-            redis_dir=`echo $redis_dir_list | cut -d " " -f $id`
-            REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
+            if [[ "$DEV" != dpu* ]]; then
+                id=`expr $DEV + 1`
+                redis_dir=`echo $redis_dir_list | cut -d " " -f $id`
+                REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
+            fi
         fi
 
         {%- if docker_container_name == "database" %}
