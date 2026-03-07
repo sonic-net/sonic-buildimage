@@ -105,6 +105,19 @@ module sonic-flex_counter {
                 }
             }
 
+            container HA_SET {
+                /* HA_SET_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
             container PFCWD {
                 /* PFC_WD_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
