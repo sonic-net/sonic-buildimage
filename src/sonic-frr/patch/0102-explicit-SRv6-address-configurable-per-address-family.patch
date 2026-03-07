@@ -1,0 +1,1068 @@
+From 9e1d26d18b0ba18a618a6c104e423ed3e7e34890 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 1 Jul 2025 15:58:19 +0200
+Subject: [PATCH 1/8] bgpd: simplify code readability of sid vpn mode change
+ configuration
+
+The mode change algorithm is complex, more readability is needed.
+Simplify the algorithm by splitting into multiple if conditions.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c | 35 ++++++++++++++++-------------------
+ 1 file changed, 16 insertions(+), 19 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index d2f8b731f27c..4aa4bbf183cd 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10185,11 +10185,12 @@ DEFPY (af_sid_vpn_export,
+ 	 * mode change between sid_idx and sid_auto isn't supported.
+ 	 * user must negate sid vpn export when they want to change the mode
+ 	 */
+-	if ((sid_auto && bgp->vpn_policy[afi].tovpn_sid_index != 0)
+-	    || (sid_idx != 0 && CHECK_FLAG(bgp->vpn_policy[afi].flags,
+-					   BGP_VPN_POLICY_TOVPN_SID_AUTO))) {
+-		vty_out(vty, "it's already configured as %s.\n",
+-			sid_auto ? "auto-mode" : "idx-mode");
++	if (sid_auto && bgp->vpn_policy[afi].tovpn_sid_index != 0) {
++		vty_out(vty, "it's already configured as idx-mode.\n",
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if (sid_idx != 0 && CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO)) {
++		vty_out(vty, "it's already configured as auto-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+@@ -10273,20 +10274,16 @@ DEFPY (bgp_sid_vpn_export,
+ 	 * mode change among sid_idx, sid_auto and sid_explicit isn't supported.
+ 	 * user must negate sid vpn export when they want to change the mode
+ 	 */
+-	if ((sid_auto && bgp->tovpn_sid_index != 0) ||
+-	    (sid_auto && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT)) ||
+-	    (sid_idx != 0 && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO)) ||
+-	    (sid_idx != 0 && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT)) ||
+-	    (sid_explicit && bgp->tovpn_sid_index != 0) ||
+-	    (sid_explicit && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO))) {
+-		vty_out(vty, "it's already configured as ");
+-		if (CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO))
+-			vty_out(vty, "auto-mode.\n");
+-		else if (CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT))
+-			vty_out(vty, "explicit-mode.\n");
+-		else if (sid_idx != 0)
+-			vty_out(vty, "idx-mode.\n");
+-
++	if ((sid_auto || sid_explicit) && bgp->tovpn_sid_index != 0) {
++		vty_out(vty, "it's already configured as idx-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if ((sid_auto || sid_idx != 0) && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT)) {
++		vty_out(vty, "it's already configured as explicit-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if ((sid_idx != 0 || sid_explicit) && CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO)) {
++		vty_out(vty, "it's already configured as auto-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+
+From 668191cb14fba4f469c878e7b5bc078b56cff227 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 15:36:51 +0200
+Subject: [PATCH 2/8] bgpd: Add support for BGP AFI to use SRv6 SID in an
+ explicit way
+
+Add support for bgp to use explicit SRv6 SID per address-family.
+The following command is available under ipv4/ipv6 unicast address
+family node:
+
+> sid vpn export explicit X:X::X:X"
+
+If SRv6 SID manager allocates the explicit SID successfully, then BGP
+will advertise it.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 36 ++++++++++++++++++++++++++++--------
+ bgpd/bgp_mplsvpn.h |  7 +++++--
+ bgpd/bgp_vty.c     | 44 ++++++++++++++++++++++++++++++++++----------
+ bgpd/bgpd.c        |  2 ++
+ bgpd/bgpd.h        |  2 ++
+ 5 files changed, 71 insertions(+), 20 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index c2736cd1fafe..8c5b27a30327 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -782,6 +782,7 @@ void ensure_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 	struct in6_addr tovpn_sid = {};
+ 	uint32_t tovpn_sid_index = 0;
+ 	bool tovpn_sid_auto = false;
++	bool is_tovpn_sid_explicit = false;
+ 	struct srv6_sid_ctx ctx = {};
+ 	uint32_t sid_func;
+ 
+@@ -810,25 +811,38 @@ void ensure_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 	tovpn_sid_index = bgp_vrf->vpn_policy[afi].tovpn_sid_index;
+ 	tovpn_sid_auto = CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags,
+ 				    BGP_VPN_POLICY_TOVPN_SID_AUTO);
++	is_tovpn_sid_explicit = CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags,
++					   BGP_VPN_POLICY_TOVPN_SID_EXPLICIT);
+ 
+ 	/* skip when VPN isn't configured on vrf-instance */
+-	if (tovpn_sid_index == 0 && !tovpn_sid_auto)
++	if (tovpn_sid_index == 0 && !tovpn_sid_auto && !is_tovpn_sid_explicit)
+ 		return;
+ 
+-	/* check invalid case both configured index and auto */
+-	if (tovpn_sid_index != 0 && tovpn_sid_auto) {
+-		zlog_err("%s: index-mode and auto-mode both selected. ignored.",
++	/* check invalid case more than one mode configured
++	 * among index, auto and explicit
++	 */
++	if ((tovpn_sid_index != 0 && tovpn_sid_auto) ||
++	    (tovpn_sid_index != 0 && is_tovpn_sid_explicit) ||
++	    (tovpn_sid_auto && is_tovpn_sid_explicit)) {
++		zlog_err("%s: more than one mode selected among index-mode, auto-mode and explicit-mode. ignored.",
+ 			 __func__);
+ 		return;
+ 	}
+ 
+-	if (!tovpn_sid_auto) {
++	/* skip when sid value isn't set for explicit-mode */
++	if (is_tovpn_sid_explicit && !bgp_vrf->vpn_policy[afi].tovpn_sid_explicit) {
++		zlog_err("%s: explicit-mode selected without sid value.", __func__);
++		return;
++	}
++	if (!tovpn_sid_auto && !is_tovpn_sid_explicit) {
+ 		if (!srv6_sid_compose(&tovpn_sid, bgp_vpn->srv6_locator,
+ 				      tovpn_sid_index)) {
+ 			zlog_err("%s: failed to compose sid for vrf %s: afi %s",
+ 				 __func__, bgp_vrf->name_pretty, afi2str(afi));
+ 			return;
+ 		}
++	} else if (is_tovpn_sid_explicit) {
++		tovpn_sid = *(bgp_vrf->vpn_policy[afi].tovpn_sid_explicit);
+ 	}
+ 
+ 	ctx.vrf_id = bgp_vrf->vrf_id;
+@@ -925,8 +939,8 @@ void ensure_vrf_tovpn_sid(struct bgp *bgp_vpn, struct bgp *bgp_vrf, afi_t afi)
+ {
+ 	/* per-af sid */
+ 	if (bgp_vrf->vpn_policy[afi].tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags,
+-		       BGP_VPN_POLICY_TOVPN_SID_AUTO))
++	    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) ||
++	    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
+ 		return ensure_vrf_tovpn_sid_per_af(bgp_vpn, bgp_vrf, afi);
+ 
+ 	/* per-vrf sid */
+@@ -942,6 +956,7 @@ void delete_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 	int debug = BGP_DEBUG(vpn, VPN_LEAK_FROM_VRF);
+ 	uint32_t tovpn_sid_index = 0;
+ 	bool tovpn_sid_auto = false;
++	bool is_tovpn_sid_explicit = false;
+ 	struct srv6_sid_ctx ctx = {};
+ 
+ 	if (debug)
+@@ -951,9 +966,10 @@ void delete_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 	tovpn_sid_index = bgp_vrf->vpn_policy[afi].tovpn_sid_index;
+ 	tovpn_sid_auto = CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags,
+ 				    BGP_VPN_POLICY_TOVPN_SID_AUTO);
++	is_tovpn_sid_explicit = CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT);
+ 
+ 	/* skip when VPN is configured on vrf-instance */
+-	if (tovpn_sid_index != 0 || tovpn_sid_auto)
++	if (tovpn_sid_index != 0 || tovpn_sid_auto || is_tovpn_sid_explicit)
+ 		return;
+ 
+ 	if (bgp_vrf->vrf_id == VRF_UNKNOWN) {
+@@ -972,6 +988,10 @@ void delete_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 		sid_unregister(bgp_vpn, bgp_vrf->vpn_policy[afi].tovpn_sid);
+ 		XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[afi].tovpn_sid);
+ 	}
++
++	if (bgp_vrf->vpn_policy[afi].tovpn_sid_explicit)
++		XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[afi].tovpn_sid_explicit);
++
+ 	bgp_vrf->vpn_policy[afi].tovpn_sid_transpose_label = 0;
+ 
+ 	srv6_locator_free(bgp_vrf->vpn_policy[afi].tovpn_sid_locator);
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index 81ff57fd9f0e..bad7a43a5f1d 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -279,13 +279,15 @@ static inline void vpn_leak_postchange(enum vpn_policy_direction direction,
+ 
+ 		if (bgp_vrf->vpn_policy[afi].tovpn_sid_index == 0 &&
+ 		    !CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) &&
++		    !CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT) &&
+ 		    bgp_vrf->tovpn_sid_index == 0 &&
+ 		    !CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) &&
+ 		    !CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT))
+ 			delete_vrf_tovpn_sid(bgp_vpn, bgp_vrf, afi);
+ 
+ 		if (CHECK_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT) ||
+-		    (!bgp_vrf->vpn_policy[afi].tovpn_sid && !bgp_vrf->tovpn_sid))
++		    (!bgp_vrf->vpn_policy[afi].tovpn_sid && !bgp_vrf->tovpn_sid) ||
++		    CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
+ 			ensure_vrf_tovpn_sid(bgp_vpn, bgp_vrf, afi);
+ 
+ 		if ((!bgp_vrf->vpn_policy[afi].tovpn_sid &&
+@@ -369,7 +371,8 @@ static inline bool is_pi_srv6_valid(struct bgp_path_info *pi, struct bgp *bgp_ne
+ 	    !CHECK_FLAG(bgp_nexthop->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) &&
+ 	    !CHECK_FLAG(bgp_nexthop->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT) &&
+ 	    bgp_nexthop->vpn_policy[afi].tovpn_sid_index == 0 &&
+-	    !CHECK_FLAG(bgp_nexthop->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO))
++	    !CHECK_FLAG(bgp_nexthop->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) &&
++	    !CHECK_FLAG(bgp_nexthop->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
+ 		return false;
+ 
+ 	return true;
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 4aa4bbf183cd..4c91fe7dd5a2 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10123,19 +10123,22 @@ DEFPY (af_label_vpn_export,
+ 
+ DEFPY (af_sid_vpn_export,
+        af_sid_vpn_export_cmd,
+-       "[no] sid vpn export <(1-1048575)$sid_idx|auto$sid_auto>",
++       "[no] sid vpn export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value>",
+        NO_STR
+        "sid value for VRF\n"
+        "Between current address-family and vpn\n"
+        "For routes leaked from current address-family to vpn\n"
+        "Sid allocation index\n"
+-       "Automatically assign a label\n")
++       "Automatically assign a label\n"
++       "Explicitly assign a sid value\n"
++       "Sid value\n")
+ {
+ 	VTY_DECLVAR_CONTEXT(bgp, bgp);
+ 	afi_t afi;
+ 	int debug = 0;
+ 	int idx = 0;
+ 	bool yes = true;
++	struct in6_addr *tovpn_sid_explicit = NULL;
+ 
+ 	if (argv_find(argv, argc, "no", &idx))
+ 		yes = false;
+@@ -10149,8 +10152,8 @@ DEFPY (af_sid_vpn_export,
+ 	if (!yes) {
+ 		/* when SID is not set, do nothing */
+ 		if ((bgp->vpn_policy[afi].tovpn_sid_index == 0) &&
+-		    !CHECK_FLAG(bgp->vpn_policy[afi].flags,
+-				BGP_VPN_POLICY_TOVPN_SID_AUTO))
++		    !CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) &&
++		    !CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT))
+ 			return CMD_SUCCESS;
+ 
+ 		/* pre-change */
+@@ -10159,6 +10162,7 @@ DEFPY (af_sid_vpn_export,
+ 		bgp->vpn_policy[afi].tovpn_sid_index = 0;
+ 		UNSET_FLAG(bgp->vpn_policy[afi].flags,
+ 			   BGP_VPN_POLICY_TOVPN_SID_AUTO);
++		UNSET_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT);
+ 
+ 		/* post-change */
+ 		vpn_leak_postchange(BGP_VPN_POLICY_DIR_TOVPN, afi,
+@@ -10176,20 +10180,27 @@ DEFPY (af_sid_vpn_export,
+ 	}
+ 
+ 	/* skip when it's already configured */
+-	if ((sid_idx != 0 && bgp->vpn_policy[afi].tovpn_sid_index != 0)
+-	    || (sid_auto && CHECK_FLAG(bgp->vpn_policy[afi].flags,
+-				       BGP_VPN_POLICY_TOVPN_SID_AUTO)))
++	if ((sid_idx != 0 && bgp->vpn_policy[afi].tovpn_sid_index != 0) ||
++	    (sid_auto && CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO)) ||
++	    (sid_explicit &&
++	     CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT)))
+ 		return CMD_SUCCESS;
+ 
+ 	/*
+ 	 * mode change between sid_idx and sid_auto isn't supported.
+ 	 * user must negate sid vpn export when they want to change the mode
+ 	 */
+-	if (sid_auto && bgp->vpn_policy[afi].tovpn_sid_index != 0) {
+-		vty_out(vty, "it's already configured as idx-mode.\n",
++	if ((sid_auto || sid_explicit) && bgp->vpn_policy[afi].tovpn_sid_index != 0) {
++		vty_out(vty, "it's already configured as idx-mode.\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if ((sid_auto || sid_idx != 0) &&
++	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VRF_TOVPN_SID_EXPLICIT)) {
++		vty_out(vty, "it's already configured as explicit-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+-	if (sid_idx != 0 && CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO)) {
++	if ((sid_idx != 0 || sid_explicit) &&
++	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VRF_TOVPN_SID_AUTO)) {
+ 		vty_out(vty, "it's already configured as auto-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+@@ -10209,6 +10220,16 @@ DEFPY (af_sid_vpn_export,
+ 		if (debug)
+ 			zlog_debug("%s: idx %ld sid alloc.", __func__, sid_idx);
+ 		bgp->vpn_policy[afi].tovpn_sid_index = sid_idx;
++	} else if (sid_explicit) {
++		/* SID allocation explicit-mode */
++		tovpn_sid_explicit = XCALLOC(MTYPE_BGP_SRV6_SID, sizeof(struct in6_addr));
++		IPV6_ADDR_COPY(tovpn_sid_explicit, &sid_value);
++		bgp->vpn_policy[afi].tovpn_sid_explicit = tovpn_sid_explicit;
++
++		if (debug)
++			zlog_debug("%s: explicit per-address-family afi %s sid alloc.", __func__,
++				   afi2str(afi));
++		SET_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT);
+ 	}
+ 
+ 	/* post-change */
+@@ -18720,6 +18741,9 @@ static void bgp_vpn_policy_config_write_afi(struct vty *vty, struct bgp *bgp,
+ 	if (CHECK_FLAG(bgp->vpn_policy[afi].flags,
+ 		       BGP_VPN_POLICY_TOVPN_SID_AUTO)) {
+ 		vty_out(vty, "%*ssid vpn export %s\n", indent, "", "auto");
++	} else if (CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT)) {
++		vty_out(vty, "%*ssid vpn export explicit %pI6\n", indent, "",
++			bgp->vpn_policy[afi].tovpn_sid_explicit);
+ 	} else if (tovpn_sid_index != 0) {
+ 		vty_out(vty, "%*ssid vpn export %d\n", indent, "",
+ 			tovpn_sid_index);
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index 0fcfc1e1685d..e3ba67b370eb 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -1543,6 +1543,8 @@ static void bgp_srv6_cleanup(struct bgp *bgp)
+ 			XFREE(MTYPE_BGP_SRV6_SID,
+ 			      bgp->vpn_policy[afi].tovpn_sid);
+ 		}
++		if (bgp->vpn_policy[afi].tovpn_sid_explicit)
++			XFREE(MTYPE_BGP_SRV6_SID, bgp->vpn_policy[afi].tovpn_sid_explicit);
+ 	}
+ 
+ 	if (bgp->tovpn_sid_locator != NULL) {
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 0355933547d1..049a1b175271 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -286,6 +286,7 @@ struct vpn_policy {
+ #define BGP_VPN_POLICY_TOVPN_LABEL_MANUAL_REG (1 << 5)
+ /* Is this value set by the cli? */
+ #define BGP_VPN_POLICY_TOVPN_RD_CLI_SET       (1 << 6)
++#define BGP_VPN_POLICY_TOVPN_SID_EXPLICIT     (1 << 7)
+ 
+ 	/*
+ 	 * If we are importing another vrf into us keep a list of
+@@ -304,6 +305,7 @@ struct vpn_policy {
+ 	 */
+ 	uint32_t tovpn_sid_index; /* unset => set to 0 */
+ 	struct in6_addr *tovpn_sid;
++	struct in6_addr *tovpn_sid_explicit;
+ 	struct srv6_locator *tovpn_sid_locator;
+ 	uint32_t tovpn_sid_transpose_label;
+ 	struct in6_addr *tovpn_zebra_vrf_sid_last_sent;
+
+From baf78d7208e2249354e29fc1f7ff7e897316ba90 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 18:17:41 +0200
+Subject: [PATCH 3/8] bgpd: fix typo in mplsvpn trace
+
+The following trace may be visible when configuring explicit mode
+> 2025/06/24 18:14:50.382809 BGP: [H2QJF-E1VQM] ensure_vrf_tovpn_sid_per_af: explicit-mode seleted without sid value.
+
+Fix the typo: selected instead of seleted.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 8c5b27a30327..fb17005cb70f 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -910,7 +910,7 @@ void ensure_vrf_tovpn_sid_per_vrf(struct bgp *bgp_vpn, struct bgp *bgp_vrf)
+ 
+ 	/* skip when sid value isn't set for explicit-mode */
+ 	if (is_tovpn_sid_explicit && !bgp_vrf->tovpn_sid_explicit) {
+-		zlog_err("%s: explicit-mode seleted without sid value.", __func__);
++		zlog_err("%s: explicit-mode selected without sid value.", __func__);
+ 		return;
+ 	}
+ 
+
+From 2e616d9b93b89427b9fe48b3ff38db35b4fb4dd1 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 15:38:20 +0200
+Subject: [PATCH 4/8] bgpd: fix do not configure per-afi sid and per-vrf sid
+ explicit
+
+It should be forbidden to both configure per-address family sid, and
+per-vrf sid vpn explicit config.
+
+Fixes: 716905505999 ("bgpd: Add support for BGP to use SRv6 SID in an explicit way")
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 4c91fe7dd5a2..04a82bbcd79b 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10171,8 +10171,8 @@ DEFPY (af_sid_vpn_export,
+ 		return CMD_SUCCESS;
+ 	}
+ 
+-	if (bgp->tovpn_sid_index != 0 ||
+-	    CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO)) {
++	if (bgp->tovpn_sid_index != 0 || CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_AUTO) ||
++	    CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_EXPLICIT)) {
+ 		vty_out(vty,
+ 			"per-vrf sid and per-af sid are mutually exclusive\n"
+ 			"Failed: per-vrf sid is configured. Remove per-vrf sid before configuring per-af sid\n");
+
+From 59b2a6233754af660938206f6d21dd6d6c13a1a8 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 15:51:52 +0200
+Subject: [PATCH 5/8] topotests: move srv6 utility functions outside of test
+ functions
+
+Move some utility functions used to compare expected outputs, outside of
+the functions. This is a preparatory commit before hosting explicit
+per-address family testing.
+
+Apply black style.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../test_bgp_srv6_sid_explicit.py             | 156 +++++++++++-------
+ 1 file changed, 96 insertions(+), 60 deletions(-)
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 0a7a89ae6306..144404ea432f 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -76,6 +76,87 @@ def teardown_module(mod):
+     tgen.stop_topology()
+ 
+ 
++def _check_explicit_srv6_sid_allocated(router, expected_sid_file):
++    logger.info("checking bgp explicit srv6 sid allocated in sending end")
++    output = json.loads(router.vtysh_cmd("show segment-routing srv6 sid json"))
++    expected = open_json_file("{}/{}".format(CWD, expected_sid_file))
++    return topotest.json_cmp(output, expected)
++
++
++def check_explicit_srv6_sid_allocated(router, expected_file):
++    func = functools.partial(_check_explicit_srv6_sid_allocated, router, expected_file)
++    _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++    assert result is None, "Failed"
++
++
++def _check_sent_bgp_vpn_srv6_sid(router, expected_route_file):
++    logger.info("checking bgp vpn route with SRv6 SIDs in sending end")
++    output = json.loads(router.vtysh_cmd("show bgp ipv4 vpn 192.168.1.0/24 json"))
++    expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++    return topotest.json_cmp(output, expected)
++
++
++def check_sent_bgp_vpn_srv6_sid(router, expected_file):
++    func = functools.partial(_check_sent_bgp_vpn_srv6_sid, router, expected_file)
++    _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++    assert result is None, "Failed"
++
++
++def _check_rcvd_bgp_vpn_srv6_sid(router, expected_route_file):
++    logger.info("checking bgp ipv4 vpn route with SRv6 SIDs in receiving end")
++    output = json.loads(router.vtysh_cmd("show bgp ipv4 vpn 192.168.1.0/24 json"))
++    expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++    return topotest.json_cmp(output, expected)
++
++
++def check_rcvd_bgp_vpn_srv6_sid(router, expected_file):
++    func = functools.partial(_check_rcvd_bgp_vpn_srv6_sid, router, expected_file)
++    _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++    assert result is None, "Failed"
++
++
++def _check_rcvd_bgp_vrf_srv6_sid(router, vrf_name, expected_route_file):
++    logger.info(
++        "checking bgp vrf {} ipv4 route with SRv6 SIDs in receiving end".format(
++            vrf_name
++        )
++    )
++    output = json.loads(
++        router.vtysh_cmd("show bgp vrf {} ipv4 192.168.1.0/24 json".format(vrf_name))
++    )
++    expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++    return topotest.json_cmp(output, expected)
++
++
++def check_rcvd_bgp_vrf_srv6_sid(router, vrf_name, expected_file):
++    func = functools.partial(
++        _check_rcvd_bgp_vrf_srv6_sid, router, vrf_name, expected_file
++    )
++    _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++    assert result is None, "Failed"
++
++
++def _check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_route_file):
++    logger.info(
++        "checking zebra vrf {} ipv4 route with SRv6 SIDs in receiving end".format(
++            vrf_name
++        )
++    )
++    output = json.loads(
++        router.vtysh_cmd("show ip route vrf {} 192.168.1.0/24 json".format(vrf_name))
++    )
++    expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++    return topotest.json_cmp(output, expected)
++
++
++def check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_file):
++    func = functools.partial(
++        _check_rcvd_zebra_vrf_srv6_sid, router, vrf_name, expected_file
++    )
++    _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++    assert result is None, "Failed"
++
++
+ # Configure 'sid vpn per-vrf export explicit X:X::X:X' in vrf and
+ # check whether zebra allocates the explicit SRv6 SIDs.
+ # By command 'show segment-routing srv6 sid json'
+@@ -85,17 +166,6 @@ def test_explicit_srv6_sid_allocated():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r1"]
+ 
+-    def _check_explicit_srv6_sid_allocated(router, expected_sid_file):
+-        logger.info("checking bgp explicit srv6 sid allocated in sending end")
+-        output = json.loads(router.vtysh_cmd("show segment-routing srv6 sid json"))
+-        expected = open_json_file("{}/{}".format(CWD, expected_sid_file))
+-        return topotest.json_cmp(output, expected)
+-
+-    def check_explicit_srv6_sid_allocated(router, expected_file):
+-        func = functools.partial(_check_explicit_srv6_sid_allocated, router, expected_file)
+-        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+-        assert result is None, "Failed"
+-
+     router.vtysh_cmd(
+         """
+         configure terminal
+@@ -115,7 +185,9 @@ def check_explicit_srv6_sid_allocated(router, expected_file):
+     # If you want to stop some specific line and start interactive shell,
+     # please use tgen.mininet_cli() to start it.
+     logger.info("--1--Test for bgp explicit srv6 sid allocated in zebra")
+-    check_explicit_srv6_sid_allocated(router, "expected_explicit_srv6_sid_allocated.json")
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_allocated.json"
++    )
+ 
+ 
+ # Check whether bgp vpn route contains the static SRv6 SIDs
+@@ -127,17 +199,6 @@ def test_sent_bgp_vpn_srv6_sid():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r1"]
+ 
+-    def _check_sent_bgp_vpn_srv6_sid(router, expected_route_file):
+-        logger.info("checking bgp vpn route with SRv6 SIDs in sending end")
+-        output = json.loads(router.vtysh_cmd("show bgp ipv4 vpn 192.168.1.0/24 json"))
+-        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+-        return topotest.json_cmp(output, expected)
+-
+-    def check_sent_bgp_vpn_srv6_sid(router, expected_file):
+-        func = functools.partial(_check_sent_bgp_vpn_srv6_sid, router, expected_file)
+-        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+-        assert result is None, "Failed"
+-
+     # FOR DEVELOPER:
+     # If you want to stop some specific line and start interactive shell,
+     # please use tgen.mininet_cli() to start it.
+@@ -153,17 +214,6 @@ def test_rcvd_bgp_vpn_srv6_sid():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    def _check_rcvd_bgp_vpn_srv6_sid(router, expected_route_file):
+-        logger.info("checking bgp ipv4 vpn route with SRv6 SIDs in receiving end")
+-        output = json.loads(router.vtysh_cmd("show bgp ipv4 vpn 192.168.1.0/24 json"))
+-        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+-        return topotest.json_cmp(output, expected)
+-
+-    def check_rcvd_bgp_vpn_srv6_sid(router, expected_file):
+-        func = functools.partial(_check_rcvd_bgp_vpn_srv6_sid, router, expected_file)
+-        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+-        assert result is None, "Failed"
+-
+     logger.info("--3--Test for SRv6 SID in bgp vpn in receiving end")
+     check_rcvd_bgp_vpn_srv6_sid(router, "expected_rcvd_bgp_vpn_srv6_sid.json")
+ 
+@@ -176,20 +226,13 @@ def test_rcvd_bgp_vrf_srv6_sid():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    def _check_rcvd_bgp_vrf_srv6_sid(router, vrf_name, expected_route_file):
+-        logger.info("checking bgp vrf {} ipv4 route with SRv6 SIDs in receiving end".format(vrf_name))
+-        output = json.loads(router.vtysh_cmd("show bgp vrf {} ipv4 192.168.1.0/24 json".format(vrf_name)))
+-        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+-        return topotest.json_cmp(output, expected)
+-
+-    def check_rcvd_bgp_vrf_srv6_sid(router, vrf_name, expected_file):
+-        func = functools.partial(_check_rcvd_bgp_vrf_srv6_sid, router, vrf_name, expected_file)
+-        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+-        assert result is None, "Failed"
+-
+     logger.info("--4--Test for SRv6 SIDs in bgp vrf route in receiving end")
+-    check_rcvd_bgp_vrf_srv6_sid(router, "Vrf10", "expected_rcvd_bgp_vrf_srv6_sid_1.json")
+-    check_rcvd_bgp_vrf_srv6_sid(router, "Vrf20", "expected_rcvd_bgp_vrf_srv6_sid_2.json")
++    check_rcvd_bgp_vrf_srv6_sid(
++        router, "Vrf10", "expected_rcvd_bgp_vrf_srv6_sid_1.json"
++    )
++    check_rcvd_bgp_vrf_srv6_sid(
++        router, "Vrf20", "expected_rcvd_bgp_vrf_srv6_sid_2.json"
++    )
+ 
+ 
+ # Check SRv6 SIDs in zebra vrf route in receiving end.
+@@ -200,20 +243,13 @@ def test_rcvd_zebra_vrf_srv6_sid():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    def _check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_route_file):
+-        logger.info("checking zebra vrf {} ipv4 route with SRv6 SIDs in receiving end".format(vrf_name))
+-        output = json.loads(router.vtysh_cmd("show ip route vrf {} 192.168.1.0/24 json".format(vrf_name)))
+-        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+-        return topotest.json_cmp(output, expected)
+-
+-    def check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_file):
+-        func = functools.partial(_check_rcvd_zebra_vrf_srv6_sid, router, vrf_name, expected_file)
+-        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+-        assert result is None, "Failed"
+-
+     logger.info("--5--Test for SRv6 SIDs in zebra vrf route in receiving end")
+-    check_rcvd_zebra_vrf_srv6_sid(router, "Vrf10", "expected_rcvd_zebra_vrf_srv6_sid_1.json")
+-    check_rcvd_zebra_vrf_srv6_sid(router, "Vrf20", "expected_rcvd_zebra_vrf_srv6_sid_2.json")
++    check_rcvd_zebra_vrf_srv6_sid(
++        router, "Vrf10", "expected_rcvd_zebra_vrf_srv6_sid_1.json"
++    )
++    check_rcvd_zebra_vrf_srv6_sid(
++        router, "Vrf20", "expected_rcvd_zebra_vrf_srv6_sid_2.json"
++    )
+ 
+ 
+ if __name__ == "__main__":
+
+From ac35f035dbb62c1ca6a0e7528bc307c09b818ca3 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 16:02:21 +0200
+Subject: [PATCH 6/8] topotests: bgp_srv6_sid_explicit, add test to disable exp
+ sid per vrf
+
+Add a test that controls whether the sid per-vrf unconfiguraiton flushes
+the SIDs from the srv6 sid table.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../expected_explicit_srv6_sid_disabled.json  |  2 +
+ .../test_bgp_srv6_sid_explicit.py             | 45 ++++++++++++++++---
+ 2 files changed, 42 insertions(+), 5 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_disabled.json
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_disabled.json b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_disabled.json
+new file mode 100644
+index 000000000000..2c63c0851048
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_disabled.json
+@@ -0,0 +1,2 @@
++{
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 144404ea432f..8c568810d620 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -76,15 +76,17 @@ def teardown_module(mod):
+     tgen.stop_topology()
+ 
+ 
+-def _check_explicit_srv6_sid_allocated(router, expected_sid_file):
++def _check_explicit_srv6_sid_allocated(router, expected_sid_file, exact=False):
+     logger.info("checking bgp explicit srv6 sid allocated in sending end")
+     output = json.loads(router.vtysh_cmd("show segment-routing srv6 sid json"))
+     expected = open_json_file("{}/{}".format(CWD, expected_sid_file))
+-    return topotest.json_cmp(output, expected)
++    return topotest.json_cmp(output, expected, exact=exact)
+ 
+ 
+-def check_explicit_srv6_sid_allocated(router, expected_file):
+-    func = functools.partial(_check_explicit_srv6_sid_allocated, router, expected_file)
++def check_explicit_srv6_sid_allocated(router, expected_file, exact=False):
++    func = functools.partial(
++        _check_explicit_srv6_sid_allocated, router, expected_file, exact=exact
++    )
+     _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+     assert result is None, "Failed"
+ 
+@@ -160,7 +162,7 @@ def check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_file):
+ # Configure 'sid vpn per-vrf export explicit X:X::X:X' in vrf and
+ # check whether zebra allocates the explicit SRv6 SIDs.
+ # By command 'show segment-routing srv6 sid json'
+-def test_explicit_srv6_sid_allocated():
++def test_explicit_srv6_sid_per_vrf_allocated():
+     tgen = get_topogen()
+     if tgen.routers_have_failure():
+         pytest.skip(tgen.errors)
+@@ -252,6 +254,39 @@ def test_rcvd_zebra_vrf_srv6_sid():
+     )
+ 
+ 
++# Configure 'no sid vpn per-vrf export explicit X:X::X:X' in vrf and
++# check whether zebra allocates the explicit SRv6 SIDs.
++# By command 'show segment-routing srv6 sid json'
++def test_explicit_srv6_sid_per_vrf_disabled():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf10
++          no sid vpn per-vrf export explicit 2001:db8:1:1:1000::
++        """
++    )
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf20
++          no sid vpn per-vrf export explicit 2001:db8:1:1:2000::
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info("--6--Test for bgp explicit srv6 sid disabled in zebra")
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_disabled.json", exact=True
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+
+From c1a28cffebe3be434deca1dc3335d7241f1adf4a Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 24 Jun 2025 21:53:41 +0200
+Subject: [PATCH 7/8] topotests: bgp_srv6_sid_explicit, Add BGP explicit SRv6
+ SID per afi
+
+Add a topotest for bgp explicit srv6 sid per address family.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ ...ed_explicit_srv6_sid_per_af_allocated.json |  34 +++++
+ .../expected_sent_bgp_vpn_srv6_sid.json       |   1 -
+ .../test_bgp_srv6_sid_explicit.py             | 126 ++++++++++++++++--
+ 3 files changed, 152 insertions(+), 9 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_per_af_allocated.json
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_per_af_allocated.json b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_per_af_allocated.json
+new file mode 100644
+index 000000000000..2344b5268cfb
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_per_af_allocated.json
+@@ -0,0 +1,34 @@
++{
++    "2001:db8:1:1:1000::":{
++      "sid":"2001:db8:1:1:1000::",
++      "behavior":"End.DT4",
++      "context":{
++        "vrfName":"Vrf10",
++        "table":10
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    },
++    "2001:db8:1:1:2000::":{
++      "sid":"2001:db8:1:1:2000::",
++      "behavior":"End.DT4",
++      "context":{
++        "vrfName":"Vrf20",
++        "table":20
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    }
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid.json b/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid.json
+index a2de2f9d58e0..31660ff5ed65 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid.json
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid.json
+@@ -52,7 +52,6 @@
+     },
+     "65001:20":{
+       "prefix":"192.168.1.0/24",
+-      "version":1,
+       "advertisedTo":{
+         "2001:db8:12::2":{
+           "hostname":"r2"
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 8c568810d620..7292a4c84914 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -195,7 +195,7 @@ def test_explicit_srv6_sid_per_vrf_allocated():
+ # Check whether bgp vpn route contains the static SRv6 SIDs
+ # in sending end.
+ # By command 'show bgp ipv4 vpn X.X.X.X/M json'
+-def test_sent_bgp_vpn_srv6_sid():
++def _test_sent_bgp_vpn_srv6_sid(step):
+     tgen = get_topogen()
+     if tgen.routers_have_failure():
+         pytest.skip(tgen.errors)
+@@ -204,31 +204,41 @@ def test_sent_bgp_vpn_srv6_sid():
+     # FOR DEVELOPER:
+     # If you want to stop some specific line and start interactive shell,
+     # please use tgen.mininet_cli() to start it.
+-    logger.info("--2--Test for bgp explicit SRv6 SIDs in bgp vpn route in sending end")
++    logger.info(
++        f"--{step}--Test for bgp explicit SRv6 SIDs in bgp vpn route in sending end"
++    )
+     check_sent_bgp_vpn_srv6_sid(router, "expected_sent_bgp_vpn_srv6_sid.json")
+ 
+ 
++def test_sent_bgp_vpn_srv6_sid():
++    _test_sent_bgp_vpn_srv6_sid(2)
++
++
+ # Check SRv6 SIDs in bgp vpn route in receiving end.
+ # By command 'show bgp ipv4 vpn json X.X.X.X/M json'
+-def test_rcvd_bgp_vpn_srv6_sid():
++def _test_rcvd_bgp_vpn_srv6_sid(step):
+     tgen = get_topogen()
+     if tgen.routers_have_failure():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    logger.info("--3--Test for SRv6 SID in bgp vpn in receiving end")
++    logger.info(f"--{step}--Test for SRv6 SID in bgp vpn in receiving end")
+     check_rcvd_bgp_vpn_srv6_sid(router, "expected_rcvd_bgp_vpn_srv6_sid.json")
+ 
+ 
++def test_rcvd_bgp_vpn_srv6_sid():
++    _test_rcvd_bgp_vpn_srv6_sid(3)
++
++
+ # Check SRv6 SIDs in bgp vrf route in receiving end.
+ # By command 'show bgp vrf VrfName ipv4 X.X.X.X/M json'
+-def test_rcvd_bgp_vrf_srv6_sid():
++def _test_rcvd_bgp_vrf_srv6_sid(step):
+     tgen = get_topogen()
+     if tgen.routers_have_failure():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    logger.info("--4--Test for SRv6 SIDs in bgp vrf route in receiving end")
++    logger.info(f"--{step}--Test for SRv6 SIDs in bgp vrf route in receiving end")
+     check_rcvd_bgp_vrf_srv6_sid(
+         router, "Vrf10", "expected_rcvd_bgp_vrf_srv6_sid_1.json"
+     )
+@@ -237,15 +247,19 @@ def test_rcvd_bgp_vrf_srv6_sid():
+     )
+ 
+ 
++def test_rcvd_bgp_vrf_srv6_sid():
++    _test_rcvd_bgp_vrf_srv6_sid(4)
++
++
+ # Check SRv6 SIDs in zebra vrf route in receiving end.
+ # By command 'show ip route vrf VrfName X.X.X.X/M json'
+-def test_rcvd_zebra_vrf_srv6_sid():
++def _test_rcvd_zebra_vrf_srv6_sid(step):
+     tgen = get_topogen()
+     if tgen.routers_have_failure():
+         pytest.skip(tgen.errors)
+     router = tgen.gears["r2"]
+ 
+-    logger.info("--5--Test for SRv6 SIDs in zebra vrf route in receiving end")
++    logger.info(f"--{step}--Test for SRv6 SIDs in zebra vrf route in receiving end")
+     check_rcvd_zebra_vrf_srv6_sid(
+         router, "Vrf10", "expected_rcvd_zebra_vrf_srv6_sid_1.json"
+     )
+@@ -254,6 +268,10 @@ def test_rcvd_zebra_vrf_srv6_sid():
+     )
+ 
+ 
++def test_rcvd_zebra_vrf_srv6_sid():
++    _test_rcvd_zebra_vrf_srv6_sid(5)
++
++
+ # Configure 'no sid vpn per-vrf export explicit X:X::X:X' in vrf and
+ # check whether zebra allocates the explicit SRv6 SIDs.
+ # By command 'show segment-routing srv6 sid json'
+@@ -287,6 +305,98 @@ def test_explicit_srv6_sid_per_vrf_disabled():
+     )
+ 
+ 
++# Configure 'sid vpn export explicit X:X::X:X' in ipv4 address-family and
++# check whether zebra allocates the explicit SRv6 SIDs.
++# By command 'show segment-routing srv6 sid json'
++def test_explicit_srv6_sid_per_af_allocated():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf10
++          address-family ipv4 unicast
++           sid vpn export explicit 2001:db8:1:1:1000::
++          exit-address-family
++        """
++    )
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf20
++          address-family ipv4 unicast
++           sid vpn export explicit 2001:db8:1:1:2000::
++          exit-address-family
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info("--7--Test for bgp explicit srv6 sid allocated in zebra")
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_per_af_allocated.json"
++    )
++
++
++def test_sent_bgp_vpn_srv6_per_af_sid():
++    _test_sent_bgp_vpn_srv6_sid(8)
++
++
++def test_rcvd_bgp_vpn_srv6_per_af_sid():
++    _test_rcvd_bgp_vpn_srv6_sid(9)
++
++
++# Check SRv6 SIDs in bgp vrf route in receiving end.
++# By command 'show bgp vrf VrfName ipv4 X.X.X.X/M json'
++def test_rcvd_bgp_vrf_srv6_per_af_sid():
++    _test_rcvd_bgp_vrf_srv6_sid(10)
++
++
++# Check SRv6 SIDs in zebra vrf route in receiving end.
++# By command 'show ip route vrf VrfName X.X.X.X/M json'
++def test_rcvd_zebra_vrf_srv6_per_af_sid():
++    _test_rcvd_zebra_vrf_srv6_sid(11)
++
++
++# Configure 'no sid vpn export explicit X:X::X:X' in af and
++# check whether zebra allocates the explicit SRv6 SIDs.
++# By command 'show segment-routing srv6 sid json'
++def test_explicit_srv6_sid_per_af_disabled():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf10
++          address-family ipv4 unicast
++           no sid vpn export explicit 2001:db8:1:1:1000::
++        """
++    )
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65001 vrf Vrf20
++          address-family ipv4 unicast
++           no sid vpn export explicit 2001:db8:1:1:2000::
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info("--12--Test for bgp explicit srv6 sid disabled in zebra")
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_disabled.json", exact=True
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+
+From 4e26d10408e083c29b39182c90b14a88b6e20ef7 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Thu, 26 Jun 2025 19:16:44 +0200
+Subject: [PATCH 8/8] doc: add documentation about 'sid vpn export' command
+
+Add documentation about sid vpn export command, under bgp
+address-family.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ doc/user/bgp.rst | 29 ++++++++++++++++++++---------
+ 1 file changed, 20 insertions(+), 9 deletions(-)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index 957fcc151573..23dcba2518f1 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -3456,15 +3456,26 @@ is accomplished via the following command in the context of a VRF:
+ 
+    Enables a SRv6 SID to be attached to a route exported from the current
+    unicast VRF to VPN. A single SID is used for both IPv4 and IPv6 address
+-   families. If you want to set a SID for only IPv4 address family or IPv6
+-   address family, you need to use the command ``sid vpn export <(1..1048575)|auto|explicit X:X::X:X>``
+-   in the context of an address-family. If the value specified is ``auto``,
+-   the SID value is automatically assigned from a pool maintained by the Zebra
+-   daemon. If the value specified is ``explicit X:X::X:X``, SID allocation
+-   with the explicit value is requested from the Zebra daemon.
+-   If Zebra is not running, or if this command is not configured, or if SID
+-   allocation is failed, automatic or explicit SID assignment will not complete,
+-   which will block corresponding route export.
++   families. If the value specified is ``auto``, the SID value is
++   automatically assigned from a pool maintained by the Zebra daemon. If the
++   value specified is ``explicit X:X::X:X``, SID allocation with the explicit
++   value is requested from the Zebra daemon. If Zebra is not running, or if
++   this command is not configured, or if SID allocation is failed, automatic
++   or explicit SID assignment will not complete, which will block corresponding
++   route export.
++
++
++.. clicmd:: sid vpn export <(1..1048575)|auto|explicit X:X::X:X>
++
++   If you want to set a SID for only IPv4 address family or IPv6 address
++   family, the above command can be executed in the context of an
++   address-family. If the value specified is ``auto``, the SID value is
++   automatically assigned from a pool maintained by the Zebra daemon. If the
++   value specified is ``explicit X:X::X:X``, SID allocation with the explicit
++   value is requested from the Zebra daemon. If Zebra is not running, or if
++   this command is not configured, or if SID allocation is failed, automatic
++   or explicit SID assignment will not complete, which will block corresponding
++   route export.
+ 
+ .. _bgp-evpn:
+ 
