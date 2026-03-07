@@ -89,6 +89,9 @@ fi
 
 mkdir -p /etc/swss/config.d/
 
+# Ensure hostname resolves (sudo hangs without this)
+grep -qw "$(hostname)" /etc/hosts 2>/dev/null || echo "127.0.0.1 $(hostname)" >> /etc/hosts
+
 rm -f /var/run/rsyslogd.pid
 
 supervisorctl start rsyslogd
