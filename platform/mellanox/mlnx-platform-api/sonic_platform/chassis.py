@@ -1233,6 +1233,56 @@ class Chassis(ChassisBase):
         self._initialize_bmc()
         return self._bmc
 
+    def change_sed_password(self, new_password):
+        """
+        Change the SED (Self-Encrypting Drive) password for Mellanox platforms.
+
+        Args:
+            new_password (str): The new password to set for the SED
+
+        Returns:
+            bool: True if the password change process completed successfully, False otherwise
+        """
+        sed_script_path = '/usr/local/bin/sed_pw_change.sh'
+        if not os.path.exists(sed_script_path):
+            logger.log_error(f"SED script path {sed_script_path} does not exist")
+            return False
+        if len(new_password) < 8 or len(new_password) > 124:
+            logger.log_error(f"SED password must be 8-124 characters long")
+            return False
+        try:
+            import subprocess
+            subprocess.check_call([sed_script_path, '-p', new_password], 
+                                 universal_newlines=True, 
+                                 stdout=subprocess.DEVNULL, 
+                                 stderr=subprocess.PIPE)
+            return True
+        except Exception as e:
+            logger.log_error(f"Failed to change SED password: {e}")
+            return False
+
+    def reset_sed_password(self):
+        """
+        Reset the SED (Self-Encrypting Drive) password to default for Mellanox platforms.
+
+        Returns:
+            bool: True if the password reset process completed successfully, False otherwise
+        """
+        sed_script_path = '/usr/local/bin/sed_reset_factory.sh'
+        if not os.path.exists(sed_script_path):
+            logger.log_error(f"SED script path {sed_script_path} does not exist")
+            return False
+        try:
+            import subprocess
+            subprocess.check_call([sed_script_path], 
+                                 universal_newlines=True, 
+                                 stdout=subprocess.DEVNULL, 
+                                 stderr=subprocess.PIPE)
+            return True
+        except Exception as e:
+            logger.log_error(f"Failed to reset SED password: {e}")
+            return False
+
 
     ##############################################
     # LiquidCooling methods
