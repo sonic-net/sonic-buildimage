@@ -95,6 +95,18 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
             assert(not neg_cmd)
         assert(peer_set == chk_data[idx])
 
+def hdl_static_route_sidlist_cmd(is_del, cmd_list, chk_data):
+    assert(len(chk_data) >= len(cmd_list))
+    for idx, cmd in enumerate(cmd_list):
+        last_cmd = re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
+        if is_del:
+            assert(last_cmd.startswith('no '))
+            last_cmd = last_cmd[len('no '):]
+        else:
+            assert(not last_cmd.startswith('no '))
+        for token in chk_data[idx]:
+            assert(token in last_cmd)
+
 conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
@@ -220,6 +232,15 @@ neighbor_shutdown_data = [
                   conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
 ]
 
+static_route_srv6_data = [
+    CmdMapTestInfo('STATIC_ROUTE', 'default|10.1.3.0/24',
+                   {'ifname': 'Ethernet8,Ethernet16',
+                    'sidlist': 'fcbb:bbbb:2:3:4:5:6:7,fcbb:bbbb:8:9:fedd::|fcbb:bbbb:3:9:fedd::'},
+                   hdl_static_route_sidlist_cmd, False, None,
+                   [['ip route 10.1.3.0/24', 'Ethernet8', 'segments fcbb:bbbb:2:3:4:5:6:7/fcbb:bbbb:8:9:fedd::', 'encap-behavior H_Encaps_Red'],
+                    ['ip route 10.1.3.0/24', 'Ethernet16', 'segments fcbb:bbbb:3:9:fedd::', 'encap-behavior H_Encaps_Red']])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd, skip_del=False):
@@ -266,3 +287,6 @@ def test_bgp_neighbor_shutdown():
     # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+def test_static_route_srv6_sidlist():
+    data_set_del_test(static_route_srv6_data)
