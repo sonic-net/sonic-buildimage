@@ -18,6 +18,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
 # and provides --build-context for COPY --from=<feature> in Dockerfile.j2
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_LLDP)
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_FPM_FRR)
+$(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_TEAMD)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \

@@ -18,8 +18,10 @@ RUN apt-get update
 {{ install_debian_packages(docker_teamd_debs.split(' ')) }}
 {%- endif %}
 
+COPY ["docker-teamd-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
-COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf.common.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
@@ -27,4 +29,4 @@ FROM $BASE
 {{ rsync_from_builder_stage() }}
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENTRYPOINT ["/usr/local/bin/supervisord"]
+ENTRYPOINT ["/usr/bin/docker-teamd-init.sh"]
