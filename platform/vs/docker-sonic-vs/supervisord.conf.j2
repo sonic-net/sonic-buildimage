@@ -265,18 +265,10 @@ stderr_syslog=true
 environment=ASAN_OPTIONS="log_path=/var/log/asan/vxlanmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
-[program:sflowmgrd]
-command=/usr/bin/sflowmgrd
-priority=22
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-{% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/sflowmgrd-asan.log{{ asan_extra_options }}"
-{% endif %}
+# sflow programs (from docker-sflow via _INCLUDE_DOCKER)
+{% set sflow_priority_base = 22 %}
+{% set sflow_wait_for = "start:exited" %}
+{% include "supervisord.conf.sflow.j2" %}
 
 # NAT programs (from docker-nat via _INCLUDE_DOCKER)
 {% set nat_priority_base = 23 %}
