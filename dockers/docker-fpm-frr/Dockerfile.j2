@@ -39,18 +39,10 @@ RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
 
 RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
 
-COPY ["frr", "/usr/share/sonic/templates"]
 COPY ["docker_init.sh", "/usr/bin/"]
 COPY ["snmp.conf", "/etc/snmp/frr.conf"]
-COPY ["TSA", "/usr/bin/TSA"]
-COPY ["TSB", "/usr/bin/TSB"]
-COPY ["TSC", "/usr/bin/TSC"]
-COPY ["TS", "/usr/bin/TS"]
-COPY ["zsocket.sh", "/usr/bin/"]
-RUN chmod a+x /usr/bin/TSA && \
-    chmod a+x /usr/bin/TSB && \
-    chmod a+x /usr/bin/TSC && \
-    chmod a+x /usr/bin/zsocket.sh
+
+{% include "Dockerfile.common.j2" %}
 
 FROM $BASE
 
