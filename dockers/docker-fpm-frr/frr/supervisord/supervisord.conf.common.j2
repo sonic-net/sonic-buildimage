@@ -1,0 +1,275 @@
+{# supervisord.conf.common.j2 — shared FRR supervisord programs
+   Included by both docker-fpm-frr (standalone) and docker-sonic-vs (via _INCLUDE_DOCKER).
+
+   Variables (set before {% include %}):
+     frr_priority_base    — base priority for FRR programs (default: 4)
+     use_dependent_startup — enable dependent_startup directives (default: false)
+     frr_wait_for         — dependent_startup_wait_for for first FRR program (default: rsyslogd:running)
+#}
+{% set _pbase = frr_priority_base | default(4) %}
+{% set _dep = use_dependent_startup | default(false) %}
+{% set _wait = frr_wait_for | default("rsyslogd:running") %}
+
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1 -P 0
+priority={{ _pbase }}
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for={{ _wait }}
+{% endif %}
+
+[program:zebra]
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic -M snmp --asic-offload=notify_on_offload
+priority={{ _pbase }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for={{ _wait }}
+{% endif %}
+
+[program:zsocket]
+command=/usr/bin/zsocket.sh
+priority={{ _pbase }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+[program:staticd]
+command=/usr/lib/frr/staticd -A 127.0.0.1 -P 0
+priority={{ _pbase }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+{% endif %}
+
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:bfdd]
+command=/usr/lib/frr/bfdd -A 127.0.0.1 -P 0
+priority={{ _pbase }}
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+{% endif %}
+
+[program:bgpd]
+{% if FEATURE is defined and
+      ((FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
+       (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled")) %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
+{% else %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
+{% endif %}
+priority={{ _pbase + 1 }}
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+{% endif %}
+
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:ospfd]
+command=/usr/lib/frr/ospfd -A 127.0.0.1 -P 0 -M snmp
+priority={{ _pbase + 1 }}
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+
+[program:pimd]
+command=/usr/lib/frr/pimd -A 127.0.0.1 -P 0
+priority={{ _pbase + 1 }}
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+{% endif %}
+
+[program:fpmsyncd]
+command=fpmsyncd
+priority={{ _pbase + 2 }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+{% if ENABLE_ASAN is defined and ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/fpmsyncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:frrcfgd]
+command=/usr/local/bin/frrcfgd
+{% else %}
+[program:bgpcfgd]
+command=/usr/local/bin/bgpcfgd
+{% endif %}
+priority={{ _pbase + 2 }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+{% if DEVICE_METADATA is not defined or DEVICE_METADATA.localhost.frr_mgmt_framework_config is not defined or DEVICE_METADATA.localhost.frr_mgmt_framework_config != "true" %}
+[program:staticroutebfd]
+command=/usr/local/bin/staticroutebfd
+priority={{ _pbase + 2 }}
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+[program:bgpmon]
+command=/usr/local/bin/bgpmon
+priority={{ _pbase + 2 }}
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+{% endif %}
+
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.software_bfd is defined and SYSTEM_DEFAULTS.software_bfd.status is defined and SYSTEM_DEFAULTS.software_bfd.status == "enabled" %}
+[program:bfdmon]
+command=/usr/local/bin/bfdmon
+priority={{ _pbase + 2 }}
+autostart=true
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% endif %}
+
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
+[program:vtysh_b]
+command=/usr/bin/vtysh -b
+priority={{ _pbase + 2 }}
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+{% endif %}
+
+{% if WARM_RESTART is defined and WARM_RESTART.bgp is defined and WARM_RESTART.bgp.bgp_eoiu is defined and WARM_RESTART.bgp.bgp_eoiu == "true" %}
+[program:bgp_eoiu_marker]
+command=/usr/bin/bgp_eoiu_marker.py
+priority={{ _pbase + 3 }}
+autostart=false
+autorestart=false
+startsecs=0
+startretries=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+{% endif %}
+
+{% if DEVICE_METADATA is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1 -P 0
+priority={{ _pbase + 1 }}
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% if _dep %}
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+{% endif %}
+{% endif %}

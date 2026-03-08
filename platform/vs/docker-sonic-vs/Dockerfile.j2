@@ -138,6 +138,7 @@ COPY ["50-default.conf", "/etc/rsyslog.d/"]
 COPY ["start.sh", "orchagent.sh", "files/update_chassisdb_config", "/usr/bin/"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
+COPY --from=fpm-frr frr/supervisord/supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2
 COPY --from=lldp start.sh /usr/bin/start-lldp.sh
 RUN chmod +x /usr/bin/start-lldp.sh
 COPY ["files/configdb-load.sh", "/usr/bin/"]
@@ -176,9 +177,13 @@ RUN rm /etc/frr/frr.conf
 
 COPY ["frr/zebra.conf", "/etc/frr/"]
 
+# FRR feature (from docker-fpm-frr via --build-context)
+{% set copy_from = "fpm-frr" %}
+{% include "docker-fpm-frr/Dockerfile.common.j2" %}
+
 # LLDP feature (from docker-lldp via --build-context)
 {% set copy_from = "lldp" %}
-{% include "Dockerfile.common.j2" %}
+{% include "docker-lldp/Dockerfile.common.j2" %}
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd

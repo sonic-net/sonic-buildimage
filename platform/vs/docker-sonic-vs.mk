@@ -17,6 +17,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
 # Include feature dockers — auto-merges DEPENDS, PYTHON_WHEELS,
 # and provides --build-context for COPY --from=<feature> in Dockerfile.j2
 $(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_LLDP)
+$(DOCKER_SONIC_VS)_INCLUDE_DOCKER += $(DOCKER_FPM_FRR)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
@@ -56,3 +57,11 @@ $(DOCKER_SONIC_VS)_LOAD_DOCKERS += $(DOCKER_SWSS_LAYER_BOOKWORM)
 SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_VS)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)
+
+# constants.yml is still needed in the build context for bgpcfgd
+DOCKER_SONIC_VS_CONSTANTS = $(PLATFORM_PATH)/docker-sonic-vs/constants.yml
+$(DOCKER_SONIC_VS_CONSTANTS): files/image_config/constants/constants.yml
+	cp -f $< $@
+
+$(TARGET_PATH)/docker-sonic-vs.gz : $(DOCKER_SONIC_VS_CONSTANTS)
+

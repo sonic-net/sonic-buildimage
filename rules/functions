@@ -161,7 +161,7 @@ $(1)_DOCKERS += $(3)
 $(1)_DOCKER_FEATURES += $(2)
 $(1)_DOCKER_FEATURE_$(2)_PATH = $$($(3)_PATH)
 $(1)_BUILD_CONTEXTS += --build-context $(2)=$$($(3)_PATH)
-$(1)_J2_INCLUDE_PATHS += -I $$($(3)_PATH)
+$(1)_J2_INCLUDE_PATHS += -I $$(dir $$($(3)_PATH))
 endef
 
 # Process _INCLUDE_DOCKER list: automatically call add_docker_feature for each entry.
