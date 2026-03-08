@@ -591,6 +591,8 @@ start() {
     else
         DB_OPT=$DB_OPT" --add-host=redis_chassis.server:$chassis_db_address "
     fi
+    {%- elif docker_container_name == "dash-ha" %}
+    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
