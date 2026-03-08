@@ -21,3 +21,15 @@ steps:
       echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES"
     name: SetVar
     displayName: "Check if vstest is needed."
+  - script: |
+      set -ex
+      tar_branch=origin/$(System.PullRequest.TargetBranchName)
+      DUALTOR_IMPACTED=NO
+      DUALTOR_PATTERNS="^(files/scripts/write_standby\.py|files/scripts/mark_dhcp_packet\.py|dockers/docker-mux/|src/sonic-linkmgrd/)"
+      if git diff $tar_branch..HEAD --name-only | grep -qE "$DUALTOR_PATTERNS"; then
+        DUALTOR_IMPACTED=YES
+      fi
+      set +x
+      echo "##vso[task.setvariable variable=DUALTOR_IMPACTED;isOutput=true]$DUALTOR_IMPACTED"
+    name: SetDualtorVar
+    displayName: "Check if dualtor vstest is needed."

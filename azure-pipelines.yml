@@ -123,6 +123,8 @@ stages:
     value: vtestbed.csv
   - name: PTF_MODIFIED
     value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+  - name: DUALTOR_IMPACTED
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['SetDualtorVar.DUALTOR_IMPACTED'], 'NO') ]
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
@@ -205,7 +207,188 @@ stages:
         testRunTitle: vstest
 
   # KVM based PR test jobs
-  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
-    parameters:
-      CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      PTF_MODIFIED: $(PTF_MODIFIED)
+  # Individual topology test jobs replace pr_test_template to allow conditional dualtor testing.
+  # For buildimage PRs, the sonic-mgmt impacted area detection always returns all checkers
+  # (since sonic-mgmt has no diff), so we define jobs explicitly with appropriate conditions.
+  - job: impacted_area_t0_elastictest
+    displayName: "impacted-area-kvmtest-t0 by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t0
+        MIN_WORKER: $(T0_INSTANCE_NUM)
+        MAX_WORKER: $(T0_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  - job: impacted_area_t0_2vlans_elastictest
+    displayName: "impacted-area-kvmtest-t0-2vlans by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t0
+        TEST_SET: t0-2vlans
+        MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
+        MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  - job: impacted_area_t1_elastictest
+    displayName: "impacted-area-kvmtest-t1-lag by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t1-lag
+        MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
+        MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  # Dualtor test only runs when dualtor-relevant buildimage files are changed:
+  # files/scripts/write_standby.py, files/scripts/mark_dhcp_packet.py,
+  # dockers/docker-mux/, or src/sonic-linkmgrd/.
+  # This prevents flaky dualtor infrastructure failures from blocking unrelated PRs.
+  - job: impacted_area_dualtor_elastictest
+    displayName: "impacted-area-kvmtest-dualtor by Elastictest"
+    condition: and(succeeded(), eq(variables['DUALTOR_IMPACTED'], 'YES'))
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: dualtor
+        MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+        MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  - job: impacted_area_t0_sonic_elastictest
+    displayName: "impacted-area-kvmtest-t0-sonic by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t0-64-32
+        TEST_SET: t0-sonic
+        MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+        MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --disable_sai_validation "
+        VM_TYPE: vsonic
+
+  - job: impacted_area_dpu_elastictest
+    displayName: "impacted-area-kvmtest-dpu by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: dpu
+        MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+        MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+        SPECIFIC_PARAM: '[{"name": "dash/test_dash_vnet.py", "param": "--skip_dataplane_checking"}]'
+
+  - job: impacted_area_multi_asic_t1_elastictest
+    displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t1-8-lag
+        MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+        MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+        NUM_ASIC: 4
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  - job: impacted_area_t2_elastictest
+    displayName: "impacted-area-kvmtest-t2 by Elastictest"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t2
+        MIN_WORKER: $(T2_INSTANCE_NUM)
+        MAX_WORKER: $(T2_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        RETRY_TIMES: "2"
+        STOP_ON_FAILURE: "True"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+
+  - job: t1_lag_vpp_elastictest
+    displayName: "kvmtest-t1-lag-vpp by Elastictest [OPTIONAL]"
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: true
+    pool: sonic-ubuntu-1c
+    steps:
+    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      parameters:
+        TOPOLOGY: t1-lag-vpp
+        MIN_WORKER: $(T1_LAG_VPP_INSTANCE_NUM)
+        MAX_WORKER: $(T1_LAG_VPP_INSTANCE_NUM)
+        BUILD_REASON: "PullRequest"
+        PTF_MODIFIED: $(PTF_MODIFIED)
+        KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+        MGMT_BRANCH: $(BUILD_BRANCH)
+        ASIC_TYPE: "vpp"
+        KVM_IMAGE_BUILD_PIPELINE_ID: "2818"
+        COMMON_EXTRA_PARAMS: "--disable_sai_validation --disable_loganalyzer"
+        STOP_ON_FAILURE: "False"
