@@ -141,6 +141,7 @@ COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/superviso
 COPY --from=fpm-frr frr/supervisord/supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2
 COPY --from=teamd supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.teamd.j2
 COPY --from=nat supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.nat.j2
+COPY --from=sflow supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.sflow.j2
 COPY --from=lldp start.sh /usr/bin/start-lldp.sh
 RUN chmod +x /usr/bin/start-lldp.sh
 COPY --from=teamd start.sh /usr/bin/start-teamd.sh
