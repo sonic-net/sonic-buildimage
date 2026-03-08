@@ -341,7 +341,6 @@ netbase==6.5
 netfilter-persistent==1.0.23
 nslcd==0.9.13-1
 nvme-cli==2.13-2
-opennsl-modules==7.1.0.0
 openssh-client==1:10.0p1-7+fips
 openssh-server==1:10.0p1-7+fips
 openssh-sftp-server==1:10.0p1-7+fips

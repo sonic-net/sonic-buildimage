@@ -121,7 +121,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.2.1-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.3.0-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
