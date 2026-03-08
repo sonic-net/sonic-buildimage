@@ -175,10 +175,6 @@ supervisorctl start vxlanmgrd
 
 supervisorctl start sflowmgrd
 
-supervisorctl start natmgrd
-
-supervisorctl start natsyncd
-
 supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd

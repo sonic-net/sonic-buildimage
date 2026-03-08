@@ -278,31 +278,10 @@ stderr_syslog=true
 environment=ASAN_OPTIONS="log_path=/var/log/asan/sflowmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
-[program:natmgrd]
-command=/usr/bin/natmgrd
-priority=23
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-{% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/natmgrd-asan.log{{ asan_extra_options }}"
-{% endif %}
-
-[program:natsyncd]
-command=/usr/bin/natsyncd
-priority=24
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-{% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/natsyncd-asan.log{{ asan_extra_options }}"
-{% endif %}
+# NAT programs (from docker-nat via _INCLUDE_DOCKER)
+{% set nat_priority_base = 23 %}
+{% set nat_wait_for = "start:exited" %}
+{% include "supervisord.conf.nat.j2" %}
 
 [program:fdbsyncd]
 command=/usr/bin/fdbsyncd
