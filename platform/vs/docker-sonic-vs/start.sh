@@ -159,10 +159,6 @@ supervisorctl start neighsyncd
 
 supervisorctl start fdbsyncd
 
-supervisorctl start teamsyncd
-
-supervisorctl start teammgrd
-
 supervisorctl start vrfmgrd
 
 supervisorctl start portmgrd
@@ -189,6 +185,7 @@ supervisorctl start fabricmgrd
 
 # Start LLDP (uses docker-lldp's start.sh)
 /usr/bin/start-lldp.sh
+/usr/bin/start-teamd.sh
 
 supervisorctl start rebootbackend
 

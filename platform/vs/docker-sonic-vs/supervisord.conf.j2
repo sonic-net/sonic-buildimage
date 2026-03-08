@@ -141,19 +141,6 @@ stderr_syslog=true
 environment=ASAN_OPTIONS="log_path=/var/log/asan/neighsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
-[program:teamsyncd]
-command=/usr/bin/teamsyncd
-priority=9
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-{% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/teamsyncd-asan.log{{ asan_extra_options }}"
-{% endif %}
-
 [program:vlanmgrd]
 command=/usr/bin/vlanmgrd
 priority=10
@@ -193,18 +180,10 @@ stderr_syslog=true
 environment=ASAN_OPTIONS="log_path=/var/log/asan/portmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
-[program:teammgrd]
-command=/usr/bin/teammgrd
-priority=12
-autostart=false
-autorestart=false
-stdout_logfile=NONE
-stdout_syslog=true
-stderr_logfile=NONE
-stderr_syslog=true
-{% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/teammgrd-asan.log{{ asan_extra_options }}"
-{% endif %}
+# Teamd programs (from docker-teamd via _INCLUDE_DOCKER)
+{% set teamd_priority_base = 12 %}
+{% set teamd_wait_for = "start:exited" %}
+{% include "supervisord.conf.teamd.j2" %}
 
 # FRR programs (from docker-fpm-frr via _INCLUDE_DOCKER)
 {% set frr_priority_base = 13 %}
