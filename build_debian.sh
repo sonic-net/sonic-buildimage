@@ -107,8 +107,21 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'echo "sysfs /sys sysfs default
 ## Setup proxy
 [ -n "$http_proxy" ] && sudo /bin/bash -c "echo 'Acquire::http::Proxy \"$http_proxy\";' > $FILESYSTEM_ROOT/etc/apt/apt.conf.d/01proxy"
 
-trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
+trap_push "sudo umount $FILESYSTEM_ROOT/proc || true"
 sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+trap_push "sudo umount $FILESYSTEM_ROOT/dev || true"
+sudo mount -t tmpfs nodev "$FILESYSTEM_ROOT/dev"
+for device in null zero full random urandom tty pts shm ptmx; do
+	if [ -d "/dev/$device" ]; then
+		sudo mkdir "$FILESYSTEM_ROOT/dev/$device"
+	elif [ -c "/dev/$device" ]; then
+		sudo touch "$FILESYSTEM_ROOT/dev/$device"
+	else
+		continue
+	fi
+	trap_push "sudo umount $FILESYSTEM_ROOT/dev/$device || true"
+	sudo mount -o bind "/dev/$device" "$FILESYSTEM_ROOT/dev/$device"
+done
 ## Note: mounting is necessary to makedev and install linux image
 echo '[INFO] Mount all'
 ## Output all the mounted device for troubleshooting
@@ -601,7 +614,7 @@ if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
     sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
 
     sudo rm -f $TARGET_PATH/$RFS_SQUASHFS_NAME
-    sudo mksquashfs $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME -Xcompression-level 1
+    sudo mksquashfs $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME -Xcompression-level 1 -one-file-system
 
     exit 0
 fi
@@ -623,6 +636,19 @@ if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
 
     trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
     sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+	trap_push "sudo umount $FILESYSTEM_ROOT/dev || true"
+	sudo mount -t tmpfs nodev "$FILESYSTEM_ROOT/dev"
+	for device in null zero full random urandom tty pts shm ptmx; do
+		if [ -d "/dev/$device" ]; then
+			sudo mkdir "$FILESYSTEM_ROOT/dev/$device"
+		elif [ -c "/dev/$device" ]; then
+			sudo touch "$FILESYSTEM_ROOT/dev/$device"
+		else
+			continue
+		fi
+		trap_push "sudo umount $FILESYSTEM_ROOT/dev/$device || true"
+		sudo mount -o bind "/dev/$device" "$FILESYSTEM_ROOT/dev/$device"
+	done
 fi
 
 ## Version file part 2
@@ -636,7 +662,7 @@ export branch="$(git rev-parse --abbrev-ref HEAD)"
 export release="$(if [ -f $FILESYSTEM_ROOT/etc/sonic/sonic_release ]; then cat $FILESYSTEM_ROOT/etc/sonic/sonic_release; fi)"
 export build_date="$(date -u)"
 export build_number="${BUILD_NUMBER:-0}"
-export built_by="$USER@$BUILD_HOSTNAME"
+export built_by="$BUILD_USER@$BUILD_HOSTNAME"
 export sonic_os_version="${SONIC_OS_VERSION}"
 j2 files/build_templates/sonic_version.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sonic_version.yml
 
