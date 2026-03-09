@@ -6,7 +6,7 @@ _idprom_completion() {
     COMPREPLY=(
         $( env COMP_WORDS="${words[*]}" \
              COMP_CWORD=$cword \
-             _FPGA_COMPLETE=complete "$1" )
+             _IDPROM_COMPLETE=bash_complete "$1" )
     )
 
     __ltrim_colon_completions "$cur"

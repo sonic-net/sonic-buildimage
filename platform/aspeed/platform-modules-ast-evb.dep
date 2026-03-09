@@ -1,0 +1,9 @@
+MPATH       := $($(ASPEED_EVB_AST2700_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/aspeed/platform-modules-ast-evb.mk platform/aspeed/platform-modules-ast-evb.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(addprefix $(MPATH)/,$(shell cd $(MPATH) && git ls-files))
+
+$(ASPEED_EVB_AST2700_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(ASPEED_EVB_AST2700_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(ASPEED_EVB_AST2700_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
+

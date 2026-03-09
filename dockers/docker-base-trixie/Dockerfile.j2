@@ -67,7 +67,7 @@ COPY ["pip.conf", "/etc/pip.conf"]
 {% endif %}
 
 # For templating
-RUN pip3 install j2cli
+RUN pip3 install jinjanator
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0

@@ -580,3 +580,249 @@ def test_per_branch_files_with_v1_flag(monkeypatch, tmp_path, branch, is_v1_enab
     # Verify IS_V1_ENABLED is set correctly
     assert ss.IS_V1_ENABLED == is_v1_enabled
 
+
+def test_restapi_service_uses_per_branch_file(ss):
+    """Test that restapi.service sync uses the per-branch service file"""
+    systemd_stub, container_fs, host_fs, commands, config_db = ss
+
+    # Prepare container unit content and host old content (branch 202311 from fixture)
+    container_restapi_service_path = "/usr/share/sonic/systemd_scripts/restapi.service_202311"
+    container_fs[container_restapi_service_path] = b"UNIT-NEW-PER-BRANCH"
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"DUMMY"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"DUMMY"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"DUMMY"
+    
+    host_fs[systemd_stub.HOST_RESTAPI_SERVICE] = b"UNIT-OLD"
+    host_fs["/usr/bin/restapi.sh"] = b"DUMMY"
+    host_fs["/bin/container_checker"] = b"DUMMY"
+    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"DUMMY"
+
+    # Add post actions for restapi.service
+    systemd_stub.POST_COPY_ACTIONS[systemd_stub.HOST_RESTAPI_SERVICE] = [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "restapi"],
+    ]
+
+    ok = systemd_stub.ensure_sync()
+    assert ok is True
+    assert host_fs[systemd_stub.HOST_RESTAPI_SERVICE] == b"UNIT-NEW-PER-BRANCH"
+
+    # Verify systemctl actions were invoked
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "daemon-reload") in post_cmds
+    assert ("sudo", "systemctl", "restart", "restapi") in post_cmds
+
+
+# ─────────────────────────── Tests for _resolve_branch ───────────────────────────
+
+@pytest.mark.parametrize("branch_input, expected", [
+    # Exact matches
+    ("202311", "202311"),
+    ("202405", "202405"),
+    ("202411", "202411"),
+    ("202505", "202505"),
+    ("202511", "202511"),
+    # Between two supported → nearest lower
+    ("202404", "202311"),
+    ("202407", "202405"),
+    ("202412", "202411"),   # e.g. version 20241211.35
+    ("202504", "202411"),
+    ("202510", "202505"),
+    ("202600", "202511"),
+    # Below minimum → falls back to 202311 (ERROR)
+    ("202210", "202311"),
+    ("202305", "202311"),
+    ("202310", "202311"),
+    # master / internal / private → latest
+    ("master",   "202511"),
+    ("internal", "202511"),
+    ("private",  "202511"),
+    # Non-numeric → falls back to 202311 (ERROR)
+    ("foobar",   "202311"),
+])
+def test_resolve_branch(ss, branch_input, expected):
+    systemd_stub, *_ = ss
+    assert systemd_stub._resolve_branch(branch_input) == expected
+
+
+def test_resolve_branch_with_version_20241211(ss, monkeypatch, tmp_path):
+    """End-to-end: SONiC.20241211.35 → branch 202412 → resolved to 202411."""
+    systemd_stub, *_ = ss
+
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.20241211.35'")
+
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    detected = systemd_stub._get_branch_name()
+    assert detected == "202412"
+    assert systemd_stub._resolve_branch(detected) == "202411"
+
+
+def test_resolve_branch_with_version_20241211_kube(ss, monkeypatch, tmp_path):
+    """End-to-end: 20241211.35-kube → branch 202412 → resolved to 202411."""
+    systemd_stub, *_ = ss
+
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: '20241211.35-kube'")
+
+    original_exists = os.path.exists
+    def mock_exists(path):
+        if path == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(path)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", mock_open)
+
+    detected = systemd_stub._get_branch_name()
+    assert detected == "202412"
+    assert systemd_stub._resolve_branch(detected) == "202411"
+
+
+def test_resolve_branch_supported_branches_constant(ss):
+    """Test that SUPPORTED_BRANCHES is defined and contains expected values."""
+    systemd_stub, *_ = ss
+    assert hasattr(systemd_stub, "SUPPORTED_BRANCHES")
+    assert systemd_stub.SUPPORTED_BRANCHES == ["202311", "202405", "202411", "202505", "202511"]
+
+
+def test_master_branch_uses_resolved_branch_for_sync(monkeypatch, tmp_path):
+    """Test that master branch gets resolved to 202511 and uses proper sync files."""
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    
+    # Create fake sonic_version.yml for master
+    version_file = tmp_path / "sonic_version.yml"
+    version_file.write_text("build_version: 'SONiC.master.921927-18199d73f'\n")
+    
+    monkeypatch.delenv("IS_V1_ENABLED", raising=False)
+    
+    # Mock file operations
+    original_exists = os.path.exists
+    def mock_exists(p):
+        if p == "/etc/sonic/sonic_version.yml":
+            return True
+        return original_exists(p)
+    monkeypatch.setattr("os.path.exists", mock_exists)
+    
+    original_open = open
+    def mock_open(file, *args, **kwargs):
+        if file == "/etc/sonic/sonic_version.yml":
+            return original_open(str(version_file), *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+    
+    monkeypatch.setattr("builtins.open", mock_open)
+    
+    ss = importlib.import_module("systemd_stub")
+    
+    # Verify branch detection and resolution
+    detected = ss._get_branch_name()
+    assert detected == "master"
+    resolved = ss._resolve_branch(detected)
+    assert resolved == "202511"
+
+
+# ─────────────────────────── Tests for regex pattern optimization ───────────────────────────
+
+def test_regex_patterns_compiled_at_module_level(ss):
+    """Test that regex patterns are compiled at module level, not in functions."""
+    systemd_stub, *_ = ss
+    
+    # Verify that the pre-compiled patterns exist
+    assert hasattr(systemd_stub, "_MASTER_PATTERN")
+    assert hasattr(systemd_stub, "_INTERNAL_PATTERN")
+    assert hasattr(systemd_stub, "_DATE_PATTERN")
+    assert hasattr(systemd_stub, "_DATE_EXTRACT_PATTERN")
+    
+    # Verify they are compiled regex pattern objects
+    import re
+    assert isinstance(systemd_stub._MASTER_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._INTERNAL_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._DATE_PATTERN, re.Pattern)
+    assert isinstance(systemd_stub._DATE_EXTRACT_PATTERN, re.Pattern)
+
+
+def test_master_pattern_matches_correctly(ss):
+    """Test that _MASTER_PATTERN correctly matches master branch versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._MASTER_PATTERN.match("SONiC.master.921927-18199d73f")
+    assert systemd_stub._MASTER_PATTERN.match("master.921927-18199d73f")
+    assert systemd_stub._MASTER_PATTERN.match("SONIC.MASTER.123456-abcdef12")  # case insensitive
+    
+    # Should not match
+    assert not systemd_stub._MASTER_PATTERN.match("SONiC.internal.123456-abcdef12")
+    assert not systemd_stub._MASTER_PATTERN.match("SONiC.20231110.19")
+    assert not systemd_stub._MASTER_PATTERN.match("master")  # missing numbers/hash
+
+
+def test_internal_pattern_matches_correctly(ss):
+    """Test that _INTERNAL_PATTERN correctly matches internal branch versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._INTERNAL_PATTERN.match("SONiC.internal.135691748-dbb8d29985")
+    assert systemd_stub._INTERNAL_PATTERN.match("internal.135691748-dbb8d29985")
+    assert systemd_stub._INTERNAL_PATTERN.match("SONIC.INTERNAL.123456789-abc1234567")
+    
+    # Should not match
+    assert not systemd_stub._INTERNAL_PATTERN.match("SONiC.master.123456-abcdef12")
+    assert not systemd_stub._INTERNAL_PATTERN.match("SONiC.20231110.19")
+    assert not systemd_stub._INTERNAL_PATTERN.match("internal")  # missing numbers/hash
+
+
+def test_date_pattern_matches_correctly(ss):
+    """Test that _DATE_PATTERN correctly matches date-based versions."""
+    systemd_stub, *_ = ss
+    
+    # Should match
+    assert systemd_stub._DATE_PATTERN.match("SONiC.20231110.19")
+    assert systemd_stub._DATE_PATTERN.match("20240515.25")
+    assert systemd_stub._DATE_PATTERN.match("SONiC.20241110.kw.24")
+    assert systemd_stub._DATE_PATTERN.match("20250515")
+    
+    # Should not match
+    assert not systemd_stub._DATE_PATTERN.match("SONiC.master.123456-abcdef12")
+    assert not systemd_stub._DATE_PATTERN.match("SONiC.internal.123456-abcdef12")
+    assert not systemd_stub._DATE_PATTERN.match("2023111")  # only 7 digits
+
+
+def test_date_extract_pattern_extracts_correctly(ss):
+    """Test that _DATE_EXTRACT_PATTERN correctly extracts year and month."""
+    systemd_stub, *_ = ss
+    
+    # Test various date formats
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.20231110.19")
+    assert match
+    assert match.groups() == ("2023", "11")
+    
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("20240515.25")
+    assert match
+    assert match.groups() == ("2024", "05")
+    
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.20241110.kw.24")
+    assert match
+    assert match.groups() == ("2024", "11")
+    
+    # Should not match
+    match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.master.123456-abcdef12")
+    assert not match
