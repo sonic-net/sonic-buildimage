@@ -21,10 +21,14 @@ QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 DPU_DOCKER_IMAGE_NAME_FILE="/host/dpu-docker-info/image"
 DPU_DOCKER_CONTAINER_NAME_FILE = "/host/dpu-docker-info/name"
 DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
+CPLD_REV_MASK = 0x7
+CPLD_REV_SHIFT = 4
 
 class APIHelper():
 
     mtfuji_board_id = 130
+    mtfuji_rev_v1 = "V1"
+    mtfuji_rev_v2 = "V2"
 
     def __init__(self):
         pass
@@ -137,6 +141,25 @@ class APIHelper():
             print(f"Failed to get board id due to {e}")
             return 0
 
+    def get_board_rev(self):
+        cmd = "cpldapp -r 0xA"
+        slot_id = 0
+        try:
+            if self.is_host():
+                slot_id = self.run_docker_cmd(cmd)
+            else:
+                slot_id_file = DOCKER_HWSKU_PATH + "/dpu_slot_id"
+                slot_id = open(slot_id_file, "r").read()
+            if self.get_board_id() == self.mtfuji_board_id:
+                rev = (int(slot_id, 16) >> CPLD_REV_SHIFT) & CPLD_REV_MASK
+                if rev == 0x2:
+                    return self.mtfuji_rev_v2
+                else:
+                    return self.mtfuji_rev_v1
+            return "N/A"
+        except:
+            return "N/A"
+
     def readline_txt_file(self, path):
         try:
             with open(path, 'r') as f:
@@ -145,4 +168,20 @@ class APIHelper():
         except Exception:
             pass
         return ''
+
+    def get_slot_id(self):
+        cmd = "cpldapp -r 0xA"
+        try:
+            if self.is_host():
+                slot_id = self.run_docker_cmd(cmd)
+                return int(slot_id,16)
+            else:
+                slot_id_file = DOCKER_HWSKU_PATH + "/dpu_slot_id"
+                slot_id_hex = open(slot_id_file, "r").read()
+                if slot_id_hex:
+                    slot_id = int(slot_id_hex, 16)
+                    return slot_id
+            return -1
+        except:
+            return -1
 

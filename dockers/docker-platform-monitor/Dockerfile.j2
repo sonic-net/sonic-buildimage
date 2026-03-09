@@ -25,7 +25,6 @@ RUN apt-get update &&   \
         dmidecode       \
         i2c-tools       \
         psmisc          \
-        python3-jsonschema \
         python3-netifaces \
         libpci3         \
         iputils-ping    \
@@ -47,7 +46,7 @@ RUN apt-get install -y -t bookworm-backports \
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
 RUN pip3 install grpcio==1.51.1 \
-        grpcio-tools==1.51.1
+        grpcio-tools==1.51.1 --no-build-isolation
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
 RUN pip3 install thrift==0.13.0
@@ -109,6 +108,8 @@ RUN rm -f /usr/share/sonic/templates/docker_init.j2
 RUN chmod 755 /usr/bin/docker_init.sh
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

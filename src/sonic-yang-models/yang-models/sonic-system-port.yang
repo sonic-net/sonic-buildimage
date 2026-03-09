@@ -5,10 +5,6 @@ module sonic-system-port {
     namespace "http://github.com/sonic-net/sonic-system-port";
     prefix system-port;
 
-    import sonic-port {
-        prefix port;
-    }
-
     import sonic-types {
         prefix stypes;
     }

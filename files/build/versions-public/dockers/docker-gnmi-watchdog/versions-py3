@@ -12,7 +12,7 @@ pyangbind==0.8.2
 pyyaml==6.0.3
 redis==5.0.1
 redis-dump-load==1.1
-regex==2025.11.3
+regex==2026.2.19
 six==1.17.0
 tabulate==0.9.0
 xmltodict==0.12.0

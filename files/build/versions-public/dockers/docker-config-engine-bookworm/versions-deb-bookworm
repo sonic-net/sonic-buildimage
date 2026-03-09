@@ -1,5 +1,6 @@
 apt-utils==2.6.1
 binutils==2.40-2
+binutils-aarch64-linux-gnu==2.40-2
 binutils-common==2.40-2
 binutils-x86-64-linux-gnu==2.40-2
 bzip2==1.0.8-5+b1
@@ -10,6 +11,7 @@ g++==4:12.2.0-3
 g++-12==12.2.0-14+deb12u1
 gcc==4:12.2.0-3
 gcc-12==12.2.0-14+deb12u1
+icu-devtools==72.1-3+deb12u1
 libasan8==12.2.0-14+deb12u1
 libbinutils==2.40-2
 libboost-serialization1.83.0==1.83.0-4.2~bpo12+1
@@ -25,6 +27,9 @@ libgcc-12-dev==12.2.0-14+deb12u1
 libgomp1==12.2.0-14+deb12u1
 libgprofng0==2.40-2
 libhiredis0.14==0.14.1-3
+libhwasan0==12.2.0-14+deb12u1
+libicu-dev==72.1-3+deb12u1
+libicu72==72.1-3+deb12u1
 libisl23==0.25-1.1
 libitm1==12.2.0-14+deb12u1
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
@@ -50,10 +55,14 @@ libswsscommon==1.0.0
 libtirpc-dev==1.3.3+ds-1
 libtsan2==12.2.0-14+deb12u1
 libubsan1==12.2.0-14+deb12u1
+libxml2==2.9.14+dfsg-1.3~deb12u5
+libxml2-dev==2.9.14+dfsg-1.3~deb12u5
+libxslt1-dev==1.1.35-1+deb12u3
+libxslt1.1==1.1.35-1+deb12u3
 libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==6.1.158-1
+linux-libc-dev==6.1.162-1
 make==4.3-4.1
 patch==2.7.6-7
 python3-swsscommon==1.0.0

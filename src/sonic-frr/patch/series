@@ -60,3 +60,4 @@
 0098-SRv6-Add-support-for-multiple-SRv6-locators.patch
 0099-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
 0100-bgpd-Allow-proper-shutdown-of-bgp-dynamic-peers.patch
+0101-bgpd-send-EOR-during-GR-only-when-FIB-install-comple.patch

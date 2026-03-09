@@ -59,6 +59,15 @@ module sonic-mux-cable {
                     description "DualToR LinkMrgrd Icmp Prober mode.";
                 }
 
+                leaf neighbor_mode {
+                    type enumeration {
+                        enum prefix-route;
+                        enum host-route;
+                    }
+                    default host-route;
+                    description "DualToR MUX neighbor mode.";
+                }
+
                 leaf server_ipv4 {
                     type inet:ipv4-prefix;
 

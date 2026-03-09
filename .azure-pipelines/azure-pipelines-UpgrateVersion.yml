@@ -114,7 +114,7 @@ stages:
         echo "artifacts$artifacts"
         cp -r $(Pipeline.Workspace)/sonic-buildimage.${default_platform}/target/versions target/
         make freeze FREEZE_VERSION_OPTIONS=-r
-        find files/build/versions
+        find -L files/build/versions
         ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf" && echo "$artifacts" | grep -E "arm64|armhf")
         for artifact in $ordered_artifacts
         do
@@ -124,14 +124,14 @@ stages:
           [[ "$artifact" == *arm64* || "$artifact" == *armhf* ]] && OPTIONS="-d"
           make freeze FREEZE_VERSION_OPTIONS="$OPTIONS"
         done
-        git diff files/build/versions
+        git diff files/build/versions-public
       displayName: 'Freeze Versions'
     - script: |
         if [ -z "$GIT_USER" ]; then
           echo "Skipped to send the pull request, GIT_USER not set."
           exit 0
         fi
-        GIT_STATUS=$(git status  --porcelain files/build/versions)
+        GIT_STATUS=$(git status  --porcelain files/build/versions-public)
         if [ -z "$GIT_STATUS" ]; then
           echo "Skipped to send the pull request, no version change in files/build/versions"
           exit 0
@@ -151,7 +151,7 @@ stages:
 
         git config user.name $GIT_USER
         git config credential.https://github.com.username $GIT_USER
-        git add files/build/versions
+        git add files/build/versions-public
         git commit -s -m "[ci/build]: Upgrade SONiC package versions"
         git checkout -b $BRANCH_NAME
         git remote add remote https://github.com/$GIT_USER/$GIT_REPO

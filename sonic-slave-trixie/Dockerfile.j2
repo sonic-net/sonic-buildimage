@@ -27,6 +27,13 @@ COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 {%- else %}
 COPY ["sources.list.amd64", "/etc/apt/sources.list"]
+{%- endif %}
+
+# Install certificates by disabling the peer verification
+RUN apt -o Acquire::https::Verify-Peer=false update && \
+    apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
 {%- if CONFIGURED_ARCH == "armhf" %}
 ARG arch=armhf
 ARG gcc_arch=arm-linux-gnueabihf
@@ -75,7 +82,7 @@ RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {
 RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
-RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.7
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
@@ -554,8 +561,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang golang-go
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
@@ -586,11 +593,8 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
-# For sonic config engine testing
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
-# https://github.com/robshakir/pyangbind/issues/232
-RUN pip3 install pyangbind==0.8.2
+
+RUN pip3 install pyangbind==0.8.7
 RUN pip3 uninstall -y enum34
 
 # For sonic-platform-common testing
@@ -633,7 +637,7 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 #RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Install docker engine 24 inside docker and enable experimental feature
+# Install docker engine 28 inside docker and enable experimental feature
 RUN apt-get update
 RUN eatmydata apt-get install -y \
            apt-transport-https \
@@ -645,15 +649,12 @@ RUN eatmydata apt-get install -y \
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
-# TODO(trixie) - Migrate to trixie docker packages
-#RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
-# Install docker packages from bookworm
-RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources
+RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
 {%- endif %}
 RUN apt-get update
-RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
+RUN eatmydata apt-get install -y docker-ce=5:28.5.2-1~debian.13~trixie docker-ce-cli=5:28.5.2-1~debian.13~trixie containerd.io=1.7.28-2~debian.13~trixie docker-buildx-plugin=0.26.1-1~debian.13~trixie docker-compose-plugin=2.39.1-1~debian.13~trixie
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
@@ -784,7 +785,9 @@ ENV RUSTUP_HOME=$RUST_ROOT
 ENV PATH=$PATH:$RUST_ROOT/bin
 
 # Install cargo-tarpaulin for code coverage
-RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+# Pin version to avoid dependency conflicts with Rust 1.86.0
+# (cargo-tarpaulin v0.35.2 pulled in gimli 0.33.0 which needs Rust 1.88+)
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='trixie' %}

@@ -7,10 +7,6 @@ module sonic-bgp-neighbor {
         prefix inet;
     }
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     import sonic-bgp-common {
         prefix bgpcmn;
     }

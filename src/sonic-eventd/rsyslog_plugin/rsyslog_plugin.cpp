@@ -4,12 +4,13 @@
 #include <regex>
 #include <ctime>
 #include <unordered_map>
+#include <atomic>
 #include "rsyslog_plugin.h"
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-bool RsyslogPlugin::g_running;
+std::atomic<bool> RsyslogPlugin::g_running;
 
 bool RsyslogPlugin::onMessage(string msg, lua_State* luaState) {
     string tag;

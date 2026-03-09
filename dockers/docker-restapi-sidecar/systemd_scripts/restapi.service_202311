@@ -7,7 +7,7 @@ After=sonic.target
 Before=ntp-config.service
 
 [Service]
-User=admin
+User=root
 ExecStartPre=/usr/bin/restapi.sh start
 ExecStart=/usr/bin/restapi.sh wait
 ExecStop=/usr/bin/restapi.sh stop
