@@ -4,7 +4,6 @@ SHELL = /bin/bash
 
 MAIN_TARGET = $(IFUPDOWN2)
 
-IFUPDOWN2_SHA256 = 55ded1c60f720c81a5d4b5feeb48d893fd3f29d4ad0fe7d9cec508fe84b5f1b8
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files
