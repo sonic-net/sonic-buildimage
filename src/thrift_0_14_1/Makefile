@@ -11,6 +11,7 @@ DERIVED_TARGETS = libthrift-dev_$(THRIFT_VERSION)_$(CONFIGURED_ARCH).deb \
 		  thrift-compiler_$(THRIFT_VERSION)_$(CONFIGURED_ARCH).deb
 
 THRIFT_LINK_PRE = https://archive.apache.org/dist/thrift
+# SHA256 of thrift-THRIFT_VERSION.tar.gz — update when changing THRIFT_VERSION
 THRIFT_SHA256 = 13da5e1cd9c8a3bb89778c0337cc57eb0c29b08f3090b41cf6ab78594b410ca5
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
