@@ -1,0 +1,12 @@
+[Unit]
+Description=NextHop USB Network Gadget Service
+Documentation=https://github.com/sonic-net/SONiC/wiki/
+After=systemd-modules-load.service local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/usb-network-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
