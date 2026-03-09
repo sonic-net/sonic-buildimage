@@ -18,6 +18,7 @@ ENV IS_V1_ENABLED=false
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
+COPY ["files/service_checker.py", "/usr/share/sonic/systemd_scripts/service_checker.py"]
 COPY ["files/telemetry.sh", "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"]
 COPY ["files/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
@@ -28,6 +29,8 @@ RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%s
 RUN chmod +x /usr/bin/systemd_stub.py /usr/share/sonic/scripts/k8s_pod_control.sh
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

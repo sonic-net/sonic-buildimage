@@ -148,7 +148,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         chrpath \
 # For frr build
         libc-ares-dev \
-        libsnmp-dev \
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
@@ -452,7 +451,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pciutils \
         dh-dkms \
         rpm2cpio \
-        libsnmp-dev \
         libpopt-dev \
         libfuse-dev \
 {%- if CONFIGURED_ARCH == "arm64" %}
