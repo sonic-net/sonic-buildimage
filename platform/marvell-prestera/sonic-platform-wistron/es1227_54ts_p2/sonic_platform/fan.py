@@ -118,12 +118,14 @@ class Fan(FanBase):
         return ''
 
     def __read_txt_file(self, file_path):
-        try:
-            with open(file_path, 'r') as fd:
-                data = fd.read()
-                return data.strip()
-        except IOError:
-            pass
+        for _ in range(3):
+            try:
+                with open(file_path, 'r') as fd:
+                    data = fd.read()
+                    return data.strip()
+            except IOError:
+                time.sleep(0.01)
+                pass
         return None
 
     def __write_txt_file(self, file_path, data):
