@@ -169,7 +169,7 @@ cmd_start() {
 
 # stop is a no-op: K8s controls the pod lifecycle; deleting the pod here
 # would just cause the controller to recreate it immediately.
-cmd_stop()    { log "stop: no-op (pod lifecycle is managed by K8s)"; }
+cmd_stop()    { kill_pods; }
 cmd_restart() { kill_pods; }
 
 cmd_status() {
@@ -190,16 +190,27 @@ cmd_status() {
 }
 
 cmd_wait() {
-  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME}…"
+  local max_rounds="${WAIT_MAX_ROUNDS:-15}"
+  local round=0
+  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME} (max ${max_rounds} rounds)…"
   while true; do
     local out=""; out="$(pods_on_node)"
     if [[ -z "$out" ]]; then
-      sleep 5; continue
+      if (( ++round > max_rounds )); then
+        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
+        exit 1
+      fi
+      sleep 20; continue
     fi
     if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
-      sleep 60
+      round=0
+      sleep 20
     else
-      sleep 5
+      if (( ++round > max_rounds )); then
+        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
+        exit 1
+      fi
+      sleep 20
     fi
   done
 }
