@@ -78,6 +78,12 @@ class FanDrawer(FanDrawerBase):
         """
         return self._fan_list[0].get_status_led()
 
+    def set_status_led(self, color):
+        """
+        Sets the state of the fan drawer LED
+        """
+        return self._fan_list[0].set_status_led(color)
+
     def get_position_in_parent(self):
         """
         Retrieves 1-based relative physical position in parent device.
