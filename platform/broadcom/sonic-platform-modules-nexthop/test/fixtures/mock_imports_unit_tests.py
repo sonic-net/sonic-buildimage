@@ -114,6 +114,11 @@ def fake_some_base_modules():
     led_control_base = Mock()
     led_control_base.LedControlBase = type("LedControlBase", (object,), {})
 
+    interface_mock = Mock()
+    interface_mock.backplane_prefix.return_value = "Ethernet-BP"
+    interface_mock.inband_prefix.return_value = "Ethernet-IB"
+    interface_mock.recirc_prefix.return_value = "Ethernet-Rec"
+
     return {
         "sonic_platform_base.sonic_thermal_control.thermal_json_object": thermal_json_object,
         "sonic_platform_base.sonic_thermal_control.thermal_info_base": thermal_info_base,
@@ -122,6 +127,7 @@ def fake_some_base_modules():
         "sonic_platform_base.watchdog_base": watchdog_base,
         "sonic_platform_pddf_base.pddf_thermal": pddf_thermal,
         "sonic_led.led_control_base": led_control_base,
+        "sonic_py_common.interface": interface_mock,
     }
 
 
