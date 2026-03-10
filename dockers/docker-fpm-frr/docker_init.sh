@@ -65,7 +65,26 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "separated" ]; then
-    echo "Config Type separated is not supported"
+    echo "Config Type separated is deprecated"
+    MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
+    if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
+        CFGGEN_PARAMS=" \
+            -d \
+            -y /etc/sonic/constants.yml \
+            -T /usr/local/sonic/frrcfgd \
+            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
+        "
+    else
+        CFGGEN_PARAMS=" \
+            -d \
+            -y /etc/sonic/constants.yml \
+            -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
+        "
+    fi
+    sonic-cfggen $CFGGEN_PARAMS
+    echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
+    rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
+          /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf
 elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then

@@ -221,7 +221,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 {% endif %}
 
-{% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
+{% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "separated") %}
 [program:vtysh_b]
 command=/usr/bin/vtysh -b
 priority=6
