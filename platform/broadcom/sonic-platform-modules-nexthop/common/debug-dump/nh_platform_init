@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# Copyright 2026 Nexthop Systems Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# nh_platform_init - Display platform initialization information for Nexthop platforms
+
+echo "I2C Device Nodes:"
+echo "-----------------"
+ls /dev/i2c* 2>/dev/null || echo "No I2C device nodes found"
+echo ""
+
+echo "I2C Bus Devices:"
+echo "----------------"
+ls /sys/bus/i2c/devices 2>/dev/null || echo "No I2C bus devices found"
+echo ""
+
+echo "MDIO Bus:"
+echo "---------"
+ls /sys/class/mdio_bus 2>/dev/null || echo "No MDIO buses found"
+echo ""
+
+echo "PDDF Kernel Sysfs:"
+echo "------------------"
+find /sys/kernel/pddf -print 2>/dev/null || echo "PDDF sysfs not initialized"
+echo ""
