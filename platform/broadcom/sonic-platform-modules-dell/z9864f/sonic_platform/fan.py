@@ -41,6 +41,7 @@ class Fan(FanBase):
     def __init__(self, fantray_index=1, fan_index=1, psu_fan=False,
                  dependency=None):
         self.is_psu_fan = psu_fan
+        self.max_speed = 14600
         if not self.is_psu_fan:
             # API index is starting from 0, DELL platform index is
             # starting from 1
@@ -158,14 +159,16 @@ class Fan(FanBase):
 
     def get_speed(self):
         """
-        Retrieves the max speed of the fan
+        Retrieves the speed of the fan
         Returns:
             int: percentage of the max fan speed
-        Note:
-            BMC based platforms thermal control handled by BMC itself.
-            To avoid FRU call CPU consumption, just returning None
         """
-        return None
+        is_valid, fan_speed = self.speed_sensor.get_reading()
+        if not is_valid:
+            return None
+        else:
+            speed = (100 * fan_speed)//self.max_speed
+        return int(speed)
 
     def get_speed_rpm(self):
         """
