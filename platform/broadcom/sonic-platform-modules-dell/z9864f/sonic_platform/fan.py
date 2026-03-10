@@ -161,7 +161,7 @@ class Fan(FanBase):
         """
         Retrieves the speed of the fan
         Returns:
-            int: percentage of the max fan speed
+            int: percentage of the max fan speed.
         """
         is_valid, fan_speed = self.speed_sensor.get_reading()
         if not is_valid:
