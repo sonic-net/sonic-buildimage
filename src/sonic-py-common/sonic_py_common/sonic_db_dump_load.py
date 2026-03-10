@@ -6,7 +6,8 @@ def sonic_db_dump_load():
     import re
     import sys
     from redisdl import dump, load
-    from swsscommon.swsscommon import SonicDBConfig
+    from swsscommon.swsscommon import SonicDBConfig, SonicDBKey
+    from sonic_py_common import multi_asic
 
     DUMP = 1
     LOAD = 2
@@ -30,22 +31,25 @@ def sonic_db_dump_load():
         if hasattr(options, 'backend') and options.backend:
             args['streaming_backend'] = options.backend
         if hasattr(options, 'dbname') and options.dbname:
+            key = SonicDBKey(options.netns)
             if options.conntype == 'tcp':
-                args['host'] = SonicDBConfig.getDbHostname(options.dbname)
-                args['port'] = SonicDBConfig.getDbPort(options.dbname)
-                args['db'] = SonicDBConfig.getDbId(options.dbname)
+                args['host'] = SonicDBConfig.getDbHostname(options.dbname, key)
+                args['port'] = SonicDBConfig.getDbPort(options.dbname, key)
+                args['db'] = SonicDBConfig.getDbId(options.dbname, key)
                 args['unix_socket_path'] = None
             elif options.conntype == "unix_socket":
                 args['host'] = None
                 args['port'] = None
-                args['db'] = SonicDBConfig.getDbId(options.dbname)
-                args['unix_socket_path'] = SonicDBConfig.getDbSock(options.dbname)
+                args['db'] = SonicDBConfig.getDbId(options.dbname, key)
+                args['unix_socket_path'] = SonicDBConfig.getDbSock(options.dbname, key)
             else:
                 raise TypeError('redis connection type is tcp or unix_socket')
 
         return args
 
     def do_dump(options):
+        if multi_asic.is_multi_asic():
+            SonicDBConfig.initializeGlobalConfig()
         if options.output:
             output = open(options.output, 'w')
         else:
@@ -58,6 +62,8 @@ def sonic_db_dump_load():
             output.close()
 
     def do_load(options, args):
+        if multi_asic.is_multi_asic():
+            SonicDBConfig.initializeGlobalConfig()
         if len(args) > 0:
             input = open(args[0], 'rb')
         else:
@@ -97,6 +103,7 @@ def sonic_db_dump_load():
         usage += "\nfrom standard input."
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('-w', '--password', help='connect with PASSWORD')
+    parser.add_option('--netns', help='Namespace string to use asic0/asic1.../asicn', default='')
     if help == DUMP:
         parser.add_option('-n', '--dbname', help='dump DATABASE (APPL_DB/ASIC_DB...)')
         parser.add_option('-t', '--conntype', help='indicate redis connection type (tcp[default] or unix_socket)', default='tcp')

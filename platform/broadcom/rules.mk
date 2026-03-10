@@ -1,6 +1,7 @@
 include $(PLATFORM_PATH)/sai-modules.mk
 include $(PLATFORM_PATH)/sai-xgs.mk
 include $(PLATFORM_PATH)/sai-dnx.mk
+include $(PLATFORM_PATH)/sai-legacy.mk
 include $(PLATFORM_PATH)/sswsyncd.mk
 # TODO(trixie): re-enable modules after updating for Trixie
 include $(PLATFORM_PATH)/platform-modules-nokia.mk
@@ -26,6 +27,7 @@ include $(PLATFORM_PATH)/platform-modules-ufispace.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-brcm.mk
+include $(PLATFORM_PATH)/docker-syncd-brcm-legacy.mk
 ifeq ($(INCLUDE_PDE), y)
 include $(PLATFORM_PATH)/docker-pde.mk
 include $(PLATFORM_PATH)/sonic-pde-tests.mk
@@ -44,10 +46,10 @@ include $(PLATFORM_PATH)/../components/docker-gbsyncd-milleniob.mk
 endif
 
 BCMCMD = bcmcmd
-$(BCMCMD)_URL = "https://packages.trafficmanager.net/public/20190307/bcmcmd"
+$(BCMCMD)_URL = "$(BUILD_PUBLIC_URL)/20190307/bcmcmd"
 
 DSSERVE = dsserve
-$(DSSERVE)_URL = "https://packages.trafficmanager.net/public/20190307/dsserve"
+$(DSSERVE)_URL = "$(BUILD_PUBLIC_URL)/20190307/dsserve"
 
 SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
 

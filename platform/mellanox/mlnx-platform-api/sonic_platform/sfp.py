@@ -797,7 +797,7 @@ class SFP(NvidiaSFPCommon):
                 with open(page, mode='rb', buffering=0) as f:
                     id_byte_raw = bytearray(f.read(1))
                     id = id_byte_raw[0]
-                    if id == 0x18 or id == 0x19 or id == 0x1e:
+                    if id == 0x18 or id == 0x19 or id == 0x1e or id == 0x80:
                         self._sfp_type_str = SFP_TYPE_CMIS
                     elif id == 0x11 or id == 0x0D:
                         # in sonic-platform-common, 0x0D is treated as sff8436,

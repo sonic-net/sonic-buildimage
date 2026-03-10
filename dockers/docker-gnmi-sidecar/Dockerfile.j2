@@ -27,6 +27,8 @@ RUN chmod +x /usr/bin/systemd_stub.py /usr/share/sonic/scripts/k8s_pod_control.s
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Make apt-get non-interactive

@@ -44,7 +44,7 @@ executing==2.2.0
 fastentrypoints==0.12
 fonttools==4.57.0
 fs==2.4.16
-fsspec==2025.12.0
+fsspec==2026.2.0
 gbp==0.9.38
 gcovr==7.2
 gpg==1.24.2
@@ -113,8 +113,8 @@ ply==3.11
 pooch==1.8.2
 prefixed==0.7.0
 prompt_toolkit==3.0.51
-protobuf==5.29.5
-psutil==7.0.0
+protobuf==5.29.6
+psutil==7.2.2
 psutils==3.3.8
 ptyprocess==0.7.0
 pure_eval==0.2.3
@@ -127,7 +127,7 @@ pyasn1_modules==0.4.1
 pycparser==2.22
 pycryptodomex==3.20.0
 pyelftools==0.32
-pyfakefs==5.10.2
+pyfakefs==6.1.1
 pygments==2.18.0
 pygobject==3.50.0
 pyhamcrest==2.1.0
@@ -151,7 +151,7 @@ pytz==2025.2
 pyxdg==0.28
 pyyaml==6.0.2
 pyyaml-include==2.2
-redis==7.1.0
+redis==7.2.0
 regex==2024.11.6
 requests==2.32.3
 roman==5.0

@@ -13,10 +13,6 @@ module sonic-smart-switch {
 		prefix stypes;
 	}
 
-	import sonic-port {
-		prefix port;
-	}
-
 	import sonic-vnet {
 		prefix sonic-vnet;
 	}

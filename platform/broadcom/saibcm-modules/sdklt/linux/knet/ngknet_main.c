@@ -98,6 +98,11 @@
 
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX  /* SONIC-76482 */
 #define NGKNET_IOC_SVTAG_SET            (SIOCDEVPRIVATE + 0)
+
+/* Define SIOCDEVPRIVATE for kernel 5.15+ compatibility (removed from userspace headers) */
+#ifndef SIOCDEVPRIVATE
+#define SIOCDEVPRIVATE 0x89F0
+#endif
 #define NGKNET_IOC_SVTAG_MAGIC          0x53565447 /* "SVTG" */
 #define NGKNET_NETIF_F_DEL_SVTAG        (1U << 15) /* Remove SVTAG from the RX packets */
 #define NGKNET_NETIF_F_ADD_SVTAG        (1U << 14) /* Insert SVTAG into the TX packets */
@@ -1625,6 +1630,46 @@ ngknet_poll_controller(struct net_device *ndev)
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
+/*!
+ * Device private ioctl handler for kernel 5.15+
+ * Handles SIOCDEVPRIVATE commands via ndo_siocdevprivate callback
+ */
+static int
+ngknet_siocdevprivate(struct net_device *ndev, struct ifreq *ifr,
+                      void __user *data, int cmd)
+{
+    struct ngknet_private *priv = netdev_priv(ndev);
+
+    if (!ndev || !priv) {
+        return -EINVAL;
+    }
+
+#if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
+    if (cmd == 0 || cmd == NGKNET_IOC_SVTAG_SET) {
+        struct ifru_svtag req;
+        
+        if (copy_from_user(&req, data, sizeof(req))) {
+            DBG_WARN(("ngknet: Failed to copy svtag data from user\n"));
+            return -EFAULT;
+        }
+        if (ntohl(req.magic) != NGKNET_IOC_SVTAG_MAGIC) {
+            DBG_WARN(("ngknet: Invalid svtag magic: 0x%x\n", ntohl(req.magic)));
+            return -EINVAL;
+        }
+        priv->netif.flags &= ~(NGKNET_NETIF_F_ADD_SVTAG | NGKNET_NETIF_F_DEL_SVTAG);
+        priv->netif.flags |= req.flags & (NGKNET_NETIF_F_ADD_SVTAG | NGKNET_NETIF_F_DEL_SVTAG);
+        memcpy(priv->svtag, req.svtag, 4);
+        DBG_VERB(("ngknet: SVTAG configured on %s: flags=0x%x, svtag=[%02x %02x %02x %02x]\n",
+               ndev->name, req.flags, req.svtag[0], req.svtag[1], req.svtag[2], req.svtag[3]));
+        return 0;
+    }
+#endif
+    /* Other private ioctl commands not supported */
+    return -EOPNOTSUPP;
+}
+#endif /* LINUX_VERSION_CODE >= 5.15.0 */
+
 static const struct net_device_ops ngknet_netdev_ops = {
     .ndo_open            = ngknet_enet_open,
     .ndo_stop            = ngknet_enet_stop,
@@ -1636,6 +1681,9 @@ static const struct net_device_ops ngknet_netdev_ops = {
     .ndo_change_mtu      = ngknet_change_mtu,
     .ndo_set_features    = NULL,
     .ndo_do_ioctl        = ngknet_do_ioctl,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
+    .ndo_siocdevprivate  = ngknet_siocdevprivate,
+#endif
     .ndo_tx_timeout      = NULL,
 #ifdef CONFIG_NET_POLL_CONTROLLER
     .ndo_poll_controller = ngknet_poll_controller,
@@ -1814,6 +1862,7 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
 #endif
 
     dev_net_set(ndev, current->nsproxy->net_ns);
+
     /* Register the kernel network device */
     rv = register_netdev(ndev);
     if (rv < 0) {
@@ -3030,4 +3079,3 @@ ngknet_exit_module(void)
 
 module_init(ngknet_init_module);
 module_exit(ngknet_exit_module);
-

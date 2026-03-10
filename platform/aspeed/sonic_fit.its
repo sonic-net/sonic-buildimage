@@ -1,0 +1,112 @@
+/dts-v1/;
+
+/*
+ * FIT Image Configuration for AST2700 SONiC - Multi-DTB Support
+ *
+ * This FIT image contains multiple DTBs for different hardware variants:
+ * - ast2700-evb: Aspeed AST2700 EVB reference platform
+ * - nexthop-b27-r0: NextHop AST2700 platform
+ *
+ * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
+ * which is set based on hardware detection at boot time.
+ *
+ * Load addresses are chosen based on AST2700 memory map:
+ * - RAM: 0x400000000 - 0x47e000000 (2016 MB)
+ * - Reserved regions: 0x41b800000-0x423ffffff, 0x42c000000-0x431bfffff
+ *
+ * Safe load addresses (avoiding reserved regions):
+ * - Kernel:   0x403000000 (U-Boot default loadaddr, ~10 MB)
+ * - Ramdisk:  0x440000000 (after reserved regions, 192 MB allocated)
+ *             Production initramfs: 37.4 MB compressed, 160 MB uncompressed
+ *             IMPORTANT: Kernel decompresses initramfs IN PLACE!
+ * - FDT:      0x44C000000 (after ramdisk: 0x440000000 + 192 MB)
+ *
+ * Memory Layout:
+ *   0x403000000 ──> Kernel (10 MB)
+ *   0x440000000 ──> Ramdisk (192 MB allocated for decompression)
+ *                   Compressed: 37.4 MB (zstd)
+ *                   Uncompressed: 160 MB (in-place decompression)
+ *   0x44C000000 ──> DTB (50 KB)
+ *
+ * Two-cell address format: <0xHIGH 0xLOW>
+ * Example: 0x44C000000 = <0x4 0x4C000000>
+ *
+ * See platform/aspeed/AST2700-MEMORY-MAP.md for details.
+ */
+
+/ {
+	description = "Kernel fitImage for SONiC AST2700 with Multi-DTB Support";
+	#address-cells = <2>;
+
+	images {
+		kernel-1 {
+			description = "Linux kernel";
+			data = /incbin/("__KERNEL_PATH__");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x4 0x03000000>;
+			entry = <0x4 0x03000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-ast2700-evb {
+			description = "Flattened Device Tree blob for Aspeed AST2700 EVB";
+			data = /incbin/("__DTB_PATH_ASPEED__/ast2700-evb.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-nexthop-b27-r0 {
+			description = "Flattened Device Tree blob for NextHop AST2700";
+			data = /incbin/("__DTB_PATH_ASPEED__/nexthop-b27-r0.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		ramdisk-1 {
+			description = "Initramfs";
+			data = /incbin/("__INITRD_PATH__");
+			type = "ramdisk";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x4 0x40000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "conf-ast2700-evb";
+		conf-ast2700-evb {
+			description = "SONiC for Aspeed AST2700 EVB";
+			kernel = "kernel-1";
+			fdt = "fdt-ast2700-evb";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-nexthop-b27-r0 {
+			description = "SONiC for NextHop AST2700";
+			kernel = "kernel-1";
+			fdt = "fdt-nexthop-b27-r0";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+	};
+};

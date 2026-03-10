@@ -13,10 +13,6 @@ module sonic-portchannel {
         prefix yang;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     import sonic-port {
         prefix port;
         revision-date 2019-07-01;
@@ -43,7 +39,6 @@ module sonic-portchannel {
     revision 2019-07-01 {
         description "First Revision";
     }
-
 
     container sonic-portchannel {
 

@@ -1,5 +1,6 @@
 # docker image for docker-ptf
 
+ifeq ($(INCLUDE_PTF),y)
 DOCKER_PTF = docker-ptf.gz
 $(DOCKER_PTF)_PYTHON_WHEELS += $(PTF_PY3)
 $(DOCKER_PTF)_PATH = $(DOCKERS_PATH)/docker-ptf
@@ -10,3 +11,4 @@ $(DOCKER_PTF)_DEPENDS += $(PYTHON_SAITHRIFT) $(P4LANG_PI) $(P4LANG_BMV2) $(P4LAN
 endif
 SONIC_DOCKER_IMAGES += $(DOCKER_PTF)
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_PTF)
+endif
