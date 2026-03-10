@@ -1,0 +1,34 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install bmcweb and sonic-dbus-bridge runtime dependencies
+RUN apt-get update      && \
+    apt-get install -f -y  \
+        libtinyxml2-11     \
+    && rm -rf /var/lib/apt/lists/*
+
+{% if docker_sonic_redfish_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sonic_redfish_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_redfish_debs.split(' ')) }}
+{%- endif %}
+
+# Create necessary directories
+RUN mkdir -p /etc/bmcweb && \
+    mkdir -p /var/lib/bmcweb && \
+    mkdir -p /usr/share/www
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
+
