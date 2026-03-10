@@ -9,11 +9,18 @@ module sonic-copp {
 		prefix stypes;
 	}
 
+	import sonic-port {
+		prefix port;
+	}
+
 	description "CoPP YANG Module for SONiC OS";
 
 	revision 2021-03-31 {
-		description
-			"First Revision";
+		description "First Revision";
+	}
+
+	revision 2026-01-09 {
+		description "Add COPP_TRAP_EXCLUDE_PORTS";
 	}
 
 	container sonic-copp {
@@ -168,6 +175,21 @@ module sonic-copp {
 			/* end of list COPP_TRAP_LIST */
 		}
 		/* end of container COPP_TRAP */
+
+		container COPP_TRAP_EXCLUDE_PORTS {
+			description "List of ports to exclude from CoPP traps";
+
+			container GLOBAL {
+				leaf-list ports {
+					type leafref {
+						path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+					}
+					ordered-by user;
+				}
+			}
+			/* end of container GLOBAL */
+		}
+		/* end of container COPP_TRAP_EXCLUDE_PORTS */
 	}
 	/* end of top level container */
 
