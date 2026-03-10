@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,7 @@ RJ45_TYPE = "RJ45"
 
 VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
 REVISION = "REV"
+VPD_DATA_WAIT_TIMEOUT = 60  # Timeout in seconds for waiting for VPD data file
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -978,10 +979,13 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
-                return result
+                logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
+                if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
+                    logger.log_error("VPD data file {} not available after timeout".format(filename))
+                    return result
 
             result = utils.read_key_value_file(filename, delimeter=": ")
-                
+
         except Exception as e:
             logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
 
