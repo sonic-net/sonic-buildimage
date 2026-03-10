@@ -1,0 +1,16 @@
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index dc0882a..845845a 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -534,9 +534,9 @@ def subscribe_start(stub, options, req_iterator):
+                 ' received\n'+str(response.error.message) + str(response.error))
+           elif response.HasField('update'):
+               if filter_event_regex is not None:
+-                  if filter_event_regex is not "":
++                  if filter_event_regex != "":
+                       match = check_event_response(response, filter_event_regex)
+-                      if len(match) is not 0:
++                      if len(match) != 0:
+                           print(response)
+                           update_count = update_count + 1
+                   else:
