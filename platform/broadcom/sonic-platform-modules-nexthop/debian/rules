@@ -99,6 +99,11 @@ override_dh_auto_install:
 			cp $(MOD_SRC_DIR)/$${mod}/bash_completion.d/* \
 				debian/$${pkg_name}/etc/bash_completion.d/; \
 		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/debug-dump ]; then \
+			dh_installdirs -p$${pkg_name} /usr/local/bin/debug-dump; \
+			cp $(MOD_SRC_DIR)/$${mod}/debug-dump/* \
+				debian/$${pkg_name}/usr/local/bin/debug-dump/; \
+		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d ]; then \
 			dh_installdirs -p$${pkg_name} etc/modprobe.d; \
 			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \

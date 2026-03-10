@@ -41,6 +41,11 @@ then
     fi
 fi
 
+if [[ $IS_BMC_DEVICE == "true" ]]
+then
+    export DATABASE_TYPE="bmcdb"
+fi
+
 export BMP_DB_PORT=6400
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
@@ -51,9 +56,9 @@ if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
     if [ -f /etc/sonic/enable_multidb ]; then
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT jinjanate /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     else
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT jinjanate /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     fi
 fi
 
@@ -101,7 +106,7 @@ then
     if [ -f /etc/sonic/database_global.json ]; then
         cp /etc/sonic/database_global.json $REDIS_DIR/sonic-db/database_global.json
     else
-        j2 /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
+        jinjanate /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
     fi
 fi
 # delete chassisdb config to generate supervisord config
@@ -143,6 +148,8 @@ done
 
 chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
-chown -R redis:redis $REDIS_BMP_DIR
+if [[ -d $REDIS_BMP_DIR ]]; then
+    chown -R redis:redis $REDIS_BMP_DIR
+fi
 
 exec /usr/local/bin/supervisord

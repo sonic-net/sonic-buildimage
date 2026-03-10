@@ -86,7 +86,23 @@ resolvconf_updates_restore
 # Read sysctl conf files again
 sysctl -p /etc/sysctl.d/90-dhcp6-systcl.conf
 
-systemctl restart networking
+MAX_RETRIES=5
+RETRY_DELAY=2
+for ((i=1; i<=MAX_RETRIES; i++)); do
+    LOG_MARK=$(date '+%Y-%m-%d %H:%M:%S')
+    if systemctl restart networking; then
+        if journalctl -u networking --since "$LOG_MARK" | grep -q "error.*already running"; then
+            echo "interfaces-config: error during networking restart in attempt $i. Retrying in ${RETRY_DELAY} seconds..."
+            sleep "${RETRY_DELAY}"
+        else
+            echo "interfaces-config: systemctl restart networking succeeded on attempt $i"
+            break
+        fi
+    else
+        echo "interfaces-config: Attempt $i to restart networking failed. Retrying in ${RETRY_DELAY} seconds..."
+        sleep "${RETRY_DELAY}"
+    fi
+done
 
 # Clean-up created files
 rm -f /tmp/ztp_input.json /tmp/ztp_port_data.json

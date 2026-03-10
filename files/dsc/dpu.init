@@ -27,13 +27,34 @@ DPU_DOCKER_INFO_DIR=/host/dpu-docker-info
 TAG=latest
 IMAGE_NAME=docker-dpu
 
+function log_msg() {
+    echo "$1" | tee /dev/kmsg /dev/console
+}
+
+function generate_ssh_host_keys()
+{
+    # Generate SSH host keys 
+    log_msg "Removing existing SSH host keys"
+    rm -rfd /etc/ssh/ssh_host*
+    sleep 1
+    ssh-keygen -A
+    systemctl restart ssh.service
+    log_msg "SSH host keys generated successfully"
+}
+
 function start_polaris()
 {
+    # Run only if ssh.service is NOT active (inactive/failed/not-found)
+    if ! systemctl is-active --quiet ssh.service; then
+        log_msg "ssh.service is not active; regenerating host keys and restarting ssh"
+        generate_ssh_host_keys
+    fi
+
     modprobe ionic_mnic
     modprobe mnet_uio_pdrv_genirq
     modprobe mdev
     modprobe pciesvc
-    insmod /usr/lib/modules/6.1.0-22-2-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
+    insmod /usr/lib/modules/6.12.41+deb13-sonic-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
 
     mkdir -p $HOST_DIR_POLARIS/update
     mkdir -p $HOST_DIR_POLARIS/sysconfig/config0
@@ -60,6 +81,8 @@ function start_polaris()
     echo $IMAGE_NAME:$TAG > $DPU_DOCKER_INFO_DIR/image
     /usr/sbin/ethtool -K Ethernet0 tx off sg off tso off rx off
 
+    echo 50 > $HOST_DIR_POLARIS/data/free_mem_threshold
+
     docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
 
     docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/external:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
@@ -67,19 +90,70 @@ function start_polaris()
     if [ -f /boot/first_boot ]; then
         device="/usr/share/sonic/device"
         platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
-        echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
+        log_msg "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
         python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
         rm /boot/first_boot
     fi
 
-    sleep 5
+    # Configure eth0-midplane interface with DHCP
+    # This must complete before database.service starts to get the midplane IP
     INTERFACE="eth0-midplane"
-    if ip link show "$INTERFACE" &> /dev/null; then
-        echo "dhclient -r $INTERFACE"
-        /usr/sbin/dhclient -r $INTERFACE
+    INTERFACE_WAIT_TIMEOUT=120  # Max seconds to wait for interface to appear
+    DHCP_MAX_RETRIES=30
+    DHCP_RETRY_INTERVAL=2
+
+    log_msg "Waiting for interface $INTERFACE to be created by polaris container..."
+
+    # Wait dynamically for eth0-midplane interface to be created
+    interface_wait_start=$(date +%s)
+    while true; do
+        if ip link show "$INTERFACE" &> /dev/null; then
+            log_msg "Interface $INTERFACE detected"
+            # Give it a moment to fully initialize
+            sleep 1
+            break
+        fi
+
+        elapsed=$(($(date +%s) - interface_wait_start))
+        if [ $elapsed -ge $INTERFACE_WAIT_TIMEOUT ]; then
+            log_msg "Error: Interface $INTERFACE not found after ${INTERFACE_WAIT_TIMEOUT}s timeout"
+            log_msg "Check if polaris container is running correctly"
+            docker logs $CONTAINER_NAME_POLARIS 2>&1 | tail -20
+            exit 1
+        fi
+
+        # Log progress every 10 seconds
+        if [ $((elapsed % 10)) -eq 0 ] && [ $elapsed -gt 0 ]; then
+            log_msg "Still waiting for $INTERFACE... (${elapsed}s elapsed)"
+        fi
+
         sleep 1
-        echo "dhclient $INTERFACE"
-        /usr/sbin/dhclient $INTERFACE
+    done
+
+    log_msg "Releasing any existing DHCP lease on $INTERFACE"
+    /usr/sbin/dhclient -r $INTERFACE 2>/dev/null || true
+    sleep 1
+
+    log_msg "Starting DHCP client on $INTERFACE"
+    /usr/sbin/dhclient $INTERFACE
+
+    # Wait for IP address to be assigned
+    log_msg "Waiting for IP address on $INTERFACE..."
+    retry_count=0
+    while [ $retry_count -lt $DHCP_MAX_RETRIES ]; do
+        midplane_ip=$(ip -4 -o addr show $INTERFACE 2>/dev/null | awk '{print $4}' | cut -d'/' -f1)
+        if [ -n "$midplane_ip" ]; then
+            log_msg "Successfully obtained IP address: $midplane_ip on $INTERFACE"
+            break
+        fi
+        retry_count=$((retry_count + 1))
+        log_msg "Waiting for DHCP... attempt $retry_count/$DHCP_MAX_RETRIES"
+        sleep $DHCP_RETRY_INTERVAL
+    done
+
+    if [ -z "$midplane_ip" ]; then
+        log_msg "Warning: Failed to obtain IP address on $INTERFACE after $DHCP_MAX_RETRIES attempts"
+        log_msg "DHCP server may not be available. Continuing without midplane IP."
     fi
 }
 

@@ -9,10 +9,6 @@ module sonic-port{
 		prefix stypes;
 	}
 
-	import sonic-extension {
-		prefix ext;
-	}
-
 	import sonic-device_metadata {
 		prefix sdm;
 	}

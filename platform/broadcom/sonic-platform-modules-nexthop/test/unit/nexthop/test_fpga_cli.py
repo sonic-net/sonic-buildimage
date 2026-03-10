@@ -189,3 +189,90 @@ def test_echo_available_fpgas(fpga_cli_module, monkeypatch, capsys):
     assert "PCIe ADDRESS" in captured.out
     assert fpga_cli_module.bdf_to_name("0000:30:00.0") ==  "CPUCARD_FPGA"
     assert fpga_cli_module.bdf_to_name("0000:e4:00.0") ==  "SWITCHCARD_FPGA"
+
+
+def test_dump_single_fpga(fpga_cli_module, monkeypatch):
+    """Test dump command with a single FPGA"""
+    def mock_dump(pci_addr):
+        return [(0x0, 0x0, 0xDEADBEEF), (0x4, 0x4, 0xCAFEBABE)]
+
+    monkeypatch.setattr("nexthop.fpga_cli.find_xilinx_fpgas", lambda: ["0000:e4:00.0"])
+    monkeypatch.setattr("nexthop.fpga_cli.name_to_bdf", lambda name: "0000:e4:00.0" if name == "SWITCHCARD_FPGA" else None)
+    monkeypatch.setattr("nexthop.fpga_cli.dump_resource0", mock_dump)
+    monkeypatch.setattr("nexthop.fpga_cli.load_pddf_device_config", lambda: {})
+    monkeypatch.setattr("nexthop.fpga_cli.bdf_to_name", lambda bdf, cfg=None: "SWITCHCARD_FPGA")
+
+    runner = CliRunner()
+    result = runner.invoke(fpga_cli_module.dump, ["SWITCHCARD_FPGA"])
+
+    assert result.exit_code == 0
+    assert "SWITCHCARD_FPGA" in result.output
+    assert "0000:e4:00.0" in result.output
+    assert "0xdeadbeef" in result.output
+
+
+def test_dump_all_fpgas(fpga_cli_module, monkeypatch):
+    """Test dump command with --all flag"""
+    def mock_dump(pci_addr):
+        if pci_addr == "0000:e3:00.0":
+            return [(0x0, 0x0, 0x11111111)]
+        else:
+            return [(0x0, 0x0, 0x22222222)]
+
+    monkeypatch.setattr("nexthop.fpga_cli.find_xilinx_fpgas", lambda: ["0000:e3:00.0", "0000:e4:00.0"])
+    monkeypatch.setattr("nexthop.fpga_cli.dump_resource0", mock_dump)
+    monkeypatch.setattr("nexthop.fpga_cli.load_pddf_device_config", lambda: {})
+    monkeypatch.setattr("nexthop.fpga_cli.bdf_to_name", lambda bdf, cfg=None: None)
+
+    runner = CliRunner()
+    result = runner.invoke(fpga_cli_module.dump, ["--all"])
+
+    assert result.exit_code == 0
+    assert "0000:e3:00.0" in result.output
+    assert "0000:e4:00.0" in result.output
+    assert "0x11111111" in result.output
+    assert "0x22222222" in result.output
+
+
+
+
+
+def test_dump_no_fpga_specified(fpga_cli_module, monkeypatch):
+    """Test dump command without FPGA or --all flag"""
+    monkeypatch.setattr("nexthop.fpga_cli.find_xilinx_fpgas", lambda: ["0000:e4:00.0"])
+
+    runner = CliRunner()
+    result = runner.invoke(fpga_cli_module.dump, [])
+
+    assert result.exit_code == 1
+    assert "Must specify either TARGET_FPGA or --all" in result.output
+
+
+def test_dump_no_fpgas_found(fpga_cli_module, monkeypatch):
+    """Test dump command when no FPGAs are found"""
+    monkeypatch.setattr("nexthop.fpga_cli.find_xilinx_fpgas", lambda: [])
+
+    runner = CliRunner()
+    result = runner.invoke(fpga_cli_module.dump, ["--all"])
+
+    assert result.exit_code == 1
+    assert "No FPGAs found" in result.output
+
+
+def test_dump_with_fpga_name(fpga_cli_module, monkeypatch):
+    """Test dump command using FPGA name instead of PCI address"""
+    def mock_dump(pci_addr):
+        return [(0x0, 0x0, 0xCAFEBABE)]
+
+    monkeypatch.setattr("nexthop.fpga_cli.find_xilinx_fpgas", lambda: ["0000:e3:00.0"])
+    monkeypatch.setattr("nexthop.fpga_cli.name_to_bdf", lambda name: "0000:e3:00.0" if name == "CPU_CARD_FPGA" else None)
+    monkeypatch.setattr("nexthop.fpga_cli.dump_resource0", mock_dump)
+    monkeypatch.setattr("nexthop.fpga_cli.load_pddf_device_config", lambda: {})
+    monkeypatch.setattr("nexthop.fpga_cli.bdf_to_name", lambda bdf, cfg=None: "CPU_CARD_FPGA")
+
+    runner = CliRunner()
+    result = runner.invoke(fpga_cli_module.dump, ["CPU_CARD_FPGA"])
+
+    assert result.exit_code == 0
+    assert "CPU_CARD_FPGA" in result.output
+    assert "0xcafebabe" in result.output

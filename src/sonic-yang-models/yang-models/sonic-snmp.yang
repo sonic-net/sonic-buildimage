@@ -6,10 +6,6 @@ module sonic-snmp {
   import ietf-inet-types {
       prefix inet;
   }
-  import sonic-vrf {
-    prefix vrf;
-  }
-
   organization
     "SONiC";
 
@@ -23,7 +19,6 @@ module sonic-snmp {
     description
       "Initial revision.";
   }
-
 
   container sonic-snmp {
 

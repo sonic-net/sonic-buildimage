@@ -28,10 +28,6 @@ module sonic-system-radius {
         prefix mgmt-port;
     }
 
-    import sonic-interface {
-        prefix interface;
-    }
-
     description
         "SONiC RADIUS";
 
@@ -47,13 +43,11 @@ module sonic-system-radius {
         }
     }
 
-
     container sonic-system-radius {
 
         container RADIUS {
 
             container global {
-
 
                 leaf passkey {
                     type string {
