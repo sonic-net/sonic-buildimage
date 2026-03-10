@@ -58,6 +58,9 @@ jobs:
             dbg_image: yes
             asan_image: yes
 
+        - name: alpinevs
+          timeoutInMinutes: 1440
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -159,6 +162,8 @@ jobs:
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
+          elif [ $(GROUP_NAME) == alpinevs ]; then
+            make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
