@@ -2,10 +2,6 @@ module sonic-buffer-queue {
     namespace "http://github.com/sonic-net/sonic-buffer-queue";
     prefix bqueue;
 
-    import sonic-extension {
-        prefix sonic-ext;
-    }
-
     import sonic-port {
         prefix prt;
     }
@@ -35,7 +31,6 @@ module sonic-buffer-queue {
         description
             "Initial revision.";
     }
-
 
     container sonic-buffer-queue {
 
@@ -77,7 +72,6 @@ module sonic-buffer-queue {
                     (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq')";
 
                 key "hostname asic_name port qindex";
-
 
                 leaf hostname {
                     type stypes:hostname;

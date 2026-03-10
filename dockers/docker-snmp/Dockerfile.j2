@@ -67,6 +67,8 @@ RUN chmod +x /usr/bin/docker-snmp-init.sh
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Enable -O for all Python calls
