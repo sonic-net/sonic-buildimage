@@ -58,7 +58,7 @@ load_kernel_drivers
 
     local k
     for k in $(seq 488 4 508); do
-        echo out > /sys/class/gpio/gpio$k/direction 2>/dev/null
+        echo in > /sys/class/gpio/gpio$k/direction 2>/dev/null
     done
 
     for i in {0..2};
