@@ -149,3 +149,66 @@ def overwrite_field(reg_val: int, bit_range: tuple[int, int], field_val: int) ->
 
     # Combine the cleared register value with the new field value.
     return cleared_reg | positioned_field_val
+
+def dump_resource0(pci_address: str, root="") -> list[tuple[int, int, int]]:
+    """
+    Dump entire resource0 memory and return collapsed ranges.
+
+    Uses proper 32-bit register reads (read_32) to respect hardware register boundaries.
+
+    Args:
+        pci_address: PCI address (e.g., '0000:e4:00.0')
+        root: Root path for testing purposes
+
+    Returns:
+        List of (start_offset, end_offset, value) tuples representing memory ranges.
+        Both start_offset and end_offset are inclusive.
+        Each tuple is (int, int, int).
+    """
+    file_path = get_resource_0_path(pci_address, root)
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(
+            f"{file_path} does not exist. Device may not have a BAR0 memory region mapped."
+        )
+
+    try:
+        file_size = os.path.getsize(file_path)
+    except OSError as e:
+        raise OSError(f"Error getting size of {file_path}: {e}")
+
+    read_size = (file_size // 4) * 4
+
+    try:
+        data = []
+        for offset in range(0, read_size, 4):
+            val = read_32(pci_address, offset, root)
+            data.append((offset, val))
+
+        ranges = []
+        prev_val = None
+        range_start = None
+        range_end = None
+
+        for offset, val in data:
+            if val == prev_val:
+                range_end = offset
+            else:
+                if prev_val is not None:
+                    ranges.append((range_start, range_end, prev_val))
+
+                prev_val = val
+                range_start = offset
+                range_end = offset
+
+        if prev_val is not None:
+            ranges.append((range_start, range_end, prev_val))
+
+        return ranges
+
+    except PermissionError:
+        raise PermissionError(
+            f"Permission denied reading {file_path}. Root privileges required."
+        )
+    except OSError as e:
+        raise OSError(f"Error reading {file_path}: {e}")
