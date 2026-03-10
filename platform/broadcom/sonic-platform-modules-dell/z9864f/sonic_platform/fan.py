@@ -168,6 +168,7 @@ class Fan(FanBase):
             return None
         else:
             speed = (100 * fan_speed)//self.max_speed
+
         return int(speed)
 
     def get_speed_rpm(self):
