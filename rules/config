@@ -390,3 +390,9 @@ BUILD_PROCESS_TIMEOUT ?= 0
 
 # BUILD_SKIP_TEST - skip all tests when building to reduce build time
 BUILD_SKIP_TEST ?= n
+# SONIC_CONFIG_USE_DOCKER_CACHE - use Docker layer cache for image builds.
+# Removes --no-cache from docker build commands, allowing unchanged layers
+# to be reused. Significantly speeds up incremental builds (~20+ min savings)
+# but may use stale layers if base images changed without version bumps.
+# Recommended for local development; CI should leave this disabled.
+# SONIC_CONFIG_USE_DOCKER_CACHE = y
