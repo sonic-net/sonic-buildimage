@@ -1569,6 +1569,7 @@ def parse_linkmeta(meta, hname):
         upper_tor_hostname = ''
         lower_tor_hostname = ''
         auto_negotiation = None
+        link_training = None
         macsec_enabled = False
         tx_power = None
         laser_freq = None
@@ -1586,6 +1587,8 @@ def parse_linkmeta(meta, hname):
                 lower_tor_hostname = value
             elif name == "AutoNegotiation":
                 auto_negotiation = value
+            elif name == "LinkTraining":
+                link_training = value
             elif name == "MacSecEnabled":
                 macsec_enabled = value
             elif name == "TxPower":
@@ -1603,6 +1606,8 @@ def parse_linkmeta(meta, hname):
                 linkmetas[port]["PeerSwitch"] = upper_tor_hostname
         if auto_negotiation:
             linkmetas[port]["AutoNegotiation"] = auto_negotiation
+        if link_training:
+            linkmetas[port]["LinkTraining"] = link_training
         if macsec_enabled:
             linkmetas[port]["MacSecEnabled"] = macsec_enabled
         if tx_power:
@@ -2436,6 +2441,11 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         autoneg = linkmetas.get(alias, {}).get('AutoNegotiation')
         if autoneg:
             port['autoneg'] = 'on' if autoneg.lower() == 'true' else 'off'
+
+        # If LinkTraining is available in the minigraph, we override any value we may have received from port_config.ini
+        link_training = linkmetas.get(alias, {}).get('LinkTraining')
+        if link_training:
+            port['link_training'] = 'on' if link_training.lower() == 'true' else 'off'
 
         # If macsec is enabled on interface, and profile is valid, add the profile to port
         macsec_enabled = linkmetas.get(alias, {}).get('MacSecEnabled')
