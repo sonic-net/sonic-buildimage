@@ -23,6 +23,9 @@ $(SYSCTL_NET_CONFIG)_PATH = files/image_config/sysctl
 CONTAINER_CHECKER = container_checker
 $(CONTAINER_CHECKER)_PATH = files/image_config/monit
 
+SERVICE_CHECKER_PY = service_checker.py
+$(SERVICE_CHECKER_PY)_PATH = src/system-health/health_checker
+
 TELEMETRY_SYSTEMD = telemetry.sh
 $(TELEMETRY_SYSTEMD)_PATH = files/scripts
 
@@ -59,6 +62,7 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(SYSCTL_NET_CONFIG) \
                     $(CONTAINER_CHECKER) \
                     $(TELEMETRY_SYSTEMD) \
+                    $(SERVICE_CHECKER_PY) \
                     $(GNMI_SYSTEMD) \
                     $(RESTAPI_SYSTEMD) \
                     $(K8S_POD_CONTROL) \

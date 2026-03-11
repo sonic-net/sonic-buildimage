@@ -25,10 +25,6 @@ module sonic-system-tacacs {
         prefix loopback;
     }
 
-    import sonic-interface {
-        prefix interface;
-    }
-
     import sonic-mgmt_port {
         prefix mgmt-port;
     }
@@ -121,7 +117,6 @@ module sonic-system-tacacs {
                 }
             }
         }
-
 
         container TACPLUS {
 

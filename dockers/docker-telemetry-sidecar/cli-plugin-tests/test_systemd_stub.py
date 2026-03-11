@@ -189,13 +189,19 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
-    # Mock _get_branch_name to return "202412" by default (avoids real file/nsenter I/O)
-    monkeypatch.setattr(ss, "_get_branch_name", lambda: "202412")
+    # Mock _get_branch_name to return "master" by default (avoids real file/nsenter I/O)
+    # Use "master" because it falls through to the default (non-branch-specific) path.
+    monkeypatch.setattr(ss, "_get_branch_name", lambda: "master")
 
     # Provide a default container_checker in both filesystems so the auto-appended
     # SyncItem from ensure_sync() is always satisfied and is a no-op.
     container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"default-checker"
     host_fs["/bin/container_checker"] = b"default-checker"
+
+    # Provide a default service_checker.py in both filesystems so the auto-appended
+    # SyncItem from ensure_sync() is always satisfied and is a no-op.
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"default-service-checker"
+    host_fs["/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"] = b"default-service-checker"
 
     return ss, container_fs, host_fs, commands, config_db
 
@@ -466,6 +472,10 @@ def test_ensure_sync_uses_202411_checker(ss):
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
     host_fs["/bin/container_checker"] = b"old-checker"
 
+    # Also provide 202411 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202411"] = b"service-checker-202411"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202411"
+
     # Clear SYNC_ITEMS to focus only on the container_checker logic
     ss_mod.SYNC_ITEMS[:] = []
 
@@ -502,6 +512,218 @@ def test_ensure_sync_202411_missing_checker_fails(ss):
     # Remove default checker too
     container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202411", None)
     container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional service_checker.py in ensure_sync ───────────
+
+def test_ensure_sync_uses_202411_service_checker(ss):
+    """When branch is 202411, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Provide the 202411-specific service_checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202411"] = b"service-checker-202411"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
+    host_fs["/bin/container_checker"] = b"checker-202411"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202411"
+
+
+def test_ensure_sync_uses_default_service_checker(ss):
+    """When branch is not 202411, ensure_sync uses the default service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    # _get_branch_name already returns "202412" from fixture default
+
+    # Provide the default service_checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"service-checker-default"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-default"
+
+
+def test_ensure_sync_202411_missing_service_checker_fails(ss):
+    """When branch is 202411 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
+    host_fs["/bin/container_checker"] = b"checker-202411"
+
+    # Remove service_checker sources
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202411", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional 202505 in ensure_sync ───────────
+
+def test_ensure_sync_uses_202505_checker(ss):
+    """When branch is 202505, ensure_sync uses the branch-specific container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Also provide 202505 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202505"] = b"service-checker-202505"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202505"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-202505"
+
+
+def test_ensure_sync_uses_202505_service_checker(ss):
+    """When branch is 202505, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202505"] = b"service-checker-202505"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"checker-202505"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202505"
+
+
+def test_ensure_sync_202505_missing_checker_fails(ss):
+    """When branch is 202505 but the branch-specific checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202505", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+def test_ensure_sync_202505_missing_service_checker_fails(ss):
+    """When branch is 202505 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"checker-202505"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202505", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional 202412 in ensure_sync ───────────
+
+def test_ensure_sync_uses_202412_checker(ss):
+    """When branch is 202412, ensure_sync uses the branch-specific container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Also provide 202412 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"service-checker-202412"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202412"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-202412"
+
+
+def test_ensure_sync_uses_202412_service_checker(ss):
+    """When branch is 202412, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"service-checker-202412"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"checker-202412"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202412"
+
+
+def test_ensure_sync_202412_missing_checker_fails(ss):
+    """When branch is 202412 but the branch-specific checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202412", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+def test_ensure_sync_202412_missing_service_checker_fails(ss):
+    """When branch is 202412 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"checker-202412"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202412", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
 
     ss_mod.SYNC_ITEMS[:] = []
 

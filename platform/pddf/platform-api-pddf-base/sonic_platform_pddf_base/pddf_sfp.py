@@ -179,38 +179,68 @@ class PddfSfp(SfpOptoeBase):
 
         return tx_disable
 
-    def get_lpmode(self):
+    def _get_lpmode_hardware(self):
         """
-        Retrieves the lpmode (low power mode) status of this SFP
+        Helper method to get lpmode via sysfs/hardware control
+
         Returns:
-            A Boolean, True if lpmode is enabled, False if disabled
+            True if low power mode is enabled, False otherwise, None on error
         """
-        lpmode = False
         device = 'PORT{}'.format(self.port_index)
         output = self.pddf_obj.get_attr_name_output(device, 'xcvr_lpmode')
 
-        if output:
-            status = int(output['status'].rstrip())
+        if not output:
+            print("_get_lpmode_hardware: port %d no sysfs output available" % self.port_index)
+            return None
 
-            if status == 1:
-                lpmode = True
-            else:
-                lpmode = False
+        try:
+            status = int(output['status'].rstrip())
+            lpmode = True if status == 1 else False
+            return lpmode
+        except (ValueError, KeyError) as e:
+            print("_get_lpmode_hardware: port %d failed to parse output: %s" % (self.port_index, str(e)))
+            return None
+
+    def get_lpmode(self, use_hardware_control=False):
+        """
+        Retrieves the lpmode (low power mode) status of this SFP
+        Args:
+            use_hardware_control: If True, read from sysfs/hardware. If False (default), use EEPROM
+        Returns:
+            A Boolean, True if lpmode is enabled, False if disabled
+        """
+        # Skip if transceiver is not present
+        if not self.get_presence():
+            return False
+
+        lpmode = None
+
+        # If use_hardware_control is explicitly True, skip EEPROM and go straight to sysfs
+        if use_hardware_control:
+            lpmode = self._get_lpmode_hardware()
+            if lpmode is None:
+                lpmode = False  # Default to False on error
         else:
+            # EEPROM method
             xcvr_id = self._xcvr_api_factory._get_id()
             if xcvr_id is not None:
                 if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
-                    # QSFP-DD or OSFP
+                    # QSFP-DD or OSFP (CMIS)
                     # Use common SfpOptoeBase implementation for get_lpmode
                     lpmode = super().get_lpmode()
                 elif xcvr_id == 0x11 or xcvr_id == 0x0d or xcvr_id == 0x0c:
-                    # QSFP28, QSFP+, QSFP
+                    # QSFP28, QSFP+, QSFP (SFF-8636)
                     # get_power_set() is not defined in the optoe_base class
                     api = self.get_xcvr_api()
                     power_set = api.get_power_set()
                     power_override = self.get_power_override()
                     # By default the lpmode pin is pulled high as mentioned in the sff community
-                    return power_set if power_override else True
+                    lpmode = power_set if power_override else True
+
+            # EEPROM method failed
+            if lpmode is None:
+                print("get_lpmode: port %d EEPROM method failed" % self.port_index)
+                lpmode = False
 
         return lpmode
 
@@ -299,48 +329,79 @@ class PddfSfp(SfpOptoeBase):
 
         return status
 
-    def set_lpmode(self, lpmode):
+    def _set_lpmode_hardware(self, lpmode):
+        """
+        Helper method to set lpmode via sysfs/hardware control
+
+        Args:
+            lpmode: True for low power mode, False for high power mode
+
+        Returns:
+            True if successful, False otherwise
+        """
+        device = 'PORT{}'.format(self.port_index)
+        path = self.pddf_obj.get_path(device, 'xcvr_lpmode')
+
+        if not path:
+            print("_set_lpmode_hardware: port %d no sysfs path available" % self.port_index)
+            return False
+
+        try:
+            f = open(path, 'r+')
+        except IOError as e:
+            print("_set_lpmode_hardware: port %d failed to open sysfs: %s" % (self.port_index, str(e)))
+            return False
+
+        try:
+            if lpmode:
+                f.write('1')
+            else:
+                f.write('0')
+
+            f.close()
+            return True
+        except IOError as e:
+            print("_set_lpmode_hardware: port %d FAILED: %s" % (self.port_index, str(e)))
+            return False
+
+    def set_lpmode(self, lpmode, use_hardware_control=False):
         """
         Sets the lpmode (low power mode) of SFP
         Args:
             lpmode: A Boolean, True to enable lpmode, False to disable it
+            use_hardware_control: If True, use sysfs/hardware control. If False (default), use EEPROM
             Note  : lpmode can be overridden by set_power_override
         Returns:
             A boolean, True if lpmode is set successfully, False if not
         """
+        # Skip if transceiver is not present
+        if not self.get_presence():
+            return False
+
         status = False
-        device = 'PORT{}'.format(self.port_index)
-        path = self.pddf_obj.get_path(device, 'xcvr_lpmode')
 
-        if path:
-            try:
-                f = open(path, 'r+')
-            except IOError as e:
-                return False
-
-            try:
-                if lpmode:
-                    f.write('1')
-                else:
-                    f.write('0')
-
-                f.close()
-                status = True
-            except IOError as e:
-                status = False
+        # If use_hardware_control is explicitly True, skip EEPROM and go straight to sysfs
+        if use_hardware_control:
+            status = self._set_lpmode_hardware(lpmode)
         else:
+            #EEPROM method
             xcvr_id = self._xcvr_api_factory._get_id()
             if xcvr_id is not None:
                 if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
-                    # QSFP-DD or OSFP
+                    # QSFP-DD or OSFP (CMIS)
                     # Use common SfpOptoeBase implementation for set_lpmode
+                    # This is CMIS compliant
                     status = super().set_lpmode(lpmode)
                 elif xcvr_id == 0x11 or xcvr_id == 0x0d or xcvr_id == 0x0c:
-                    # QSFP28, QSFP+, QSFP
+                    # QSFP28, QSFP+, QSFP (SFF-8636)
                     if lpmode is True:
                         status = self.set_power_override(True, True)
                     else:
                         status = self.set_power_override(True, False)
+
+            # EEPROM method failed
+            if not status:
+                print("set_lpmode: port %d EEPROM method failed" % self.port_index)
 
         return status
 

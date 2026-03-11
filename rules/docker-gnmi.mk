@@ -17,6 +17,11 @@ $(DOCKER_GNMI)_PACKAGE_NAME = gnmi
 
 $(DOCKER_GNMI)_DBG_IMAGE_PACKAGES = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_IMAGE_PACKAGES)
 
+# Ensure docker-telemetry-watchdog (which uses a docker-sonic-gnmi-based image)
+# is built before the docker-sonic-gnmi debug image, because the debug image build removes
+# its docker-sonic-gnmi base image during cleanup.
+$(DOCKER_GNMI_DBG)_AFTER += $(DOCKER_TELEMETRY_WATCHDOG)
+
 SONIC_DOCKER_IMAGES += $(DOCKER_GNMI)
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_GNMI)
 ifeq ($(INCLUDE_SYSTEM_GNMI), y)
@@ -53,6 +58,8 @@ $(DOCKER_GNMI)_RUN_OPT += --security-opt apparmor=unconfined
 $(DOCKER_GNMI)_RUN_OPT += --security-opt seccomp=unconfined
 # For GNOI running sudo command in case of container NS remapping.
 $(DOCKER_GNMI)_RUN_OPT += --userns=host
+# For GNMI Unix Domain Socket (local access without TLS)
+$(DOCKER_GNMI)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:rw
 
 
 

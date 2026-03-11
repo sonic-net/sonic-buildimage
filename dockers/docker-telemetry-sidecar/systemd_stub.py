@@ -127,6 +127,9 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ],
+    "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py": [
+        ["sudo", "systemctl", "restart", "system-health"],
+    ],
 }
 
 
@@ -178,18 +181,27 @@ def reconcile_config_db_once() -> None:
     else:
         _ensure_cname_absent(GNMI_CLIENT_CNAME)
 
+# Host destination for service_checker.py
+HOST_SERVICE_CHECKER = "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"
+
+
 def ensure_sync() -> bool:
     branch_name = _get_branch_name()
 
-    if branch_name == "202411":
-        # For 202411 branch, use the branch-specific container_checker
-        container_checker_src = "/usr/share/sonic/systemd_scripts/container_checker_202411"
+    if branch_name in ("202411", "202412", "202505"):
+        # For 202411/202412/202505 branches, use the branch-specific container_checker
+        container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+        # For 202411/202412/202505 branches, use the branch-specific service_checker
+        service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
     else:
-        # For 202412 and other branches, use the default container_checker
+        # For other branches, use the default container_checker
         container_checker_src = "/usr/share/sonic/systemd_scripts/container_checker"
+        # For other branches, use the default service_checker
+        service_checker_src = "/usr/share/sonic/systemd_scripts/service_checker.py"
 
     items: List[SyncItem] = SYNC_ITEMS + [
         SyncItem(container_checker_src, "/bin/container_checker"),
+        SyncItem(service_checker_src, HOST_SERVICE_CHECKER),
     ]
     return sync_items(items, POST_COPY_ACTIONS)
 

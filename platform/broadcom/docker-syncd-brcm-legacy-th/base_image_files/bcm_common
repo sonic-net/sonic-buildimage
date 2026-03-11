@@ -1,0 +1,40 @@
+#!/bin/bash
+
+function help()
+{
+    echo "Usage: $0 -n [0 to $(($NUM_ASIC-1))]" 1>&2; exit 1;
+
+}
+
+
+DEV=""
+
+PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+
+# Parse the device specific asic conf file, if it exists
+
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+if [ -f "$ASIC_CONF" ]; then
+    source $ASIC_CONF
+fi
+
+
+if [[ ($NUM_ASIC -gt 1) ]]; then
+    OPTIND=1
+
+    while getopts ":n:h:" opt; do
+        case "${opt}" in
+            h) help
+               exit 0
+               ;;
+            n) DEV=${OPTARG}
+               [ $DEV -lt $NUM_ASIC -a  $DEV -ge 0 ] || help
+               ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
+
+    if [ -z "${DEV}" ]; then
+        help
+    fi
+fi

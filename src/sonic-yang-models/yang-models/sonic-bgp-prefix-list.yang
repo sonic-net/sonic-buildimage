@@ -10,10 +10,6 @@ module sonic-bgp-prefix-list {
         prefix stypes;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     description "SONIC Device-specfifc BGP prefix lists data";
 
     revision 2025-02-17 {
