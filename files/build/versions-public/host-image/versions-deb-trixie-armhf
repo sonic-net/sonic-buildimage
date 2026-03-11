@@ -15,6 +15,7 @@ kexec-tools==1:2.0.29-2
 libfuse3-4==3.17.2-3
 linux-image-6.12.41+deb13-sonic-armmp==6.12.41-1
 logrotate==3.22.0-1
+makedumpfile==1:1.7.6-1
 mrvlprestera==1.0
 mtr-tiny==0.95-1.1+b1
 ncal==12.1.8
