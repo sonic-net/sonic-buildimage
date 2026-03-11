@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-08-25-1.12" profile="SAI" dsig="md5" sid="83e62682-dcf7-4eee-9ae7-6144f7394d66">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-11-25-1.13" profile="SAI" dsig="md5" sid="d8ebbcc6-f01b-4b02-9d19-6ded3cadc6f5">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -493,6 +493,8 @@ to the MacAddress textual convention of the SMIv2.</SAIplt:description>
     <SAIplt:Feature>
       <SAIplt:PHY_Temperature SAIplt:type="Feature-enable">Disabled</SAIplt:PHY_Temperature>
       <SAIplt:MAC-in-MAC-Tunnel-Enable SAIplt:type="Feature-enable">Disabled</SAIplt:MAC-in-MAC-Tunnel-Enable>
+      <SAIplt:Lossless-Traffic-Warmboot SAIplt:type="Feature-enable">Disabled</SAIplt:Lossless-Traffic-Warmboot>
+      <SAIplt:QinQ_Enable SAIplt:type="Feature-enable">Disabled</SAIplt:QinQ_Enable>
     </SAIplt:Feature>
   </SAIplt:SAI>
 </data>

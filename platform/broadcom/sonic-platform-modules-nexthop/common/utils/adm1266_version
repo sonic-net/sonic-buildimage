@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import click
+
+@click.command()
+@click.argument("i2c_path")
+def adm1266_version(i2c_path):
+    """Read adm1266 versions from sysfs. Combines FW revision and CFG revision 
+    into a single version string for use with fwutil. 
+
+    I2C_PATH is in the format {I2C Bus Num}-00{I2C Address}. e.g. "9-0041"
+    """
+    fw_ver = ""
+    cfg_ver = ""
+    fw_path = f"/sys/bus/i2c/devices/{i2c_path}/firmware_revision"
+    cfg_path = f"/sys/bus/i2c/devices/{i2c_path}/mfr_revision"
+    try:
+        with open(fw_path, "r") as f:
+            fw_ver = f.read().strip()
+        with open(cfg_path, "r") as f:
+            cfg_ver = f.read().strip()
+    except FileNotFoundError:
+        pass
+    click.echo(f"fw{fw_ver}_cfg{cfg_ver}")
+
+if __name__ == "__main__":
+    adm1266_version()
