@@ -1,0 +1,30 @@
+From fb8a5829fba4b89cff85f43eb70e13161f427194 Mon Sep 17 00:00:00 2001
+From: Boyang Yu <byu@arista.com>
+Date: Wed, 11 Mar 2026 22:43:17 +0000
+Subject: [PATCH] Generate initrd for kdump on build time
+
+---
+ debian/kernel-postinst-generate-initrd | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/debian/kernel-postinst-generate-initrd b/debian/kernel-postinst-generate-initrd
+index 809edb7..182cdc6 100755
+--- a/debian/kernel-postinst-generate-initrd
++++ b/debian/kernel-postinst-generate-initrd
+@@ -21,13 +21,6 @@ if [ "${INITRD-}" = 'No' ]; then
+ 	exit 0
+ fi
+ 
+-# initramfs generation may fail, or include an inappropriate set of kernel
+-# modules in a chroot. Leave it to the target system to handle on reboot
+-if [ -x "$(command -v ischroot)" ] && ischroot; then
+-	echo "W: kdump-tools: Executing in a chroot, skipping initramfs generation." >&2
+-	exit 0;
+-fi
+-
+ # avoid running multiple times
+ if [ -n "${DEB_MAINT_PARAMS-}" ]; then
+ 	eval set -- "$DEB_MAINT_PARAMS"
+-- 
+2.47.0
+
