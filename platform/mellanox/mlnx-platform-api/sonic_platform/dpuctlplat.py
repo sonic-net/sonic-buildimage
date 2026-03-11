@@ -260,7 +260,7 @@ class DpuCtlPlat():
             self.log_error(f"Failed power on! Trying Force Power on")
             self._power_off_force()
             time.sleep(1)
-            return self._power_on_force()
+            return self._power_on_force(count=3)
         self.log_info(f"Power on Successful!")
         return True
 
