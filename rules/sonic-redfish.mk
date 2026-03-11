@@ -33,8 +33,3 @@ endif
 
 # Export variables for the build
 export SONIC_REDFISH_VERSION SONIC_REDFISH_SUBVERSION
-
-# Include docker image build (only in trixie environment)
-ifeq ($(BLDENV), trixie)
-include $(RULES_PATH)/docker-sonic-redfish.mk
-endif

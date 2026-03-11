@@ -12,6 +12,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update      && \
     apt-get install -f -y  \
         libtinyxml2-11     \
+        libboost-system1.83.0 \
+        libjsoncpp26 \
+        libhiredis1.1.0 \
+        dbus \
     && rm -rf /var/lib/apt/lists/*
 
 {% if docker_sonic_redfish_debs.strip() -%}

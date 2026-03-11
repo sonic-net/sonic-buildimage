@@ -303,6 +303,16 @@ echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
 sudo LANG=C chroot $FILESYSTEM_ROOT usermod -aG redis $USERNAME
 
+## Create redfish, priv-admin, priv-operator and priv-user group
+#  for bmcweb authentication and authorization (aspeed platform only)
+if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+    sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redfish
+    sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f priv-admin
+    sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f priv-operator
+    sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f priv-user
+    sudo LANG=C chroot $FILESYSTEM_ROOT usermod -aG redfish,priv-admin $USERNAME
+fi
+
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     ## Pre-install hardware drivers
     sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install      \
