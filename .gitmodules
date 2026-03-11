@@ -129,8 +129,7 @@
 	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
 [submodule "platform/vpp"]
 	path = platform/vpp
-	url = https://github.com/yue-fred-gao/sonic-platform-vpp.git
-	branch = relocate_vpp_mk
+	url = https://github.com/sonic-net/sonic-platform-vpp.git
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
