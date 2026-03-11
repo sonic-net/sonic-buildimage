@@ -8,6 +8,7 @@ es1227_54ts_p2/service/es1227_54ts_p2-sysled.service etc/systemd/system
 es1227_54ts_p2/service/es1227_54ts_p2-oob-led.service etc/systemd/system
 es1227_54ts_p2/service/es1227_54ts_p2-rst_button.service etc/systemd/system
 es1227_54ts_p2/service/es1227_54ts_p2-psu-monitor.service etc/systemd/system
+es1227_54ts_p2/service/es1227_54ts_p2-watchdog.service etc/systemd/system
 es1227_54ts_p2/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-wistron_es1227_54ts_p2-r0
 es1227_54ts_p2/utils/poetool usr/local/bin
 es1227_54ts_p2/utils/es1227_54ts_p2_led.py usr/local/bin
@@ -22,3 +23,4 @@ es1227_54ts_p2/utils/poe_cfg_lldp.py usr/local/bin
 es1227_54ts_p2/utils/poe_power.sh usr/local/bin
 es1227_54ts_p2/utils/rst_button.py usr/local/bin
 es1227_54ts_p2/utils/psu_detect.py usr/local/bin
+es1227_54ts_p2/utils/es1227_54ts_p2-reboot-check usr/local/bin

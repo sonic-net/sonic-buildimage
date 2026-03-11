@@ -167,20 +167,35 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-
         reboot_cause_path = (HOST_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE) if self.__is_host(
         ) else PMON_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE
-        sw_reboot_cause = self.__read_txt_file(
-            reboot_cause_path) or "Unknown"
 
+        # First boot after ONIE install: skip all detection
+        if os.path.exists("/tmp/notify_firstboot_to_platform"):
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, 'Unknown reason')
+
+        # Run es1227_54ts_p2-reboot-check first to detect thermal/watchdog cause
+        # and write result to reboot-cause.txt before we read it
+        try:
+            subprocess.run(
+                ['/usr/local/bin/es1227_54ts_p2-reboot-check'],
+                timeout=30, capture_output=True
+            )
+        except Exception:
+            pass
+
+        # Re-read the file after reboot-check has updated it
+        sw_reboot_cause = self.__read_txt_file(reboot_cause_path) or "Unknown"
+
+        # 1. Thermal cause (written by reboot-check or thermal_actions.py)
+        if sw_reboot_cause.startswith("Thermal"):
+            return (self.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, sw_reboot_cause)
+
+        # 2. Other Software Causes (e.g., 'reboot' command)
         if sw_reboot_cause != "Unknown":
-            reboot_cause = self.REBOOT_CAUSE_NON_HARDWARE
-            description = sw_reboot_cause
-        else:
-            reboot_cause = self.REBOOT_CAUSE_HARDWARE_OTHER
-            description = 'Unknown reason'
+            return (self.REBOOT_CAUSE_NON_HARDWARE, sw_reboot_cause)
 
-        return (reboot_cause, description)
+        return (self.REBOOT_CAUSE_HARDWARE_OTHER, 'Watchdog or Unknown reason')
 
     def _get_sku_name(self):
         if self.__is_host():

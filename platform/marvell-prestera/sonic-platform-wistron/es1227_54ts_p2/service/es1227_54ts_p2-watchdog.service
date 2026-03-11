@@ -1,0 +1,22 @@
+[Unit]
+Description=Platform es1227_54ts_p2 watchdog daemon
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/watchdogutil daemon -s 180 -i 5
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do docker info >/dev/null 2>&1 && exit 0; sleep 1; done; echo "docker not ready"; exit 1'
+
+Restart=always
+RestartSec=2s
+TimeoutStartSec=60
+KillMode=control-group
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+
+ExecStopPost=/bin/sh -c '[ -x /usr/local/bin/watchdogutil ] && /usr/local/bin/watchdogutil disarm || true'
+
+[Install]
+WantedBy=multi-user.target

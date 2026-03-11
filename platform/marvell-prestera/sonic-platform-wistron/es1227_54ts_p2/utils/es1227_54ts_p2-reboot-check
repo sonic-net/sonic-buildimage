@@ -1,0 +1,104 @@
+#!/bin/bash
+
+REBOOT_CAUSE_FILE="/host/reboot-cause/reboot-cause.txt"
+THERMAL_TIMESTAMP_FILE="/var/log/thermal_shutdown_timestamp" # Assuming a file to store thermal shutdown timestamp
+THERMAL_TIMESTAMP_LIMIT_SECONDS=300 # 5 minutes
+
+# Thermal reboot check
+THERMAL_REBOOT_CHECK() {
+    local is_thermal_reboot=false
+    local limit_seconds=3600 # 1 hour threshold for fresh boot
+    local syslog_file="/var/log/syslog"
+
+    # 1. Get current and previous reboot timestamps from history
+    local history_records=$(show reboot-cause history | grep -E '[0-9]{4}_[0-9]{2}' | awk '{print $1}' | head -n 2)
+    local current_rb_name=$(echo "$history_records" | sed -n '1p')
+    local previous_rb_name=$(echo "$history_records" | sed -n '2p')
+
+    if [[ -n "$current_rb_name" ]]; then
+        format_name_to_date() { echo "$1" | sed 's/_/-/1; s/_/-/1; s/_/ /1; s/_/:/1; s/_/:/1'; }
+        local current_rb_ts=$(date -d "$(format_name_to_date "$current_rb_name")" +%s)
+        local now_ts=$(date +%s)
+        local boot_diff=$((now_ts - current_rb_ts))
+
+        # Priority 1: Syslog Correlation
+        if [[ "$boot_diff" -ge -60 && "$boot_diff" -le "$limit_seconds" ]]; then
+            local syslog_line=$(sudo grep -a "Temp is over high critical threshold" "$syslog_file" | tail -n 1)
+
+            if [[ -n "$syslog_line" ]]; then
+                local syslog_time_str=$(echo "$syslog_line" | awk '{print $1" "$2" "$3}' | cut -d'.' -f1)
+                local rb_year=$(echo "$current_rb_name" | cut -d'_' -f1)
+                # Try format: "Feb 2 00:45:05 2025"
+                local trigger_ts=$(date -d "$syslog_time_str $rb_year" +%s)
+
+                if [[ $trigger_ts -gt $current_rb_ts ]]; then
+                    trigger_ts=$(date -d "$syslog_time_str $((rb_year - 1))" +%s)
+                fi
+
+                local is_after_prev=true
+                if [[ -n "$previous_rb_name" ]]; then
+                    local previous_rb_ts=$(date -d "$(format_name_to_date "$previous_rb_name")" +%s)
+                    if [[ $trigger_ts -le $previous_rb_ts ]]; then is_after_prev=false; fi
+                fi
+
+                if $is_after_prev && [[ $trigger_ts -lt $current_rb_ts ]]; then
+                    local sensor_info=$(echo "$syslog_line" | sed 's/.*system shutdown //')
+                    # Extract the first word of the sensor name and convert to uppercase
+                    thermal_detail=$(echo "$sensor_info" | awk '{print $1}' | tr 'a-z' 'A-Z')
+                    echo "[thermal-check] Verified via Syslog: $syslog_time_str"
+                    echo "[thermal-check] Details: $sensor_info"
+                    is_thermal_reboot=true
+                fi
+            fi
+        fi
+    fi
+
+    # Priority 2: Persistent file content
+    if ! $is_thermal_reboot; then
+        if [[ -f "$REBOOT_CAUSE_FILE" ]] && grep -qi "Thermal" "$REBOOT_CAUSE_FILE"; then
+            echo "[thermal-check] Verified via persistent file content."
+            is_thermal_reboot=true
+        fi
+    fi
+
+    if $is_thermal_reboot; then
+        local final_cause="Thermal"
+        if [[ -n "$thermal_detail" ]]; then
+            final_cause="Thermal - $thermal_detail"
+        else
+            # If validated via file content, try to preserve the existing detail
+            local current_file_msg=$(cat "$REBOOT_CAUSE_FILE" 2>/dev/null)
+            if [[ "$current_file_msg" =~ [Tt]hermal ]]; then
+                final_cause="$current_file_msg"
+            fi
+        fi
+
+        # Force uppercase "T" for compatibility with platform API
+        [[ "$final_cause" == "thermal" ]] && final_cause="Thermal"
+
+        echo "$final_cause" > $REBOOT_CAUSE_FILE
+        echo "[reboot-cause.txt] : $(cat $REBOOT_CAUSE_FILE)"
+        echo "reboot cause by thermal"
+
+        # Only clear the cause if we've been up for a while to avoid racing with history service
+        # or if forced by user
+        local uptime_s=$(cat /proc/uptime | awk '{print int($1)}')
+        if [[ $uptime_s -gt 240 || -n "$FORCE_CLEAR" ]]; then
+            #echo "Unknown" > "$REBOOT_CAUSE_FILE"
+            echo "[reboot-check] Cause file reset to Unknown (Uptime: $uptime_s s)."
+        else
+            echo "[reboot-check] Skipping cause reset (Uptime too short: $uptime_s s) to allow history logging."
+        fi
+        return 0
+    fi
+    return 1
+}
+
+# Main execution
+FIRST_BOOT_FILE="/tmp/notify_firstboot_to_platform"
+if [[ -f "$FIRST_BOOT_FILE" ]]; then
+    echo "[reboot-check] First boot after ONIE install detected, skipping reboot cause check."
+    exit 0
+fi
+
+THERMAL_REBOOT_CHECK 
