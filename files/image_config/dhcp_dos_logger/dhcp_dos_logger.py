@@ -11,7 +11,10 @@ SYSLOG_IDENTIFIER = os.path.basename(__file__)
 logger = Logger(SYSLOG_IDENTIFIER)
 logger.log_info("Starting DHCP DoS logger...")
 
-if multi_asic.is_multi_asic():
+# Cache the multi-ASIC check result at startup
+is_multi_asic = multi_asic.is_multi_asic()
+
+if is_multi_asic:
     SonicDBConfig.initializeGlobalConfig()
     ports_table = multi_asic.get_table('PORT')
     
@@ -32,7 +35,7 @@ def get_port_namespace(port):
 
 #Check if interface exists for a port in the namespace
 def interface_exists(ifname, namespace=None):
-    if multi_asic.is_multi_asic() and namespace is not None:
+    if is_multi_asic and namespace is not None:
         output = subprocess.run(["ip", "netns", "exec", namespace, "test", "-e", f"/sys/class/net/{ifname}"], capture_output=True)
         return output.returncode == 0
 
@@ -41,7 +44,7 @@ def interface_exists(ifname, namespace=None):
 def handler():
     while True:
         for port in drop_pkts.keys():
-            if multi_asic.is_multi_asic():
+            if is_multi_asic:
                 namespace = get_port_namespace(port)
             else:
                 namespace = None
@@ -52,7 +55,7 @@ def handler():
                 continue
             try:
                 cmd = ["tc", "-s", "qdisc", "show", "dev", str(port), "handle", "ffff:"]
-                if multi_asic.is_multi_asic() and namespace is not None:
+                if is_multi_asic and namespace is not None:
                     cmd = ["ip", "netns", "exec", namespace] + cmd
 
                 output = subprocess.run(cmd, capture_output=True, text=True)
