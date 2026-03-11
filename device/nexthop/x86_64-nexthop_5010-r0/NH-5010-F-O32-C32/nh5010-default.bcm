@@ -1970,6 +1970,7 @@ appl_param_rcy_mirror_ports_range.BCM8887X=500-1000
 #                                     -----------------------------------------------
 
 dpp_db_path=/usr/share/bcm/db
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 rif_id_max=8192
 trunk_group_max_members=128
 custom_feature_ts_pll_internal_clock_reference.BCM8887X=1
