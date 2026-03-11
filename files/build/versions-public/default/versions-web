@@ -8,8 +8,6 @@ http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.3-P1-2.debian.tar
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.3-P1-2.dsc==9f39c78ebbf7d66194de179dc12de49e
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.3-P1.orig.tar.gz==36c6ca77212373b0cff478ae9e5d32af
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.3-P1.orig.tar.gz.asc==6db320501d5766198bc2da9515c62bbb
-https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1+b1_amd64.deb==11fb98ea2921b2d334f110aa5c2893f4
-https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1+b1_arm64.deb==e1409c5608fc8dbff7137b117e96d0c0
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1.debian.tar.xz==2dfa6e22972d0af32fd7afe99734a304
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1.dsc==efbde3517ddc5ac129532871651444af
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0.orig.tar.gz==f60e47b5eb50bbeed48a9f43bb08dd5e

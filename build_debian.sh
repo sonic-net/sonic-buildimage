@@ -362,6 +362,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     cgroup-tools            \
     ipmitool                \
     ndisc6                  \
+    makedumpfile            \
     conntrack               \
     python3                 \
     python3-pip             \

@@ -1461,7 +1461,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(SONIC_DEVICE_DATA) \
                 $(IFUPDOWN2) \
                 $(KDUMP_TOOLS) \
-                $(MAKEDUMPFILE) \
                 $(LIBPAM_RADIUS) \
                 $(LIBNSS_RADIUS) \
                 $(LIBPAM_TACPLUS) \
