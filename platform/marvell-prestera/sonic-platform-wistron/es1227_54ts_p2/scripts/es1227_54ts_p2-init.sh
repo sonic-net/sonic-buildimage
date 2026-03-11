@@ -73,5 +73,12 @@ load_kernel_drivers
     echo 1 > /sys/bus/i2c/devices/0-0033/port_led_auto
 
     sh /usr/local/bin/poe_init.sh
+    
+    # init oob port led
+    phytool write eth0/0/22 3
+    phytool write eth0/0/17 0x4400
+    phytool write eth0/0/18 0x0080
+    phytool write eth0/0/16 0x0340
+    phytool write eth0/0/22 0
 
 exit 0
