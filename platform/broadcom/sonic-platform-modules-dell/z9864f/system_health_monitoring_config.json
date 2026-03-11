@@ -4,8 +4,8 @@
     "user_defined_checkers": [],
     "polling_interval": 60,
     "led_color": {
-        "fault"  : "blink_yellow",
+        "fault"  : "blinking_amber",
         "normal" : "green",
-        "booting": "blink_green"
+        "booting": "blinking_green"
     }
 }

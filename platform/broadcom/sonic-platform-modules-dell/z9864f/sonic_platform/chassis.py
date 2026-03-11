@@ -56,7 +56,7 @@ class Chassis(ChassisBase):
     }
 
     REG_TO_SYSLED_COLOR = {
-        0x6  : "blinking_green",
+        0x6 : "blinking_green",
         0x2 : "green",
         0x1 : "amber",
         0x5 : "blinking_amber"
