@@ -12,6 +12,7 @@ DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp40-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libnetsnmptrapd40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
