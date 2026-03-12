@@ -873,6 +873,9 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+
 ```
 {
 "CONSOLE_PORT": {
@@ -883,12 +886,14 @@ It currently allows user to administratively bring down a line-card or fabric-ca
     },
     "2": {
         "baud_rate": "9600",
-        "flow_control": "1"
+        "flow_control": "1",
+        "escape_char": "c"
     }
   },
 "CONSOLE_SWITCH": {
     "console_mgmt": {
-        "enabled": "yes"
+        "enabled": "yes",
+        "default_escape_char": "b"
     }
   }
 }
