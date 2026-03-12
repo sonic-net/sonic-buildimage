@@ -61,6 +61,16 @@ if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
 
+# Check if FIB suppression is enabled
+SUPPRESS_FIB_PENDING=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending")
+if [ "$SUPPRESS_FIB_PENDING" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-F "
+fi
+
+# Write FIB suppression state to STATE_DB so fpmsyncd (in bgp container) can read it
+SUPPRESS_FIB_STATE=${SUPPRESS_FIB_PENDING:-disabled}
+sonic-db-cli STATE_DB hset "FIB_SUPPRESS_TABLE|orchagent" "enabled" "$SUPPRESS_FIB_STATE"
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
