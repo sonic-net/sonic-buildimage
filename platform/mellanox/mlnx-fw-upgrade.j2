@@ -70,6 +70,8 @@ SYSLOG_LOGGER="${NO_PARAM}"
 VERBOSE_LEVEL="${VERBOSE_MIN}"
 MFT_DIAGNOSIS_FLAGS=""
 RESET_CONFIG="${NO_PARAM}"
+MST_STARTED="${NO_PARAM}"
+IGNORE_MST_START_FAILURE="${NO_PARAM}"
 
 function PrintHelp() {
     echo
@@ -81,6 +83,7 @@ function PrintHelp() {
     echo "  -v, --verbose  Verbose mode (enabled when -u|--upgrade)"
     echo "  -d, --dry-run  Compare the FW versions without installation. Return code "0" means the FW is up-to-date, return code "10" means an upgrade is required, otherwise an error is detected."
     echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
+    echo "  -m, --ignore-mst-start-failure   Do not exit if 'mst start' fails"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  -r, --reset    Reset firmware configuration (NVIDIA BlueField platform only)"
 {% endif %}
@@ -116,6 +119,9 @@ function ParseArguments() {
             ;;
             -c|--clear-semaphore)
                 CLEAR_SEMAPHORE="${YES_PARAM}"
+            ;;
+            -m|--ignore-mst-start-failure)
+                IGNORE_MST_START_FAILURE="${YES_PARAM}"
             ;;
 {% if sonic_asic_platform == "nvidia-bluefield" %}
             -r|--reset)
@@ -406,6 +412,14 @@ function UpgradeFW() {
         fi
 
         LogNotice "firmware upgrade is required. Installing compatible version..."
+        LogInfo "Starting MST with i2cdev"
+        MST_STARTED="${YES_PARAM}"
+        if [[ "${IGNORE_MST_START_FAILURE}" != "${YES_PARAM}" ]]; then
+            RunCmd "/usr/bin/mst start --with_i2cdev"
+        else
+            /usr/bin/mst start --with_i2cdev || true
+        fi
+
 
         if [[ "${_MST_DEVICE}" = "${UNKN_MST}" ]]; then
             LogWarning "could not find fastest mst device, using default device"
@@ -456,6 +470,10 @@ function ExitIfQEMU() {
 }
 
 function Cleanup() {
+    if [[ "${MST_STARTED}" = "${YES_PARAM}" ]]; then
+        LogInfo "Stopping MST service"
+        /usr/bin/mst stop || true
+    fi
     if [[ -n "${LOCKFD}" ]]; then
         UnlockStateChange
     fi

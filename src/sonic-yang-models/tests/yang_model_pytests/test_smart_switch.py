@@ -454,7 +454,7 @@ class TestSmartSwitch:
                     "global": {
                         "vnet_name": "Vnet55",
                         "cp_data_channel_port": 11234,
-                        "dp_channel_port": 11235,
+                        "dp_channel_dst_port": 11235,
                         "dp_channel_src_port_min": 11236,
                         "dp_channel_src_port_max": 11237,
                         "dp_channel_probe_interval_ms": 500,

@@ -44,6 +44,8 @@ RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events_info.json
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Pass the image_version to container
