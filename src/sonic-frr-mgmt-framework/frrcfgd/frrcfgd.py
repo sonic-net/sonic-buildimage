@@ -4096,14 +4096,16 @@ class BGPConfigDaemon:
 
         # Backward compatibility: If no targets are configured, create default "sonic-bmp" target
         # with 127.0.0.1:5000 collector and adj-rib-in-pre monitoring for IPv4/IPv6 unicast
+        # All the default vakyes for attributs like min_retry, max_retry, stats_interval etc are
+        # chosen to maintain backward compatibility.
         if not targets:
             syslog.syslog(syslog.LOG_INFO, 'No BMP targets configured, using default "sonic-bmp" target for backward compatibility')
             targets['sonic-bmp'] = {
                 'collectors': [{
                     'ip': '127.0.0.1',
                     'port': '5000',
-                    'min_retry': '30000',
-                    'max_retry': '720000'
+                    'min_retry': '10000',
+                    'max_retry': '15000'
                 }],
                 'afi_safis': [
                     {
@@ -4120,7 +4122,7 @@ class BGPConfigDaemon:
                     }
                 ],
                 'mirror': 'false',
-                'stats_interval': '1000'  # Default stats interval (1000ms) for backward compatibility
+                'stats_interval': '1000'
             }
         
         # Map AFI/SAFI names to FRR format
