@@ -34,9 +34,9 @@ RUN mkdir -p /etc/bmcweb && \
     groupadd -f priv-admin && \
     groupadd -f priv-operator && \
     groupadd -f priv-user && \
-    useradd -m -s /bin/bash admin || true && \
-    echo "admin:YourPaSsWoRd" | chpasswd || true && \
-    usermod -aG redfish,priv-admin,priv-operator,priv-user admin || true
+    useradd -m -s /bin/bash "{{ DEFAULT_USERNAME }}" || true && \
+    echo "{{ DEFAULT_USERNAME }}:{{ DEFAULT_PASSWORD }}" | chpasswd || true && \
+    usermod -aG redfish,priv-admin,priv-operator,priv-user "{{ DEFAULT_USERNAME }}" || true
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
