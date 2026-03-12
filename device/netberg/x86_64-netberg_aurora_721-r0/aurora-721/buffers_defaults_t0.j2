@@ -1,0 +1,111 @@
+{%- set default_cable = '5m' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "2940941",
+            "xoff": "14704704",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "ingress_lossy_pool": {
+            "size": "15031475",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "16189824",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossy_pool": {
+            "size": "16189824",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "size": "0",
+            "dynamic_th":"1",
+            "xoff":"244706",
+            "xon":"1746919",
+            "xon_offset": "18432"
+        },
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"1"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"1"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"1"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_pg_profils(port_names_active) %}
+    "BUFFER_PG": {
+        "{{ port_names_active }}|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port_names_active }}|1": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port_names_active }}|2": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port_names_active }}|3": {
+            "profile" : "ingress_lossless_profile"
+        },
+        "{{ port_names_active }}|4": {
+            "profile" : "ingress_lossless_profile"
+        },
+        "{{ port_names_active }}|5": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port_names_active }}|6": {
+            "profile" : "ingress_lossy_profile"
+        },
+        "{{ port_names_active }}|7": {
+            "profile" : "ingress_lossy_profile"
+        }
+    },
+{%- endmacro %}
+
+{% macro generate_queue_buffers(port_names_active) %}
+    "BUFFER_QUEUE": {
+        "{{ port_names_active }}|0": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port_names_active }}|1": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port_names_active }}|2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port_names_active }}|3": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port_names_active }}|4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port_names_active }}|5": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port_names_active }}|6": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port_names_active }}|7": {
+            "profile" : "egress_lossy_profile"
+        }
+    }
+{% endmacro %}
+
