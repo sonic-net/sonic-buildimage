@@ -11,7 +11,8 @@ ARP_UPDATE_VARS_FILE="/usr/share/sonic/templates/arp_update_vars.j2"
 
 # Overload `logger` command to include arp_update tag
 logger () {
-    command logger -i -t "arp_update" "[$$] $*"
+    local pid="$$"
+    command logger -i -t "arp_update" "[$pid]" "$@"
 }
 
 # Function to run a command with retries on failure
