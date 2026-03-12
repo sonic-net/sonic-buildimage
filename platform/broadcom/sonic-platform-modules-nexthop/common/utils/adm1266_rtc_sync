@@ -14,7 +14,7 @@ SET_RTC command on the ADM1266 DPM devices.
 
 import sys
 
-from nexthop.pddf_config_parser import load_pd_plugin_config
+from nexthop.pddf_config_parser import load_pd_plugin_config, load_pddf_device_config
 from sonic_platform.adm1266 import Adm1266, EPOCH_OFFSET_SECONDS
 from sonic_platform.dpm_base import DpmType
 from sonic_py_common import syslogger
@@ -35,6 +35,12 @@ def main():
         logger.log_error(f"Failed to load pd-plugin.json configuration: {e}")
         return 1
 
+    try:
+        device_config = load_pddf_device_config()
+    except Exception as e:
+        logger.log_error(f"Failed to load pddf-device.json configuration: {e}")
+        return 1
+
     dpm_config = plugin_config.get("DPM", {})
     if not dpm_config:
         return 0
@@ -48,7 +54,7 @@ def main():
             continue
 
         try:
-            adm1266 = Adm1266(dpm_name, platform_spec)
+            adm1266 = Adm1266(dpm_name, platform_spec, device_config)
             adm1266.set_rtc_epoch_offset(EPOCH_OFFSET_SECONDS)
             success_count += 1
 

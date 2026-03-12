@@ -264,7 +264,8 @@ def squash_sw_and_hw_causes(sorted_causes: list[RebootCause]) -> list[RebootCaus
 
 
 class RebootCauseManager:
-    def __init__(self, pddf_plugin_data: dict[str, Any]):
+    def __init__(self, pddf_data: dict[str, Any], pddf_plugin_data: dict[str, Any]):
+        self._pddf_data = pddf_data
         self._pddf_plugin_data = pddf_plugin_data
         self._sw_reboot_cause_filepath = pddf_plugin_data.get("REBOOT_CAUSE", {}).get(
             "reboot_cause_file", None
@@ -274,7 +275,9 @@ class RebootCauseManager:
         for dpm_name, platform_spec in pddf_plugin_data.get("DPM", {}).items():
             dpm_type = platform_spec["type"]
             if dpm_type == "adm1266":
-                self._dpm_devices.append(Adm1266(dpm_name, platform_spec))
+                self._dpm_devices.append(
+                    Adm1266(dpm_name, platform_spec, self._pddf_data)
+                )
             else:
                 logger.log_warning(f"Unknown DPM type '{dpm_type}' for '{dpm_name}' DPM.")
 

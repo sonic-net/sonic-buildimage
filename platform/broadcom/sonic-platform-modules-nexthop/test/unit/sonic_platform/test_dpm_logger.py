@@ -167,11 +167,20 @@ class TestDpmLogger:
                 ],
             ),
         ]
+        # Minimal pddf_device_data for testing
+        pddf_device_data = {
+            "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}},
+            "DPM2": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x41"}}},
+        }
         DPM_1 = adm1266_module.Adm1266(
-            "test-dpm-1", {"nvmem_path": "/dummy/path", "powerup_counter_path": "/dummy/path"}
+            "test-dpm-1",
+            {"dpm": "DPM1"},
+            pddf_device_data,
         )
         DPM_2 = adm1266_module.Adm1266(
-            "test-dpm-2", {"nvmem_path": "/dummy/path", "powerup_counter_path": "/dummy/path"}
+            "test-dpm-2",
+            {"dpm": "DPM2"},
+            pddf_device_data,
         )
         with (
             tempfile.TemporaryDirectory() as tmpdir,

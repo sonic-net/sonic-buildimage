@@ -319,6 +319,11 @@ def test_read_blackbox(dpm_base_module, adm1266_module, nh_reboot_cause_module):
         nh_reboot_cause_module, "check_root_privileges", autospec=True, return_value=None
     ), patch.object(
         nh_reboot_cause_module.pddf_config_parser,
+        "load_pddf_device_config",
+        autospec=True,
+        return_value={},
+    ), patch.object(
+        nh_reboot_cause_module.pddf_config_parser,
         "load_pd_plugin_config",
         autospec=True,
         return_value={},
@@ -376,6 +381,11 @@ def test_read_blackbox_empty(nh_reboot_cause_module):
 
     with patch.object(
         nh_reboot_cause_module, "check_root_privileges", autospec=True, return_value=None
+    ), patch.object(
+        nh_reboot_cause_module.pddf_config_parser,
+        "load_pddf_device_config",
+        autospec=True,
+        return_value={},
     ), patch.object(
         nh_reboot_cause_module.pddf_config_parser,
         "load_pd_plugin_config",

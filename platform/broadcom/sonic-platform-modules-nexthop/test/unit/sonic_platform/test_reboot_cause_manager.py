@@ -34,10 +34,13 @@ class TestRebootCauseManager:
         with temp_file(
             "User issued 'reboot' command [User: admin, Time: Thu Oct  2 11:22:56 PM UTC 2025]"
         ) as sw_reboot_cause_filepath:
+            pddf_data = {}  # Empty pddf_data for tests without DPM devices
             pddf_plugin_data = {"REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath}}
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(
+                pddf_data, pddf_plugin_data
+            )
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -56,10 +59,13 @@ class TestRebootCauseManager:
         with temp_file(
             "Kernel Panic - Out of memory [Time: Thu Oct  21 11:22:59 PM UTC 2025]"
         ) as sw_reboot_cause_filepath:
+            pddf_data = {}  # Empty pddf_data for tests without DPM devices
             pddf_plugin_data = {"REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath}}
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(
+                pddf_data, pddf_plugin_data
+            )
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -80,10 +86,13 @@ class TestRebootCauseManager:
         # Given
         FULL_SW_CAUSE = "Some software causes that don't match known patterns"
         with temp_file(FULL_SW_CAUSE) as sw_reboot_cause_filepath:
+            pddf_data = {}  # Empty pddf_data for tests without DPM devices
             pddf_plugin_data = {"REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath}}
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(
+                pddf_data, pddf_plugin_data
+            )
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -101,10 +110,13 @@ class TestRebootCauseManager:
     def test_summarize_reboot_causes_sw_unknown(self, reboot_cause_manager_module):
         # Given
         with temp_file("Unknown") as sw_reboot_cause_filepath:
+            pddf_data = {}  # Empty pddf_data for tests without DPM devices
             pddf_plugin_data = {"REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath}}
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(
+                pddf_data, pddf_plugin_data
+            )
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -156,13 +168,15 @@ class TestRebootCauseManager:
             temp_file(content="12") as powerup_counter_path_1,
             temp_file(content="3") as powerup_counter_path_2,
         ):
+            pddf_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}},
+                "DPM2": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x41"}}},
+            }
             pddf_plugin_data = {
                 "DPM": {
                     "test-dpm1": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path_1,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path_1,
-                        "powerup_counter_path": powerup_counter_path_1,
+                        "dpm": "DPM1",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0000_0000_0001",  # PDI1
@@ -177,9 +191,7 @@ class TestRebootCauseManager:
                     },
                     "test-dpm2": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path_2,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path_2,
-                        "powerup_counter_path": powerup_counter_path_2,
+                        "dpm": "DPM2",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0000_0000_0001",  # PDI1
@@ -205,7 +217,19 @@ class TestRebootCauseManager:
             }
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(
+                pddf_data, pddf_plugin_data
+            )
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm1":
+                    dpm._nvmem_path = nvmem_path_1
+                    dpm._powerup_counter_path = powerup_counter_path_1
+                    dpm._rtc_epoch_offset_path = rtc_epoch_offset_path_1
+                elif dpm.get_name() == "test-dpm2":
+                    dpm._nvmem_path = nvmem_path_2
+                    dpm._powerup_counter_path = powerup_counter_path_2
+                    dpm._rtc_epoch_offset_path = rtc_epoch_offset_path_2
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -307,15 +331,20 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [],
                     }
                 }
             }
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -340,21 +369,31 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm1": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path_1,
-                        "powerup_counter_path": powerup_counter_path_1,
+                        "dpm": "DPM1",
                         "dpm_signal_to_fault_cause": [],
                     },
                     "test-dpm2": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path_2,
-                        "powerup_counter_path": powerup_counter_path_2,
+                        "dpm": "DPM2",
                         "dpm_signal_to_fault_cause": [],
                     },
                 }
             }
 
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}},
+                "DPM2": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x41"}}},
+            }
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm1":
+                    dpm._nvmem_path = nvmem_path_1
+                    dpm._powerup_counter_path = powerup_counter_path_1
+                elif dpm.get_name() == "test-dpm2":
+                    dpm._nvmem_path = nvmem_path_2
+                    dpm._powerup_counter_path = powerup_counter_path_2
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -383,8 +422,7 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0000_0100_0000",  # PDI7
@@ -400,7 +438,15 @@ class TestRebootCauseManager:
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -441,14 +487,21 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [],
                     }
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -741,9 +794,7 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0000_0100_0000",  # PDI7
@@ -759,7 +810,15 @@ class TestRebootCauseManager:
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -822,9 +881,7 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0001_0000_0000",  # PDI9
@@ -840,7 +897,15 @@ class TestRebootCauseManager:
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -883,9 +948,7 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0001_0000_0000",  # PDI9
@@ -901,7 +964,15 @@ class TestRebootCauseManager:
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then
@@ -944,9 +1015,7 @@ class TestRebootCauseManager:
                 "DPM": {
                     "test-dpm": {
                         "type": "adm1266",
-                        "nvmem_path": nvmem_path,
-                        "rtc_epoch_offset_path": rtc_epoch_offset_path,
-                        "powerup_counter_path": powerup_counter_path,
+                        "dpm": "DPM",
                         "dpm_signal_to_fault_cause": [
                             {
                                 "pdio_mask": "0b0000_0001_0000_0000",  # PDI9
@@ -962,7 +1031,15 @@ class TestRebootCauseManager:
                 },
             }
             # When
-            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_plugin_data)
+            pddf_data = {"DPM": {"i2c": {"topo_info": {"parent_bus": "0x0", "dev_addr": "0x40"}}}}
+            reboot_cause_manager = reboot_cause_manager_module.RebootCauseManager(pddf_data, pddf_plugin_data)
+            # Override the calculated paths with our temp files for testing
+            for dpm in reboot_cause_manager._dpm_devices:
+                if dpm.get_name() == "test-dpm":
+                    dpm._nvmem_path = nvmem_path
+                    dpm._powerup_counter_path = powerup_counter_path
+                    if 'rtc_epoch_offset_path' in locals():
+                        dpm._rtc_epoch_offset_path = rtc_epoch_offset_path
             reboot_causes = reboot_cause_manager.summarize_reboot_causes()
 
             # Then

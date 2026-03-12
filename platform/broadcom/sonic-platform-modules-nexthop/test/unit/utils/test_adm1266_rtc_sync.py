@@ -8,7 +8,6 @@ import os
 import pytest
 import sys
 
-from fixtures.test_helpers_common import temp_file
 from unittest.mock import patch
 
 # Prevent Python from writing .pyc files during test imports
@@ -35,7 +34,10 @@ class TestAdm1266RtcSync:
 
     def test_main_ok_with_no_dpms(self, adm1266_rtc_sync_module):
         # Given
-        with patch.object(adm1266_rtc_sync_module, "load_pd_plugin_config", return_value={}):
+        with (
+            patch.object(adm1266_rtc_sync_module, "load_pd_plugin_config", return_value={}),
+            patch.object(adm1266_rtc_sync_module, "load_pddf_device_config", return_value={}),
+        ):
             # When
             ret = adm1266_rtc_sync_module.main()
             # Then
@@ -43,15 +45,18 @@ class TestAdm1266RtcSync:
 
     def test_main_ok_with_non_adm1266_dpm(self, adm1266_rtc_sync_module):
         # Given
-        with patch.object(
-            adm1266_rtc_sync_module,
-            "load_pd_plugin_config",
-            return_value={
-                "DPM": {
-                    "test-dpm1": {"type": "unknown"},
-                    "test-dpm2": {"type": "unknown"},
-                }
-            },
+        with (
+            patch.object(
+                adm1266_rtc_sync_module,
+                "load_pd_plugin_config",
+                return_value={
+                    "DPM": {
+                        "test-dpm1": {"type": "unknown"},
+                        "test-dpm2": {"type": "unknown"},
+                    }
+                },
+            ),
+            patch.object(adm1266_rtc_sync_module, "load_pddf_device_config", return_value={}),
         ):
             # When
             ret = adm1266_rtc_sync_module.main()
@@ -60,8 +65,28 @@ class TestAdm1266RtcSync:
 
     def test_main_ok_with_adm1266_dpm_and_rtc_epoch_offset_path(self, adm1266_rtc_sync_module):
         # Given
+        written_value = None
+
+        def mock_open_func(path, mode):
+            nonlocal written_value
+            if mode == "w" and "rtc_epoch_offset" in path:
+                # Mock file object for writing
+                class MockFile:
+                    def write(self, value):
+                        nonlocal written_value
+                        written_value = value
+
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *args):
+                        pass
+
+                return MockFile()
+            # For other files, use the real open
+            return open(path, mode)
+
         with (
-            temp_file(content="") as rtc_epoch_offset_path,
             patch.object(
                 adm1266_rtc_sync_module,
                 "load_pd_plugin_config",
@@ -69,35 +94,48 @@ class TestAdm1266RtcSync:
                     "DPM": {
                         "test-dpm": {
                             "type": "adm1266",
-                            "nvmem_path": "/dummy/path",
-                            "powerup_counter_path": "/dummy/path",
-                            "rtc_epoch_offset_path": rtc_epoch_offset_path,
+                            "dpm": "DPM1",
                         },
                     }
                 },
             ),
+            patch.object(
+                adm1266_rtc_sync_module,
+                "load_pddf_device_config",
+                return_value={
+                    "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+                },
+            ),
+            patch("builtins.open", side_effect=mock_open_func),
         ):
             # When
             ret = adm1266_rtc_sync_module.main()
             # Then
             assert ret == 0
-            with open(rtc_epoch_offset_path, "r") as file:
-                assert file.read() == "1704067200"
+            assert written_value == "1704067200"
 
-    def test_main_fail_with_no_rtc_epoch_offset_path(self, adm1266_rtc_sync_module):
+    def test_main_fail_with_missing_dpm_field(self, adm1266_rtc_sync_module):
         # Given
-        with patch.object(
-            adm1266_rtc_sync_module,
-            "load_pd_plugin_config",
-            return_value={
-                "DPM": {
-                    "test-dpm": {
-                        "type": "adm1266",
-                        "nvmem_path": "/dummy/path",
-                        "powerup_counter_path": "/dummy/path",
-                    },
-                }
-            },
+        with (
+            patch.object(
+                adm1266_rtc_sync_module,
+                "load_pd_plugin_config",
+                return_value={
+                    "DPM": {
+                        "test-dpm": {
+                            "type": "adm1266",
+                            # Missing "dpm" field
+                        },
+                    }
+                },
+            ),
+            patch.object(
+                adm1266_rtc_sync_module,
+                "load_pddf_device_config",
+                return_value={
+                    "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+                },
+            ),
         ):
             # When
             ret = adm1266_rtc_sync_module.main()
@@ -106,8 +144,28 @@ class TestAdm1266RtcSync:
 
     def test_main_fail_when_some_dpms_fail(self, adm1266_rtc_sync_module):
         # Given
+        written_value = None
+
+        def mock_open_func(path, mode):
+            nonlocal written_value
+            if mode == "w" and "rtc_epoch_offset" in path:
+                # Mock file object for writing
+                class MockFile:
+                    def write(self, value):
+                        nonlocal written_value
+                        written_value = value
+
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *args):
+                        pass
+
+                return MockFile()
+            # For other files, use the real open
+            return open(path, mode)
+
         with (
-            temp_file(content="") as rtc_epoch_offset_path,
             patch.object(
                 adm1266_rtc_sync_module,
                 "load_pd_plugin_config",
@@ -115,19 +173,23 @@ class TestAdm1266RtcSync:
                     "DPM": {
                         "test-dpm": {
                             "type": "adm1266",
-                            "nvmem_path": "/dummy/path",
-                            "powerup_counter_path": "/dummy/path",
-                            "rtc_epoch_offset_path": rtc_epoch_offset_path,
+                            "dpm": "DPM1",
                         },
-                        # No rtc_epoch_offset_path.
+                        # Missing "dpm" field for test-dpm2
                         "test-dpm2": {
                             "type": "adm1266",
-                            "nvmem_path": "/dummy/path",
-                            "powerup_counter_path": "/dummy/path",
                         },
                     }
                 },
             ),
+            patch.object(
+                adm1266_rtc_sync_module,
+                "load_pddf_device_config",
+                return_value={
+                    "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+                },
+            ),
+            patch("builtins.open", side_effect=mock_open_func),
         ):
             # When
             ret = adm1266_rtc_sync_module.main()

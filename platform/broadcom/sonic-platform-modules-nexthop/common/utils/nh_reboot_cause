@@ -106,8 +106,9 @@ def read_blackbox() -> None:
     """Reads and displays blackbox records from all DPMs if available."""
     check_root_privileges()
 
+    pddf_data = pddf_config_parser.load_pddf_device_config()
     pd_plugin_data = pddf_config_parser.load_pd_plugin_config()
-    reboot_cause_manager = RebootCauseManager(pd_plugin_data)
+    reboot_cause_manager = RebootCauseManager(pddf_data, pd_plugin_data)
     hw_reboot_causes, dpm_to_powerups = reboot_cause_manager.read_hw_reboot_causes()
 
     data, _ = DpmLogger().to_data(hw_reboot_causes, dpm_to_powerups)

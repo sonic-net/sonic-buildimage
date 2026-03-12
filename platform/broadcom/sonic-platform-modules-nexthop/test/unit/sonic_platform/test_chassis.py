@@ -127,7 +127,10 @@ class TestChassis:
             ),
         ):
             # When
-            chassis = chassis_module.Chassis(pddf_plugin_data={"DUMMY": "dummy"})
+            chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),  # Empty PDDF data for tests
+                pddf_plugin_data={"DUMMY": "dummy"}
+            )
             # Then
             assert chassis.get_reboot_cause() == ("Non-Hardware", "")
 
@@ -159,6 +162,7 @@ class TestChassis:
         ):
             # When
             chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),  # Empty PDDF data for tests
                 pddf_plugin_data={
                     "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
                 }
@@ -210,6 +214,7 @@ class TestChassis:
         ):
             # When
             chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),  # Empty PDDF data for tests
                 pddf_plugin_data={
                     "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
                 }
@@ -279,6 +284,7 @@ class TestChassis:
         ):
             # When
             chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),  # Empty PDDF data for tests
                 pddf_plugin_data={
                     "REBOOT_CAUSE": {"reboot_cause_file": sw_reboot_cause_filepath},
                 }
@@ -314,6 +320,9 @@ class TestChassis:
             Mock(return_value=[reboot_cause_manager_module.UNKNOWN_HW_REBOOT_CAUSE]),
         ):
             # When
-            chassis = chassis_module.Chassis(pddf_plugin_data={"DUMMY": "dummy"})
+            chassis = chassis_module.Chassis(
+                pddf_data=mock_pddf_data({}),  # Empty PDDF data for tests
+                pddf_plugin_data={"DUMMY": "dummy"}
+            )
             # Then
             assert chassis.get_reboot_cause() == ("REBOOT_CAUSE_HARDWARE_OTHER", "unknown, time: unknown, src: unknown")

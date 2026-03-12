@@ -504,12 +504,60 @@ def trim_record_dict(dict_representation: dict[str, str]) -> dict[str, str]:
 class Adm1266(DpmBase, type=DpmType.ADM1266, max_powerup_counter=65535):
     """ADM1266 device."""
 
-    def __init__(self, name: str, platform_spec: dict[str, Any]):
+    NVMEM_CELL_IDX = 0
+
+    def __init__(
+        self,
+        name: str,
+        platform_spec: dict[str, Any],
+        pddf_device_data: dict[str, Any],
+    ):
         super().__init__(name, platform_spec)
 
-        self._nvmem_path = platform_spec["nvmem_path"]
-        self._rtc_epoch_offset_path = platform_spec.get("rtc_epoch_offset_path", None)
-        self._powerup_counter_path = platform_spec["powerup_counter_path"]
+        # Get the DPM device name from platform_spec
+        dpm_device_name = platform_spec.get("dpm")
+        if not dpm_device_name:
+            raise ValueError(
+                f"platform_spec for DPM '{name}' must contain a 'dpm' field specifying the dpm name."
+            )
+        self._calculate_paths_from_pddf_device_data(dpm_device_name, pddf_device_data)
+
+    def _calculate_paths_from_pddf_device_data(
+        self, dpm_device_name: str, pddf_device_data: dict[str, Any]
+    ) -> None:
+        """Calculate sysfs paths from pddf-device.json data.
+
+        Args:
+            dpm_device_name: The DPM device name from pd-plugin.json's "dpm" field (e.g., "DPM1", "DPM2")
+            pddf_device_data: The loaded pddf-device.json data
+
+        Raises:
+            ValueError: If the DPM device cannot be found in pddf-device.json
+        """
+        dpm_device = pddf_device_data.get(dpm_device_name)
+        if not dpm_device:
+            raise ValueError(f"DPM device '{dpm_device_name}' not found in pddf-device.json.")
+
+        i2c_info = dpm_device.get("i2c", {})
+        topo_info = i2c_info.get("topo_info", {})
+        parent_bus = topo_info.get("parent_bus")
+        dev_addr = topo_info.get("dev_addr")
+
+        if not parent_bus or not dev_addr:
+            raise ValueError(
+                f"Missing parent_bus or dev_addr in pddf-device.json for DPM '{dpm_device_name}'"
+            )
+
+        parent_bus_int = int(parent_bus, 16) if isinstance(parent_bus, str) else parent_bus
+        dev_addr_int = int(dev_addr, 16) if isinstance(dev_addr, str) else dev_addr
+
+        self._nvmem_path = f"/sys/bus/nvmem/devices/{parent_bus_int}-{dev_addr_int:04x}{self.NVMEM_CELL_IDX}/nvmem"
+        self._powerup_counter_path = (
+            f"/sys/bus/i2c/devices/{parent_bus_int}-{dev_addr_int:04x}/powerup_counter"
+        )
+        self._rtc_epoch_offset_path = (
+            f"/sys/bus/i2c/devices/{parent_bus_int}-{dev_addr_int:04x}/rtc_epoch_offset"
+        )
 
     def set_rtc_epoch_offset(self, epoch_offset_sec: int = EPOCH_OFFSET_SECONDS):
         """Writes to sysfs to set the custom epoch on the ADM1266's RTC.

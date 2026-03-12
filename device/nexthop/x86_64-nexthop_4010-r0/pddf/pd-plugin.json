@@ -2,9 +2,7 @@
     "DPM": {
         "cpu_card": {
             "type": "adm1266",
-            "nvmem_path": "/sys/bus/nvmem/devices/7-00410/nvmem",
-            "powerup_counter_path": "/sys/bus/i2c/devices/7-0041/powerup_counter",
-            "rtc_epoch_offset_path": "/sys/bus/i2c/devices/7-0041/rtc_epoch_offset",
+            "dpm": "DPM1",
             "dpm_signal_to_fault_cause": [
                 {
                     "pdio_mask": "0xC002",
@@ -73,9 +71,7 @@
         },
         "switch_card": {
             "type": "adm1266",
-            "nvmem_path": "/sys/bus/nvmem/devices/9-00410/nvmem",
-            "powerup_counter_path": "/sys/bus/i2c/devices/9-0041/powerup_counter",
-            "rtc_epoch_offset_path": "/sys/bus/i2c/devices/9-0041/rtc_epoch_offset",
+            "dpm": "DPM2",
             "dpm_signal_to_fault_cause": [
                 {
                     "pdio_mask": "0x0001",

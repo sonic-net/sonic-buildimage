@@ -55,7 +55,7 @@ class Chassis(PddfChassis):
             self._thermal_list.append(thermal)
 
         self._reboot_cause_manager = (
-            RebootCauseManager(pddf_plugin_data) if pddf_plugin_data else None
+            RebootCauseManager(pddf_data.data, pddf_plugin_data) if (pddf_plugin_data and pddf_data) else None
         )
 
     # Provide the functions/variables below for which implementation is to be overwritten

@@ -343,12 +343,98 @@ class TestAdm1266BlackBoxRecord:
 class TestAdm1266:
     """Test class for Adm1266 functionality."""
 
+    def test_dynamic_path_calculation_dpm1(self, adm1266_module):
+        # Given
+        platform_spec = {"dpm": "DPM1"}
+        pddf_device_data = {
+            "DPM1": {
+                "i2c": {
+                    "topo_info": {
+                        "parent_bus": "0x7",
+                        "dev_addr": "0x41",
+                    }
+                }
+            }
+        }
+        # When
+        adm1266 = adm1266_module.Adm1266("cpu_card", platform_spec, pddf_device_data)
+        # Then
+        assert adm1266._nvmem_path == "/sys/bus/nvmem/devices/7-00410/nvmem"
+        assert adm1266._powerup_counter_path == "/sys/bus/i2c/devices/7-0041/powerup_counter"
+        assert adm1266._rtc_epoch_offset_path == "/sys/bus/i2c/devices/7-0041/rtc_epoch_offset"
+
+    def test_dynamic_path_calculation_dpm2(self, adm1266_module):
+        # Given
+        platform_spec = {"dpm": "DPM2"}
+        pddf_device_data = {
+            "DPM2": {
+                "i2c": {
+                    "topo_info": {
+                        "parent_bus": "0x9",
+                        "dev_addr": "0x41",
+                    }
+                }
+            }
+        }
+        # When
+        adm1266 = adm1266_module.Adm1266("switch_card", platform_spec, pddf_device_data)
+        # Then
+        assert adm1266._nvmem_path == "/sys/bus/nvmem/devices/9-00410/nvmem"
+        assert adm1266._powerup_counter_path == "/sys/bus/i2c/devices/9-0041/powerup_counter"
+        assert adm1266._rtc_epoch_offset_path == "/sys/bus/i2c/devices/9-0041/rtc_epoch_offset"
+
+    def test_dynamic_path_calculation_dpm3(self, adm1266_module):
+        # Given
+        platform_spec = {"dpm": "DPM3"}
+        pddf_device_data = {
+            "DPM3": {
+                "i2c": {
+                    "topo_info": {
+                        "parent_bus": "0x9",
+                        "dev_addr": "0x42",
+                    }
+                }
+            }
+        }
+        # When
+        adm1266 = adm1266_module.Adm1266("switch_card_2", platform_spec, pddf_device_data)
+        # Then
+        assert adm1266._nvmem_path == "/sys/bus/nvmem/devices/9-00420/nvmem"
+        assert adm1266._powerup_counter_path == "/sys/bus/i2c/devices/9-0042/powerup_counter"
+        assert adm1266._rtc_epoch_offset_path == "/sys/bus/i2c/devices/9-0042/rtc_epoch_offset"
+
+    def test_missing_dpm_field_raises_error(self, adm1266_module):
+        # Given
+        platform_spec = {}  # Missing "dpm" field
+        pddf_device_data = {"DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}}
+        # When/Then
+        with pytest.raises(ValueError, match="must contain a 'dpm' field"):
+            adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+
+    def test_missing_dpm_device_in_pddf_raises_error(self, adm1266_module):
+        # Given
+        platform_spec = {"dpm": "DPM99"}  # DPM99 doesn't exist in pddf_device_data
+        pddf_device_data = {"DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}}
+        # When/Then
+        with pytest.raises(ValueError, match="DPM device 'DPM99' not found in pddf-device.json"):
+            adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+
+    def test_missing_i2c_info_raises_error(self, adm1266_module):
+        # Given
+        platform_spec = {"dpm": "DPM1"}
+        # Device exists but has incomplete i2c info
+        pddf_device_data = {"DPM1": {"i2c": {"topo_info": {}}}}  # Missing parent_bus and dev_addr
+        # When/Then
+        with pytest.raises(ValueError, match="Missing parent_bus or dev_addr"):
+            adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+
     def test_get_name(self, adm1266_module):
         # Given
-        adm1266 = adm1266_module.Adm1266(
-            "test-dpm",
-            platform_spec={"nvmem_path": "/dummy/path", "powerup_counter_path": "/dummy/path"},
-        )
+        platform_spec = {"dpm": "DPM1"}
+        pddf_device_data = {
+            "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+        }
+        adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
         # When
         name = adm1266.get_name()
         # Then
@@ -356,10 +442,11 @@ class TestAdm1266:
 
     def test_get_type(self, adm1266_module):
         # Given
-        adm1266 = adm1266_module.Adm1266(
-            "test-dpm",
-            platform_spec={"nvmem_path": "/dummy/path", "powerup_counter_path": "/dummy/path"},
-        )
+        platform_spec = {"dpm": "DPM1"}
+        pddf_device_data = {
+            "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+        }
+        adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
         # When
         dpm_type = adm1266.get_type()
         # Then
@@ -372,13 +459,14 @@ class TestAdm1266:
             file_prefix="rtc_epoch_offset",
             dir_prefix="test_adm1266",
         ) as rtc_epoch_offset_path:
-            platform_spec = {
-                "nvmem_path": "/dummy/path",
-                "powerup_counter_path": "/dummy/path",
-                "rtc_epoch_offset_path": rtc_epoch_offset_path,
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
             }
             # When
-            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec)
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._rtc_epoch_offset_path = rtc_epoch_offset_path
             adm1266.set_rtc_epoch_offset()
             # Then
             with open(rtc_epoch_offset_path, "r") as file:
@@ -391,13 +479,14 @@ class TestAdm1266:
             file_prefix="rtc_epoch_offset",
             dir_prefix="test_adm1266",
         ) as rtc_epoch_offset_path:
-            platform_spec = {
-                "nvmem_path": "/dummy/path",
-                "powerup_counter_path": "/dummy/path",
-                "rtc_epoch_offset_path": rtc_epoch_offset_path,
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
             }
             # When
-            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec)
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._rtc_epoch_offset_path = rtc_epoch_offset_path
             adm1266.set_rtc_epoch_offset(1234567)
             # Then
             with open(rtc_epoch_offset_path, "r") as file:
@@ -418,10 +507,13 @@ class TestAdm1266:
             file_prefix="nvmem",
             dir_prefix="test_adm1266",
         ) as nvmem_path:
-            adm1266 = adm1266_module.Adm1266(
-                "test-dpm",
-                platform_spec={"nvmem_path": nvmem_path, "powerup_counter_path": "/dummy/path"},
-            )
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._nvmem_path = nvmem_path
             # When
             read_records = adm1266.read_raw_records()
             # Then
@@ -439,10 +531,13 @@ class TestAdm1266:
             file_prefix="nvmem",
             dir_prefix="test_adm1266",
         ) as nvmem_path:
-            adm1266 = adm1266_module.Adm1266(
-                "test-dpm",
-                platform_spec={"nvmem_path": nvmem_path, "powerup_counter_path": "/dummy/path"},
-            )
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._nvmem_path = nvmem_path
             # When
             read_records = adm1266.read_raw_records()
             # Then
@@ -458,10 +553,13 @@ class TestAdm1266:
         with temp_file(
             content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
         ) as nvmem_path:
-            adm1266 = adm1266_module.Adm1266(
-                "test-dpm",
-                platform_spec={"nvmem_path": nvmem_path, "powerup_counter_path": "/dummy/path"},
-            )
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._nvmem_path = nvmem_path
             # When
             records = adm1266.read_records(adm1266_module.Adm1266BlackBoxRecord)
             # Then
@@ -479,10 +577,13 @@ class TestAdm1266:
             file_prefix="nvmem",
             dir_prefix="test_adm1266",
         ) as nvmem_path:
-            adm1266 = adm1266_module.Adm1266(
-                "test-dpm",
-                platform_spec={"nvmem_path": nvmem_path, "powerup_counter_path": "/dummy/path"},
-            )
+            platform_spec = {"dpm": "DPM1"}
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._nvmem_path = nvmem_path
             # When
             assert adm1266.read_raw_records() != []
             adm1266.clear_records()
@@ -522,8 +623,7 @@ class TestAdm1266:
             content=b"".join(RECORDS), file_prefix="nvmem", dir_prefix="test_adm1266"
         ) as nvmem_path:
             platform_spec = {
-                "nvmem_path": nvmem_path,
-                "powerup_counter_path": "/dummy/path",
+                "dpm": "DPM1",
                 "dpm_signal_to_fault_cause": [
                     {
                         "pdio_mask": "0b0000_0000_0000_0001",  # PDI1
@@ -545,7 +645,12 @@ class TestAdm1266:
                     },
                 ],
             }
-            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec)
+            pddf_device_data = {
+                "DPM1": {"i2c": {"topo_info": {"parent_bus": "0x7", "dev_addr": "0x41"}}}
+            }
+            adm1266 = adm1266_module.Adm1266("test-dpm", platform_spec, pddf_device_data)
+            # Override the calculated path with our temp file for testing
+            adm1266._nvmem_path = nvmem_path
 
             # When
             reboot_causes = adm1266.get_powerup_entries()
