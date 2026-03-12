@@ -423,6 +423,14 @@ start() {
         fi
     fi
 
+    # Make suppress-fib-pending configuration operational by writing it to
+    # STATE_DB before swss or bgp containers come up (before orchagent and
+    # fpmsyncd processes start). This guarantees they are in sync.
+    SUPPRESS_FIB_CONFIG=$($SONIC_DB_CLI CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending")
+    SUPPRESS_FIB_OPER=${SUPPRESS_FIB_CONFIG:-disabled}
+    $SONIC_DB_CLI STATE_DB hset "FIB_SUPPRESS_TABLE|system" "oper_state" "$SUPPRESS_FIB_OPER"
+    debug "FIB suppression oper_state: $SUPPRESS_FIB_OPER"
+
     # On supervisor card, skip starting asic related services here. In wait(),
     # wait until the asic is detected by pmon and published via database.
     if ! is_chassis_supervisor; then
