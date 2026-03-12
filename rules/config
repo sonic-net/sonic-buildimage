@@ -171,7 +171,7 @@ INCLUDE_SYSTEM_TELEMETRY = n
 INCLUDE_SYSTEM_OTEL = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
-INCLUDE_ICCPD = n
+INCLUDE_ICCPD ?= n
 
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
