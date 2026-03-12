@@ -71,8 +71,8 @@ ln -s "functions/${FUNCTION_TYPE}.${INTERFACE_NAME}" configs/c.1/
 logger -t usb-network "Gadget '${GADGET_NAME}' created with ${FUNCTION_TYPE^^} function"
 
 # Step 4: Enable the gadget
-# Find the first available UDC (USB Device Controller)
-UDC_NAME=$(ls /sys/class/udc 2>/dev/null | head -n1)
+# Use the specific UDC port for AST2700 USB virtual hub
+UDC_NAME="12021000.usb-vhub:p1"
 
 if [ -z "${UDC_NAME}" ]; then
     logger -t usb-network "ERROR: No UDC (USB Device Controller) found!"
