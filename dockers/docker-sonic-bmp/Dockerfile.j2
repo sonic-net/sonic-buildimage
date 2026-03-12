@@ -40,7 +40,12 @@ RUN chmod +x /usr/bin/bmp.sh
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

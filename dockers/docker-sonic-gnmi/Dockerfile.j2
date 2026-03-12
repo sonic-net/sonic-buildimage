@@ -35,6 +35,8 @@ COPY ["critical_processes.2", "/etc/supervisor/critical_processes"]
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 ## Make apt-get non-interactive
