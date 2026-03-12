@@ -1,0 +1,401 @@
+{
+    "PORT_STATE_VALID_BASIC_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "up",
+                        "state": "ok"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_ALL_FIELDS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "up",
+                        "state": "ok",
+                        "admin_status": "up",
+                        "speed": "100000",
+                        "mtu": 9100,
+                        "fec": "rs",
+                        "supported_speeds": "10000,25000,40000,100000",
+                        "supported_fecs": "rs,fc,none",
+                        "host_tx_ready": "true",
+                        "link_training_status": "trained",
+                        "rmt_adv_speeds": "100000,40000",
+                        "netdev_oper_status": "up",
+                        "phy_ctrl_unreliable_los": "false"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_OPER_STATUS_UP_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_OPER_STATUS_DOWN_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "down"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_STATE_OK_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "state": "ok"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_ADMIN_STATUS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "admin_status": "down"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_SPEED_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "speed": "100000"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "speed": "25000"
+                    },
+                    {
+                        "ifname": "Ethernet8",
+                        "speed": "400000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_SPEED_NA_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "speed": "N/A"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_MTU_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "mtu": 9100
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "mtu": 1500
+                    },
+                    {
+                        "ifname": "Ethernet8",
+                        "mtu": 9216
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_FEC_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "fec": "rs"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "fec": "fc"
+                    },
+                    {
+                        "ifname": "Ethernet8",
+                        "fec": "none"
+                    },
+                    {
+                        "ifname": "Ethernet12",
+                        "fec": "auto"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_SUPPORTED_SPEEDS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "supported_speeds": "10000,25000,40000,100000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_SUPPORTED_FECS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "supported_fecs": "rs,fc,none"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_SUPPORTED_FECS_NA_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "supported_fecs": "N/A"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_HOST_TX_READY_TRUE_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "host_tx_ready": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_HOST_TX_READY_FALSE_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "host_tx_ready": "false"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_LINK_TRAINING_STATUS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "link_training_status": "trained"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "link_training_status": "not_trained"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_RMT_ADV_SPEEDS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "rmt_adv_speeds": "100000,40000,25000"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_NETDEV_OPER_STATUS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "netdev_oper_status": "up"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "netdev_oper_status": "down"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_PHY_CTRL_UNRELIABLE_LOS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "phy_ctrl_unreliable_los": "true"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "phy_ctrl_unreliable_los": "false"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_VALID_MULTIPLE_PORTS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "up",
+                        "state": "ok",
+                        "speed": "100000",
+                        "supported_speeds": "10000,25000,40000,100000"
+                    },
+                    {
+                        "ifname": "Ethernet4",
+                        "oper_status": "down",
+                        "state": "ok",
+                        "speed": "25000",
+                        "supported_speeds": "10000,25000"
+                    },
+                    {
+                        "ifname": "Ethernet8",
+                        "oper_status": "up",
+                        "state": "ok",
+                        "speed": "400000",
+                        "fec": "rs"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_OPER_STATUS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "oper_status": "invalid"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_STATE_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "state": "invalid"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_ADMIN_STATUS_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "admin_status": "invalid"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_SPEED_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "speed": "invalid_speed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_MTU_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "mtu": 65535
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_FEC_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "fec": "invalid_fec"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_STATE_INVALID_HOST_TX_READY_TEST": {
+        "sonic-port-state:sonic-port-state": {
+            "sonic-port-state:PORT_TABLE": {
+                "PORT_TABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "host_tx_ready": "invalid"
+                    }
+                ]
+            }
+        }
+    }
+}
+
