@@ -10,12 +10,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-{% if docker_syncd_brcm_legacy_debs.strip() -%}
+{% if docker_syncd_brcm_legacy_th_debs.strip() -%}
 # Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_syncd_brcm_legacy_debs.split(' '), "/debs/") }}
+{{ copy_files("debs/", docker_syncd_brcm_legacy_th_debs.split(' '), "/debs/") }}
 
 # Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_syncd_brcm_legacy_debs.split(' ')) }}
+{{ install_debian_packages(docker_syncd_brcm_legacy_th_debs.split(' ')) }}
 {%- endif %}
 
 ## TODO: add kmod into Depends
