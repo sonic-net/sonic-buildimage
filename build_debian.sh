@@ -324,6 +324,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     isc-dhcp-client         \
     sudo                    \
     vim                     \
+    bash-completion         \
     tcpdump                 \
     dbus                    \
     openssh-server          \
@@ -383,6 +384,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
+    tzdata-legacy           \
     nvme-cli
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd

@@ -62,6 +62,8 @@ COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
 
+ARG image_version
+
 RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 ## Make apt-get non-interactive
