@@ -19,15 +19,22 @@ configure ports eth0 lldp portidsubtype local {{ mgmt_if.port_name }}
 configure system ip management pattern {{ mgmt_if.ipv4 }}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
-{# Configure port ID subtype for all front-panel ports at startup.
+{# Configure port ID subtype for front-panel ports at startup.
    Without this, lldpd uses MAC address as default Port ID. When lldpd
    auto-resumes after config processing, the first LLDP frame would carry
    MAC-based Port IDs. Peers see a transient MSAP change when lldpmgrd
-   later reconfigures portidsubtype, causing unnecessary neighbor flaps. #}
+   later reconfigures portidsubtype, causing unnecessary neighbor flaps.
+   Special ports (inband/recirculation/backplane) are excluded to match
+   lldpmgrd behavior which skips these port types. #}
 {% if PORT %}
-{% for port_name in PORT %}
-{% if PORT[port_name].alias is defined and PORT[port_name].alias %}
-configure ports {{ port_name }} lldp portidsubtype local {{ PORT[port_name].alias }}
+{% for port_name in PORT|sort %}
+{% if not port_name.startswith('Ethernet-IB') and not port_name.startswith('Ethernet-Rec') and not port_name.startswith('Ethernet-BP') %}
+{% set port_alias = PORT[port_name].alias|default('') %}
+{% if port_alias %}
+configure ports {{ port_name }} lldp portidsubtype local {{ port_alias }}
+{% else %}
+configure ports {{ port_name }} lldp portidsubtype local {{ port_name }}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}
