@@ -27,7 +27,6 @@ link_namespace() {
 }
 {%- endif %}
 
-
 {%- if docker_container_name == "pmon" %}
 get_pmon_device_mounts() {
     local devregex='i2c-[0-9]+|cpld[0-9]|fpga[0-9]|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
