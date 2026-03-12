@@ -1,0 +1,25 @@
+{
+    "chassis": {
+        "M2-W6510-48GT4V": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6510-48gt4v-r0/latest_firmware/cpu_cpld_upgrade_header.vme",
+                    "version": "02231020"
+                },
+                "CTRL_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6510-48gt4v-r0/latest_firmware/ctrl_cpld_upgrade_header.vme",
+                    "version": "03231020"
+                },
+                "PORT_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6510-48gt4v-r0/latest_firmware/port_cpld_upgrade_header.vme",
+                    "version": "00230823"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6510-48gt4v-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "3BARZA415"
+                }
+            }
+        }
+    }
+}
+
