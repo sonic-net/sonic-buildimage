@@ -1,7 +1,7 @@
 [Unit]
 Description=Profiler container
 Requires=database.service
-Before=swss.service
+After=database.service swss.service syncd.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
