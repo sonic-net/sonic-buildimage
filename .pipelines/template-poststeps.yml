@@ -11,6 +11,7 @@ parameters:
       - marvell-prestera-armhf
       - marvell-prestera-arm64
       - cisco-8000
+      - cisco-8000-arm64
       - nvidia-bluefield
       - pensando
   - name: BRANCH_FOLDER
