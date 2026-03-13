@@ -342,31 +342,143 @@ def test_reconcile_enables_user_auth_and_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     # Set module-level flags directly (they're read inside reconcile)
     ss.GNMI_VERIFY_ENABLED = True
-    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
 
     # Precondition: empty DB
     assert config_db == {}
 
     ss.reconcile_config_db_once()
 
-    # user_auth must be set to 'cert'
-    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
-    # CNAME hash must exist with role=gnmi_show_readonly (default GNMI_CLIENT_ROLE)
-    cname_key = f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"
-    assert config_db.get(cname_key, {}).get("role") == "gnmi_show_readonly"
+    assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
+    # CNAME hash must exist with role=gnmi_show_readonly
+    assert config_db.get("GNMI_CLIENT_CERT|fake-infra-ca.test.example.com", {}).get("role") == "gnmi_show_readonly"
 
 
 def test_reconcile_disabled_removes_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     ss.GNMI_VERIFY_ENABLED = False
-    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
 
     # Seed an existing entry to be removed
-    config_db[f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"] = {"role": "gnmi_show_readonly"}
+    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
 
     ss.reconcile_config_db_once()
 
-    assert f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}" not in config_db
+    assert "GNMI_CLIENT_CERT|fake-infra-ca.test.example.com" not in config_db
+
+def test_reconcile_multiple_cnames(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": "admin"},
+        {"cname": "fake-server.test.example.com", "role": '["gnmi_show_readonly","admin"]'},
+    ]
+    assert config_db == {}
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == "admin"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-server.test.example.com", {}).get("role") == '["gnmi_show_readonly","admin"]'
+
+# ─────────────────────────── Tests for _parse_client_certs ───────────────────────────
+
+class TestParseClientCerts:
+    """Tests for _parse_client_certs() env-var parsing."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_module(self, monkeypatch):
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        self.monkeypatch = monkeypatch
+
+    def _import_with_env(self, env_vars):
+        """Set env vars, re-import systemd_stub, and return the parsed GNMI_CLIENT_CERTS."""
+        for k, v in env_vars.items():
+            if v is None:
+                self.monkeypatch.delenv(k, raising=False)
+            else:
+                self.monkeypatch.setenv(k, v)
+        # Clear stale env vars not in the dict
+        for k in ("GNMI_CLIENT_CERTS", "TELEMETRY_CLIENT_CNAME", "GNMI_CLIENT_ROLE"):
+            if k not in env_vars:
+                self.monkeypatch.delenv(k, raising=False)
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        ss = importlib.import_module("systemd_stub")
+        return ss.GNMI_CLIENT_CERTS
+
+    def test_valid_json_array(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "client.gbl", "role": "admin"}]'
+        })
+        assert certs == [{"cname": "client.gbl", "role": "admin"}]
+
+    def test_valid_json_multiple_entries(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "a.gbl", "role": "admin"}, {"cname": "b.gbl", "role": "readonly"}]'
+        })
+        assert len(certs) == 2
+        assert certs[0] == {"cname": "a.gbl", "role": "admin"}
+        assert certs[1] == {"cname": "b.gbl", "role": "readonly"}
+
+    def test_non_array_json_falls_back_to_legacy(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '{"cname": "c.gbl", "role": "admin"}',
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+            "GNMI_CLIENT_ROLE": "readonly",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "readonly"}]
+
+    def test_invalid_json_falls_back_to_legacy(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": "not-json!",
+            "TELEMETRY_CLIENT_CNAME": "fallback.gbl",
+        })
+        assert certs == [{"cname": "fallback.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_not_dict_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '["not-a-dict"]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_missing_role_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "x.gbl"}]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_empty_cname_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "  ", "role": "admin"}]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_legacy_single_entry(self):
+        certs = self._import_with_env({
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+            "GNMI_CLIENT_ROLE": "admin",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "admin"}]
+
+    def test_legacy_default_role(self):
+        certs = self._import_with_env({
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_no_env_returns_empty(self):
+        certs = self._import_with_env({})
+        assert certs == []
+
+    def test_whitespace_stripped(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": " client.gbl ", "role": " admin "}]'
+        })
+        assert certs == [{"cname": "client.gbl", "role": "admin"}]
 
 
 # ─────────────────────────── Tests for _get_branch_name ───────────────────────────
