@@ -32,7 +32,6 @@ $(DOCKER_OTEL)_RUN_OPT += -v /:/mnt/host:ro
 $(DOCKER_OTEL)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 $(DOCKER_OTEL)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
 $(DOCKER_OTEL)_RUN_OPT += --pid=host
-$(DOCKER_OTEL)_RUN_OPT += --privileged
 $(DOCKER_OTEL)_RUN_OPT += --userns=host
 
 $(DOCKER_OTEL)_BASE_IMAGE_FILES += monit_otel:/etc/monit/conf.d
