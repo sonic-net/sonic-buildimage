@@ -45,6 +45,10 @@ $(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
 # For sonic binary image downloads to persistent file system.
 $(DOCKER_GNMI)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
+# Read-only mount of host machine /etc/passwd to container
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/passwd:/etc/passwd:ro
+# Read-only mount of host /etc/group to container
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/group:/etc/group:ro
 # For host command execution in gnoi.
 $(DOCKER_GNMI)_RUN_OPT += --pid=host
 # Container hardening: Replace --privileged with specific capabilities
