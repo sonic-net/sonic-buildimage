@@ -620,7 +620,12 @@ start() {
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
+{%- if docker_container_name == "sonic-redfish" %}
+        # sonic-redfish uses bridge networking with port mapping (-p 443:18080)
         NET="bridge"
+{%- else %}
+        NET="host"
+{%- endif %}
     else
         NET="host"
     fi
