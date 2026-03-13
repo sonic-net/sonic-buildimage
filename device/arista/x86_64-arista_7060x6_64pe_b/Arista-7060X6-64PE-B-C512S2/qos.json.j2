@@ -251,25 +251,17 @@
             {% endblock %}
         },
         "AZURE_LOSSY_DOWNLINK_Q4": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {% block azure_placeholder %}
+            "wred_green_enable": "false",
+            "wred_red_enable": "false",
+            "wred_yellow_enable": "false"
+            {% endblock %}
         },
         "AZURE_LOSSY_DOWNLINK_Q5": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {{ self.azure_placeholder() }}
         },
         "AZURE_LOSSY_DOWNLINK_Q6": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {{ self.azure_placeholder() }}
         },
         "AZURE_LOSSY_UPLINK_Q1": {
             {{ self.azure_lossy_q1() }}
@@ -281,25 +273,13 @@
             {{ self.azure_lossy_q3() }}
         },
         "AZURE_LOSSY_UPLINK_Q4": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {{ self.azure_placeholder() }}
         },
         "AZURE_LOSSY_UPLINK_Q5": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {{ self.azure_placeholder() }}
         },
         "AZURE_LOSSY_UPLINK_Q6": {
-            "ecn": "ecn_green",
-            "green_drop_probability": "0",
-            "green_max_threshold": "266338050",
-            "green_min_threshold": "266338050",
-            "wred_green_enable": "false"
+            {{ self.azure_placeholder() }}
         }
     },
 {%- endmacro -%}
