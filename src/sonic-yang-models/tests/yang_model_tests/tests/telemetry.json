@@ -15,10 +15,17 @@
         "desc": "TABLE_WITH_INCORRECT_SAVE_ON_SET failure",
         "eStrKey": "InvalidValue"
     },
-    "TELEMETRY_TABLE_WITH_VALID_CONFIG": {
-        "desc": "TABLE WITH VALID CONFIG."
-    },
     "TELEMETRY_TABLE_WITH_VALID_USER_AUTH": {
         "desc": "TABLE WITH VALID USER_AUTH."
+    },
+    "TELEMETRY_TABLE_WITH_INCORRECT_VRF": {
+        "desc": "TABLE_WITH_INCORRECT_VRF failure",
+        "eStrKey": "InvalidValue"
+    },
+    "TELEMETRY_TABLE_WITH_VALID_CONFIG_MGMT_VRF": {
+        "desc": "TABLE WITH VALID CONFIG MGMT VRF."
+    },
+    "TELEMETRY_TABLE_WITH_VALID_CONFIG_NON_MGMT_VRF": {
+        "desc": "TABLE WITH VALID CONFIG NON MGMT VRF."
     }
 }
