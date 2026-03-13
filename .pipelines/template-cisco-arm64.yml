@@ -62,10 +62,14 @@ jobs:
       env:
         PAT: $(TOKEN)
     - script: |
-        pushd .
-        cd platform/cisco-8000/artifactory/cisco-wb-bsp/
-        ln -s bookworm trixie 
-        popd
+        set -ex
+        for dir in platform/cisco-8000/artifactory/*/bookworm; do
+          parent=$(dirname "$dir")
+          if [ ! -e "$parent/trixie" ]; then
+            echo "Creating trixie symlink in $parent"
+            ln -s bookworm "$parent/trixie"
+          fi
+        done
       displayName: 'Create symbol link for trixie'
     - script: |
         rm platform/cisco-8000/platform-setup/.checker
