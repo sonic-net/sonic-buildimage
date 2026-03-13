@@ -933,8 +933,8 @@
           </a:DeviceProperty>
           <a:DeviceProperty>
             <a:Name>LinkTraining</a:Name>
-              <a:Reference i:nil="true"/>
-              <a:Value>True</a:Value>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
           </a:DeviceProperty>
         </a:Properties>
         <a:Key>Servers1:eth0;switch-t0:fortyGigE0/16</a:Key>
