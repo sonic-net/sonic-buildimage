@@ -33,7 +33,6 @@ COPY ["start.sh", "profiler.sh", "/usr/bin/"]
 RUN chmod +x /usr/bin/start.sh /usr/bin/profiler.sh
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
-COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
 ARG image_version
