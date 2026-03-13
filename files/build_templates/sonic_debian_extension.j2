@@ -200,12 +200,7 @@ install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 # Install some dependencies for pyangbind
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
-# For sonic-config-engine Python 3 package
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# Then immediately uninstall enum34, as enum34 should not be installed for Python >= 3.4, as it causes a
-# conflict with the new 'enum' module in the standard library
-# https://github.com/robshakir/pyangbind/issues/232
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.2
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
 
 # Install SONiC config engine Python 3 package
@@ -709,6 +704,10 @@ sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.netdev
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-npu.service
 #echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
+for i in {0..7}; do
+    sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu${i}.service
+done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf

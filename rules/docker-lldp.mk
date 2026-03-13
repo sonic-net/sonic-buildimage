@@ -22,15 +22,19 @@ $(DOCKER_LLDP)_WARM_SHUTDOWN_BEFORE = swss
 $(DOCKER_LLDP)_FAST_SHUTDOWN_BEFORE = swss
 
 SONIC_DOCKER_IMAGES += $(DOCKER_LLDP)
+ifeq ($(INCLUDE_LLDP), y)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_LLDP)
+endif
 
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_LLDP_DBG)
+ifeq ($(INCLUDE_LLDP), y)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_LLDP_DBG)
+endif
 
 $(DOCKER_LLDP)_CONTAINER_NAME = lldp
 $(DOCKER_LLDP)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_LLDP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_LLDP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+$(DOCKER_LLDP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_LLDP)_BASE_IMAGE_FILES += lldpctl:/usr/bin/lldpctl
 $(DOCKER_LLDP)_BASE_IMAGE_FILES += lldpcli:/usr/bin/lldpcli

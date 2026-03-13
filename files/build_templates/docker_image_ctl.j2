@@ -472,6 +472,12 @@ start() {
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
+        HWSKU_MOUNT_MODE="ro"
+        {%- if docker_container_name == "swss" %}
+        if [ -f "$MOUNTPATH/hwsku-init" ]; then
+            HWSKU_MOUNT_MODE="rw"
+        fi
+        {%- endif %}
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
@@ -762,7 +768,7 @@ start() {
         $DB_OPT \
 {%- else %}
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
-        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
+        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
