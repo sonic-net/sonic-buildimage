@@ -99,22 +99,28 @@ RUN apt-get update          \
         wireshark-common    \
         freeradius          \
         quilt               \
-    {% if CONFIGURED_ARCH == "armhf" %}
-    && GRPCURL_ARCH=linux_armv6 \
-    {% elif CONFIGURED_ARCH == "arm64" %}
-    && GRPCURL_ARCH=linux_arm64 \
-    {% else %}
-    && GRPCURL_ARCH=linux_x86_64 \
-    {% endif %}
-    && GRPCURL_VERSION=1.9.3 && \
-    curl -L "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz" \
-      -o /tmp/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
-    cd /tmp && \
-    tar xvf grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
-    mv grpcurl /usr/local/bin/grpcurl && \
-    chmod +x /usr/local/bin/grpcurl && \
-    rm -f /tmp/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
-    rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go toolchain for building grpcurl and gnoic from source
+# to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
+{% if CONFIGURED_ARCH == "armhf" %}
+RUN GO_ARCH=armv6l \
+{% elif CONFIGURED_ARCH == "arm64" %}
+RUN GO_ARCH=arm64 \
+{% else %}
+RUN GO_ARCH=amd64 \
+{% endif %}
+    && GO_VERSION=1.25.8 \
+    && curl -L "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz \
+    && tar -C /usr/local -xzf /tmp/go.tar.gz \
+    && rm /tmp/go.tar.gz
+
+ENV PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
+
+# Build grpcurl from source with patched Go (GO-2026-4337)
+RUN go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.3 \
+    && mv "$(go env GOPATH)/bin/grpcurl" /usr/local/bin/grpcurl \
+    && chmod +x /usr/local/bin/grpcurl
 # Security fixes: upgrade vulnerable system packages (S360 scan remediation)
 RUN apt-get update && apt-get install -y --only-upgrade \
         telnet               \
@@ -299,11 +305,11 @@ RUN pip3 install Flask   \
     && pip3 install jinja2
 
 # gnxi/gnmi_cli_py ships pre-generated _pb2.py stubs; they are
-# Pin to 6.31.1 to match grpcio-tools keep a known-good version.
+# Pin to 6.33.5 to match grpcio-tools keep a known-good version.
 RUN set -e; \
     . /etc/os-release; \
     if [ "$VERSION_CODENAME" = "bookworm" ]; then \
-        pip install protobuf==6.31.1; \
+        pip install protobuf==6.33.5; \
     else \
         pip install protobuf; \
     fi
@@ -348,7 +354,7 @@ RUN cd gnxi \
     && quilt push -a \
     && cd gnmi_cli_py \
     && pip install -r requirements.txt \
-    && pip3 install protobuf==6.31.1 --no-binary=protobuf
+    && pip3 install protobuf==6.33.5 --no-binary=protobuf
 {% else %}
 
 # Since gnxi were generated with proto 3.x we need to regenerate _pb2 with the new proto version
@@ -365,22 +371,17 @@ RUN cd gnxi \
 # Deactivating a virtualenv.
 # ENV PATH="$BACKUP_OF_PATH"
 
-# Install gnoic tool
-# Without specifying the version there is a failure
-# to determine the latest version automatically.
-#
-# root@a2014cb5bc54:~/gnoic# ./install.sh
-# Warning: Failed to verify the package: https://api.github.com/repos/karimra/gnoic/releases/latest, the version is not specified
-# Could not determine the latest release
-# Failed to install gnoic
-# For support, go to https://github.com/karimra/gnoic/issues
+# Build gnoic from source with patched Go (GO-2026-4337)
 RUN git clone https://github.com/karimra/gnoic.git \
     && cd gnoic \
     && git checkout 27bc5a6 \
-    && chmod +x install.sh \
-    && ./install.sh --version 0.2.1 \
+    && go build -o /usr/local/bin/gnoic . \
     && cd .. \
     && rm -rf gnoic
+
+# Remove Go toolchain to reduce image size
+RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
+ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 {% if PTF_ENV_PY_VER == "py3" %}
 # Install the python-saithrift into the virtual environment
