@@ -16,7 +16,7 @@
 #
 
 DOCKER_SYNCD_PLATFORM_CODE = bluefield
-include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(MFT) $(SDN_APPL) $(DPU_SAI) $(MLNX_IPROUTE2)
 
