@@ -1766,7 +1766,7 @@ instead of data network.
 ```
 ### MUX_CABLE
 
-The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type`, `soc_ipv4` and `neighbor_mode` objects are optional.
+The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type`, `soc_ipv4`, `neighbor_mode` and `switching_mode` objects are optional.
 
 ```
 {
@@ -1774,6 +1774,7 @@ The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_
         "Ethernet4": {
             "cable_type": "active-active",
             "neighbor_mode": "prefix-route",
+            "switching_mode": "hardware",
             "server_ipv4": "192.168.0.2/32",
             "server_ipv6": "fc02:1000::30/128",
             "soc_ipv4": "192.168.0.3/32",
