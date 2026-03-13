@@ -501,6 +501,45 @@
             },
             {
                 "name": "NVMe"
+            },
+            {
+                "name": "DPM1"
+            },
+            {
+                "name": "DPM2"
+            },
+            {
+                "name": "DPM3"
+            },
+            {
+                "name": "DPM4"
+            },
+            {
+                "name": "DCDC2"
+            },
+            {
+                "name": "DCDC3"
+            },
+            {
+                "name": "DCDC4"
+            },
+            {
+                "name": "DCDC5"
+            },
+            {
+                "name": "DCDC6"
+            },
+            {
+                "name": "DCDC7"
+            },
+            {
+                "name": "DCDC8"
+            },
+            {
+                "name": "DCDC9"
+            },
+            {
+                "name": "DCDC10"
             }
         ],
         "fans": [

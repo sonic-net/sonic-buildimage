@@ -81,7 +81,9 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     address {{ prefix | ip }}
     netmask {{ prefix | netmask if prefix | ipv4 else prefix | prefixlen }}
     network {{ prefix | network }}
+{% if prefix | broadcast %}
     broadcast {{ prefix | broadcast }}
+{% endif %}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
 {%     set vrf_table = '5000' %}
