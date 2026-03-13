@@ -22,15 +22,19 @@ $(DOCKER_SNMP)_VERSION = 1.0.0
 $(DOCKER_SNMP)_PACKAGE_NAME = snmp
 
 SONIC_DOCKER_IMAGES += $(DOCKER_SNMP)
+ifeq ($(INCLUDE_SNMP), y)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SNMP)
+endif
 
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_SNMP_DBG)
+ifeq ($(INCLUDE_SNMP), y)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SNMP_DBG)
+endif
 
 $(DOCKER_SNMP)_CONTAINER_NAME = snmp
 $(DOCKER_SNMP)_RUN_OPT += -t
 $(DOCKER_SNMP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SNMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+$(DOCKER_SNMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_SNMP)_BASE_IMAGE_FILES += monit_snmp:/etc/monit/conf.d
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SNMP)
