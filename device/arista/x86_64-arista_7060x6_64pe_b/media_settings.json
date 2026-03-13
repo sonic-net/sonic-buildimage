@@ -1,8 +1,8 @@
 {
     "PORT_MEDIA_SETTINGS": {
         "1": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -237,8 +237,8 @@
             }
         },
         "2": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -473,8 +473,8 @@
             }
         },
         "3": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -709,8 +709,8 @@
             }
         },
         "4": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -945,8 +945,8 @@
             }
         },
         "5": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -1181,8 +1181,8 @@
             }
         },
         "6": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -1417,8 +1417,8 @@
             }
         },
         "7": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffd",
                         "lane1": "0xfffffffd",
@@ -1653,8 +1653,8 @@
             }
         },
         "8": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffd",
                         "lane1": "0xfffffffd",
@@ -1889,8 +1889,8 @@
             }
         },
         "9": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -2125,8 +2125,8 @@
             }
         },
         "10": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -2361,8 +2361,8 @@
             }
         },
         "11": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -2597,8 +2597,8 @@
             }
         },
         "12": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -2833,8 +2833,8 @@
             }
         },
         "13": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -3069,8 +3069,8 @@
             }
         },
         "14": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -3305,8 +3305,8 @@
             }
         },
         "15": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -3541,8 +3541,8 @@
             }
         },
         "16": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -3777,8 +3777,8 @@
             }
         },
         "17": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -4013,8 +4013,8 @@
             }
         },
         "18": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -4249,8 +4249,8 @@
             }
         },
         "19": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -4485,8 +4485,8 @@
             }
         },
         "20": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -4721,8 +4721,8 @@
             }
         },
         "21": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -4957,8 +4957,8 @@
             }
         },
         "22": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -5193,8 +5193,8 @@
             }
         },
         "23": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -5429,8 +5429,8 @@
             }
         },
         "24": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -5665,8 +5665,8 @@
             }
         },
         "25": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -5901,8 +5901,8 @@
             }
         },
         "26": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -6137,8 +6137,8 @@
             }
         },
         "27": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -6373,8 +6373,8 @@
             }
         },
         "28": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -6609,8 +6609,8 @@
             }
         },
         "29": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -6845,8 +6845,8 @@
             }
         },
         "30": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -7081,8 +7081,8 @@
             }
         },
         "31": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -7317,8 +7317,8 @@
             }
         },
         "32": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -7553,8 +7553,8 @@
             }
         },
         "33": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -7789,8 +7789,8 @@
             }
         },
         "34": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -8025,8 +8025,8 @@
             }
         },
         "35": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -8261,8 +8261,8 @@
             }
         },
         "36": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -8497,8 +8497,8 @@
             }
         },
         "37": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -8733,8 +8733,8 @@
             }
         },
         "38": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -8969,8 +8969,8 @@
             }
         },
         "39": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -9205,8 +9205,8 @@
             }
         },
         "40": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -9441,8 +9441,8 @@
             }
         },
         "41": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -9677,8 +9677,8 @@
             }
         },
         "42": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -9913,8 +9913,8 @@
             }
         },
         "43": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -10149,8 +10149,8 @@
             }
         },
         "44": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -10385,8 +10385,8 @@
             }
         },
         "45": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -10621,8 +10621,8 @@
             }
         },
         "46": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -10857,8 +10857,8 @@
             }
         },
         "47": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -11093,8 +11093,8 @@
             }
         },
         "48": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -11329,8 +11329,8 @@
             }
         },
         "49": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -11565,8 +11565,8 @@
             }
         },
         "50": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -11801,8 +11801,8 @@
             }
         },
         "51": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -12037,8 +12037,8 @@
             }
         },
         "52": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -12273,8 +12273,8 @@
             }
         },
         "53": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -12509,8 +12509,8 @@
             }
         },
         "54": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -12745,8 +12745,8 @@
             }
         },
         "55": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -12981,8 +12981,8 @@
             }
         },
         "56": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -13217,8 +13217,8 @@
             }
         },
         "57": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -13453,8 +13453,8 @@
             }
         },
         "58": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -13689,8 +13689,8 @@
             }
         },
         "59": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -13925,8 +13925,8 @@
             }
         },
         "60": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xfffffffe",
                         "lane1": "0xfffffffe",
@@ -14161,8 +14161,8 @@
             }
         },
         "61": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -14397,8 +14397,8 @@
             }
         },
         "62": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -14633,8 +14633,8 @@
             }
         },
         "63": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
@@ -14869,8 +14869,8 @@
             }
         },
         "64": {
-            "EOPTOLINK-(EO138HGPCT\\d{2}SL1)": {
-                "speed:100GAUI-1-S|800G.*": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EO138HGPCT\\d{2}CSL1)": {
+                "speed:100GAUI-1-S|400GAUI-4-S|800G.*": {
                     "pre3": {
                         "lane0": "0xffffffff",
                         "lane1": "0xffffffff",
