@@ -49,6 +49,13 @@ jobs:
       displayName: 'Export cisco release version'
     - script: |
         set -ex
+        cd platform/cisco-8000
+        git fetch origin $(cisco.ref)
+        git checkout $(cisco.ref)
+        git submodule update --init --recursive
+      displayName: 'Checkout Cisco Arctos platform ref'
+    - script: |
+        set -ex
         if ! gh --version; then
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
