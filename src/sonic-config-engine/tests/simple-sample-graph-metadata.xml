@@ -263,6 +263,11 @@
      <a:Reference i:nil="true"/>
      <a:Value>downstream_subrole_y</a:Value>
     </a:DeviceProperty>
+    <a:DeviceProperty>
+     <a:Name>ZebraNexthop</a:Name>
+     <a:Reference i:nil="true"/>
+     <a:Value>enabled</a:Value>
+    </a:DeviceProperty>
   </a:Properties>
   </a:DeviceMetadata>
  </Devices>
