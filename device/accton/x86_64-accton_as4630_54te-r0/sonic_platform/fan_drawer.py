@@ -10,7 +10,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-FANS_PER_FANTRAY = 2
+FANS_PER_FANTRAY = 1
 
 
 class FanDrawer(FanDrawerBase):
@@ -88,3 +88,25 @@ class FanDrawer(FanDrawerBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the fan module status LED
+        Args:
+            color: A string representing the color with which to set the
+                   fan module status LED
+        Returns:
+            bool: True if status LED state is set successfully, False if not
+        """
+        return False # Not supported
+
+    def get_status_led(self):
+        """
+        Gets the state of the fan status LED
+        Returns:
+            A string, one of the predefined STATUS_LED_COLOR_* strings above
+        """
+        return {
+            True: self.STATUS_LED_COLOR_GREEN,
+            False: self.STATUS_LED_COLOR_OFF
+        }.get(self.get_status(), self.STATUS_LED_COLOR_OFF)

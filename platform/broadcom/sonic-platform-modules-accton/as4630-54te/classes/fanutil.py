@@ -21,9 +21,12 @@
 
 try:
     import logging
+    import subprocess
+    from sonic_platform.helper import APIHelper
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
+TARGET_SPEED_PATH = "/tmp/fan_target_speed"
 
 class FanUtil(object):
     """Platform-specific FanUtil class"""
@@ -182,6 +185,11 @@ class FanUtil(object):
 
         fan_file.write(str(val))
         fan_file.close()
+
+        # Update set_fan_speed to host and pmon
+        APIHelper.write_txt_file(self, TARGET_SPEED_PATH, int(val))
+        subprocess.getstatusoutput("docker exec pmon bash -c 'echo {} > {}'".format(val, TARGET_SPEED_PATH))
+
         return True
 
     def get_fan_speed(self, fan_num):
