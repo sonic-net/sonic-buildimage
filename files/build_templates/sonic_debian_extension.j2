@@ -206,12 +206,7 @@ install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 # Install some dependencies for pyangbind
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
-# For sonic-config-engine Python 3 package
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# Then immediately uninstall enum34, as enum34 should not be installed for Python >= 3.4, as it causes a
-# conflict with the new 'enum' module in the standard library
-# https://github.com/robshakir/pyangbind/issues/232
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.2
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyangbind==0.8.7
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 uninstall -y enum34
 
 # Install SONiC config engine Python 3 package
@@ -250,8 +245,8 @@ install_deb_package $debs_path/sonic-utilities-data_*.deb
 # Install customized bash version to patch bash plugin support.
 install_deb_package $debs_path/bash_*.deb
 
-# sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
-# in bash.bashrc, so we copy a version of the file with it enabled here.
+# Bash completion is disabled by default in bash.bashrc, so we copy a version
+# of the file with it enabled here.
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bashrc $FILESYSTEM_ROOT/etc/
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bash_logout $FILESYSTEM_ROOT/etc/
 
@@ -566,7 +561,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
@@ -728,6 +723,10 @@ done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
+# https://github.com/systemd/systemd/issues/29034
+sudo sed -i 's/#ManageForeignNextHops=yes/ManageForeignNextHops=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
@@ -1290,6 +1289,42 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
+
+#############################################################################
+# PLATFORM-SPECIFIC SERVICE FILTERING
+# This section MUST remain at the end of the file to ensure all services
+# have been added to GENERATED_SERVICE_FILE before filtering.
+# DO NOT add service registrations (tee -a $GENERATED_SERVICE_FILE) after this point!
+#############################################################################
+
+# Aspeed BMC platform: Filter services for BMC use case
+if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+    # Show original service count
+    ORIGINAL_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE")
+
+    # Use filter script to remove unwanted services and add BMC services
+    sudo cp $BUILD_SCRIPTS_DIR/aspeed_bmc_filter_services.py $FILESYSTEM_ROOT/tmp/
+    sudo chmod a+x $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+
+    # Filter the generated services and mask excluded services
+    sudo python3 $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py \
+        $GENERATED_SERVICE_FILE \
+        $GENERATED_SERVICE_FILE.filtered \
+        $FILESYSTEM_ROOT
+
+    # Show filtered service count
+    FILTERED_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE.filtered")
+
+    # Replace with filtered version
+    sudo mv $GENERATED_SERVICE_FILE.filtered $GENERATED_SERVICE_FILE
+
+    # Cleanup
+    sudo rm -f $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+fi
+
+#############################################################################
+# END OF FILE - Platform-specific service filtering complete
+#############################################################################
 
 
 ## Copy over  set-vrf-strict-mode.service

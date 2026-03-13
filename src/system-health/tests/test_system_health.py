@@ -361,7 +361,7 @@ def test_service_checker_check_by_monit(mock_run):
 @patch('health_checker.utils.run_command')
 @patch('swsscommon.swsscommon.ConfigDBConnector')
 def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_client):
-    """Test that service checker recognizes Kubernetes-managed containers by labels"""
+    """Test that service checker skips Kubernetes-managed containers (namespace=sonic)"""
     setup()
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
@@ -398,7 +398,7 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
         'io.kubernetes.container.name': 'restapi'
     }
     
-    # Mock POD container (should be ignored)
+    # Mock POD container (should also be skipped)
     mock_pod_container = MagicMock()
     mock_pod_container.name = 'k8s_POD_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
     mock_pod_container.labels = {
@@ -418,13 +418,13 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     config = Config()
     checker.check(config)
     
-    # Verify k8s containers are recognized by their label names
+    # Verify all K8s containers (namespace=sonic) are excluded from running containers
     running_containers = checker.get_current_running_containers()
-    assert 'snmp' in running_containers
-    assert 'restapi' in running_containers
+    assert 'snmp' not in running_containers
+    assert 'restapi' not in running_containers
     assert 'POD' not in running_containers
     
-    # Verify k8s containers are NOT added to critical processes (k8s has its own health checks)
+    # Verify k8s containers are NOT added to critical processes
     assert 'snmp' not in checker.container_critical_processes
     assert 'restapi' not in checker.container_critical_processes
 
@@ -482,14 +482,15 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     config = Config()
     checker.check(config)
     
-    # Verify both types of containers are recognized
+    # Verify regular Docker container is in running containers
     running_containers = checker.get_current_running_containers()
     assert 'swss' in running_containers
-    assert 'database' in running_containers
+    # K8s container (namespace=sonic) is skipped from running containers
+    assert 'database' not in running_containers
     
     # Verify only regular Docker containers are monitored for critical processes
     assert 'swss' in checker.container_critical_processes
-    assert 'database' not in checker.container_critical_processes  # k8s container, not monitored
+    assert 'database' not in checker.container_critical_processes  # k8s container, skipped entirely
 
 
 def test_hardware_checker():
@@ -1103,16 +1104,16 @@ def test_update_system_status():
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
     assert result == "UP"
 
-from sonic_py_common.task_base import ProcessTaskBase
-import multiprocessing
-mpmgr = multiprocessing.Manager()
+from sonic_py_common.task_base import ThreadTaskBase
+import threading
+import queue
 
-myQ = mpmgr.Queue()
+myQ = queue.Queue()
 def test_monitor_statedb_task():
     sysmon = MonitorStateDbTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -1120,7 +1121,7 @@ def test_monitor_sysbus_task():
     sysmon = MonitorSystemBusTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -1128,7 +1129,7 @@ def test_monitor_sysbus_task():
 def test_system_service():
     sysmon = Sysmonitor()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 

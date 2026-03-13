@@ -148,7 +148,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         chrpath \
 # For frr build
         libc-ares-dev \
-        libsnmp-dev \
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
@@ -452,7 +451,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pciutils \
         dh-dkms \
         rpm2cpio \
-        libsnmp-dev \
         libpopt-dev \
         libfuse-dev \
 {%- if CONFIGURED_ARCH == "arm64" %}
@@ -504,9 +502,11 @@ RUN eatmydata apt-get install -y \
 
 {%- if CONFIGURED_ARCH == "amd64" %}
 # Upgrade CMAKE version
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
-RUN chmod +x cmake-3.27.6-linux-x86_64.sh
-RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN wget -O cmake-3.27.6-linux-x86_64.sh https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh \
+ && echo "8c449dabb2b2563ec4e6d5e0fb0ae09e729680efab71527b59015131cea4a042  cmake-3.27.6-linux-x86_64.sh" | sha256sum -c - \
+ && chmod +x cmake-3.27.6-linux-x86_64.sh \
+ && sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr \
+ && rm cmake-3.27.6-linux-x86_64.sh
 RUN sudo apt-get update -y
 {%- endif %}
 
@@ -568,7 +568,9 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng
+# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
+RUN pip3 install jsonpath_ng!=1.8.0
 RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
@@ -768,9 +770,17 @@ RUN eatmydata apt install -y python-is-python3
 
 # Install Bazel build system (amd64 and arm64 architectures are supported using this method)
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
+{%- if CONFIGURED_ARCH == "amd64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64
+ARG bazelisk_sha256=22e7d3a188699982f661cf4687137ee52d1f24fec1ec893d91a6c4d791a75de8
+{%- elif CONFIGURED_ARCH == "arm64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64
+ARG bazelisk_sha256=8ded44b58a0d9425a4178af26cf17693feac3b87bdcfef0a2a0898fcd1afc9f2
+{%- endif %}
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
-ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
-RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} \
+ && echo "${bazelisk_sha256}  /usr/local/bin/bazel" | sha256sum -c - \
+ && chmod 755 /usr/local/bin/bazel
 {% endif -%}
 
 # Install Rust

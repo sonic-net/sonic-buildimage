@@ -25,7 +25,6 @@ RUN apt-get update &&   \
         dmidecode       \
         i2c-tools       \
         psmisc          \
-        python3-jsonschema \
         python3-netifaces \
         libpci3         \
         iputils-ping    \
@@ -109,6 +108,8 @@ RUN rm -f /usr/share/sonic/templates/docker_init.j2
 RUN chmod 755 /usr/bin/docker_init.sh
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

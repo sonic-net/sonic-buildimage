@@ -12,10 +12,6 @@ module sonic-events-swss {
         prefix stypes;
     }
 
-    import sonic-port {
-        prefix port;
-    }
-
     organization
         "SONiC";
 

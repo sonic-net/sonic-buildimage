@@ -1,5 +1,6 @@
 # docker image for docker-ptf-sai
 
+ifeq ($(INCLUDE_PTF),y)
 DOCKER_PTF_SAI = docker-ptf-sai.gz
 DOCKER_PTF_BASE = docker-ptf.gz
 $(DOCKER_PTF_SAI)_PATH = $(DOCKERS_PATH)/docker-ptf-sai
@@ -11,3 +12,4 @@ endif
 $(DOCKER_PTF_SAI)_LOAD_DOCKERS += $(DOCKER_PTF_BASE)
 SONIC_DOCKER_IMAGES += $(DOCKER_PTF_SAI)
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_PTF_SAI)
+endif

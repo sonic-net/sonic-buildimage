@@ -82,7 +82,7 @@ RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {
 RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
-RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.7
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
@@ -575,7 +575,9 @@ RUN eatmydata apt-get install -y golang-go \
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng pyyaml-include
+# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
+RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie
@@ -593,11 +595,8 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
-# For sonic config engine testing
-# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
-# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
-# https://github.com/robshakir/pyangbind/issues/232
-RUN pip3 install pyangbind==0.8.2
+
+RUN pip3 install pyangbind==0.8.7
 RUN pip3 uninstall -y enum34
 
 # For sonic-platform-common testing
@@ -640,7 +639,7 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 #RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Install docker engine 24 inside docker and enable experimental feature
+# Install docker engine 28 inside docker and enable experimental feature
 RUN apt-get update
 RUN eatmydata apt-get install -y \
            apt-transport-https \
@@ -652,15 +651,12 @@ RUN eatmydata apt-get install -y \
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
-# TODO(trixie) - Migrate to trixie docker packages
-#RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
-# Install docker packages from bookworm
-RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources
+RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
 {%- endif %}
 RUN apt-get update
-RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
+RUN eatmydata apt-get install -y docker-ce=5:28.5.2-1~debian.13~trixie docker-ce-cli=5:28.5.2-1~debian.13~trixie containerd.io=1.7.28-2~debian.13~trixie docker-buildx-plugin=0.26.1-1~debian.13~trixie docker-compose-plugin=2.39.1-1~debian.13~trixie
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
