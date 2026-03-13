@@ -53,6 +53,12 @@ if $msg startswith " otel" then {
     stop
 }
 
+## profiler rules
+if $msg startswith " profiler" then {
+    /var/log/profiler.log
+    stop
+}
+
 ## stpd rules
 if $programname contains "stp" then {
     if not ($msg contains "STP_SYSLOG") then {

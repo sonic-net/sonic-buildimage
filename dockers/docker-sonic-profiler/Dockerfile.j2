@@ -1,0 +1,47 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+RUN echo "deb http://archive.debian.org/debian buster main" >> /etc/apt/sources.list \
+ && echo "deb http://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list \
+ && apt-get update
+
+{% if docker_sonic_profiler_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sonic_profiler_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_profiler_debs.split(' ')) }}
+{%- endif %}
+
+# Install dependencies
+RUN apt-get install -y  \
+        libcurl4-gnutls-dev \
+        libxml2
+
+COPY ["start.sh", "profiler.sh", "/usr/bin/"]
+RUN chmod +x /usr/bin/start.sh /usr/bin/profiler.sh
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
