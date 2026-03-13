@@ -28,29 +28,29 @@ class Thermal(ThermalBase):
                          "/sys/bus/i2c/devices/3-0058/hwmon/",
                          "/sys/devices/virtual/thermal/thermal_zone1/",
                          "/sys/bus/i2c/devices/0-001b/hwmon/"]
+    THERMAL_NAME_LIST = [
+        "XFMR Ambient",
+        "DDR Ambient",
+        "System Ambient",
+        "PSU 1 Temp",
+        "PSU 2 Temp",
+        "CPU Temp",
+        "Dimm Temp",
+        "PoE Temp",
+        "MAC Temp",
+        "XCVR 1 Temp",
+        "XCVR 2 Temp",
+        "XCVR 3 Temp",
+        "XCVR 4 Temp",
+        "XCVR 5 Temp",
+        "XCVR 6 Temp"
+    ]
 
     def __init__(self, thermal_index):
         self.index = thermal_index
         if thermal_index >= 9:
             self.sfp_module = Sfp(49 + (thermal_index - 9), 'SFP')
 
-        # Add thermal name
-        self.THERMAL_NAME_LIST.append("XFMR Ambient")
-        self.THERMAL_NAME_LIST.append("DDR Ambient")
-        self.THERMAL_NAME_LIST.append("System Ambient")
-        self.THERMAL_NAME_LIST.append("PSU 1 Temp")
-        self.THERMAL_NAME_LIST.append("PSU 2 Temp")
-        self.THERMAL_NAME_LIST.append("CPU Temp")
-        self.THERMAL_NAME_LIST.append("Dimm Temp")
-        self.THERMAL_NAME_LIST.append("PoE Temp")
-        self.THERMAL_NAME_LIST.append("MAC Temp")
-
-        self.THERMAL_NAME_LIST.append("XCVR 1 Temp")
-        self.THERMAL_NAME_LIST.append("XCVR 2 Temp")
-        self.THERMAL_NAME_LIST.append("XCVR 3 Temp")
-        self.THERMAL_NAME_LIST.append("XCVR 4 Temp")
-        self.THERMAL_NAME_LIST.append("XCVR 5 Temp")
-        self.THERMAL_NAME_LIST.append("XCVR 6 Temp")
         ThermalBase.__init__(self)
         self.minimum_thermal = 150.0
         self.maximum_thermal = 0.0
@@ -78,8 +78,13 @@ class Thermal(ThermalBase):
         hwmon_dir = self.__search_hwmon_dir_name(self.SYSFS_THERMAL_DIR[self.index])
         temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], hwmon_dir, temp_file)
         raw_temp = self.__read_txt_file(temp_file_path)
-        temp = float(raw_temp)/1000
-        return "{:.3f}".format(temp)
+        if not raw_temp:
+            return None
+        try:
+            temp = float(raw_temp)/1000
+            return "{:.3f}".format(temp)
+        except (ValueError, TypeError):
+            return None
 
     def get_temperature(self):
         """
@@ -91,29 +96,48 @@ class Thermal(ThermalBase):
         if self.index < 5 or self.index == 6:
             temp_file = "temp1_input"
             if self.get_presence():
-                return float(self.__get_temp(temp_file))
+                val = self.__get_temp(temp_file)
+                return float(val) if val is not None else 0.0
         elif self.index == 5:
             temp_file = "temp"
             temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], temp_file)
             raw_temp = self.__read_txt_file(temp_file_path)
-            temp = float(raw_temp)/1000
-            return float("{:.3f}".format(temp))
+            if not raw_temp:
+                return 0.0
+            try:
+                temp = float(raw_temp)/1000
+                return float("{:.3f}".format(temp))
+            except (ValueError, TypeError):
+                return 0.0
         elif self.index == 7:
             raw_temp = self.__read_txt_file("/poe_temp")
-            temp = float(raw_temp)
-            return float("{:.3f}".format(temp))
+            if not raw_temp:
+                return 0.0
+            try:
+                temp = float(raw_temp)
+                return float("{:.3f}".format(temp))
+            except (ValueError, TypeError):
+                return 0.0
         elif self.index == 8:
             from swsscommon.swsscommon import DBConnector
             temp = 0
             try:
                 stateDB = DBConnector('STATE_DB', 0, True, '')
-                temp = int(stateDB.hget('ASIC_TEMPERATURE_INFO', 'temperature_0'))
+                val = stateDB.hget('ASIC_TEMPERATURE_INFO', 'maximum_temperature')
+                if val is None or int(float(val)) == 0:
+                    val = stateDB.hget('ASIC_TEMPERATURE_INFO', 'average_temperature')
+                
+                if val is not None:
+                    temp = float(val)
             except Exception as E:
                 print("get_temperature (MAC) failed, cause by {}".format(E))
             return float("{:.3f}".format(temp))
         else:
             if self.get_presence():
-                return float("{:.3f}".format(self.sfp_module.get_temperature()))
+                temp = self.sfp_module.get_temperature()
+                if temp is None:
+                    return 0.0
+                return float("{:.3f}".format(temp))
 
     def get_high_threshold(self):
         """
@@ -126,7 +150,8 @@ class Thermal(ThermalBase):
             return float("{:.3f}".format(80))
         elif self.index < 5:
             temp_file = "temp1_max"
-            return float(self.__get_temp(temp_file))
+            val = self.__get_temp(temp_file)
+            return float(val) if val is not None else 80.0
         elif self.index == 5:
             return float("{:.3f}".format(90))
         elif self.index == 7:
@@ -147,7 +172,8 @@ class Thermal(ThermalBase):
             return float("{:.3f}".format(82))
         elif self.index < 5:
             temp_file = "temp1_max"
-            return float(self.__get_temp(temp_file)) + 2
+            val = self.__get_temp(temp_file)
+            return (float(val) + 2) if val is not None else 82.0
         elif self.index == 5:
             return float("{:.3f}".format(92))
         elif self.index == 7:
@@ -166,10 +192,12 @@ class Thermal(ThermalBase):
 
         if self.index < 3:
             temp_file = "temp1_max"
-            return float(self.__get_temp(temp_file))
+            val = self.__get_temp(temp_file)
+            return float(val) if val is not None else 100.0
         elif self.index < 5:
             temp_file = "temp1_crit"
-            return float(self.__get_temp(temp_file))
+            val = self.__get_temp(temp_file)
+            return float(val) if val is not None else 110.0
         elif self.index == 5:
             return float("{:.3f}".format(95))
         elif self.index == 6:
