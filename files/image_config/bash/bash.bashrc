@@ -73,3 +73,6 @@ if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then
         exit
     fi
 fi
+
+# Aliases for redis-cli with correct database and port for each SONiC DB
+alias redis-appdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("APPL_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("APPL_DB")))')"
