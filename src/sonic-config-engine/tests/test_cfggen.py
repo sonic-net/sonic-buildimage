@@ -123,6 +123,16 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(output.strip(), 'downstream_subrole_y')
 
+    def test_minigraph_zebra_nexthop(self):
+        argument = ['-v', "DEVICE_METADATA['localhost']['zebra_nexthop']", '-m', self.sample_graph_metadata, '-p', self.port_config]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), 'enabled')
+
+    def test_minigraph_zebra_nexthop_null(self):
+        argument = ['-m', self.sample_graph_deployment_id, '-p', self.port_config, '-v', "DEVICE_METADATA['localhost']"]
+        output = self.run_script(argument)
+        self.assertNotIn('zebra_nexthop', output.strip())
+
     def test_print_data(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '--print-data']
         output = self.run_script(argument)
