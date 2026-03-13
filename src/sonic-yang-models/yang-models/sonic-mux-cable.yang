@@ -68,6 +68,15 @@ module sonic-mux-cable {
                     description "DualToR MUX neighbor mode.";
                 }
 
+                leaf switching_mode {
+                    type enumeration {
+                        enum hardware;
+                        enum software;
+                    }
+                    default software;
+                    description "DualToR MUX switching mode.";
+                }
+
                 leaf server_ipv4 {
                     type inet:ipv4-prefix;
 
