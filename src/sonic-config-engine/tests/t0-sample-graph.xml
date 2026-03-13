@@ -470,6 +470,13 @@
       </DeviceLinkBase>
       <DeviceLinkBase>
         <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>Servers1</EndDevice>
+        <EndPort>eth0</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/16</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
         <EndDevice>Servers100</EndDevice>
         <EndPort>eth0</EndPort>
         <StartDevice>switch-t0</StartDevice>
@@ -915,6 +922,22 @@
           </a:DeviceProperty>
         </a:Properties>
         <a:Key>ARISTA06T1:Ethernet1/34;switch-t0:fortyGigE0/8</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>False</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>LinkTraining</a:Name>
+              <a:Reference i:nil="true"/>
+              <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers1:eth0;switch-t0:fortyGigE0/16</a:Key>
       </a:LinkMetadata>
     </Link>
   </LinkMetadataDeclaration>

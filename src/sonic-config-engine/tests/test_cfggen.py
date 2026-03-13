@@ -224,14 +224,14 @@ class TestCfgGen(TestCase):
             utils.to_dict(output.strip().replace("Warning: Ignoring Control Plane ACL NTP_ACL without type\n", '')),
             utils.to_dict(
                 "{'NTP_ACL': {'services': ['NTP'], 'type': 'CTRLPLANE', 'policy_desc': 'NTP_ACL', 'stage': 'ingress'}, "
-                "'EVERFLOW': {'stage': 'ingress', 'type': 'MIRROR', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet100'], 'policy_desc': 'EVERFLOW'}, "
-                "'EVERFLOW_EGRESS': {'stage': 'egress', 'type': 'MIRROR', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet100'], 'policy_desc': 'EVERFLOW_EGRESS'}, "
+                "'EVERFLOW': {'stage': 'ingress', 'type': 'MIRROR', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet16', 'Ethernet100'], 'policy_desc': 'EVERFLOW'}, "
+                "'EVERFLOW_EGRESS': {'stage': 'egress', 'type': 'MIRROR', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet16', 'Ethernet100'], 'policy_desc': 'EVERFLOW_EGRESS'}, "
                 "'ROUTER_PROTECT': {'services': ['SSH', 'SNMP'], 'type': 'CTRLPLANE', 'policy_desc': 'ROUTER_PROTECT', 'stage': 'ingress'}, "
                 "'DATAACLINGRESS': {'stage': 'ingress', 'type': 'L3', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04'], 'policy_desc': 'DATAACLINGRESS'}, "
                 "'SNMP_ACL': {'services': ['SNMP'], 'type': 'CTRLPLANE', 'policy_desc': 'SNMP_ACL', 'stage': 'ingress'}, "
                 "'SSH_ACL': {'services': ['SSH'], 'type': 'CTRLPLANE', 'policy_desc': 'SSH_ACL', 'stage': 'ingress'}, "
                 "'DATAACLEGRESS': {'stage': 'egress', 'type': 'L3', 'ports': ['PortChannel01', 'PortChannel02', 'Ethernet100', 'PortChannel03'], 'policy_desc': 'DATAACLEGRESS'}, "
-                "'EVERFLOWV6': {'stage': 'ingress', 'type': 'MIRRORV6', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet100'], 'policy_desc': 'EVERFLOWV6'}}"
+                "'EVERFLOWV6': {'stage': 'ingress', 'type': 'MIRRORV6', 'ports': ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04', 'Ethernet4', 'Ethernet16', 'Ethernet100'], 'policy_desc': 'EVERFLOWV6'}}"
             )
         )
 
@@ -384,6 +384,7 @@ class TestCfgGen(TestCase):
                 "'Ethernet4': {'name': 'Servers0', 'port': 'eth0'}, "
                 "'Ethernet116': {'name': 'ARISTA02T1', 'port': 'Ethernet1/1'}, "
                 "'Ethernet100': {'name': 'Servers100', 'port': 'eth0'}, "
+                "'Ethernet16': {'name': 'Servers1', 'port': 'eth0'}, "
                 "'Ethernet112': {'name': 'ARISTA01T1', 'port': 'Ethernet1/1'}}")
         )
 
@@ -415,7 +416,7 @@ class TestCfgGen(TestCase):
                 "'Ethernet4': {'lanes': '25,26,27,28', 'description': 'Servers0:eth0', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/4', 'admin_status': 'up', 'autoneg': 'on', 'speed': '100000', 'fec': 'none'}, "
                 "'Ethernet8': {'lanes': '37,38,39,40', 'description': 'fortyGigE0/8', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/8', 'admin_status': 'up', 'autoneg': 'off', 'fec': 'none', 'speed': '40000'}, "
                 "'Ethernet12': {'lanes': '33,34,35,36', 'description': 'fortyGigE0/12', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/12', 'admin_status': 'up', 'speed': '40000'}, "
-                "'Ethernet16': {'lanes': '41,42,43,44', 'description': 'fortyGigE0/16', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/16', 'admin_status': 'up', 'speed': '40000'}, "
+                "'Ethernet16': {'lanes': '41,42,43,44', 'description': 'Servers1:eth0', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/16', 'admin_status': 'up', 'autoneg': 'off', 'link_training': 'on', 'speed': '40000'}, "
                 "'Ethernet20': {'lanes': '45,46,47,48', 'description': 'fortyGigE0/20', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/20', 'admin_status': 'up', 'speed': '40000'}, "
                 "'Ethernet24': {'lanes': '5,6,7,8', 'description': 'fortyGigE0/24', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/24', 'admin_status': 'up', 'speed': '40000'}, "
                 "'Ethernet28': {'lanes': '1,2,3,4', 'description': 'fortyGigE0/28', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/28', 'admin_status': 'up', 'speed': '40000'}, "
@@ -456,7 +457,7 @@ class TestCfgGen(TestCase):
                 "'Ethernet4': {'lanes': '25,26,27,28', 'description': 'Servers0:eth0', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/4', 'admin_status': 'up', 'autoneg': 'on', 'speed': '100000', 'fec': 'none'}, "
                 "'Ethernet8': {'lanes': '37,38,39,40', 'description': 'fortyGigE0/8', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/8', 'admin_status': 'up', 'autoneg': 'off', 'fec': 'none', 'speed': '40000'}, "
                 "'Ethernet12': {'lanes': '33,34,35,36', 'description': 'fortyGigE0/12', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/12', 'admin_status': 'up', 'autoneg': 'off', 'speed': '40000'}, "
-                "'Ethernet16': {'lanes': '41,42,43,44', 'description': 'fortyGigE0/16', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/16', 'admin_status': 'up', 'autoneg': 'off', 'speed': '40000'}, "
+                "'Ethernet16': {'lanes': '41,42,43,44', 'description': 'Servers1:eth0', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/16', 'admin_status': 'up', 'autoneg': 'off', 'link_training': 'on', 'speed': '40000'}, "
                 "'Ethernet20': {'lanes': '45,46,47,48', 'description': 'fortyGigE0/20', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/20', 'admin_status': 'up', 'autoneg': 'off', 'speed': '40000'}, "
                 "'Ethernet24': {'lanes': '5,6,7,8', 'description': 'fortyGigE0/24', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/24', 'admin_status': 'up', 'autoneg': 'off', 'speed': '40000'}, "
                 "'Ethernet28': {'lanes': '1,2,3,4', 'description': 'fortyGigE0/28', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/28', 'admin_status': 'up', 'autoneg': 'off', 'speed': '40000'}, "
@@ -485,6 +486,14 @@ class TestCfgGen(TestCase):
                 "'Ethernet120': {'lanes': '97,98,99,100', 'description': 'ARISTA03T1:Ethernet1/1', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/120', 'admin_status': 'up', 'autoneg': 'on', 'speed': '40000'}, "
                 "'Ethernet124': {'lanes': '101,102,103,104', 'fec': 'rs', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/124', 'admin_status': 'up', 'autoneg': 'on', 'speed': '100000', 'description': 'ARISTA04T1:Ethernet1/1', 'speed': '100000'}}"
             )
+        )
+
+    def test_minigraph_link_training(self):
+        argument = ['-m', self.sample_graph_t0, '-p', self.port_config, '-v', "PORT[\'Ethernet16\']"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict("{'lanes': '41,42,43,44', 'description': 'Servers1:eth0', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/16', 'admin_status': 'up', 'autoneg': 'off', 'link_training': 'on', 'speed': '40000'}")
         )
 
     def test_minigraph_port_rs(self):
