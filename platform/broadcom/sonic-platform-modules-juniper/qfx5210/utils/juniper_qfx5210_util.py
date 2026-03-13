@@ -35,6 +35,7 @@ command:
 """
 
 import commands
+import re
 import sys, getopt
 import binascii
 import logging
@@ -57,6 +58,11 @@ if DEBUG == True:
     print(sys.argv[0])
     print('ARGV      :', sys.argv[1:])
 
+def platform_install():
+    global FORCE
+    status, platform = log_os_system('/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform', 1)
+    if status==0:
+        log_os_system("pip3 install /usr/share/sonic/device/"+platform+"/sonic_platform-1.0-py3-none-any.whl",1)
 
 def main():
     global DEBUG
@@ -125,8 +131,10 @@ def main():
             return                
         else:
             show_help()
-           
-    DisableWatchDogCmd = ['/usr/sbin/i2cset', '-f', '-y', '0', '0x65', '0x3', '0x04'] 
+
+    platform_install()
+
+    DisableWatchDogCmd = ['/usr/sbin/i2cset', '-f', '-y', '0', '0x65', '0x3', '0x04']
     # Disable watchdog
     try:
         subprocess.call(DisableWatchDogCmd)
@@ -196,6 +204,8 @@ kos = [
 'modprobe x86-64-juniper-qfx5210-64x-fan'     ,
 'modprobe x86-64-juniper-qfx5210-64x-leds'      ,
 'modprobe x86-64-juniper-qfx5210-64x-psu' ]
+
+
 
 def driver_install():
     global FORCE
