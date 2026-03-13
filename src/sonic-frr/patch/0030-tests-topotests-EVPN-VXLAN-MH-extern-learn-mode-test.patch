@@ -1,0 +1,1850 @@
+From 0b75a2653046a222a06234669a321067d44467ff Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Date: Wed, 20 Aug 2025 06:11:35 +0000
+Subject: [PATCH 8/9] tests: topotests: EVPN VXLAN MH extern learn mode tests
+
+Topotests added under bgp_evpn_mh_l2l3vni_ext_learn to:
+- Validate correct ES discovery and advertisement for both local and
+ remote PEs.
+- Check VTEP peer lists for accuracy, including handling of downed VTEPs
+  and ES state transitions.
+- Ensure L2VNI and L3VNI are correctly instantiated and associated with the
+ appropriate VRFs and VXLAN interfaces.
+- Test orphaned hosts, dual-attached hosts, and single-attached hosts
+ in various failure and recovery scenarios.
+- MAC 'protocol' state transitions i.e data plane learnt to
+  control plane learnt and vice versa, delete, relearn in both peers
+  sequeunces
+Utility and Parser Functions:
+Utility functions in lib/bgp_evpn.py(new) are added.
+These changes adds the test coverage and reliability for EVPN VXLAN
+ multihoming in external mode, making it easier to detect regressions and
+ validate new features.
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ tests/topotests/bgp_evpn_mh/test_evpn_mh.py   |  55 +-
+ .../spine1/frr.conf                           |  34 +
+ .../spine2/frr.conf                           |  34 +
+ .../test_evpn_mh_l2l3vni_ext_learn.py         | 933 ++++++++++++++++++
+ .../torm11/frr.conf                           |  76 ++
+ .../torm12/frr.conf                           |  72 ++
+ .../torm21/frr.conf                           |  71 ++
+ .../torm22/frr.conf                           |  73 ++
+ tests/topotests/lib/bgp_evpn.py               | 366 +++++++
+ 9 files changed, 1666 insertions(+), 48 deletions(-)
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
+ create mode 100644 tests/topotests/lib/bgp_evpn.py
+
+diff --git a/tests/topotests/bgp_evpn_mh/test_evpn_mh.py b/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
+index b77485b5c7..ca2fb73162 100644
+--- a/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
++++ b/tests/topotests/bgp_evpn_mh/test_evpn_mh.py
+@@ -37,6 +37,9 @@ from lib import topotest
+ # Required to instantiate the topology builder class.
+ from lib.topogen import Topogen, TopoRouter, get_topogen
+ 
++# bgp_evpn library
++from lib import bgp_evpn
++
+ #####################################################
+ ##
+ ##   Network Topology Definition
+@@ -210,36 +213,6 @@ host_es_map = {
+ }
+ 
+ 
+-def config_bond(node, bond_name, bond_members, bond_ad_sys_mac, br):
+-    """
+-    Used to setup bonds on the TORs and hosts for MH
+-    """
+-    node.run("ip link add dev %s type bond mode 802.3ad" % bond_name)
+-    node.run("ip link set dev %s type bond lacp_rate 1" % bond_name)
+-    node.run("ip link set dev %s type bond miimon 100" % bond_name)
+-    node.run("ip link set dev %s type bond xmit_hash_policy layer3+4" % bond_name)
+-    node.run("ip link set dev %s type bond min_links 1" % bond_name)
+-    node.run(
+-        "ip link set dev %s type bond ad_actor_system %s" % (bond_name, bond_ad_sys_mac)
+-    )
+-
+-    for bond_member in bond_members:
+-        node.run("ip link set dev %s down" % bond_member)
+-        node.run("ip link set dev %s master %s" % (bond_member, bond_name))
+-        node.run("ip link set dev %s up" % bond_member)
+-
+-    node.run("ip link set dev %s up" % bond_name)
+-
+-    # if bridge is specified add the bond as a bridge member
+-    if br:
+-        node.run(" ip link set dev %s master bridge" % bond_name)
+-        node.run("/sbin/bridge link set dev %s priority 8" % bond_name)
+-        node.run("/sbin/bridge vlan del vid 1 dev %s" % bond_name)
+-        node.run("/sbin/bridge vlan del vid 1 untagged pvid dev %s" % bond_name)
+-        node.run("/sbin/bridge vlan add vid 1000 dev %s" % bond_name)
+-        node.run("/sbin/bridge vlan add vid 1000 untagged pvid dev %s" % bond_name)
+-
+-
+ def config_mcast_tunnel_termination_device(node):
+     """
+     The kernel requires a device to terminate VxLAN multicast tunnels
+@@ -326,10 +299,10 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
+     else:
+         sys_mac = "44:38:39:ff:ff:02"
+     bond_member = tor_name + "-eth2"
+-    config_bond(tor, "hostbond1", [bond_member], sys_mac, "bridge")
++    bgp_evpn.config_bond(tor, "hostbond1", [bond_member], sys_mac, "bridge")
+ 
+     bond_member = tor_name + "-eth3"
+-    config_bond(tor, "hostbond2", [bond_member], sys_mac, "bridge")
++    bgp_evpn.config_bond(tor, "hostbond2", [bond_member], sys_mac, "bridge")
+ 
+     # create SVI
+     config_svi(tor, svi_pip)
+@@ -349,25 +322,11 @@ def compute_host_ip_mac(host_name):
+     return host_ip, host_mac
+ 
+ 
+-def config_host(host_name, host):
+-    """
+-    Create the dual-attached bond on host nodes for MH
+-    """
+-    bond_members = []
+-    bond_members.append(host_name + "-eth0")
+-    bond_members.append(host_name + "-eth1")
+-    bond_name = "torbond"
+-    config_bond(host, bond_name, bond_members, "00:00:00:00:00:00", None)
+-
+-    host_ip, host_mac = compute_host_ip_mac(host_name)
+-    host.run("ip addr add %s dev %s" % (host_ip, bond_name))
+-    host.run("ip link set dev %s address %s" % (bond_name, host_mac))
+-
+-
+ def config_hosts(tgen, hosts):
+     for host_name in hosts:
+         host = tgen.gears[host_name]
+-        config_host(host_name, host)
++        host_ip, host_mac = compute_host_ip_mac(host_name)
++        bgp_evpn.config_host(host_name, host, host_ip, host_mac)
+ 
+ 
+ def setup_module(module):
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
+new file mode 100644
+index 0000000000..e23aff332c
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine1/frr.conf
+@@ -0,0 +1,34 @@
++int spine1-eth0
++  ip addr 192.168.1.1/24
++!
++int spine1-eth1
++  ip addr 192.168.2.1/24
++!
++int spine1-eth2
++  ip addr 192.168.3.1/24
++!
++int spine1-eth3
++  ip addr 192.168.4.1/24
++!
++int lo
++  ip addr 192.168.100.13/32
++  ip addr 192.168.100.100/32
++!
++frr defaults datacenter
++!
++router bgp 65001
++  bgp router-id 192.168.100.13
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.1.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.2.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.3.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.4.2 peer-group TRANSIT_OVERLAY
++  redistribute connected
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++  exit-address-family
++!
+\ No newline at end of file
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
+new file mode 100644
+index 0000000000..b3916ef2c7
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/spine2/frr.conf
+@@ -0,0 +1,34 @@
++int spine2-eth0
++  ip addr 192.168.5.1/24
++!
++int spine2-eth1
++  ip addr 192.168.6.1/24
++!
++int spine2-eth2
++  ip addr 192.168.7.1/24
++!
++int spine2-eth3
++  ip addr 192.168.8.1/24
++!
++int lo
++  ip addr 192.168.100.14/32
++  ip addr 192.168.100.100/32
++!
++frr defaults datacenter
++!
++router bgp 65002
++  bgp router-id 192.168.100.14
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.5.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.6.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.7.2 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.8.2 peer-group TRANSIT_OVERLAY
++  redistribute connected
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++  exit-address-family
++!
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
+new file mode 100644
+index 0000000000..c0249841f5
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/test_evpn_mh_l2l3vni_ext_learn.py
+@@ -0,0 +1,933 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# test_evpn_mh_l2l3vni_ext_learn.py
++#
++# Copyright (c) 2025 by
++# Cisco Systems, Inc.
++# Patrice Brissette
++#
++# Permission to use, copy, modify, and/or distribute this software
++# for any purpose with or without fee is hereby granted, provided
++# that the above copyright notice and this permission notice appear
++# in all copies.
++#
++# THE SOFTWARE IS PROVIDED "AS IS" AND NETDEF DISCLAIMS ALL WARRANTIES
++# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NETDEF BE LIABLE FOR
++# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
++# DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
++# WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
++# ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
++# OF THIS SOFTWARE.
++#
++
++"""
++test_evpn_mh_l2l3vni_ext_learn.py: Testing EVPN multihoming with L3VNI
++
++"""
++
++import os
++import sys
++import subprocess
++from functools import partial
++import time
++
++import pytest
++import json
++import platform
++from functools import partial
++
++pytestmark = [pytest.mark.bgpd, pytest.mark.pimd]
++
++# Save the Current Working Directory to find configuration files.
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++# pylint: disable=C0413
++# Import topogen and topotest helpers
++from lib import topotest
++
++# Required to instantiate the topology builder class.
++from lib.topogen import Topogen, TopoRouter, get_topogen
++
++# bgp_evpn library
++from lib import bgp_evpn
++
++#####################################################
++##
++##   Network Topology Definition
++##
++## See topology picture at evpn-mh-topo-tests.pdf
++#####################################################
++
++
++def build_topo(tgen):
++    """
++    EVPN Multihoming Topology -
++    1. Two level CLOS
++    2. Two spine switches - spine1, spine2
++    3. Two racks with Top-of-Rack switches per rack - tormx1, tormx2
++    4. Dual attached hosts per-rack - hostd12, hostd21, hostd22
++    5. Single attached host - hostd11 to torm11
++    6. hostd22 is in a different subnet then hostd1x and hostd21
++    7. L2VNI with L3VNI setup on each leaf with SVI as IP gateway
++    8. hostd33 is a orphan on torm11
++    """
++
++    tgen.add_router("spine1")
++    tgen.add_router("spine2")
++    tgen.add_router("torm11")
++    tgen.add_router("torm12")
++    tgen.add_router("torm21")
++    tgen.add_router("torm22")
++    tgen.add_router("hostd11")
++    tgen.add_router("hostd12")
++    tgen.add_router("hostd21")
++    tgen.add_router("hostd22")
++    tgen.add_router("hostd33")
++
++    # On main router
++    # First switch is for a dummy interface (for local network)
++
++    ##################### spine1 ########################
++    # spine1-eth0 is connected to torm11-eth0
++    switch = tgen.add_switch("sw1")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["torm11"])
++
++    # spine1-eth1 is connected to torm12-eth0
++    switch = tgen.add_switch("sw2")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["torm12"])
++
++    # spine1-eth2 is connected to torm21-eth0
++    switch = tgen.add_switch("sw3")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["torm21"])
++
++    # spine1-eth3 is connected to torm22-eth0
++    switch = tgen.add_switch("sw4")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["torm22"])
++
++    ##################### spine2 ########################
++    # spine2-eth0 is connected to torm11-eth1
++    switch = tgen.add_switch("sw5")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["torm11"])
++
++    # spine2-eth1 is connected to torm12-eth1
++    switch = tgen.add_switch("sw6")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["torm12"])
++
++    # spine2-eth2 is connected to torm21-eth1
++    switch = tgen.add_switch("sw7")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["torm21"])
++
++    # spine2-eth3 is connected to torm22-eth1
++    switch = tgen.add_switch("sw8")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["torm22"])
++
++    ##################### torm11 ########################
++    # torm11-eth2 is connected to hostd11-eth0
++    switch = tgen.add_switch("sw9")
++    switch.add_link(tgen.gears["torm11"])
++    switch.add_link(tgen.gears["hostd11"])
++
++    # torm11-eth3 is connected to hostd12-eth0
++    switch = tgen.add_switch("sw10")
++    switch.add_link(tgen.gears["torm11"])
++    switch.add_link(tgen.gears["hostd12"])
++
++    # torm11-eth4 is connected to hostd33-eth0
++    # Its an orphan on torm11
++    switch = tgen.add_switch("sw11")
++    switch.add_link(tgen.gears["torm11"])
++    switch.add_link(tgen.gears["hostd33"])
++
++    ##################### torm12 ########################
++    # keeping the hostd11 single-homed
++    # torm12-eth2 is connected to hostd11-eth1
++    # switch = tgen.add_switch("sw11")
++    # switch.add_link(tgen.gears["torm12"])
++    # switch.add_link(tgen.gears["hostd11"])
++
++    # torm12-eth3 is connected to hostd12-eth1
++    switch = tgen.add_switch("sw12")
++    switch.add_link(tgen.gears["torm12"])
++    switch.add_link(tgen.gears["hostd12"])
++
++    ##################### torm21 ########################
++    # torm21-eth2 is connected to hostd21-eth0
++    switch = tgen.add_switch("sw13")
++    switch.add_link(tgen.gears["torm21"])
++    switch.add_link(tgen.gears["hostd21"])
++
++    # torm21-eth3 is connected to hostd22-eth0
++    switch = tgen.add_switch("sw14")
++    switch.add_link(tgen.gears["torm21"])
++    switch.add_link(tgen.gears["hostd22"])
++
++    ##################### torm22 ########################
++    # torm22-eth2 is connected to hostd21-eth1
++    switch = tgen.add_switch("sw15")
++    switch.add_link(tgen.gears["torm22"])
++    switch.add_link(tgen.gears["hostd21"])
++
++    # torm22-eth3 is connected to hostd22-eth1
++    switch = tgen.add_switch("sw16")
++    switch.add_link(tgen.gears["torm22"])
++    switch.add_link(tgen.gears["hostd22"])
++
++
++#####################################################
++##
++##   Tests starting
++##
++#####################################################
++
++tor_ips = {
++    "torm11": "192.168.100.15",
++    "torm12": "192.168.100.16",
++    "torm21": "192.168.100.17",
++    "torm22": "192.168.100.18",
++}
++tor_mac_macs = {
++    "torm11": "aa:bb:cc:00:00:11",
++    "torm12": "aa:bb:cc:00:00:12",
++    "torm21": "aa:bb:cc:00:00:21",
++    "torm22": "aa:bb:cc:00:00:22",
++}
++
++svi_ips = {
++    "torm11": "45.0.0.2",
++    "torm12": "45.0.0.3",
++    "torm21": "45.0.0.4",
++    "torm22": "45.0.0.5",
++}
++svi2_ips = {
++    "torm11": "20.0.0.2",
++    "torm12": "20.0.0.3",
++    "torm21": "20.0.0.4",
++    "torm22": "20.0.0.5",
++}
++
++tor_ips_rack_1 = {"torm11": "192.168.100.15", "torm12": "192.168.100.16"}
++
++tor_ips_rack_2 = {"torm21": "192.168.100.17", "torm22": "192.168.100.18"}
++
++host_es_map = {
++    "hostd12": "03:44:38:39:ff:ff:01:00:00:02",
++    "hostd21": "03:44:38:39:ff:ff:02:00:00:01",
++    "hostd22": "03:44:38:39:ff:ff:02:00:00:02",
++}
++
++host_vni_map = {
++    "hostd12": 1000,
++    "hostd21": 1000,
++    "hostd22": 2000,
++}
++
++
++def config_tor(tor_name, tor, tor_ip, svi_pip, svi2_pip):
++    """
++    Create the bond/vxlan-bridge on the TOR which acts as VTEP and EPN-PE
++    """
++
++    # create l3vni along with l3vni bridge
++    bgp_evpn.config_l3vni(tor_name, tor, tor_ip, tor_mac_macs)
++
++    # create l2vni, bridge and associated SVI
++    bgp_evpn.config_l2vni(tor_name, tor, svi_pip, tor_ip)
++    if "torm2" in tor_name:
++        bgp_evpn.config_l2vni(tor_name, tor, svi2_pip, tor_ip, vni=2000, vid=2000)
++
++    # create hostbonds and add them to the bridge
++    if "torm1" in tor_name:
++        sys_mac = "44:38:39:ff:ff:01"
++    else:
++        sys_mac = "44:38:39:ff:ff:02"
++
++    # torm11 has 3 connections on the same subnet: hostbond1, hostbond2 & hostbond3
++    if "torm11" in tor_name:
++        bond_member = tor_name + "-eth2"
++        bgp_evpn.config_bond(tor, "hostbond1", [bond_member], sys_mac, "br1000")
++        bond_member = tor_name + "-eth3"
++        bgp_evpn.config_bond(tor, "hostbond2", [bond_member], sys_mac, "br1000")
++        bond_member = tor_name + "-eth4"
++        bgp_evpn.config_bond(tor, "hostbond3", [bond_member], sys_mac, "br1000")
++    # torm12 has only 1 connection with hostbond2
++    elif "torm12" in tor_name:
++        bond_member = tor_name + "-eth2"
++        bgp_evpn.config_bond(tor, "hostbond2", [bond_member], sys_mac, "br1000")
++    # torm2x has 2 connections but on different subnets
++    else:
++        bond_member = tor_name + "-eth2"
++        bgp_evpn.config_bond(tor, "hostbond1", [bond_member], sys_mac, "br1000")
++        bond_member = tor_name + "-eth3"
++        bgp_evpn.config_bond(tor, "hostbond2", [bond_member], sys_mac, "br2000")
++
++
++def config_tors(tgen, tors):
++    for tor_name in tors:
++        tor = tgen.gears[tor_name]
++        config_tor(
++            tor_name,
++            tor,
++            tor_ips.get(tor_name),
++            svi_ips.get(tor_name),
++            svi2_ips.get(tor_name),
++        )
++
++
++def compute_host_ip_mac(host_name):
++    host_id = host_name.split("hostd")[1]
++    if host_name == "hostd22":
++        host_ip = "20.0.0." + host_id + "/24"
++    else:
++        host_ip = "45.0.0." + host_id + "/24"
++    host_mac = "00:00:00:00:00:" + host_id
++    return host_ip, host_mac
++
++
++def config_hosts(tgen, hosts):
++    for host_name in hosts:
++        host = tgen.gears[host_name]
++        host_ip, host_mac = compute_host_ip_mac(host_name)
++        bgp_evpn.config_host(host_name, host, host_ip, host_mac)
++
++
++def setup_module(module):
++    "Setup topology"
++    tgen = Topogen(build_topo, module.__name__)
++    tgen.start_topology()
++
++    krel = platform.release()
++    if topotest.version_cmp(krel, "4.19") < 0:
++        tgen.errors = "kernel 4.19 needed for multihoming tests"
++        pytest.skip(tgen.errors)
++
++    tors = []
++    tors.append("torm11")
++    tors.append("torm12")
++    tors.append("torm21")
++    tors.append("torm22")
++    config_tors(tgen, tors)
++
++    hosts = []
++    hosts.append("hostd11")
++    hosts.append("hostd12")
++    hosts.append("hostd21")
++    hosts.append("hostd22")
++    hosts.append("hostd33")
++    config_hosts(tgen, hosts)
++
++    # tgen.mininet_cli()
++    # This is a sample of configuration loading.
++    router_list = tgen.routers()
++    for rname, router in router_list.items():
++        router.load_frr_config(
++            os.path.join(CWD, "{}/frr.conf".format(rname)),
++            [
++                (TopoRouter.RD_ZEBRA, " --kernel-mac-ext-learn"),
++                (TopoRouter.RD_BGP, None),
++            ],
++        )
++    tgen.start_router()
++    # tgen.mininet_cli()
++
++
++def teardown_module(_mod):
++    "Teardown the pytest environment"
++    tgen = get_topogen()
++
++    # This function tears down the whole topology.
++    tgen.stop_topology()
++
++
++def test_evpn_es():
++    """
++    One ES is setup on torm1x
++    Two ES are setup on torm2x. This test checks if -
++    1. ES peer has been added to the local ES (via Type-1/EAD route)
++    2. The remote ESs are setup with the right list of PEs (via Type-1)
++    """
++
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    dut_name = "torm11"
++    local_vteps = set([v for k, v in tor_ips_rack_1.items() if k != dut_name])
++    remote_vteps = set([v for _, v in tor_ips_rack_2.items()])
++
++    dut = tgen.gears[dut_name]
++    test_fn = partial(
++        bgp_evpn.check_es, dut, host_es_map, host_vni_map, local_vteps, remote_vteps
++    )
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++
++    assertmsg = '"{}" ES content incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++
++def test_evpn_df():
++    """
++    1. Check the DF role on all the PEs on rack-1.
++    2. Increase the DF preference on the non-DF and check if it becomes
++       the DF winner.
++    """
++
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # We will run the tests on just one ES
++    esi = host_es_map.get("hostd12")
++    intf = "hostbond2"
++
++    tors = []
++    tors.append(tgen.gears["torm11"])
++    tors.append(tgen.gears["torm12"])
++    df_node = "torm11"
++
++    # check roles on rack-1
++    for tor in tors:
++        role = "DF" if tor.name == df_node else "nonDF"
++        test_fn = partial(bgp_evpn.check_df_role, tor, esi, role)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" DF role incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++    # change df preference on the nonDF to make it the df
++    torm12 = tgen.gears["torm12"]
++    torm12.vtysh_cmd("conf\ninterface %s\nevpn mh es-df-pref %d" % (intf, 60000))
++    df_node = "torm12"
++
++    # re-check roles on rack-1; we should have a new winner
++    for tor in tors:
++        role = "DF" if tor.name == df_node else "nonDF"
++        test_fn = partial(bgp_evpn.check_df_role, tor, esi, role)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" DF role incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++
++def test_mac_extern_learn_basic():
++    """
++    Test adding a MAC using bridge fdb command with extern_learn option on torm11
++    and verify it appears in both TORs with correct flags
++    Precondition: bridge fdb, protocol support is needed for this test
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # Setup for torm11
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++    mac = "00:00:00:00:00:88"
++    dev = "hostbond2"
++    vlan = 1000
++    vni = 1000
++
++    # Precondition check on support of 'bridge fdb' with protocol field
++    result = bgp_evpn.check_bridge_fdb_proto_supported(dut)
++    if result != None:
++        pytest.skip(result)
++
++    # wait for protodown rc to clear after startup
++    test_fn = partial(bgp_evpn.check_protodown_rc, dut, None)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" protodown rc incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++    # Also get reference to torm12 for cross-checking
++    dut2_name = "torm12"
++    dut2 = tgen.gears[dut2_name]
++    dev2 = "hostbond2"
++
++    # Add MAC using bridge fdb command on torm11
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Check if MAC exists in torm11 kernel bridge FDB with proto hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Bridge FDB check failed for MAC {mac} on device {dev} vlan {vlan} with protocol hw"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm11's EVPN MAC table as local entry with peer-proxy flag (X)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "X", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"EVPN MAC check failed for MAC {mac} on VNI {vni} with peer-proxy flag as local entry"
++    assert result is None, assertmsg
++
++    # Check if MAC has been synced to torm12's kernel bridge FDB with proto zebra
++    test_fn = partial(
++        bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="zebra"
++    )
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Bridge FDB check failed for MAC {mac} on torm12 device {dev2} vlan {vlan} with protocol zebra"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm12's EVPN MAC table as local entry with peer-active and local-inactive flags (PI)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "PI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"EVPN MAC check failed for MAC {mac} on torm12 VNI {vni} with peer-active and local-inactive flags"
++    assert result is None, assertmsg
++
++    # Test MAC removal from torm11
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++
++    # Get the MAC holdtime from zebra and wait for that duration
++    holdtime = bgp_evpn.get_mac_holdtime(dut)
++    # Let the hold timer expire
++    time.sleep(holdtime)
++
++    # Verify MAC is removed from torm11's kernel bridge FDB
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Bridge FDB still contains MAC {mac} on device {dev} vlan {vlan} after deletion"
++    assert result is None, assertmsg
++
++    # Verify MAC is removed from torm11's EVPN MAC table
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"EVPN MAC table still contains MAC {mac} on VNI {vni} after deletion"
++    assert result is None, assertmsg
++
++    # Verify MAC is also removed from torm12's kernel bridge FDB
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = (
++        f"Bridge FDB on torm12 still contains MAC {mac} after deletion from torm11"
++    )
++    assert result is None, assertmsg
++
++    # Verify MAC is also removed from torm12's EVPN MAC table
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut2, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"EVPN MAC table on torm12 still contains MAC {mac} after deletion from torm11"
++    )
++    assert result is None, assertmsg
++
++
++def test_mac_extern_learn_both_tors():
++    """
++    Test adding the same MAC on both torm11 and torm12 with extern_learn
++    and verify both have it with peer-active flag
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # Setup for torm11
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++    mac = "00:00:00:00:00:99"
++    dev = "hostbond2"
++    vlan = 1000
++    vni = 1000
++
++    # Precondition check on support of 'bridge fdb' with protocol field
++    result = bgp_evpn.check_bridge_fdb_proto_supported(dut)
++    if result != None:
++        pytest.skip(result)
++
++    # Also get reference to torm12
++    dut2_name = "torm12"
++    dut2 = tgen.gears[dut2_name]
++    dev2 = "hostbond2"
++
++    # Add MAC using bridge fdb command on torm11
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Add same MAC using bridge fdb command on torm12
++    dut2.run(
++        f"bridge fdb add {mac} dev {dev2} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Check if MAC exists in torm11 kernel bridge FDB with proto hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Bridge FDB check failed for MAC {mac} on torm11 device {dev} vlan {vlan} with protocol hw"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm12 kernel bridge FDB with proto hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Bridge FDB check failed for MAC {mac} on torm12 device {dev2} vlan {vlan} with protocol hw"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm11's EVPN MAC table as local entry with peer-active flag (P)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"EVPN MAC check failed for MAC {mac} on torm11 VNI {vni} with peer-active flag as local entry"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm12's EVPN MAC table as local entry with peer-active flag (P)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"EVPN MAC check failed for MAC {mac} on torm12 VNI {vni} with peer-active flag as local entry"
++    assert result is None, assertmsg
++
++    # Clean up: remove MACs from both torm11 and torm12
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++    dut2.run(f"bridge fdb del {mac} dev {dev2} vlan {vlan} master")
++
++    # Wait for MAC removal (using holdtime from first device)
++    holdtime = bgp_evpn.get_mac_holdtime(dut)
++    time.sleep(holdtime)
++
++    # Verify MAC is removed from both TORs
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"EVPN MAC table still contains MAC {mac} on torm11 VNI {vni} after deletion"
++    )
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut2, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"EVPN MAC table still contains MAC {mac} on torm12 VNI {vni} after deletion"
++    )
++    assert result is None, assertmsg
++
++
++def test_mac_extern_learn_delete_readd():
++    """
++    Test MAC flag transitions when deleting from one TOR and quickly readding before hold timer expires
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # Setup for torm11
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++    mac = "00:00:00:00:00:77"
++    dev = "hostbond2"
++    vlan = 1000
++    vni = 1000
++
++    # Precondition check on support of 'bridge fdb' with protocol field
++    result = bgp_evpn.check_bridge_fdb_proto_supported(dut)
++    if result != None:
++        pytest.skip(result)
++
++    # Also get reference to torm12
++    dut2_name = "torm12"
++    dut2 = tgen.gears[dut2_name]
++    dev2 = "hostbond2"
++
++    # Add MAC using bridge fdb command on both torm11 and torm12
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++    dut2.run(
++        f"bridge fdb add {mac} dev {dev2} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Verify initial state: proto=hw on both sides, both show peer-active flag
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Initial check: Bridge FDB failed for MAC {mac} on torm11 device {dev} with proto hw"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Initial check: Bridge FDB failed for MAC {mac} on torm12 device {dev2} with proto hw"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"Initial check: EVPN MAC failed for MAC {mac} on torm11 with peer-active flag"
++    )
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"Initial check: EVPN MAC failed for MAC {mac} on torm12 with peer-active flag"
++    )
++    assert result is None, assertmsg
++
++    # Delete MAC on torm11 only
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++
++    # Sync in progress, don't wait for hold timer
++    # Check protocol has changed on torm11 (hw → zebra)
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="zebra")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"After torm11 deletion: Bridge FDB failed for MAC {mac} on torm11 - expected proto zebra"
++    assert result is None, assertmsg
++
++    # Verify torm12 still shows proto=hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"After torm11 deletion: Bridge FDB failed for MAC {mac} on torm12 - should stay proto hw"
++    assert result is None, assertmsg
++
++    # Check flags on torm11: local, peer-active, local-inactive
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "PI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"After torm11 deletion: EVPN MAC failed for MAC {mac} on torm11 - expected PI flags"
++    assert result is None, assertmsg
++
++    # Check flags on torm12: local, peer-active, peer-proxy
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "PX", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"After torm11 deletion: EVPN MAC failed for MAC {mac} on torm12 - expected PX flags"
++    assert result is None, assertmsg
++
++    # Re-add MAC on torm11 before hold timer expires
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Sync in progress
++    # Verify restored state: proto=hw on both sides, both show peer-active flag
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"After re-add: Bridge FDB failed for MAC {mac} on torm11 device {dev} with proto hw"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"After re-add: Bridge FDB failed for MAC {mac} on torm12 device {dev2} with proto hw"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"After re-add: EVPN MAC failed for MAC {mac} on torm11 with peer-active flag"
++    )
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"After re-add: EVPN MAC failed for MAC {mac} on torm12 with peer-active flag"
++    )
++    assert result is None, assertmsg
++
++    # Final cleanup - remove MAC from both TORs
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++    dut2.run(f"bridge fdb del {mac} dev {dev2} vlan {vlan} master")
++
++    # Wait for holdtime to expire
++    holdtime = bgp_evpn.get_mac_holdtime(dut)
++    time.sleep(holdtime)
++
++    # Verify MAC is fully removed from both TORs
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Final cleanup: MAC {mac} still exists in torm11 EVPN table"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut2, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Final cleanup: MAC {mac} still exists in torm12 EVPN table"
++    assert result is None, assertmsg
++
++
++def test_mac_extern_learn_transition():
++    """
++    Test MAC transition between TORs:
++    1. Add MAC on torm11, verify flags
++    2. Delete MAC from torm11, verify flags change
++    3. Add MAC on torm12, verify flags change again
++    4. Re-add MAC on torm11, verify flags return to both active
++    """
++    tgen = get_topogen()
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # Setup for torm11
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++    mac = "00:00:00:00:00:55"
++    dev = "hostbond2"
++    vlan = 1000
++    vni = 1000
++
++    # Precondition check on support of 'bridge fdb' with protocol field
++    result = bgp_evpn.check_bridge_fdb_proto_supported(dut)
++    if result != None:
++        pytest.skip(result)
++
++    # Also get reference to torm12
++    dut2_name = "torm12"
++    dut2 = tgen.gears[dut2_name]
++    dev2 = "hostbond2"
++
++    # Step 1: Add MAC on torm11 only
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Check if MAC exists in torm11 kernel bridge FDB with proto hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Step 1: Bridge FDB check failed for MAC {mac} on torm11 device {dev} with protocol hw"
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm11's EVPN MAC table as local entry with peer-proxy flag (X)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "X", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = (
++        f"Step 1: EVPN MAC check failed for MAC {mac} on torm11 with peer-proxy flag"
++    )
++    assert result is None, assertmsg
++
++    # Check if MAC has been synced to torm12's kernel bridge FDB with proto zebra
++    test_fn = partial(
++        bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="zebra"
++    )
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = (
++        f"Step 1: Bridge FDB check failed for MAC {mac} on torm12 with protocol zebra"
++    )
++    assert result is None, assertmsg
++
++    # Check if MAC exists in torm12 with peer-active and local-inactive flags (PI)
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "PI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 1: EVPN MAC check failed for MAC {mac} on torm12 with peer-active and local-inactive flags"
++    assert result is None, assertmsg
++
++    # Step 2: Delete MAC from torm11
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++
++    # Sync to happen, don't wait for hold timer
++    # Verify MAC is removed from torm11's bridge FDB, but would be added back
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="zebra")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Step 2: Bridge FDB check failed for MAC {mac} on torm11 - MAC should be present"
++    assert result is None, assertmsg
++
++    # Check torm12 has proto zebra
++    test_fn = partial(
++        bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="zebra"
++    )
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Step 2: Bridge FDB check failed for MAC {mac} on torm12 - expected proto zebra"
++    assert result is None, assertmsg
++
++    # Check flags on torm11: local, peer-proxy, local-inactive
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "XI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 2: EVPN MAC check failed for MAC {mac} on torm11 - expected peer-proxy and local-inactive flags"
++    assert result is None, assertmsg
++
++    # Check flags on torm12: local, peer-active, local-inactive
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "PI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 2: EVPN MAC check failed for MAC {mac} on torm12 - expected peer-active and local-inactive flags"
++    assert result is None, assertmsg
++
++    # Step 3: Add MAC on torm12
++    dut2.run(
++        f"bridge fdb add {mac} dev {dev2} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Check torm12 now has proto hw
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = (
++        f"Step 3: Bridge FDB check failed for MAC {mac} on torm12 - expected proto hw"
++    )
++    assert result is None, assertmsg
++
++    # Check flags on torm12: local with peer-proxy
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "X", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 3: EVPN MAC check failed for MAC {mac} on torm12 - expected peer-proxy flag"
++    assert result is None, assertmsg
++
++    # Check torm11 still has proto zebra
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="zebra")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = f"Step 3: Bridge FDB check failed for MAC {mac} on torm11 - should still have proto zebra"
++    assert result is None, assertmsg
++
++    # Check flags on torm11: local, peer-active, local-inactive
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "PI", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 3: EVPN MAC check failed for MAC {mac} on torm11 - expected peer-active and local-inactive flags"
++    assert result is None, assertmsg
++
++    # Step 4: Re-add MAC on torm11
++    dut.run(
++        f"bridge fdb add {mac} dev {dev} vlan {vlan} master dynamic extern_learn proto hw"
++    )
++
++    # Verify proto=hw on torm11
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut, mac, dev, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = (
++        f"Step 4: Bridge FDB check failed for MAC {mac} on torm11 - expected proto hw"
++    )
++    assert result is None, assertmsg
++
++    # Verify proto=hw on torm12
++    test_fn = partial(bgp_evpn.check_mac_in_bridge, dut2, mac, dev2, vlan, proto="hw")
++    _, result = topotest.run_and_expect(test_fn, None, count=15, wait=1)
++    assertmsg = (
++        f"Step 4: Bridge FDB check failed for MAC {mac} on torm12 - expected proto hw"
++    )
++    assert result is None, assertmsg
++
++    # Check flags on torm11: local with peer-active
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 4: EVPN MAC check failed for MAC {mac} on torm11 - expected peer-active flag"
++    assert result is None, assertmsg
++
++    # Check flags on torm12: local with peer-active
++    test_fn = partial(bgp_evpn.check_mac_flag_in_evpn, dut2, vni, mac, "P", "local")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Step 4: EVPN MAC check failed for MAC {mac} on torm12 - expected peer-active flag"
++    assert result is None, assertmsg
++
++    # Final cleanup - remove MAC from both TORs
++    dut.run(f"bridge fdb del {mac} dev {dev} vlan {vlan} master")
++    dut2.run(f"bridge fdb del {mac} dev {dev2} vlan {vlan} master")
++
++    # Wait for holdtime to expire
++    holdtime = bgp_evpn.get_mac_holdtime(dut)
++    time.sleep(holdtime)
++
++    # Verify MAC is fully removed from both TORs
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Final cleanup: MAC {mac} still exists in torm11 EVPN table"
++    assert result is None, assertmsg
++
++    test_fn = partial(bgp_evpn.check_mac_exists_in_evpn, dut2, vni, mac, expect=False)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=1)
++    assertmsg = f"Final cleanup: MAC {mac} still exists in torm12 EVPN table"
++    assert result is None, assertmsg
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
+new file mode 100644
+index 0000000000..4a1c92d70c
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm11/frr.conf
+@@ -0,0 +1,76 @@
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra dplane
++! debug zebra vxlan
++! debug zebra kernel
++! debug zebra kernel msgdump
++
++evpn mh startup-delay 3
++evpn mh mac-holdtime 30
++evpn mh neigh-holdtime 20
++!
++int torm11-eth0
++  ip addr 192.168.1.2/24
++  evpn mh uplink
++!
++int torm11-eth1
++  ip addr 192.168.5.2/24
++  evpn mh uplink
++!
++int lo
++  ip addr 192.168.100.15/32
++
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++
++vrf vrf500
++  vni 500
++!
++frr defaults datacenter
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++!
++!
++router bgp 65011
++  bgp router-id 192.168.100.15
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.1.1 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.5.1 peer-group TRANSIT_OVERLAY
++
++  address-family ipv4 unicast
++    neighbor TRANSIT_OVERLAY activate
++    redistribute connected
++  exit-address-family
++
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++    advertise-all-vni
++!   advertise-svi-ip
++  exit-address-family
++exit
++!
++
++router bgp 65011 vrf vrf500
++  address-family ipv4 unicast
++  redistribute connected
++  exit-address-family
++  !
++  address-family ipv6 unicast
++  redistribute connected
++  exit-address-family
++!
++  address-family l2vpn evpn
++    advertise ipv4 unicast
++    advertise ipv6 unicast
++  exit-address-family
++!
++exit
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
+new file mode 100644
+index 0000000000..f8138a1acb
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm12/frr.conf
+@@ -0,0 +1,72 @@
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra dplane
++! debug zebra vxlan
++! debug zebra kernel
++! debug zebra kernel msgdump
++!
++evpn mh startup-delay 3
++evpn mh mac-holdtime 30
++evpn mh neigh-holdtime 20
++!
++int torm12-eth0
++  ip addr 192.168.2.2/24
++  evpn mh uplink
++!
++int torm12-eth1
++  ip addr 192.168.6.2/24
++  evpn mh uplink
++!
++!
++int lo
++  ip addr 192.168.100.16/32
++
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++!
++vrf vrf500
++  vni 500
++!
++frr defaults datacenter
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++!
++!
++router bgp 65012
++  bgp router-id 192.168.100.16
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.2.1 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.6.1 peer-group TRANSIT_OVERLAY
++
++  address-family ipv4 unicast
++    neighbor TRANSIT_OVERLAY activate
++    redistribute connected
++  exit-address-family
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++    advertise-all-vni
++    advertise-svi-ip
++  exit-address-family
++!
++router bgp 65012 vrf vrf500
++  address-family ipv4 unicast
++  exit-address-family
++!
++  address-family ipv6 unicast
++  exit-address-family
++!
++  address-family l2vpn evpn
++    advertise ipv4 unicast
++    advertise ipv6 unicast
++  exit-address-family
++!
++exit
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
+new file mode 100644
+index 0000000000..13374f67f3
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm21/frr.conf
+@@ -0,0 +1,71 @@
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++int torm21-eth0
++  ip addr 192.168.3.2/24
++  evpn mh uplink
++!
++!
++int torm21-eth1
++  ip addr 192.168.7.2/24
++  evpn mh uplink
++!
++!
++int lo
++  ip addr 192.168.100.17/32
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++vrf vrf500
++  vni 500
++!
++frr defaults datacenter
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++!
++!
++router bgp 65021
++  bgp router-id 192.168.100.17
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.3.1 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.7.1 peer-group TRANSIT_OVERLAY
++
++  address-family ipv4 unicast
++    neighbor TRANSIT_OVERLAY activate
++    redistribute connected
++  exit-address-family
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++    advertise-all-vni
++  exit-address-family
++!
++router bgp 65021 vrf vrf500
++  address-family ipv4 unicast
++  exit-address-family
++!
++  address-family ipv6 unicast
++  exit-address-family
++!
++  address-family l2vpn evpn
++    advertise ipv4 unicast
++    advertise ipv6 unicast
++  exit-address-family
++!
++exit
+diff --git a/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
+new file mode 100644
+index 0000000000..dc330498c4
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_l2l3vni_ext_learn/torm22/frr.conf
+@@ -0,0 +1,73 @@
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++int torm22-eth0
++  ip addr 192.168.4.2/24
++  evpn mh uplink
++!
++!
++int torm22-eth1
++  ip addr 192.168.8.2/24
++  evpn mh uplink
++!
++!
++int lo
++  ip addr 192.168.100.18/32
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++vrf vrf500
++  vni 500
++!
++!
++frr defaults datacenter
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++!
++router bgp 65022
++  bgp router-id 192.168.100.18
++  no bgp ebgp-requires-policy
++
++  neighbor TRANSIT_OVERLAY peer-group
++  neighbor TRANSIT_OVERLAY remote-as external
++
++  neighbor 192.168.4.1 peer-group TRANSIT_OVERLAY
++  neighbor 192.168.8.1 peer-group TRANSIT_OVERLAY
++
++  address-family ipv4 unicast
++    neighbor TRANSIT_OVERLAY activate
++    redistribute connected
++  exit-address-family
++  address-family l2vpn evpn
++    neighbor TRANSIT_OVERLAY activate
++    advertise-all-vni
++  exit-address-family
++!
++router bgp 65022 vrf vrf500
++  address-family ipv4 unicast
++    redistribute connected
++  exit-address-family
++!
++  address-family ipv6 unicast
++    redistribute connected
++  exit-address-family
++!
++  address-family l2vpn evpn
++    advertise ipv4 unicast
++    advertise ipv6 unicast
++  exit-address-family
++!
++exit
+diff --git a/tests/topotests/lib/bgp_evpn.py b/tests/topotests/lib/bgp_evpn.py
+new file mode 100644
+index 0000000000..c654b2426a
+--- /dev/null
++++ b/tests/topotests/lib/bgp_evpn.py
+@@ -0,0 +1,366 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# bgp_evpn.py
++# Verification utility APIs and Classes for BGP/EVPN related testing
++#
++# Copyright (c) 2025 by
++# Cisco Systems, Inc.
++# Mrinmoy Ghosh
++#
++# Permission to use, copy, modify, and/or distribute this software
++# for any purpose with or without fee is hereby granted, provided
++# that the above copyright notice and this permission notice appear
++# in all copies.
++#
++# THE SOFTWARE IS PROVIDED "AS IS" AND NETDEF DISCLAIMS ALL WARRANTIES
++# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL NETDEF BE LIABLE FOR
++# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
++# DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
++# WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
++# ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
++# OF THIS SOFTWARE.
++#
++
++import json
++from lib import topotest
++
++
++### Configs
++def config_bond(node, bond_name, bond_members, bond_ad_sys_mac, br, vid=1000):
++    """
++    Used to setup bonds on the TORs and hosts for MH
++    """
++    node.run(f"ip link add dev {bond_name} type bond mode 802.3ad")
++    node.run(f"ip link set dev {bond_name} type bond lacp_rate 1")
++    node.run(f"ip link set dev {bond_name} type bond miimon 100")
++    node.run(f"ip link set dev {bond_name} type bond xmit_hash_policy layer3+4")
++    node.run(f"ip link set dev {bond_name} type bond min_links 1")
++    node.run(f"ip link set dev {bond_name} type bond ad_actor_system {bond_ad_sys_mac}")
++
++    for bond_member in bond_members:
++        node.run(f"ip link set dev {bond_member} down")
++        node.run(f"ip link set dev {bond_member} master {bond_name}")
++        node.run(f"ip link set dev {bond_member} up")
++
++    node.run(f"ip link set dev {bond_name} up")
++
++    # if bridge is specified add the bond as a bridge member
++    if br:
++        node.run(f" ip link set dev {bond_name} master {br}")
++        node.run(f"/sbin/bridge link set dev {bond_name} priority 8")
++        node.run(f"/sbin/bridge vlan del vid 1 dev {bond_name}")
++        node.run(f"/sbin/bridge vlan del vid 1 untagged pvid dev {bond_name}")
++        node.run(f"/sbin/bridge vlan add vid {vid} dev {bond_name}")
++        node.run(f"/sbin/bridge vlan add vid {vid} untagged pvid dev {bond_name}")
++
++
++def config_host(
++    host_name,
++    host,
++    host_ip,
++    host_mac,
++    bond_name="torbond",
++    bond_member_suffixes=["-eth0", "-eth1"],
++    bond_ad_sys_mac="00:00:00:00:00:00",
++):
++    """
++    Create the dual-attached bond on host nodes for MH
++    """
++    bond_members = []
++
++    for suffix in bond_member_suffixes:
++        bond_members.append(host_name + suffix)
++
++    config_bond(host, bond_name, bond_members, bond_ad_sys_mac, None)
++    host.run(f"ip addr add {host_ip} dev {bond_name}")
++    host.run(f"ip link set dev {bond_name} address {host_mac}")
++
++
++def config_l3vni(tor_name, node, vtep_ip, mac_map, vni=500, vrf="vrf500", svi="br500"):
++    """
++    Create an L3VNI and its ip-vrf {vrf} on the TOR node.
++    The VNI is associated with SVI bridge {svi}.
++    The SVI is assigned a MAC address based on the tor_name using mac_map.
++    """
++    node.run(f"ip link add {vrf} type vrf table {vni}")
++    node.run(f"ip link set {vrf} up")
++
++    node.run(f"ip link add {svi} type bridge")
++    node.run(f"ip link set {svi} master {vrf} addrgenmode none")
++
++    node.run(f"ip link set {svi} addr {mac_map[tor_name]}")
++    node.run(
++        f"ip link add vni{vni} type vxlan id {vni} local {vtep_ip} dstport 4789 nolearning"
++    )
++    node.run(f"ip link set vni{vni} master {svi} addrgenmode none")
++    # node.run("/sbin/bridge link set dev vni500 learning off")
++    node.run(f"ip link set dev vni{vni} master {svi}")
++    node.run(f"ip link set dev {svi} up")
++    node.run(f"ip link set dev vni{vni} up")
++
++
++def config_l2vni(tor_name, node, svi_ip, vtep_ip, vni=1000, vid=1000, vrf="vrf500"):
++    """
++    On torm1x amd torm21,
++    Create a VxLAN device for VNI 1000 and add it to the bridge.
++    VLAN-1000 is mapped to VNI-1000.
++
++    On torm22, do the same + add another bridge and l2vni to create a different subnet
++    """
++    bridge = f"br{vid}"
++    # on torm2x, there are 2 subnets. This required to different bridge domain, svi_ip and l2vni.
++    # subnets are connected to same vrf. Therefore, same L3VNI can be used
++    node.run(f"ip link add {bridge} type bridge")
++    node.run(f"ip link set {bridge} master {vrf}")
++    node.run(f"ip addr add {svi_ip}/24 dev {bridge}")
++    node.run(f"/sbin/sysctl net.ipv4.conf.{bridge}.arp_accept=1")
++
++    node.run(
++        f"ip link add vni{vni} type vxlan local {vtep_ip} dstport 4789 id {vni} nolearning"
++    )
++    node.run(f"ip link set vni{vni} master {bridge} addrgenmode none")
++    node.run(f"/sbin/bridge link set dev vni{vni} learning off")
++    node.run(f"ip link set vni{vni} up")
++    node.run(f"ip link set {bridge} up")
++
++    node.run(f"/sbin/bridge vlan del vid 1 dev vni{vni}")
++    node.run(f"/sbin/bridge vlan del vid 1 untagged pvid dev vni{vni}")
++    node.run(f"/sbin/bridge vlan add vid {vid} dev vni{vni}")
++    node.run(f"/sbin/bridge vlan add vid {vid} untagged pvid dev vni{vni}")
++
++
++### Verifications
++def get_bgp_evpn_vni(dut):
++    """
++    Check the output of 'show bgp evpn vni' command on the router
++    Parse 'show evpn vni json' output and return a dict of VNI to type.
++    Example return: {1000: "L2", 500: "L3"}
++    :param dut: Device under test
++    """
++
++    output = json.loads(dut.vtysh_cmd("show evpn vni json"))
++    vni_types = {}
++    for vni_str, vni_info in output.items():
++        vni = int(vni_str)
++        vni_types[vni] = vni_info.get("type")
++    return vni_types
++
++
++def get_local_l2_vnis(dut):
++    """
++    Returns list of L2VNIs configured and active on the DUT
++    :param dut: Device under test
++    """
++    return [k for k, v in get_bgp_evpn_vni(dut).items() if v == "L2"]
++
++
++def check_es(dut, host_es_map, host_vni_map, local_vteps, remote_vteps):
++    """
++    Verify list of PEs associated all ESs, local and remote
++    :param dut: Device under test
++    :param host_es_map: Mapping of hosts to their Ethernet Segment Identifiers (ESIs)
++    :param host_vni_map: Mapping of hosts to their Virtual Network Identifiers (VNIs)
++    :param local_vteps: Set of local VTEP IPs
++    :param remote_vteps: Set of remote VTEP IPs
++    """
++    bgp_es = dut.vtysh_cmd("show bgp l2vp evpn es json")
++    bgp_es_json = json.loads(bgp_es)
++
++    result = None
++
++    expected_es_set = set(
++        [
++            v1
++            for k1, v1 in host_es_map.items()
++            for k2, v2 in host_vni_map.items()
++            if k1 == k2 and v2 in get_local_l2_vnis(dut)
++        ]
++    )
++    curr_es_set = []
++
++    # check is ES content is correct
++    for es in bgp_es_json:
++        esi = es["esi"]
++        curr_es_set.append(esi)
++        types = es["type"]
++        vtep_ips = set()
++        for vtep in es.get("vteps", []):
++            vtep_ips.add(vtep["vtep_ip"])
++
++        if "local" in types:
++            diff = local_vteps.symmetric_difference(vtep_ips)
++        else:
++            diff = remote_vteps.symmetric_difference(vtep_ips)
++        result = (esi, diff) if diff else None
++        if result:
++            return result
++
++    # check if all ESs are present
++    curr_es_set = set(curr_es_set)
++    result = curr_es_set.symmetric_difference(expected_es_set)
++
++    return result if result else None
++
++
++def check_df_role(dut, esi, role):
++    """
++    Return error string if the df role on the dut is different
++    """
++    es_json = dut.vtysh_cmd("show evpn es %s json" % esi)
++    es = json.loads(es_json)
++
++    if not es:
++        return "esi %s not found" % esi
++
++    flags = es.get("flags", [])
++    curr_role = "nonDF" if "nonDF" in flags else "DF"
++
++    if curr_role != role:
++        return "%s is %s for %s" % (dut.name, curr_role, esi)
++
++    return None
++
++
++def check_ip_neigh(tgen, ip, mac, bridge, dut, expect=True):
++    """
++    checks if neighbor entry is present in kernel
++    """
++    output = tgen.gears[dut].run(
++        f"ip neigh show | grep {ip} | grep {mac} | grep {bridge}"
++    )
++    if (ip in output) == expect:
++        return None
++    else:
++        return f"{'' if expect else 'Un-'}Expected IP Neighbor Entry on {dut}: {ip} {mac} {bridge}: Got {output}"
++
++
++def check_protodown_rc(dut, protodown_rc):
++    """
++    check if specified protodown reason code is set
++    """
++
++    out = dut.vtysh_cmd("show evpn json")
++
++    evpn_js = json.loads(out)
++    tmp_rc = evpn_js.get("protodownReasons", [])
++
++    if protodown_rc:
++        if protodown_rc not in tmp_rc:
++            return "protodown %s missing in %s" % (protodown_rc, tmp_rc)
++    else:
++        if tmp_rc:
++            return "unexpected protodown rc %s" % (tmp_rc)
++
++    return None
++
++
++def check_neigh(dut, vni, ip, mac, m_type, state, expect=True):
++    """
++    checks if neighbor is present and if desination matches the one provided
++    """
++
++    out = dut.vtysh_cmd("show evpn arp-cache vni %d ip %s json" % (vni, ip))
++
++    if out == "":
++        return f"Could not find neighbor ip {ip}" if expect else None
++    nbr_js = json.loads(out)
++    tmp_ip = nbr_js.get("ip", "")
++    tmp_mac = nbr_js.get("mac", "")
++    tmp_m_type = nbr_js.get("type", "")
++    tmp_state = nbr_js.get("state", "")
++    if tmp_ip == ip and tmp_mac == mac and tmp_m_type == m_type and tmp_state == state:
++        return None if expect else f"Incorrectly found Neighbor {nbr_js}"
++
++    return "invalid vni %d ip %s out %s" % (vni, ip, nbr_js) if expect else None
++
++
++def check_mac_in_bridge(dut, mac, dev, vlan, proto=None, expect=True):
++    """
++    Check if a MAC entry exists in the kernel bridge FDB with specified protocol
++    """
++    output = dut.run(f"bridge fdb show | grep '{mac} dev {dev} vlan {vlan}'")
++
++    # Check if MAC exists
++    if (mac in output) != expect:
++        return f"MAC {'not' if expect else 'unexpectedly'} found in bridge FDB: {mac} dev {dev} vlan {vlan}"
++
++    # If MAC exists and protocol check is requested
++    if expect and proto and (mac in output):
++        if f"proto {proto}" not in output:
++            return f"MAC {mac} found but with wrong protocol. Expected: {proto}, Got: {output}"
++
++    return None
++
++
++def check_mac_flag_in_evpn(dut, vni, mac, flag, mac_type="local", expect=True):
++    """
++    Check if a MAC exists in the EVPN MAC table with the specified flag and type
++    """
++    out = dut.vtysh_cmd(f"show evpn mac vni {vni}")
++
++    if not out or "Number of MACs" not in out:
++        return (
++            None
++            if not expect
++            else f"MAC {mac} not found in EVPN MAC table for VNI {vni}"
++        )
++
++    found = False
++    for line in out.splitlines():
++        if mac in line:
++            # Check both flag and type
++            if flag in line and mac_type in line:
++                found = True
++                break
++
++    if found == expect:
++        return None
++    else:
++        return f"MAC {mac} {'not' if expect else 'unexpectedly'} found as {mac_type} with flag {flag} in EVPN MAC table for VNI {vni}"
++
++
++def get_mac_holdtime(dut):
++    """
++    Get the MAC holdtime value from the 'show evpn' command
++    """
++    out = dut.vtysh_cmd("show evpn json")
++    evpn_data = json.loads(out)
++    holdtime = evpn_data.get("macHoldtime", 300)  # Default to 300 if not found
++
++    # Convert to seconds
++    return int(holdtime)
++
++
++def check_mac_exists_in_evpn(dut, vni, mac, expect=True):
++    """
++    Check if a MAC exists in the EVPN MAC table regardless of flags or type
++    """
++    out = dut.vtysh_cmd(f"show evpn mac vni {vni}")
++
++    if not out or "Number of MACs" not in out:
++        return None if not expect else f"EVPN MAC output missing for VNI {vni}"
++
++    found = False
++    for line in out.splitlines():
++        if mac in line:
++            found = True
++            break
++
++    if found == expect:
++        return None
++    else:
++        return f"MAC {mac} {'not' if expect else 'unexpectedly'} found in EVPN MAC table for VNI {vni}"
++
++
++def check_bridge_fdb_proto_supported(dut):
++    """
++    Check if the bridge FDB supports 'protocol' field
++    """
++    out = dut.run("bridge fdb help 2>&1 | grep protocol | wc -l")
++    out = int(out.strip())
++    if out > 0:
++        return None
++    return "Bridge FDB does not support protocol"
+-- 
+2.43.0
+

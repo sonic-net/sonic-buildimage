@@ -1,0 +1,53 @@
+From 58225977242105501f73edb9d305104ab22304f6 Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Date: Wed, 20 Aug 2025 00:58:23 +0000
+Subject: [PATCH 5/9] zebra: ARP/ND Suppression disabled for
+ kernel-mac-ext-learn mode
+
+For MAC External mode, presently ARP/ND Suppression is not supported,
+ thereby disabled. Remote Neighbor programming is also not required,
+ based on zebra_mac_ext_learn_mode.
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/zebra_evpn_neigh.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index 9da3918918..7b4bcee809 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -159,7 +159,11 @@ int zebra_evpn_rem_neigh_install(struct zebra_evpn *zevpn,
+ 		flags |= DPLANE_NTF_ROUTER;
+ 	ZEBRA_NEIGH_SET_ACTIVE(n);
+ 
+-	dplane_rem_neigh_add(vlan_if, &n->ip, &n->emac, flags, was_static);
++	/* Skip Installation to Kernel, in mac external learn mode
++	 * ARP/ND Suppression/Asymmetric IRB is not supported in MAC External learn mode
++	 */
++	if (!zebra_mac_ext_learn_mode())
++		dplane_rem_neigh_add(vlan_if, &n->ip, &n->emac, flags, was_static);
+ 
+ 	return ret;
+ }
+@@ -861,8 +865,12 @@ static int zebra_evpn_neigh_uninstall(struct zebra_evpn *zevpn,
+ 
+ 	ZEBRA_NEIGH_SET_INACTIVE(n);
+ 	n->loc_seq = 0;
+-
+-	dplane_rem_neigh_delete(vlan_if, &n->ip);
++	/* Installation to Kernel is skipped, in mac external learn mode
++	 * Hence no uninstall required
++	 * ARP/ND Suppression/Asymmetric IRB is not supported in MAC External learn mode
++	 */
++	if (!zebra_mac_ext_learn_mode())
++		dplane_rem_neigh_delete(vlan_if, &n->ip);
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

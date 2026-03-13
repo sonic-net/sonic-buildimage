@@ -1,0 +1,407 @@
+{
+    "EVPN_ES_VALID_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    },
+                    {
+                        "name": "Ethernet11",
+                        "lanes": "5,6,7,8",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "AUTO",
+                        "type": "TYPE_3_MAC_BASED",
+                        "df_pref": 12345
+                    },
+                    {
+                        "ifname": "Ethernet11",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_PORTCHANNEL_VALID_TEST": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "mode": "routed"
+                    },
+                    {
+                        "name": "PortChannel0002",
+                        "admin_status": "up",
+                        "min_links": "2",
+                        "mtu": "9100",
+                        "mode": "trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "PortChannel0001",
+                        "esi": "AUTO",
+                        "type": "TYPE_3_MAC_BASED",
+                        "df_pref": 5000
+                    },
+                    {
+                        "ifname": "PortChannel0002",
+                        "esi": "00:01:02:03:04:05:06:07:08:AA",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_AUTO_W_ESI_0": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    },
+                    {
+                        "name": "Ethernet11",
+                        "lanes": "5,6,7,8",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    },
+                    {
+                        "name": "Ethernet11"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "AUTO",
+                        "type": "TYPE_3_MAC_BASED"
+                    },
+                    {
+                        "ifname": "Ethernet11",
+                        "esi": "AUTO",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_TYPE_3_W_MANUAL_ESI": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    },
+                    {
+                        "name": "Ethernet11",
+                        "lanes": "5,6,7,8",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    },
+                    {
+                        "name": "Ethernet11"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:01:02:03:04:05:06:07:08:AA",
+                        "type": "TYPE_3_MAC_BASED"
+                    },
+                    {
+                        "ifname": "Ethernet11",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_TYPE_0_ESI_LENGTH": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:01:02:03:04:05",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_TYPE_0_ESI_BYTE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:01:02:03:04:ZZ:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_TYPE_0_ESI_BYTE_RANGE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:01:02:03:04:1234:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_DF_PREF": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 1000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet10"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet10",
+                        "esi": "00:01:02:03:04:12:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED",
+                        "df_pref": 12341234
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_MH_VALID_TEST": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "default_key": "default",
+                        "startup_delay": 1800,
+                        "mac_holdtime": 1000,
+                        "neigh_holdtime": 600
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_STARTUP_DELAY": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "default_key": "default",
+                        "startup_delay": 3601,
+                        "mac_holdtime": 1000,
+                        "neigh_holdtime": 600
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_MAC_HOLDTIME": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "default_key": "default",
+                        "startup_delay": 1800,
+                        "mac_holdtime": 86401,
+                        "neigh_holdtime": 600
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_NEIGH_HOLDTIME": {
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_MH_GLOBAL": {
+                "EVPN_MH_GLOBAL_LIST": [
+                    {
+                        "default_key": "default",
+                        "startup_delay": 1800,
+                        "mac_holdtime": 1000,
+                        "neigh_holdtime": 86401
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_IFNAME_NOT_EXISTS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 10000
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet99",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_PORTCHANNEL_NOT_EXISTS": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "PortChannel0099",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    }
+}

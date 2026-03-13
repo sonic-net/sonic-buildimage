@@ -1,0 +1,39 @@
+From f470bc51fe073e9276da96f9b7f0006f93c9fa80 Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrghosh@cisco.com>
+Date: Tue, 19 Aug 2025 23:18:29 +0000
+Subject: [PATCH 3/9] doc: zebra: Doc update for zebra option
+ kernel-mac-ext-learn
+
+Doc update for new zebra option '--kernel-mac-ext-learn'
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ doc/user/zebra.rst | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/doc/user/zebra.rst b/doc/user/zebra.rst
+index 91b1c9299d..1716fc9cdd 100644
+--- a/doc/user/zebra.rst
++++ b/doc/user/zebra.rst
+@@ -120,6 +120,16 @@ Besides the common invocation options (:ref:`common-invocation-options`), the
+    8 bit values are scaled to a range of 1-254 and 16 bit values are
+    scaled to a range of 1-65534.
+ 
++.. option:: --kernel-mac-ext-learn
++
++   Signal to zebra that its operating in MAC external learn mode.
++   In this mode, both MAC learning and the aging timer are managed
++   by the underlying hardware. As a result, kernel-based MAC learning
++   and aging are disabled. MAC addresses learned via both the
++   control plane and data plane are programmed in the kernel with the
++   'extern_learn' attribute. ARP and Neighbor Discovery (ND) suppression
++   are not supported in this mode.
++
+ .. _interface-commands:
+ 
+ Configuration Addresses behaviour
+-- 
+2.43.0
+

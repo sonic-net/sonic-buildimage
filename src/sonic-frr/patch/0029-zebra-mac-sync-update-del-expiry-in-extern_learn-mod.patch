@@ -1,0 +1,232 @@
+From 5a30fc184a0df39283d73a0e9aedccc2bacb22d1 Mon Sep 17 00:00:00 2001
+From: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Date: Wed, 20 Aug 2025 05:21:06 +0000
+Subject: [PATCH 7/9] zebra: mac sync update/del/expiry in extern_learn mode
+
+Dataplane Sync MAC Update:
+- Install sync local MAC only if its inactive
+On hold timer expiry:
+- Flush the MAC, and no reprogram, as no dynamic learn during static
+Sync Del:
+- Explicit MAC flush if MAC is inactive, if it has no PEER flags
+Sync MAC update:
+- In Peer Proxy, no additional BGP update computation
+Netlink MAC Update processing:
+- Ignore VXLAN Info message in extern mode
+- Ignore MAC netlink update if interface is down.
+  Presently done only for extern mode
+
+Signed-off-by: Mrinmoy Ghosh <mrinmoy_g@hotmail.com>
+Signed-off-by: Mrinmoy Ghosh <mrghosh@cisco.com>
+Signed-off-by: Patrice Brissette <pbrisset@cisco.com>
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
+---
+ zebra/zebra_evpn_mac.c | 76 ++++++++++++++++++++++++++++--------------
+ zebra/zebra_evpn_mh.c  | 14 ++++++--
+ zebra/zebra_evpn_mh.h  |  1 +
+ zebra/zebra_neigh.c    | 14 ++++++++
+ 4 files changed, 77 insertions(+), 28 deletions(-)
+
+diff --git a/zebra/zebra_evpn_mac.c b/zebra/zebra_evpn_mac.c
+index baff68f9da..f7a046f5e8 100644
+--- a/zebra/zebra_evpn_mac.c
++++ b/zebra/zebra_evpn_mac.c
+@@ -1452,20 +1452,21 @@ int zebra_evpn_sync_mac_dp_install(struct zebra_mac *mac, bool set_inactive,
+ 		return 0;
+ 	}
+ 
+-	if (IS_ZEBRA_DEBUG_EVPN_MH_MAC) {
+-		char mac_buf[MAC_BUF_SIZE];
++	if (!zebra_mac_ext_learn_mode() || CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
++		/* For Extern Only mode:
++		 *  Update the dataplane only when the MAC is inactive
++		 */
++		if (IS_ZEBRA_DEBUG_EVPN_MH_MAC) {
++			char mac_buf[MAC_BUF_SIZE];
+ 
+-		zlog_debug("dp-install sync-mac vni %u mac %pEA es %s %s%s%s",
+-			   zevpn->vni, &mac->macaddr,
+-			   mac->es ? mac->es->esi_str : "-",
+-			   zebra_evpn_zebra_mac_flag_dump(mac, mac_buf,
+-							  sizeof(mac_buf)),
+-			   set_static ? "static " : "",
+-			   set_inactive ? "inactive " : "");
++			zlog_debug("dp-install sync-mac vni %u mac %pEA es %s %s%s%s", zevpn->vni,
++				   &mac->macaddr, mac->es ? mac->es->esi_str : "-",
++				   zebra_evpn_zebra_mac_flag_dump(mac, mac_buf, sizeof(mac_buf)),
++				   set_static ? "static " : "", set_inactive ? "inactive " : "");
++		}
++		dplane_local_mac_add(ifp, br_ifp, vid, &mac->macaddr, sticky, set_static,
++				     set_inactive);
+ 	}
+-
+-	dplane_local_mac_add(ifp, br_ifp, vid, &mac->macaddr, sticky,
+-			     set_static, set_inactive);
+ 	return 0;
+ }
+ 
+@@ -1519,16 +1520,23 @@ static void zebra_evpn_mac_hold_exp_cb(struct event *t)
+ 							  sizeof(mac_buf)));
+ 	}
+ 
+-	/* re-program the local mac in the dataplane if the mac is no
+-	 * longer static
+-	 */
+-	if (old_static != new_static)
+-		zebra_evpn_sync_mac_dp_install(mac, false, false, __func__);
++	if (zebra_mac_ext_learn_mode()) {
++		vlanid_t vid;
++		struct interface *ifp;
++		/* Upon expiry, MAC is delete from DP. */
++		zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
++		zebra_evpn_flush_local_mac(mac, ifp);
++	} else {
++		/* re-program the local mac in the dataplane if the mac is no
++		 * longer static
++		 */
++		if (old_static != new_static)
++			zebra_evpn_sync_mac_dp_install(mac, false, false, __func__);
+ 
+-	/* inform bgp if needed */
+-	if (old_bgp_ready != new_bgp_ready)
+-		zebra_evpn_mac_send_add_del_to_client(mac, old_bgp_ready,
+-						      new_bgp_ready);
++		/* inform bgp if needed */
++		if (old_bgp_ready != new_bgp_ready)
++			zebra_evpn_mac_send_add_del_to_client(mac, old_bgp_ready, new_bgp_ready);
++	}
+ }
+ 
+ static inline void zebra_evpn_mac_start_hold_timer(struct zebra_mac *mac)
+@@ -1588,7 +1596,15 @@ void zebra_evpn_sync_mac_del(struct zebra_mac *mac)
+ 		zebra_evpn_mac_start_hold_timer(mac);
+ 	new_static = zebra_evpn_mac_is_static(mac);
+ 
+-	if (old_static != new_static)
++	if (zebra_mac_ext_learn_mode() && !new_static &&
++	    CHECK_FLAG(mac->flags, ZEBRA_MAC_LOCAL_INACTIVE)) {
++		/* Clear the MAC from Peer Proxy, as no age out will happen for extern mode */
++		struct interface *ifp;
++		vlanid_t vid;
++
++		zebra_evpn_mac_get_access_info(mac, &ifp, &vid);
++		zebra_evpn_flush_local_mac(mac, ifp);
++	} else if (old_static != new_static)
+ 		/* program the local mac in the kernel */
+ 		zebra_evpn_sync_mac_dp_install(mac, false, false, __func__);
+ }
+@@ -1800,8 +1816,16 @@ struct zebra_mac *zebra_evpn_proc_sync_mac_update(struct zebra_evpn *zevpn,
+ 		if (old_static != new_static)
+ 			inform_dataplane = true;
+ 
+-		old_bgp_ready = zebra_evpn_mac_is_ready_for_bgp(old_flags);
+-		new_bgp_ready = zebra_evpn_mac_is_ready_for_bgp(mac->flags);
++		/* when going from peer-active to peer-proxy, nothing should be happening
++		 * Route is maintain in BGP
++		 */
++		if (zebra_mac_ext_learn_mode() && CHECK_FLAG(new_flags, ZEBRA_MAC_ES_PEER_PROXY)) {
++			old_bgp_ready = false;
++			new_bgp_ready = false;
++		} else {
++			old_bgp_ready = zebra_evpn_mac_is_ready_for_bgp(old_flags);
++			new_bgp_ready = zebra_evpn_mac_is_ready_for_bgp(mac->flags);
++		}
+ 		if (old_bgp_ready != new_bgp_ready)
+ 			inform_bgp = true;
+ 	}
+@@ -2386,7 +2410,9 @@ int zebra_evpn_del_local_mac(struct zebra_evpn *zevpn, struct zebra_mac *mac,
+ 							      new_bgp_ready);
+ 		}
+ 
+-		/* re-install the inactive entry in the kernel */
++		/* In EXT-LEARN mode as well, the MAC will be reprogrammed as static,
++		 * post age out, until proxy is withdrawn
++		 */
+ 		zebra_evpn_sync_mac_dp_install(mac, true, false, __func__);
+ 
+ 		return 0;
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 8ff7871150..ade4ba8c56 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -59,6 +59,8 @@ static void zebra_evpn_mh_update_protodown_es(struct zebra_evpn_es *es,
+ 					      bool resync_dplane);
+ static void zebra_evpn_mh_clear_protodown_es(struct zebra_evpn_es *es);
+ static void zebra_evpn_mh_startup_delay_timer_start(const char *rc);
++static void zebra_evpn_es_bypass_update_macs(struct zebra_evpn_es *es, struct interface *ifp,
++					     bool bypass);
+ 
+ esi_t zero_esi_buf, *zero_esi = &zero_esi_buf;
+ 
+@@ -2106,8 +2108,7 @@ static void zebra_evpn_es_setup_evis(struct zebra_evpn_es *es)
+ 	}
+ }
+ 
+-static void zebra_evpn_flush_local_mac(struct zebra_mac *mac,
+-				       struct interface *ifp)
++void zebra_evpn_flush_local_mac(struct zebra_mac *mac, struct interface *ifp)
+ {
+ 	vlanid_t vid;
+ 	struct zebra_if *zif;
+@@ -2324,7 +2325,14 @@ static void zebra_evpn_es_local_info_set(struct zebra_evpn_es *es,
+ 	/* if there any local macs referring to the ES as dest we
+ 	 * need to clear the contents and start over
+ 	 */
+-	zebra_evpn_es_flush_local_macs(es, zif->ifp, true);
++	if (zebra_mac_ext_learn_mode()) {
++		/* Note: though bypass route is called, but its effectively clearing all
++		 * macs
++		 */
++		zebra_evpn_es_bypass_update_macs(es, zif->ifp, false);
++	} else {
++		zebra_evpn_es_flush_local_macs(es, zif->ifp, true);
++	}
+ 
+ 	/* inherit EVPN protodown flags on the access port */
+ 	zebra_evpn_mh_update_protodown_es(es, true /*resync_dplane*/);
+diff --git a/zebra/zebra_evpn_mh.h b/zebra/zebra_evpn_mh.h
+index f68e2eae60..cd9d79b93a 100644
+--- a/zebra/zebra_evpn_mh.h
++++ b/zebra/zebra_evpn_mh.h
+@@ -391,5 +391,6 @@ void zebra_evpn_es_bypass_cfg_update(struct zebra_if *zif, bool bypass);
+ void zebra_evpn_mh_uplink_cfg_update(struct zebra_if *zif, bool set);
+ 
+ void zebra_evpn_mh_if_init(struct zebra_if *zif);
++void zebra_evpn_flush_local_mac(struct zebra_mac *mac, struct interface *ifp);
+ 
+ #endif /* _ZEBRA_EVPN_MH_H */
+diff --git a/zebra/zebra_neigh.c b/zebra/zebra_neigh.c
+index 39e83b7b77..d56a4ad5dc 100644
+--- a/zebra/zebra_neigh.c
++++ b/zebra/zebra_neigh.c
+@@ -591,6 +591,12 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ 		}
+ 
+ 		if (IS_ZEBRA_IF_VXLAN(ifp)) {
++			/* In mac-extern-learn mode the Linux kernel should never give us an entry
++			 * with VxLAN info
++			 */
++			if (zebra_mac_ext_learn_mode())
++				return;
++
+ 			if (!dst_present)
+ 				return;
+ 
+@@ -603,6 +609,14 @@ static void zebra_neigh_macfdb_update(struct zebra_dplane_ctx *ctx)
+ 						       !!(ndm_flags & ZEBRA_NTF_EXT_LEARNED));
+ 			return;
+ 		}
++		if (zebra_mac_ext_learn_mode()) {
++			if (!if_is_operative(ifp)) {
++				if (IS_ZEBRA_DEBUG_KERNEL)
++					zlog_debug("Interface %s(%u) not operative:Ignore Mac update",
++						   ifp->name, ifp->ifindex);
++				return;
++			}
++		}
+ 
+ 		zebra_vxlan_local_mac_add_update(ifp, br_if, &mac, vid, sticky, local_inactive,
+ 						 dp_static);
+-- 
+2.43.0
+

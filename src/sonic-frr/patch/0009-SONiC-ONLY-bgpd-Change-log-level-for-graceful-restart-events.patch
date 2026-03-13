@@ -1,19 +1,19 @@
-[PATCH] From c423bce4db804c1d07d65ce3d06a9e62c4eceb2b Mon Sep 17
+From 9ee17808e0d653071c4908fc135bdc8e565f73e9 Mon Sep 17 00:00:00 2001
+From: Tamer Ahmed <tamerahmed@microsoft.com>
+Date: Wed, 7 Jan 2026 10:54:00 -0800
+Subject: [PATCH] [bgpd] change log level for graceful restart events
 
-From: stormliang <stormliang@microsoft.com>
-
-Subject: [PATCH] From c423bce4db804c1d07d65ce3d06a9e62c4eceb2b Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] change log level for graceful restart events
+Signed-off-by: Tamer Ahmed <tamerahmed@microsoft.com>
 ---
- bgpd/bgp_fsm.c |   37 ++++++++++++++++---------------------
- bgpd/bgpd.c    |   10 ++++------
- 2 files changed, 20 insertions(+), 27 deletions(-)
+ bgpd/bgp_fsm.c | 27 ++++++++++++---------------
+ bgpd/bgpd.c    | 10 ++++------
+ 2 files changed, 16 insertions(+), 21 deletions(-)
 
 diff --git a/bgpd/bgp_fsm.c b/bgpd/bgp_fsm.c
-index ce57ca53f..18798d345 100644
+index 58ea2d6c9c..0ac893e189 100644
 --- a/bgpd/bgp_fsm.c
 +++ b/bgpd/bgp_fsm.c
-@@ -765,8 +765,8 @@ static void bgp_graceful_restart_timer_expire(struct event *thread)
+@@ -775,8 +775,8 @@ static void bgp_graceful_restart_timer_expire(struct event *thread)
  	afi_t afi;
  	safi_t safi;
  
@@ -24,7 +24,7 @@ index ce57ca53f..18798d345 100644
  			   peer, bgp_peer_get_connection_direction(connection));
  
  	FOREACH_AFI_SAFI (afi, safi) {
-@@ -824,8 +824,8 @@ static void bgp_graceful_stale_timer_expire(struct event *thread)
+@@ -834,8 +834,8 @@ static void bgp_graceful_stale_timer_expire(struct event *thread)
  	afi_t afi;
  	safi_t safi;
  
@@ -35,7 +35,7 @@ index ce57ca53f..18798d345 100644
  			   bgp_peer_get_connection_direction(connection));
  
  	/* NSF delete stale route */
-@@ -1411,19 +1411,16 @@ enum bgp_fsm_state_progress bgp_stop(struct peer_connection *connection)
+@@ -1683,19 +1683,16 @@ enum bgp_fsm_state_progress bgp_stop(struct peer_connection *connection)
  		/* graceful restart */
  		if (connection->t_gr_stale) {
  			event_cancel(&connection->t_gr_stale);
@@ -51,7 +51,7 @@ index ce57ca53f..18798d345 100644
 -					   peer, peer->v_gr_restart,
 -					   bgp_peer_get_connection_direction(connection));
 -				zlog_debug("%pBP graceful restart stalepath timer started for %d sec for %s",
--					   peer, peer->bgp->stalepath_time,
+-					   peer, bgp->stalepath_time,
 -					   bgp_peer_get_connection_direction(connection));
 -			}
 +			zlog_info("%pBP graceful restart timer started for %d sec for %s",
@@ -63,33 +63,11 @@ index ce57ca53f..18798d345 100644
  			BGP_TIMER_ON(connection->t_gr_restart,
  				     bgp_graceful_restart_timer_expire,
  				     peer->v_gr_restart);
-@@ -2282,17 +2279,15 @@ bgp_establish(struct peer_connection *connection)
- 		UNSET_FLAG(peer->sflags, PEER_STATUS_NSF_MODE);
- 		if (connection->t_gr_stale) {
- 			event_cancel(&connection->t_gr_stale);
--			if (bgp_debug_neighbor_events(peer))
--				zlog_debug("%pBP graceful restart stalepath timer stopped for %s",
--					   peer, bgp_peer_get_connection_direction(connection));
-+			zlog_info("%pBP graceful restart stalepath timer stopped for %s",
-+				peer, bgp_peer_get_connection_direction(connection));
- 		}
- 	}
- 
- 	if (connection->t_gr_restart) {
- 		event_cancel(&connection->t_gr_restart);
--		if (bgp_debug_neighbor_events(peer))
--			zlog_debug("%pBP graceful restart timer stopped for %s", peer,
--				   bgp_peer_get_connection_direction(connection));
-+		zlog_info("%pBP graceful restart timer stopped for %s", peer,
-+			bgp_peer_get_connection_direction(connection));
- 	}
- 
- 	/* Reset uptime, turn on keepalives, send current table. */
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index c50568510..42f0914f2 100644
+index e3b26b37a1..a725e9ea00 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
-@@ -2702,15 +2702,13 @@ void peer_nsf_stop(struct peer *peer)
+@@ -2723,15 +2723,13 @@ void peer_nsf_stop(struct peer *peer)
  
  	if (peer->connection->t_gr_restart) {
  		event_cancel(&peer->connection->t_gr_restart);
@@ -109,3 +87,6 @@ index c50568510..42f0914f2 100644
  	}
  	bgp_clear_route_all(peer);
  }
+-- 
+2.34.1
+
