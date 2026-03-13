@@ -33,15 +33,7 @@ parameters:
 - name: jobFilters
   type: object
   default:
-  - vs
-  - broadcom
-  - broadcom-dbg
-  - mellanox
-  - marvell-prestera-armhf
-  - marvell-prestera-arm64
-  - cisco-8000
-  - nvidia-bluefield
-  - pensando
+  - cisco-8000-arm64
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
   default: 400

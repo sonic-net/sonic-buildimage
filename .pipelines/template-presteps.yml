@@ -15,6 +15,7 @@ parameters:
       - barefoot
       - marvell-prestera
       - cisco-8000
+      - cisco-8000-arm64
       - nvidia-bluefield
       - pensando
   - name: OPTIONS

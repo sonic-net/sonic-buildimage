@@ -309,6 +309,13 @@ stages:
           OPTIONS: ${{ parameters.OPTIONS }}
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+    - ${{ if containsValue(parameters.JOBS, 'cisco-8000-arm64') }}:
+      - template: template-cisco-arm64.yml
+        parameters:
+          NAME: cisco-8000-arm64
+          OPTIONS: ${{ parameters.OPTIONS }}
+          CACHE: ${{ parameters.CACHE }}
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'pensando') }}:
       - template: template-pensando.yml
         parameters:
