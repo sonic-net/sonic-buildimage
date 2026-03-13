@@ -1,0 +1,33 @@
+[package]
+name = "gcu-watchdog"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "gcu_watchdog"
+path = "src/main.rs"
+
+[dependencies]
+# gRPC framework (server + client code generation via tonic-build in build.rs)
+tonic = "0.11"
+prost = "0.12"
+
+# Async runtime — tonic requires Tokio
+tokio = { version = "1", features = ["full"] }
+
+# MD5 checksumming of venv files
+md5 = "0.7"
+
+# Recursive directory walking
+walkdir = "2"
+
+# Glob pattern expansion (for the python* wildcard in the venv lib path)
+glob = "0.3"
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[build-dependencies]
+# tonic-build generates Rust gRPC stubs from watchdog.proto at compile time.
+tonic-build = "0.11"

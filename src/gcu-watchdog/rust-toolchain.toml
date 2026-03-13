@@ -1,0 +1,6 @@
+[toolchain]
+# Pin the Rust toolchain to ensure reproducible builds both inside Docker
+# (where rustup installs this version explicitly) and in local development
+# environments where 'cargo' defers to this file automatically.
+channel = "1.85.0"
+components = ["rustfmt", "clippy"]
