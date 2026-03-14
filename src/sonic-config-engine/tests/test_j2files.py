@@ -445,6 +445,186 @@ class TestJ2Files(TestCase):
                                                        self.nokia_ixr7250e_36x400g_t2_minigraph, 'qos-nokia-ixr7250e-36x400g.json',\
                                                        'buffer-nokia-ixr7250e-36x400g.json', 1)
 
+    def do_test_voq_qos_active_ports(self, platform, vendor, hwsku, minigraph, multi_asic,
+                                      local_hostname, local_asicname,
+                                      expected_active_ports, expected_inactive_local_ports,
+                                      expected_remote_lcs):
+        """
+        Verify that the QUEUE section of VoQ chassis QoS config only applies scheduler
+        config to admin-up (DEVICE_NEIGHBOR) ports:
+          - Active local ports: have scheduler in queue|3/4 and have queue|0/1/2/5/6 entries
+          - Inactive local ports: have wred_profile but NO scheduler in queue|3/4, and NO queue|0-6
+          - Remote LC ports: have wred_profile but NO scheduler in queue|3/4, and NO queue|0-6
+        """
+        dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', vendor, platform, hwsku)
+        if multi_asic == 1:
+            dir_path = os.path.join(dir_path, '0')
+
+        qos_file = os.path.join(dir_path, 'qos.json.j2')
+        port_config_ini_file = os.path.join(dir_path, 'port_config.ini')
+
+        qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
+        shutil.copy2(qos_config_file, dir_path)
+
+        argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', qos_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        # cleanup
+        qos_config_file_new = os.path.join(dir_path, 'qos_config.j2')
+        os.remove(qos_config_file_new)
+
+        with open(self.output_file, 'r') as f:
+            output_json = json.load(f)
+
+        queue = output_json.get('QUEUE', {})
+
+        lossless_queues = ['3', '4']
+        other_queues = ['0', '1', '2', '5', '6']
+        sp_prefix = local_hostname + '|' + local_asicname + '|' if local_asicname else None
+
+        # Verify active local ports have scheduler in lossless queues and have other queue entries
+        for port in expected_active_ports:
+            sp_key = sp_prefix + port if sp_prefix else port
+            for q in lossless_queues:
+                entry = queue.get('{}|{}'.format(sp_key, q), {})
+                self.assertIn('scheduler', entry,
+                    msg="Active port {} should have scheduler in queue|{}".format(sp_key, q))
+                self.assertIn('wred_profile', entry,
+                    msg="Active port {} should have wred_profile in queue|{}".format(sp_key, q))
+            for q in other_queues:
+                self.assertIn('{}|{}'.format(sp_key, q), queue,
+                    msg="Active port {} should have queue|{} entry".format(sp_key, q))
+
+        # Verify inactive local ports have wred_profile but no scheduler in lossless queues
+        # and no other queue entries
+        for port in expected_inactive_local_ports:
+            sp_key = sp_prefix + port if sp_prefix else port
+            for q in lossless_queues:
+                entry = queue.get('{}|{}'.format(sp_key, q), {})
+                self.assertIn('wred_profile', entry,
+                    msg="Inactive local port {} should have wred_profile in queue|{}".format(sp_key, q))
+                self.assertNotIn('scheduler', entry,
+                    msg="Inactive local port {} should NOT have scheduler in queue|{}".format(sp_key, q))
+            for q in other_queues:
+                self.assertNotIn('{}|{}'.format(sp_key, q), queue,
+                    msg="Inactive local port {} should NOT have queue|{} entry".format(sp_key, q))
+
+        # Verify remote LC ports have wred_profile but no scheduler in lossless queues
+        # and no other queue entries
+        for remote_lc, remote_asic, remote_port in expected_remote_lcs:
+            sp_key = '{}|{}|{}'.format(remote_lc, remote_asic, remote_port)
+            for q in lossless_queues:
+                entry = queue.get('{}|{}'.format(sp_key, q), {})
+                self.assertIn('wred_profile', entry,
+                    msg="Remote LC port {} should have wred_profile in queue|{}".format(sp_key, q))
+                self.assertNotIn('scheduler', entry,
+                    msg="Remote LC port {} should NOT have scheduler in queue|{}".format(sp_key, q))
+            for q in other_queues:
+                self.assertNotIn('{}|{}'.format(sp_key, q), queue,
+                    msg="Remote LC port {} should NOT have queue|{} entry".format(sp_key, q))
+
+    # Ports in the arista7800r3 48CQ2/48CQM2 linecards that have no neighbors
+    # (not in DEVICE_NEIGHBOR) and should not receive scheduler config.
+    # These are the ports that appear in SYSTEM_PORT for dut-lc3 but are absent
+    # from the DeviceInterfaceLinks section in the minigraph.
+    ARISTA_7800R3_LC_INACTIVE_PORTS = ['Ethernet160', 'Ethernet168', 'Ethernet172']
+
+    def _arista7800r3_lc_active_inactive_ports(self):
+        """Return (active_ports, inactive_ports) for the 7800R3 48-port linecards."""
+        inactive = self.ARISTA_7800R3_LC_INACTIVE_PORTS
+        inactive_set = set(inactive)
+        active = ['Ethernet{}'.format(i * 4) for i in range(48)
+                  if 'Ethernet{}'.format(i * 4) not in inactive_set]
+        return active, inactive
+
+    def test_voq_qos_active_ports_arista7800r3_48cq2(self):
+        """
+        Test that for Arista 7800R3-48CQ2 linecard (single-asic VoQ with asic_name=Asic0):
+        - Local ports with neighbors (admin-up) have full scheduler config in all queues
+        - Local ports without neighbors (Ethernet160/168/172) have only wred_profile in lossless queues
+        - Remote LC ports (dut-lc4, dut-lc5) have only wred_profile in lossless queues
+        """
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        active_ports, inactive_local_ports = self._arista7800r3_lc_active_inactive_ports()
+        # Sample representative ports from each remote LC for validation
+        remote_lcs = [('dut-lc4', 'Asic0', 'Ethernet0'), ('dut-lc4', 'Asic0', 'Ethernet4'),
+                      ('dut-lc5', 'Asic0', 'Ethernet0'), ('dut-lc5', 'Asic0', 'Ethernet188')]
+
+        self.do_test_voq_qos_active_ports(
+            'x86_64-arista_7800r3_48cq2_lc', 'arista', 'Arista-7800R3-48CQ2-C48',
+            self.arista7800r3_48cq2_lc_t2_minigraph, 0,
+            'dut-lc3', 'Asic0',
+            active_ports, inactive_local_ports, remote_lcs)
+
+    def test_voq_qos_active_ports_arista7800r3_48cqm2(self):
+        """
+        Test that for Arista 7800R3-48CQM2 linecard (single-asic VoQ with asic_name=Asic0):
+        - Local ports with neighbors have full scheduler config in all queues
+        - Local ports without neighbors have only wred_profile in lossless queues
+        - Remote LC ports have only wred_profile in lossless queues
+        """
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        active_ports, inactive_local_ports = self._arista7800r3_lc_active_inactive_ports()
+        remote_lcs = [('dut-lc4', 'Asic0', 'Ethernet0'), ('dut-lc5', 'Asic0', 'Ethernet0')]
+
+        self.do_test_voq_qos_active_ports(
+            'x86_64-arista_7800r3_48cqm2_lc', 'arista', 'Arista-7800R3-48CQM2-C48',
+            self.arista7800r3_48cqm2_lc_t2_minigraph, 0,
+            'dut-lc3', 'Asic0',
+            active_ports, inactive_local_ports, remote_lcs)
+
+    def test_voq_qos_fallback_all_ports_active_nokia(self):
+        """
+        Test that for Nokia IXR7250E (multi-asic, no asic_name in DEVICE_METADATA):
+        All system ports across all LCs are treated as active (fallback mode)
+        and receive full scheduler config.
+        """
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', 'nokia',
+                                'x86_64-nokia_ixr7250e_36x400g-r0', 'Nokia-IXR7250E-36x100G', '0')
+        qos_file = os.path.join(dir_path, 'qos.json.j2')
+        port_config_ini_file = os.path.join(dir_path, 'port_config.ini')
+
+        qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
+        shutil.copy2(qos_config_file, dir_path)
+
+        argument = ['-m', self.nokia_ixr7250e_36x100g_t2_minigraph, '-p', port_config_ini_file, '-t', qos_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        # cleanup
+        os.remove(os.path.join(dir_path, 'qos_config.j2'))
+
+        with open(self.output_file, 'r') as f:
+            output_json = json.load(f)
+
+        queue = output_json.get('QUEUE', {})
+
+        # In fallback mode (no asic_name), ALL ports across ALL LCs should have scheduler.
+        # Verify that no queue|3 or queue|4 entries are missing their scheduler.
+        for key, entry in queue.items():
+            if key.endswith('|3') or key.endswith('|4'):
+                self.assertIn('scheduler', entry,
+                    msg="Nokia fallback: all lossless queue entries should have scheduler: {}".format(key))
+                self.assertIn('wred_profile', entry,
+                    msg="Nokia fallback: all lossless queue entries should have wred_profile: {}".format(key))
+
+        # Verify that all ports have queue|0-6 entries (since all are active in fallback)
+        other_queues = ['0', '1', '2', '5', '6']
+        port_bases = set()
+        for key in queue:
+            if key.endswith('|3'):
+                port_bases.add(key.rsplit('|', 1)[0])
+        for port_base in port_bases:
+            for q in other_queues:
+                self.assertIn('{}|{}'.format(port_base, q), queue,
+                    msg="Nokia fallback: port {} should have queue|{} entry".format(port_base, q))
+
     def test_qos_dell9332_render_template(self):
         self._test_qos_render_template('dell', 'x86_64-dellemc_z9332f_d1508-r0', 'DellEMC-Z9332f-O32', 'sample-dell-9332-t1-minigraph.xml', 'qos-dell9332.json')
 
