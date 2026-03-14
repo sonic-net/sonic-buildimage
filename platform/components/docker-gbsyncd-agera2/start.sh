@@ -3,6 +3,7 @@
 HWSKU_DIR=/usr/share/sonic/hwsku
 
 mkdir -p /etc/sai.d/
+mkdir -p /var/run/kms
 
 # Create/Copy the psai.profile to /etc/sai.d/psai.profile
 if [ -f $HWSKU_DIR/psai.profile.j2 ]; then
