@@ -50,7 +50,13 @@ RUN apt update &&            \
 # for sairedis zmq rpc channel
         libzmq5              \
         libwrap0            \
-        libatomic1
+        libatomic1           \
+# iproute2 dependencies
+        libbpf1              \
+        libelf1              \
+        libmnl0              \
+        libxtables12         \
+        libcap2-bin
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
