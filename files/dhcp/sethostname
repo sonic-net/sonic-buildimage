@@ -1,12 +1,21 @@
 case $reason in
     BOUND|RENEW|REBIND|REBOOT)
-        current_host_name=`hostname -s`
-        if [ "$current_host_name" != "$new_host_name" ] && [ -n "$new_host_name" ]
-        then
-            echo $new_host_name > /etc/hostname
-            hostname -F /etc/hostname
-            sed -i "/\s$current_host_name$/d" /etc/hosts
-            echo "127.0.0.1 $new_host_name" >> /etc/hosts
+        if [ -n "$new_host_name" ]; then
+            current_full_hostname=$(hostname -f)
+
+            desired_full_hostname=$new_host_name
+            if [ "$new_host_name" = "${new_host_name%%.*}" ] && [ -n "$new_domain_name" ]; then
+                desired_full_hostname="${new_host_name}.${new_domain_name}"
+            fi
+
+            if [ "$current_full_hostname" != "$desired_full_hostname" ]; then
+                echo "127.0.0.1 $desired_full_hostname ${desired_full_hostname%%.*}" >> /etc/hosts
+
+                echo "$desired_full_hostname" > /etc/hostname
+                hostname -F /etc/hostname
+
+                sed -i "/\s$current_full_hostname\s\+${current_full_hostname%%.*}$/d" /etc/hosts
+            fi
         fi
         ;;
 esac
