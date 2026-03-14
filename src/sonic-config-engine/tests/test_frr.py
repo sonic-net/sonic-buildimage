@@ -82,3 +82,41 @@ class TestCfgGen(TestCase):
     def test_bgpd_frr_bmp(self):
         extra_data = {"FEATURE": {"frr_bmp": {"state": "enabled"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp.conf', extra_data=extra_data))
+
+    def test_bgpd_frr_bmp_single_target(self):
+        extra_data = {
+            "FEATURE": {"frr_bmp": {"state": "enabled"}},
+            "BMP_TARGET": {
+                "production": {"mirror": "true", "stats-interval": "5000"}
+            },
+            "BMP_TARGET_COLLECTOR": {
+                "production|192.168.1.100|5000": {"min-retry": "30000", "max-retry": "720000"}
+            },
+            "BMP_TARGET_AFI_SAFI": {
+                "production|ipv4_unicast": {"adj-rib-in-pre": "true", "adj-rib-in-post": "false", "loc-rib": "false"},
+                "production|ipv6_unicast": {"adj-rib-in-pre": "false", "adj-rib-in-post": "true", "loc-rib": "false"}
+            }
+        }
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp_single_target.conf', extra_data=extra_data))
+
+    def test_bgpd_frr_bmp_multiple_targets(self):
+        extra_data = {
+            "FEATURE": {"frr_bmp": {"state": "enabled"}},
+            "BMP": {
+                "global": {"mirror-buffer-limit": "1000000000"}
+            },
+            "BMP_TARGET": {
+                "production": {"mirror": "false", "stats-interval": "2000"},
+                "troubleshooting": {"mirror": "true", "stats-interval": "500"}
+            },
+            "BMP_TARGET_COLLECTOR": {
+                "production|192.168.1.100|5000": {"min-retry": "30000", "max-retry": "720000"},
+                "troubleshooting|10.0.0.1|6000": {"min-retry": "20000", "max-retry": "600000"}
+            },
+            "BMP_TARGET_AFI_SAFI": {
+                "production|ipv4_unicast": {"adj-rib-in-pre": "true", "adj-rib-in-post": "false", "loc-rib": "false"},
+                "troubleshooting|ipv4_unicast": {"adj-rib-in-pre": "true", "adj-rib-in-post": "true", "loc-rib": "false"},
+                "troubleshooting|l2vpn_evpn": {"adj-rib-in-pre": "false", "adj-rib-in-post": "false", "loc-rib": "true"}
+            }
+        }
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp_multiple_targets.conf', extra_data=extra_data))

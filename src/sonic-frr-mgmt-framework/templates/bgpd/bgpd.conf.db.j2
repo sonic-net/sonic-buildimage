@@ -122,6 +122,116 @@ router bgp {{ bgp_sess['local_asn']}} vrf {{ vrf }}
  bgp graceful-restart preserve-fw-state
 {% endif %}
 {# --------------------------bgp graceful-restart - end   ----------------------------- #}
+{# --------------------------bmp - start ------------------------------------------------ #}
+{% if (FEATURE is defined) and
+      (('frr_bmp' in FEATURE and 'state' in FEATURE['frr_bmp'] and FEATURE['frr_bmp']['state'] == 'enabled') or
+      ('bmp' in FEATURE and 'state' in FEATURE['bmp'] and FEATURE['bmp']['state'] == 'enabled')) %}
+{# Global mirror buffer limit #}
+!
+{% if BMP is defined and 'global' in BMP and 'mirror-buffer-limit' in BMP['global'] %}
+ bmp mirror buffer-limit {{ BMP['global']['mirror-buffer-limit'] }}
+{% else %}
+ bmp mirror buffer-limit 4294967214
+{% endif %}
+!
+{# Iterate over all BMP targets from BMP_TARGET table #}
+{# First, check if any targets are configured #}
+{% set has_targets = namespace(value=false) %}
+{% if BMP_TARGET is defined and BMP_TARGET|length > 0 %}
+{%   set has_targets.value = true %}
+{% endif %}
+{# Backward compatibility: If no targets configured, create default sonic-bmp target #}
+{% if not has_targets.value %}
+ bmp targets sonic-bmp
+ bmp stats interval 1000
+ bmp monitor ipv4 unicast pre-policy
+ bmp monitor ipv6 unicast pre-policy
+ bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000
+ exit
+!
+{% else %}
+{# Process configured targets from BMP_TARGET table #}
+{%   set afi_safi_map = {
+       'ipv4_unicast': ('ipv4', 'unicast'),
+       'ipv6_unicast': ('ipv6', 'unicast'),
+       'ipv4_multicast': ('ipv4', 'multicast'),
+       'ipv6_multicast': ('ipv6', 'multicast'),
+       'l2vpn_evpn': ('l2vpn', 'evpn'),
+       'ipv4_vpn': ('ipv4', 'vpn'),
+       'ipv6_vpn': ('ipv6', 'vpn')
+     } %}
+{%   for target_key, target_value in BMP_TARGET.items() %}
+{%     set target_name = target_key if target_key is string else target_key[0] %}
+ bmp targets {{ target_name }}
+{# Check if stats-interval is configured for this target #}
+{%     if target_value is mapping and 'stats-interval' in target_value %}
+ bmp stats interval {{ target_value['stats-interval'] }}
+{%     endif %}
+{# Check if mirror is enabled for this target #}
+{%     if target_value is mapping and 'mirror' in target_value and target_value['mirror'] == 'true' %}
+ bmp mirror
+{%     endif %}
+{# Collect all AFI/SAFI configs for this target from BMP_TARGET_AFI_SAFI table #}
+{%     if BMP_TARGET_AFI_SAFI is defined %}
+{%       for afi_safi_key, afi_safi_value in BMP_TARGET_AFI_SAFI.items() %}
+{%         set afi_safi_target = none %}
+{%         set afi_safi_name = none %}
+{%         if afi_safi_key is string %}
+{%           set parts = afi_safi_key.split('|') %}
+{%           if parts|length >= 2 %}
+{%             set afi_safi_target = parts[0] %}
+{%             set afi_safi_name = parts[1] %}
+{%           endif %}
+{%         elif afi_safi_key is iterable and afi_safi_key|length >= 2 %}
+{%           set afi_safi_target = afi_safi_key[0] %}
+{%           set afi_safi_name = afi_safi_key[1] %}
+{%         endif %}
+{%         if afi_safi_target == target_name and afi_safi_name is not none and afi_safi_name in afi_safi_map %}
+{%           set afi, safi = afi_safi_map[afi_safi_name] %}
+{%           if afi_safi_value.get('adj-rib-in-pre') == 'true' %}
+ bmp monitor {{ afi }} {{ safi }} pre-policy
+{%           endif %}
+{%           if afi_safi_value.get('adj-rib-in-post') == 'true' %}
+ bmp monitor {{ afi }} {{ safi }} post-policy
+{%           endif %}
+{%           if afi_safi_value.get('loc-rib') == 'true' %}
+ bmp monitor {{ afi }} {{ safi }} loc-rib
+{%           endif %}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{# Collect all collectors for this target from BMP_TARGET_COLLECTOR table #}
+{%     if BMP_TARGET_COLLECTOR is defined %}
+{%       for collector_key, collector_value in BMP_TARGET_COLLECTOR.items() %}
+{%         set collector_target = none %}
+{%         set collector_ip = none %}
+{%         set collector_port = none %}
+{%         if collector_key is string %}
+{%           set parts = collector_key.split('|') %}
+{%           if parts|length >= 3 %}
+{%             set collector_target = parts[0] %}
+{%             set collector_ip = parts[1] %}
+{%             set collector_port = parts[2] %}
+{%           endif %}
+{%         elif collector_key is iterable and collector_key|length >= 3 %}
+{%           set collector_target = collector_key[0] %}
+{%           set collector_ip = collector_key[1] %}
+{%           set collector_port = collector_key[2] %}
+{%         endif %}
+{%         if collector_target == target_name and collector_ip is not none and collector_port is not none %}
+{%           set min_retry = collector_value.get('min-retry', '30000') %}
+{%           set max_retry = collector_value.get('max-retry', '720000') %}
+ bmp connect {{ collector_ip }} port {{ collector_port }} min-retry {{ min_retry }} max-retry {{ max_retry }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+ exit
+!
+{%   endfor %}
+{% endif %}{# end else (has_targets) #}
+!
+{% endif %}{# end if FEATURE bmp enabled #}
+{# --------------------------bmp - end   ------------------------------------------------ #}
 {# --------------------------bgp bestpath as-path - start ----------------------------- #}
 {% if 'ignore_as_path_length' in bgp_sess %}
  bgp bestpath as-path ignore
