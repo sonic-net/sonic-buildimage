@@ -87,13 +87,6 @@ if [[ $# -gt 0 ]]; then
     exit $?
 fi
 
-# Check if networking service is active (only for bulk updates)
-networking_status=$(systemctl is-active networking.service 2>/dev/null)
-if [[ $networking_status != "active" ]]; then
-    log_message "info" "Networking service is not active, skipping container updates"
-    exit 0
-fi
-
 # If no container name provided, update only running containers
 log_message "info" "Starting resolv.conf update for running containers"
 
