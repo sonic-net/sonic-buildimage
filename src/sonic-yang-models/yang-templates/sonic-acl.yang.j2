@@ -201,6 +201,13 @@ module sonic-acl {
 						pattern '0[xX][0-9a-fA-F]{1,2}(/0[xX][0-9a-fA-F]{1,2})?';
 					}
 				}
+				/* Validating 'TCP_FLAGS' is supported by the ACL table type */
+				must "not(TCP_FLAGS) or " +
+					"count(/acl:sonic-acl/acl:ACL_TABLE_TYPE/acl:ACL_TABLE_TYPE_LIST" +
+					"[acl:ACL_TABLE_TYPE_NAME = " +
+ 					"/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST" +
+ 					"[acl:ACL_TABLE_NAME = current()/ACL_TABLE_NAME]/acl:type]" +
+ 					"/acl:MATCHES[. = 'TCP_FLAGS']) > 0";
 
 				leaf DSCP {
 					type uint8;
