@@ -53,7 +53,13 @@ RUN apt update &&            \
 # for sairedis zmq rpc channel
         libzmq5              \
         libwrap0            \
-        libatomic1
+        libatomic1           \
+# iproute2 dependencies
+        libbpf1              \
+        libelf1              \
+        libmnl0              \
+        libxtables12         \
+        libcap2-bin
 
 # Security fixes: upgrade vulnerable base packages (S360 scan remediation)
 RUN apt-get update && apt-get upgrade -y \
