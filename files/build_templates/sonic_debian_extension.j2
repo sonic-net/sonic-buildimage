@@ -317,6 +317,8 @@ install_deb_package $debs_path/libnss-tacplus_*.deb
 # Install bash-tacplus
 install_deb_package $debs_path/bash-tacplus_*.deb
 # Install audisp-tacplus
+# Install audisp-tacplus (depends on libauparse0 |libauparse0t64 ; ensure it is installed for Trixie/time64)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libauparse0t64
 install_deb_package $debs_path/audisp-tacplus_*.deb
 # Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying

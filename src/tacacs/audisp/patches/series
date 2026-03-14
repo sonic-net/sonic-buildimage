@@ -2,3 +2,4 @@
 0002-Remove-user-secret-from-accounting-log.patch
 0003-Add-local-accounting.patch
 0004-Trixie-fixes.patch
+0005-Trixie-libauparse0t64-dependency.patch
