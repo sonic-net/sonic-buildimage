@@ -94,7 +94,7 @@ devices = {
         {
             "name": "ONIE_E2",
             "e2loc": {"loc": "/sys/bus/i2c/devices/1-0056/eeprom", "way": "sysfs"},
-            "airflow": "intake"
+            "airflow": "exhaust"
         },
     ],
     "psus": [
@@ -315,7 +315,8 @@ devices = {
             "temp_id": "TEMP3",
             "Temperature": {
                 "value": [
-                    {"loc": "/sys/s3ip/temp_sensor/temp10/value", "way": "sysfs"},
+                    {"loc": "/sys/s3ip/temp_sensor/temp11/value", "way": "sysfs"},
+                    {"loc": "/sys/s3ip/temp_sensor/temp12/value", "way": "sysfs"},
                 ],
                 "Min": -30000,
                 "Low": 0,
@@ -330,8 +331,7 @@ devices = {
             "temp_id": "TEMP4",
             "Temperature": {
                 "value": [
-                    {"loc": "/sys/s3ip/temp_sensor/temp11/value", "way": "sysfs"},
-                    {"loc": "/sys/s3ip/temp_sensor/temp12/value", "way": "sysfs"},
+                    {"loc": "/sys/s3ip/temp_sensor/temp10/value", "way": "sysfs"},
                 ],
                 "Min": -30000,
                 "Low": 0,

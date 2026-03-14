@@ -70,7 +70,7 @@ class Psu(PsuBase):
         Returns:
             string: The name of the device
         """
-        return "PSU {}".format(self.index)
+        return "Psu{}".format(self.index)
 
     def get_presence(self):
         """
