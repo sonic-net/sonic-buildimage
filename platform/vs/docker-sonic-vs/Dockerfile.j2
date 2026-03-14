@@ -122,20 +122,12 @@ RUN apt-get autoremove -y
 # Remove temporary sonic-host-services/dbus-python build backend tools
 RUN pip3 uninstall -y meson-python meson ninja patchelf
 RUN rm -rf /debs ~/.cache
-
-RUN sed -ri 's/^# save ""$/save ""/g;                    \
-             s/^daemonize yes$/daemonize no/;            \
-             s/^logfile .*$/logfile ""/;                 \
-             s/^# syslog-enabled no$/syslog-enabled no/; \
-             s/^# unixsocket/unixsocket/;                \
-             s/redis-server.sock/redis.sock/g;           \
-             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
-             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
-             s/^databases [0-9]+$/databases 100/ \
-            ' /etc/redis/redis.conf
+# Database feature (from docker-database via --build-context)
+{% set copy_from = "database" %}
+{% include "docker-database/Dockerfile.common.j2" %}
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
-COPY ["start.sh", "files/update_chassisdb_config", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
 COPY --from=fpm-frr frr/supervisord/supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2
