@@ -344,6 +344,13 @@ module sonic-device_metadata {
                     }
                     default enabled;
                 }
+
+                leaf frr_mgmt_framework_cfg_template_restore {
+                    type boolean;
+                    description "When sonic-frr-mgmt-framework module is set to true, this field provides the flexibility to restore
+                        the FRR configurations during startup through frrcfgd.";
+                    default "true";
+                }
             }
             /* end of container localhost */
 

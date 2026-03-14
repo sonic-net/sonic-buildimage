@@ -399,6 +399,15 @@
             }
         }
     },
+    "DEVICE_METADATA_FRR_MGMT_FRAMEWORK_CFG_TEMPLATE_RESTORE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "frr_mgmt_framework_cfg_template_restore": true
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_CORRECT_CLOUDTYPE_REGION_CONFIG": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
