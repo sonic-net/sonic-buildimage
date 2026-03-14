@@ -21,14 +21,11 @@
 #ifndef __WB_WDT_H__
 #define __WB_WDT_H__
 
-#include <linux/of_gpio.h>
-
 #define SYSFS_NO_CFG         (0xff)
 #define INVALID_REG_ADDR     (0xffffffff)
 
 typedef struct gpio_wdt_info_s {
     int       gpio;
-    enum of_gpio_flags  flags;
     bool      active_low;
     bool      state;
 }gpio_wdt_info_t;

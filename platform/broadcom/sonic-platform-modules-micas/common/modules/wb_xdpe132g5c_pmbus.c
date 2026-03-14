@@ -23,6 +23,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
@@ -349,8 +350,7 @@ static struct pmbus_driver_info xdpe132g5c_info = {
     .identify = xdpe132g5c_identify,
 };
 
-static int xdpe132g5c_probe(struct i2c_client *client,
-             const struct i2c_device_id *id)
+static int xdpe132g5c_probe(struct i2c_client *client)
 {
     int status;
     struct pmbus_driver_info *info;

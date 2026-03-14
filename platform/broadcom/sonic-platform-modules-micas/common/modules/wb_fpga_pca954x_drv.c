@@ -372,7 +372,7 @@ static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 /*
  * I2C init/probing/exit functions
  */
-static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int fpga_i2c_pca954x_probe(struct i2c_client *client)
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
     int num, force, class;
@@ -381,6 +381,7 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
     struct device *dev;
     int dynamic_nr = 1;
     fpga_pca954x_device_t *fpga_pca954x_device;
+    const struct i2c_device_id *id = i2c_match_id(fpga_pca954x_id, client);
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4,6,7)
     struct i2c_mux_core *muxc;
@@ -486,7 +487,7 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
             goto virt_reg_failed;
         }
 #else
-        ret = i2c_mux_add_adapter(muxc, force, num, class);
+        ret = i2c_mux_add_adapter(muxc, force, num);
         if (ret) {
             dev_err(&client->dev, "Failed to register multiplexed adapter %d as bus %d\n",
                 num, force);

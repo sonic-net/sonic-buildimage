@@ -25,6 +25,7 @@
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
@@ -721,7 +722,7 @@ static int platform_i2c_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int platform_i2c_dev_remove(struct platform_device *pdev)
+static void platform_i2c_dev_remove(struct platform_device *pdev)
 {
     int i;
 
@@ -732,7 +733,6 @@ static int platform_i2c_dev_remove(struct platform_device *pdev)
         }
     }
 
-    return 0;
 }
 
 static const struct of_device_id platform_i2c_dev_of_match[] = {

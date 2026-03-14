@@ -761,10 +761,13 @@ static int mac_bsc_config_check(dev_params_t *dev_params)
     return 0;
 }
 
-static int mac_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static const struct i2c_device_id mac_id_table[];
+
+static int mac_probe(struct i2c_client *client)
 {
     struct mac_data *data;
     int ret, mac_id, index;
+    const struct i2c_device_id *id = i2c_match_id(mac_id_table, client);
 
     WB_MAC_BSC_DEBUG("=========mac_probe(%d-%04x)===========\n",
         client->adapter->nr, client->addr);

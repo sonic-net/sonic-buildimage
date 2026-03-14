@@ -146,7 +146,7 @@ static void dfd_ko_cfg_regval_conv_lst_add(struct list_head *root, int val, char
     val_convert->index1 = index1;
     val_convert->index2 = index2;
     if (str != NULL) {
-        strlcpy(val_convert->str_val, str, sizeof(val_convert->str_val));
+        strscpy(val_convert->str_val, str, sizeof(val_convert->str_val));
     }
 
     /* After initialization, the list does not change and does not need to be locked */
@@ -517,7 +517,7 @@ static int dfd_ko_cfg_add_str_item(uint64_t key, char *str, int line_num)
             return -1;
         }
         mem_clear(str_cfg, DFD_CFG_STR_MAX_LEN);
-        strlcpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+        strscpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
 
         /* Add to linked list */
         rv = lnode_insert_node(&dfd_ko_cfg_list_root, key, str_cfg);
@@ -535,7 +535,7 @@ static int dfd_ko_cfg_add_str_item(uint64_t key, char *str, int line_num)
         DBG_DEBUG(DBG_WARN, "line%d: replace string item[%s->%s], key=0x%08llx\n",
             line_num, str_cfg, str, key);
         mem_clear(str_cfg, DFD_CFG_STR_MAX_LEN);
-        strlcpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+        strscpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
     }
 
     return 0;
@@ -748,7 +748,7 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
         break;
     case INFO_CTRL_MEM_FPATH:
         mem_clear(info_ctrl->fpath, sizeof(info_ctrl->fpath));
-        strlcpy(info_ctrl->fpath, buf_val, sizeof(info_ctrl->fpath));
+        strscpy(info_ctrl->fpath, buf_val, sizeof(info_ctrl->fpath));
         break;
     case INFO_CTRL_MEM_ADDR:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->addr), line_num);
@@ -761,7 +761,7 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
         break;
     case INFO_CTRL_MEM_STR_CONS:
         mem_clear(info_ctrl->str_cons, sizeof(info_ctrl->str_cons));
-        strlcpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
+        strscpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
         break;
     case INFO_CTRL_MEM_INT_EXTRA1:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->int_extra1), line_num);

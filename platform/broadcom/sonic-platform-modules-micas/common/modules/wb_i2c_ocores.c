@@ -23,6 +23,7 @@
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/errno.h>
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
@@ -1157,7 +1158,7 @@ out:
     return ret;
 }
 
-static int ocores_i2c_remove(struct platform_device *pdev)
+static void ocores_i2c_remove(struct platform_device *pdev)
 {
     struct ocores_i2c *i2c = platform_get_drvdata(pdev);
     u8 ctrl = oc_getreg(i2c, OCI2C_CONTROL);
@@ -1168,7 +1169,6 @@ static int ocores_i2c_remove(struct platform_device *pdev)
 
     /* remove adapter & data */
     i2c_del_adapter(&i2c->adap);
-    return 0;
 }
 
 static struct platform_driver ocores_i2c_driver = {

@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of_gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
 #include <linux/hrtimer.h>
@@ -795,7 +796,7 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
 {
     struct device *dev;
     gpio_wdt_info_t *gpio_wdt;
-    enum of_gpio_flags flags;
+    struct gpio_desc *gpiod;
     uint32_t f = 0;
     int ret;
 
@@ -803,17 +804,21 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
     gpio_wdt = &priv->gpio_wdt;
 
     if (dev->of_node) {
-        gpio_wdt->gpio = of_get_gpio_flags(dev->of_node, 0, &flags);
+        gpiod = gpiod_get_index(dev, NULL, 0, GPIOD_ASIS);
+        if (IS_ERR(gpiod))
+            return PTR_ERR(gpiod);
+
+        gpio_wdt->gpio = desc_to_gpio(gpiod);
+        gpio_wdt->active_low = gpiod_is_active_low(gpiod);
+        gpiod_put(gpiod);
     } else {
         gpio_wdt->gpio = wb_wdt_device->wdt_config_mode.gpio_wdt.gpio;
-        flags = wb_wdt_device->wdt_config_mode.gpio_wdt.flags;
+        gpio_wdt->active_low = wb_wdt_device->wdt_config_mode.gpio_wdt.active_low;
     }
     if (!gpio_is_valid(gpio_wdt->gpio)) {
         dev_err(dev, "gpio is invalid.\n");
         return gpio_wdt->gpio;
     }
-
-    gpio_wdt->active_low = flags & OF_GPIO_ACTIVE_LOW;
 
     if(priv->hw_algo == HW_ALGO_TOGGLE) {
         f = GPIOF_IN;
@@ -1182,13 +1187,12 @@ static void unregister_action(struct platform_device *pdev)
     return;
 }
 
-static int wb_wdt_remove(struct platform_device *pdev)
+static void wb_wdt_remove(struct platform_device *pdev)
 {
     WDT_VERBOSE("enter remove wdt.\n");
     unregister_action(pdev);
     dev_info(&pdev->dev, "remove wdt finish.\n");
 
-    return 0;
 }
 
 static void wb_wdt_shutdown(struct platform_device *pdev)

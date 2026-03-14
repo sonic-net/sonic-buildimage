@@ -20,6 +20,7 @@
 
 #include <linux/version.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/jiffies.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
@@ -541,19 +542,19 @@ static int pca9641_do_gpio_reset(struct i2c_mux_core *muxc)
         usleep_range(reset_cfg->rst_delay_b, reset_cfg->rst_delay_b + 1);
     }
 
-    __gpio_set_value(gpio_attr->gpio, gpio_attr->reset_on);
+    gpio_set_value(gpio_attr->gpio, gpio_attr->reset_on);
 
     if (reset_cfg->rst_delay) {
         usleep_range(reset_cfg->rst_delay, reset_cfg->rst_delay + 1);
     }
 
-    __gpio_set_value(gpio_attr->gpio, gpio_attr->reset_off);
+    gpio_set_value(gpio_attr->gpio, gpio_attr->reset_off);
     ret = -1;
     udelay_cnt = 0;
     timeout = reset_cfg->rst_delay_a;
     while (timeout > 0) {
         usleep_range(1, 2);
-        val = __gpio_get_value(gpio_attr->gpio);
+        val = gpio_get_value(gpio_attr->gpio);
         if (val == gpio_attr->reset_off) {
             ret = 0;
             PCA_DEBUG("pca9641_do_gpio_reset success.\n");
@@ -1272,7 +1273,7 @@ static int pca9641_reset_data_init(struct pca9541 *data)
 /*
  * I2C init/probing/exit functions
  */
-static int pca9541_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int pca9541_probe(struct i2c_client *client)
 {
     struct i2c_adapter *adap = client->adapter;
     struct i2c_mux_core *muxc;
@@ -1322,7 +1323,7 @@ static int pca9541_probe(struct i2c_client *client, const struct i2c_device_id *
             PCA_DEBUG("pca9641_nr: %d.\n", force);
         }
 
-        ret = i2c_mux_add_adapter(muxc, force, 0, 0);
+        ret = i2c_mux_add_adapter(muxc, force, 0);
         if (ret)
             return ret;
     } else {
@@ -1375,7 +1376,7 @@ static int pca9541_probe(struct i2c_client *client, const struct i2c_device_id *
             }
         }
 
-        ret = i2c_mux_add_adapter(muxc, force, 0, 0);
+        ret = i2c_mux_add_adapter(muxc, force, 0);
         if (ret) {
             dev_err(&client->dev, "Failed to register master selector.\n");
             return ret;

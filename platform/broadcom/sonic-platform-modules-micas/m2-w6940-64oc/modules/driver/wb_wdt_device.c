@@ -59,7 +59,7 @@ static wb_wdt_device_t wb_wdt_device_data_0 = {
     .hw_algo = "toggle",
     .wdt_config_mode.gpio_wdt = {
         .gpio = 346,
-        .flags = 1
+        .active_low = 1
     },
     .timer_accuracy = 1600,          /* 1.6s */
     .sysfs_index = SYSFS_NO_CFG,
