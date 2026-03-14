@@ -485,14 +485,30 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
     TODO: once platform.json has all the necessary port config information
           remove this check
     """
+    # Helper function to check if platform.json has valid interfaces
+    def _check_platform_json(json_path):
+        if os.path.isfile(json_path):
+            try:
+                with open(json_path) as f:
+                    platform_data = json.load(f)
+                interfaces = platform_data.get('interfaces', None)
+                if interfaces is not None and len(interfaces) > 0:
+                    return True
+            except (json.JSONDecodeError, IOError):
+                pass
+        return False
+
+
 
     if os.path.isfile(hwsku_json_file):
-        if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
-            json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
-            platform_data = json.loads(open(json_file).read())
-            interfaces = platform_data.get('interfaces', None)
-            if interfaces is not None and len(interfaces) > 0:
-                port_config_candidates.append(os.path.join(platform_path, PLATFORM_JSON_FILE))
+        # First check hwsku directory for platform.json (preferred location)
+        hwsku_platform_json = os.path.join(hwsku_path, PLATFORM_JSON_FILE)
+        if _check_platform_json(hwsku_platform_json):
+            port_config_candidates.append(hwsku_platform_json)
+        # Then check platform directory for platform.json (legacy location)
+        elif _check_platform_json(os.path.join(platform_path, PLATFORM_JSON_FILE)):
+            port_config_candidates.append(os.path.join(platform_path, PLATFORM_JSON_FILE))
+
 
     # Check for 'port_config.ini' file presence in a few locations
     if asic:
