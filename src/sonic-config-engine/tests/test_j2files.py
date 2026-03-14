@@ -259,6 +259,13 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv6, self.output_file))
 
+        # Test generation of lldpd.conf with PORT table (aliases, special ports, missing alias)
+        mgmt_iface_ipv4_with_ports_json = os.path.join(self.test_dir, "data", "lldp", "mgmt_iface_ipv4_with_ports.json")
+        expected_mgmt_ipv4_with_ports = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'lldp_conf', 'lldpd-ipv4-iface-with-ports.conf')
+        argument = ['-j', mgmt_iface_ipv4_with_ports_json, '-t', lldpd_conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
+
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', ipinip_file]
