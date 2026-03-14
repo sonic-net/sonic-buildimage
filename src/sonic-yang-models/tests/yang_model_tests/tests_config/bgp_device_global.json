@@ -34,7 +34,7 @@
             }
         }
     },
-    "BGP_DEVICE_GLOBAL_WITH_WCMP_DEFAULT_VALUE": {
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_DEFAULT_VALUE": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE": {
@@ -42,29 +42,47 @@
             }
         }
     },
-    "BGP_DEVICE_GLOBAL_WITH_WCMP_ENABLED": {
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_CUMULATIVE": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE": {
-                    "wcmp_enabled": "true"
+                    "originate_bandwidth": "cumulative"
                 }
             }
         }
     },
-    "BGP_DEVICE_GLOBAL_WITH_WCMP_DISABLED": {
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_MULTIPATH": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE": {
-                    "wcmp_enabled": "false"
+                    "originate_bandwidth": "num_multipaths"
                 }
             }
         }
     },
-    "BGP_DEVICE_GLOBAL_WITH_WCMP_INVALID_VALUE": {
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_WEIGHT": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE": {
-                    "wcmp_enabled": "invalid_value"
+                    "originate_bandwidth": "5"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_DISABLED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "originate_bandwidth": "disabled"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_ORIGINATE_BANDWIDTH_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "originate_bandwidth": "invalid_value"
                 }
             }
         }
