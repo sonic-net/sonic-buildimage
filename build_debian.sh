@@ -751,7 +751,7 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
-    elif [[ $CONFIGURED_ARCH == arm64 ]]; then
+    elif [[ $CONFIGURED_ARCH == arm64 && $CONFIGURED_PLATFORM != nokia-vs ]]; then
         if [[ $CONFIGURED_PLATFORM == pensando ]]; then
             ## copy device tree file into boot (XXX: need to compile dtb from dts)
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
