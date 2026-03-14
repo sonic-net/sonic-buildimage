@@ -1,0 +1,67 @@
+module sonic-dot1p-tc-map {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-dot1p-tc-map";
+
+    prefix dot1ptm;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "DOT1P_TO_TC_MAP yang Module for SONiC OS";
+
+    revision 2021-04-15 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-dot1p-tc-map {
+
+        container DOT1P_TO_TC_MAP {
+
+            description "DOT1P_TO_TC_MAP part of config_db.json";
+
+            list DOT1P_TO_TC_MAP_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for map name.";
+                            error-app-tag map-name-invalid-length;
+                        }
+                    }
+                }
+
+                list DOT1P_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+
+                    key "dot1p";
+
+                    leaf dot1p {
+                        type string {
+                            pattern "[0-7]?" {
+                                error-message "Invalid DOT1P";
+                                error-app-tag dot1p-invalid;
+                            }
+                        }
+                    }
+
+                    leaf tc {
+                        type stypes:tc_type;
+                    }
+                }
+            }
+        }
+    }
+}

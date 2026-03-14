@@ -1,0 +1,46 @@
+
+{%- set default_cable = '40m' %}
+
+{%- set PORT_ALL = [] %}
+
+{%- for port in PORT %}
+    {%- if PORT_ALL.append(port) %}{%- endif %}
+{%- endfor %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "27678784",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "4194112"
+        },
+        "egress_lossy_pool": {
+            "size": "26045524",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "32786432",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"1518",
+            "static_th":"3995680"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"1518",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}

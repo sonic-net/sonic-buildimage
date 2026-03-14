@@ -1,0 +1,556 @@
+#!/usr/bin/env python
+"""sonic-cfggen
+
+A tool to read SONiC config data from one or more of the following sources:
+minigraph file, config DB, json file(s), yaml files(s), command line input,
+and write the data into DB, print as json, or render a jinja2 config template.
+
+Examples:
+    Render template with minigraph:
+        sonic-cfggen -m -t /usr/share/template/bgpd.conf.j2
+    Dump config DB content into json file:
+        sonic-cfggen -d --print-data > db_dump.json
+    Load content of json file into config DB:
+        sonic-cfggen -j db_dump.json --write-to-db
+See usage string for detail description for arguments.
+"""
+
+from __future__ import print_function
+
+import argparse
+import contextlib
+import jinja2
+import json
+import netaddr
+import os
+import sys
+import yaml
+import ipaddress
+import base64
+
+from collections import OrderedDict
+from config_samples import generate_sample_config, get_available_config
+from functools import partial
+from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
+from portconfig import get_port_config, get_breakout_mode
+from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
+from sonic_py_common import device_info
+from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
+from asic_sensors_config import get_asic_sensors_config
+
+PY3x = sys.version_info >= (3, 0)
+
+# TODO: Remove STR_TYPE, FILE_TYPE once SONiC moves to Python 3.x
+# TODO: Remove the import SonicYangCfgDbGenerator once SONiC moves to python3.x
+if PY3x:
+    from io import IOBase
+    from sonic_yang_cfg_generator import SonicYangCfgDbGenerator
+    STR_TYPE = str
+    FILE_TYPE = IOBase
+else:
+    STR_TYPE = unicode
+    FILE_TYPE = file
+
+def sort_by_port_index(value):
+    if not value:
+        return
+    if isinstance(value, list):
+        # In multi-ASIC platforms backend ethernet ports are identified as
+        # 'Ethernet-BPxy'. Add 1024 to sort backend ports to the end.
+        value.sort(
+            key = lambda k: int(k[8:]) if "BP" not in k else int(k[11:]) + 1024
+        )
+
+def is_ipv4(value):
+    if not value:
+        return False
+    if isinstance(value, netaddr.IPNetwork):
+        addr = value
+    else:
+        try:
+            addr = netaddr.IPNetwork(str(value))
+        except:
+            return False
+    return addr.version == 4
+
+def is_ipv6(value):
+    if not value:
+        return False
+    if isinstance(value, netaddr.IPNetwork):
+        addr = value
+    else:
+        try:
+            addr = netaddr.IPNetwork(str(value))
+        except:
+            return False
+    return addr.version == 6
+
+def prefix_attr(attr, value):
+    if not value:
+        return None
+    else:
+        try:
+            prefix = netaddr.IPNetwork(str(value))
+        except:
+            return None
+    result = getattr(prefix, attr)
+    if result is None:
+        return None
+    return str(result)
+
+def unique_name(l):
+    name_list = []
+    new_list = []
+    for item in l:
+        if item['name'] not in name_list:
+            name_list.append(item['name'])
+            new_list.append(item)
+    return new_list
+
+def pfx_filter(value):
+    """INTERFACE Table can have keys in one of the two formats:
+       string or tuple - This filter skips the string keys and only
+       take into account the tuple.
+       For eg - VLAN_INTERFACE|Vlan1000 vs VLAN_INTERFACE|Vlan1000|192.168.0.1/21
+    """
+    table = OrderedDict()
+
+    if not value:
+        return table
+
+    for key,val in value.items():
+        if not isinstance(key, tuple):
+            continue
+        intf, ip_address = key
+        if '/' not in ip_address:
+            if is_ipv4(ip_address):
+                new_ip_address = "%s/32" % ip_address
+            elif is_ipv6(ip_address):
+                new_ip_address = "%s/128" % ip_address
+            else:
+                raise ValueError("'%s' is invalid ip address" % ip_address)
+            table[(intf, new_ip_address)] = val
+        else:
+            table[key] = val
+    return table
+
+def ip_network(value):
+    """ Extract network for network prefix """
+    try:
+        r_v = netaddr.IPNetwork(value)
+    except:
+        return "Invalid ip address %s" % value
+    return r_v.network
+
+def b64encode(value):
+    """Base64 encoder
+    Return:
+        encoded string or the same value in case of error
+    """
+    try:
+        ret = base64.b64encode(value.encode()).decode()
+    except:
+        return value
+    return ret
+
+
+def b64decode(value):
+    """Base64 decoder
+    Return:
+        decoded string or the same value in case of error
+    """
+    try:
+        ret = base64.b64decode(value.encode()).decode()
+    except:
+        return value
+    return ret
+
+def get_primary_addr(value):
+    if not value:
+        return ""
+    table = pfx_filter(value)
+    primary_gateways = OrderedDict()
+    intf_with_secondary = set()
+    for key, val in table.items():
+        name, prefix = key
+        if "secondary" in val:
+            intf_with_secondary.add(name)
+    for key, val in table.items():
+        name, prefix = key
+        if name in intf_with_secondary and "secondary" not in val:
+            if PY3x:
+                network_def = ipaddress.ip_network(prefix, strict=False)
+            else:
+                network_def = ipaddress.ip_network(unicode(prefix), strict=False)
+            primary_gateways[(name, network_def[1])] = {}
+            intf_with_secondary.remove(name)
+    return primary_gateways
+
+def load_namespace_config():
+    if is_multi_asic():
+        if not SonicDBConfig.isGlobalInit():
+            SonicDBConfig.initializeGlobalConfig()
+    else:
+        if not SonicDBConfig.isInit():
+            SonicDBConfig.initialize()
+
+def file_exists_filter(path):
+    return os.path.isfile(path)
+
+class FormatConverter:
+    """Convert config DB based schema to legacy minigraph based schema for backward capability.
+We will move to DB schema and remove this class when the config templates are modified.
+
+TODO(taoyl): Current version of config db only supports BGP admin states.
+    All other configuration are still loaded from minigraph. Plan to remove
+    minigraph and move everything into config db in a later commit.
+    """
+    @staticmethod
+    def db_to_output(db_data):
+        return db_data
+
+    @staticmethod
+    def output_to_db(output_data):
+        db_data = {}
+        for table_name in output_data:
+            if table_name[0].isupper():
+                db_data[table_name] = output_data[table_name]
+        return db_data
+
+    @staticmethod
+    def to_serialized(data, lookup_key = None):
+        if type(data) is dict:
+            if lookup_key is not None:
+                newData = {}
+                for key in data.keys():
+                    if ((type(key) is STR_TYPE and lookup_key == key) or (type(key) is tuple and lookup_key in key)):
+                        newData[ConfigDBConnector.serialize_key(key)] = data.pop(key)
+                        break
+                return newData
+
+            current_keys = list(data.keys())
+            for key in current_keys:
+                new_key = ConfigDBConnector.serialize_key(key)
+                if new_key != key:
+                    data[new_key] = data.pop(key)
+                data[new_key] = FormatConverter.to_serialized(data[new_key])
+        return data
+
+    @staticmethod
+    def to_deserialized(data):
+        for table in data:
+            if type(data[table]) is dict:
+                current_keys = list(data[table].keys())
+                for key in current_keys:
+                    new_key = ConfigDBConnector.deserialize_key(key)
+                    if new_key != key:
+                        data[table][new_key] = data[table].pop(key)
+        return data
+
+def deep_update(dst, src):
+    """ Deep update of dst dict with contest of src dict"""
+    pending_nodes = [(dst, src)]
+    while len(pending_nodes) > 0:
+        d, s = pending_nodes.pop(0)
+        for key, value in s.items():
+            if isinstance(value, dict):
+                node = d.setdefault(key, type(value)())
+                pending_nodes.append((node, value))
+            else:
+                d[key] = value
+    return dst
+
+# sort_data is required as it is being imported by config/config_mgmt module in sonic_utilities
+def sort_data(data):
+    for table in data:
+        if type(data[table]) is dict:
+            data[table] = OrderedDict(natsorted(data[table].items()))
+    return data
+
+@contextlib.contextmanager
+def smart_open(filename=None, mode=None):
+    """
+    Provide contextual file descriptor of filename if it is not a file descriptor
+    """
+    smart_file = open(filename, mode) if not isinstance(filename, FILE_TYPE) else filename
+    try:
+        yield smart_file
+    finally:
+        if not isinstance(filename, FILE_TYPE):
+            smart_file.close()
+
+def _process_json(args, data):
+    """
+    Process JSON file and update switch configuration data
+    """
+    for json_file in args.json:
+        with open(json_file, 'r') as stream:
+            deep_update(data, FormatConverter.to_deserialized(json.load(stream)))
+
+def _get_jinja2_env(paths):
+    """
+    Retreive Jinj2 env used to render configuration templates
+    """
+    loader = jinja2.FileSystemLoader(paths)
+    env = jinja2.Environment(loader=loader, trim_blocks=True)
+    env.filters['sort_by_port_index'] = sort_by_port_index
+    env.filters['ipv4'] = is_ipv4
+    env.filters['ipv6'] = is_ipv6
+    env.filters['unique_name'] = unique_name
+    env.filters['pfx_filter'] = pfx_filter
+    env.filters['ip_network'] = ip_network
+    env.filters['get_primary_addr'] = get_primary_addr
+    env.filters['file_exists'] = file_exists_filter
+    for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
+        env.filters[attr] = partial(prefix_attr, attr)
+
+    # Base64 encoder/decoder
+    env.filters['b64encode'] = b64encode
+    env.filters['b64decode'] = b64decode
+
+    # Introduce a 'template_exists' function to check if a template exists
+    # This is used to conditionally import a template since jinja2 import
+    # statement fails if the template does not exist and does not have native support
+    def template_exists(name):
+        try:
+            loader.get_source(env, name)
+            return True
+        except jinja2.exceptions.TemplateNotFound:
+            return False
+    env.globals['template_exists'] = template_exists
+
+    # Expose is_smartswitch flag into Jinja globals
+    try:
+        smartswitch_flag = device_info.is_smartswitch()
+    except Exception as e:
+        smartswitch_flag = False
+        sys.stderr.write("sonic-cfggen: is_smartswitch() detection failed: {}\n".format(e))
+    env.globals['is_smartswitch'] = smartswitch_flag
+
+    return env
+
+def main():
+    parser=argparse.ArgumentParser(description="Render configuration file from minigraph data and jinja2 template.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-m", "--minigraph", help="minigraph xml file", nargs='?', const='/etc/sonic/minigraph.xml')
+    group.add_argument("-Y", "--yang", help="yang data json file", nargs='?', const='/etc/sonic/config_yang.json')
+    group.add_argument("-M", "--device-description", help="device description xml file")
+    group.add_argument("-k", "--hwsku", help="HwSKU")
+    parser.add_argument("-n", "--namespace", help="namespace name", nargs='?', const=None, default=None)
+    parser.add_argument("-p", "--port-config", help="port config file, used with -m or -k", nargs='?', const=None)
+    parser.add_argument("-S", "--hwsku-config", help="hwsku config file, used with -p and -m or -k", nargs='?', const=None)
+    parser.add_argument("-y", "--yaml", help="yaml file that contains additional variables", action='append', default=[])
+    parser.add_argument("-j", "--json", help="json file that contains additional variables", action='append', default=[])
+    parser.add_argument("-a", "--additional-data", help="addition data, in json string")
+    parser.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
+    parser.add_argument("-H", "--platform-info", help="read platform and hardware info", action='store_true')
+    parser.add_argument("-s", "--redis-unix-sock-file", help="unix sock file for redis connection")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-t", "--template", help="render the data with the template file", action="append", default=[],
+                       type=lambda opt_value: tuple(opt_value.split(',')) if ',' in opt_value else (opt_value, sys.stdout))
+    parser.add_argument("-T", "--template_dir", help="search base for the template files", action='store')
+    group.add_argument("-v", "--var", help="print the value of a variable, support jinja2 expression")
+    group.add_argument("--var-json", help="print the value of a variable, in json format")
+    group.add_argument("--preset", help="generate sample configuration from a preset template", choices=get_available_config())
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--print-data", help="print all data", action='store_true')
+    group.add_argument("-w", "--write-to-db", help="write config into configdb", action='store_true')
+    group.add_argument("-K", "--key", help="Lookup for a specific key")
+    args = parser.parse_args()
+
+    platform = device_info.get_platform()
+    data = {}
+
+    bmc_data = None
+    if platform:
+        bmc_data = device_info.get_bmc_data()
+    if bmc_data:
+        for key, value in bmc_data.items():
+            deep_update(data, {'DEVICE_METADATA': {'bmc': {key:value}}})
+
+    db_kwargs = {}
+    if args.redis_unix_sock_file is not None:
+        db_kwargs['unix_socket_path'] = args.redis_unix_sock_file
+
+    hwsku = args.hwsku
+    asic_name = args.namespace
+    asic_id = None
+    if asic_name is not None:
+        asic_id = get_asic_id_from_name(asic_name)
+    # get the namespace ID
+    namespace_id = os.getenv("NAMESPACE_ID")
+    if namespace_id:
+        deep_update(data, {
+                            'DEVICE_METADATA': {
+                                'localhost': {'namespace_id': namespace_id}
+                             }
+                          })
+    if hwsku is not None:
+        hardware_data = {'DEVICE_METADATA': {'localhost': {
+            'hwsku': hwsku
+            }}}
+        deep_update(data, hardware_data)
+        if args.port_config is None:
+            args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
+        load_namespace_config()
+        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, hwsku_config_file=args.hwsku_config, asic_name=asic_name)
+        if ports is None:
+            print('Failed to get port config', file=sys.stderr)
+            sys.exit(1)
+        deep_update(data, {'PORT': ports})
+
+        brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
+        if  brkout_table is not None:
+            deep_update(data, {'BREAKOUT_CFG': brkout_table})
+
+    _process_json(args, data)
+
+    if args.yang is not None:
+        #TODO: Remove this check onces SONiC moves to python3.x
+        if PY3x:
+            yang_file = args.yang
+            config_db_json = SonicYangCfgDbGenerator().generate_config(
+                yang_data_file=yang_file)
+            deep_update(data, config_db_json)
+        else:
+            print('-Y/--yang option is not available in Python2', file=sys.stderr)
+            sys.exit(1)
+
+    if args.minigraph is not None:
+        minigraph = args.minigraph
+        load_namespace_config()
+        if platform:
+            if args.port_config is not None:
+                deep_update(data, parse_xml(minigraph, platform, args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
+            else:
+                deep_update(data, parse_xml(minigraph, platform, asic_name=asic_name))
+        else:
+            deep_update(data, parse_xml(minigraph, port_config_file=args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
+
+    if args.device_description is not None:
+        deep_update(data, parse_device_desc_xml(args.device_description))
+
+    for yaml_file in args.yaml:
+        with open(yaml_file, 'r') as stream:
+            if yaml.__version__ >= "5.1":
+                additional_data = yaml.full_load(stream)
+            else:
+                additional_data = yaml.safe_load(stream)
+            deep_update(data, FormatConverter.to_deserialized(additional_data))
+
+    if args.additional_data is not None:
+        deep_update(data, json.loads(args.additional_data))
+
+    if args.from_db:
+        use_unix_sock = True if os.getuid() == 0 else False
+        if args.namespace is None:
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
+        else:
+            load_namespace_config()
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
+
+        configdb.connect()
+        deep_update(data, FormatConverter.db_to_output(configdb.get_config()))
+
+
+    # the minigraph file must be provided to get the mac address for backend asics
+    # or switch_type chassis_packet
+    if args.platform_info:
+        asic_role = None
+        switch_type = None
+        hostname = None
+
+        if args.minigraph is not None:
+            hostname = parse_hostname(args.minigraph)
+
+        if asic_name is not None:
+            if args.minigraph is not None:
+                asic_role = parse_asic_sub_role(args.minigraph, asic_name)
+                switch_type = parse_asic_switch_type(args.minigraph, asic_name, hostname)
+            if ((switch_type is not None and switch_type.lower() == "chassis-packet") or
+                (asic_role is not None and asic_role.lower() == "backend") or
+                (platform == device_info.VS_PLATFORM)) :
+                mac = device_info.get_system_mac(namespace=asic_name, hostname=hostname)
+            else:
+                mac = device_info.get_system_mac()
+        else:
+            mac = device_info.get_system_mac(hostname=hostname)
+
+        hardware_data = {'DEVICE_METADATA': {'localhost': {
+            'platform': platform,
+            'mac': mac,
+            }}}
+
+        # The ID needs to be passed to the SAI to identify the asic.
+        if asic_name is not None:
+            device_id = get_asic_device_id(asic_id)
+            # if the device_id obtained is None, exit with error
+            if device_id is None:
+                print('Warning: Failed to get device ID from asic.conf file for', asic_name, file=sys.stderr)
+            else:
+                hardware_data['DEVICE_METADATA']['localhost'].update(asic_id=device_id)
+
+            sub_role = get_asic_sub_role(asic_id)
+            if sub_role is not None:
+                hardware_data['DEVICE_METADATA']['localhost'].update(sub_role=sub_role)
+
+        deep_update(data, hardware_data)
+
+        asic_sensors = {}
+        if is_multi_asic():
+            if asic_name is not None:
+                asic_sensors = get_asic_sensors_config()
+        else:
+            asic_sensors = get_asic_sensors_config()
+        if asic_sensors:
+            deep_update(data, asic_sensors) 
+
+    paths = ['/', '/usr/share/sonic/templates']
+    if args.template_dir:
+        paths.append(os.path.abspath(args.template_dir))
+
+    paths.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../files/build_templates')))
+
+    if args.template:
+        for template_file, _ in args.template:
+            paths.append(os.path.dirname(os.path.abspath(template_file)))
+        env = _get_jinja2_env(paths)
+        for template_file, dest_file in args.template:
+            template = env.get_template(os.path.basename(template_file))
+            template_data = template.render(data)
+            if dest_file == "config-db":
+                deep_update(data, FormatConverter.to_deserialized(json.loads(template_data)))
+            else:
+                with smart_open(dest_file, 'w') as df:
+                    print(template_data, file=df)
+
+    if args.var is not None:
+        template = jinja2.Template('{{' + args.var + '}}')
+        print(template.render(data))
+
+    if args.var_json is not None and args.var_json in data:
+        if args.key is not None:
+            print(json.dumps(FormatConverter.to_serialized(data[args.var_json], args.key), indent=4, cls=minigraph_encoder))
+        else:
+            print(json.dumps(FormatConverter.to_serialized(data[args.var_json]), indent=4, cls=minigraph_encoder))
+
+    if args.write_to_db:
+        if args.namespace is None:
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
+        else:
+            load_namespace_config()
+            configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
+
+        configdb.connect(False)
+        configdb.mod_config(FormatConverter.output_to_db(data))
+
+    if args.print_data:
+        print(json.dumps(FormatConverter.to_serialized(data), indent=4, cls=minigraph_encoder))
+
+    if args.preset is not None:
+        data = generate_sample_config(data, args.preset)
+        print(json.dumps(FormatConverter.to_serialized(data), indent=4, cls=minigraph_encoder))
+
+
+if __name__ == "__main__":
+    main()

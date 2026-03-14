@@ -1,0 +1,66 @@
+sonic-cel-platform-modules (1.0) unstable; urgency=low
+
+  * Add questone2 platform module.
+  * V2 platforms DS4000, DS3000, DS2000
+  * Rename Belgite to DS1000
+  * Hardened platform bug fixes
+
+ -- Jemston Fernando <sjemstonirudayam.fernando@celestica.com>  Wed, 12 Jun 2024 15:00:00 +0530
+
+sonic-cel-platform-modules (0.9) unstable; urgency=low
+
+  * Add haliburton platform module.
+
+ -- Wirut Getbamrung <wgetbumr@celestica.com>  Fri, 17 Aug 2018 10:10:10 +0700
+
+sonic-cel-platform-modules (0.8) unstable; urgency=low
+
+  * Add dx010 platform fan led control.
+  * The platform gpio init moved to kernel space. 
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Mon, 1 Jul 2018 11:09:13 +0700
+
+sonic-cel-platform-modules (0.7) unstable; urgency=low
+
+  * Add dx010 plaform gpio sysfs exported when module load.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Wed, 21 Jun 2018 13:29:05 +0700
+
+sonic-cel-platform-modules (0.6) unstable; urgency=low
+
+  * Remove unused port-mode switch script. This should be done by hwsku config script.
+  * Add script to turn off QSFP low power mode when boot up.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Wed, 26 Jul 2017 10:43:00 +0700
+
+sonic-cel-platform-modules (0.5) unstable; urgency=low
+
+  * Add port-mode switch script to support 100G 50G 10G_50G qsfp modes.
+  * Fix garbage data when using sfputil to read QSFP-transceiver's eeprom.
+  * Fix incorrect endian in eeprom read word data.
+
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Tue, 18 Jul 2017 11:30:00 +0700
+
+sonic-cel-platform-modules (0.4) unstable; urgency=low
+
+  * Add support for DX010's fancontrol, automatic run-up and FIX bug lpmod
+
+ -- Pariwat Leamsumran <pleamsum@celestica.com>  Thu, 14 Jun 2017 16:25:00 +0700
+
+sonic-cel-platform-modules (0.3) unstable; urgency=low
+
+  * Add support for DX010's DPS800
+
+ -- Abhisit Sangjan <asang@celestica.com>  Thu, 29 May 2017 19:23:00 +0700
+
+sonic-cel-platform-modules (0.2) unstable; urgency=low
+
+  * Add support for DX010's LM75B, Watchdog and EMC2305
+
+ -- Abhisit Sangjan <asang@celestica.com>  Thu, 25 May 2017 15:26:00 +0700
+
+sonic-cel-platform-modules (0.1) unstable; urgency=low
+
+  * Initial release
+
+ -- Abhisit Sangjan <asang@celestica.com>  Mon, 2 May 2017 14:47:00 +0700

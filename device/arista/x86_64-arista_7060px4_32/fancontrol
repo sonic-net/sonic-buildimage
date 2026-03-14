@@ -1,0 +1,10 @@
+INTERVAL=5
+DEVPATH=hwmon3=devices/pci0000:ff/0000:ff:0b.3/i2c-73/73-004c hwmon4=devices/pci0000:ff/0000:ff:0b.3/i2c-85/85-0060
+DEVNAME=hwmon3=max6658 hwmon4=tehama_cpld
+FCTEMPS=hwmon4/pwm5=hwmon3/temp1_input hwmon4/pwm4=hwmon3/temp1_input hwmon4/pwm3=hwmon3/temp1_input hwmon4/pwm2=hwmon3/temp1_input hwmon4/pwm1=hwmon3/temp1_input
+FCFANS=hwmon4/pwm5=hwmon4/fan5_input hwmon4/pwm4=hwmon4/fan4_input hwmon4/pwm3=hwmon4/fan3_input hwmon4/pwm2=hwmon4/fan2_input hwmon4/pwm1=hwmon4/fan1_input
+MINTEMP=hwmon4/pwm5=50 hwmon4/pwm4=50 hwmon4/pwm3=50 hwmon4/pwm2=50 hwmon4/pwm1=50
+MINPWM=hwmon4/pwm5=128 hwmon4/pwm4=128 hwmon4/pwm3=128 hwmon4/pwm2=128 hwmon4/pwm1=128
+MAXTEMP=hwmon4/pwm5=60 hwmon4/pwm4=60 hwmon4/pwm3=60 hwmon4/pwm2=60 hwmon4/pwm1=60
+MINSTART=hwmon4/pwm5=128 hwmon4/pwm4=128 hwmon4/pwm3=128 hwmon4/pwm2=128 hwmon4/pwm1=128
+MINSTOP=hwmon4/pwm5=128 hwmon4/pwm4=128 hwmon4/pwm3=128 hwmon4/pwm2=128 hwmon4/pwm1=128

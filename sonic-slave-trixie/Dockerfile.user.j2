@@ -1,0 +1,30 @@
+ARG slave_base_tag_ref=latest
+{%- if MULTIARCH_QEMU_ENVIRON != "y" and CROSS_BUILD_ENVIRON != "y" %}
+FROM sonic-slave-trixie:${slave_base_tag_ref}
+{%- else %}
+FROM sonic-slave-trixie-march-{{ CONFIGURED_ARCH }}:${slave_base_tag_ref}
+{%- endif %}
+
+# Add user
+ARG user
+ARG uid
+ARG guid
+ARG hostname
+
+ENV BUILD_HOSTNAME=$hostname
+ENV USER=$user
+
+RUN groupadd -f -r -g $guid g$user
+
+RUN useradd $user -l -u $uid -g $guid -d /var/$user -m -s /bin/bash
+
+RUN gpasswd -a $user docker
+
+# Config git for stg
+RUN su $user -c "git config --global user.name $user"
+RUN su $user -c "git config --global user.email $user@contoso.com"
+
+# Add user to sudoers
+RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
+
+USER $user

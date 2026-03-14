@@ -1,0 +1,268 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hwsku": "TCS8400-24CC8CD",
+            "platform": "x86_64-tencent_tcs8400-r0",
+            "mac": "58:69:6c:f1:23:12",
+            "hostname": "sonic"
+        }
+    },
+    "PORT": {
+        "Ethernet1": {
+            "lanes": "25,26,27,28",
+            "alias": "Eth200GE0/1",
+            "index": "1",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet2": {
+            "lanes": "29,30,31,32",
+            "alias": "Eth200GE0/2",
+            "index": "2",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet3": {
+            "lanes": "41,42,43,44",
+            "alias": "Eth200GE0/3",
+            "index": "3",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet4": {
+            "lanes": "45,46,47,48",
+            "alias": "Eth200GE0/4",
+            "index": "4",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet5": {
+            "lanes": "49,50,51,52",
+            "alias": "Eth200GE0/5",
+            "index": "5",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet6": {
+            "lanes": "53,54,55,56",
+            "alias": "Eth200GE0/6",
+            "index": "6",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet7": {
+            "lanes": "57,58,59,60",
+            "alias": "Eth200GE0/7",
+            "index": "7",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet8": {
+            "lanes": "61,62,63,64",
+            "alias": "Eth200GE0/8",
+            "index": "8",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet9": {
+            "lanes": "9,10,11,12",
+            "alias": "Eth200GE0/9",
+            "index": "9",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet10": {
+            "lanes": "13,14,15,16",
+            "alias": "Eth200GE0/10",
+            "index": "10",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet11": {
+            "lanes": "17,18,19,20",
+            "alias": "Eth200GE0/11",
+            "index": "11",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet12": {
+            "lanes": "21,22,23,24",
+            "alias": "Eth200GE0/12",
+            "index": "12",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet13": {
+            "lanes": "81,82,83,84",
+            "alias": "Eth200GE0/13",
+            "index": "13",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet14": {
+            "lanes": "85,86,87,88",
+            "alias": "Eth200GE0/14",
+            "index": "14",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet15": {
+            "lanes": "89,90,91,92",
+            "alias": "Eth200GE0/15",
+            "index": "15",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet16": {
+            "lanes": "93,94,95,96",
+            "alias": "Eth200GE0/16",
+            "index": "16",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet17": {
+            "lanes": "97,98,99,100",
+            "alias": "Eth200GE0/17",
+            "index": "17",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet18": {
+            "lanes": "101,102,103,104",
+            "alias": "Eth200GE0/18",
+            "index": "18",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet19": {
+            "lanes": "137,138,139,140",
+            "alias": "Eth200GE0/19",
+            "index": "19",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet20": {
+            "lanes": "141,142,143,144",
+            "alias": "Eth200GE0/20",
+            "index": "20",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet21": {
+            "lanes": "145,146,147,148",
+            "alias": "Eth200GE0/21",
+            "index": "21",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet22": {
+            "lanes": "149,150,151,152",
+            "alias": "Eth200GE0/22",
+            "index": "22",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet23": {
+            "lanes": "153,154,155,156",
+            "alias": "Eth200GE0/23",
+            "index": "23",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet24": {
+            "lanes": "157,158,159,160",
+            "alias": "Eth200GE0/24",
+            "index": "24",
+            "speed": "200000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet25": {
+            "lanes": "1,2,3,4,5,6,7,8",
+            "alias": "Eth400GE0/25",
+            "index": "25",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet26": {
+            "lanes": "33,34,35,36,37,38,39,40",
+            "alias": "Eth400GE0/26",
+            "index": "26",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet27": {
+            "lanes": "65,66,67,68,69,70,71,72",
+            "alias": "Eth400GE0/27",
+            "index": "27",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet28": {
+            "lanes": "73,74,75,76,77,78,79,80",
+            "alias": "Eth400GE0/28",
+            "index": "28",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet29": {
+            "lanes": "105,106,107,108,109,110,111,112",
+            "alias": "Eth400GE0/29",
+            "index": "29",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet30": {
+            "lanes": "113,114,115,116,117,118,119,120",
+            "alias": "Eth400GE0/30",
+            "index": "30",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet31": {
+            "lanes": "121,122,123,124,125,126,127,128",
+            "alias": "Eth400GE0/31",
+            "index": "31",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        },
+        "Ethernet32": {
+            "lanes": "129,130,131,132,133,134,135,136",
+            "alias": "Eth400GE0/32",
+            "index": "32",
+            "speed": "400000",
+            "admin_status": "up",
+            "mtu": "9100"
+        }
+    }
+}

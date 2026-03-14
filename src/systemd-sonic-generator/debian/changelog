@@ -1,0 +1,3 @@
+systemd-sonic-generator (1.0.0) UNRELEASED; urgency=medium
+    * Initial version
+ -- Lawrence Lee <t-lale@microsoft.com>  Tue, 23 Jul 2019 16:00:00 -0800

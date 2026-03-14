@@ -1,0 +1,166 @@
+{
+  "phys": [
+    {
+      "phy_id": 1,
+      "name": "phy1_1",
+      "address": "1",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy1_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio0_0_0/0"
+    },
+    {
+      "phy_id": 2,
+      "name": "phy1_2",
+      "address": "2",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy2_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio0_0_1/0"
+    },
+    {
+      "phy_id": 3,
+      "name": "phy2_1",
+      "address": "3",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy3_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio1_0_0/0"
+    },
+    {
+      "phy_id": 4,
+      "name": "phy2_2",
+      "address": "4",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy4_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio1_0_1/0"
+    },
+    {
+      "phy_id": 5,
+      "name": "phy3_1",
+      "address": "5",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy5_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio2_0_0/0"
+    },
+    {
+      "phy_id": 6,
+      "name": "phy3_2",
+      "address": "6",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy6_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio2_0_1/0"
+    },
+    {
+      "phy_id": 7,
+      "name": "phy4_1",
+      "address": "7",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy7_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio3_0_0/0"
+    },
+    {
+      "phy_id": 8,
+      "name": "phy4_2",
+      "address": "8",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/bh.lz4.fw.1.5.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy8_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "mdio3_0_1/0"
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "Ethernet0",
+      "index": 1,
+      "phy_id": 1,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet4",
+      "index": 2,
+      "phy_id": 2,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet128",
+      "index": 33,
+      "phy_id": 3,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet132",
+      "index": 34,
+      "phy_id": 4,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet120",
+      "index": 31,
+      "phy_id": 5,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet124",
+      "index": 32,
+      "phy_id": 6,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet248",
+      "index": 63,
+      "phy_id": 7,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    },
+    {
+      "name": "Ethernet252",
+      "index": 64,
+      "phy_id": 8,
+      "system_lanes": [0,1,2,3,4,5,6,7],
+      "line_lanes": [8,9,10,11,12,13,14,15]
+    }
+  ]
+}

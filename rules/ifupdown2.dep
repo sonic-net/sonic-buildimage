@@ -1,0 +1,10 @@
+
+SPATH       := $($(IFUPDOWN2)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/ifupdown2.mk rules/ifupdown2.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(IFUPDOWN2)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(IFUPDOWN2)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(IFUPDOWN2)_DEP_FILES   := $(DEP_FILES)
+

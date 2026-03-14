@@ -1,0 +1,773 @@
+#######################################################################
+#
+#   Copyright (c) 2020 Broadcom, Inc.
+#   The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries.
+#
+#   Author: Kalimuthu Velappan
+#           Greg Paussa
+#
+#   Email : kalimuthu.velappan@broadcom.com
+#           greg.paussa@broadcom.com
+#
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#######################################################################
+#
+#
+#            DPKG caching framework
+#
+# SONiC source code composes of multiple open source modules. Eg: Linux, bash, ntp etc.
+# Each module considered as a build target in the sonic build framework.
+# Each module gets compiled and generate the final debian package(.deb) file.
+# There are two types of source code packages used by the SONiC repo.
+#
+#         1. Module source code is maintained as part of main repo
+#                 Eg: sonic-utilities, Plaform files etc
+#
+#             Some module source code is maintained outside the sonic repo, but
+#             the build framework is part of sonic main repo.
+#             The build framework downloads the zipped source content from the web,
+#             applies a series of patches (if applicable) on the downloaded source code,
+#             compiles the source and generates the final .deb package(s).
+#                 Eg: bash, ntp, etc
+#
+#         2. Module source code is maintained as a submodule(SM) in the sonic repo.
+#             Eg: Frr, swss, Linux etc
+#
+#
+# The sonic build framework uses the module .deb packages that are generated as part of build and
+# creates  the set of target docker images and the final binary image for distribution.
+#
+# The caching framework provides the method to cache the module .deb packages and docker images
+# into a cache location by tracking module dependency information.
+#
+# A module can have a set of dependency files, for example Makefiles, source files, scripts, dpkg control files, etc.
+# The caching is done based on the SHA hash value of the module dependency file contents. If one of the
+# dependency files is changed, the corresponding cache file is also changed. So it automatically creates the new cache file
+# for that module.
+#
+# It provides two levels of caching.
+#     Global cache := Module doesnt have any local changes.
+#     Local cache  := Used for target when one of its dependency file is modified.
+#
+#
+# Steps for adding new module is given as a template.
+# Template File : rules/template.dep
+#
+
+
+# Common files and FLAGS
+# Run the 'touch cache.skip.common' command in the base directory to exclude the common files from caching
+#
+# Cache scope design:
+#   SONIC_COMMON_FILES_LIST tracks files whose changes affect ALL package outputs.
+#   slave.mk is intentionally excluded because:
+#     - It is 1800+ lines and changed ~20 times per 6 months
+#     - Most changes (new targets, platform additions, cosmetic) do NOT affect
+#       existing package outputs
+#     - Including it causes 100% cache invalidation on every slave.mk commit
+#     - Per-package .dep files already track package-specific dependencies
+#   Instead, SONIC_CACHE_RECIPE_VER acts as a manual version stamp.
+#   Bump it when a slave.mk change genuinely affects package build output
+#   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
+#
+SONIC_CACHE_RECIPE_VER := 1
+# Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
+# Used by the guard below to detect unreviewed slave.mk changes.
+SONIC_CACHE_RECIPE_VER_BASELINE := 348388b6882c0c90f4a1c7170d0e33cf9c0e645b
+
+# Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
+# This catches the case where someone modifies slave.mk build recipes without
+# bumping the cache version, which could serve stale cached packages.
+# To resolve: review whether the slave.mk change affects package output.
+#   - If yes: bump SONIC_CACHE_RECIPE_VER and update the baseline hash.
+#   - If no:  just update the baseline hash.
+SONIC_CACHE_SLAVE_HASH := $(if $(wildcard .git),$(shell git hash-object slave.mk 2>/dev/null))
+ifneq ($(SONIC_CACHE_SLAVE_HASH),)
+ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
+ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
+ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+$(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
+$(warning [CACHE] Review whether the change affects package build output:)
+$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+endif
+endif
+endif
+endif
+
+# SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
+# It includes common files like .platform, rules/functions, Makefile.cache etc.
+# NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
+SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
+SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
+SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
+                            $(CONFIGURED_PLATFORM) \
+                            $(CONFIGURED_ARCH) \
+                            $(BLDENV) \
+                            $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
+                            $(SONIC_DEBUGGING_ON) \
+                            $(SONIC_PROFILING_ON) $(SONIC_ENABLE_SYNCD_RPC)
+SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
+                            debian/compat debian/install debian/copyright
+SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 sonic-slave-jessie/Dockerfile.user.j2 \
+                                 sonic-slave-stretch/Dockerfile.j2 sonic-slave-stretch/Dockerfile.user.j2 \
+                                 sonic-slave-buster/Dockerfile.j2 sonic-slave-buster/Dockerfile.user.j2 \
+                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2 \
+                                 sonic-slave-bookworm/Dockerfile.j2 sonic-slave-bookworm/Dockerfile.user.j2
+
+
+
+include $(RULES_PATH)/*.dep
+
+
+ifneq ($(CONFIGURED_PLATFORM), undefined)
+ifeq ($(PDDF_SUPPORT), y)
+include $(PLATFORM_PDDF_PATH)/rules.dep
+endif
+
+-include $(PLATFORM_PATH)/rules.dep
+endif
+
+ifndef SONIC_BUILD_QUIETER
+$(info "SONIC_DPKG_CACHE_METHOD"         : "$(SONIC_DPKG_CACHE_METHOD)")
+ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
+$(info "DPKG_CACHE_PATH"                 : "$(SONIC_DPKG_CACHE_SOURCE)")
+endif
+$(info )
+endif
+
+
+###############################################################################
+## Canned sequences
+###############################################################################
+
+SONIC_DPKG_CACHE_DIR    := /dpkg_cache
+MOD_CACHE_LOCK_SUFFIX   := cache_access
+MOD_CACHE_LOCK_TIMEOUT  := 3600
+SONIC_DPKG_LOCAL_CACHE_DIR=${TARGET_PATH}/cache
+$(shell test -d $(SONIC_DPKG_LOCAL_CACHE_DIR) || \
+    mkdir -p $(SONIC_DPKG_LOCAL_CACHE_DIR) && chmod 777 $(SONIC_DPKG_LOCAL_CACHE_DIR) )
+$(shell test -w $(SONIC_DPKG_CACHE_DIR) || sudo chmod 777 $(SONIC_DPKG_CACHE_DIR) )
+
+DOCKER_LOCKFILE_SUFFIX  := access
+DOCKER_LOCKFILE_TIMEOUT := 1200
+
+# Lock macro for shared file access
+# Lock is implemented through flock command with a specified timeout value
+# Lock file is created in the specified directory, a separate one for each target file name
+# A designated suffix is appended to each target file name, followed by .lock
+#
+# Parameters:
+#  $(1) - target file name (without path)
+#  $(2) - lock file path (only)
+#  $(3) - designated lock file suffix
+#  $(4) - flock timeout (in seconds)
+#
+# $(call MOD_LOCK,file,path,suffix,timeout)
+define MOD_LOCK
+	if [[ ! -f $(2)/$(1)_$(3).lock ]]; then
+		touch $(2)/$(1)_$(3).lock
+		chmod 777 $(2)/$(1)_$(3).lock;
+	fi
+	$(eval $(1)_lock_fd=$(subst ~,_,$(subst -,_,$(subst +,_,$(subst .,_,$(1))))))
+	exec {$($(1)_lock_fd)}<>"$(2)/$(1)_$(3).lock";
+	if ! flock -x -w $(4) "$${$($(1)_lock_fd)}" ; then
+		echo "ERROR: Lock timeout trying to access $(2)/$(1)_$(3).lock";
+		exit 1;
+	fi
+endef
+
+# UnLock macro for shared file access
+#
+# Parameters:
+#  $(1) - target file name (without path)
+#
+# $(call MOD_UNLOCK,file)
+define MOD_UNLOCK
+	eval exec "$${$($(1)_lock_fd)}<&-";
+endef
+
+
+# Calculate the 24 byte SHA value
+# GIT_COMMIT_SHA  => SHA is derived from last git commit ID
+# GIT_CONTENT_SHA => SHA is derived from contents of depdency files
+# Args:
+#  $(1)   => target name
+define GET_MOD_SHA
+	$(eval  $(1)_MOD_DEP_FILES := $($(1)_DEP_FLAGS_FILE) $($(1)_MOD_HASH_FILE) $($(1)_SMOD_HASH_FILE) )
+	$(if $(MDEBUG), $(info $(1)_MOD_DEP_FILES: $($(1)_MOD_DEP_FILES)))
+	$(eval $(1)_MOD_HASH    := $(if $(filter GIT_COMMIT_SHA,$($(1)_CACHE_MODE)),\
+                            $(shell cd $($(1)_MOD_SRC_PATH) && git log -1 --format="%H"| awk '{print substr($$1,0,23);}' ),\
+                            $(shell git hash-object $($(1)_MOD_DEP_FILES)| \
+                                   sha1sum | awk '{print substr($$1,0,23);}')))
+endef
+
+
+# Calculate the 24 byte SHA value
+# SHA value is derived from dependent files of the target which includes .flags, .sha and .smsha files.
+# Args:
+#  $(1)   => target name
+define GET_MOD_DEP_SHA
+	$(eval $(1)_MOD_DEP_PKGS := $(foreach dfile,$($(1)_DEPENDS) $($(1)_RDEPENDS) $($(1)_WHEEL_DEPENDS) \
+                            $($(1)_PYTHON_DEBS) $($(1)_PYTHON_WHEELS) \
+                            $($(1)_DBG_DEPENDS) $($(1)_DBG_IMAGE_PACKAGES) $($(1)_LOAD_DOCKERS),\
+                            $(if $($(dfile)_MAIN_DEB),$($(dfile)_MAIN_DEB),$(dfile))) )
+
+	$(if $(MDEBUG), $(info $(1)_MOD_DEP_PKGS: $($(1)_MOD_DEP_PKGS)))
+
+	# Warn if there is any missing dependency files
+	$(eval $(1)_DEP_MOD_SHA_FILES := $(foreach dfile,$($(1)_MOD_DEP_PKGS), \
+	                        $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE)) )
+	$(eval $(1)_DEP_FILES_MISSING := $(filter-out $(wildcard $($(1)_DEP_MOD_SHA_FILES)),$($(1)_DEP_MOD_SHA_FILES)) )
+	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependecy file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
+
+	# Include package dependencies hash values into package hash calculation
+	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$($(dfile)_DEP_MOD_SHA) $($(dfile)_MOD_HASH)))
+
+	$(eval $(1)_DEP_MOD_SHA := $(shell bash -c "git hash-object  $($(1)_DEP_MOD_SHA_FILES) && echo $($(1)_DEP_PKGS_SHA)" \
+                            | sha1sum | awk '{print substr($$1,0,23);}'))
+endef
+
+
+# Retrive the list of files that are modified for the target. The files can be from
+# 1. Any of dependent target is modified
+# 2. Files from the target dependency list
+# 3. Files from submodule dependency list if the target is a submodule
+#
+# Args:
+#  $(1)   => target name
+define GET_MODIFIED_FILES
+	$(eval $(1)_FILES_MODIFIED := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$(if $($(dfile)_FILES_MODIFIED),$(dfile))) \
+                                  $(if $($(1)_DEP_FILES), $(shell cat $($(1)_MOD_DEP_FILE) | xargs git status -s)) \
+                                  $(if $($(1)_SMDEP_PATHS), $(foreach path,$($(1)_SMDEP_PATHS), \
+                                        $(shell cd $(path) &&  git status --ignore-submodules=all -s -uno .))) )
+
+endef
+
+# Loads the deb package from debian cache
+# Cache file prefix is formed using SHA value
+# The SHA value consists of
+#   1.  24 byte SHA value is derived from the dependency files list
+#          Flags: Module ENV flags file
+#          Dependent packages : DEPENDS, RDEPENDS, WHEEL_DEPENDS, PYTHON_DEBS, PYTHON_WHEELS, DBG_DEPENDS, DBG_IMAGE_PACKAGES, LOAD_DOCKERS
+#   2.  24 byte SHA value from one of the keyword type - GIT_COMMIT_SHA or GIT_CONTENT_SHA
+#          GIT_COMMIT_SHA   - SHA value of the last git commit id if it is a submodule
+#          GIT_CONTENT_SHA  - SHA value is calculated from the target dependency files content.
+#   Cache is loaded from either local cache or global cache based on the dependency SHA match with the cache filename.
+#   Otherwise it builds the package from source.
+# TODO:
+# 1. Extend dpkg for all the chip vendor packages.
+
+# Args:
+# $(1) => target name
+# $(2) => target output file name
+define LOAD_FROM_CACHE
+
+	# Calculate the modules SHA and its dependency SHA value
+	$(call GET_MOD_DEP_SHA,$(1))
+	$(call GET_MOD_SHA,$(1))
+
+	# Form the cache file name
+	$(eval $(1)_MOD_CACHE_FILE := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
+	$(if $(MDEBUG), $(info $(1)_MODE_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
+
+	# Retrive and log files list that are modified for the target.
+	$(call GET_MODIFIED_FILES,$(1))
+	$(if $($(1)_FILES_MODIFIED),
+		echo "Target $(1) dependencies are modifed - global cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		echo "Modified dependencies are : [$($(1)_FILES_MODIFIED)] " >> $($(1)_DST_PATH)/$(1).log
+		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR)))
+
+	# Choose the cache file path in the following order
+	# 1. First load from Local cache path
+	# 2. If not, load from global cache path
+	$(eval CACHE_FILE_SELECT:=$(or $(wildcard $(SONIC_DPKG_LOCAL_CACHE_DIR)/$($(1)_MOD_CACHE_FILE)), \
+								$(wildcard $(SONIC_DPKG_CACHE_DIR)/$($(1)_MOD_CACHE_FILE))) )
+
+	# Check if any of the derived package is not built
+	$(eval LOAD_DRV_DEB := $(foreach pkg,$(addprefix $($(1)_DST_PATH)/,$(1) $($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS)),$(if $(wildcard $(pkg)),,$(pkg))))
+
+	# Load the cache if cache is enabled and cache file is present in the cache
+	# Update the cache_loaded variable
+	$(if $(and $(CACHE_FILE_SELECT),$(call CHECK_RCACHE_ENABLED,$(1))),
+		$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo );
+		echo "File $(CACHE_FILE_SELECT) is loaded from cache into $($(1)_BASE_PATH)" >> $($(1)_DST_PATH)/$(1).log
+		$(eval $(1)_CACHE_LOADED := Yes)
+		$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(shell touch $(CACHE_FILE_SELECT)))
+		echo "[ CACHE::LOADED ] $($(1)_CACHE_DIR)/$($(1)_MOD_CACHE_FILE)" >> $($(1)_DST_PATH)/$(1).log
+		echo "File $($(1)_CACHE_DIR)/$($(1)_MOD_CACHE_FILE)  is not present in cache or cache mode set as $(SONIC_DPKG_CACHE_METHOD) !" >> $($(1)_DST_PATH)/$(1).log
+		echo "[ CACHE::SKIPPED ] $($(1)_CACHE_DIR)/$($(1)_MOD_CACHE_FILE)" >> $($(1)_DST_PATH)/$(1).log
+		echo "[ CACHE::SKIPPED ] DEP_FILES - Modified Files: [$($(1)_FILES_MODIFIED)] " >> $($(1)_DST_PATH)/$(1).log
+		echo "[ CACHE::SKIPPED ] DEPENDS   - Modified Files: [$?] " >> $($(1)_DST_PATH)/$(1).log
+	 )
+endef
+
+# Saves the deb package into debian cache
+# A single tared-zip cache is created for .deb and its derived packages in the cache direcory.
+# It saves the .deb into global cache only when its dependencies are not changed,
+#    Otherwise it saves the .deb into local cache
+# The cache save is protected with lock.
+# Args:
+# $(1) => target name
+# $(2) => target output file name
+define SAVE_INTO_CACHE
+
+	# Calculate the modules SHA and its dependency SHA value
+	$(call GET_MOD_DEP_SHA,$(1))
+	$(call GET_MOD_SHA,$(1))
+
+	# Form the cache file name
+	$(eval $(1)_MOD_CACHE_FILE  := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
+	$(if $(MDEBUG), $(info $(1)_MOD_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
+
+	# Retrive and log files list that are modified for the target.
+	$(call GET_MODIFIED_FILES,$(1))
+
+	$(eval MOD_CACHE_FILE=$($(1)_MOD_CACHE_FILE))
+	$(call MOD_LOCK,$(1),$(SONIC_DPKG_CACHE_DIR),$(MOD_CACHE_LOCK_SUFFIX),$(MOD_CACHE_LOCK_TIMEOUT))
+	$(if $($(1)_FILES_MODIFIED),
+		echo "Target $(1) dependencies are modifed - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR))
+	 )
+	cp $($(1)_DST_PATH)/$(1).log $($(1)_DST_PATH)/$(1).cached.log
+	$($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mczvf $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE) $(2) $(addprefix $($(1)_DST_PATH)/,$($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS) $(1).cached.log)  \
+		1>>$($(1)_DST_PATH)/$(1).log
+	sudo chmod 777 $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE)
+	rm -f $($(1)_DST_PATH)/$(1).cached.log
+	
+	echo "File $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE) saved in cache " >> $($(1)_DST_PATH)/$(1).log
+	echo "[ CACHE::SAVED ] $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE)" >> $($(1)_DST_PATH)/$(1).log
+
+	$(call MOD_UNLOCK,$(1))
+endef
+
+# Read from the cache
+RCACHE_OPTIONS := cache rcache rwcache
+define CHECK_RCACHE_ENABLED
+$(if $(and $(filter $(RCACHE_OPTIONS), \
+					$(or $($(1)_CACHE_OVERRIDE),$(SONIC_DPKG_CACHE_METHOD))), \
+			$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+endef
+
+# Write into the cache
+WCACHE_OPTIONS := cache wcache rwcache
+define CHECK_WCACHE_ENABLED
+$(if $(and $(filter $(WCACHE_OPTIONS), \
+					$(or $($(1)_CACHE_OVERRIDE),$(SONIC_DPKG_CACHE_METHOD))), \
+			$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+endef
+
+# It logs the reason why the target is getting built/rebuilt
+# Args:
+# $(1) => target name
+define SHOW_WHY
+	@echo "[ REASON ] :\
+		$(if $(filter $(PHONY),$@), it is phony,\
+		$(eval $(1)_PREREQ_PHONY:= $(filter $(PHONY),$^))\
+		$(eval $(1)_PREREQ_DNE:= $(filter-out $(wildcard $^) $($(1)_PREREQ_PHONY),$^))\
+		$(eval $(1)_PREREQ_NEW:= $(filter-out $($(1)_PREREQ_DNE),$?))\
+		$(if $(wildcard $@),$(if $($(1)_PREREQ_NEW), NEWER PREREQUISITES: $($(1)_PREREQ_NEW)), $@ does not exist)\
+		$(if $($(1)_PREREQ_DNE),  NON-EXISTENT PREREQUISITES: $($(1)_PREREQ_DNE))\
+		$(if $($(1)_PREREQ_PHONY),  PHONY PREREQUISITES: $($(1)_PREREQ_PHONY)))"  >> $($(1)_DST_PATH)/$(1).log
+
+	@echo "[ FLAGS  FILE    ] : [$($(1)_FILE_FLAGS)] " >> $($(1)_DST_PATH)/$(1).log
+	@echo "[ FLAGS  DEPENDS ] : [$($(1)_DEP_FLAGS_ALL)] " >> $($(1)_DST_PATH)/$(1).log
+	@echo "[ FLAGS  DIFF    ] : [$($(1)_FLAGS_DIFF)] " >> $($(1)_DST_PATH)/$(1).log
+	@$(file >>$($(1)_DST_PATH)/$(1).log, "[ DEP    DEPENDS ] : [$($(1)_DEP_FILES_MODIFIED)] ")
+	@$(file >>$($(1)_DST_PATH)/$(1).log, "[ SMDEP  DEPENDS ] : [$($(1)_SMDEP_FILES_MODIFIED)] ")
+	@$(file >>$($(1)_DST_PATH)/$(1).log, "[ TARGET DEPENDS ] : [$?] ")
+endef
+
+
+
+# It invokes the Load Cache macro if cache is enabled globally as well as per module level
+# Args:
+# $(1) => target name
+# $(2) => target output file name
+define LOAD_CACHE
+	$(call SHOW_WHY,$(1))
+	$(if $(call CHECK_RCACHE_ENABLED,$(1)), $(call LOAD_FROM_CACHE,$(1),$(2)) )
+endef
+
+
+# It invokes the Save Cache if cache is enabled globally as well as per module level
+# Args:
+# $(1) => target name
+# $(2) => target output file name
+define SAVE_CACHE
+	$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(call SAVE_INTO_CACHE,$(1),$(2)))
+endef
+
+RFS_DEP_FILES := $(wildcard \
+	$(addprefix scripts/, build_debian_base_system.sh prepare_debian_image_buildinfo.sh build_mirror_config.sh) \
+	$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
+	$(shell git ls-files files/initramfs-tools) \
+	$(shell git ls-files files/image_config) \
+	$(shell git ls-files files/apparmor) \
+	$(shell git ls-files files/apt) \
+	$(shell git ls-files files/sshd) \
+	$(shell git ls-files files/dhcp) \
+	src/sonic-build-hooks/buildinfo/trusted.gpg.d \
+	platform/$(CONFIGURED_PLATFORM)/modules  \
+	files/docker/docker.service.conf \
+	files/build_templates/default_users.json.j2 \
+	files/build_scripts/generate_asic_config_checksum.py \
+	files/scripts/core_cleanup.py \
+	build_debian.sh onie-image.conf)
+
+
+# Set the target path for each target.
+$(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(DEBS_PATH))) \
+		$(eval $(DEBS_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_MAKE_FILES), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(FILES_PATH))) \
+		$(eval $(FILES_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_PYTHON_STDEB_DEBS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(PYTHON_DEBS_PATH))) \
+		$(eval $(PYTHON_DEBS_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_PYTHON_WHEELS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(PYTHON_WHEELS_PATH))) \
+		$(eval $(PYTHON_WHEELS_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
+		$(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_INSTALL_PKGS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(FSROOT_PATH))) \
+		$(eval $(FSROOT_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+$(foreach pkg, $(SONIC_RFS_TARGETS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
+        $(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA) \
+        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)) \
+        $(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES)) \
+        $(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
+
+# define the DEP files(.dep and .smdep) and SHA files (.sha and smsha) for each target
+$(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS) \
+        $(SONIC_MAKE_FILES) $(SONIC_PYTHON_STDEB_DEBS) $(SONIC_PYTHON_WHEELS) \
+        $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS) $(SONIC_RFS_TARGETS), \
+        $(eval $(pkg)_MOD_SRC_PATH:=$(if $($(pkg)_SRC_PATH),$($(pkg)_SRC_PATH),$($(pkg)_PATH))) \
+        $(eval $(pkg)_BASE_PATH:=$(if $($(pkg)_BASE_PATH),$($(pkg)_BASE_PATH),$(CURDIR))) \
+        $(eval $(pkg)_DEP_FLAGS_FILE:=$($(pkg)_DST_PATH)/$(pkg).flags) \
+        $(eval $(pkg)_MOD_DEP_FILE:=$($(pkg)_DST_PATH)/$(pkg).dep) \
+        $(eval $(pkg)_MOD_HASH_FILE:=$($(pkg)_DST_PATH)/$(pkg).dep.sha) \
+        $(eval $(pkg)_SMOD_DEP_FILE:=$(if $($(pkg)_SMDEP_FILES),$($(pkg)_DST_PATH)/$(pkg).smdep)) \
+        $(eval $(pkg)_SMOD_HASH_FILE:=$(if $($(pkg)_SMDEP_FILES),$($(pkg)_DST_PATH)/$(pkg).smdep.smsha)) \
+        $(eval $(pkg)_DEP_FILES_LIST := $($(pkg)_DEP_FLAGS_FILE) $($(pkg)_DEP_FILES) $($(pkg)_SMDEP_FILES)) \
+        $(eval $(pkg)_CACHE_DIR := $(SONIC_DPKG_CACHE_DIR)) \
+        $(if $(filter-out none,$(SONIC_DPKG_CACHE_METHOD)), \
+			$(if $(filter-out none,$($(pkg)_CACHE_MODE)), \
+				$(if $($(pkg)_SMDEP_FILES), \
+					$(if $($(pkg)_SMDEP_PATHS),,$(info Missing PATH/SRC_PATH attribute for $(pkg) package)) \
+				 ),\
+				$(info [ DPKG ] Cache is not enabled for $(pkg) package)\
+			 )\
+		 ) \
+    )
+
+
+# DPGK framework creates three dependency files for each target.
+#         1. Flags file (.flags)
+#         2. Dependency file (.dep),
+#         3. Dependecy SHA hash file (.sha)
+#         4. If the target is a submodule, corresponding dependency file and hash file are created
+#             sub module dependency file (.smdep)
+#             sub module hash file (.smsha)
+#         For example: following are the cache framework files for bash module
+#             target/debs/stretch/bash_4.3-14_amd64.deb             => Final debian package
+#             target/debs/stretch/bash_4.3-14_amd64.deb.flags       => Environment Flag file
+#             target/debs/stretch/bash_4.3-14_amd64.deb.dep         => Dependency files list
+#             target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha     => SHA Hash file
+#
+#
+# [1] .flags => contains value of all the environment variables of a target.
+#                 Each target can have dependency with one or more environment variable.
+#                 For example:
+#                     SONIC_DEBUGGING_ON=y
+#                     SONIC_PROFILING_ON=y
+#                     SONIC_SANITIZER_ON=y
+#                     etc
+#                 If any of the ENV flag variables are modified, the target needs to be rebuilt as
+#                 the content of flag file is changed becase of value of ENV variable is changed.
+#
+# [2] .dep => contains the dependency files list for a target. Eeach traget can have one or more dependency files.
+#                 If any of the ENV flag variables are modified, the target needs to be rebuilt.
+#                 For example: Dependency files list for 'bash' module
+#                     rules/bash.mk
+#                     rules/bash.dep
+#                     src/bash/Makefile
+#                     etc
+#
+# [3] .sha => contains the 48 byte SHA value for each dependency file present in the .dep file.
+#                 For example:
+#                     9604676527653dcf7b6046fdda7ba52026b7f56f   rules/bash.mk
+#                     191c345c1270776b3902c9ec91d5e777e0b5e2a3   rules/bash.dep
+#                     55692fe59303554b5958b04aa62c3651bc34bb6a   src/bash/Makefile
+#                     etc
+#
+# If module target is a sub module in the sonic repo, the following additional files gets created for that target.
+#         .smdep  => contains the dependency files list
+#         .smsha  => contains the SHA hash value for .smdep files list.
+
+
+
+
+
+# ruiles for <.flags> file creation
+#
+# Each target defines a variable called '_DEP_FLAGS' that contais  a list of environment flags for that target and
+# that indicates that target needs to be rebuilt if any of the dependent flags are changed.
+# An environmental dependency flags file is created with the name as ‘<target name>.flags’  for each target.
+# This file contains the values of target environment flags and gets updated only when there is a change in the flag's value.
+# This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
+# For Eg:
+#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.flags
+#
+#  RULE args:
+#  $(1)  => target name
+#  $(2)  => target destination folder path
+#  $(3)  => target file extension
+#  $(4)  => additional flags
+#
+#  It updates the _DEP_FLAGS variable if there is any change in the module flags.
+
+define FLAGS_DEP_RULES
+ALL_DEP_FILES_LIST += $(foreach pkg,$(2), $(if $(filter none,$($(1)_CACHE_MODE)),$(addsuffix .$(3),$(addprefix $(pkg)/, $(1)))))
+$(addsuffix .$(3),$(addprefix $(2)/, $(1))) :: $(2)/%.$(3) :
+	@$$(eval $$*_FILE_FLAGS := $$(shell test -f $$@ && cat $$@))
+	@$$(eval $$*_DEP_FLAGS_ALL := $$(shell echo '$$($$*_DEP_FLAGS) $(4)' | sed -E 's/[ ]+/ /g' | sed -E 's/[ ]+$$$$//g'))
+	@echo '$$($$*_DEP_FLAGS_ALL)' | cmp -s - $$@ || echo '$$($$*_DEP_FLAGS_ALL)' > $$@
+	$$(eval $$*_FLAGS_DIFF := $$(filter-out $$($$*_FILE_FLAGS),$$($$*_DEP_FLAGS_ALL)) $$(filter-out $$($$*_DEP_FLAGS_ALL),$$($$*_FILE_FLAGS)))
+	@$$(if $$(MDEBUG), $$(info FLAGS: $$@, DEP:$$?))
+endef
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH),flags,$(BLDENV)) )
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_MAKE_FILES), $(FILES_PATH),flags,$(BLDENV)))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH),flags))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),flags))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),flags))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),flags))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),flags))
+
+
+
+
+# rules for <.smdep> and <.smsha> file creation
+# This rule creates two dependency files for a target  if the target is a submodule
+#     [1] .smdep file
+#         Each module target defines a variable called '_SMDEP_FILES' that contains the list of sub module dependency files for the target.
+#        Contents of the '_SMDEP_FILES' variable is stored in this file
+#
+#     [2] .smsha file
+#         The SHA hash (.smsha) file is created from 48 byte SHA value for each of the dependency files present in the .smdep file
+#
+# The target needs to be rebuilt if any of the dependent flags are changed.
+# The submodule dependency file is created with the name as '<target name>.smdep' and the SHA hash file created as '<target name>.smdep.smsha'.
+# This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
+# For Eg:
+#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep
+#       target/debs/stretch/linux-headers-4.9.0-9-2-common_4.9.168-1+deb9u3_all.deb.smdep.smsha
+#
+#  RULE args:
+#  $(1)  => target name
+#  $(2)  => target destination folder path
+#  $(3)  => target file extension
+
+define SMSHA_DEP_RULES
+ALL_DEP_FILES_LIST += $(foreach pkg,$(2), $($(filter none,$($(1)_CACHE_MODE)), \
+                      $(addsuffix .$(3),$(addprefix $(pkg)/, $(1))) \
+                      $(addsuffix .$(3).smsha,$(addprefix $(pkg)/, $(1)))))
+$(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
+	$(2)/%.flags   $$$$($$$$*_SMDEP_FILES)
+	@$$(eval $$*_SMDEP_FILES_MODIFIED := $$? )
+	@$$(file >$$@,$$(patsubst $$($$*_MOD_SRC_PATH)/%,%,$$($$*_SMDEP_FILES)))
+	@( cd $$($$*_MOD_SRC_PATH) ; cat $$($$*_BASE_PATH)/$$@  |xargs git hash-object ) >$$@.smsha
+	@$$(if $$(MDEBUG), $$(info SMDEP:$$@, MOD:$$?))
+endef
+$(eval $(call SMSHA_DEP_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH),smdep))
+$(eval $(call SMSHA_DEP_RULES, $(SONIC_MAKE_FILES), $(FILES_PATH),smdep))
+$(eval $(call SMSHA_DEP_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH),smdep))
+$(eval $(call SMSHA_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),smdep))
+$(eval $(call SMSHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),smdep))
+
+
+
+
+
+# rules for <.dep> and <.sha> file creation
+#
+# This rule creates two dependency files for the target
+#     [1] .dep file
+#         Each module target defines a variable called '_DEP_FILES' that contains the list of dependency files for the target.
+#        Contents of the '_DEP_FILES' variable is stored in this file
+#
+#     [2] .sha file
+#         The SHA hash (.sha) file is created from 48 byte SHA value for each of the dependency files present in the .dep file
+#
+# The target needs to be rebuilt if any of the dependent flags are changed.
+# The module dependency file is created with the name as '<target name>.dep' and the SHA hash file created as '<target name>.dep.sha'.
+# This file is added as a dependency to the target, so that any change in the file will trigger the target recompilation.
+# For Eg:
+#       target/debs/stretch/bash_4.3-14_amd64.deb.dep
+#       target/debs/stretch/bash_4.3-14_amd64.deb.dep.sha
+#
+#  RULE args:
+#          $(1)  => target name
+#          $(2)  => target destination folder path
+#          $(3)  => target file extension
+#
+
+define SHA_DEP_RULES
+ALL_DEP_FILES_LIST += $(foreach pkg,$(2), $($(filter none,$($(1)_CACHE_MODE)), \
+                      $(addsuffix .$(3),$(addprefix $(pkg)/, $(1))) \
+                      $(addsuffix .$(3).sha,$(addprefix $(pkg)/, $(1)))))
+$(foreach docker, $(filter $(SONIC_DOCKER_IMAGES), $(1)), \
+	$(eval $(docker)_DEP_FILES+=$(wildcard files/build/versions/default/*) \
+	$(wildcard files/build/versions/dockers/$(basename $(docker))/*) \
+	$(foreach docker_file, $($(docker)_FILES), $(addprefix $(if $($(docker_file)_PATH), $($(docker_file)_PATH), $(FILES_PATH))/, $(docker_file))) ))
+$(foreach docker, $(filter $(SONIC_DOCKER_DBG_IMAGES), $(1)), \
+	$(eval $(docker)_DEP_FILES+=$(wildcard files/build/versions/default/*) \
+	$(wildcard files/build/versions/dockers/$(patsubst %-$(DBG_IMAGE_MARK).gz,%,$(docker))/*) \
+	$(foreach docker_file, $($(docker)_FILES), $(addprefix $(if $($(docker_file)_PATH), $($(docker_file)_PATH), $(FILES_PATH))/, $(docker_file))) ))
+$(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
+	$(2)/%.flags $$$$($$$$*_DEP_FILES) $$$$(if $$$$($$$$*_SMDEP_FILES), $(2)/%.smdep)
+	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
+	@$$(file >$$@.tmp,$$($$*_DEP_FILES))
+	@cat $$@.tmp |xargs git hash-object >$$@.sha.tmp
+	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; fi
+	@rm -f $$@.tmp $$@.sha.tmp
+	@$$(if $$(MDEBUG), $$(info DEP: $$@, MOD:$$?))
+endef
+$(eval $(call SHA_DEP_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_MAKE_FILES), $(FILES_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),dep))
+
+
+
+
+
+# Clean all the DEP and SHA files for all the DEBS target
+SONIC_CACHE_CLEAN_DEBS = $(addsuffix -clean,$(addprefix $(DEBS_PATH)/, \
+           $(SONIC_ONLINE_DEBS) \
+           $(SONIC_COPY_DEBS) \
+           $(SONIC_MAKE_DEBS) \
+           $(SONIC_DPKG_DEBS) \
+           $(SONIC_DERIVED_DEBS) \
+           $(SONIC_EXTRA_DEBS)))
+$(SONIC_CACHE_CLEAN_DEBS) :: $(DEBS_PATH)/%-clean : .platform $$(addsuffix -clean,$$(addprefix $(DEBS_PATH)/,$$($$*_MAIN_DEB)))
+	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+
+
+# Clean all the DEP and SHA files for all the FILES target
+SONIC_CACHE_CLEAN_FILES = $(addsuffix -clean,$(addprefix $(FILES_PATH)/, \
+           $(SONIC_ONLINE_FILES) \
+           $(SONIC_COPY_FILES) \
+           $(SONIC_MAKE_FILES)))
+$(SONIC_CACHE_CLEAN_FILES) :: $(FILES_PATH)/%-clean : .platform
+	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+
+
+# Clean all the DEP and SHA files for all the DOCKER target
+SONIC_CACHE_CLEAN_TARGETS = $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
+               $(SONIC_DOCKER_IMAGES) \
+               $(SONIC_DOCKER_DBG_IMAGES) \
+               $(SONIC_SIMPLE_DOCKER_IMAGES) \
+               $(SONIC_RFS_TARGETS) \
+               $(SONIC_INSTALLERS)))
+$(SONIC_CACHE_CLEAN_TARGETS) :: $(TARGET_PATH)/%-clean : .platform
+	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+
+
+# Clean all the DEP and SHA files for all the PYTHON DEBS target
+SONIC_CACHE_CLEAN_STDEB_DEBS = $(addsuffix -clean,$(addprefix $(PYTHON_DEBS_PATH)/, \
+             $(SONIC_PYTHON_STDEB_DEBS)))
+$(SONIC_CACHE_CLEAN_STDEB_DEBS) :: $(PYTHON_DEBS_PATH)/%-clean : .platform
+	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+
+
+# Clean all the DEP and SHA files for all the PYTHON WHEELS target
+SONIC_CACHE_CLEAN_WHEELS = $(addsuffix -clean,$(addprefix $(PYTHON_WHEELS_PATH)/, \
+             $(SONIC_PYTHON_WHEELS)))
+$(SONIC_CACHE_CLEAN_WHEELS) :: $(PYTHON_WHEELS_PATH)/%-clean : .platform
+	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \
+        $($*_MOD_DEP_FILE) $($*_SMOD_DEP_FILE)
+
+.PHONY: cclean
+cclean:: $(SONIC_CACHE_CLEAN_DEBS) $(SONIC_CACHE_CLEAN_FILES) $(SONIC_CACHE_CLEAN_TARGETS) \
+        $(SONIC_CACHE_CLEAN_STDEB_DEBS) $(SONIC_CACHE_CLEAN_WHEELS)
+
+.PHONY: clean
+clean:: cclean
+
+# Clear all the local cache contents
+.PHONY:lcclean
+lcclean::
+	@rm -f $(TARGET_PATH)/cache/*
+
+
+
+# List all main targets and its derived target with indent.
+listall :
+	@$(foreach target,$(SONIC_TARGET_LIST),\
+        $(eval DPKG:=$(lastword $(subst /, ,$(target)))) \
+        $(eval PATH:= $(subst $(DPKG),,$(target))) \
+        $(if $($(DPKG)_MAIN_DEB),,
+			echo "[$(target)] "; \
+            $(foreach pkg,$($(DPKG)_DERIVED_DEBS) $($(DPKG)_EXTRA_DEBS),\
+				echo "     $(PATH)$(pkg)"; \
+             )\
+         )\
+      )
+
+#$(addprefix show-,$(SONIC_TARGET_LIST)):show-%:
+show-%:
+	@$(foreach target,$(SONIC_TARGET_LIST),\
+        $(eval DPKG:=$(lastword $(subst /, ,$(target)))) \
+        $(eval PATH:= $(subst $(DPKG),,$(target))) \
+        $(if $(findstring $*,$(target)),
+		$(info ) \
+		$(eval MDPKG:=$(if $($(DPKG)_MAIN_DEB),$($(DPKG)_MAIN_DEB),$(DPKG))) \
+			$(info  [$(PATH)$(MDPKG)]  ) \
+            $(foreach pkg,$($(MDPKG)_DERIVED_DEBS) $($(MDPKG)_EXTRA_DEBS),\
+				$(info $(SPACE)$(SPACE)$(SPACE)$(SPACE) $(PATH)$(pkg)) \
+             )\
+         )\
+      )
+	$(info )
+
+
+
+# Cache prune - Remove least frequently used cache files.
+NUMDAYS ?= 7 # Delete all the cache files which are not used within last 7 days
+.PHONY: cprune
+cprune:
+	@find $(SONIC_DPKG_CACHE_DIR) -name "*.tgz" !  -mtime -$(NUMDAYS) -exec rm -f {} \;
+
+
+
+# Invoke DPKG dependency only if DPKG cache is enabled.
+define dpkg_depend
+	$(if $(filter-out none,$(SONIC_DPKG_CACHE_METHOD)),$(1))
+endef

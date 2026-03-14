@@ -1,0 +1,10 @@
+{
+    "VERSIONS_WITH_INCORRECT_PATTERN": {
+	"desc": "VERSIONS_WITH_INCORRECT_PATTERN pattern failure.",
+	"eStrKey" : "Pattern"
+    },
+    "VERSIONS_WITH_INCORRECT_PATTERN2": {
+	"desc": "VERSIONS_WITH_INCORRECT_PATTERN pattern failure.",
+	"eStrKey" : "Pattern"
+    }
+}

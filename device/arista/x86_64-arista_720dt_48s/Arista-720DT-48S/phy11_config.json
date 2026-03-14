@@ -1,0 +1,38 @@
+{
+  "lanes": [
+    {
+      "index": 255,
+      "local_lane_id": 255,
+      "system_side": true,
+      "tx_polarity": 255,
+      "rx_polarity": 255,
+      "line_tx_lanemap": 255,
+      "line_rx_lanemap": 255,
+      "line_to_system_lanemap": 255,
+      "mdio_addr": ""
+    }
+  ],
+  "ports": [
+    {
+      "index": 11,
+      "mdio_addr": "",
+      "system_speed": 1000,
+      "system_fec": "none",
+      "system_auto_neg": false,
+      "system_loopback": "none",
+      "system_training": false,
+      "line_speed": 1000,
+      "line_fec": "none",
+      "line_auto_neg": false,
+      "line_loopback": "none",
+      "line_training": false,
+      "line_media_type": "copper",
+      "line_intf_type": "none",
+      "line_adver_speed": [],
+      "line_adver_fec": [],
+      "line_adver_auto_neg": false,
+      "line_adver_asym_pause": false,
+      "line_adver_media_type": "copper"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_HEX_VALUES": {
+        "desc": "Configuring ERSPAN entry with valid heximal values."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_HEX_VALUES_1": {
+        "desc": "Configuring ERSPAN entry with valid heximal values."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_DEC_VALUES": {
+        "desc": "Configuring ERSPAN entry with valid decimal values."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_DEC_VALUES_1": {
+        "desc": "Configuring ERSPAN entry with valid decimal values."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_DEC_VALUES_2": {
+        "desc": "Configuring ERSPAN entry with valid decimal values."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "desc": "Configuring ERSPAN entry with valid IPv6 source and destination IPs."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid type",
+        "eStrKey": "InvalidValue"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP": {
+        "desc": "Configuring ERSPAN entry with invalid dst_ip",
+        "eStr" : "src_ip and dst_ip must have the same IP version."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid dst_ip",
+        "eStrKey" : "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP": {
+        "desc": "Configuring ERSPAN entry with invalid src_ip",
+        "eStr" : "src_ip and dst_ip must have the same IP version."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid src_ip",
+        "eStrKey" : "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_GRE_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid GRE type",
+        "eStrKey" : "Pattern"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_GRE_TYPE_1": {
+        "desc": "Configuring ERSPAN entry with invalid GRE type",
+        "eStrKey" : "Pattern"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_GRE_TYPE_2": {
+        "desc": "Configuring ERSPAN entry with invalid GRE type",
+        "eStrKey" : "Pattern"
+    },
+    "MIRROR_ERSPAN_ENTRY_GRE_WRONG_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid GRE type",
+        "eStrKey" : "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_DSCP": {
+        "desc": "Configuring ERSPAN entry with invalid dscp",
+        "eStr" : "Invalid dscp value"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_DSCP_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid dscp",
+        "eStrKey" : "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TTL": {
+        "desc": "Configuring ERSPAN entry with invalid ttl",
+        "eStrKey": "Bounds"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TTL_TYPE": {
+        "desc": "Configuring ERSPAN entry with invalid ttl",
+        "eStrKey" : "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_VALID_SRC_PORT": {
+        "desc": "Configuring ERSPAN entry with valid source port"
+    },
+    "MIRROR_ERSPAN_ENTRY_VALID_SRC_PORTCHANNEL": {
+        "desc": "Configuring ERSPAN entry with valid source portchannel"
+    },
+    "MIRROR_SPAN_ENTRY_WITH_VALID_VALUES": {
+        "desc": "Configuring SPAN entry with valid source and destination ports"
+    },
+    "MIRROR_SPAN_ENTRY_INVALID_DST_PORT": {
+        "desc": "Configuring SPAN entry with invalid destination ports",
+        "eStrKey" : "InvalidValue"
+    },
+    "MIRROR_SPAN_ENTRY_INVALID_DST_PORT_TYPE": {
+        "desc": "Configuring SPAN entry with invalid destination ports",
+        "eStrKey" : "When"
+    },
+    "MIRROR_SPAN_ENTRY_VALID_DST_PORT_CPU": {
+        "desc": "Configuring SPAN entry with valid destination port CPU"
+    },
+    "MIRROR_SPAN_ENTRY_INVALID_DIRECTION": {
+        "desc": "Configuring SPAN entry with invalid direction",
+        "eStrKey": "InvalidValue"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_POLICER": {
+        "desc": "Configuring SPAN entry with valid policer"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_INVALID_POLICER": {
+        "desc": "Configuring SPAN entry with invalid policer",
+        "eStrKey": "LeafRef"
+    }
+}

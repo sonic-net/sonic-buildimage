@@ -1,0 +1,7 @@
+[
+    {
+        "tag": "notification",
+        "regex": ".*NOTIFICATION: (received|sent) (?:to|from) neighbor ([0-9a-f:.]*[0-9a-f+]*)\\s*.* (\\d*)\/(\\d*)",
+        "params": [ "is_sent:ret=(arg==\"sent\")and\"true\"or\"false\"", "ip", "major_code", "minor_code" ]
+    }
+]

@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_GNMI)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-gnmi.mk rules/docker-gnmi.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_GNMI)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_GNMI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_GNMI)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_GNMI),$(DOCKER_GNMI_DBG)))

@@ -1,0 +1,40 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update apt's cache of available packages
+RUN apt-get update
+
+# Install redis-server
+RUN apt-get install -y redis-tools redis-server
+
+# Install click for CLI
+RUN pip3 install click
+
+{% if docker_database_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_database_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_database_debs.split(' ')) }}
+{%- endif %}
+
+{% include "Dockerfile.common.j2" %}
+
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
+COPY ["files/90-sonic.conf", "/usr/lib/sysctl.d/"]
+
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

@@ -1,0 +1,39 @@
+{#
+    Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
+    Apache-2.0
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+{% set default_cable = '5m' %}
+{% set ingress_lossless_pool_size =  '44910592' %}
+{% set ingress_lossless_pool_xoff  =  '1751040' %}
+{% set egress_lossless_pool_size =  '60817392' %}
+{% set egress_lossy_pool_size =  '44910592' %}
+
+{% import 'buffers_defaults_objects.j2' as defs with context %}
+
+{%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
+{{ defs.generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_profile_lists_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_profile_lists(port_names_active, port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_queue_buffers_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_queue_buffers(port_names_active, port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_pg_profiles_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_pg_profiles(port_names_active, port_names_inactive) }}
+{%- endmacro %}

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+      ### type  1 result/1000
+          type  2 result/100
+          type  3 read bit
+     ### property need check must add int front
+-->
+<catalog>
+    <fans>
+    	<fan id="fan1" >
+    		<property name="present" location="2-0037/fan_present" type="3"  bit="0" decode="fanpresent" default="0"/>
+    		<property name="status" location="2-0037/fan_status" type="3" bit="0" decode="fanstatus" default="1"/>
+    		<property name="hw_version" location="3-0053/fan_hw_version" type="0"  bit="0"/>
+    		<property name="fan_type"   location="3-0053/fan_type"/>
+    		<property name="sn"    location="3-0053/fan_sn"/>
+    		<property name="Speed" location="2-0037/hwmon/*/fan1_input"/>
+    	</fan>  
+    	<fan id="fan2" >
+    		<property name="present" location="2-0037/fan_present" type="3"  bit="1" decode="fanpresent" default="0" />
+    		<property name="status" location="2-0037/fan_status" type="3" bit="1" decode="fanstatus" default="1"/>
+    		<property name="hw_version" location="4-0053/fan_hw_version" type="0"  bit="0"/>
+    		<property name="fan_type"   location="4-0053/fan_type"/>
+    		<property name="sn"    location="4-0053/fan_sn"/>
+    		<property name="Speed" location="2-0037/hwmon/*/fan2_input"/>
+    	</fan>   	
+    	<fan id="fan3" >
+    		<property name="present" location="2-0037/fan_present" type="3"  bit="2"  decode="fanpresent" default="0"/>
+    		<property name="status" location="2-0037/fan_status" type="3" bit="2"  decode="fanstatus" default="1"/>
+    		<property name="hw_version" location="5-0053/fan_hw_version" type="0"  bit="0"/>
+    		<property name="fan_type"   location="5-0053/fan_type"/>
+    		<property name="sn"    location="5-0053/fan_sn"/>
+    		<property name="Speed" location="2-0037/hwmon/*/fan3_input"/>
+    	</fan>  
+    	<fan id="fan4" >
+    		<property name="present" location="2-0037/fan_present" type="3"  bit="3"  decode="fanpresent" default="0"/>
+    		<property name="status" location="2-0037/fan_status" type="3" bit="3"  decode="fanstatus" default="1"/>
+    		<property name="hw_version" location="6-0053/fan_hw_version" type="0"  bit="0"/>
+    		<property name="fan_type"   location="6-0053/fan_type"/>
+    		<property name="sn"    location="6-0053/fan_sn"/>
+    		<property name="Speed" location="2-0037/hwmon/*/fan4_input"/>
+    	</fan>  
+    </fans>  
+    <temps>
+    	<temp id="air_inlet" >
+    		<property name="temp1_input" location="/2-0048/hwmon/*/temp1_input" type="1"/>
+    		<property name="temp1_max"   location="/2-0048/hwmon/*/temp1_max" type="1" />
+    		<property name="temp1_max_hyst"    location="/2-0048/hwmon/*/temp1_max_hyst" type="1" />
+    	</temp> 
+    	<temp id="air_outlet" >
+    		<property name="temp1_input" location="/2-0049/hwmon/*/temp1_input" type="1" />
+    		<property name="temp1_max"   location="/2-0049/hwmon/*/temp1_max" type="1" />
+    		<property name="temp1_max_hyst"    location="/2-0049/hwmon/*/temp1_max_hyst" type="1" />
+    	</temp> 
+    	<temp id="air_hotlet" >
+    		<property name="temp1_input" location="/2-004a/hwmon/*/temp1_input" type="1"/>
+    		<property name="temp1_max"   location="/2-004a/hwmon/*/temp1_max" type="1"/>
+    		<property name="temp1_max_hyst"    location="/2-004a/hwmon/*/temp1_max_hyst" type="1"/>
+    	</temp> 
+    </temps> 
+    <psus>    		
+    	<psu id="psu1" >
+    		<property name="present" location="2-0037/psu_status" type="3"  bit="0" decode="psucheck" default="0"/>
+    		<property name="status" location="2-0037/psu_status" type="3"  bit="1" decode="psustatus" default="1"/>
+    		<property name="sn"    location="7-0050/psu_sn" />
+    		<property name="in_current"    location="7-0058/hwmon/*/curr1_input" type="1" />
+    		<property name="in_voltage"    location="7-0058/hwmon/*/in1_input"  type="1"/>
+    		<property name="out_voltage"    location="7-0058/hwmon/*/in2_input" type="1" />
+    		<property name="out_current"    location="7-0058/hwmon/*/curr2_input" type="1" />
+    		<property name="temp"    location="7-0058/hwmon/*/temp1_input" type="1"/>
+    		<property name="hw"    location="7-0050/psu_hw" />		
+    		<property name="type1"    location="7-0050/psu_type" decode="psutype"/>
+    		<property name="fan_speed"     location="7-0058/hwmon/*/fan1_input" />
+    		<property name="in_power"      location="7-0058/hwmon/*/power1_input"  type="5"/>
+    		<property name="out_power"     location="7-0058/hwmon/*/power2_input"  type="5"/>
+    	</psu> 
+    	<psu id="psu2" >
+    		<property name="present" location="2-0037/psu_status" type="3"  bit="4" decode="psucheck" default="0"/>
+    		<property name="status" location="2-0037/psu_status" type="3"  bit="5" decode="psustatus" default="1"/>
+    		<property name="sn"    location="8-0053/psu_sn" />
+    		<property name="in_current"    location="8-005b/hwmon/*/curr1_input" type="1" />
+    		<property name="in_voltage"    location="8-005b/hwmon/*/in1_input"  type="1"/>
+    		<property name="out_voltage"    location="8-005b/hwmon/*/in2_input" type="1" />
+    		<property name="out_current"    location="8-005b/hwmon/*/curr2_input" type="1" />
+    		<property name="temp"    location="8-005b/hwmon/*/temp1_input" type="1"/>
+    		<property name="hw"    location="8-0053/psu_hw" />
+    		<property name="type1"    location="8-0053/psu_type" decode="psutype"/>
+    		<property name="fan_speed"     location="8-005b/hwmon/*/fan1_input" />
+    		<property name="in_power"      location="8-005b/hwmon/*/power1_input"  type="5"/>
+    		<property name="out_power"     location="8-005b/hwmon/*/power2_input"  type="5"/>
+    	</psu> 
+    </psus> 
+    <cpus location="/sys/class/hwmon/hwmon0"/>
+    <ports_rx>
+		<mgmt_rx id="mgmt" sender="eth0" >
+    		<property name="mgmt" location="/eth0/statistics/rx_packets" type="4"/>
+		</mgmt_rx> 
+    </ports_rx> 
+    <decode>
+	<fanpresent>
+		<code key="1" value="ABSENT"/>
+		<code key="0" value="PRESENT"/>
+	</fanpresent>
+	<fanstatus>
+		<code key="1" value="OK"/>
+		<code key="0" value="NOT OK"/>
+	</fanstatus>
+	<psucheck>
+		<code key="1" value="ABSENT"/>
+		<code key="0" value="PRESENT"/>
+	</psucheck>
+	<psustatus>
+		<code key="1" value="OK"/>
+		<code key="0" value="NOT OK"/>
+	</psustatus>
+	
+	<psutype>		
+		<code key="CSU550AP-3-300" value="RG-PA550I-F"/>
+		<code key="DPS-550AB-39 A" value="RG-PA550I-F"/>
+	</psutype>
+    </decode>
+</catalog>
+

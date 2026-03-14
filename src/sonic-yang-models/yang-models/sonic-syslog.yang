@@ -1,0 +1,218 @@
+module sonic-syslog {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-system-syslog";
+    prefix syslog;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-feature {
+        prefix feature;
+    }
+
+    description "Syslog YANG Module for SONiC OS: remote syslog logging";
+
+    revision 2022-04-18 {
+        description "Initial revision.";
+    }
+
+    typedef vrf-device {
+        description "Represents syslog VRF device";
+        type enumeration {
+            enum default;
+            enum mgmt;
+        }
+    }
+
+    typedef syslog-rate-limit-interval {
+        description "Message rate limit interval in second";
+        type uint32 {
+            range 0..2147483647;
+        }
+    }
+
+    typedef syslog-rate-limit-burst {
+        description "Message rate limit burst in message count";
+        type uint32 {
+            range 0..2147483647;
+        }
+    }
+
+    typedef log-format {
+        description "Represents syslog log format";
+        type enumeration {
+            enum welf;
+            enum standard;
+        }
+    }
+
+    typedef rsyslog-protocol {
+        description "The protocol to send logs to remote server";
+        type enumeration {
+            enum tcp;
+            enum udp;
+        }
+    }
+
+    typedef syslog-filter-type {
+        description "The filter type";
+        type enumeration {
+            enum include;
+            enum exclude;
+        }
+    }
+
+    typedef rsyslog-severity {
+        description "The protocol to send logs to remote server";
+        type enumeration {
+            enum none;
+            enum debug;
+            enum info;
+            enum notice;
+            enum warn;
+            enum error;
+            enum crit;
+        }
+    }
+
+
+    container sonic-syslog {
+
+        container SYSLOG_SERVER {
+
+            description "SYSLOG_SERVER part of config_db.json";
+
+            list SYSLOG_SERVER_LIST {
+
+                key "server_address";
+
+                leaf server_address {
+                    description "Syslog server IP address";
+                    type inet:host;
+                }
+
+                leaf source {
+                    description "Syslog source IP address";
+                    type inet:ip-address;
+                    must "(contains(current(), '.') and contains(../server_address, '.'))
+                    or (contains(current(), ':') and contains(../server_address, ':'))";
+                }
+
+                leaf port {
+                    description "Syslog server UDP port";
+                    type inet:port-number;
+                }
+
+                leaf vrf {
+                    description "Syslog VRF device";
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type vrf-device;
+                    }
+                    must "(current() != 'mgmt')
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
+                }
+
+                leaf filter {
+                    description "Syslog filter type";
+                    type syslog-filter-type;
+                }
+
+                leaf filter_regex {
+                    description "Filter regex";
+                    type string;
+                }
+
+                leaf protocol {
+                    description "The protocol to send logs to remote server";
+                    type rsyslog-protocol;
+                }
+
+                leaf severity {
+                    description "Limit the severity to send logs to remote server";
+                    type rsyslog-severity;
+                }
+
+            }
+            /* end of list SYSLOG_SERVER_LIST */
+        }
+        /* end of container SYSLOG_SERVER */
+
+        container SYSLOG_CONFIG {
+
+            description "SYSLOG_CONFIG part of config_db.json";
+
+            container GLOBAL {
+                leaf rate_limit_interval {
+                    type syslog-rate-limit-interval;
+                }
+
+                leaf rate_limit_burst {
+                    type syslog-rate-limit-burst;
+                }
+
+                leaf format {
+                    description "Log format";
+                    type log-format;
+                    default standard;
+                }
+
+                leaf welf_firewall_name {
+                    description "WELF format Firewall name";
+                    type string;
+                    must "(../format != 'standard')";
+                }
+
+                leaf severity {
+                    type rsyslog-severity;
+                    default notice;
+                }
+
+            }
+            /* end of list SYSLOG_CONFIG_LIST */
+        }
+        /* end of container SYSLOG_CONFIG */
+
+        container SYSLOG_CONFIG_FEATURE {
+
+            description "SYSLOG_CONFIG_FEATURE part of config_db.json";
+
+            list SYSLOG_CONFIG_FEATURE_LIST {
+
+                key "service";
+
+                leaf service {
+                    description "Service name";
+                    type leafref {
+                        path "/feature:sonic-feature/feature:FEATURE/feature:FEATURE_LIST/feature:name";
+                    }
+                }
+
+                leaf rate_limit_interval {
+                    type syslog-rate-limit-interval;
+                }
+
+                leaf rate_limit_burst {
+                    type syslog-rate-limit-burst;
+                }
+            }
+            /* end of list SYSLOG_CONFIG_FEATURE_LIST */
+        }
+        /* end of container SYSLOG_CONFIG_FEATURE */
+    }
+    /* end of container sonic-syslog */
+}
+/* end of module sonic-syslog */

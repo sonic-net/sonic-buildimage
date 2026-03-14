@@ -1,0 +1,7 @@
+# This file describes the maintainers for sonic-device-data
+# See the SONiC project governance document for more information
+
+Name = "Joe LeVeque"
+Email = "jolevequ@microsoft.com"
+Github = jleveque
+Mailinglist = sonicproject@googlegroups.com

@@ -1,0 +1,20 @@
+[Unit]
+Description=Config initialization and migration service
+After=rc-local.service
+After=database.service
+After=config-topology.service
+Requires=config-topology.service
+Requires=database.service
+{% if sonic_asic_platform == 'mellanox' -%}
+Requires=hw-management.service
+{% endif -%}
+
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/config-setup boot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

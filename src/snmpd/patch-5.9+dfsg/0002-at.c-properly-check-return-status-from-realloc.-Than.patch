@@ -1,0 +1,31 @@
+From e370973f273ffc1b32673bc94c5a46f75a846d82 Mon Sep 17 00:00:00 2001
+From: Niels Baggesen <nba@users.sourceforge.net>
+Date: Wed, 31 Aug 2016 21:43:36 +0200
+Subject: [PATCH] at.c: properly check return status from realloc. Thanks to
+ Daniel Eiland (bug 2678)
+
+---
+ agent/mibgroup/mibII/at.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/agent/mibgroup/mibII/at.c b/agent/mibgroup/mibII/at.c
+index f57ba2a..a73fb8c 100644
+--- a/agent/mibgroup/mibII/at.c
++++ b/agent/mibgroup/mibII/at.c
+@@ -638,11 +638,12 @@ ARP_Scan_Init(void)
+             struct arptab  *newtab = (struct arptab *)
+                 realloc(at, (sizeof(struct arptab) *
+                              (arptab_curr_max_size + ARP_CACHE_INCR)));
+-            if (newtab == at) {
++            if (newtab == NULL) {
+                 snmp_log(LOG_ERR,
+                          "Error allocating more space for arpcache.  "
+                          "Cache will continue to be limited to %d entries",
+                          arptab_curr_max_size);
++                newtab = at;
+                 break;
+             } else {
+                 arptab_curr_max_size += ARP_CACHE_INCR;
+-- 
+2.7.4
+

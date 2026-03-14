@@ -1,0 +1,500 @@
+module sonic-spanning-tree {
+	yang-version 1.1;
+	namespace "http://github.com/sonic-net/sonic-stp";
+	
+	prefix stp;
+
+	/*
+	import sonic-extension {
+		prefix sonic-ext;
+	}
+	*/
+
+	organization
+		"SONiC";
+
+	contact
+		"SONiC";
+
+	description
+		"YANG model for Spanning Tree Protocol (STP) in SONiC, supporting PVST and MSTP";
+
+	revision 2025-03-15 {
+		description
+			"Initial YANG model written for PVST & MSTP configurations xFlow & BRCM";
+		reference
+			"Initial implementation for SONiC STP support";
+}
+
+	grouping vlanModeAttr {
+		description
+			"Configuration parameters for VLAN-based STP settings";
+
+		leaf forward_delay {
+			type uint8 {
+				range "4..30" {
+					error-message "Invalid Forwarding Delay Value";
+				}
+			}
+			units seconds;
+			default 15;
+			description
+				"Delay before transitioning to the forwarding state";
+		}
+
+		leaf hello_time {
+			type uint8 {
+				range "1..10" {
+					error-message "Invalid Hello Time value";
+				}
+			}
+			units seconds;
+			default 2;
+			description
+				"Interval between configuration BPDUs";
+		}
+
+		leaf max_age {
+			type uint8 {
+				range "6..40" {
+					error-message "Invalid Maximum Age Time value";
+				}
+			}
+			units seconds;
+			default 20;
+			description
+				"Maximum time bridge stores BPDU information";
+		}
+
+		leaf priority {
+			type uint16 {
+				range "0..61440" {
+					error-message "Invalid Bridge Priority value";
+				}
+			}
+			default 32768;
+			description
+				"Bridge Identifier priority component";
+		}
+	}
+
+	grouping interfaceAttr {
+		description
+			"Configuration parameters for STP interfaces";
+
+		leaf path_cost {
+			type uint64 {
+				range "1..200000000" {
+					error-message "Invalid Port Path Cost value";
+				}
+			}
+			default 200;
+			description
+				"Root path cost contribution";
+		}
+
+		leaf priority {
+			type uint8 {
+				range "0..240" {
+					error-message "Invalid Port Priority value";
+				}
+			}
+			default 128;
+			description
+				"Port priority in STP calculations";
+		}
+	}
+
+
+	container sonic-spanning-tree {
+		description
+			"SONiC Spanning Tree Protocol (STP) configuration";
+
+		container STP {
+			description
+				"Global STP configurations, maps to STP_GLOBAL_TABLE";
+
+			list STP_LIST {
+				key "keyleaf";
+				max-elements 1;
+				description
+					"Global STP configuration settings";
+
+				leaf keyleaf {
+					type enumeration {
+						enum GLOBAL {
+							description
+								"Global STP identifier";
+						}
+					}
+					description
+						"Key node identifier, always GLOBAL";
+				}
+
+				leaf mode {
+					type enumeration {
+						enum pvst {
+							description
+								"Per VLAN Spanning Tree Mode";
+						}
+						enum mst {
+							description
+								"Multiple Spanning Tree Mode";
+						}
+					}
+					mandatory true;
+					description
+						"STP operating mode";
+				}
+
+				leaf rootguard_timeout {
+					type uint16 {
+						range "5..600" {
+							error-message "Invalid Root-guard Timeout value";
+						}
+					}
+					units "seconds";
+					must "../mode = 'pvst'" {
+						error-message "Root guard timeout configuration is allowed only in PVST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					default 30;
+					description
+						"Once superior BPDUs stop coming on the port, device will wait for a period until root guard timeout before moving the port to forwarding state";
+				}
+				uses vlanModeAttr;
+			}
+		}
+
+		container STP_VLAN {
+			description
+				"VLAN Specific STP Configurations, maps to STP_VLAN_TABLE";
+
+			list STP_VLAN_LIST {
+				key "name";
+				description
+					"List of VLAN STP configurations";
+
+				leaf name {
+					type string;
+					description
+						"Vlan identifier in format 'Vlan<id>'";
+				}
+
+				leaf vlanid {
+					type uint16 {
+						range "1..4095" {
+							error-message "Vlan ID out of range";
+							/*error-app-tag vlanid-invalid;*/
+						}
+					}
+					description
+						"Vlan identifier number";
+				}
+
+				leaf enabled {
+					type boolean;
+					mandatory true;
+					description
+						"Spanning tree enabled/disabled on Vlan";
+				}
+				uses vlanModeAttr;
+			}
+		}
+
+		container STP_VLAN_PORT {
+			description
+				"Vlan port configurations, maps to STP_VLAN_PORT_TABLE";
+
+			list STP_VLAN_PORT_LIST {
+				key "vlan-name ifname";
+				description
+					"List of VLAN port configurations";
+
+				leaf vlan-name {
+					type leafref {
+						path "../../../STP_VLAN/STP_VLAN_LIST/name";
+					}
+					description
+						"Reference to Vlan";
+				}
+
+				leaf ifname {
+					type leafref {
+						path "../../../STP_PORT/STP_PORT_LIST/ifname";
+					}
+					description
+						"Reference to Ethernet interface or PortChannel";
+				}
+
+				uses interfaceAttr;
+			}
+		}
+
+		container STP_PORT {
+			description
+				"Port Configurations, maps to STP_PORT_TABLE";
+
+			list STP_PORT_LIST {
+				key "ifname";
+				description
+					"List of STP port List attributes";
+
+				/*sonic-ext:dependent-on "STP_LIST";*/
+				/*sonic-ext:dependent-on "sonic-spanning-tree:STP/STP_LIST";*/
+
+				leaf ifname {
+					type string;
+					description
+						"Reference to Ethernet interface or PortChannel";
+				}
+
+				leaf enabled {
+					type boolean;
+					mandatory true;
+					description
+						"Spanning tree enabled/disabled on Interface";
+				}
+
+				leaf root_guard {
+					type boolean;
+					default false;
+					description
+						"Enable/Disable Root guard on port";
+				}
+
+				leaf bpdu_guard {
+					type boolean;
+					default false;
+					description
+						"Enable/Disable port BPDU guard";
+				}
+
+				leaf bpdu_guard_do_disable {
+					type boolean;
+					default false;
+					description
+						"Port to be disabled as it receives a BPDU";
+				}
+
+				leaf uplink_fast {
+					type boolean;
+					default false;
+					description
+						"Enable/Disable uplink-fast on port";
+				}
+
+				leaf portfast {
+					type boolean;
+					must "current()='false' or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='pvst'" {
+						error-message "Mode must be PVST, and PortFast must be enabled for this configuration to be valid.";
+						/*error-app-tag stp-invalid;*/
+					}
+					default false;
+					description
+						"Enable/Disable portfast on port in PVST only";
+				}
+
+				uses interfaceAttr;
+
+				// For MST
+				leaf edge_port {
+					type boolean;
+					must "current()='false' or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Mode must be MST, and EdgePort must be enabled for this configuration to be valid.";
+						/*error-app-tag stp-invalid;*/
+					}
+					default false;
+					description
+						"Enable/Disable Edge-port on interface";
+				}
+
+				leaf link_type {
+					type enumeration {
+						enum auto {
+							description
+								"Specifies the interface's link type as auto";
+						}
+						enum shared {
+							description
+								"Specifies the interface's link type as shared";
+						}
+						enum point-to-point {
+							description
+								"Specifies the interface's link type as point-to-point";
+						}
+					}
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode only";
+					}
+					description
+						"Specifies the interface's link type: shared, point-to-point or auto";
+				}
+			}
+		}
+
+		container STP_MST {
+			description
+				"MST specific configuration container, maps to STP_MST_TABLE";
+
+			list STP_MST_LIST {
+				key "keyleaf";
+				max-elements 1;
+				description
+					"List of MST global configurations";
+				
+				/*sonic-ext:dependent-on "STP_LIST";*/
+				/*sonic-ext:dependent-on "sonic-spanning-tree:STP/STP_LIST";*/
+
+				leaf keyleaf {
+					type enumeration {
+						enum GLOBAL {
+							description
+								"Global MST";
+						}
+					}
+					description
+						"Key node identifier. It's value is always GLOBAL";
+				}
+
+				leaf name {
+					type string;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					description
+						"MST Region name";
+				}
+
+				leaf revision {
+					type uint32;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					description
+						"MST Revision number";
+				}
+
+				leaf max_hops {
+					type uint8;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					default 20;
+					description
+						"MST Max hops";
+				}
+
+				leaf max_age {
+					type uint8;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					default 20;
+					description
+						"MST max age in seconds";
+				}
+
+				leaf hello_time {
+					type uint8;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					default 2;
+					description
+						"MST hello time in seconds";
+				}
+
+				leaf forward_delay {
+					type uint8;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					default 15;
+					description
+						"MST forward delay in seconds";
+				}
+
+				leaf hold_count {
+					type uint8;
+					must "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='mst'" {
+						error-message "Configuration allowed in MST mode";
+						/*error-app-tag stp-invalid;*/
+					}
+					description
+						"MST hold count";
+				}
+			}
+		}
+
+		container STP_MST_INST {
+			description
+				"STP MST Instance Configuration, maps to STP_MST_INST_TABLE";
+
+			list STP_MST_INST_LIST {
+				key "instance";
+				description
+					"List of STP MST Instance attributes";
+
+				/*sonic-ext:dependent-on "sonic-spanning-tree:STP/STP_LIST";*/
+
+				leaf instance {
+					type uint16;
+					description
+						"Instance identifier";
+				}
+
+				leaf-list vlan {
+					type string;
+					description
+						"Vlan list assigned to MST instance";
+				}
+
+				leaf bridge_priority {
+					type uint16 {
+						range "0..61440" {
+							error-message "Invalid Bridge Priority value";
+						}
+					}
+					default 32768;
+					description
+						"The manageable component of the Bridge Identifier";
+				}
+			}
+		}
+
+		container STP_MST_PORT {
+			description
+				"STP MST Port configurations, maps to STP_MST_PORT_TABLE";
+
+			list STP_MST_PORT_LIST {
+				key "inst_id ifname";
+				description
+					"STP MST Port List attributes";			
+
+				leaf inst_id {
+					type leafref {
+						path "../../../STP_MST_INST/STP_MST_INST_LIST/instance";
+					}
+					description
+						"Reference to MST Instance";
+				}
+
+				leaf ifname {
+					type leafref {
+						path "../../../STP_PORT/STP_PORT_LIST/ifname";
+					}
+					description
+						"Reference to Ethernet interface or PortChannel";
+				}
+				uses interfaceAttr;
+			}
+		}
+	}
+}

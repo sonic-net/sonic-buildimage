@@ -1,0 +1,25 @@
+From 19928173ce022f499c59b719179e7ad9a4bafb7f Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Mon, 9 Nov 2020 13:21:55 -0800
+Subject: [PATCH] Remove extensive debug output
+
+---
+ libteamdctl/cli_usock.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libteamdctl/cli_usock.c b/libteamdctl/cli_usock.c
+index 0dc97ae..d3fbdba 100644
+--- a/libteamdctl/cli_usock.c
++++ b/libteamdctl/cli_usock.c
+@@ -163,7 +163,7 @@ static int cli_usock_method_call(struct teamdctl *tdc, const char *method_name,
+ 	char *replystr;
+ 	int err;
+ 
+-	dbg(tdc, "usock: Calling method \"%s\"", method_name);
++	/* dbg(tdc, "usock: Calling method \"%s\"", method_name); */
+ 	err= myasprintf(&msg, "%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
+ 					  method_name);
+ 	if (err)
+-- 
+2.29.2.windows.2
+

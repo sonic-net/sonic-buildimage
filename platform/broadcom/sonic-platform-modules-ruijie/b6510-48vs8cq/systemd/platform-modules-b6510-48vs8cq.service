@@ -1,0 +1,13 @@
+[Unit]
+Description=b6510-48vs8cq platform modules
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/b6510-48vs8cq_platform.sh init
+ExecStop=/usr/local/bin/b6510-48vs8cq_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

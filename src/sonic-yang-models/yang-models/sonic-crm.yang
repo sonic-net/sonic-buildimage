@@ -1,0 +1,920 @@
+module sonic-crm {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-crm";
+    prefix crm;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-device_metadata {
+        prefix dm;
+    }
+
+    description "CRM YANG Module for SONiC OS";
+
+    revision 2020-04-10 {
+        description "First Revision";
+    }
+
+    container sonic-crm {
+
+        container CRM {
+
+            description "CRM part of config_db.json";
+
+            container Config {
+
+                /* typedef specific to CRM */
+                typedef threshold {
+                    type uint16;
+                }
+
+                leaf acl_counter_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../acl_counter_high_threshold<100 and
+                        ../acl_counter_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf acl_counter_high_threshold {
+                    must "(current() > ../acl_counter_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf acl_counter_low_threshold {
+                    type threshold;
+                }
+
+                leaf acl_group_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../acl_group_high_threshold<100 and
+                        ../acl_group_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf acl_group_high_threshold {
+                    must "(current() > ../acl_group_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf acl_group_low_threshold {
+                    type threshold;
+                }
+
+                leaf acl_entry_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../acl_entry_high_threshold<100 and
+                        ../acl_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf acl_entry_high_threshold {
+                    must "(current() > ../acl_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf acl_entry_low_threshold {
+                    type threshold;
+                }
+
+                leaf acl_table_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../acl_table_high_threshold<100 and
+                        ../acl_table_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf acl_table_high_threshold {
+                    must "(current() > ../acl_table_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf acl_table_low_threshold {
+                    type threshold;
+                }
+
+                leaf fdb_entry_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../fdb_entry_high_threshold<100 and
+                        ../fdb_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf fdb_entry_high_threshold {
+                    must "(current() > ../fdb_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf fdb_entry_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv4_neighbor_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv4_neighbor_high_threshold<100 and
+                        ../ipv4_neighbor_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv4_neighbor_high_threshold {
+                    must "(current() > ../ipv4_neighbor_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv4_neighbor_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv4_nexthop_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv4_nexthop_high_threshold<100 and
+                        ../ipv4_nexthop_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv4_nexthop_high_threshold {
+                    must "(current() > ../ipv4_nexthop_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv4_nexthop_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv4_route_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv4_route_high_threshold<100 and
+                        ../ipv4_route_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv4_route_high_threshold {
+                    must "(current() > ../ipv4_route_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv4_route_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv6_neighbor_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv6_neighbor_high_threshold<100 and
+                        ../ipv6_neighbor_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv6_neighbor_high_threshold {
+                    must "(current() > ../ipv6_neighbor_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv6_neighbor_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv6_nexthop_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv6_nexthop_high_threshold<100 and
+                        ../ipv6_nexthop_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv6_nexthop_high_threshold {
+                    must "(current() > ../ipv6_nexthop_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv6_nexthop_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipv6_route_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipv6_route_high_threshold<100 and
+                        ../ipv6_route_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipv6_route_high_threshold {
+                    must "(current() > ../ipv6_route_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipv6_route_low_threshold {
+                    type threshold;
+                }
+
+                leaf nexthop_group_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../nexthop_group_high_threshold<100 and
+                        ../nexthop_group_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf nexthop_group_high_threshold {
+                    must "(current() > ../nexthop_group_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf nexthop_group_low_threshold {
+                    type threshold;
+                }
+
+                leaf nexthop_group_member_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../nexthop_group_member_high_threshold<100 and
+                        ../nexthop_group_member_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf nexthop_group_member_high_threshold {
+                    must "(current() > ../nexthop_group_member_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf nexthop_group_member_low_threshold {
+                    type threshold;
+                }
+
+                leaf polling_interval {
+                    type threshold;
+                }
+
+                leaf dnat_entry_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dnat_entry_high_threshold<100 and
+                        ../dnat_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dnat_entry_high_threshold {
+                    must "(current() > ../dnat_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dnat_entry_low_threshold {
+                    type threshold;
+                }
+
+                leaf snat_entry_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../snat_entry_high_threshold<100 and
+                        ../snat_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf snat_entry_high_threshold {
+                    must "(current() > ../snat_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf snat_entry_low_threshold {
+                    type threshold;
+                }
+
+                leaf ipmc_entry_threshold_type {
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../ipmc_entry_high_threshold<100 and
+                        ../ipmc_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf ipmc_entry_high_threshold {
+                    must "(current() > ../ipmc_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf ipmc_entry_low_threshold {
+                    type threshold;
+                }
+
+                leaf mpls_inseg_threshold_type {
+                    description "CRM threshold support for MPLS in-segment entries";
+
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../mpls_inseg_high_threshold<100 and
+                        ../mpls_inseg_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf mpls_inseg_high_threshold {
+                    description "CRM threshold support for MPLS in-segment entries";
+
+                    must "(current() > ../mpls_inseg_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf mpls_inseg_low_threshold {
+                    description "CRM threshold support for MPLS in-segment entries";
+
+                    type threshold;
+                }
+
+                leaf mpls_nexthop_threshold_type {
+                    description "CRM threshold support for MPLS next-hops";
+
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../mpls_nexthop_high_threshold<100 and
+                        ../mpls_nexthop_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf mpls_nexthop_high_threshold {
+                    description "CRM threshold support for MPLS next-hops";
+
+                    must "(current() > ../mpls_nexthop_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf mpls_nexthop_low_threshold {
+                    description "CRM threshold support for MPLS next-hops";
+
+                    type threshold;
+                }
+
+                leaf srv6_my_sid_entry_threshold_type {
+                    description "CRM threshold support for SRV6 my_sid entries";
+
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../srv6_my_sid_entry_high_threshold<100 and
+                        ../srv6_my_sid_entry_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf srv6_my_sid_entry_high_threshold {
+                    description "CRM threshold support for SRV6 my_sid entries";
+
+                    must "(current() > ../srv6_my_sid_entry_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf srv6_my_sid_entry_low_threshold {
+                    description "CRM threshold support for SRV6 my_sid entries";
+
+                    type threshold;
+                }
+
+                leaf srv6_nexthop_threshold_type {
+                    description "CRM threshold support for SRV6 next-hops";
+
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../srv6_nexthop_high_threshold<100 and
+                        ../srv6_nexthop_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf srv6_nexthop_high_threshold {
+                    description "CRM threshold support for SRV6 next-hops";
+
+                    must "(current() > ../srv6_nexthop_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf srv6_nexthop_low_threshold {
+                    description "CRM threshold support for SRV6 next-hops";
+
+                    type threshold;
+                }
+
+                leaf dash_vnet_threshold_type {
+                    description "CRM threshold support for DASH VNETs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_vnet_high_threshold<100 and
+                        ../dash_vnet_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_vnet_high_threshold {
+                    description "CRM threshold support for DASH VNETs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_vnet_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_vnet_low_threshold {
+                    description "CRM threshold support for DASH VNETs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_eni_threshold_type {
+                    description "CRM threshold support for DASH ENIs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_eni_high_threshold<100 and
+                        ../dash_eni_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_eni_high_threshold {
+                    description "CRM threshold support for DASH ENIs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_eni_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_eni_low_threshold {
+                    description "CRM threshold support for DASH ENIs";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_eni_ether_address_map_threshold_type {
+                    description "CRM threshold support for DASH ENI ETHER address map entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_eni_ether_address_map_high_threshold<100 and
+                        ../dash_eni_ether_address_map_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_eni_ether_address_map_high_threshold {
+                    description "CRM threshold support for DASH ENI ETHER address map entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_eni_ether_address_map_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_eni_ether_address_map_low_threshold {
+                    description "CRM threshold support for DASH ENI ETHER address map entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_inbound_routing_threshold_type {
+                    description "CRM threshold support for DASH IPv4 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_inbound_routing_high_threshold<100 and
+                        ../dash_ipv4_inbound_routing_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_inbound_routing_high_threshold {
+                    description "CRM threshold support for DASH IPv4 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_inbound_routing_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_inbound_routing_low_threshold {
+                    description "CRM threshold support for DASH IPv4 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_inbound_routing_threshold_type {
+                    description "CRM threshold support for DASH IPv6 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_inbound_routing_high_threshold<100 and
+                        ../dash_ipv6_inbound_routing_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_inbound_routing_high_threshold {
+                    description "CRM threshold support for DASH IPv6 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_inbound_routing_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_inbound_routing_low_threshold {
+                    description "CRM threshold support for DASH IPv6 inbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_outbound_routing_threshold_type {
+                    description "CRM threshold support for DASH IPv4 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_outbound_routing_high_threshold<100 and
+                        ../dash_ipv4_outbound_routing_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_outbound_routing_high_threshold {
+                    description "CRM threshold support for DASH IPv4 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_outbound_routing_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_outbound_routing_low_threshold {
+                    description "CRM threshold support for DASH IPv4 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_outbound_routing_threshold_type {
+                    description "CRM threshold support for DASH IPv6 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_outbound_routing_high_threshold<100 and
+                        ../dash_ipv6_outbound_routing_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_outbound_routing_high_threshold {
+                    description "CRM threshold support for DASH IPv6 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_outbound_routing_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_outbound_routing_low_threshold {
+                    description "CRM threshold support for DASH IPv6 outbound routes";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_pa_validation_threshold_type {
+                    description "CRM threshold support for DASH IPv4 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_pa_validation_high_threshold<100 and
+                        ../dash_ipv4_pa_validation_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_pa_validation_high_threshold {
+                    description "CRM threshold support for DASH IPv4 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_pa_validation_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_pa_validation_low_threshold {
+                    description "CRM threshold support for DASH IPv4 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_pa_validation_threshold_type {
+                    description "CRM threshold support for DASH IPv6 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_pa_validation_high_threshold<100 and
+                        ../dash_ipv6_pa_validation_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_pa_validation_high_threshold {
+                    description "CRM threshold support for DASH IPv6 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_pa_validation_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_pa_validation_low_threshold {
+                    description "CRM threshold support for DASH IPv6 PA validation entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_outbound_ca_to_pa_threshold_type {
+                    description "CRM threshold support for DASH IPv4 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_outbound_ca_to_pa_high_threshold<100 and
+                        ../dash_ipv4_outbound_ca_to_pa_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_outbound_ca_to_pa_high_threshold {
+                    description "CRM threshold support for DASH IPv4 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_outbound_ca_to_pa_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_outbound_ca_to_pa_low_threshold {
+                    description "CRM threshold support for DASH IPv4 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_outbound_ca_to_pa_threshold_type {
+                    description "CRM threshold support for DASH IPv6 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_outbound_ca_to_pa_high_threshold<100 and
+                        ../dash_ipv6_outbound_ca_to_pa_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_outbound_ca_to_pa_high_threshold {
+                    description "CRM threshold support for DASH IPv6 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_outbound_ca_to_pa_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_outbound_ca_to_pa_low_threshold {
+                    description "CRM threshold support for DASH IPv6 outbound CA to PA entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_acl_group_threshold_type {
+                    description "CRM threshold support for DASH IPv4 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_acl_group_high_threshold<100 and
+                        ../dash_ipv4_acl_group_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_acl_group_high_threshold {
+                    description "CRM threshold support for DASH IPv4 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_acl_group_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_acl_group_low_threshold {
+                    description "CRM threshold support for DASH IPv4 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_acl_group_threshold_type {
+                    description "CRM threshold support for DASH IPv6 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_acl_group_high_threshold<100 and
+                        ../dash_ipv6_acl_group_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_acl_group_high_threshold {
+                    description "CRM threshold support for DASH IPv6 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_acl_group_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_acl_group_low_threshold {
+                    description "CRM threshold support for DASH IPv6 ACL group entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv4_acl_rule_threshold_type {
+                    description "CRM threshold support for DASH IPv4 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv4_acl_rule_high_threshold<100 and
+                        ../dash_ipv4_acl_rule_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv4_acl_rule_high_threshold {
+                    description "CRM threshold support for DASH IPv4 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv4_acl_rule_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv4_acl_rule_low_threshold {
+                    description "CRM threshold support for DASH IPv4 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+                leaf dash_ipv6_acl_rule_threshold_type {
+                    description "CRM threshold support for DASH IPv6 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dash_ipv6_acl_rule_high_threshold<100 and
+                        ../dash_ipv6_acl_rule_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dash_ipv6_acl_rule_high_threshold {
+                    description "CRM threshold support for DASH IPv6 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+                    must "(current() > ../dash_ipv6_acl_rule_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dash_ipv6_acl_rule_low_threshold {
+                    description "CRM threshold support for DASH IPv6 ACL rule entries";
+
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type = 'dpu')";
+
+                    type threshold;
+                }
+
+            }
+            /* end of Config */
+        }
+        /* end of container CRM */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-crm */

@@ -1,0 +1,4 @@
+et-6248brb/scripts/et-6248brb_platform_init.sh usr/local/bin
+et-6248brb/cfg/et-6248brb-modules.conf etc/modules-load.d
+et-6248brb/scripts/led_status.sh usr/local/bin
+systemd/platform-modules-et-6248brb.service lib/systemd/system

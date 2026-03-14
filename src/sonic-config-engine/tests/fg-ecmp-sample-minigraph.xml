@@ -1,0 +1,1805 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+   <CpgDec>
+      <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution" />
+      <PeeringSessions>
+         <BGPSession>
+            <MacSec>false</MacSec>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>10.0.0.56</StartPeer>
+            <EndRouter>ARISTA01T1</EndRouter>
+            <EndPeer>10.0.0.57</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>FC00::71</StartPeer>
+            <EndRouter>ARISTA01T1</EndRouter>
+            <EndPeer>FC00::72</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <MacSec>false</MacSec>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>10.0.0.58</StartPeer>
+            <EndRouter>ARISTA02T1</EndRouter>
+            <EndPeer>10.0.0.59</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>FC00::75</StartPeer>
+            <EndRouter>ARISTA02T1</EndRouter>
+            <EndPeer>FC00::76</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <MacSec>false</MacSec>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>10.0.0.60</StartPeer>
+            <EndRouter>ARISTA03T1</EndRouter>
+            <EndPeer>10.0.0.61</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>FC00::79</StartPeer>
+            <EndRouter>ARISTA03T1</EndRouter>
+            <EndPeer>FC00::7A</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <MacSec>false</MacSec>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>10.0.0.62</StartPeer>
+            <EndRouter>ARISTA04T1</EndRouter>
+            <EndPeer>10.0.0.63</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+         <BGPSession>
+            <StartRouter>str2-sn3800-azd</StartRouter>
+            <StartPeer>FC00::7D</StartPeer>
+            <EndRouter>ARISTA04T1</EndRouter>
+            <EndPeer>FC00::7E</EndPeer>
+            <Multihop>1</Multihop>
+            <HoldTime>10</HoldTime>
+            <KeepAliveTime>3</KeepAliveTime>
+         </BGPSession>
+      </PeeringSessions>
+      <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+         <a:BGPRouterDeclaration>
+            <a:ASN>65100</a:ASN>
+            <a:Hostname>str2-sn3800-azd</a:Hostname>
+            <a:Peers>
+               <BGPPeer>
+                  <Address>10.0.0.57</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+               </BGPPeer>
+               <BGPPeer>
+                  <Address>10.0.0.59</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+               </BGPPeer>
+               <BGPPeer>
+                  <Address>10.0.0.61</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+               </BGPPeer>
+               <BGPPeer>
+                  <Address>10.0.0.63</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+               </BGPPeer>
+               <BGPPeer i:type="a:BGPPeerPassive">
+                  <ElementType>BGPPeer</ElementType>
+                  <Address>10.1.0.32</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+                  <a:Name>BGPSLBPassive</a:Name>
+                  <a:PeersRange>10.255.0.0/25</a:PeersRange>
+               </BGPPeer>
+               <BGPPeer i:type="a:BGPPeerPassive">
+                  <ElementType>BGPPeer</ElementType>
+                  <Address>10.1.0.32</Address>
+                  <RouteMapIn i:nil="true" />
+                  <RouteMapOut i:nil="true" />
+                  <Vrf i:nil="true" />
+                  <a:Name>BGPVac</a:Name>
+                  <a:PeersRange>192.168.0.0/21</a:PeersRange>
+               </BGPPeer>
+            </a:Peers>
+            <a:RouteMaps />
+         </a:BGPRouterDeclaration>
+         <a:BGPRouterDeclaration>
+            <a:ASN>64600</a:ASN>
+            <a:Hostname>ARISTA01T1</a:Hostname>
+            <a:RouteMaps />
+         </a:BGPRouterDeclaration>
+         <a:BGPRouterDeclaration>
+            <a:ASN>64600</a:ASN>
+            <a:Hostname>ARISTA02T1</a:Hostname>
+            <a:RouteMaps />
+         </a:BGPRouterDeclaration>
+         <a:BGPRouterDeclaration>
+            <a:ASN>64600</a:ASN>
+            <a:Hostname>ARISTA03T1</a:Hostname>
+            <a:RouteMaps />
+         </a:BGPRouterDeclaration>
+         <a:BGPRouterDeclaration>
+            <a:ASN>64600</a:ASN>
+            <a:Hostname>ARISTA04T1</a:Hostname>
+            <a:RouteMaps />
+         </a:BGPRouterDeclaration>
+      </Routers>
+   </CpgDec>
+   <DpgDec>
+      <DeviceDataPlaneInfo>
+         <IPSecTunnels />
+         <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+            <a:LoopbackIPInterface>
+               <Name>HostIP</Name>
+               <AttachTo>Loopback0</AttachTo>
+               <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+                  <b:IPPrefix>10.1.0.32/32</b:IPPrefix>
+               </a:Prefix>
+               <a:PrefixStr>10.1.0.32/32</a:PrefixStr>
+            </a:LoopbackIPInterface>
+            <a:LoopbackIPInterface>
+               <Name>HostIP1</Name>
+               <AttachTo>Loopback0</AttachTo>
+               <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+                  <b:IPPrefix>FC00:1::32/128</b:IPPrefix>
+               </a:Prefix>
+               <a:PrefixStr>FC00:1::32/128</a:PrefixStr>
+            </a:LoopbackIPInterface>
+         </LoopbackIPInterfaces>
+         <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+            <a:ManagementIPInterface>
+               <Name>HostIP</Name>
+               <AttachTo>eth0</AttachTo>
+               <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+                  <b:IPPrefix>10.3.146.183/23</b:IPPrefix>
+               </a:Prefix>
+               <a:PrefixStr>10.3.146.183/23</a:PrefixStr>
+            </a:ManagementIPInterface>
+            <a:ManagementIPInterface>
+               <Name>V6HostIP</Name>
+               <AttachTo>eth0</AttachTo>
+               <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+                  <b:IPPrefix>FC00:2::32/64</b:IPPrefix>
+               </a:Prefix>
+               <a:PrefixStr>FC00:2::32/64</a:PrefixStr>
+            </a:ManagementIPInterface>
+         </ManagementIPInterfaces>
+         <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution" />
+         <MplsInterfaces />
+         <MplsTeInterfaces />
+         <RsvpInterfaces />
+         <Hostname>str2-sn3800-azd</Hostname>
+         <PortChannelInterfaces>
+            <PortChannel>
+               <Name>PortChannel0001</Name>
+               <AttachTo>etp29</AttachTo>
+               <SubInterface />
+            </PortChannel>
+            <PortChannel>
+               <Name>PortChannel0002</Name>
+               <AttachTo>etp30</AttachTo>
+               <SubInterface />
+            </PortChannel>
+            <PortChannel>
+               <Name>PortChannel0003</Name>
+               <AttachTo>etp31</AttachTo>
+               <SubInterface />
+            </PortChannel>
+            <PortChannel>
+               <Name>PortChannel0004</Name>
+               <AttachTo>etp32</AttachTo>
+               <SubInterface />
+            </PortChannel>
+         </PortChannelInterfaces>
+         <VlanInterfaces>
+            <VlanInterface>
+               <Name>Vlan1000</Name>
+               <AttachTo>etp2;etp3;etp4;etp5;etp6;etp7;etp8;etp9;etp10;etp11;etp12;etp13;etp14;etp15;etp16;etp17;etp18;etp19;etp20;etp21;etp22;etp23;etp24;etp25</AttachTo>
+               <NoDhcpRelay>False</NoDhcpRelay>
+               <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+               <Type i:nil="true" />
+               <DhcpRelays>192.0.0.1;192.0.0.2;192.0.0.3;192.0.0.4;192.0.0.5;192.0.0.6;192.0.0.7;192.0.0.8;192.0.0.9;192.0.0.10;192.0.0.11;192.0.0.12;192.0.0.13;192.0.0.14;192.0.0.15;192.0.0.16;192.0.0.17;192.0.0.18;192.0.0.19;192.0.0.20;192.0.0.21;192.0.0.22;192.0.0.23;192.0.0.24;192.0.0.25;192.0.0.26;192.0.0.27;192.0.0.28;192.0.0.29;192.0.0.30;192.0.0.31;192.0.0.32;192.0.0.33;192.0.0.34;192.0.0.35;192.0.0.36;192.0.0.37;192.0.0.38;192.0.0.39;192.0.0.40;192.0.0.41;192.0.0.42;192.0.0.43;192.0.0.44;192.0.0.45;192.0.0.46;192.0.0.47;192.0.0.48</DhcpRelays>
+               <VlanID>1000</VlanID>
+               <Tag>1000</Tag>
+               <Subnets>192.168.0.0/21</Subnets>
+            </VlanInterface>
+            <VlanInterface>
+               <Name>Vlan31</Name>
+               <AttachTo>etp26</AttachTo>
+               <NoDhcpRelay>False</NoDhcpRelay>
+               <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+               <Type i:nil="true" />
+               <DhcpRelays>200.200.0.48</DhcpRelays>
+               <VlanID>31</VlanID>
+               <Tag>31</Tag>
+               <Subnets>200.200.0.0/21</Subnets>
+            </VlanInterface>
+         </VlanInterfaces>
+         <IPInterfaces>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>PortChannel0001</AttachTo>
+               <Prefix>10.0.0.56/31</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:Name="true" />
+               <AttachTo>PortChannel0001</AttachTo>
+               <Prefix>FC00::71/126</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>PortChannel0002</AttachTo>
+               <Prefix>10.0.0.58/31</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:Name="true" />
+               <AttachTo>PortChannel0002</AttachTo>
+               <Prefix>FC00::75/126</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>PortChannel0003</AttachTo>
+               <Prefix>10.0.0.60/31</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:Name="true" />
+               <AttachTo>PortChannel0003</AttachTo>
+               <Prefix>FC00::79/126</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>PortChannel0004</AttachTo>
+               <Prefix>10.0.0.62/31</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:Name="true" />
+               <AttachTo>PortChannel0004</AttachTo>
+               <Prefix>FC00::7D/126</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>Vlan1000</AttachTo>
+               <Prefix>192.168.0.1/21</Prefix>
+            </IPInterface>
+            <IPInterface>
+               <Name i:nil="true" />
+               <AttachTo>Vlan31</AttachTo>
+               <Prefix>200.200.200.0/27</Prefix>
+            </IPInterface>
+         </IPInterfaces>
+         <DataAcls />
+         <AclInterfaces>
+            <AclInterface>
+               <InAcl>SNMP_ACL</InAcl>
+               <AttachTo>SNMP</AttachTo>
+               <Type>SNMP</Type>
+            </AclInterface>
+            <AclInterface>
+               <AttachTo>ERSPAN</AttachTo>
+               fg-ecmp-sample-minigraphfg-ecmp-sample-minigraph
+               <InAcl>Everflow</InAcl>
+               <Type>Everflow</Type>
+            </AclInterface>
+            <AclInterface>
+               <AttachTo>ERSPANV6</AttachTo>
+               <InAcl>EverflowV6</InAcl>
+               <Type>EverflowV6</Type>
+            </AclInterface>
+            <AclInterface>
+               <AttachTo>VTY_LINE</AttachTo>
+               <InAcl>ssh-only</InAcl>
+               <Type>SSH</Type>
+            </AclInterface>
+            <AclInterface>
+               <AttachTo>PortChannel0001;PortChannel0002;PortChannel0003;PortChannel0004</AttachTo>
+               <InAcl>DataAcl</InAcl>
+               <Type>DataPlane</Type>
+            </AclInterface>
+         </AclInterfaces>
+         <DownstreamSummaries />
+         <DownstreamSummarySet xmlns:d4p1="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+            <DownstreamSummary>
+               <d4p1:Advertise>false</d4p1:Advertise>
+               <d4p1:Subnet>100.50.25.12/32</d4p1:Subnet>
+               <d4p1:SummaryType>FineGrainedECMPGroupDestination</d4p1:SummaryType>
+            </DownstreamSummary>
+            <DownstreamSummary>
+               <d4p1:Advertise>true</d4p1:Advertise>
+               <d4p1:Subnet>2603:10b0:10d:e07::/64</d4p1:Subnet>
+               <d4p1:SummaryType>DeviceAggregate</d4p1:SummaryType>
+            </DownstreamSummary>
+            <DownstreamSummary>
+               <d4p1:Advertise>false</d4p1:Advertise>
+               <d4p1:Subnet>fc:5::/128</d4p1:Subnet>
+               <d4p1:SummaryType>FineGrainedECMPGroupDestination</d4p1:SummaryType>
+            </DownstreamSummary>
+         </DownstreamSummarySet>
+         <IPNextHops>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp10</AttachTo>
+               <Address>200.200.200.1</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp11</AttachTo>
+               <Address>200.200.200.2</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp12</AttachTo>
+               <Address>200.200.200.3</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp13</AttachTo>
+               <Address>200.200.200.4</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp14</AttachTo>
+               <Address>200.200.200.5</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp15</AttachTo>
+               <Address>200.200.200.6</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp16</AttachTo>
+               <Address>200.200.200.7</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp17</AttachTo>
+               <Address>200.200.200.8</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp18</AttachTo>
+               <Address>200.200.200.9</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp19</AttachTo>
+               <Address>200.200.200.10</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp10</AttachTo>
+               <Address>200:200:200:200::1</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp11</AttachTo>
+               <Address>200:200:200:200::2</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp12</AttachTo>
+               <Address>200:200:200:200::3</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp13</AttachTo>
+               <Address>200:200:200:200::4</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp14</AttachTo>
+               <Address>200:200:200:200::5</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp15</AttachTo>
+               <Address>200:200:200:200::6</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp16</AttachTo>
+               <Address>200:200:200:200::7</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp17</AttachTo>
+               <Address>200:200:200:200::8</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp18</AttachTo>
+               <Address>200:200:200:200::9</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+            <IPNextHop>
+               <ElementType>IPNextHop</ElementType>
+               <Name i:nil="true" />
+               <AttachTo>etp19</AttachTo>
+               <Address>200:200:200:200::10</Address>
+               <Type>FineGrainedECMPGroupMember</Type>
+            </IPNextHop>
+         </IPNextHops>
+      </DeviceDataPlaneInfo>
+   </DpgDec>
+   <PngDec>
+      <DeviceInterfaceLinks>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>ARISTA01T1</EndDevice>
+            <EndPort>Ethernet1</EndPort>
+            <StartDevice>str2-sn3800-azd</StartDevice>
+            <StartPort>etp29</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>ARISTA02T1</EndDevice>
+            <EndPort>Ethernet1</EndPort>
+            <StartDevice>str2-sn3800-azd</StartDevice>
+            <StartPort>etp30</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>ARISTA03T1</EndDevice>
+            <EndPort>Ethernet1</EndPort>
+            <StartDevice>str2-sn3800-azd</StartDevice>
+            <StartPort>etp31</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>ARISTA04T1</EndDevice>
+            <EndPort>Ethernet1</EndPort>
+            <StartDevice>str2-sn3800-azd</StartDevice>
+            <StartPort>etp32</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp2</EndPort>
+            <StartDevice>Servers0</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp5</EndPort>
+            <StartDevice>Servers3</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp6</EndPort>
+            <StartDevice>Servers4</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp9</EndPort>
+            <StartDevice>Servers7</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp10</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp11</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp12</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp13</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp14</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp15</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp16</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp17</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp18</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp19</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp20</EndPort>
+            <StartDevice>Servers10</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp21</EndPort>
+            <StartDevice>Servers11</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp22</EndPort>
+            <StartDevice>Servers20</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp23</EndPort>
+            <StartDevice>Servers21</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp24</EndPort>
+            <StartDevice>Servers22</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+         <DeviceLinkBase>
+            <ElementType>DeviceInterfaceLink</ElementType>
+            <EndDevice>str2-sn3800-azd</EndDevice>
+            <EndPort>etp25</EndPort>
+            <StartDevice>Servers23</StartDevice>
+            <StartPort>eth0</StartPort>
+         </DeviceLinkBase>
+      </DeviceInterfaceLinks>
+      <Devices>
+         <Device i:type="ToRRouter">
+            <Hostname>str2-sn3800-azd</Hostname>
+            <HwSku>ACS-MSN3800</HwSku>
+            <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+               <a:IPPrefix>10.3.146.183</a:IPPrefix>
+            </ManagementAddress>
+         </Device>
+         <Device i:type="LeafRouter">
+            <Hostname>ARISTA04T1</Hostname>
+            <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+               <a:IPPrefix>172.16.134.63</a:IPPrefix>
+            </ManagementAddress>
+            <HwSku>Arista-VM</HwSku>
+         </Device>
+         <Device i:type="LeafRouter">
+            <Hostname>ARISTA03T1</Hostname>
+            <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+               <a:IPPrefix>172.16.134.62</a:IPPrefix>
+            </ManagementAddress>
+            <HwSku>Arista-VM</HwSku>
+         </Device>
+         <Device i:type="LeafRouter">
+            <Hostname>ARISTA02T1</Hostname>
+            <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+               <a:IPPrefix>172.16.134.61</a:IPPrefix>
+            </ManagementAddress>
+            <HwSku>Arista-VM</HwSku>
+         </Device>
+         <Device i:type="LeafRouter">
+            <Hostname>ARISTA01T1</Hostname>
+            <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+               <a:IPPrefix>172.16.134.60</a:IPPrefix>
+            </ManagementAddress>
+            <HwSku>Arista-VM</HwSku>
+         </Device>
+      </Devices>
+   </PngDec>
+   <DeviceInfos>
+      <DeviceInfo>
+         <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp1</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp2</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp3</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp4</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp5</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp6</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp7</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp8</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp9</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp10</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp11</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp12</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp13</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp14</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp15</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp16</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp17</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp18</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp19</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp20</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp21</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp22</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp23</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp24</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp25</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp26</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp27</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp28</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp29</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp30</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp31</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp32</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp33</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp34</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp35</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp36</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp37</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp38</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp39</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp40</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp41</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp42</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp43</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp44</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp45</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp46</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp47</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp48</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp49</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp50</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp51</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp52</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp53</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp54</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp55</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp56</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp57</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp58</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp59</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp60</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp61</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp62</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp63</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+            <a:EthernetInterface>
+               <ElementType>DeviceInterface</ElementType>
+               <AlternateSpeeds i:nil="true" />
+               <EnableFlowControl>true</EnableFlowControl>
+               <Index>1</Index>
+               <InterfaceName>etp64</InterfaceName>
+               <InterfaceType i:nil="true" />
+               <MultiPortsInterface>false</MultiPortsInterface>
+               <PortName>0</PortName>
+               <Priority>0</Priority>
+               <Speed>100000</Speed>
+            </a:EthernetInterface>
+         </EthernetInterfaces>
+         <FlowControl>true</FlowControl>
+         <Height>0</Height>
+         <HwSku>ACS-MSN3800</HwSku>
+         <ManagementInterfaces />
+      </DeviceInfo>
+   </DeviceInfos>
+   <MetadataDeclaration>
+      <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+         <a:DeviceMetadata>
+            <a:Name>str2-sn3800-azd</a:Name>
+            <a:Properties>
+               <a:DeviceProperty>
+                  <a:Name>DeploymentId</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>26</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>QosProfile</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>Profile0</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>DhcpResources</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>192.0.0.1;192.0.0.2;192.0.0.3;192.0.0.4;192.0.0.5;192.0.0.6;192.0.0.7;192.0.0.8;192.0.0.9;192.0.0.10;192.0.0.11;192.0.0.12;192.0.0.13;192.0.0.14;192.0.0.15;192.0.0.16;192.0.0.17;192.0.0.18;192.0.0.19;192.0.0.20;192.0.0.21;192.0.0.22;192.0.0.23;192.0.0.24;192.0.0.25;192.0.0.26;192.0.0.27;192.0.0.28;192.0.0.29;192.0.0.30;192.0.0.31;192.0.0.32;192.0.0.33;192.0.0.34;192.0.0.35;192.0.0.36;192.0.0.37;192.0.0.38;192.0.0.39;192.0.0.40;192.0.0.41;192.0.0.42;192.0.0.43;192.0.0.44;192.0.0.45;192.0.0.46;192.0.0.47;192.0.0.48</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>NtpResources</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>10.20.8.129;10.20.8.130</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>SnmpResources</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>10.3.145.98</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>SyslogResources</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>10.3.145.8;100.127.20.21</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>TacacsGroup</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>Starlab</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>TacacsServer</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>100.127.20.21</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>ForcedMgmtRoutes</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>10.3.145.98/31;10.3.145.8;100.127.20.16/28;10.3.149.170/31;40.122.216.24;13.91.48.226;10.3.145.14</a:Value>
+               </a:DeviceProperty>
+               <a:DeviceProperty>
+                  <a:Name>ErspanDestinationIpv4</a:Name>
+                  <a:Reference i:nil="true" />
+                  <a:Value>10.20.6.16</a:Value>
+               </a:DeviceProperty>
+            </a:Properties>
+         </a:DeviceMetadata>
+      </Devices>
+      <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution" />
+   </MetadataDeclaration>
+  <LinkMetadataDeclaration>
+    <Link xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>str2-sn3800-azd:etp29;ARISTA01T1:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>str2-sn3800-azd:etp30;ARISTA02T1:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>str2-sn3800-azd:etp31;ARISTA03T1:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>str2-sn3800-azd:etp32;ARISTA04T1:Ethernet1</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers0:eth0;str2-sn3800-azd:etp2</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers3:eth0;str2-sn3800-azd:etp5</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers4:eth0;str2-sn3800-azd:etp6</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers7:eth0;str2-sn3800-azd:etp9</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp10</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp11</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp12</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp13</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp14</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp15</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp16</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp17</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp18</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp19</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers10:eth0;str2-sn3800-azd:etp20</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers11:eth0;str2-sn3800-azd:etp21</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers20:eth0;str2-sn3800-azd:etp22</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers21:eth0;str2-sn3800-azd:etp23</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers22:eth0;str2-sn3800-azd:etp24</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>Servers23:eth0;str2-sn3800-azd:etp25</a:Key>
+      </a:LinkMetadata>
+    </Link>
+  </LinkMetadataDeclaration>
+   <Hostname>str2-sn3800-azd</Hostname>
+   <HwSku>ACS-MSN3800</HwSku>
+</DeviceMiniGraph>

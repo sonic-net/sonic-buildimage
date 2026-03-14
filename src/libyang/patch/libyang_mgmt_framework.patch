@@ -1,0 +1,13 @@
+diff --git a/src/tree_data.c b/src/tree_data.c
+index 04653a46..65dca211 100644
+--- a/src/tree_data.c
++++ b/src/tree_data.c
+@@ -842,7 +842,7 @@ error:
+     return ret;
+ }
+ 
+-int
++API int
+ lyd_check_mandatory_tree(struct lyd_node *root, struct ly_ctx *ctx, const struct lys_module **modules, int mod_count,
+                          int options)
+ {

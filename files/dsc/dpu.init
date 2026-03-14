@@ -1,0 +1,233 @@
+#!/bin/bash
+
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+
+# This script starts/stops dpu sw
+
+
+### BEGIN INIT INFO
+# Provides:          load-dpu
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load dpu sw
+### END INIT INFO
+ACTIVE_FILE="/boot/active.txt"
+NIC_MOUNT=""
+LOG_FILE="/tmp/active_nic"
+TAG=latest
+HOST_DIR=/host/dpu
+HOST_DIR_POLARIS=/host/polaris
+CONTAINER_NAME=dpu
+CONTAINER_NAME_POLARIS=polaris
+DPU_DOCKER_INFO_DIR=/host/dpu-docker-info
+TAG=latest
+IMAGE_NAME=docker-dpu
+
+function log_msg() {
+    echo "$1" | tee /dev/kmsg /dev/console
+}
+
+function generate_ssh_host_keys()
+{
+    # Generate SSH host keys 
+    log_msg "Removing existing SSH host keys"
+    rm -rfd /etc/ssh/ssh_host*
+    sleep 1
+    ssh-keygen -A
+    systemctl restart ssh.service
+    log_msg "SSH host keys generated successfully"
+}
+
+function start_polaris()
+{
+    # Run only if ssh.service is NOT active (inactive/failed/not-found)
+    if ! systemctl is-active --quiet ssh.service; then
+        log_msg "ssh.service is not active; regenerating host keys and restarting ssh"
+        generate_ssh_host_keys
+    fi
+
+    modprobe ionic_mnic
+    modprobe mnet_uio_pdrv_genirq
+    modprobe mdev
+    modprobe pciesvc
+    insmod /usr/lib/modules/6.12.41+deb13-sonic-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
+
+    mkdir -p $HOST_DIR_POLARIS/update
+    mkdir -p $HOST_DIR_POLARIS/sysconfig/config0
+    mkdir -p $HOST_DIR_POLARIS/sysconfig/config1
+    mkdir -p $HOST_DIR_POLARIS/obfl
+    mkdir -p $HOST_DIR_POLARIS/data
+    mkdir -p $HOST_DIR_POLARIS/share
+    mount -t tmpfs -o size=20M tmpfs $HOST_DIR_POLARIS/share
+    mount -t tmpfs -o size=5M tmpfs $HOST_DIR_POLARIS/external
+    mkdir -p $HOST_DIR_POLARIS/dsc
+    mount -t tmpfs -o size=5M dsctmps $HOST_DIR_POLARIS/dsc
+    mkdir -p $HOST_DIR_POLARIS/mnt
+    mkdir -p $HOST_DIR_POLARIS/obfl/a
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt/upper
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt/work
+    mkdir -p $DPU_DOCKER_INFO_DIR
+    echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+    sync; sync;
+    sleep 3;
+
+    echo $CONTAINER_NAME_POLARIS > $DPU_DOCKER_INFO_DIR/name
+    echo $IMAGE_NAME:$TAG > $DPU_DOCKER_INFO_DIR/image
+    /usr/sbin/ethtool -K Ethernet0 tx off sg off tso off rx off
+
+    echo 50 > $HOST_DIR_POLARIS/data/free_mem_threshold
+
+    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
+
+    docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/external:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
+
+    if [ -f /boot/first_boot ]; then
+        device="/usr/share/sonic/device"
+        platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+        log_msg "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
+        python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+        rm /boot/first_boot
+    fi
+
+    # Configure eth0-midplane interface with DHCP
+    # This must complete before database.service starts to get the midplane IP
+    INTERFACE="eth0-midplane"
+    INTERFACE_WAIT_TIMEOUT=120  # Max seconds to wait for interface to appear
+    DHCP_MAX_RETRIES=30
+    DHCP_RETRY_INTERVAL=2
+
+    log_msg "Waiting for interface $INTERFACE to be created by polaris container..."
+
+    # Wait dynamically for eth0-midplane interface to be created
+    interface_wait_start=$(date +%s)
+    while true; do
+        if ip link show "$INTERFACE" &> /dev/null; then
+            log_msg "Interface $INTERFACE detected"
+            # Give it a moment to fully initialize
+            sleep 1
+            break
+        fi
+
+        elapsed=$(($(date +%s) - interface_wait_start))
+        if [ $elapsed -ge $INTERFACE_WAIT_TIMEOUT ]; then
+            log_msg "Error: Interface $INTERFACE not found after ${INTERFACE_WAIT_TIMEOUT}s timeout"
+            log_msg "Check if polaris container is running correctly"
+            docker logs $CONTAINER_NAME_POLARIS 2>&1 | tail -20
+            exit 1
+        fi
+
+        # Log progress every 10 seconds
+        if [ $((elapsed % 10)) -eq 0 ] && [ $elapsed -gt 0 ]; then
+            log_msg "Still waiting for $INTERFACE... (${elapsed}s elapsed)"
+        fi
+
+        sleep 1
+    done
+
+    log_msg "Releasing any existing DHCP lease on $INTERFACE"
+    /usr/sbin/dhclient -r $INTERFACE 2>/dev/null || true
+    sleep 1
+
+    log_msg "Starting DHCP client on $INTERFACE"
+    /usr/sbin/dhclient $INTERFACE
+
+    # Wait for IP address to be assigned
+    log_msg "Waiting for IP address on $INTERFACE..."
+    retry_count=0
+    while [ $retry_count -lt $DHCP_MAX_RETRIES ]; do
+        midplane_ip=$(ip -4 -o addr show $INTERFACE 2>/dev/null | awk '{print $4}' | cut -d'/' -f1)
+        if [ -n "$midplane_ip" ]; then
+            log_msg "Successfully obtained IP address: $midplane_ip on $INTERFACE"
+            break
+        fi
+        retry_count=$((retry_count + 1))
+        log_msg "Waiting for DHCP... attempt $retry_count/$DHCP_MAX_RETRIES"
+        sleep $DHCP_RETRY_INTERVAL
+    done
+
+    if [ -z "$midplane_ip" ]; then
+        log_msg "Warning: Failed to obtain IP address on $INTERFACE after $DHCP_MAX_RETRIES attempts"
+        log_msg "DHCP server may not be available. Continuing without midplane IP."
+    fi
+}
+
+function start_dpu()
+{
+    modprobe ionic_mnic
+    modprobe mnet_uio_pdrv_genirq
+    modprobe mdev
+    modprobe pciesvc
+
+    mkdir -p $HOST_DIR/update
+    mkdir -p $HOST_DIR/sysconfig/config0
+    mkdir -p $HOST_DIR/sysconfig/config1
+    mkdir -p $HOST_DIR/obfl
+    mkdir -p $HOST_DIR/data
+    mkdir -p $HOST_DIR/tmpfsshare
+    mkdir -p $HOST_DIR/runfs
+    mkdir -p $HOST_DIR/logfs
+    mkdir -p $DPU_DOCKER_INFO_DIR
+    mount -t tmpfs -o size=20M,mode=1777  tmpfs $HOST_DIR/tmpfsshare
+    mount -t tmpfs -o size=20M,mode=0755  runs $HOST_DIR/runfs
+    mount -t tmpfs -o size=20M,mode=0755  logfs $HOST_DIR/logfs
+
+    if [ -f "$ACTIVE_FILE" ]; then
+        ACTIVE_CONTENTS=$(cat "$ACTIVE_FILE")
+        ACTIVE_NIC=$(echo "$ACTIVE_CONTENTS" | cut -d " " -f 8-)
+        if [ "$ACTIVE_NIC" = "/boot/nicA" ]; then
+            NIC_MOUNT="-v /dev/shm:/dev/shm -v /boot/nicA/nic_core:/nic -v /boot/nicA/shared/conf/gen:/nic/conf/gen"
+        elif [ "$ACTIVE_NIC" = "/boot/nicB" ]; then
+            NIC_MOUNT="-v /dev/shm:/dev/shm -v /boot/nicB/nic_core:/nic -v /boot/nicB/shared/conf/gen:/nic/conf/gen"
+        fi
+    else
+        echo "/boot/active.txt not present" > $LOG_FILE
+    fi
+    echo "Active Nic: $ACTIVE_NIC" >> $LOG_FILE
+    echo "NIC_MOUNT: $NIC_MOUNT" >> $LOG_FILE
+
+    echo $CONTAINER_NAME > $DPU_DOCKER_INFO_DIR/name
+    echo $IMAGE_NAME:$TAG > $DPU_DOCKER_INFO_DIR/image
+
+    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
+
+    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=$CONTAINER_NAME --privileged $IMAGE_NAME:$TAG &
+}
+
+case "$1" in
+start)
+    platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+    pipeline=`cat /usr/share/sonic/device/$platform/default_pipeline`
+
+    echo -n "Start $pipeline... "
+
+    if [ $pipeline = "polaris" ]; then
+        start_polaris
+    else
+	start_dpu
+    fi
+
+    echo "done."
+    ;;
+
+stop)
+    echo "Not supported"
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/dpu.init {start}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

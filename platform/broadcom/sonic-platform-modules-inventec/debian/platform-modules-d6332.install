@@ -1,0 +1,4 @@
+d6332/utils/inventec_d6332_util.py              /usr/local/bin
+systemd/platform-modules-d6332.service          /lib/systemd/system
+d6332/utils/sonic_platform-1.0-py2-none-any.whl /usr/share/sonic/device/x86_64-inventec_d6332-r0
+d6332/utils/sonic_platform-1.0-py3-none-any.whl /usr/share/sonic/device/x86_64-inventec_d6332-r0

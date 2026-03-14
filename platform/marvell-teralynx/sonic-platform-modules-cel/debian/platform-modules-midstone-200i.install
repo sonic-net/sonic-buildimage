@@ -1,0 +1,2 @@
+midstone-200i/cfg/midstone-200i-modules.conf etc/modules-load.d
+midstone-200i/systemd/platform-modules-midstone-200i.service lib/systemd/system

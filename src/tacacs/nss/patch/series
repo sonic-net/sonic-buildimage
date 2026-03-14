@@ -1,0 +1,13 @@
+0001-Modify-user-map-profile.patch
+0002-Enable-modifying-local-user-permission.patch
+0003-management-vrf-support.patch
+0004-Skip-accessing-tacacs-servers-for-local-non-tacacs-u.patch
+0005-libnss-Modify-parsing-of-IP-addr-and-port-number-str.patch
+0006-fix-compiling-warning-about-token-dereference.patch
+0007-Add-support-for-TACACS-source-address.patch
+0008-do-not-create-or-modify-local-user-if-there-is-no-pr.patch
+0009-fix-compile-error-strncpy.patch
+0010-Send-remote-address-in-TACACS-authorization-message.patch
+0011-Replace-popen-shell-execution-with-safer-execle.patch
+0012-fix-compile-error-conditionals.patch
+0013-Partial-memleak-fix-due-to-unfreed-strdup.patch

@@ -1,0 +1,13 @@
+[Unit]
+Description=Update CoPP configuration
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/copp-config.sh
+
+[Install]
+WantedBy=sonic.target

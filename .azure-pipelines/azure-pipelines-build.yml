@@ -1,0 +1,207 @@
+# The azure pipeline template for Official build, and upgrade version build
+
+parameters:
+- name: 'jobFilters'
+  type: object
+  default: ''
+- name: 'buildOptions'
+  type: string
+  default: 'SONIC_CONFIG_BUILD_JOBS=1'
+- name: 'preSteps'
+  type: stepList
+  default: []
+- name: 'postSteps'
+  type: stepList
+  default: []
+- name: 'jobGroups'
+  type: object
+  default: ''
+- name: 'qemuOrCrossBuild'
+  type: boolean
+  default: false
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
+
+jobs:
+- template: azure-pipelines-image-template.yml
+  parameters:
+    jobFilters: ${{ parameters.jobFilters }}
+    preSteps: ${{ parameters.preSteps }}
+    postSteps: ${{ parameters.postSteps }}
+    SUBMODULE: ${{ parameters.SUBMODULE }}
+    COMMIT_ID: ${{ parameters.COMMIT_ID }}
+    jobVariables:
+      PLATFORM_AZP: $(GROUP_NAME)
+      PLATFORM_ARCH: amd64
+      BUILD_NUMBER: $(Build.BuildId)
+      BUILD_OPTIONS: ${{ parameters.buildOptions }}
+      DOCKER_DATA_ROOT_FOR_MULTIARCH: /data/march/docker
+      dbg_image: no
+      asan_image: no
+      swi_image: no
+      docker_syncd_rpc_image: no
+      syncd_rpc_image: no
+      platform_rpc: no
+      ${{ if parameters.qemuOrCrossBuild }}:
+        SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
+        CACHE_MODE: 'none'
+    ${{ if ne(parameters.jobGroups, '') }}:
+      jobGroups: ${{ parameters.jobGroups }}
+    ${{ if eq(parameters.jobGroups, '') }}:
+      jobGroups:
+        - name: vs
+          variables:
+            dbg_image: yes
+            asan_image: yes
+
+        - name: barefoot
+          variables:
+            docker_syncd_rpc_image: yes
+            platform_rpc: bfn
+            swi_image: yes
+
+        - name: broadcom
+          timeoutInMinutes: 1440
+          variables:
+            dbg_image: yes
+            swi_image: yes
+            docker_syncd_rpc_image: yes
+            platform_rpc: brcm
+
+        - name: marvell-teralynx
+          variables:
+            dbg_image: yes
+
+        - name: marvell-prestera-armhf
+          ${{ if not(parameters.qemuOrCrossBuild) }}:
+            pool: sonicso1ES-armhf
+          variables:
+            PLATFORM_NAME: marvell-prestera
+            PLATFORM_ARCH: armhf
+
+        - name: marvell-prestera-arm64
+          ${{ if not(parameters.qemuOrCrossBuild) }}:
+            pool: sonicso1ES-arm64
+          variables:
+            PLATFORM_NAME: marvell-prestera
+            PLATFORM_ARCH: arm64
+
+        - name: marvell-prestera
+
+        - name: mellanox
+          variables:
+            dbg_image: yes
+            docker_syncd_rpc_image: yes
+            syncd_rpc_image: yes
+            platform_rpc: mlnx
+
+        - name: nephos
+          variables:
+            dbg_image: yes
+            docker_syncd_rpc_image: yes
+            platform_rpc: nephos
+
+        - name: pensando
+          pool: sonicso1ES-arm64
+          variables:
+            PLATFORM_ARCH: arm64
+
+        - name: nvidia-bluefield
+          pool: sonicso1ES-arm64
+          variables:
+            PLATFORM_ARCH: arm64
+
+        - name: vpp
+          variables:
+            dbg_image: yes
+
+    buildSteps:
+      - template: .azure-pipelines/template-skipvstest.yml@buildimage
+      - template: .azure-pipelines/template-daemon.yml@buildimage
+      - bash: |
+          set -ex
+          if echo $(GROUP_NAME) | grep mellanox; then
+            BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
+          fi
+          if [ $(GROUP_NAME) == pensando ]; then
+            make $BUILD_OPTIONS target/sonic-pensando.tar
+          elif [ $(GROUP_NAME) == vs ]; then
+            if [ $(dbg_image) == yes ]; then
+              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz
+              mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
+            fi
+            if [ $(asan_image) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
+              mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
+            fi
+            if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
+              make $BUILD_OPTIONS INCLUDE_KUBERNETES_MASTER=y target/sonic-vs.img.gz
+              gzip -d target/sonic-vs.img.gz
+              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
+              gzip target/sonic-vs.vhdx
+              mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
+              rm target/sonic-vs.img
+            fi
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-ptf.gz
+            if [ $(Build.Reason) != 'PullRequest' ];then
+              gzip -kd target/sonic-vs.img.gz
+              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
+              rm target/sonic-vs.img
+            fi
+          elif [ $(GROUP_NAME) == vpp ]; then
+            if [ $(dbg_image) == yes ]; then
+              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
+              mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
+            fi
+            make $BUILD_OPTIONS target/sonic-vpp.img.gz
+          else
+            if [ $(dbg_image) == yes ]; then
+              make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-dbg.bin
+            fi
+            if [ $(swi_image) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi
+            fi
+            if [ $(docker_syncd_rpc_image) == yes ]; then
+              # workaround for issue in rules/sairedis.dep, git ls-files will list un-exist files for cache
+              make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-$(platform_rpc)-rpc.gz
+              pushd ./src/sonic-sairedis/SAI
+              git stash
+              popd
+              if [ $(GROUP_NAME) == broadcom ]; then
+                make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-$(platform_rpc)-dnx-rpc.gz
+                pushd ./src/sonic-sairedis/SAI
+                git stash
+                popd
+              fi
+            fi
+            if [ $(syncd_rpc_image) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-rpc.bin
+            fi
+            if [ $(session_monitor) == yes ]; then
+              make $BUILD_OPTIONS ENABLE_SESSION_MONITOR=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-session-monitor.bin
+            fi
+            if [ $(GROUP_NAME) == nvidia-bluefield ]; then
+              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
+            fi
+            make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
+          fi
+        displayName: "Build sonic image"
+      - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: ManifestGeneratorTask@0
+        condition: ne(variables.SKIP_MG, 'y')
+        timeoutInMinutes: 60
+        continueOnError: true
+        displayName: "Manifest Generator"
+        inputs:
+          BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+          ManifestDirPath: 'target/'
+          BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
+

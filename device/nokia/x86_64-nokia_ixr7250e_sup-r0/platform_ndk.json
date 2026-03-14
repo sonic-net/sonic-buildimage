@@ -1,0 +1,56 @@
+{
+    "options": [
+    {
+        "key": "midplane_subnet",
+        "stringval": "10.6.0.0/16"
+    },
+    {
+        "key": "midplane_monitor",
+        "stringval": "yes"
+    },
+    {
+        "key": "monitor_action",
+        "stringval": "warn"
+    },
+    {
+        "key": "sonic_bdb_mode",
+        "intval": 1
+    },
+    {
+        "intval": 1,
+        "key": "disable_vfio"
+    },
+    {
+        "key": "amd_pcon",
+        "intval": 1
+    },
+    {
+      "key": "enable_firmware_update",
+      "intval": 0
+    },
+    {
+      "key": "sonic_log_level",
+      "stringval": "debug"
+    },
+    {
+      "key": "thermal_low_margin_threshold",
+      "intval": 10
+    },
+    {
+      "key": "thermal_log_current_threshold",
+      "intval": 5
+    },
+    {
+      "key": "thermal_log_margin_threshold",
+      "intval": 5
+    },
+    {
+      "key": "thermal_log_min_threshold",
+      "intval": 5
+    },
+    {
+      "key": "thermal_log_max_threshold",
+      "intval": 1
+    }
+    ]
+}

@@ -1,0 +1,204 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+FROM {{ prefix }}ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    apt-utils \
+    bats \
+    build-essential \
+    ca-certificates \
+    cmake \
+    conserver-client \
+    curl \
+    default-jre \
+    git \
+    gnupg \
+    gnupg-agent \
+    iproute2 \
+    iputils-ping \
+    isc-dhcp-client \
+    libffi-dev \
+    libssl-dev \
+    libxml2 \
+    libxslt1-dev \
+    lsb-release \
+    jq \
+    openssh-server \
+    protobuf-compiler \
+    psmisc \
+    python3 \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    python-is-python3 \
+    rsyslog \
+    shellcheck \
+    snmp \
+    software-properties-common \
+    sshpass \
+    sudo \
+    tcpdump \
+    telnet \
+    vim
+
+# Ubuntu 24.04 recommends installing pip packages in a virtual environment
+# Create a virtual environment at /opt/venv and install all required python packages there
+RUN python3 -m venv --system-site-packages /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
+# Without this change, running pip or python with sudo will not use the binaries from /opt/venv/bin
+RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
+    && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
+
+RUN pip install --no-cache-dir \
+    aiohttp \
+    allure-pytest \
+    ansible==11.10.0 \
+    azure-storage-blob \
+    azure-kusto-data \
+    azure-kusto-ingest \
+    defusedxml \
+    celery[redis] \
+    cffi \
+    contextlib2 \
+    cryptography \
+    ctypesgen \
+    debugpy \
+    dpkt \
+    dpugen \
+    future \
+    gitpython \
+    ipaddr \
+    ipython \
+    ixload \
+    ixnetwork-restpy \
+    ixnetwork-open-traffic-generator \
+    jinja2 \
+    jsonpatch \
+    lxml \
+    markupsafe \
+    matplotlib \
+    mock \
+    msrest \
+    natsort \
+    ncclient \
+    netaddr \
+    netmiko \
+    opentelemetry-api==1.27.0 \
+    opentelemetry-sdk==1.27.0 \
+    opentelemetry-exporter-otlp==1.27.0 \
+    pandas \
+    paramiko \
+    passlib \
+    pexpect \
+    prettytable \
+    psutil \
+    ptf \
+    pyasn1 \
+    pycryptodome \
+    pyfiglet \
+    pylint \
+    pyro4 \
+    pysnmp \
+    pysubnettree \
+    pytest \
+    pytest-ansible \
+    pytest-html \
+    pytest-repeat \
+    pytest-stress \
+    pytest-xdist \
+    python-dateutil \
+    PyYAML \
+    redis \
+    requests \
+    retry \
+    rich \
+    rpyc \
+    scandir \
+    scapy \
+    seaborn \
+    setuptools-rust \
+    six \
+    snappi \
+    snappi-ixnetwork \
+    tabulate \
+    textfsm \
+    thrift \
+    kubernetes \
+    && wget https://github.com/nanomsg/nanomsg/archive/refs/tags/1.2.1.tar.gz \
+    && tar xvfz 1.2.1.tar.gz \
+    && cd nanomsg-1.2.1      \
+    && mkdir -p build      \
+    && cd build            \
+    && cmake ..            \
+    && make install        \
+    && ldconfig            \
+    && cd ../..            \
+    && rm -fr nanomsg-1.2.1  \
+    && rm -f 1.2.1.tar.gz  \
+    && python3 -m pip install --no-cache-dir nnpy
+
+# Install docker-ce-cli, azure-cli
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update  \
+    && apt-get install -y docker-ce-cli \
+    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Install dash-api
+RUN tmpdir=$(mktemp -d) \
+    && python_site_packages=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+    && mkdir -p "$python_site_packages/dash_api" \
+    && git clone --depth 1 https://github.com/sonic-net/sonic-dash-api.git $tmpdir/sonic-dash-api \
+    && cp $tmpdir/sonic-dash-api/misc/pypkg/dash_api/__init__.py "$python_site_packages/dash_api/__init__.py" \
+    && protoc -I=$tmpdir/sonic-dash-api/proto --python_out="$python_site_packages/dash_api" $tmpdir/sonic-dash-api/proto/*.proto \
+    && rm -rf "$tmpdir"
+
+## Copy and install sonic-mgmt docker dependencies
+COPY debs/sonic-device-data_*.deb debs/
+RUN dpkg -i debs/sonic-device-data_*.deb
+
+# Install dash-pipeline-utils
+COPY ["files/github_get.py", "/usr/bin"]
+RUN tmpdir=$(mktemp -d) \
+    && cd "$tmpdir" \
+    && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
+    && cd utils \
+    && python3 setup.py bdist_wheel \
+    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && cd / \
+    && rm -rf "$tmpdir"
+
+# Apply patches to ansible and ptf
+COPY \
+    0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+    0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    /tmp/
+RUN site_packages_dir=$(/opt/venv/bin/python3 -c "import site; print(site.getsitepackages()[0])") \
+    && patch -u -b "$site_packages_dir/ansible/plugins/loader.py" -i /tmp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
+    && rm -f /tmp/*.patch
+
+RUN mkdir /var/run/sshd
+EXPOSE 22
+
+# Make it ready to be used as azure pipeline agent
+COPY start.sh /azp/
+RUN chmod +x /azp/start.sh
+
+ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BUNDLED_FREETDS=1
+
+# Remove the default ubuntu user of Ubuntu 24.04 to avoid conflicts with setup-container.sh in sonic-mgmt repo
+# The SONiC community usually uses the setup-container.sh tool in the sonic-mgmt repo to create the sonic-mgmt container.
+# The tool will create a user with the same uid and gid of the host user who runs the tool.
+RUN if getent passwd ubuntu; then userdel -r ubuntu; fi

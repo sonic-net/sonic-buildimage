@@ -1,0 +1,270 @@
+libpam-radius-auth (1.4.1-1) unstable; urgency=low
+  * Picked version from github.com
+  * Used Debian Scripts from buster.
+  * Added patches for CHAP, PEAP/MSCHAPV2 authentication protocols
+  * Added patche for supporting nas-ip-address conf. and statistics
+
+ -- Arun Barboza <29963827+a-barboza@users.noreply.github.com>  Tue, 13 Aug 2019 16:46:25 -0700
+
+libpam-radius-auth (1.4.0-3~deb10u1) buster; urgency=medium
+
+  * Rebuild for buster.
+  * Revert packaging changes:
+    - Lower Standards-Version to 4.2.0
+    - Lower Debhelper compat level to 11
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 11 Jul 2020 21:24:48 +0200
+
+libpam-radius-auth (1.4.0-3) unstable; urgency=medium
+
+  * QA upload
+  * Add patch to fix buffer overflow in password field.
+    (Fixes: CVE-2015-9542) (Closes: #951396)
+  * Bump Standards-Version to 4.5.0 and dh-compat to 12
+
+ -- Utkarsh Gupta <utkarsh@debian.org>  Fri, 21 Feb 2020 15:47:11 +0530
+
+libpam-radius-auth (1.4.0-2) unstable; urgency=medium
+
+  * QA upload.
+  * Fix a regression that made libpam-radius-auth/1.4.0-1 use
+    a different configuration file than intended.  This version
+    restores /etc/pam_radius_auth.conf as the configuration
+    file for Debian package of libpam-radius-auth.
+    (Closes: #908006)
+  * Use the new "debhelper-compat (= 11)" method for specifying
+    debhelper compat version.
+
+ -- Niels Thykier <niels@thykier.net>  Wed, 05 Sep 2018 19:44:07 +0000
+
+libpam-radius-auth (1.4.0-1) unstable; urgency=low
+
+  * QA upload.
+  * New upstream release.  (Closes: #854284)
+  * Drop patch that was applied upstream or no longer relevant.
+  * Set Rules-Requires-Root to "no".
+  * Bump Priority to "optional" since "extra" has been
+    removed.
+  * Rewrite rules file to the dh7-style.
+  * Add ${misc:Depends} to the Depends field.
+  * Add Homepage field.
+  * Correct section to admin.
+  * Change to source format 3.0 (quilt).
+  * Bump debhelper compat to 11.
+  * Enable bindnow hardening.
+  * Update debian/copyright.
+  * Bump Standards-Versions to 4.2.0 - no additional changes
+    required.
+
+ -- Niels Thykier <niels@thykier.net>  Sun, 19 Aug 2018 12:16:13 +0000
+
+libpam-radius-auth (1.3.16-5) unstable; urgency=medium
+
+  * QA upload
+  * Set maintainer field to Debian QA Group (see #833039)
+  * Bump debhelper compat level. Closes: #817544
+
+ -- Christoph Biedl <debian.axhn@manchmal.in-ulm.de>  Sun, 18 Dec 2016 23:47:08 +0100
+
+libpam-radius-auth (1.3.16-4.4) unstable; urgency=low
+
+  * Non-maintainer upload to fix pending l10n issues.
+  * Remove debconf stuff that deals with a prehistoric transition.
+    Closes: #414926, #482458, #483032, #483081
+  * [Lintian] Set debhelper compatibility level in debian/compat
+  * [Lintian] No longer ignore errors in "make clean"
+  * [Lintian] Remove debian/conffiles that only contains a file in /etc
+    which is anyway automatically added
+
+ -- Christian Perrier <bubulle@debian.org>  Thu, 22 May 2008 19:14:50 +0200
+
+libpam-radius-auth (1.3.16-4.3) unstable; urgency=low
+
+  * NUM with maintainers consent
+  * Add German debconf translation. (Closes: #410536)
+
+ -- Helge Kreutzmann <debian@helgefjell.de>  Mon, 12 Feb 2007 18:01:57 +0100
+
+libpam-radius-auth (1.3.16-4.2) unstable; urgency=low
+
+  * NMU
+  * Add Spanish debconf translation. (Closes: #405445)
+
+ -- Javier Ruano <Javier.ruano@estudiante.uam.es>  Thu,  4 Jan 2007 14:08:51 +0100
+
+libpam-radius-auth (1.3.16-4.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Remove bashisms in debian/rules. (Closes: #379498)
+
+ -- Christine Spang <spang@mit.edu>  Wed, 23 Aug 2006 07:14:29 -0400
+
+libpam-radius-auth (1.3.16-4) unstable; urgency=low
+
+  * Add alternate Depends to unblock debconf-2.0 transition.
+  (Closes: #332003)
+
+  * Add Vietnamese debconf translation.
+  (Closes: #312442)
+
+  * Add Czech debconf translation.
+  (Closes: #316889)
+
+  * Add Swedish debconf translation.
+  (Closes: #333145)
+
+  * Bump standard version. No changes.
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Sat, 15 Oct 2005 18:13:44 +0200
+
+libpam-radius-auth (1.3.16-3) unstable; urgency=high
+
+  * [SECURITY] Fix Denial of service:
+    - Add patch 002.CAN2005-0108.diff. (CAN2005-0108)
+
+  * Add french debconf translation. (Closes: #268027)
+
+  * Add dutch debconf translation. (Closes: #274897)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Wed, 19 Jan 2005 10:42:18 +0100
+
+libpam-radius-auth (1.3.16-2) unstable; urgency=high
+
+  * Acknowledge NMU. Thanks Michael for your help! (Closes: #266924)
+  * Remove spurious "echo foo1" from debian/config ;)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Mon, 23 Aug 2004 07:46:17 +0200
+
+libpam-radius-auth (1.3.16-1.2) unstable; urgency=high
+
+  * NMU: SECURITY: clarify logic in preinst
+
+ -- Michael Stone <mstone@debian.org>  Sat, 21 Aug 2004 11:26:34 -0400
+
+libpam-radius-auth (1.3.16-1.1) unstable; urgency=high
+
+  * NMU: SECURITY: fix incorrect permissions on /etc/pam_radius_auth.conf
+
+ -- Michael Stone <mstone@debian.org>  Sat, 21 Aug 2004 09:50:17 -0400
+
+libpam-radius-auth (1.3.16-1) unstable; urgency=low
+
+  * New upstream release
+  * New standard version: 3.6.1
+  * Removed patches that were accepted by upstream
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Wed, 29 Oct 2003 07:12:50 +0100
+
+libpam-radius-auth (1.3.15-8) unstable; urgency=low
+
+  * New standard version 3.5.10
+  * fixed clean target in debian/rules
+  * fixed a call to the linker to avoid unresolved symbols on some archs
+    (Thanks to Jochen Friedrich <jochen@scram.de>)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Sun, 18 May 2003 10:05:07 +0200
+
+libpam-radius-auth (1.3.15-7) unstable; urgency=low
+
+  * The "fixed in NMU" upload fix (Closes: #188314)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Tue, 15 Apr 2003 07:05:44 +0200
+
+libpam-radius-auth (1.3.15-6) unstable; urgency=low
+
+  * Bumped standard version to: 3.5.9
+  * username (253 bytes) and password (128 bytes) length
+    are now RFC2138 compliant (Closes: #188314)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Thu, 10 Apr 2003 22:13:50 +0200
+
+libpam-radius-auth (1.3.15-5) unstable; urgency=low
+
+  * Reincluded the original INSTALL
+  * Included index.debian.html to point to the correct files.
+  * Added README.Debian with notes about configfile
+    location (Closes: #180576)
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Mon, 10 Mar 2003 18:36:33 +0100
+
+libpam-radius-auth (1.3.15-4) unstable; urgency=low
+
+  * removed dh_testroot from debian/rules (build section)
+    to permit normal users to compile the package again
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Thu, 16 Jan 2003 19:41:06 +0100
+
+libpam-radius-auth (1.3.15-3) unstable; urgency=low
+
+  * fixed a compilation warning for gcc3.2
+  * lintian and linda cleanup
+  * removed symlink in /usr/doc
+  * added two examples in the doc section
+  * updated to Standards-Version: 3.5.8
+  * new debian/rules to use debhelper
+  * moved *.diff in debian/patches
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Thu, 16 Jan 2003 17:11:29 +0100
+
+libpam-radius-auth (1.3.15-2) unstable; urgency=low
+
+  * New maintainer upload, closes: #151254
+  * s/-Bshareable/-shared/g, closes: #156962
+  * made Suggests: point to radius-server, closes: #153987
+
+ -- Fabio M. Di Nitto <fabbione@fabbione.net>  Thu, 24 Oct 2002 22:35:23 +0200
+
+libpam-radius-auth (1.3.15-1) unstable; urgency=high (for big endians)
+
+  * New upstream release.
+  * It now compiles correctly for big endian architectures, closes: #149323
+  * Also it compiles correctly for 64-bit architectures.
+  * Removed misleading note in conffile, closes: #144502
+
+ -- Piotr Roszatycki <dexter@debian.org>  Tue, 11 Jun 2002 12:38:40 +0200
+
+libpam-radius-auth (1.3.14-1) unstable; urgency=low
+
+  * New upstream release, closes: #108189
+
+ -- Piotr Roszatycki <dexter@debian.org>  Mon, 27 Aug 2001 19:44:08 +0200
+
+libpam-radius-auth (1.3.13-1) unstable; urgency=low
+
+  * New upstream release
+  * Lintian clean
+
+ -- Piotr Roszatycki <dexter@debian.org>  Tue, 10 Jul 2001 16:10:09 +0200
+
+libpam-radius-auth (1.3.11-3) unstable; urgency=low
+
+  * Removed yada from Debian source, closes: #89268
+
+ -- Piotr Roszatycki <dexter@debian.org>  Tue, 13 Mar 2001 13:26:32 +0100
+
+libpam-radius-auth (1.3.11-2) unstable; urgency=low
+
+  * New yada and standards.
+  * Updates Build-Depends, closes: #84941
+
+ -- Piotr Roszatycki <dexter@debian.org>  Thu, 15 Feb 2001 18:47:23 +0000
+
+libpam-radius-auth (1.3.11-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Piotr Roszatycki <dexter@debian.org>  Wed, 19 Jul 2000 18:43:52 +0200
+
+libpam-radius-auth (1.3.10-2) unstable; urgency=medium
+
+  * New upstream source from CVS server.
+  * This version works well with ppp.
+
+ -- Piotr Roszatycki <dexter@debian.org>  Tue, 18 Jul 2000 17:29:06 +0200
+
+libpam-radius-auth (1.3.10-1) unstable; urgency=low
+
+  * UNRELEASED
+  * Initial Debian version.
+
+ -- Piotr Roszatycki <dexter@debian.org>  Sat, 15 Jul 2000 15:30:45 +0200

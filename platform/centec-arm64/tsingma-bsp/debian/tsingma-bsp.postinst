@@ -1,0 +1,2 @@
+systemctl enable tsingma-bsp.service
+systemctl start tsingma-bsp.service

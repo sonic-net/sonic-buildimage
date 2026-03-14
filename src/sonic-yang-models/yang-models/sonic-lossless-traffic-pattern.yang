@@ -1,0 +1,58 @@
+module sonic-lossless-traffic-pattern {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-lossless-traffic-pattern";
+
+    prefix lossless-traffic-pattern;
+
+    description "LOSSLESS_TRAFFIC_PATTERN YANG module for SONiC OS";
+
+    revision 2022-05-31 {
+        description "Initial version";
+    }
+
+    container sonic-lossless-traffic-pattern {
+        container LOSSLESS_TRAFFIC_PATTERN {
+
+            description "LOSSLESS_TRAFFIC_PATTERN part of config_db.json";
+
+            list LOSSLESS_TRAFFIC_PATTERN_LIST {
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                            error-message "Invalid lossless traffic pattern list name.";
+                            error-app-tag lossless-traffic-pattern-invalid-list-name;
+                        }
+                        length 1..32 {
+                            error-message "Invalid length for the lossless traffic pattern list name.";
+                            error-app-tag lossless-traffic-pattern-invalid-list-name-length;
+                        }
+                    }
+                }
+
+                leaf mtu {
+                    type uint16 {
+                        range 1..9216 {
+                            error-message "Invaild MTU which should be in [1, 9216].";
+                        }
+                    }
+                    mandatory true;
+                    description "The maximum packet size of a lossless packet";
+                }
+
+                leaf small_packet_percentage {
+                    type uint8 {
+                        range 0..100 {
+                            error-message "Invalid small packets percentage which should be in [0, 100].";
+                        }
+                    }
+                    mandatory true;
+                    description "The percentage of small packets which is used to calculate the headroom size";
+                }
+            }
+        }
+    }
+}

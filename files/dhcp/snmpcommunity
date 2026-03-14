@@ -1,0 +1,11 @@
+case $reason in
+    BOUND|RENEW|REBIND|REBOOT)
+        if [ -n "${new_snmp_community}" ]; then
+            if [ -f /etc/sonic/snmp.yml ]; then
+                sed -i "s/^snmp_rocommunity:.*/snmp_rocommunity: $new_snmp_community/g" /etc/sonic/snmp.yml
+            else
+                echo "snmp_rocommunity: "$new_snmp_community > /etc/sonic/snmp.yml
+            fi
+        fi
+        ;;
+esac

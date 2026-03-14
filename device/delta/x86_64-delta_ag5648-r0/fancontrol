@@ -1,0 +1,10 @@
+INTERVAL=10
+DEVPATH=hwmon1=/sys/bus/i2c/devices
+DEVNAME=hwmon1=emc2305
+FCTEMPS=DEVPATH/2-004d/hwmon/hwmon*/temp1_input DEVPATH/3-0049/hwmon/hwmon*/temp1_input DEVPATH/3-004b/hwmon/hwmon*/temp1_input DEVPATH/3-004c/hwmon/hwmon*/temp1_input DEVPATH/3-004e/hwmon/hwmon*/temp1_input DEVPATH/3-004f/hwmon/hwmon*/temp1_input DEVPATH/6-0059/temp1_input DEVPATH/6-0058/temp1_input
+
+FCFANS=DEVPATH/3-004d/fan1_input DEVPATH/3-004d/fan2_input DEVPATH/3-004d/fan3_input DEVPATH/3-004d/fan4_input DEVPATH/5-004d/fan1_input DEVPATH/5-004d/fan2_input DEVPATH/5-004d/fan3_input DEVPATH/5-004d/fan4_input  
+MINTEMP=20
+MAXTEMP=60
+MINSTART=75
+MINSTOP=22

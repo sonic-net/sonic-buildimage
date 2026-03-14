@@ -1,0 +1,16 @@
+steps:
+- script: |
+    . functions.sh
+    SONIC_VERSION=$(sonic_get_version)
+    echo "SONIC_VERSION=$SONIC_VERSION"
+    if [[ "$SONIC_VERSION" == *dirty* ]]; then
+      # Print the detail dirty info
+      git status --untracked-files=no -s --ignore-submodules
+
+      # Exit with error, if it is a PR build
+      if [ "$(Build.Reason)" == "PullRequest" ]; then
+        echo "Build failed for the dirty version: $SONIC_VERSION" 1>&2
+        exit 1
+      fi
+    fi
+  displayName: "Check the dirty version"

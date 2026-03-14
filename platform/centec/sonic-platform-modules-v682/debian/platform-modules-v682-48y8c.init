@@ -1,0 +1,200 @@
+#!/bin/bash
+# This script load/unload centec kernel modules
+
+### BEGIN INIT INFO
+# Provides:          platform-modules-v682-48y8c
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load Centec kernel modules
+### END INIT INFO
+
+function install_python_api_package()
+{
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+
+    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        rv=$(pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl)
+    fi
+}
+
+function load_system_eeprom_file()
+{
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    mkdir -p /mnt/onie-boot
+    mount -t ext4 -L ONIE-BOOT /mnt/onie-boot
+    dd if=/mnt/onie-boot/eeprom_file of=$device/$platform/eeprom_file bs=1 skip=1046528
+    dd if=/mnt/onie-boot/eeprom_file of=$device/$platform/eeprom_cipher bs=1 count=32
+    MACADDR=`decode-syseeprom | grep "Base MAC Address" | awk '{print $6}'`
+    ifconfig eth0 hw ether $MACADDR
+    umount /mnt/onie-boot
+    rmdir /mnt/onie-boot
+}
+
+function load_kernel_modules()
+{
+    modprobe centec_v682_48y8c_platform
+    modprobe dal
+    modprobe knet
+    modprobe tun
+    modprobe tap
+}
+
+function remove_kernel_modules()
+{
+    modprobe -r tap
+    modprobe -r tun
+    modprobe -r knet
+    modprobe -r dal
+    modprobe -r centec_v682_48y8c_platform
+}
+
+function release_board()
+{
+    systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+    chmod a+x /usr/local/lib/python3.9/dist-packages/release.py
+    /usr/local/lib/python3.9/dist-packages/release.py
+}
+
+function create_i2c_device_nodes()
+{
+    # load pca954x driver for pca9548
+    modprobe i2c-mux-pca954x
+    modprobe optoe
+
+    # i2c-0 for SMBus
+    # i2c-1 for CP2112
+    # create i2c 2,3,4,5,6,7,8,9 for pca9548 0x70 channel 0,1,2,3,4,5,6,7
+    echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-0/new_device
+    # create i2c 13,12,11,10,17,16,15,14 for fiber 0,1,2,3,4,5,6,7
+    echo pca9548 0x71 > /sys/bus/i2c/devices/i2c-2/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-13/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-12/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-11/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-10/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-17/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-16/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-15/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-14/new_device
+    # create i2c 21,20,19,18,25,24,23,22 for fiber 8,9,10,11,12,13,14,15
+    echo pca9548 0x72 > /sys/bus/i2c/devices/i2c-3/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-21/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-20/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-19/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-18/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-25/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-24/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-23/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-22/new_device
+    # create i2c 29,28,27,26,33,32,31,30 for fiber 16,17,18,19,20,21,22,23
+    echo pca9548 0x73 > /sys/bus/i2c/devices/i2c-4/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-29/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-28/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-27/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-26/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-33/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-32/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-31/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-30/new_device
+    # create i2c 37,36,35,34,41,40,39,38 for fiber 24,25,26,27,28,29,30,31
+    echo pca9548 0x74 > /sys/bus/i2c/devices/i2c-6/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-37/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-36/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-35/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-34/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-41/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-40/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-39/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-38/new_device
+    # create i2c 45,44,43,42,49,48,47,46 for fiber 32,33,34,35,36,37,38,39
+    echo pca9548 0x75 > /sys/bus/i2c/devices/i2c-7/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-45/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-44/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-43/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-42/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-49/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-48/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-47/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-46/new_device
+    # create i2c 53,52,51,50,57,56,55,54 for fiber 40,41,42,43,44,45,46,47
+    echo pca9548 0x76 > /sys/bus/i2c/devices/i2c-8/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-53/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-52/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-51/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-50/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-57/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-56/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-55/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-54/new_device
+    # create i2c 61,60,59,58,65,64,63,62 for fiber 48,49,50,51,52,53,54,55
+    echo pca9548 0x77 > /sys/bus/i2c/devices/i2c-5/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-61/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-60/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-59/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-58/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-65/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-64/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-63/new_device
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-62/new_device
+
+    # for rtc sd2405
+    echo sd2405 0x32 > /sys/bus/i2c/devices/i2c-0/new_device
+    # load rtc-sd2405 driver for rtc sd2405
+    modprobe rtc-sd2405
+    sleep 1
+    hwclock -s -f /dev/rtc1 > /dev/null 2>&1
+
+    # for sensor lm77
+    echo lm77 0x49 > /sys/bus/i2c/devices/i2c-0/new_device
+    # load lm77 driver for sensor lm77
+    modprobe lm77
+
+    # for fan adt7470
+    echo adt7470 0x2c > /sys/bus/i2c/devices/i2c-9/new_device
+    echo adt7470 0x2e > /sys/bus/i2c/devices/i2c-9/new_device
+    # load adt7470 driver for fan adt7470
+    modprobe adt7470
+}
+
+case "$1" in
+start)
+    echo -n "Init Centec V682-48Y8C ... "
+
+    depmod -a
+    modprobe i2c-dev
+
+    release_board
+    load_kernel_modules
+    create_i2c_device_nodes
+    install_python_api_package
+    load_system_eeprom_file
+
+    echo "done."
+    ;;
+
+stop)
+    echo -n "Deinit Centec V682-48Y8C ... "
+
+    remove_kernel_modules
+
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-v682-48y8c {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

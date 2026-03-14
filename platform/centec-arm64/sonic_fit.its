@@ -1,0 +1,114 @@
+/*
+ *Copyright 2018 CENTEC
+ *
+ */
+
+/dts-v1/;
+
+/ {
+	description = "arm64 kernel, initramfs and FDT blob";	
+	#address-cells = <1>;
+    
+	images {
+		kernel_ctc {
+			description = "ARM64 Kernel";			
+			data = /incbin/("./vmlinuz-6.12.41+deb13-sonic-arm64");
+			type = "kernel";			
+			arch = "arm64";			
+			os = "linux";			
+			compression = "none";			
+			load = <0x80080000>;			
+			entry = <0x80080000>;			
+			hash {				
+				algo = "crc32";			
+			};
+		};
+		initramfs {
+			description = "initramfs";
+			data = /incbin/("./initrd.img-6.12.41+deb13-sonic-arm64");
+			type = "ramdisk";
+			arch = "arm64";
+			os = "linux";
+			compression = "gzip";
+			load = <0x85000000>;
+			entry = <0x85000000>;
+			hash {				
+				algo = "crc32";			
+			};
+		};
+		ctc_fdt {
+			description = "dtb for tm_ctc5236";			
+			data = /incbin/("./e530-ctc5236.dtb");			
+			type = "flat_dt";
+			arch = "arm64";			
+			os = "linux";			
+			compression = "none";			
+			load = <0x88000000>;			
+			hash {				
+				algo = "crc32";			
+			};
+		};
+                ctc_fdtw6010 {
+                        description = "dtb for m2-w6010-48gt4x-r0";
+                        data = /incbin/("./m2-w6010-48gt4x-r0.dtb");
+                        type = "flat_dt";
+                        arch = "arm64";
+                        os = "linux";
+                        compression = "none";
+                        load = <0x88000000>;
+                        hash {
+                                algo = "crc32";
+                        };
+                };
+	};
+	configurations {
+		default = "arm64-centec_e530_24x2c-r0";
+					
+		arm64-centec_e530_24x2c-r0 {
+			description = "config for arm64-centec_e530_24x2c-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_24x2q-r0 {
+			description = "config for arm64-centec_e530_24x2q-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_48s4x-r0 {
+			description = "config for arm64-centec_e530_48s4x-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_48t4x_p-r0 {
+			description = "config for arm64-centec_e530_48t4x_p-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-fs_s5800_48t4s-r0 {
+			description = "config for arm64-fs_s5800_48t4s-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+                arm64-micas_m2-w6010-48gt4x-fa-r0 {
+                        description = "config for micas_m2-w6010-48gt4x-fa";
+                        kernel = "kernel_ctc";
+                        ramdisk = "initramfs";
+                        fdt = "ctc_fdtw6010";
+                        };
+                arm64-micas_m2-w6010-48gt4x-ra-r0 {
+                        description = "config for micas_m2-w6010-48gt4x-ra";
+                        kernel = "kernel_ctc";
+                        ramdisk = "initramfs";
+                        fdt = "ctc_fdtw6010";
+                        };
+	};
+};

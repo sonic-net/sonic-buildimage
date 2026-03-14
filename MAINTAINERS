@@ -1,0 +1,7 @@
+# This file describes the maintainers for sonic-buildimage
+# See the SONiC project governance document for more information
+
+Name = "Qi Luo"
+Email = "qiluo@microsoft.com"
+Github = qiluo-msft
+Mailinglist = sonicproject@googlegroups.com

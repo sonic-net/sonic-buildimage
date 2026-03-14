@@ -1,0 +1,63 @@
+module sonic-dhcpv6-relay {
+
+	namespace "http://github.com/sonic-net/sonic-dhcpv6-relay";
+
+	prefix sdhcpv6relay;
+
+	yang-version 1.1;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	organization "SONiC";
+
+	contact "SONiC";
+
+	description "DHCPv6 Relay yang Module for SONiC OS";
+
+	revision 2021-10-30 {
+		description "First Revision";
+	}
+
+	container sonic-dhcpv6-relay {
+
+		container DHCP_RELAY {
+
+			description "DHCP_RELAY part of config_db.json";
+
+			list DHCP_RELAY_LIST {
+
+				key "name";
+
+				leaf name {
+					type string;
+				}
+
+				leaf-list dhcpv6_servers {
+					description "Configure the dhcp v6 servers";
+					type inet:ipv6-address;
+					ordered-by user;
+				}
+
+				leaf rfc6939_support {
+					description "Set rfc6939 for the relay";
+					type string {
+						pattern "false|true";
+					}
+				}
+
+				leaf interface_id {
+					description "Enable interface ID insertion in relayed messages";
+					type string {
+						pattern "false|true";
+					}
+				}
+			}
+			/* end of VLAN_LIST */
+		}
+		/* end of container DHCP_RELAY */
+	}
+	/* end of container sonic-dhcpv6-relay */
+}
+/* end of module sonic-dhcpv6-relay */

@@ -1,0 +1,96 @@
+module sonic-pfcwd {
+    namespace "http://github.com/sonic-net/sonic-pfcwd";
+    prefix sonic-pfcwd;
+
+    yang-version 1.1;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC PFC Watchdog parameters";
+
+    revision 2021-07-01 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-pfcwd {
+        container PFC_WD {
+            list PFC_WD_LIST {
+                key "ifname";
+                leaf ifname {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type string {
+                            pattern "GLOBAL" {
+                                error-message "Invalid interface name";
+                                error-app-tag interface-name-invalid;
+                            }
+                        }
+                    }
+                }
+                leaf action {
+                    must "../ifname != 'GLOBAL'";
+                    type enumeration {
+                        enum drop;
+                        enum forward;
+                        enum alert;
+                    }
+                    description
+                        "PFC watchdog action when entering storm state.";
+                }
+                leaf detection_time {
+                    must "../ifname != 'GLOBAL'";
+                    must "(not(boolean(current()/../../PFC_WD_LIST[ifname='GLOBAL'])) or (current() >= current()/../../PFC_WD_LIST[ifname='GLOBAL']/POLL_INTERVAL))" {
+                        error-message "detection_time must be greater than or equal to POLL_INTERVAL";
+                    }
+                    type uint32 {
+                        range 100..5000;
+                    }
+                    description
+                        "Detection interval for pause storm in msec.";
+                }
+                leaf restoration_time {
+                    must "../ifname != 'GLOBAL'";
+                    must "(not(boolean(current()/../../PFC_WD_LIST[ifname='GLOBAL'])) or (current() >= current()/../../PFC_WD_LIST[ifname='GLOBAL']/POLL_INTERVAL))" {
+                        error-message "restoration_time must be greater than or equal to POLL_INTERVAL";
+                    }
+                    type uint32 {
+                        range 100..60000;
+                    }
+                    description
+                        "Time delay before resuming normal PFC operation in msec.";
+                }
+                leaf pfc_stat_history {
+                    must "../ifname != 'GLOBAL'";
+                    type string {
+                        pattern "enable|disable" {
+                            error-message "pfc_stat_history must be either enable or disable";
+                            error-app-tag pfc-stat-history-invalid-status;
+                        }
+                    }
+                    description
+                        "Toggle for PFC Historical Statistics estimation.";
+                }
+                leaf POLL_INTERVAL {
+                    must "../ifname = 'GLOBAL'";
+                    type uint32 {
+                        range 100..3000;
+                    }
+                    description
+                        "PFC watchdog global polling interval in msec.";
+                }
+            }
+        }
+    }
+}

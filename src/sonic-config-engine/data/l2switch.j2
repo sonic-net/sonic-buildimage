@@ -1,0 +1,43 @@
+{
+    "DEVICE_METADATA": {{ DEVICE_METADATA | tojson }},
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_STATUS": "disable",
+            "POLL_INTERVAL": "10000"
+        }
+    },
+    {% set ns = {'firstPrinted': False} -%}
+    "PORT": {
+        {%- for key, value in PORT.items() -%}
+        {%- if ns.firstPrinted %},{% endif %}
+
+        "{{ key }}": {
+            {%- for keyPort, valuePort in value.items() %}
+
+            {% if keyPort != "admin_status" %}"{{ keyPort }}": "{{ valuePort }}",{% endif %}
+            {%- endfor %}
+
+            "admin_status": "{{ value.admin_status|default("up") }}"
+        }
+        {%- if ns.update({'firstPrinted': True}) %}{% endif -%}
+        {%- endfor %}
+
+    },
+    "VLAN": {
+        "Vlan1000": {
+            "vlanid": "1000"
+        }
+    },
+    {% set ns = {'firstPrinted': False} -%}
+    "VLAN_MEMBER": {
+        {%- for port in PORT -%}
+        {%- if ns.firstPrinted %},{% endif %}
+
+        "Vlan1000|{{ port }}": {
+            "tagging_mode": "untagged"
+        }
+        {%- if ns.update({'firstPrinted': True}) %}{% endif -%}
+        {%- endfor %}
+
+    }
+}

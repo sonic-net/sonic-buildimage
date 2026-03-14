@@ -1,0 +1,8 @@
+qfx5200/utils/juniper_qfx5200_util.py usr/local/bin
+qfx5200/utils/juniper_qfx5200_monitor.py usr/local/bin
+qfx5200/utils/show_thresholds usr/local/bin
+qfx5200/utils/temperature_thresholds_AFI.txt usr/local/bin
+qfx5200/utils/temperature_thresholds_AFO.txt usr/local/bin
+qfx5200/service/qfx5200-platform-init.service etc/systemd/system
+qfx5200/utils/wrapper-warm-reboot usr/local/bin
+qfx5200/utils/wrapper-fast-reboot usr/local/bin

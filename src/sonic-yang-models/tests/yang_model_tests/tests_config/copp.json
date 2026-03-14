@@ -1,0 +1,147 @@
+{
+    "COPP_TRAP_WITH_EXIST_GROUP": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue1_group1",
+                    "trap_action":"trap",
+                    "trap_priority":"1",
+                    "queue": "1",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"6000",
+                    "cbs":"6000",
+                    "red_action":"drop"
+                }]
+            },
+            "sonic-copp:COPP_TRAP": {
+                "COPP_TRAP_LIST": [{
+                    "name": "ip2me",
+                    "trap_ids": "ip2me",
+                    "trap_group": "queue1_group1"
+                }]
+            }
+        }
+    },
+
+    "COPP_TRAP_WITH_NON_EXIST_GROUP": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue2_group2",
+                    "trap_action":"trap",
+                    "trap_priority":"2",
+                    "queue": "2",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_action":"drop"
+                }]
+            },
+            "sonic-copp:COPP_TRAP": {
+                "COPP_TRAP_LIST": [{
+                    "name": "udld",
+                    "trap_ids": "udld",
+                    "trap_group": "queue3_group3"
+                }]
+            }
+        }
+    },
+
+    "COPP_GROUP_MANDATORY_TRAP_ACTION": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue3_group4",
+                    "trap_priority":"3",
+                    "queue": "3",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "COPP_GROUP_MANDATORY_METER_TYPE": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue4_group5",
+                    "trap_action":"trap",
+                    "trap_priority":"4",
+                    "queue": "4",
+                    "mode":"sr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "COPP_GROUP_PIR_LESS_THAN_CIR": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue5_group6",
+                    "trap_action":"trap",
+                    "trap_priority":"5",
+                    "queue": "5",
+                    "mode":"tr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "pir":"4000",
+                    "pbs":"4000",
+                    "red_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "COPP_TRAP_MANDATORY_TRAP_IDS": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue6_group7",
+                    "trap_action":"trap",
+                    "trap_priority":"6",
+                    "queue": "6",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"6000",
+                    "cbs":"6000",
+                    "red_action":"drop"
+                }]
+            },
+            "sonic-copp:COPP_TRAP": {
+                "COPP_TRAP_LIST": [{
+                    "name": "bgp",
+                    "trap_group": "queue6_group7"
+                }]
+            }
+        }
+    },
+
+    "COPP_GROUP_WHEN_SRTCM_WITH_PIR": {
+        "sonic-copp:sonic-copp": {
+            "sonic-copp:COPP_GROUP": {
+                "COPP_GROUP_LIST": [{
+                    "name": "queue6_group7",
+                    "trap_action":"trap",
+                    "trap_priority":"6",
+                    "queue": "6",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"6000",
+                    "cbs":"6000",
+                    "pir":"6000",
+                    "red_action":"drop"
+                }]
+            }
+        }
+    }
+}

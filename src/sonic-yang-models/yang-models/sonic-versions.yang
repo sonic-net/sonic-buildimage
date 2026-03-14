@@ -1,0 +1,36 @@
+module sonic-versions {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-versions";
+    prefix versions;
+
+
+    description "VERSIONS YANG Module for SONiC OS";
+
+    revision 2020-04-10 {
+        description "First Revision";
+    }
+
+    container sonic-versions {
+
+        container VERSIONS {
+
+            description "DATABASE SCHEMA VERSIONS part of config_db.json";
+
+            container DATABASE {
+
+                leaf VERSION {
+                    type string {
+                        length 1..255;
+                        pattern 'version_(([1-9]|[1-9]{1}[0-9]{1})_([0-9]{1,2})_([0-9]{1,2})|([1-9]{1}[0-9]{5})_([0-9]{2}))';
+                    }
+                }
+            }
+            /* end of container DATABASE */
+        }
+        /* end of container VERSIONS */
+	}
+	/* end of top level container */
+}
+/* end of module sonic-versions */

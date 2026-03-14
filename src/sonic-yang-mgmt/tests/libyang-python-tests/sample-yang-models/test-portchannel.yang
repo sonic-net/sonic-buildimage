@@ -1,0 +1,79 @@
+module test-portchannel {
+
+	namespace "http://github.com/Azure/portchannel";
+	prefix lag;
+
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import test-head {
+		prefix head;
+		revision-date 2019-07-01;
+	}
+
+	import test-port {
+		prefix port;
+		revision-date 2019-07-01;
+	}
+
+	revision 2019-07-01 {
+		description "First Revision";
+	}
+
+	container test-portchannel {
+		container PORTCHANNEL {
+
+			description "PORTCHANNEL part of config_db.json";
+
+			list PORTCHANNEL_LIST {
+
+				key "portchannel_name";
+
+				leaf portchannel_name {
+					type string {
+						length 1..128;
+						pattern 'PortChannel[0-9]{1,4}';
+					}
+				}
+
+				leaf-list members {
+					/* leaf-list members are unique by default */
+					type leafref {
+						path /port:test-port/port:PORT/port:PORT_LIST/port:port_name;
+					}
+				}
+
+				leaf min_links {
+					type uint8 {
+						range 1..128;
+					}
+				}
+
+				leaf description {
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf mtu {
+					type uint16 {
+						range 1..9216;
+					}
+				}
+
+				leaf admin_status {
+					mandatory true;
+					type head:admin_status;
+				}
+			} /* end of list PORTCHANNEL_LIST */
+
+		} /* end of container PORTCHANNEL */
+
+	} /* end of container portchannel */
+
+} /* end of module port */

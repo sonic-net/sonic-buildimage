@@ -1,0 +1,103 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+{% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+ARG BASE={{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
+{% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+ARG BASE={{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
+{% else %}
+ARG BASE={{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bullseye
+{% endif %}
+
+FROM $BASE AS base
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure data sources for apt/dpkg
+COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-multiple-retries", "/etc/apt/apt.conf.d"]
+
+# Update apt cache and
+# pre-install fundamental packages
+RUN apt-get update &&        \
+    apt-get -y install       \
+        curl                 \
+        less                 \
+        perl                 \
+        procps               \
+        python3              \
+        python3-distutils    \
+        python3-pip          \
+        python-is-python3    \
+        vim-tiny             \
+# Install rsync for copying over only changes between layers
+        rsync                \
+# Install redis-tools
+        redis-tools          \
+# common dependencies
+        libdaemon0           \
+        libdbus-1-3          \
+        libjansson4          \
+# ip and ifconfig utility missing in docker for arm arch
+        iproute2             \
+        net-tools            \
+# for processing/handling json files in bash environment
+        jq                   \
+# for sairedis zmq rpc channel
+        libzmq5              \
+        libwrap0
+
+# default rsyslog version is 8.2110.0 which has a bug on log rate limit,
+# use backport version 8.2206.0-1~bpo11+1
+RUN apt-get -t bullseye-backports -y install rsyslog
+
+# Upgrade pip via PyPI and uninstall the Debian version
+RUN pip3 install --upgrade pip
+RUN apt-get purge -y python3-pip
+
+# setuptools and wheel are necessary for installing some Python wheel packages
+RUN pip3 install --no-cache-dir setuptools==49.6.00
+RUN pip3 install --no-cache-dir wheel==0.35.1
+
+# For templating
+RUN pip3 install j2cli
+
+# Install supervisor
+RUN pip3 install supervisor==4.2.1
+
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
+
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+
+# Uninstall unused dependencies
+RUN apt autoremove -y --purge
+
+RUN apt-get -y purge   \
+    exim4              \
+    exim4-base         \
+    exim4-config       \
+    exim4-daemon-light
+
+{% if docker_base_bullseye_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_base_bullseye_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_base_bullseye_debs.split(' ')) }}
+{%- endif %}
+
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
+COPY ["root/.vimrc", "/root/.vimrc"]
+
+RUN ln /usr/bin/vim.tiny /usr/bin/vim
+
+COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+
+FROM scratch
+
+COPY --from=base / /

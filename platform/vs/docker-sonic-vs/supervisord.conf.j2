@@ -1,0 +1,119 @@
+{% set asan_extra_options = ':print_suppressions=0' %}
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[program:start]
+command=/usr/bin/start.sh
+priority=1
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n
+priority=2
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:redis-server]
+command=/usr/bin/redis-server /etc/redis/redis.conf
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:redis-chassis]
+command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --protected-mode no --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+[program:syncd]
+command=/usr/bin/syncd_start.sh
+priority=4
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/syncd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+[program:gbsyncd]
+command=/usr/bin/syncd -s -p /usr/share/sonic/hwsku/pai.profile -x /usr/share/sonic/hwsku/context_config.json -g 1
+priority=4
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+# SWSS programs (from docker-orchagent via _INCLUDE_DOCKER)
+{% set swss_priority_base = 5 %}
+{% set include_swssconfig = false %}
+{% include "supervisord.conf.swss.j2" %}
+
+# Teamd programs (from docker-teamd via _INCLUDE_DOCKER)
+{% set teamd_priority_base = 23 %}
+{% set teamd_wait_for = "start:exited" %}
+{% include "supervisord.conf.teamd.j2" %}
+
+# FRR programs (from docker-fpm-frr via _INCLUDE_DOCKER)
+{% set frr_priority_base = 24 %}
+{% set use_dependent_startup = true %}
+{% set frr_wait_for = "start:exited" %}
+{% set frr_enable_snmp = false %}
+{% include "supervisord.conf.frr.j2" %}
+
+[program:arp_update]
+command=/usr/bin/arp_update
+priority=30
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+# sflow programs (from docker-sflow via _INCLUDE_DOCKER)
+{% set sflow_priority_base = 31 %}
+{% set sflow_wait_for = "start:exited" %}
+{% include "supervisord.conf.sflow.j2" %}
+
+# NAT programs (from docker-nat via _INCLUDE_DOCKER)
+{% set nat_priority_base = 32 %}
+{% set nat_wait_for = "start:exited" %}
+{% include "supervisord.conf.nat.j2" %}
+
+{% set lldp_priority_base = 34 %}
+{% include "supervisord.conf.lldp.j2" %}

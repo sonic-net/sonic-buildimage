@@ -1,0 +1,9 @@
+# The systemd-networkd requires that the bridge interface(bridge-midplane) has at least one member interface, otherwise the IP address will not be configured.
+# This dummy interface will be added into the bridge-midplane as a member to guarantee the IP address configuration correctly.
+# Refer: https://github.com/systemd/systemd/issues/9252#issuecomment-771540028
+
+[Match]
+Name=dummy-midplane
+
+[Network]
+Bridge=bridge-midplane

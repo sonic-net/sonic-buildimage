@@ -1,0 +1,12 @@
+.eggs/
+build/
+dist/
+*.egg-info/
+frrcfgd/*.pyc
+tests/*.pyc
+tests/__pycache__/
+.idea
+.coverage
+frrcfgd/__pycache__/
+venv
+tests/.coverage*

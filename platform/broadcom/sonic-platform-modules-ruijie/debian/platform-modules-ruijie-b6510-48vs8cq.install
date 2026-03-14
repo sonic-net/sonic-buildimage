@@ -1,0 +1,3 @@
+b6510-48vs8cq/modules/sonic_platform-1.0-py3-none-any.whl /usr/share/sonic/device/x86_64-ruijie_b6510-48vs8cq-r0
+b6510-48vs8cq/scripts/b6510-48vs8cq_platform.sh /usr/local/bin
+b6510-48vs8cq/systemd/platform-modules-b6510-48vs8cq.service /usr/lib/systemd/system

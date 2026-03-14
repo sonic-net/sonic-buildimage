@@ -1,0 +1,15 @@
+[Unit]
+Description=ICCPD container
+Requires=config-setup.service swss.service
+After=config-setup.service swss.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+User={{ sonicadmin_user }}
+ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
+ExecStart=/usr/bin/{{docker_container_name}}.sh wait
+ExecStop=/usr/bin/{{docker_container_name}}.sh stop
+
+[Install]
+WantedBy=sonic.target swss.service

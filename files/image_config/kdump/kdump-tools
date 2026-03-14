@@ -1,0 +1,17 @@
+# Default configuration
+KDUMP_CMDLINE_APPEND="irqpoll nr_cpus=1 nousb systemd.unit=kdump-tools.service ata_piix.prefer_ms_hyperv=0"
+
+# ---------------------------------------------------------------------------
+# Additional Kdump environment settings used in SONiC
+#
+
+# Reboot crash kernel on panic
+# Enable debug level logging of crash kernel for better visibility
+# Set loglevel to reduce verbosity and print only warning conditions
+# Disable advanced pcie features
+# Disable high precision event timer as on some platforms it is interfering with the kdump operation
+# Pass platform identifier string as part of crash kernel command line to be used by the reboot script during kdump
+KDUMP_CMDLINE_APPEND="${KDUMP_CMDLINE_APPEND} panic=10 debug loglevel=4 hpet=disable pcie_port=compat pci=nommconf sonic_platform=__PLATFORM__"
+
+# Use SONiC reboot wrapper script present in /usr/local/bin post kdump
+PATH=/usr/local/bin:$PATH

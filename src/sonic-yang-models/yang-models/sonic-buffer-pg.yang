@@ -1,0 +1,69 @@
+module sonic-buffer-pg {
+    namespace "http://github.com/sonic-net/sonic-buffer-pg";
+    prefix bpg;
+
+    yang-version 1.1;
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    import sonic-buffer-profile {
+        prefix bpf;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BUFFER PG";
+
+    revision 2021-07-01 {
+        description
+            "Initial revision.";
+    }
+
+
+    container sonic-buffer-pg {
+
+        container BUFFER_PG {
+
+            list BUFFER_PG_LIST {
+                key "port pg_num";
+
+                leaf port {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                }
+
+                leaf pg_num {
+                    type string {
+                        pattern "[0-7]((-)[0-7])?" {
+                            error-message "Invalid Buffer PG number";
+                            error-app-tag pg-num-invalid;
+                        }
+                    }
+                    description "Priority Group number";
+                }
+
+                leaf profile {
+                    default 0;
+                    type union {
+                        type leafref {
+                            path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
+                        }
+                        type string {
+                            pattern "NULL";
+                        }
+                    }
+                    description "Buffer Profile associated with Priority Group number for a port";
+                }
+
+            }
+        }
+    }
+}

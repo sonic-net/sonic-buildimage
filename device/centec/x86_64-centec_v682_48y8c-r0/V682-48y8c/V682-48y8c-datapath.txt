@@ -1,0 +1,1022 @@
+#SERDES_MODE:   0-NONE, 1-XFI, 2-SGMII, 3-Not Support, 4-QSGMII, 7-XLG, 8-100GR4, 9-SGMII2G5 
+#               13-XXVG, 14-50GR2, 16-50GR1, 17-100GR2, 18-200G, 19-400G 
+#SERDES_POLY:   0-No Inverse, 1-Inverse 
+#SERDES_SWITCH: 0-Not Support Dynamic Switch, 1-Support Dynamic Switch exclude QSGMII, 2-Support Dynamic Switch include QSGMII 
+
+[CORE_PLL] = 1050
+[DP0_FLEXE_CLIENT_NUM] = 0
+[DP1_FLEXE_CLIENT_NUM] = 0
+[DP0_XPIPE_PORT_NUM] = 0
+[DP1_XPIPE_PORT_NUM] = 0
+[DOT1AE_ENABLE] = 1
+
+#{ 
+[SERDES_ITEM] 
+
+[SERDES_ID] = 7
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 0
+
+[SERDES_ID] = 6
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 1
+
+[SERDES_ID] = 5
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 2
+
+[SERDES_ID] = 4
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 3
+
+[SERDES_ID] = 3
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 4
+
+[SERDES_ID] = 2
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 5
+
+[SERDES_ID] = 1
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 6
+
+[SERDES_ID] = 0
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 7
+
+[SERDES_ID] = 11
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 8
+
+[SERDES_ID] = 10
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 9
+
+[SERDES_ID] = 9
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 10
+
+[SERDES_ID] = 8
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 11
+
+[SERDES_ID] = 12
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 12
+
+[SERDES_ID] = 13
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 13
+
+[SERDES_ID] = 14
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 14
+
+[SERDES_ID] = 15
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 15
+
+[SERDES_ID] = 16
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 16
+
+[SERDES_ID] = 17
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 17
+
+[SERDES_ID] = 18
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 18
+
+[SERDES_ID] = 19
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 19
+
+[SERDES_ID] = 20
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 20
+
+[SERDES_ID] = 21
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 21
+
+[SERDES_ID] = 22
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 22
+
+[SERDES_ID] = 23
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 23
+
+[SERDES_ID] = 24
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 24
+
+[SERDES_ID] = 25
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 25
+
+[SERDES_ID] = 26
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 26
+
+[SERDES_ID] = 27
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 27
+
+[SERDES_ID] = 28
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 28
+
+[SERDES_ID] = 29
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 29
+
+[SERDES_ID] = 30
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 30
+
+[SERDES_ID] = 31
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 31
+
+[SERDES_ID] = 36
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 32
+
+[SERDES_ID] = 37
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 33
+
+[SERDES_ID] = 38
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 34
+
+[SERDES_ID] = 32
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 35
+
+[SERDES_ID] = 39
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 36
+
+[SERDES_ID] = 34
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 37
+
+[SERDES_ID] = 35
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 38
+
+[SERDES_ID] = 33
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 39
+
+[SERDES_ID] = 40
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 40
+
+[SERDES_ID] = 44
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 41
+
+[SERDES_ID] = 42
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 42
+
+[SERDES_ID] = 41
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 43
+
+[SERDES_ID] = 43
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 44
+
+[SERDES_ID] = 46
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 45
+
+[SERDES_ID] = 47
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 46
+
+[SERDES_ID] = 45
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 47
+
+[SERDES_ID] = 49
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 48
+
+[SERDES_ID] = 48
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 49
+
+[SERDES_ID] = 51
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 50
+
+[SERDES_ID] = 50
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 51
+
+[SERDES_ID] = 53
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 52
+
+[SERDES_ID] = 52
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 53
+
+[SERDES_ID] = 55
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 54
+
+[SERDES_ID] = 54
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 55
+
+[SERDES_ID] = 57
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 56
+
+[SERDES_ID] = 56
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 57
+
+[SERDES_ID] = 59
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 58
+
+[SERDES_ID] = 58
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 59
+
+[SERDES_ID] = 60
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 60
+
+[SERDES_ID] = 61
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 61
+
+[SERDES_ID] = 62
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 62
+
+[SERDES_ID] = 63
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 63
+
+[SERDES_ID] = 70
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 64
+
+[SERDES_ID] = 71
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 65
+
+[SERDES_ID] = 68
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 66
+
+[SERDES_ID] = 69
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 67
+
+[SERDES_ID] = 66
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 68
+
+[SERDES_ID] = 67
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 69
+
+[SERDES_ID] = 64
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 70
+
+[SERDES_ID] = 65
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 1
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 71
+
+[SERDES_ID] = 74
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 72
+
+[SERDES_ID] = 75
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 73
+
+[SERDES_ID] = 72
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 74
+
+[SERDES_ID] = 73
+[SERDES_MODE] = 13
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 75
+
+[SERDES_ID] = 76
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 76
+
+[SERDES_ID] = 77
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 77
+
+[SERDES_ID] = 78
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 78
+
+[SERDES_ID] = 79
+[SERDES_MODE] = 0
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 79
+
+[SERDES_ID] = 83
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 80
+
+[SERDES_ID] = 81
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 81
+
+[SERDES_ID] = 87
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 82
+
+[SERDES_ID] = 82
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 83
+
+[SERDES_ID] = 86
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 84
+
+[SERDES_ID] = 80
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 85
+
+[SERDES_ID] = 84
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 86
+
+[SERDES_ID] = 85
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 87
+
+[SERDES_ID] = 95
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 88
+
+[SERDES_ID] = 93
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 89
+
+[SERDES_ID] = 91
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 90
+
+[SERDES_ID] = 94
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 91
+
+[SERDES_ID] = 90
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 92
+
+[SERDES_ID] = 89
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 93
+
+[SERDES_ID] = 88
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 94
+
+[SERDES_ID] = 92
+[SERDES_MODE] = 8
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 95
+
+[SERDES_ID] = 96
+[SERDES_MODE] = 1
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 96
+
+[SERDES_ID] = 97
+[SERDES_MODE] = 1
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 97
+
+[SERDES_ID] = 98
+[SERDES_MODE] = 1
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 98
+
+[SERDES_ID] = 99
+[SERDES_MODE] = 1
+[SERDES_RX_POLY] = 0
+[SERDES_TX_POLY] = 0
+[SERDES_SWITCH] = 1
+[SERDES_GROUP] = 0
+[SERDES_XPIPE] = 0
+[INDEX] = 99
+
+#} 
+[SERDES_TO_LPORT] 
+#{ 
+#index     |serdes    |QSGMII      |SGMII/SGMII2G5/XFI/XXVG |XLG     |50GR1   |50GR2   |100GR4  |100GR2  |200G    |400G     
+#----------|----------|------------|------------------------|--------|--------|--------|--------|--------|--------|-------- 
+#0         |7         |NA          |0                       |0       |0       |0       |0       |0       |NA      |NA       
+#1         |6         |NA          |1                       |0       |NA      |0       |0       |NA      |NA      |NA       
+#2         |5         |NA          |2                       |0       |2       |2       |0       |0       |NA      |NA       
+#3         |4         |NA          |3                       |0       |NA      |2       |0       |NA      |NA      |NA       
+#4         |3         |NA          |4                       |4       |4       |4       |4       |4       |NA      |NA       
+#5         |2         |NA          |5                       |4       |NA      |4       |4       |NA      |NA      |NA       
+#6         |1         |NA          |6                       |4       |6       |6       |4       |4       |NA      |NA       
+#7         |0         |NA          |7                       |4       |NA      |6       |4       |NA      |NA      |NA       
+#8         |11        |NA          |8                       |8       |8       |8       |8       |8       |NA      |NA       
+#9         |10        |NA          |9                       |8       |NA      |8       |8       |NA      |NA      |NA       
+#10        |9         |NA          |10                      |8       |10      |10      |8       |8       |NA      |NA       
+#11        |8         |NA          |11                      |8       |NA      |10      |8       |NA      |NA      |NA       
+#12        |12        |NA          |12                      |12      |12      |12      |12      |12      |NA      |NA       
+#13        |13        |NA          |13                      |12      |NA      |12      |12      |NA      |NA      |NA       
+#14        |14        |NA          |14                      |12      |14      |14      |12      |12      |NA      |NA       
+#15        |15        |NA          |15                      |12      |NA      |14      |12      |NA      |NA      |NA       
+#16        |16        |NA          |16                      |16      |16      |16      |16      |16      |NA      |NA       
+#17        |17        |NA          |17                      |16      |NA      |16      |16      |NA      |NA      |NA       
+#18        |18        |NA          |18                      |16      |18      |18      |16      |16      |NA      |NA       
+#19        |19        |NA          |19                      |16      |NA      |18      |16      |NA      |NA      |NA       
+#20        |20        |NA          |20                      |20      |20      |20      |20      |20      |NA      |NA       
+#21        |21        |NA          |21                      |20      |NA      |20      |20      |NA      |NA      |NA       
+#22        |22        |NA          |22                      |20      |22      |22      |20      |20      |NA      |NA       
+#23        |23        |NA          |23                      |20      |NA      |22      |20      |NA      |NA      |NA       
+#24        |24        |NA          |24                      |24      |24      |24      |24      |24      |NA      |NA       
+#25        |25        |NA          |25                      |24      |NA      |24      |24      |NA      |NA      |NA       
+#26        |26        |NA          |26                      |24      |26      |26      |24      |24      |NA      |NA       
+#27        |27        |NA          |27                      |24      |NA      |26      |24      |NA      |NA      |NA       
+#28        |28        |NA          |28                      |28      |28      |28      |28      |28      |NA      |NA       
+#29        |29        |NA          |29                      |28      |NA      |28      |28      |NA      |NA      |NA       
+#30        |30        |NA          |30                      |28      |30      |30      |28      |28      |NA      |NA       
+#31        |31        |NA          |31                      |28      |NA      |30      |28      |NA      |NA      |NA       
+#32        |36        |NA          |32                      |32      |32      |32      |32      |32      |32      |32       
+#33        |37        |NA          |33                      |32      |33      |32      |32      |32      |32      |32       
+#34        |38        |NA          |34                      |32      |34      |34      |32      |34      |32      |32       
+#35        |32        |NA          |35                      |32      |35      |34      |32      |34      |32      |32       
+#36        |39        |NA          |36                      |36      |36      |36      |36      |36      |36      |32       
+#37        |34        |NA          |37                      |36      |37      |36      |36      |36      |36      |32       
+#38        |35        |NA          |38                      |36      |38      |38      |36      |38      |36      |32       
+#39        |33        |NA          |39                      |36      |39      |38      |36      |38      |36      |32       
+#40        |40        |NA          |40                      |40      |40      |40      |40      |40      |40      |40       
+#41        |44        |NA          |41                      |40      |41      |40      |40      |40      |40      |40       
+#42        |42        |NA          |42                      |40      |42      |42      |40      |42      |40      |40       
+#43        |41        |NA          |43                      |40      |43      |42      |40      |42      |40      |40       
+#44        |43        |NA          |44                      |44      |44      |44      |44      |44      |44      |40       
+#45        |46        |NA          |45                      |44      |45      |44      |44      |44      |44      |40       
+#46        |47        |NA          |46                      |44      |46      |46      |44      |46      |44      |40       
+#47        |45        |NA          |47                      |44      |47      |46      |44      |46      |44      |40       
+#48        |49        |NA          |48                      |48      |48      |48      |48      |48      |NA      |NA       
+#49        |48        |NA          |49                      |48      |NA      |48      |48      |NA      |NA      |NA       
+#50        |51        |NA          |50                      |48      |50      |50      |48      |48      |NA      |NA       
+#51        |50        |NA          |51                      |48      |NA      |50      |48      |NA      |NA      |NA       
+#52        |53        |NA          |52                      |52      |52      |52      |52      |52      |NA      |NA       
+#53        |52        |NA          |53                      |52      |NA      |52      |52      |NA      |NA      |NA       
+#54        |55        |NA          |54                      |52      |54      |54      |52      |52      |NA      |NA       
+#55        |54        |NA          |55                      |52      |NA      |54      |52      |NA      |NA      |NA       
+#56        |57        |NA          |56                      |56      |56      |56      |56      |56      |NA      |NA       
+#57        |56        |NA          |57                      |56      |NA      |56      |56      |NA      |NA      |NA       
+#58        |59        |NA          |58                      |56      |58      |58      |56      |56      |NA      |NA       
+#59        |58        |NA          |59                      |56      |NA      |58      |56      |NA      |NA      |NA       
+#60        |60        |NA          |60                      |60      |60      |60      |60      |60      |NA      |NA       
+#61        |61        |NA          |61                      |60      |NA      |60      |60      |NA      |NA      |NA       
+#62        |62        |NA          |62                      |60      |62      |62      |60      |60      |NA      |NA       
+#63        |63        |NA          |63                      |60      |NA      |62      |60      |NA      |NA      |NA       
+#64        |70        |NA          |64                      |64      |64      |64      |64      |64      |NA      |NA       
+#65        |71        |NA          |65                      |64      |NA      |64      |64      |NA      |NA      |NA       
+#66        |68        |NA          |66                      |64      |66      |66      |64      |64      |NA      |NA       
+#67        |69        |NA          |67                      |64      |NA      |66      |64      |NA      |NA      |NA       
+#68        |66        |NA          |68                      |68      |68      |68      |68      |68      |NA      |NA       
+#69        |67        |NA          |69                      |68      |NA      |68      |68      |NA      |NA      |NA       
+#70        |64        |NA          |70                      |68      |70      |70      |68      |68      |NA      |NA       
+#71        |65        |NA          |71                      |68      |NA      |70      |68      |NA      |NA      |NA       
+#72        |74        |NA          |72                      |72      |72      |72      |72      |72      |NA      |NA       
+#73        |75        |NA          |73                      |72      |NA      |72      |72      |NA      |NA      |NA       
+#74        |72        |NA          |74                      |72      |74      |74      |72      |72      |NA      |NA       
+#75        |73        |NA          |75                      |72      |NA      |74      |72      |NA      |NA      |NA       
+#76        |76        |NA          |76                      |76      |76      |76      |76      |76      |NA      |NA       
+#77        |77        |NA          |77                      |76      |NA      |76      |76      |NA      |NA      |NA       
+#78        |78        |NA          |78                      |76      |78      |78      |76      |76      |NA      |NA       
+#79        |79        |NA          |79                      |76      |NA      |78      |76      |NA      |NA      |NA       
+#80        |83        |NA          |80                      |80      |80      |80      |80      |80      |80      |80       
+#81        |81        |NA          |81                      |80      |81      |80      |80      |80      |80      |80       
+#82        |87        |NA          |82                      |80      |82      |82      |80      |82      |80      |80       
+#83        |82        |NA          |83                      |80      |83      |82      |80      |82      |80      |80       
+#84        |86        |NA          |84                      |84      |84      |84      |84      |84      |84      |80       
+#85        |80        |NA          |85                      |84      |85      |84      |84      |84      |84      |80       
+#86        |84        |NA          |86                      |84      |86      |86      |84      |86      |84      |80       
+#87        |85        |NA          |87                      |84      |87      |86      |84      |86      |84      |80       
+#88        |95        |NA          |88                      |88      |88      |88      |88      |88      |88      |88       
+#89        |93        |NA          |89                      |88      |89      |88      |88      |88      |88      |88       
+#90        |91        |NA          |90                      |88      |90      |90      |88      |90      |88      |88       
+#91        |94        |NA          |91                      |88      |91      |90      |88      |90      |88      |88       
+#92        |90        |NA          |92                      |92      |92      |92      |92      |92      |92      |88       
+#93        |89        |NA          |93                      |92      |93      |92      |92      |92      |92      |88       
+#94        |88        |NA          |94                      |92      |94      |94      |92      |94      |92      |88       
+#95        |92        |NA          |95                      |92      |95      |94      |92      |94      |92      |88       
+#96        |96        |NA          |232                     |232     |232     |232     |232     |232     |NA      |NA       
+#97        |97        |NA          |233                     |232     |NA      |232     |232     |NA      |NA      |NA       
+#98        |98        |NA          |243                     |232     |243     |243     |232     |232     |NA      |NA       
+#99        |99        |NA          |244                     |232     |NA      |243     |232     |NA      |NA      |NA       
+#} 
+

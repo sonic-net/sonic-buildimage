@@ -1,0 +1,18 @@
+[Unit]
+Description=Accton AS7726-32X Platform Monitoring service
+Before=pmon.service
+After=as7726-32x-platform-handle_mac.service
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as7726_32x_util.py install
+ExecStart=/usr/local/bin/accton_as7726_32x_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

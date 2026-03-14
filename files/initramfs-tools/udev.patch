@@ -1,0 +1,10 @@
+--- a/udev	2017-09-02 23:13:45.078773236 +0000
++++ b/udev	2017-09-02 22:40:08.502773236 +0000
+@@ -1,6 +1,6 @@
+ #!/bin/sh -e
+
+-PREREQS=""
++PREREQS="union-mount"
+
+ prereqs() { echo "$PREREQS"; }
+

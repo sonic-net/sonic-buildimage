@@ -1,0 +1,13 @@
+[Unit]
+Description=Dell S5296f Platform modules
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s5296f_platform.sh init
+ExecStop=/usr/local/bin/s5296f_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

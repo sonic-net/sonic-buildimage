@@ -1,0 +1,161 @@
+module sonic-interface {
+
+	yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-interface";
+	prefix intf;
+
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import sonic-types {
+		prefix stypes;
+	}
+
+	import sonic-port {
+		prefix port;
+		revision-date 2019-07-01;
+	}
+
+	import sonic-vrf {
+		prefix vrf;
+	}
+	
+	import sonic-vnet {
+		prefix svnet;
+	}
+
+	description "INTERFACE yang Module for SONiC OS";
+
+	revision 2025-03-06 {
+		description "Add leaf vnet_name";
+	}
+
+	revision 2021-03-30 {
+		description "Modify the type of vrf name";
+	}
+
+	revision 2019-07-01 {
+		description "First Revision";
+	}
+
+	container sonic-interface {
+
+		container INTERFACE {
+
+			description "INTERFACE part of config_db.json";
+
+			list INTERFACE_LIST {
+
+				description "INTERFACE part of config_db.json with vrf";
+
+				key "name";
+
+				leaf name {
+					type leafref {
+						path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+					}
+				}
+
+				leaf vrf_name {
+					type leafref {
+						path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+					}
+				}
+				
+				leaf vnet_name {
+					description "Reference to the name of a VNET in sonic-vnet model";
+					type leafref {
+						path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+					}   
+				}
+
+				leaf nat_zone {
+					description "NAT Zone for the interface";
+					type uint8 {
+						range "0..3" {
+							error-message "Invalid nat zone for the interface.";
+							error-app-tag nat-zone-invalid;
+						}
+					}
+                                        default "0";
+				}
+
+				leaf mpls {
+					description "Enable/disable MPLS routing for the interface";
+					type enumeration {
+						enum enable;
+						enum disable;
+					}
+				}
+
+				leaf ipv6_use_link_local_only {
+					description "Enable/Disable IPv6 link local address on interface";
+					type stypes:mode-status;
+					default disable;
+				}
+
+				leaf mac_addr {
+					description "Assign administrator-provided MAC address to Interface";
+					type yang:mac-address;
+				}
+
+                leaf loopback_action {
+                    description "Packet action when a packet ingress and gets routed on the same IP interface";
+                    type stypes:loopback_action;
+                }
+			}
+			/* end of INTERFACE_LIST */
+
+			list INTERFACE_IPPREFIX_LIST {
+
+				description "INTERFACE part of config_db.json with ip-prefix";
+
+				key "name ip-prefix";
+
+				leaf name {
+					/* This node must be present in INTERFACE_LIST */
+					must "(current() = ../../INTERFACE_LIST[name=current()]/name)"
+					{
+						error-message "Must condition not satisfied, Try adding PORT: {}, Example: 'Ethernet0': {}";
+					}
+
+					type leafref {
+						path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+					}
+				}
+
+				leaf ip-prefix {
+					type union {
+						type stypes:sonic-ip4-prefix;
+						type stypes:sonic-ip6-prefix;
+					}
+				}
+
+				leaf scope {
+					type enumeration {
+						enum global;
+						enum local;
+					}
+				}
+
+				leaf family {
+
+					/* family leaf needed for backward compatibility
+					   Both ip4 and ip6 address are string in IETF RFC 6021,
+					   so must statement can check based on : or ., family
+					   should be IPv4 or IPv6 according.
+					 */
+
+					must "(contains(../ip-prefix, ':') and current()='IPv6') or
+						(contains(../ip-prefix, '.') and current()='IPv4')";
+					type stypes:ip-family;
+				}
+			}
+			/* end of INTERFACE_IPPREFIX_LIST */
+
+		}
+		/* end of INTERFACE container */
+	}
+}

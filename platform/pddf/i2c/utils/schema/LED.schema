@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "LED": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            },
+            "device_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type",
+            "device_name"
+          ]
+        },
+        "dev_attr": {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "index"
+          ]
+        },
+        "i2c": {
+          "type": "object",
+          "properties": {
+            "attr_list": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    },
+                    "bits": {
+                      "type": "string"
+                    },
+                    "color": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "swpld_addr": {
+                      "type": "string"
+                    },
+                    "swpld_addr_offset": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name",
+                    "bits",
+                    "color",
+                    "value",
+                    "swpld_addr",
+                    "swpld_addr_offset"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "attr_name": {
+                      "type": "string"
+                    },
+                    "bits": {
+                      "type": "string"
+                    },
+                    "color": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "swpld_addr": {
+                      "type": "string"
+                    },
+                    "swpld_addr_offset": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attr_name",
+                    "bits",
+                    "color",
+                    "value",
+                    "swpld_addr",
+                    "swpld_addr_offset"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "attr_list"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "dev_attr",
+        "i2c"
+      ]
+    }
+  },
+  "required": [
+    "LED"
+  ]
+}

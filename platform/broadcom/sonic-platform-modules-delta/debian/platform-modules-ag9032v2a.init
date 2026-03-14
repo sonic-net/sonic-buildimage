@@ -1,0 +1,41 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup ag9032v2a board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    modprobe ipmi_devintf
+    modprobe ipmi_si ports=0xca2
+    modprobe optoe
+    modprobe delta_ag9032v2a_platform
+    /usr/local/bin/ag9032v2a_platform_init.sh
+
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-ag9032v2a.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

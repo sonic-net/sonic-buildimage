@@ -1,0 +1,53 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG frr_user_uid
+ARG frr_user_gid
+
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update apt's cache of available packages
+# Install required packages
+RUN apt-get update   && \
+    apt-get install -y  \
+        iproute2        \
+        logrotate
+
+RUN groupadd -g ${frr_user_gid} frr
+RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
+
+{% if docker_fpm_frr_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_fpm_frr_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_fpm_frr_debs.split(' ')) }}
+{%- endif %}
+
+{% if docker_fpm_frr_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_fpm_frr_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_fpm_frr_whls.split(' ')) }}
+{% endif %}
+
+RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
+
+COPY ["docker_init.sh", "/usr/bin/"]
+COPY ["snmp.conf", "/etc/snmp/frr.conf"]
+
+{% include "Dockerfile.common.j2" %}
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENTRYPOINT ["/usr/bin/docker_init.sh"]

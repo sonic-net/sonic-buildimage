@@ -1,0 +1,99 @@
+module sonic-buffer-profile {
+    namespace "http://github.com/sonic-net/sonic-buffer-profile";
+    prefix bpf;
+
+    import sonic-buffer-pool {
+        prefix bpl;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BUFFER PROFILE";
+
+    revision 2021-07-01 {
+        description
+            "Initial revision.";
+    }
+
+
+    container sonic-buffer-profile {
+
+        container BUFFER_PROFILE {
+
+            list BUFFER_PROFILE_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Buffer Profile name";
+                }
+
+                leaf static_th {
+                    type uint64;
+                    description "The maximum size of the buffer pool the port can occupy";
+                }
+
+                leaf dynamic_th {
+                    type int32 {
+                        range "-8..7";
+                    }
+                    description "The maximum proportion of the free size of the buffer pool the port can occupy (Alpha value)";
+                }
+
+                leaf size {
+                    mandatory true;
+                    type uint64;
+                    description "Reserved Size";
+                }
+
+                leaf pool {
+                    mandatory true;
+                    type leafref {
+                        path "/bpl:sonic-buffer-pool/bpl:BUFFER_POOL/bpl:BUFFER_POOL_LIST/bpl:name";
+                    }
+                    description "Buffer Pool name defined in BUFFER_POOL";
+                }
+
+                leaf xon_offset {
+                    type uint64;
+                    default 0;
+                    description "Xon Offset Threshold for ingress PG. Triggered if total buffer usage <= max(xon, total buffer limit - xon_offset)";
+                }
+
+                leaf xon {
+                    type uint64;
+                    default 0;
+                    description "Xon Threshold for ingress PG";
+                }
+
+                leaf xoff {
+                    type uint64;
+                    default 0;
+                    description "Xoff Threshold for ingress PG";
+                }
+
+                leaf headroom_type {
+                    default static;
+                    type enumeration {
+                        enum static;
+                        enum dynamic;
+                    }
+                    description "Profile is dynamically calculated or user configured";
+                }
+
+                leaf packet_discard_action {
+                    type enumeration {
+                        enum drop;
+                        enum trim;
+                    }
+                    description "Action on failure to admit a packet to Shared Buffer/MMU";
+                }
+            }
+        }
+    }
+}

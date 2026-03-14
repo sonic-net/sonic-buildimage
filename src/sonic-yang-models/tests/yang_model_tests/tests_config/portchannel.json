@@ -1,0 +1,656 @@
+{
+    "PORT_CHANNEL_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "tpid": "0x8100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel0001",
+                        "fast_rate": "false",
+                        "fallback" : "false",
+                        "mode" :  "routed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_MAX_VALID_MIN_LINKS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1024",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_OUT_OF_RANGE_MIN_LINKS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1025",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode":"routed"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_WRONG_PATTERN": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "name": "PortChannel11001"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_WRONG_TPID_PATTERN": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid": "0x9500",
+                        "name": "PortChannel0001"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_INVALID_MODE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid" :  "0x9100",
+                        "name": "PortChannel0001",
+                        "mode": "off"
+
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_INVALID_FALLBACK": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid": "0x9100",
+                        "name": "PortChannel0001",
+                        "fallback": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_CHANNEL_INVALID_FAST_RATE": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "mtu": "9100",
+                        "tpid": "0x9100",
+                        "name": "PortChannel0001",
+                        "fast_rate": "TRUE"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_IP_ADDR_TEST": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "ip_prefix": "1.1.1.1/24"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_IP_ADDR_ON_NON_EXIST_PO": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "PortChannel0002",
+                        "ip_prefix": "2.2.2.2/24"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_MEMBER_WITH_NON_EXIST_PORTCHANNEL": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0002",
+                        "port": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "lanes": "65"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_MEMBER_WITH_NON_EXIST_PORT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0002",
+                        "port": "Ethernet0"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0002",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_LIST_VRF_TEST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                    "name": "Vrf_blue"
+                }]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [{
+                    "name": "PortChannel0001",
+                    "admin_status": "up"
+                }]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [{
+                    "name": "PortChannel0001",
+                    "vrf_name": "Vrf_blue"
+                }]
+            }
+        }
+    },
+
+    "PORTCHANNEL_INTERFACE_LIST_WITH_NO_VRF": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [{
+                    "name": "PortChannel0001",
+                    "admin_status": "up"
+                }]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [{
+                    "name": "PortChannel0001"
+                }]
+            }
+        }
+    },
+
+    "PORTCHANNEL_INTERFACE_LIST_VRF_TEST_ON_NON_EXIST_PO": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                    "name": "Vrf_blue"
+                }]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [{
+                    "name": "PortChannel0001",
+                    "vrf_name": "Vrf_blue"
+                }]
+            }
+        }
+    },
+
+    "PORTCHANNEL_INTERFACE_LIST_NON_EXIST_VRF_TEST": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [{
+                    "name": "PortChannel0001",
+                    "admin_status": "up"
+                }]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [{
+                    "name": "PortChannel0001",
+                    "vrf_name": "Vrf_blue"
+                }]
+            }
+        }
+    },
+
+    "PORTCHANNEL_INTERFACE_WRONG_NAT_ZONE_RANGE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode":"routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "nat_zone": "4"
+                    }
+                ],
+                "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "ip_prefix": "1.1.1.1/24"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORTCHANNEL_INTERFACE_VALID_NAT_ZONE_RANGE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "nat_zone": "1"
+                    }
+                ],
+                "PORTCHANNEL_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "ip_prefix": "1.1.1.1/24"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_LOOPBACK_ACTION": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "loopback_action": "trap"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "ipv6_use_link_local_only": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "ipv6_use_link_local_only": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "02:26:9b:73:c1:1a"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_UPPER_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "02:AB:CD:EF:12:34"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "badaddr"
+                    }
+                ]
+            }
+        }
+    }
+}

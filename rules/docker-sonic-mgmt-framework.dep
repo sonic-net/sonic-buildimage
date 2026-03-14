@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_MGMT_FRAMEWORK)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-sonic-mgmt-framework.mk rules/docker-sonic-mgmt-framework.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_MGMT_FRAMEWORK)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_MGMT_FRAMEWORK)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_MGMT_FRAMEWORK)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_MGMT_FRAMEWORK),$(DOCKER_MGMT_FRAMEWORK_DBG)))

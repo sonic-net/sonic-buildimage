@@ -1,0 +1,16 @@
+[Unit]
+Description=SNMP container
+Requires=config-setup.service
+Requisite=swss.service
+After=config-setup.service swss.service syncd.service interfaces-config.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+ExecStartPre=/bin/bash -c 'end=$((SECONDS+20));while [ $SECONDS -lt $end ];do if /usr/bin/pgrep intfmgrd >/dev/null;then break;else sleep 1;fi;done'
+ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start
+ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait
+ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop
+RestartSec=30

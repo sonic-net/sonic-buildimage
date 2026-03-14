@@ -1,0 +1,1099 @@
+#!/bin/sh
+# Copyright (C) 2016 Arista Networks, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Aboot stage 0 boot script
+#
+# This boot0 script can be used in different scenario
+#  - Installation and boot from Aboot (manual or reboot on a new image)
+#  - EOS to SONiC fast-reboot (installation and kexec in EOS)
+#  - SONiC to SONiC fast-reboot (installation and kexec in SONiC)
+#
+# Use it this way:
+#   - swipath=path/to/swi install=true boot0
+#   - swipath=path/to/swi install=true force=true boot0
+#   - swipath=path/to/swi kexec=true boot0
+#
+# The logic defaults to the first scenario but providing extra environment variable
+# will affect the behavior of the script.
+# The list of variables is maintained here
+#   - KERNEL : relative path to the kernel to execute
+#   - INITRD : relative path to the initrd to load
+#   - CMDLINE : place to find the default kernel cmdline to use for the platform
+#   - VERBOSE : setting it to 1 will enable debug traces
+#
+# By default the boot0 script will behave for an Aboot based behavior.
+# Options can be provided to only run some features of this script.
+#
+# Extra kernel parameters can be provided at runtime by the user by adding them
+# into the kernel-params file.
+#
+# Secureboot of SONiC SWI images is also supported.
+# In such cases, there will only be a partial install on the flash.
+# SONiC will be mostly booting in RAM as a live operating system.
+
+# All templated variables should be declared here
+image_name="image-%%IMAGE_VERSION%%"
+dockerfs="{{ FILESYSTEM_DOCKERFS }}"
+boot_image="{{ ABOOT_BOOT_IMAGE }}"
+installer_image="sonic.swi"
+docker_dir="{{ DOCKERFS_DIR }}"
+
+do_not_clean="do-not-clean"
+kernel_params="kernel-params"
+
+aboot_machine="arista_unknown"
+
+info() { printf "%04.2f: $@\n" "$(cut -f1 -d' ' /proc/uptime)"; }
+err() { info "Error: $@"; }
+warn() { info "Warning: $@"; }
+
+if [ $# -ne 0 ]; then
+    echo "usage: $0 (see code)"
+    exit 1
+fi
+
+mountpoint_for_file() {
+   local file="$1"
+   df "$file" 2>/dev/null | tail -1 | tr -s " " | cut -d ' ' -f6
+}
+
+# extract mount point from the swi path, e.g., /mnt/flash/sonic.swi --> /mnt/flash
+if [ -z "$target_path" ]; then
+    if [ -z "$swipath" ]; then
+       err "target_path= is required when swipath= is not provided"
+       exit 1
+    fi
+    target_path=$(mountpoint_for_file "$swipath")
+fi
+image_path="$target_path/$image_name"
+hook_path="$image_path/platform/hooks"
+data_path="$image_path/platform/data"
+boot_image_path="$image_path/$boot_image"
+installer_image_path="$image_path/$installer_image"
+
+boot_config="$target_path/boot-config"
+
+kernel_cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
+default_cmdline_blacklist="crashkernel"
+
+# for backward compatibility with the sonic_upgrade= behavior
+install="${install:-${sonic_upgrade:-}}"
+
+is_secureboot_enabled() {
+    if $in_aboot; then
+        if [ -x /bin/securebootctl ] && securebootctl sb -display | grep -q "Secure Boot enabled"; then
+            return 0
+        fi
+        return 1
+    else
+        if grep -q aboot.secureboot /proc/cmdline; then
+            return 0
+        fi
+        # FIXME: EOS is not handled here
+        return 1
+    fi
+}
+
+clean_flash() {
+    ## Remove all the other unnecssary files except swi file, boot-config
+    for f in $(ls -A $target_path); do
+        if [ $f != "${swipath##*/}" ] &&
+           [ $f != "boot-config" ] &&
+           [ $f != "preserve-installer" ] &&
+           [ $f != "$kernel_params" ] &&
+           [ $f != "aquota.user" ] &&
+           [ $f != "old_config" ] &&
+           [ $f != "minigraph.xml" ] &&
+           [ $f != "snmp.yml" ] &&
+           [ $f != "acl.json" ] &&
+           [ $f != "port_config.json" ] &&
+           [ $f != "golden_config_db.json" ]
+        then
+            rm -rf "$target_path/$f"
+        fi
+    done
+}
+
+in_array() {
+    local value="$1"
+    shift
+
+    for other in $@; do
+        if [ "$value" = "$other" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+update_boot_config() {
+    local key="$1"
+    local value="$2"
+
+    if grep "$key" "$boot_config" 2>&1 > /dev/null; then
+        sed -i "s#^$key=.*\$#$key=$value#" "$boot_config"
+    else
+        echo "$key=$value" >> "$boot_config"
+    fi
+}
+
+get_boot_config() {
+    local key="$1"
+
+    sed -n "s#^$key=##p" "$boot_config" || :
+}
+
+update_next_boot() {
+    local default="$(get_boot_config SWI_DEFAULT)"
+
+    if [ -z "$default" ]; then
+        warn "boot-config has no variable SWI_DEFAULT"
+    else
+        info "Next reboot will use $default"
+        update_boot_config SWI "$default"
+    fi
+}
+
+get_sorted_hooks() {
+    echo $(find "$1" -name '[0-9][0-9]-*' -type f)
+}
+
+run_hooks() {
+    if [ -d "$hook_path/$1" ]; then
+        for hook in $(get_sorted_hooks "$hook_path/$1"); do
+            if [ ! -z "$hook" ]; then
+                info "Running hook $(basename $hook)"
+                . "$hook"
+            fi
+        done
+    fi
+}
+
+get_uuid_for() {
+    local dev="$1"
+
+    if type lsblk 2>&1 > /dev/null; then
+       lsblk "$dev" -n --output UUID
+    elif type blkid 2>&1 > /dev/null; then
+       blkid | grep "^$dev" | sed -n 's/^.* UUID="//p' | sed 's/".*$//'
+    fi
+}
+
+cmdline_append() {
+    cat >> /tmp/append
+}
+
+cmdline_clear() {
+    echo -n > /tmp/append
+}
+
+cmdline_add() {
+    echo "$@" >> /tmp/append
+}
+
+cmdline_remove() {
+    # remove all occurences of parameter and its value from the cmdline
+    sed -i "s/\b${1}=[^ ]*\s*//g" /tmp/append
+}
+
+cmdline_has() {
+    grep -q "$1" /tmp/append
+}
+
+cmdline_echo() {
+    # echo trims and remove whitespace duplicates
+    echo $(cat /tmp/append | tr '\n' ' ')
+}
+
+cmdline_get() {
+    # extract last matching value for key
+    sed -nr "s/.*$1=([^ ]+).*/\1/p" /tmp/append | tail -n 1
+}
+
+find_first_kernel_under() {
+    local path="$1"
+    find "$path" -name 'vmlinuz-*' -type f | head -n 1
+}
+
+find_first_initrd_under() {
+    local path="$1"
+    find "$path" -name 'initrd.img-*' -type f | head -n 1
+}
+
+is_file_in_memory() {
+    local file="$1"
+    local filemnt=$(mountpoint_for_file "$file")
+    local filemntfs=$(mount | grep " $filemnt " | cut -f5 -d' ')
+
+    case "$filemntfs" in
+       tmpfs|ramfs) return 0;;
+       *) return 1;;
+    esac
+}
+
+get_tmpfs() {
+    local tmpfs="$(mktemp -d)"
+
+    mkdir -p "$tmpfs"
+    if ! $in_aboot && ! mount | grep -q ' /tmp type tmpfs'; then
+        # mount a real tmpfs on /tmp/xxx if /tmp is not one already.
+        mount -t tmpfs "$(dirname $tmpfs)" "$tmpfs"
+    fi
+    echo "$tmpfs"
+}
+
+clean_tmpfs() {
+    local tmpfs="$1"
+
+    case "$tmpfs" in
+       /tmp) return 0;;
+       /tmp/*);; # only cleanup tmpfs created by this script
+       *) return 0;;
+    esac
+
+    if mount | grep -q "$tmpfs"; then
+        umount "$tmpfs" || :
+    fi
+}
+
+move_swi_to_tmpfs() {
+    local oldswi="$1"
+
+    if is_file_in_memory "$oldswi"; then
+       echo "$oldswi"
+       return 0
+    fi
+
+    local tmpfs="$(get_tmpfs)"
+    local newswi="$tmpfs/$(basename "$oldswi")"
+
+    mv "$oldswi" "$newswi"
+    echo "$newswi"
+}
+
+cleanup_swi_tmpfs() {
+   rm -f "$swipath"
+   clean_tmpfs "$(mountpoint_for_file "$swipath")"
+}
+
+mount_relpath() {
+    local abspath="$1"
+    local mountpath="$(df "$abspath" | sed -nr '/\//s/^.* ([^ ]+)$/\1/p')"
+
+    echo "$abspath" | sed "s#^$mountpath/##"
+}
+
+zip_file_offset() {
+    local zipfile="$1"
+    local filename="$2"
+
+    if $in_aboot; then
+        unzip -qqf "$zipfile" "$filename"
+    else
+        local hexoffset="$(zipdetails "$zipfile" | sed -En "/Filename +'$filename'/,/^$/p" | sed -En 's/^([^ ]+) PAYLOAD$/\1/p')"
+        echo "$((0x$hexoffset))"
+    fi
+}
+
+SWI_ALREADY_INSTALLED=0
+SWI_NOT_INSTALLED=1
+SWI_VERSION_MISMATCH=2
+SWI_OTHER_VARIANT_INSTALLED=3
+
+is_swi_installed() {
+    local swi_path="$1"
+    local swi_version="$(unzip -qp "$swi_path" .imagehash)"
+    local local_version="$(cat $image_path/.imagehash 2>/dev/null || :)"
+
+    if [ -z "$local_version" ]; then
+        # no image installed for this version
+        return $SWI_NOT_INSTALLED
+    fi
+
+    if [ "$swi_version" != "$local_version" ]; then
+        warn "Installed image has a different version than $swipath"
+        return $SWI_VERSION_MISMATCH
+    fi
+
+    if $secureboot; then
+        if [ -s "$installer_image_path" ]; then
+            # secureboot image already installed
+            return $SWI_ALREADY_INSTALLED
+        else
+            # regular image of the same version already installed
+            return $SWI_OTHER_VARIANT_INSTALLED
+        fi
+    else
+        if [ -s "$boot_image_path" ]; then
+            # regular image already installed
+            return $SWI_ALREADY_INSTALLED
+        else
+            # secureboot image of the same version already installed
+            return $SWI_OTHER_VARIANT_INSTALLED
+        fi
+    fi
+}
+
+extract_image() {
+    info "Moving swi to a tmpfs"
+    ## Avoid problematic flash usage spike on older systems, also improves I/O
+    swipath="$(move_swi_to_tmpfs "$swipath")"
+
+    info "Extracting swi content"
+    ## Unzip the image except boot0 and dockerfs archive
+    unzip -oq "$swipath" -x boot0 "$dockerfs" "platform.tar.gz" -d "$image_path"
+
+    ## Extract the platform.tar.gz
+    info "Extracting platform.tar.gz"
+    mkdir -p "$image_path/platform"
+    unzip -oqp "$swipath" "platform.tar.gz" | tar xzf - -C "$image_path/platform" $TAR_EXTRA_OPTION
+
+    ## detect rootfs type
+    local mountstr="$(grep " $target_path " /proc/mounts)"
+    local rootdev="$(echo $mountstr | cut -f1 -d' ')"
+    rootfs_type="$(echo $mountstr | cut -d' ' -f3)"
+
+    info "Extracting $dockerfs from swi"
+    ## Unpacking dockerfs delayed
+    ## 1. when disk is vfat as it does not support symbolic link
+    ## 2. when disk is small, expand it into ramfs during initrd
+    if [ "$rootfs_type" != "vfat" ] && ! cmdline_has docker_inram=on; then
+        mkdir -p "$image_path/$docker_dir"
+
+        if [ -n "$install" ]; then
+            TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
+        fi
+
+        ## extract docker archive
+        unzip -oqp "$swipath" "$dockerfs" | tar xzf - -C "$image_path/$docker_dir" $TAR_EXTRA_OPTION
+    else
+        ## save dockerfs archive in the image directory
+        unzip -oq "$swipath" "$dockerfs" -d "$image_path"
+        info "Unpacking $dockerfs delayed to initrd because $target_path is $rootfs_type or docker_inram is on"
+    fi
+
+    ## remove installer since it's not needed anymore
+    if $preserve_installer; then
+        info "Preserving installer under $installer_image_path"
+        mv "$swipath" "$installer_image_path"
+        chmod a+r "$installer_image_path"
+    else
+        info "Remove installer"
+        cleanup_swi_tmpfs "$swipath"
+    fi
+
+    ## use new reduced-size boot swi
+    local swi_boot_path="flash:$image_name/$boot_image"
+    update_boot_config SWI "$swi_boot_path"
+    update_boot_config SWI_DEFAULT "$swi_boot_path"
+
+    ## sync disk operations
+    sync
+}
+
+extract_image_secureboot() {
+    info "Extracting necessary swi content"
+    # NOTE: boot/ is not used by the boot process but only extracted for kdump
+    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline-append -d "$image_path"
+
+    ## Extract platform.tar.gz
+    info "Extracting platform.tar.gz"
+    mkdir -p "$image_path/platform"
+    unzip -oqp "$swipath" "platform.tar.gz" | tar xzf - -C "$image_path/platform" $TAR_EXTRA_OPTION
+
+    info "Installing swi under $installer_image_path"
+    mv "$swipath" "$installer_image_path"
+    chmod a+r "$installer_image_path"
+    swipath="$installer_image_path"
+
+    local swi_boot_path="flash:$image_name/$installer_image"
+    update_boot_config SWI "$swi_boot_path"
+    update_boot_config SWI_DEFAULT "$swi_boot_path"
+
+    sync
+}
+
+prepare_image_secureboot() {
+    local boot_tmpfs="$(get_tmpfs)"
+
+    info "Extracting boot content in tmpfs"
+    unzip -oq "$swipath" 'boot/*' -d "$boot_tmpfs"
+
+    info "Generating machine.conf and cmdline"
+    write_secureboot_configs
+
+    sync
+
+    # override environment variables preventing external tamper on kernel execution
+    CMDLINE="$(cmdline_echo) $ENV_EXTRA_CMDLINE"
+    KERNEL="$(find_first_kernel_under "$boot_tmpfs")"
+    INITRD="$(find_first_initrd_under "$boot_tmpfs")"
+}
+
+write_machine_config() {
+    ## Detect SKU and create a hardware description file
+    aboot_version=$(cmdline_get Aboot | sed 's/^.*norcal.-//')
+    if [ -x /bin/sysinit ]; then
+       aboot_build_date=$(stat -c %y /bin/sysinit | sed 's/ /T/g')
+    else
+       aboot_build_date="unknown"
+    fi
+    cat <<EOF > ${target_path}/machine.conf
+aboot_version=$aboot_version
+aboot_vendor=arista
+aboot_platform=x86_64-$aboot_machine
+aboot_machine=$aboot_machine
+aboot_arch=x86_64
+aboot_build_date=$aboot_build_date
+EOF
+    chmod a+r "${target_path}/machine.conf"
+}
+
+read_eeprom() {
+    if [ -x /bin/readprefdl ] && [ -f "$1" ]; then
+        readprefdl -f "$1" -d > $target_path/.system-prefdl
+    elif [ -f /etc/prefdl ]; then
+        cp /etc/prefdl $target_path/.system-prefdl
+        chmod a+r $target_path/.system-prefdl
+    fi
+}
+
+read_switch_eeprom() {
+    read_eeprom /tmp/.switch-prefdl
+}
+
+read_system_eeprom() {
+    read_eeprom /tmp/.system-prefdl
+}
+
+get_eeprom_value() {
+    local key="$1"
+    sed -n "s#^$key: *##p" "$target_path/.system-prefdl" || :
+}
+
+write_kdump_cmdline() {
+    local sid="$(cmdline_get sid | sed 's/Ssd$//')"
+    case "$sid" in
+        Lodoga*|*Quicksilver*|*Moby|Shearwater*|Moranda*|Gardena*|PikeIsland*|\
+        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2*Quartz4*|Redstart8Mk2*CitrineDd*)
+            if ! cmdline_has crashkernel; then
+                cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
+            fi
+            ;;
+    esac
+}
+
+write_platform_specific_cmdline() {
+    local platform="$(cmdline_get platform)"
+    local sid="$(cmdline_get sid | sed 's/Ssd$//')"
+
+    local varlog_size=0
+
+    # sonic_mode is set to fixed by default.
+    sonic_mode="fixed"
+    supervisor_mode="supervisor"
+    linecard_mode="linecard"
+
+    # detect the size of the flash partition from name in Aboot/EOS/SONiC
+    local flash_size=$(($(df "$target_path" | tail -1 | tr -s ' ' | cut -f2 -d' ') / 1000))
+
+    if [ "$platform" = "raven" ]; then
+        # Assuming sid=Cloverdale
+        aboot_machine=arista_7050_qx32
+        cmdline_add modprobe.blacklist=radeon,sp5100_tco
+        cmdline_add acpi=off
+    fi
+    if [ "$platform" = "crow" ]; then
+        # Assuming sid=Clearlake
+        aboot_machine=arista_7050_qx32s
+        cmdline_add modprobe.blacklist=radeon,sp5100_tco
+    fi
+    if in_array "$sid" "Upperlake" "UpperlakeES" "UpperlakeElite"; then
+        aboot_machine=arista_7060_cx32s
+        flash_size=3700
+    fi
+    if [ "$sid" = "UpperlakePlus" ]; then
+        aboot_machine=arista_7060cx2_32s
+        flash_size=3700
+    fi
+    if [ "$sid" = "Gardena" ] || [ "$sid" = "GardenaE" ]; then
+        aboot_machine=arista_7260cx3_64
+        flash_size=28000
+        cmdline_add logs_inram=on
+        cmdline_add i2c-i801.disable_features=0x10
+    fi
+    if [ "$sid" = "Alhambra" ]; then
+        aboot_machine=arista_7170_64c
+        flash_size=28000
+        cmdline_add hugepages=128
+    fi
+    if [ "$sid" = "Mineral" ]; then
+        aboot_machine=arista_7170_32c
+        flash_size=28000
+        cmdline_add hugepages=128
+    fi
+    if [ "$sid" = "MineralD" ]; then
+        aboot_machine=arista_7170_32cd
+        flash_size=28000
+        cmdline_add hugepages=128
+    fi
+    if [ "$sid" = "Woodleaf" ]; then
+        aboot_machine=arista_7170b_64c
+        cmdline_add hugepages=128
+    fi
+    if [ "$sid" = "Lodoga" ]; then
+        aboot_machine=arista_7050cx3_32s
+        cmdline_add logs_inram=on
+        cmdline_add libata.force=2.00:noncq
+        cmdline_add nohz=off
+    fi
+    if [ "$sid" = "LodogaPrime" ]; then
+        aboot_machine=arista_7050cx3_32c
+        cmdline_add logs_inram=on
+    fi
+    if [ "$sid" = "Marysville" ]; then
+        aboot_machine=arista_7050sx3_48yc8
+        flash_size=7382
+    fi
+    if [ "$sid" = "Marysville10" ]; then
+        aboot_machine=arista_7050sx3_48c8
+        flash_size=7382
+    fi
+    if [ "$sid" = "BlackhawkO" ]; then
+        aboot_machine=arista_7060px4_32
+        flash_size=28000
+    fi
+    if [ "$sid" = "BlackhawkDD" ] || [ "$sid" = "BlackhawkDDM" ]; then
+        aboot_machine=arista_7060dx4_32
+        flash_size=28000
+    fi
+    if in_array "$sid" "PikeIslandZ" "PikeIslandZ-F" "PikeIslandZ-2F" "PikeIslandZ-R" "PikeIslandZ-2R"; then
+        aboot_machine=arista_720dt_48s
+        varlog_size=2048
+    fi
+    if [ "$sid" = "PikeIslandZ-MGX-2F" ]; then
+        aboot_machine=arista_720dt_48s_mgx
+        varlog_size=2048
+    fi
+    if [ "$sid" = "BlackhawkT4O" ]; then
+        aboot_machine=arista_7050px4_32s
+    fi
+    if [ "$sid" = "BlackhawkT4DD" ]; then
+        aboot_machine=arista_7050dx4_32s
+    fi
+    if [ "$sid" = "BlackhawkTH4DD" ] || [ "$sid" = "BlackhawkTh4Dd" ]; then
+           aboot_machine=arista_7060dx5_32
+    fi
+    if [ "$sid" = "QuartzDd" ]; then
+        aboot_machine=arista_7280dr3a_36
+    fi
+    if [ "$sid" = "QuartzDdBk" ]; then
+        aboot_machine=arista_7280dr3ak_36
+    fi
+    if [ "$sid" = "QuartzDdBkS" ]; then
+        aboot_machine=arista_7280dr3ak_36s
+    fi
+    if [ "$sid" = "QuartzDdMs" ]; then
+        aboot_machine=arista_7280dr3am_36
+    fi
+    if in_array "$sid" "Redstart8Mk2CitrineDd" "Redstart8Mk2NCitrineDd"; then
+        aboot_machine=arista_7280r4_32qf_32df
+    fi
+    if in_array "$sid" "Redstart8Mk2CitrineDdBk" "Redstart8Mk2NCitrineDdBk"; then
+        aboot_machine=arista_7280r4k_32qf_32df
+    fi
+    if [ "$sid" = "Smartsville" ]; then
+        aboot_machine=arista_7280cr3_32p4
+    fi
+    if [ "$sid" = "SmartsvilleBK" ]; then
+        aboot_machine=arista_7280cr3k_32p4
+    fi
+    if [ "$sid" = "SmartsvilleBkMs" ] || [ "$sid" = "SmartsvilleBkMsTpm" ]; then
+        aboot_machine=arista_7280cr3mk_32p4
+    fi
+    if [ "$sid" = "SmartsvilleDD" ]; then
+        aboot_machine=arista_7280cr3_32d4
+    fi
+    if [ "$sid" = "SmartsvilleDDBK" ]; then
+        aboot_machine=arista_7280cr3k_32d4
+    fi
+    if [ "$sid" = "SmartsvilleDDBkMs" ] || [ "$sid" = "SmartsvilleDDBkMsTpm" ]; then
+        aboot_machine=arista_7280cr3mk_32d4
+    fi
+    if [ "$sid" = "CatalinaP" ]; then
+        aboot_machine=arista_7060px5_64s
+    fi
+    if [ "$sid" = "CatalinaDD" ]; then
+        aboot_machine=arista_7060dx5_64s
+    fi
+    if [ "$sid" = "Clearwater2" ]; then
+        aboot_machine=arista_7800r3_48cq2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "Clearwater2Ms" ]; then
+        aboot_machine=arista_7800r3_48cqm2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "WolverineQCpu" ]; then
+        aboot_machine=arista_7800r3a_36d2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "WolverineQCpuBk" ]; then
+        aboot_machine=arista_7800r3ak_36d2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "WolverineQCpuMs" ]; then
+        aboot_machine=arista_7800r3a_36dm2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "WolverineQCpuBkMs" ]; then
+        aboot_machine=arista_7800r3ak_36dm2_lc
+        sonic_mode="$linecard_mode"
+    fi
+    if [ "$sid" = "OtterLake" ]; then
+        aboot_machine=arista_7800_sup
+        flash_size=30000
+        sonic_mode=$supervisor_mode
+    fi
+    if [ "$sid" = "SmartsvilleBkMs" ]; then
+        aboot_machine=arista_7280cr3mk_32p4
+        flash_size=7382
+    fi
+    if in_array "$sid" "Shearwater4Mk2" "Shearwater4Mk2N" "Shearwater4Mk2QuicksilverDD" "Shearwater4Mk2NQuicksilverDD"; then
+        aboot_machine=arista_7060x6_64de
+    fi
+    if in_array "$sid" "Shearwater4Mk2QuicksilverP" "Shearwater4Mk2NQuicksilverP"; then
+        aboot_machine=arista_7060x6_64pe
+    fi
+    if in_array "$sid" "Redstart8Mk2QuicksilverP512" "Redstart8Mk2NQuicksilverP512" \
+                "Redstart832Mk2QuicksilverP512" "Redstart832Mk2NQuicksilverP512"; then
+        aboot_machine=arista_7060x6_64pe_b
+    fi
+    if in_array "$sid" "MorandaP"; then
+        aboot_machine=arista_7060x6_32pe
+    fi
+
+    # disable cpu c-state other than C1
+    local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"
+    cmdline_add processor.max_cstate=1
+    if [ "$cpuvendor" = "GenuineIntel" ]; then
+        cmdline_add intel_idle.max_cstate=0
+    fi
+
+    if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish" "puffin"; then
+        cmdline_add tsc=reliable
+        cmdline_add pcie_ports=native
+        cmdline_add rhash_entries=1
+        cmdline_add usb-storage.delay_use=0
+        cmdline_add reassign_prefmem
+    fi
+    if in_array "$platform" "cormorant"; then
+        read_system_eeprom
+    fi
+    if in_array "$platform" "rook" "sprucefish"; then
+        cmdline_add iommu=on
+        cmdline_add intel_iommu=on
+        read_system_eeprom
+    fi
+    if in_array "$platform" "rook"; then
+        # Currently applies to Alhambra, Blackhawk, Gardena and Mineral
+        cmdline_add libata.force=1.00:noncq
+    fi
+    if in_array "$platform" "crow" "magpie"; then
+        cmdline_add amd_iommu=off
+        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
+        cmdline_add sdhci.append_quirks2=0x40
+        read_system_eeprom
+    fi
+    if in_array "$platform" "woodpecker" "puffin" "skylark"; then
+        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
+        read_system_eeprom
+    fi
+    if in_array "$platform" "lorikeet"; then
+        cmdline_add reassign_prefmem
+        read_system_eeprom
+    fi
+    if in_array "$platform" "hedgehog"; then
+        cmdline_add reassign_prefmem
+        cmdline_add nohz=off
+        read_system_eeprom
+    fi
+    if in_array "$platform" "prairieisland"; then
+        read_system_eeprom
+    fi
+    if in_array "$platform" "shearwater" "redstart"; then
+        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio,amd_sfh
+        if [ -f /tmp/.switch-prefdl ]; then
+            read_switch_eeprom
+        else
+            read_system_eeprom
+        fi
+    fi
+    if in_array "$sid" "Moby" "RedstartFixed8CNMoby"; then
+        aboot_machine=arista_7060x6_16pe_384c_b
+
+        local hw_api="$(get_eeprom_value HwApi)"
+        info "HwApi for Moby: $hw_api"
+        if [ -z "$hw_api" ] || [ "$hw_api" = "01.00" ]; then
+            aboot_machine=arista_7060x6_16pe_384c
+        fi
+    fi
+
+    if [ $varlog_size -eq 0 ]; then
+       if [ $flash_size -ge 28000 ]; then
+           varlog_size=4096
+       elif [ $flash_size -gt 4000 ]; then
+           varlog_size=400
+       else
+           varlog_size=256
+           cmdline_add logs_inram=on
+           cmdline_add docker_inram=on
+           cmdline_add docker_inram_algo=zstd
+           if [ $flash_size -le 2000 ]; then
+               # enable docker_inram for switches with less than 2G of flash
+               varlog_size=128
+           fi
+       fi
+    fi
+
+    cmdline_add "varlog_size=$varlog_size"
+    cmdline_add "sonic.mode=$sonic_mode"
+}
+
+write_image_specific_cmdline() {
+    # security
+    cmdline_add security=apparmor
+    cmdline_add apparmor=1
+
+    # fs configuration
+    cmdline_add rw
+
+    # disable deterministic interface naming
+    cmdline_add net.ifnames=0
+
+    # increase kernel log buffer size
+    cmdline_add log_buf_len=1M
+
+    # verbosity
+    cmdline_add quiet
+    # Start showing systemd information from the first failing unit if any.
+    # systemd.show_status=false or quiet can be used to silence systemd entierly
+    cmdline_add systemd.show_status=auto
+
+    # Pass the MAC address to the new kernel as a command line parameter. This makes it
+    # possible to restore the MAC address in the new kernel without requiring driver modifications.
+    if [ -f /sys/class/net/ma1/address ]; then
+        cmdline_add "hwaddr_ma1=$(cat /sys/class/net/ma1/address)"
+    elif [ -f /sys/class/net/eth0/address ]; then
+        cmdline_add "hwaddr_ma1=$(cat /sys/class/net/eth0/address)"
+    else
+        err "Management port not found."
+    fi
+
+    # Obtain root partition uuid
+    local mountstr="$(mount | grep " $target_path ")"
+    local rootdev="$(echo $mountstr | cut -f1 -d' ')"
+    local rootfstype="$(echo $mountstr | cut -f5 -d' ')"
+    local rootuuid="$(get_uuid_for $rootdev)"
+    if [ -z "$rootuuid" ] || [ "$rootfstype" = "vfat" ] ; then
+        cmdline_add "root=$rootdev"
+    else
+        cmdline_add "root=UUID=$rootuuid"
+    fi
+}
+
+write_default_cmdline() {
+    local delimiter="cmdline-aboot-end"
+
+    cmdline_clear
+
+    if $in_aboot; then
+        # generate the default kernel parameters for the platform
+        cat /etc/cmdline | sed "/^\(${bootconfigvars// /\|}\|crashkernel\|loglevel\|ignore_loglevel\)\(\$\|=\)/d;/^\$/d" | cmdline_append
+    elif grep -q "$delimiter" /proc/cmdline; then
+        # we are on a recent sonic image using delimiter. extracting the part of the
+        # cmdline coming from aboot is trivial.
+        cat /proc/cmdline | sed -E "s/^(.*) $delimiter .*$/\1/" | tr ' ' '\n' | cmdline_append
+    else
+        # we are either on SONiC or EOS and the commandline doesn't have a delimiter
+        # for the Aboot part. Take an educated guess at a right delimiter.
+        # Subject to breakage if EOS or SONiC cmdline change.
+        cat /proc/cmdline | sed -E 's/^(.*) rw .*$/\1/' | tr ' ' '\n' | cmdline_append
+
+        # Remove any parameters that are inadvertently inherited
+        for field in $default_cmdline_blacklist; do
+            cmdline_remove "$field"
+        done
+    fi
+
+    cmdline_add "$delimiter"
+}
+
+write_cmdline() {
+    # use extra parameters from kernel-params hook if the file exists
+    if [ -f "$target_path/$kernel_params" ] && ! $secureboot; then
+        info "Loading extra kernel parameters from $kernel_params"
+        cat "$target_path/$kernel_params" | cmdline_append
+    fi
+
+    # NOTE: SONiC might need to provide some extra kernel parameter to change the
+    #       next boot behavior. The following lines lookup allowed parameters and
+    #       append them to the cmdline.
+    #       - kernel-cmdline is still modified but its usage should ideally be deprecated over time
+    #       - kernel-cmdline-append is for the user (SONiC) to use.
+    #         this file can be either packaged in the swi or generated from userland
+    for cpath in "$image_path/kernel-cmdline" "$image_path/kernel-cmdline-append"; do
+        if [ -f "$cpath" ]; then
+            for field in $kernel_cmdline_allowlist; do
+               cat "$cpath" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
+            done
+        fi
+    done
+
+    # FIXME: legacy configuration files used by fast-reboot and eos2sonic
+    #        these should be deprecated over time.
+    cmdline_echo > "$image_path/kernel-cmdline"
+    cmdline_echo | sed 's/ cmdline-aboot-end.*$//' > "$target_path/kernel-params-base"
+}
+
+write_common_configs() {
+    write_default_cmdline
+    write_platform_specific_cmdline
+    write_image_specific_cmdline
+    write_machine_config
+}
+
+write_secureboot_configs() {
+    write_common_configs
+    cmdline_add "loop=$(mount_relpath "$installer_image_path")"
+    cmdline_add loopfstype=squashfs
+    cmdline_add "loopoffset=$(zip_file_offset "$installer_image_path" fs.squashfs)"
+    cmdline_add docker_inram=on
+    cmdline_add secure_boot_enable=y
+    cmdline_add aboot.secureboot=enabled
+    # setting panic= has the side effect of disabling the initrd shell on error
+    cmdline_add panic=0
+    write_cmdline
+    write_kdump_cmdline
+}
+
+write_regular_configs() {
+    write_common_configs
+    cmdline_add "loop=$image_name/fs.squashfs"
+    cmdline_add loopfstype=squashfs
+    write_cmdline
+}
+
+run_kexec() {
+    local cmdline="${CMDLINE:-$(cmdline_echo) $ENV_EXTRA_CMDLINE}"
+    local kernel="${KERNEL:-$(find_first_kernel_under "$image_path/boot")}"
+    local initrd="${INITRD:-$(find_first_initrd_under "$image_path/boot")}"
+
+    if $verbose; then
+        # show systemd showdown sequence when verbose is set
+        cmdline="$(echo "$cmdline" | sed 's/systemd.show_status=auto/systemd.show_status=true/')"
+    fi
+
+    if $debug; then
+        # enable initrd debug as well as kernel verbose output
+        cmdline="$(echo "$cmdline" | sed 's/ quiet//')"
+        cmdline="$cmdline debug loglevel=7 log_buf_len=8M printk.devmsg=on"
+    fi
+
+    sync
+    kexec --load --initrd="$initrd" --append="$cmdline" "$kernel"
+
+    ( [ -z "$testonly" ] && [ -z "$loadonly" ] ) || exit 0
+    info "Kexecing..."
+    kexec --exec
+}
+
+secureboot_install() {
+    if [ -e "$image_path" ]; then
+        warn "Image folder $image_path already exist (likely regular install)"
+    fi
+
+    mkdir -p "$image_path"
+
+    info "Installing image as $installer_image_path"
+    extract_image_secureboot
+}
+
+regular_install() {
+    if [ -e "$image_path" ]; then
+        warn "Image folder $image_path already exist (likely secureboot install)"
+    fi
+
+    mkdir -p $image_path
+
+    info "Generating boot-config, machine.conf and cmdline"
+    write_regular_configs "$image_path"
+    write_kdump_cmdline
+
+    info "Installing image under $image_path"
+    extract_image
+
+    # NOTE: this call is necessary to process the kernel-cmdline-append file coming
+    #       from the just extracted swi
+    write_cmdline
+
+    run_hooks post-install
+}
+
+run_quirks() {
+    # only run in Aboot
+    if $in_aboot && [ -f "/etc/cmdline" ]; then
+        if [ "$aboot_machine" = "arista_7060x6_64pe_b" ]; then
+            info "Resetting switch chip for $aboot_machine"
+            setpci -s 05:00.0 COMMAND=0002
+            devmem 0x80084000 32 0xC
+            sleep 1
+            devmem 0x80084010 32 0x4
+            sleep 1
+            devmem 0x80084010 32 0x8
+        fi
+        if [ "$aboot_machine" = "arista_7060x6_64pe" ]; then
+            info "Resetting switch chip for $aboot_machine"
+            setpci -s 03:00.0 COMMAND=0002
+            devmem 0xa5184000 32 0xC
+            sleep 1
+            devmem 0xa5184010 32 0x4
+            sleep 1
+            devmem 0xa5184010 32 0x8
+        fi
+    fi
+}
+
+secureboot_boot() {
+    # boot material is extracted and generated in RAM.
+    # SONiC starts as a live OS.
+    info "Preparing image for secureboot"
+    prepare_image_secureboot
+    run_quirks
+    update_next_boot
+    run_kexec
+}
+
+regular_boot() {
+    # boot uses the image installed on the flash
+    write_regular_configs "$image_path"
+    run_hooks pre-kexec
+    run_quirks
+    update_next_boot
+    run_kexec
+}
+
+
+# In Aboot no option will be provided therefore these are the default values to use
+in_aboot=true
+do_clean=true
+do_install=true
+do_kexec=true
+
+# prevent the flash from being cleaned if the do-not-clean file exists
+if [ -f "$target_path/$do_not_clean" ]; then
+    do_clean=false
+fi
+
+# Parse the cmdline options (used from EOS or from SONiC)
+if [ ! -z "$install" ]; then
+    # install from SONiC or EOS
+    in_aboot=false
+    do_clean=false
+    do_kexec=false
+elif [ ! -z "$kexec" ]; then
+    # kexec from SONiC or EOS
+    in_aboot=false
+    do_install=false
+    do_clean=false
+fi
+
+# Make sure boot-config exists to avoid noise
+touch "$boot_config"
+
+# Verbosity can be defined by the caller, default to false otherwise
+verbose=${verbose:-false}
+debug=${debug:-false}
+if [ -f "$target_path/verbose-boot" ] ||
+   [ "$(get_boot_config VERBOSE)" = "1" ] ||
+   ! $in_aboot; then
+    verbose=true
+fi
+if [ -f "$target_path/debug-boot" ] || [ "$(get_boot_config DEBUG)" = "1" ]; then
+    verbose=true
+    debug=true
+fi
+
+# behavioral configuration for secureboot
+# can be overidden by passing secureboot=true via env
+if [ -z "$secureboot" ]; then
+    if is_secureboot_enabled; then
+        secureboot=true
+    else
+        secureboot=false
+    fi
+fi
+
+# preserve original installer during regular install when set
+preserve_installer=false
+if [ -f "$target_path/preserve-installer" ] ||
+   [ "$(get_boot_config PRESERVE_INSTALLER)" = "1" ]; then
+    preserve_installer=true
+fi
+
+# enable shell debug mode to get the most verbosity
+if $verbose; then
+    set -x
+fi
+
+# install the image if newer
+if $do_install; then
+    if ! unzip -ql "$swipath" 2>&1 > /dev/null; then
+        err "The swipath= environment variable does not point to a valid SWI"
+        exit 1
+    fi
+
+    swi_installed=0
+    is_swi_installed "$swipath" || swi_installed=$?
+
+    if [ "$swi_installed" -ne $SWI_ALREADY_INSTALLED ] || [ -n "$force" ]; then
+        if [ "$swi_installed" -eq $SWI_VERSION_MISMATCH ] || [ -n "$force" ]; then
+            warn "Removing existing installation folder $image_path"
+            rm -rf $image_path
+        fi
+        if [ "$swi_installed" -ne $SWI_OTHER_VARIANT_INSTALLED ] && $do_clean; then
+            info "Cleaning flash content $target_path"
+            clean_flash
+        fi
+        if $secureboot; then
+            secureboot_install
+        else
+            regular_install
+        fi
+    else
+        info "Using previously installed image"
+    fi
+fi
+
+# chainloading using kexec
+if $do_kexec; then
+    if $secureboot; then
+       secureboot_boot
+    else
+       regular_boot
+    fi
+fi

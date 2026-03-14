@@ -1,0 +1,144 @@
+module sonic-queue {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-queue";
+
+    prefix squeue;
+
+    import sonic-extension {
+        prefix sonic-ext;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-scheduler {
+        prefix sch;
+    }
+
+    import sonic-wred-profile {
+        prefix wrd;
+    }
+
+    import sonic-device_metadata {
+        prefix sdm;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+	"QUEUE yang Module for SONiC OS";
+
+    revision 2021-04-01 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-queue {
+
+        container QUEUE {
+
+            description "QUEUE part of config_db.json";
+
+            list QUEUE_LIST {
+                when "not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) or
+                    (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type!='voq')";
+
+                key "ifname qindex";
+
+//         sonic-ext:key-pattern "QUEUE|{ifname}|{qindex}"; //special pattern used for extracting keys from redis-key and populate the yang instance
+                                                                 // Total list instances = number(key1) * number(key2) * number(key3)
+
+                leaf ifname {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type string {
+                            pattern "CPU";
+                        }
+                    }
+                    description "Interface name.";
+                }
+                // qindex format is (X) | (X-Y). X is start and Y is end index.
+                // X and Y value depends on platform, example for physical ports 0-7 and
+                // for CPU port 0-48. Example qindex is 3-4
+                leaf qindex {
+                  //  sonic-ext:custom-validation ValidateQindexPattern;
+                    type string;
+                    description "Queue index on the interface.";
+                }
+
+                leaf scheduler {
+                    type leafref {
+                        path "/sch:sonic-scheduler/sch:SCHEDULER/sch:SCHEDULER_LIST/sch:name"; //Reference to SCHEDULER table
+                    }
+                    description "Scheduler for queue.";
+                }
+
+                leaf wred_profile {
+                    type leafref {
+                        path "/wrd:sonic-wred-profile/wrd:WRED_PROFILE/wrd:WRED_PROFILE_LIST/wrd:name"; // Reference to WRED_PROFILE table
+                    }
+                    description "Wred profile for queue.";
+                }
+            }
+
+            list VOQ_QUEUE_LIST {
+                when "boolean(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) and
+                    (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq')";
+                key "hostname asic_name ifname qindex";
+
+
+                leaf hostname {
+                    type stypes:hostname;
+                }
+
+                leaf asic_name {
+                    type stypes:asic_name;
+                }
+
+                leaf ifname {
+                    type string {
+                        length 1..128;
+                    }
+
+                    description "Interface name.";
+                }
+                // qindex format is (X) | (X-Y). X is start and Y is end index.
+                // X and Y value depends on platform, example for physical ports 0-7 and
+                // for CPU port 0-48. Example qindex is 3-4
+                leaf qindex {
+                  //  sonic-ext:custom-validation ValidateQindexPattern;
+                    type string;
+                    description "Queue index on the interface.";
+                }
+
+                leaf scheduler {
+                    type leafref {
+                        path "/sch:sonic-scheduler/sch:SCHEDULER/sch:SCHEDULER_LIST/sch:name"; //Reference to SCHEDULER table
+                    }
+                    description "Scheduler for queue.";
+                }
+
+                leaf wred_profile {
+                    type leafref {
+                        path "/wrd:sonic-wred-profile/wrd:WRED_PROFILE/wrd:WRED_PROFILE_LIST/wrd:name"; // Reference to WRED_PROFILE table
+                    }
+                    description "Wred profile for queue.";
+                }
+            }
+        }
+
+    }
+}

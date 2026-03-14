@@ -1,0 +1,76 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 1f0f
+  name: 'Host bridge: Intel Corporation Atom processor C2000 SoC Transaction Router'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 1f10
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 1'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 1f11
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 2'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 1f12
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 3'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 1f13
+  name: 'PCI bridge: Intel Corporation Atom processor C2000 PCIe Root Port 4'
+- bus: '00'
+  dev: 0e
+  fn: '0'
+  id: 1f14
+  name: 'Host bridge: Intel Corporation Atom processor C2000 RAS'
+- bus: '00'
+  dev: 0f
+  fn: '0'
+  id: 1f16
+  name: 'IOMMU: Intel Corporation Atom processor C2000 RCEC'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: 1f15
+  name: 'System peripheral: Intel Corporation Atom processor C2000 SMBus 2.0'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 1f41
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection I354'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: 1f2c
+  name: 'USB controller: Intel Corporation Atom processor C2000 USB Enhanced Host Controller'
+- bus: '00'
+  dev: '17'
+  fn: '0'
+  id: 1f22
+  name: 'SATA controller: Intel Corporation Atom processor C2000 AHCI SATA2 Controller'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: 1f38
+  name: 'ISA bridge: Intel Corporation Atom processor C2000 PCU'
+- bus: '00'
+  dev: 1f
+  fn: '3'
+  id: 1f3c
+  name: 'SMBus: Intel Corporation Atom processor C2000 PCU SMBus'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b340
+  name: 'Ethernet controller: Broadcom Limited Device b340'
+- bus: '01'
+  dev: '00'
+  fn: '1'
+  id: b340
+  name: 'Ethernet controller: Broadcom Limited Device b340'
+

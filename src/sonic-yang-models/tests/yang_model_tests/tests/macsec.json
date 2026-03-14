@@ -1,0 +1,29 @@
+{
+    "VALID_PROFILE": {
+        "desc": "Valid MACsec profile test"
+    },
+    "DUPLICATE_CKN": {
+        "desc": "Primary CKN equals than fallback CKN",
+        "eStrKey": "Must"
+    },
+    "INVALID_CAK_LENGTH": {
+        "desc": "Invalid CAK length",
+        "eStrKey": "Pattern"
+    },
+    "INVALID_CAK_CHARACTER": {
+        "desc": "Invalid CAK character",
+        "eStrKey": "Pattern"
+    },
+    "INVALID_CIPHER_LOWERCASE": {
+        "desc": "Invalid cipher with lowercase",
+        "eStrKey": "Pattern"
+    },
+    "MISMATCH_LENGTH_PRIMARY_FALLBACK": {
+        "desc": "Mismatch length of primary and fallback",
+        "eStrKey": "Must"
+    },
+    "SET_REPLAY_WINDOW_WHEN_DISABLE_REPLAY_PROTECT": {
+        "desc": "Set replay window when disable replay protect",
+        "eStrKey": "When"
+    }
+}

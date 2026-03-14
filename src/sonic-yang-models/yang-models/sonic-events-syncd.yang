@@ -1,0 +1,74 @@
+module sonic-events-syncd {
+    namespace "http://github.com/sonic-net/sonic-events-syncd";
+    yang-version 1.1;
+    prefix events-syncd;
+
+    import sonic-events-common {
+        prefix evtcmn;
+        revision-date 2022-12-01;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC syncd events";
+
+    revision 2022-12-01 {
+        description "syncd alert events.";
+    }
+
+    container sonic-events-syncd {
+        container syncd-failure {
+            evtcmn:ALARM_SEVERITY_MAJOR;
+
+            description "
+                Declares an event for all types of syncd failure.
+                The type of failure and the asic-index of failing syncd are
+                provided along with a human readable message to give the
+                dev debugging additional info.";
+
+            leaf fail_type {
+                type enumeration {
+                    enum "route_add_failed";
+                    enum "switch_event";
+                    enum "assert";
+                    enum "mmu_err";
+                    enum "parity_check";
+                }
+            }
+
+            uses evtcmn:sonic-events-cmn;
+        }
+
+        container alpm-parity-error {
+            evtcmn:ALARM_SEVERITY_MAJOR;
+
+            description "
+                Declares an event for a parity error in ALPM
+                insert or delete for ipv4 or ipv6";
+
+            leaf operation {
+                type enumeration {
+                    enum "insert";
+                    enum "delete";
+                }
+                description "Operation for alpm parity error";
+            }
+
+            leaf ip_family {
+                type stypes:ip-family;
+                description "IP family for alpm parity error";
+            }
+
+            uses evtcmn:sonic-events-cmn;
+        }
+    }
+}

@@ -1,0 +1,50 @@
+{% macro install_debian_packages(packages) -%}
+RUN dpkg -i \
+{%- for deb in packages %}
+    /debs/{{ deb }} {%- if not loop.last %} \ {%- endif %}
+{%- endfor %} || apt-get -y install -f --no-remove
+{%- endmacro %}
+
+{% macro install_python2_wheels(packages) -%}
+RUN cd /python-wheels/ && pip2 install {{ packages | join(' ') }}
+{%- endmacro %}
+
+{% macro install_python3_wheels(packages) -%}
+RUN cd /python-wheels/ && pip3 install {{ packages | join(' ') }}
+{%- endmacro %}
+
+{% macro install_python_wheels(packages) -%}
+{%- set py2_pkgs, py3_pkgs = [], [] %}
+{%- for pkg in packages %}
+    {%- if 'py3' in pkg %}
+       {{- py3_pkgs.append(pkg) or '' }}
+    {%- else %}
+       {{- py2_pkgs.append(pkg) or '' }}
+    {%- endif %}
+{%- endfor %}
+{%- if py3_pkgs | length %}
+{{ install_python3_wheels(py3_pkgs) }}
+{%- endif %}
+{%- if py2_pkgs | length %}
+{{  install_python2_wheels(py2_pkgs) }}
+{%- endif %}
+{%- endmacro %}
+
+{% macro copy_files(prefix, files, dest) -%}
+COPY \
+    {%- for file in files %}
+        {{ prefix }}/{{ file }} \
+    {%- endfor %}
+    {{ dest }}
+{%- endmacro %}
+
+{% macro install_offending_packages(packages) -%}
+    {%- for pkg in packages %}
+        RUN pip3 install {{ pkg }}
+        RUN pip3 install setuptools==65.5.1
+    {%- endfor %}
+{%- endmacro %}
+
+{% macro rsync_from_builder_stage() -%}
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+{%- endmacro %}

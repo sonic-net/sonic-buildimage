@@ -1,0 +1,279 @@
+#!/bin/bash
+#
+# Simple script implementing a temperature dependent fan speed control
+# Supported Linux kernel versions: 2.6.5 and later
+#
+# Version 0.70
+#
+# Usage: fancontrol [CONFIGFILE]
+#
+# Dependencies:
+#   bash, egrep, sed, cut, sleep, readlink, lm_sensors :)
+#
+# Please send any questions, comments or success stories to
+# marius.reiner@hdev.de
+# Thanks!
+#
+# For configuration instructions and warnings please see fancontrol.txt, which
+# can be found in the doc/ directory or at the website mentioned above.
+#
+#
+#    Copyright 2003 Marius Reiner <marius.reiner@hdev.de>
+#    Copyright (C) 2007-2009 Jean Delvare <khali@linux-fr.org>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#    MA 02110-1301 USA.
+#
+#
+
+PIDFILE="/var/run/fancontrol.pid"
+
+#DEBUG=1
+MAX=255
+
+function LoadConfig
+{
+	local fcvcount fcv
+
+	echo "Loading configuration from $1 ..."
+	if [ ! -r "$1" ]
+	then
+		echo "Error: Can't read configuration file" >&2
+		exit 1
+	fi
+
+	# grep configuration from file
+	INTERVAL=`egrep '^INTERVAL=.*$' $1 | sed -e 's/INTERVAL=//g'`
+	DEVPATH=`egrep '^DEVPATH=.*$' $1 | sed -e 's/DEVPATH= *//g'`
+	DEVNAME=`egrep '^DEVNAME=.*$' $1 | sed -e 's/DEVNAME= *//g'`
+	FCTEMPS=`egrep '^FCTEMPS=.*$' $1 | sed -e 's/FCTEMPS=//g'`
+	MINTEMP=`egrep '^MINTEMP=.*$' $1 | sed -e 's/MINTEMP=//g'`
+	MAXTEMP=`egrep '^MAXTEMP=.*$' $1 | sed -e 's/MAXTEMP=//g'`
+	MINSTART=`egrep '^MINSTART=.*$' $1 | sed -e 's/MINSTART=//g'`
+	MINSTOP=`egrep '^MINSTOP=.*$' $1 | sed -e 's/MINSTOP=//g'`
+	HWMON=$( echo "$DEVPATH" | sed 's/=.*$//g')
+	FCDEVPATH=$( echo "$DEVPATH" | sed 's/^.*=//g')
+	FCMINTEMP=$MINTEMP
+	FCMAXTEMP=$MAXTEMP
+	FCMINSTART=$MINSTART
+	FCMINSTOP=$MINSTOP
+	AFCTEMP_1_LOWER=(00 39 36 41 46 55)
+	AFCTEMP_1_UPPER=(39 39 44 49 54 150)
+	AFCTEMP_2_LOWER=(00 61 65 69 73 82)
+	AFCTEMP_2_UPPER=(63 67 71 75 79 150)
+	AFCTEMP_3_LOWER=(00 51 55 59 63 71)
+	AFCTEMP_3_UPPER=(53 57 61 65 69 150)
+
+
+	FCFANS=`egrep '^FCFANS=.*$' $1 | sed -e 's/FCFANS=//g'`
+
+	FCTARGETS=`egrep '^FCTARGETS=.*$' $1 | sed -e 's/FCTARGETS=//g'`
+
+	# Check whether all mandatory settings are set
+	if [[ -z ${INTERVAL} || -z ${FCTEMPS} || -z ${MINTEMP} || -z ${MAXTEMP} || -z ${MINSTART} || -z ${MINSTOP} ]]
+	then
+		echo "Some mandatory settings missing, please check your config file!" >&2
+		exit 1
+	fi
+	if [ "$INTERVAL" -le 0 ]
+	then
+		echo "Error in configuration file:" >&2
+		echo "INTERVAL must be at least 1" >&2
+		exit 1
+	fi
+
+	# write settings to arrays for easier use and print them
+	echo
+	echo "Common settings:"
+	
+	temp_string=$FCTEMPS
+	
+	let fcvcount=0
+	for fcv in $FCTEMPS
+	do
+		fcvcount=$((fcvcount+1))
+		AFCTEMP[$fcvcount]=$( echo "$temp_string" | cut -d" " -f $fcvcount )
+		AFCTEMP[$fcvcount]=$( echo "${AFCTEMP[$fcvcount]}" | sed 's/hwmon1/\/sys\/bus\/i2c\/devices/g' )
+		AFCTEMP_PATH[$fcvcount]=$( echo "${AFCTEMP[$fcvcount]}" | sed 's/hwmon1/\/sys\/bus\/i2c\/devices/g' )
+        	AFCTEMP[$fcvcount]=$( cat ${AFCTEMP[$fcvcount]} )
+		AFCTEMP[$fcvcount]=$(( AFCTEMP[$fcvcount]/1000 ))
+	done
+
+	fan_string=$FCFANS
+	fcvcount=0
+	for fcv in $FCFANS
+	do
+		fcvcount=$((fcvcount+1))
+		AFCFAN[$fcvcount]=$( echo "$fan_string" | cut -d" " -f $fcvcount )
+		AFCFAN_PATH[$fcvcount]=$( echo "${AFCFAN[$fcvcount]}" | sed 's/hwmon1/\/sys\/bus\/i2c\/devices/g' )
+		AFCFAN[$fcvcount]=$( cat ${AFCFAN_PATH[$fcvcount]} )
+	done
+
+	target_string=$FCTARGETS
+	fcvcount=0
+	for fcv in $FCTARGETS
+	do
+		fcvcount=$((fcvcount+1))
+		AFCTARGET[$fcvcount]=$( echo "$target_string" | cut -d" " -f $fcvcount )
+		AFCFAN_TARGET[$fcvcount]=$( echo "${AFCTARGET[$fcvcount]}" | sed 's/hwmon1/\/sys\/bus\/i2c\/devices/g' )
+	done
+
+}
+
+# Check that all referenced sysfs files exist
+function CheckFiles
+{
+	local outdated=0 fcvcount tsen fan
+	if [ $outdated -eq 1 ]
+	then
+		echo >&2
+		echo "At least one referenced file is missing. Either some required kernel" >&2
+		echo "modules haven't been loaded, or your configuration file is outdated." >&2
+		echo "In the latter case, you should run pwmconfig again." >&2
+	fi
+	return $outdated
+}
+
+LoadConfig $1
+
+# Detect path to sensors
+if [ ! -d $DIR ]
+then
+	echo $0: 'No sensors found! (did you load the necessary modules?)' >&2
+	exit 1
+fi
+cd $DIR
+
+# Check for configuration change
+if [ "$DIR" != "/" ] && [ -z "$DEVPATH" -o -z "$DEVNAME" ]
+then
+	echo "Configuration is too old, please run pwmconfig again" >&2
+	exit 1
+fi
+if [ "$DIR" = "/" -a -n "$DEVPATH" ]
+then
+	echo "Unneeded DEVPATH with absolute device paths" >&2
+	exit 1
+fi
+CheckFiles || exit 1
+
+if [ -f "$PIDFILE" ]
+then
+	echo "File $PIDFILE exists, is fancontrol already running?" >&2
+	exit 1
+fi
+echo $$ > "$PIDFILE"
+
+# main function
+function UpdateThermalSensors
+{
+	fcvcount=0
+	for fcv in $FCTEMPS
+	do
+		fcvcount=$((fcvcount+1))
+        	AFCTEMP[$fcvcount]=$( cat ${AFCTEMP_PATH[$fcvcount]} )
+		AFCTEMP[$fcvcount]=$(( AFCTEMP[$fcvcount]/1000 ))
+	done
+}
+
+function UpdateThermalLevel
+{
+	AFCTEMP_NUM=$((6-${AFCTEMP_LEVEL[$i]}))
+ 	AFCTEMP_UPPER_BUF=AFCTEMP_"$i"_UPPER["$AFCTEMP_NUM"]
+ 	AFCTEMP_LOWER_BUF=AFCTEMP_"$i"_LOWER["$AFCTEMP_NUM"]
+
+	AFCTEMP_UPPER=${!AFCTEMP_UPPER_BUF}
+ 	AFCTEMP_LOWER=${!AFCTEMP_LOWER_BUF}
+
+
+	if (( ("${AFCTEMP[$i]}" <= "$AFCTEMP_UPPER") && ("${AFCTEMP[$i]}" >= "$AFCTEMP_LOWER") )) ; then 
+	    FLAG=2
+	elif (( "${AFCTEMP[$i]}" > "$AFCTEMP_UPPER" )); then 
+	    AFCTEMP_LEVEL[$i]=$((${AFCTEMP_LEVEL[$i]} - 1))
+	    FLAG=1
+	elif (( "${AFCTEMP[$i]}" < "$AFCTEMP_LOWER" )); then     
+		AFCTEMP_LEVEL[$i]=$((${AFCTEMP_LEVEL[$i]} + 1))
+		FLAG=1
+	else
+		AFCTEMP_LEVEL[$i]=1
+		FLAG=2
+	fi
+}
+
+function UpdateFanSpeeds
+{
+	#echo "num tmp lev  F   L   H"
+	#Update level
+	for i in 1 2 3
+	do
+		#echo "----------------------"
+		FLAG=0
+		#FLAG=0 : initial flag
+		#FLAG=1 : update level
+		#FLAG=2 : final level
+		while [ $FLAG -ne 2 ]
+		do
+			UpdateThermalLevel
+			#echo " $i  ${AFCTEMP[$i]}   ${AFCTEMP_LEVEL[$i]}   $FLAG  $AFCTEMP_LOWER  $AFCTEMP_UPPER "
+		done
+	done
+
+	min=${AFCTEMP_LEVEL[0]}
+	for j in "${AFCTEMP_LEVEL[@]}"; do
+	  (( j < min )) && min=$j
+	done
+
+	if (($min == 1 || $min == 2)); then 
+    	FAN_PERCENTAGE=100
+	elif (($min == 3)); then 
+	    FAN_PERCENTAGE=80
+	elif (($min == 4)); then
+	    FAN_PERCENTAGE=60
+	elif (($min == 5)); then
+	    FAN_PERCENTAGE=40
+	elif (($min == 6)); then
+	    FAN_PERCENTAGE=30
+	else
+	    FAN_PERCENTAGE=100
+	fi
+	echo "The lowest level of thermal sensors: $min "
+	echo "Trying to set fan speed to $FAN_PERCENTAGE %"
+	#Set speed to fan1~fan10
+	FAN_PERCENTAGE=`expr $FAN_PERCENTAGE \* 255 / 100`
+	let fcvcount=0
+	for fcv in $FCFANS
+	do
+		fcvcount=$(( fcvcount + 1 ))
+		echo  $FAN_PERCENTAGE > ${AFCFAN_TARGET[$fcvcount]} 
+		AFCFAN[$fcvcount]=$( cat ${AFCFAN_PATH[$fcvcount]} )
+
+		echo "FAN fan$fcvcount = ${AFCFAN[$fcvcount]} (rpm)"
+	done
+
+	rm -f "$PIDFILE"
+}
+
+# main loop calling the main function at specified intervals
+AFCTEMP_LEVEL=(9 4 4 4) #inttial level
+while true
+do
+	UpdateThermalSensors
+	UpdateFanSpeeds
+	echo "Sleep $INTERVAL seconds ..."
+	echo
+	# Sleep while still handling signals
+	sleep $INTERVAL &
+	wait $!
+done

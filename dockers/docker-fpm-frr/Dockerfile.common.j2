@@ -1,0 +1,21 @@
+{# Dockerfile.common.j2 — shared FRR Dockerfile fragment
+   Used by docker-sonic-vs via _INCLUDE_DOCKER / --build-context.
+   Variables:
+     copy_from  — (optional) build-context name for COPY --from=<name>
+#}
+{% set _from = "--from=" + copy_from + " " if copy_from is defined else "" %}
+
+# FRR configuration templates
+COPY {{ _from }}["frr", "/usr/share/sonic/templates"]
+
+# FRR scripts
+COPY {{ _from }}["TSA", "/usr/bin/TSA"]
+COPY {{ _from }}["TSB", "/usr/bin/TSB"]
+COPY {{ _from }}["TSC", "/usr/bin/TSC"]
+COPY {{ _from }}["TS", "/usr/bin/TS"]
+COPY {{ _from }}["zsocket.sh", "/usr/bin/"]
+COPY {{ _from }}["vtysh.conf", "/etc/frr/"]
+RUN chmod a+x /usr/bin/TSA && \
+    chmod a+x /usr/bin/TSB && \
+    chmod a+x /usr/bin/TSC && \
+    chmod a+x /usr/bin/zsocket.sh

@@ -1,0 +1,16 @@
+[Unit]
+Description=Update banner config based on configdb
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=database.service
+BindsTo=sonic.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/bin/banner-config.sh
+
+[Install]
+WantedBy=sonic.target
+
+

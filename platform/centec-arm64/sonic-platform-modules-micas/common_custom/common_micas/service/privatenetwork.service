@@ -1,0 +1,13 @@
+[Unit]
+Description=Update interfaces configuration for adding eth0 private subnetwork
+After=network.target m2-w6010-48gt4x_platform.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/privatenetwork.py start
+ExecStop=/usr/local/bin/privatenetwork.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

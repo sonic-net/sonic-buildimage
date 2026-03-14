@@ -1,0 +1,42 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_PRE_NAME := sonic-platform-ingrasys
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= s9100  s8900-64xc s8900-54xc s8810-32q s9200-64x
+MODULE_DIR := modules
+UTILS_DIR := utils
+SERVICE_DIR := service
+CONF_DIR := conf
+
+%:
+	dh $@ --with systemd
+
+override_dh_auto_build:
+	(for mod in $(MODULE_DIRS); do \
+		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+	done)
+
+override_dh_auto_install:
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} \
+			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko \
+			debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/sbin; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/*.sh \
+			debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/sbin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
+			debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system; \
+	done)
+
+override_dh_clean:
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+	done)
+

@@ -1,0 +1,5 @@
+{
+    "DHCP_SERVER_POSITIVE_CONFIG": {
+        "desc": "Configure DHCP_SERVER POSITIVE_CONFIGs."
+    }
+}

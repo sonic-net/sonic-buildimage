@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "7215 IXS-T1": {
+            "component": {
+                "U-Boot": { },
+                "System-CPLD": { }
+            }
+        }
+    }
+}

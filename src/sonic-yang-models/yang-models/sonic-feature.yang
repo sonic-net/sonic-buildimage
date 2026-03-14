@@ -1,0 +1,123 @@
+module sonic-feature{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-feature";
+    prefix feature;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Feature Table yang Module for SONiC";
+
+    typedef feature-state {
+        description "configuration to set the feature running state";
+        type string;
+    }
+
+    typedef feature-owner {
+        description "configuration to set if the container is controlled
+                     by kubernetes or locally";
+        type string {
+            pattern "kube|local";
+        }
+    }
+
+    typedef feature-scope-status {
+        description "configuration to set the feature has asic scope as true/false";
+        type string;
+    }
+
+    typedef feature-delay-status {
+        description "configuration to set the feature has delay scope as True/False";
+        type string;
+    }
+
+    container sonic-feature {
+
+        container FEATURE {
+
+            description "feature table in config_db.json";
+
+            list FEATURE_LIST {
+
+                key "name";
+
+                leaf name {
+                    description "feature name in Feature table";
+                    type string {
+                        length 1..32;
+                    }
+                }
+
+                leaf state {
+                    description "state of the feature";
+                    type feature-state;
+                    default "enabled";
+                }
+
+                leaf auto_restart {
+                    type feature-state;
+                    default "enabled";
+                }
+
+                leaf delayed {
+                    description "This configuration identicates if the feature needs to be delayed until
+                                 system initialization";
+                    type feature-delay-status;
+                    default "false";
+                }
+
+                leaf has_global_scope {
+                    description "This configuration identicates there will only one service
+                                spawned for the device";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_asic_scope {
+                    description "This configuration identicates there will only one service
+                                spawned per asic";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_dpu_scope {
+                    description "This configuration identicates there will only one service
+                                spawned per DPU";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf high_mem_alert {
+                    description "This configuration controls the trigger to generate
+                                alert on high memory utilization";
+                    type feature-state;
+                    default "disabled";
+                }
+
+                leaf set_owner {
+                    description " This configuration set the feature owner is
+                                kubernetes or local";
+                    type feature-owner;
+                    default "local";
+                }
+
+                leaf check_up_status {
+                    description "This configuration controls the system ready tool to check
+                        the app ready/up status";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf support_syslog_rate_limit {
+                    description "This configuration indicates the feature support configuring
+                                 syslog rate limit";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+            }
+        }
+    }
+}

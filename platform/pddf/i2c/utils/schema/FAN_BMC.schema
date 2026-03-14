@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "FAN": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type"
+          ]
+        },
+        "bmc": {
+          "type": "object",
+          "properties": {
+            "ipmitool": {
+              "type": "object",
+              "properties": {
+                "attr_list": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "attr_list"
+              ]
+            }
+          },
+          "required": [
+            "ipmitool"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "bmc"
+      ]
+    }
+  },
+  "required": [
+    "FAN"
+  ]
+}

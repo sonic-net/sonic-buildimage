@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS5712-54X Platform Monitoring service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as5712_util.py install
+ExecStart=/usr/local/bin/accton_as5712_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

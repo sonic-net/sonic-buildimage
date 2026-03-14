@@ -1,0 +1,547 @@
+#!/bin/bash
+###########################################################################
+# Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc.    #
+# and/or its subsidiaries.                                                #
+#                                                                         #
+# Licensed under the Apache License, Version 2.0 (the "License");         #
+# you may not use this file except in compliance with the License.        #
+# You may obtain a copy of the License at                                 #
+#                                                                         #
+#   http://www.apache.org/licenses/LICENSE-2.0                            #
+#                                                                         #
+# Unless required by applicable law or agreed to in writing, software     #
+# distributed under the License is distributed on an "AS IS" BASIS,       #
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.#
+# See the License for the specific language governing permissions and     #
+# limitations under the License.                                          #
+#                                                                         #
+###########################################################################
+# SONiC Configuration Setup                                               #
+#                                                                         #
+# This script is used to initialize configuration used                    #
+# by SONiC SWSS. It also performs configuration                           #
+# migration.                                                              #
+#                                                                         #
+###########################################################################
+
+# Initialize constants
+INIT_CFG_JSON=/etc/sonic/init_cfg.json
+CONFIG_DB_JSON=/etc/sonic/config_db.json
+CONFIG_DB_PATH=/etc/sonic/
+CONFIG_DB_PREFIX=config_db
+CONFIG_DB_SUFFIX=.json
+MINGRAPH_FILE=/etc/sonic/minigraph.xml
+TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
+FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
+CONFIG_PRE_MIGRATION_HOOKS=/etc/config-setup/config-migration-pre-hooks.d
+CONFIG_POST_MIGRATION_HOOKS=/etc/config-setup/config-migration-post-hooks.d
+CONFIG_SETUP_VAR_DIR=/var/lib/config-setup
+CONFIG_SETUP_PRE_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_pre_migration
+CONFIG_SETUP_POST_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_post_migration
+CONFIG_SETUP_INITIALIZATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_initialization
+CONFIG_SETUP_CONF=/etc/config-setup/config-setup.conf
+
+TACACS_JSON_BACKUP=tacacs.json
+
+# Command usage and help
+usage()
+{
+    cat << EOF
+ Usage:  config-setup < backup | boot | factory >
+
+         backup  - Take a backup copy of SONiC configuration.
+         boot    - Initialize/migrate SONiC configuration during system boot.
+         factory - Create factory default SONiC configuration and save it to
+                   to ${CONFIG_DB_JSON}.
+EOF
+}
+
+# Factory command usage and help
+usage_factory()
+{
+    cat << EOF
+ Usage:  config-setup factory < keep-basic >
+
+         Create factory default configuration and save it to
+         to ${CONFIG_DB_JSON}.
+
+         keep-basic  - Preserves basic configurations only.
+EOF
+}
+
+# run given script
+run_hook() {
+    local script="$1"
+    local script_param="$2"
+    local exit_status=0
+
+    if [ -f $script ]; then
+        # Check hook for syntactical correctness before executing it
+        /bin/bash -n $script $script_param
+        exit_status=$?
+        if [ "$exit_status" -eq 0 ]; then
+            . $script $script_param
+        fi
+        exit_status=$?
+    fi
+
+    if [ -n "$exit_status" ] && [ "$exit_status" -ne 0 ]; then
+        echo "$script returned non-zero exit status $exit_status"
+    fi
+
+    return $exit_status
+}
+
+# run scripts in given directory
+run_hookdir() {
+    local dir="$1"
+    local progress_file="$2"
+    local script_param="$3"
+    local exit_status=0
+
+    if [ -d "$dir" ]; then
+        if [ -n $progress_file ]; then
+            [ ! -d  $(dirname $progress_file) ] && mkdir -p $(dirname $progress_file)
+            [ ! -e $progress_file  ] &&  run-parts --list $dir > $progress_file
+            SCRIPT_LIST=$(cat $progress_file)
+        else
+            SCRIPT_LIST=$(run-parts --list $dir)
+        fi
+
+        for script in $SCRIPT_LIST; do
+            run_hook $script $script_param
+            exit_status=$((exit_status|$?))
+            script_name=$(basename $script)
+            sed -i "/$script_name/d" $progress_file
+        done
+        [ -n $progress_file ] && [ "$(cat ${progress_file})" = "" ] && rm -f ${progress_file}
+    fi
+
+    return $exit_status
+}
+
+# Reload minigraph.xml file on disk
+reload_minigraph()
+{
+    echo "Reloading minigraph..."
+    if [ -f /etc/sonic/golden_config_db.json ]; then
+        config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json'
+    else
+        config load_minigraph -y -n
+    fi
+    config save -y
+}
+
+# Apply tacacs config
+apply_tacacs()
+{
+    if [ -r /etc/sonic/old_config/${TACACS_JSON_BACKUP} ]; then
+        sonic-cfggen -j /etc/sonic/old_config/${TACACS_JSON_BACKUP} --write-to-db
+        echo "Applied tacacs json to restore tacacs credentials"
+        config save -y
+
+        # Change tacacs config file name, so tacacs config will not be revert when device reboot.
+        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
+    else
+        echo "Missing tacacs json to restore tacacs credentials"
+    fi
+}
+
+# Reload existing config db file on disk
+# Usage: reload_configdb <config_file>
+reload_configdb()
+{
+    CONFIG_FILE=${1}
+
+    echo "Reloading existing config db..."
+    config reload ${CONFIG_FILE} -y -n
+}
+
+# Restore SONiC configuration from a backup copy
+copy_config_files_and_directories()
+{
+    for file_dir in $@; do
+        if [ -f /etc/sonic/old_config/${file_dir} ] || [ -d /etc/sonic/old_config/${file_dir} ]; then
+            echo "Copying SONiC configuration ${file_dir} ..."
+            cp -ar /etc/sonic/old_config/${file_dir} /etc/sonic/
+        else
+            echo "Missing SONiC configuration ${file_dir} ..."
+        fi
+    done
+}
+
+# Check if SONiC switch has booted after a warm reboot request.
+# Prefers STATE_DB when available (reflects true warm boot state and
+# gets cleared after warm boot completes). Falls back to /proc/cmdline
+# only during the "boot" command when database services may not be up yet.
+check_system_warm_boot()
+{
+    WARM_BOOT="false"
+
+    # Try STATE_DB first — authoritative source that reflects current
+    # warm boot state and is cleared after warm boot completes.
+    SYSTEM_WARM_START=$(sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable)
+    DB_RC=$?
+
+    if [ $DB_RC -eq 0 ]; then
+        # DB is reachable — use its answer exclusively
+        if [[ x"$SYSTEM_WARM_START" == x"true" ]]; then
+            WARM_BOOT="true"
+        fi
+        return
+    fi
+
+    # DB not available — fall back to /proc/cmdline only during boot,
+    # when database services may not have started yet.
+    # Outside of boot context, /proc/cmdline may contain a stale
+    # SONIC_BOOT_TYPE=warm from a previous warm reboot.
+    if [ "$CMD" = "boot" ]; then
+        case "$(cat /proc/cmdline)" in
+        *SONIC_BOOT_TYPE=warm*)
+            WARM_BOOT="true"
+            ;;
+        esac
+    fi
+}
+
+# Check if Zero Touch Provisioning is available and is administratively enabled
+ztp_is_enabled()
+{
+    rv=1
+    if [ -e /usr/bin/ztp ]; then
+        status=$(ztp status -c)
+        [ "$status" != "0:DISABLED" ] && [ "$status" != "" ] && rv=0
+    fi
+    return $rv
+}
+
+# Generate requested SONiC configuration and save it as destination file
+# Usage: generate_config < factory | ztp > <destination_file>
+#
+#        factory - Create factory default configuration
+#        ztp - Create Zero Touch Provisioning Configuration
+#              used for provisioning data discovery.
+#
+generate_config()
+{
+    # Collect all information needed to generate configuration
+    PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+    PRESET=(`head -n 1 /usr/share/sonic/device/$PLATFORM/default_sku`)
+    HW_KEY=${PRESET[0]}
+    DEFAULT_PRESET=${PRESET[1]}
+
+    # Parse arguments passed
+    CONFIG_TYPE=$1
+    DEST_FILE=$2
+
+    if [ "$1" = "ztp" ]; then
+        /usr/lib/ztp/ztp-profile.sh create ${DEST_FILE}
+    elif [ "$1" = "factory" ]; then
+        FACTORY_TYPE=$3
+        rv=1
+
+        if [ "$FACTORY_TYPE" = "keep-basic" ]; then
+            TMP_FILE="/tmp/tmp_keep_basic.$$.json"
+            # Verify the DEST_FILE exists and KEEP_BASIC_TABLES was defined in CONFIG_SETUP_CONF
+            if [ ! -f ${DEST_FILE} ] || [ -z "${KEEP_BASIC_TABLES}" ]; then
+                # Create empty valid json file
+                echo {} > ${TMP_FILE}
+            else
+                # Create filtered json file with keep-basic tables only
+                jq 'with_entries(select([.key] | inside($tables)))' --argjson tables "$KEEP_BASIC_TABLES" ${DEST_FILE} > ${TMP_FILE}
+            fi
+            # Create factory default
+            sonic-cfggen -H -k ${HW_KEY} --preset ${DEFAULT_PRESET}  > ${DEST_FILE}
+            rv=$?
+            if [ $rv -ne 0 ]; then
+                rm -f ${TMP_FILE}
+                return $rv
+            fi
+            # Merge factory default config with filtered json
+            jq --indent 4 -s '.[0] * .[1]' ${DEST_FILE} ${TMP_FILE} > tmp.$$.json && mv tmp.$$.json ${DEST_FILE}
+            rm -f ${TMP_FILE}
+        fi
+
+        # Execute config initialization hooks
+        run_hookdir ${FACTORY_DEFAULT_HOOKS} ${CONFIG_SETUP_INITIALIZATION_FLAG} ${FACTORY_TYPE}
+
+        # Use preset defined in default_sku
+        if [ ! -e ${DEST_FILE} ]; then
+            sonic-cfggen -H -k ${HW_KEY} --preset ${DEFAULT_PRESET} > ${DEST_FILE}
+            rv=$?
+            if [ $rv -ne 0 ]; then
+                return $rv
+            fi
+        fi
+    fi
+    return 0
+}
+
+# Create SONiC configuration for first time bootup
+#  - If minigraph.xml is available, use it to generate configuration
+#  - If ZTP is enabled and no minigraph, ZTP configuration is created
+#  - If ZTP is disabled and no minigraph, factory default configuration
+#    is created
+do_config_initialization()
+{
+    # If minigraph.xml is available, prefer it over ZTP/factory default.
+    # This avoids ZTP triggering a config reload that removes management IP
+    # when the device has a valid minigraph but no config_db.json
+    # (e.g., during upgrade path tests).
+    if [ -r ${MINGRAPH_FILE} ]; then
+        echo "No config_db.json found but minigraph.xml is available, using minigraph..."
+        reload_minigraph
+        rm -f /tmp/pending_config_initialization
+        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        return 0
+    fi
+
+    if ! ztp_is_enabled ; then
+        echo "No configuration detected, generating factory default configuration..."
+        generate_config factory ${CONFIG_DB_JSON}
+        reload_configdb ${CONFIG_DB_JSON}
+    fi
+
+    if  ztp_is_enabled ; then
+        echo "No configuration detected, initiating zero touch provisioning..."
+        generate_config ztp ${TMP_ZTP_CONFIG_DB_JSON}
+        reload_configdb ${TMP_ZTP_CONFIG_DB_JSON}
+        rm -f ${TMP_ZTP_CONFIG_DB_JSON}
+    fi
+
+    rm -f /tmp/pending_config_initialization
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+}
+
+# Restore config-setup post migration hooks from a backup copy
+copy_post_migration_hooks()
+{
+    BACKUP_DIR=/etc/sonic/old_config/config-migration-post-hooks.d
+    if [ -d ${BACKUP_DIR} ]; then
+        [ -d ${CONFIG_POST_MIGRATION_HOOKS} ] || mkdir -p ${CONFIG_POST_MIGRATION_HOOKS}
+        for hook in $(ls -1 ${BACKUP_DIR}) ; do
+            if [ ! -e ${CONFIG_POST_MIGRATION_HOOKS}/$hook ]; then
+                cp -ar ${BACKUP_DIR}/$hook ${CONFIG_POST_MIGRATION_HOOKS}
+            fi
+        done
+    fi
+}
+
+# Get the list of config db for both
+# single and multi-npu platforms
+get_config_db_file_list()
+{
+    config_db_file_list=${CONFIG_DB_PREFIX}${CONFIG_DB_SUFFIX}
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
+        config_db_file_list+=' '${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX}
+        ((asic_num = asic_num + 1))
+    done
+
+    echo $config_db_file_list
+}
+
+# Check if all needed config db are present for both
+# single and multi-npu platforms
+check_all_config_db_present()
+{
+    if [[ ! -r ${CONFIG_DB_JSON} ]]; then
+       return 1
+    fi
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 1) ]]; do
+        if [[ ! -r ${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}$asic_num${CONFIG_DB_SUFFIX} ]]; then
+            return 1
+        fi
+        ((asic_num = asic_num + 1))
+    done
+
+    return 0   
+}
+
+# DB schema is subject to change between two images
+# Perform DB schema migration after loading backup config/minigraph from previous image
+do_db_migration()
+{
+    if [[ -x /usr/local/bin/db_migrator.py ]]; then
+        # Migrate the DB to the latest schema version if needed
+        /usr/local/bin/db_migrator.py -o migrate
+    fi
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+
+    #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
+       tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+       sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+       OP_CODE=$?
+
+       if [ $OP_CODE -ne 0 ]; then
+         err_msg="Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled."
+         echo "$err_msg"
+         logger -t CHASSIS_APP_DB -p user.info "$err_msg"
+       fi
+    fi
+}
+
+# Perform configuration migration from backup copy.
+#  - This step is performed when a new image is installed and SONiC switch boots into it
+do_config_migration()
+{
+    # Identify list of files to migrate
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry golden_config_db.json"
+
+    # Migrate all configuration files from old to new
+    copy_config_files_and_directories $copy_list
+    
+    # Migrate all config_db from old to new
+    copy_config_files_and_directories $(get_config_db_file_list)
+
+    # Migrate post-migration hooks
+    copy_post_migration_hooks
+
+    # Execute custom hooks if present
+    run_hookdir ${CONFIG_POST_MIGRATION_HOOKS} ${CONFIG_SETUP_POST_MIGRATION_FLAG}
+
+    if [ x"${WARM_BOOT}" == x"true" ]; then
+        echo "Warm reboot detected..."
+        do_db_migration
+        rm -f /tmp/pending_config_migration
+        exit 0
+    elif check_all_config_db_present; then
+        echo "Use config_db.json from old system..."
+        reload_configdb
+        do_db_migration
+    elif [ -r ${MINGRAPH_FILE} ]; then
+        echo "Use minigraph.xml from old system..."
+        reload_minigraph
+        do_db_migration
+    else
+        echo "Didn't found neither config_db.json nor minigraph.xml ..."
+    fi
+
+    rm -f /tmp/pending_config_migration
+}
+
+# Take a backup of current SONiC configuration
+do_config_backup()
+{
+    echo "Taking backup of current configuration"
+    rm -rf /host/old_config
+    cp -ar /etc/sonic /host/old_config
+    [ -d ${CONFIG_POST_MIGRATION_HOOKS} ] && cp -arL ${CONFIG_POST_MIGRATION_HOOKS} /host/old_config
+
+    # Execute custom hooks if present
+    run_hookdir ${CONFIG_PRE_MIGRATION_HOOKS} ${CONFIG_SETUP_PRE_MIGRATION_FLAG}
+}
+
+# Process switch bootup event
+#  - Check if it is warm boot and take no further action
+#  - Perform configuration migration if requested
+#  - Perform configuration initialization if requested
+#  - If no saved SONiC configuration is found and ZTP is enabled,
+#    start ZTP
+boot_config()
+{
+    check_system_warm_boot
+    if [ -e /tmp/pending_config_migration ] || [ -e  ${CONFIG_SETUP_POST_MIGRATION_FLAG} ]; then
+        do_config_migration
+    fi
+
+    # During warm boot the existing configuration must be preserved.
+    # Never run config initialization or ZTP — doing so would generate
+    # a new config and trigger config reload, wiping management IP.
+    if [ x"${WARM_BOOT}" == x"true" ]; then
+        echo "Warm boot detected, skipping config initialization and ZTP."
+        # Mark config as initialized so subsequent boots don't re-trigger
+        # initialization unnecessarily (warm-reboot to new image scenario).
+        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        rm -f /tmp/pending_config_initialization
+        return 0
+    fi
+
+    # For multi-npu platfrom we don't support config initialization. Assumption
+    # is there should be existing minigraph or config_db from previous image
+    # file system to trigger. pending_config_initialization will remain set
+    # for multi-npu platforms if we reach this case.
+    if [[ ($NUM_ASIC -gt 1) ]]; then
+        return 0
+    fi	
+
+    if [ -e /tmp/pending_config_initialization ] || [ -e  ${CONFIG_SETUP_INITIALIZATION_FLAG} ]; then
+        do_config_initialization
+    fi
+
+    # If no startup configuration is found, create a configuration to be used.
+    # do_config_initialization() will prefer minigraph.xml if available,
+    # falling back to ZTP or factory default only when no minigraph exists.
+    if [ ! -e ${CONFIG_DB_JSON} ]; then
+        do_config_initialization
+        # force ZTP to restart (only relevant when ZTP was actually used,
+        # i.e., when minigraph.xml was not available)
+        if [ ! -e ${MINGRAPH_FILE} ] && ztp_is_enabled ; then
+            ztp_status=$(ztp status -c)
+            if [ "$ztp_status" = "5:SUCCESS" ] || \
+          [ "$ztp_status" = "6:FAILED" ]; then
+                # Clear completed ztp information, before starting a new one
+                ztp erase -y
+            else
+                touch /tmp/pending_ztp_restart
+            fi
+        fi
+    fi
+}
+
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+
+# read config-setup.conf
+[ -f $CONFIG_SETUP_CONF ] && . $CONFIG_SETUP_CONF
+
+### Execution starts here ###
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+# Parse the device specific asic conf file, if it exists
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+if [[ -f "$ASIC_CONF" ]]; then
+    source $ASIC_CONF
+fi
+
+PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
+    source $PLATFORM_ENV_CONF_FILE
+fi
+
+CMD=$1
+# Default command is boot
+if [ "$CMD" = "" ] || [ "$CMD" = "help" ] || \
+   [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
+    usage
+    exit 1
+fi
+
+# Process switch bootup event
+if [ "$CMD" = "boot" ]; then
+    boot_config
+fi
+
+# Process factory default configuration creation request
+if [ "$CMD" = "factory" ]; then
+    FACTORY_TYPE=$2
+    if [ "$FACTORY_TYPE" = "help" ] || [ "$FACTORY_TYPE" = "-h" ] || \
+       [ "$FACTORY_TYPE" = "--help" ]; then
+        usage_factory
+        exit 1
+    fi
+    generate_config factory ${CONFIG_DB_JSON} ${FACTORY_TYPE}
+fi
+
+# Take a backup of current configuration
+if [ "$CMD" = "backup" ]; then
+    do_config_backup
+fi
+
+# Apply tacacs from old configuration
+if [ "$CMD" = "apply_tacacs" ]; then
+    apply_tacacs
+fi
+
+exit 0

@@ -1,0 +1,31 @@
+From ea32c62f6a644037b7e6fdef760372a57f5ef809 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 14 Aug 2025 07:18:58 +0000
+Subject: zebra: Add missing debug guard in rt netlink code
+
+Guard a debug in the rt netlink code.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 50d1fc07d1..134f023f1a 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1523,8 +1523,9 @@ int netlink_route_change(struct nlmsghdr *h, ns_id_t ns_id, int startup)
+ 
+ 	if (!(h->nlmsg_type == RTM_NEWROUTE || h->nlmsg_type == RTM_DELROUTE)) {
+ 		/* If this is not route add/delete message print warning. */
+-		zlog_debug("Kernel message: %s NS %u",
+-			   nl_msg_type_to_str(h->nlmsg_type), ns_id);
++		if (IS_ZEBRA_DEBUG_KERNEL)
++			zlog_debug("Kernel message: %s NS %u", nl_msg_type_to_str(h->nlmsg_type),
++				   ns_id);
+ 		return 0;
+ 	}
+ 
+-- 
+2.48.1
+

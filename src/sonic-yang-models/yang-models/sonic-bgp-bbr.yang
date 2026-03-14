@@ -1,0 +1,41 @@
+module sonic-bgp-bbr {
+    namespace "http://github.com/sonic-net/sonic-bgp-bbr";
+    prefix bgpbbr;
+    yang-version 1.1;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP BBR";
+
+    revision 2023-12-25 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-bbr {
+        container BGP_BBR {
+
+            description "BGP_BBR table part of config_db.json";
+
+            container all {
+                leaf status {
+                    type stypes:admin_mode;
+                    default enabled;
+                    description "bgp bbr status";
+                }
+            }
+            /* end of container all */
+        }
+        /* end of container BGP_BBR */
+    }
+    /* end of container sonic-bgp-bbr */
+}

@@ -1,0 +1,33 @@
+From 09af7e3106720c871cdbadff9f661685aa1bdb16 Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Tue, 3 Mar 2020 12:54:09 -0800
+Subject: [PATCH] Skip setting the same hwaddr to lag port to avoid disrupting
+
+---
+ teamd/teamd.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+index dc46a62..bf42347 100644
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -834,7 +834,15 @@ static int teamd_set_hwaddr(struct teamd_context *ctx)
+ 		err = -EINVAL;
+ 		goto free_hwaddr;
+ 	}
+-	err = team_hwaddr_set(ctx->th, ctx->ifindex, hwaddr, hwaddr_len);
++
++	if(!memcmp(hwaddr, ctx->hwaddr, hwaddr_len)) {
++		err = 0;
++		teamd_log_dbg(ctx, "Skip setting same hwaddr string: \"%s\".", hwaddr_str);
++	}
++	else{
++		err = team_hwaddr_set(ctx->th, ctx->ifindex, hwaddr, hwaddr_len);
++	}
++
+ 	if (!err)
+ 		ctx->hwaddr_explicit = true;
+ free_hwaddr:
+-- 
+2.17.1.windows.2
+

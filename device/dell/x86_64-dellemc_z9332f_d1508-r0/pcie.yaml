@@ -1,0 +1,28 @@
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 6f08
+  name: 'PCI bridge: Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI
+    Express Root Port 3 (rev 03)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: 8c10
+  name: 'PCI bridge: Intel Corporation 8 Series/C220 Series Chipset Family PCI Express
+    Root Port #1 (rev d5)'
+- bus: '00'
+  dev: 1f
+  fn: '2'
+  id: 8c02
+  name: 'SATA controller: Intel Corporation 8 Series/C220 Series Chipset Family 6-port
+    SATA Controller 1 [AHCI mode] (rev 05)'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: b980
+  name: 'Ethernet controller: Broadcom Limited Device b980 (rev 11)'
+- bus: 09
+  dev: '00'
+  fn: '0'
+  id: '7021'
+  name: 'Memory controller: Xilinx Corporation Device 7021'

@@ -1,0 +1,294 @@
+{
+	"test-vlan:test-vlan": {
+		"test-vlan:VLAN_INTERFACE": {
+			"VLAN_INTERFACE_LIST": [{
+					"vlanid": 111,
+					"ip-prefix": "2000:f500:45:6709::1/64",
+					"scope": "global",
+					"family": "IPv6"
+				},
+				{
+					"vlanid": 111,
+					"ip-prefix": "10.1.1.65/26",
+					"scope": "global",
+					"family": "IPv4"
+				},
+				{
+					"vlanid": 111,
+					"ip-prefix": "fe80::1/10",
+					"scope": "local",
+					"family": "IPv6"
+				},
+				{
+					"vlanid": 555,
+					"ip-prefix": "2000:f500:41:4e9::1/64",
+					"scope": "global",
+					"family": "IPv6"
+				},
+				{
+					"vlanid": 555,
+					"ip-prefix": "10.1.5.65/26",
+					"scope": "global",
+					"family": "IPv4"
+				},
+				{
+					"vlanid": 555,
+					"ip-prefix": "fe80::1/10",
+					"scope": "local",
+					"family": "IPv6"
+				}
+			]
+		},
+
+		"test-vlan:VLAN": {
+			"VLAN_LIST": [{
+					"vlanid": 111,
+					"description": "server_vlan",
+					"dhcp_servers": [
+						"10.1.7.116"
+					],
+					"mtu": "9216",
+					"admin_status": "up"
+				},
+				{
+					"vlanid": 555,
+					"description": "ipmi_vlan",
+					"dhcp_servers": [
+						"10.1.7.116"
+					],
+					"mtu": "9216",
+					"admin_status": "up"
+				}
+			]
+		},
+
+		"test-vlan:VLAN_MEMBER": {
+			"VLAN_MEMBER_LIST": [{
+					"vlanid": 111,
+					"port": "Ethernet0",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet1",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet2",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet3",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet4",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet5",
+					"tagging_mode": "tagged"
+				},
+				{
+					"vlanid": 111,
+					"port": "Ethernet6",
+					"tagging_mode": "tagged"
+				}
+			]
+		}
+	},
+	"test-port:test-port": {
+		"test-port:PORT": {
+			"PORT_LIST": [{
+					"port_name": "Ethernet0",
+					"alias": "eth0",
+					"description": "Ethernet0",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet1",
+					"alias": "eth1",
+					"description": "Ethernet1",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet2",
+					"alias": "eth2",
+					"description": "Ethernet2",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet3",
+					"alias": "eth2",
+					"description": "Ethernet3",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet4",
+					"alias": "eth4",
+					"description": "Ethernet4",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet5",
+					"alias": "eth5",
+					"description": "Ethernet5",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet6",
+					"alias": "eth6",
+					"description": "Ethernet6",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet7",
+					"alias": "eth7",
+					"description": "Ethernet7",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet8",
+					"alias": "eth8",
+					"description": "Ethernet8",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				},
+				{
+					"port_name": "Ethernet9",
+					"alias": "eth9",
+					"description": "Ethernet9",
+					"speed": 25000,
+					"mtu": 9000,
+					"admin_status": "up"
+				}
+			]
+		}
+	},
+
+	"test-acl:test-acl": {
+		"test-acl:ACL_RULE": {
+			"ACL_RULE_LIST": [{
+					"ACL_TABLE_NAME": "PACL-V4",
+					"RULE_NAME": "Rule_20",
+					"PACKET_ACTION": "FORWARD",
+					"DST_IP": "10.1.72.0/26",
+					"SRC_IP": "10.1.0.0/15",
+					"PRIORITY": "999980",
+					"IP_TYPE": "IPV4ANY"
+				},
+				{
+					"ACL_TABLE_NAME": "PACL-V4",
+					"RULE_NAME": "Rule_40",
+					"PACKET_ACTION": "FORWARD",
+					"DST_IP": "10.1.72.64/26",
+					"SRC_IP": "10.1.0.0/15",
+					"PRIORITY": "999960",
+					"IP_TYPE": "IPV4ANY",
+					"INNER_ETHER_TYPE": "0x88CC"
+				},
+				{
+					"ACL_TABLE_NAME": "PACL-V6",
+					"RULE_NAME": "Rule_20",
+					"PACKET_ACTION": "FORWARD",
+					"IP_TYPE": "IP",
+					"SRC_IPV6": "2000:f500:41::/48",
+					"PRIORITY": "999980",
+					"DST_IPV6": "2000:f500:43:320::/64",
+					"L4_SRC_PORT_RANGE": "653-1053"
+				}
+			]
+		},
+
+		"test-acl:ACL_TABLE": {
+			"ACL_TABLE_LIST": [{
+					"ACL_TABLE_NAME": "PACL-V6",
+					"policy_desc": "Filter IPv6",
+					"type": "L3V6",
+					"stage": "EGRESS",
+					"ports": ["Ethernet7", "Ethernet9", "Ethernet8"]
+				},
+				{
+					"ACL_TABLE_NAME": "PACL-V4",
+					"policy_desc": "Filter IPv6",
+					"type": "L3",
+					"stage": "INGRESS",
+					"ports": ["Ethernet2", "Ethernet0", "Ethernet1"]
+				}
+			]
+		}
+	},
+
+	"test-interface:test-interface": {
+		"test-interface:INTERFACE": {
+			"INTERFACE_LIST": [{
+					"interface": "Ethernet8",
+					"ip-prefix": "10.1.1.65/26",
+					"scope": "global",
+					"family": "IPv4"
+				},
+				{
+					"interface": "Ethernet8",
+					"ip-prefix": "2000:f500:40:a749::2/126",
+					"scope": "global",
+					"family": "IPv6"
+				}
+			]
+		}
+	},
+
+	"test-yang-structure:test-yang-structure": {
+		"test-yang-structure:YANG_STRUCT_TEST": {
+			"YANG_LIST_TEST_LIST": [{
+					"name" : "Vlan1001",
+					"leaf-list-test": [
+						"fc02:2000::1",
+						"fc02:2000::2"
+					],
+					"container-in-list-test": {
+						"leaf-1": true,
+						"leaf-2": "test1",
+						"mc-case-leaf-1": 55,
+						"mc-case-leaf-3": 1234
+					},
+					"case-leaf-1": 101
+				},
+				{
+					"name" : "Test123",
+					"leaf-list-test": [
+						"3003:2000::1",
+						"2002:2001::2"
+					],
+					"container-in-list-test": {
+						"leaf-1": false,
+						"leaf-2": "test2",
+						"mc-case-leaf-2": 77,
+						"mc-case-leaf-3": 4321
+					},
+					"case-leaf-2": 1001
+				}
+			]
+		}
+	}
+}

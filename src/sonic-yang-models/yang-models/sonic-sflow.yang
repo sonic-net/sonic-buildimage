@@ -1,0 +1,196 @@
+module sonic-sflow{
+
+    namespace "http://github.com/sonic-net/sonic-sflow";
+    prefix sflow;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+    import sonic-port {
+        prefix port;
+    }
+    /*
+    import sonic-vlan {
+        prefix vlan;
+    }
+    */
+    import sonic-portchannel {
+        prefix lag;
+    }
+    import sonic-mgmt_port {
+        prefix mgmt-port;
+    }
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
+
+    description "SFLOW yang Module for SONiC OS";
+
+    revision 2023-04-11 {
+        description "Add direction command to support egress sflow";
+    }
+
+    revision 2021-04-26 {
+        description "First Revision";
+    }
+
+    typedef sample_direction {
+        type enumeration {
+            enum rx {
+                description "rx direction";
+            }
+            enum tx {
+                description "tx direction";
+            }
+            enum both {
+                description "Both tx and rx direction";
+            }
+        }
+    }
+
+    container sonic-sflow {
+
+        container SFLOW_COLLECTOR {
+            list SFLOW_COLLECTOR_LIST {
+                max-elements 2;
+                key "name";
+
+                leaf name {
+                    type string {
+                        length 1..64;
+                    }
+                    description "Name of the Sflow collector";
+                }
+
+                leaf collector_ip {
+                    mandatory true;
+                    type inet:ip-address;
+                    description "IPv4/IPv6 address of the Sflow collector";
+                }
+
+
+                leaf collector_port {
+                    type inet:port-number;
+                    default 6343;
+                    description "Destination L4 port of the Sflow collector";
+                }
+
+                leaf collector_vrf {
+                    must "(current() != 'mgmt') or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')" {
+                        error-message "Must condition not satisfied. Try enable Management VRF.";
+                    }
+
+                    type string {
+                        pattern "mgmt|default";
+                    }
+
+                    description
+                        "Specify the Collector VRF. In this revision, it is either
+                         default VRF or Management VRF.";
+                }
+
+            } /* end of list SFLOW_COLLECTOR_LIST */
+        } /* end of container SFLOW_COLLECTOR */
+
+        container SFLOW_SESSION {
+            list SFLOW_SESSION_LIST {
+                key "port";
+
+                leaf port {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type string {
+                            pattern "all";
+                        }
+                    }
+                    description "Sets sflow session table attributes for either all interfaces or a specific Ethernet interface.";
+                }
+
+                leaf admin_state {
+                    type stypes:admin_status;
+                    default up;
+                    description "Per port sflow admin state";
+                }
+
+                leaf sample_rate {
+                    must "../port != 'all'";
+                    type uint32 {
+                        range "256..8388608" {
+                            error-message "sFlow sample rate must be [256-8388608]";
+                        }
+                    }
+                    description "Sets the packet sampling rate.  The rate is expressed as an integer N, where the intended sampling rate is 1/N packets.";
+                }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
+            } /* end of list SFLOW_SESSION_LIST */
+        } /* end of container SFLOW_SESSION */
+
+        container SFLOW {
+
+            container global {
+
+                leaf admin_state {
+                    type stypes:admin_status;
+                    default down;
+                    description "Global sflow admin state";
+                }
+
+                leaf polling_interval {
+                    type uint16 {
+                        range "0|5..300" {
+                            error-message "sFlow polling interval must be [0, 5-300]";
+                        }
+                    }
+                    description "The interval within which sFlow data is collected and sent to the configured collectors";
+                    default 20;
+                }
+
+                leaf agent_id {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                        /*
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        }
+                        */
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                    }
+                    description "Interface name";
+                }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
+            } /* end of container global */
+       } /* end of container SFLOW */
+
+    } /* end of container sonic-sflow */
+
+} /* end of module sonic-sflow */

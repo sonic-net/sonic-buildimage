@@ -1,0 +1,105 @@
+module sonic-warm-restart  {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-warm-restart";
+    prefix wrm;
+
+    description "SONIC WARMRESTART";
+
+    revision 2021-05-24 {
+        description "First Revision";
+    }
+
+    typedef module-name {
+
+        type enumeration {
+
+            enum bgp {
+               description
+                 "BGP module";
+            }
+
+            enum teamd {
+               description
+                 "Teamd module";
+            }
+
+            enum swss {
+               description
+                 "Switch State Services module";
+            }
+
+            enum system {
+               description
+                 "Warm Restart on a System level.";
+            }
+
+        }
+
+        description
+            "The modules supported in warm-restart";
+    }
+
+
+    container sonic-warm-restart {
+        container WARM_RESTART {
+
+            list WARM_RESTART_LIST {
+                key "module";
+
+                leaf module {
+                    type module-name;
+                    description
+                       "Name of the module";
+                }
+
+                leaf bgp_eoiu {
+                    type boolean;
+                    must "current()/../module = 'bgp'" { error-message "bgp_eoiu is only supported for module bgp."; }
+                    description
+                       "BGP End-of-Initial Update (EOIU) signal enable/disable";
+                }
+
+                leaf bgp_timer {
+                    type uint16 {
+                        range "1..3600" {
+                            error-message "Timer must be 1..3600";
+                            error-app-tag timer-invalid;
+                        }
+                    }
+                    must "current()/../module = 'bgp'" { error-message "bgp_timer is only supported for module bgp."; }
+                    description
+                       "Timer value for BGP module";
+                }
+
+                leaf teamsyncd_timer {
+                    type uint16 {
+                        range "1..3600" {
+                            error-message "Timer must be 1..3600";
+                            error-app-tag timer-invalid;
+                        }
+                    }
+                    must "current()/../module = 'teamd'" { error-message "teamsyncd_timer is only supported for module teamd."; }
+                    description
+                       "Timer value for teamd module";
+                }
+
+                leaf neighsyncd_timer {
+                    type uint16 {
+                        range "1..9999" {
+                            error-message "Timer must be 1..9999";
+                            error-app-tag timer-invalid;
+                        }
+                    }
+                    must "current()/../module = 'swss'" { error-message "neighsyncd_timer is only supported for module swss."; }
+                    description
+                       "Timer value for swss module";
+                }
+
+            } /* end of list WARM_RESTART_LIST */
+        } /* end of container WARM_RESTART */
+    } /* end of container sonic-warm-restart */
+
+
+} /* end of module sonic-warm-restart */

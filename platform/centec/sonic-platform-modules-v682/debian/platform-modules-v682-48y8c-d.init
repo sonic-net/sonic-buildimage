@@ -1,0 +1,101 @@
+#!/bin/bash
+# This script load/unload centec kernel modules
+
+### BEGIN INIT INFO
+# Provides:          platform-modules-v682-48y8c-d
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load Centec kernel modules
+### END INIT INFO
+
+function install_python_api_package()
+{
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+
+    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        rv=$(pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl)
+    fi
+}
+
+function load_system_eeprom_file()
+{
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    mkdir -p /mnt/onie-boot
+    mount -t ext4 -L ONIE-BOOT /mnt/onie-boot
+    dd if=/mnt/onie-boot/eeprom_file of=$device/$platform/eeprom_file bs=1 skip=1046528
+    dd if=/mnt/onie-boot/eeprom_file of=$device/$platform/eeprom_cipher bs=1 count=32
+    MACADDR=`decode-syseeprom | grep "Base MAC Address" | awk '{print $6}'`
+    ifconfig eth0 hw ether $MACADDR
+    umount /mnt/onie-boot
+    rmdir /mnt/onie-boot
+}
+
+function load_kernel_modules()
+{
+    depmod -a
+    modprobe i2c-dev
+    modprobe centec_v682_48y8c_d_platform
+    modprobe dal
+    modprobe tun
+    modprobe tap
+}
+
+function remove_kernel_modules()
+{
+    modprobe -r tap
+    modprobe -r tun
+    modprobe -r dal
+    modprobe -r centec_v682_48y8c_d_platform
+    modprobe -r i2c-dev
+}
+
+function release_board()
+{
+    systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+    chmod a+x /usr/local/lib/python3.9/dist-packages/libSUSI-4.00.so.1
+    chmod a+x /usr/local/lib/python3.9/dist-packages/_Susi4.so
+    chmod a+x /usr/local/lib/python3.9/dist-packages/release.py
+    /usr/local/lib/python3.9/dist-packages/release.py
+}
+
+
+case "$1" in
+start)
+    echo -n "Load Centec kernel modules... "
+
+    release_board
+    load_kernel_modules
+    install_python_api_package
+    load_system_eeprom_file
+
+    echo "done."
+    ;;
+
+stop)
+    echo -n "Unload Centec kernel modules... "
+
+    remove_kernel_modules
+
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-v682-48y8c-d {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

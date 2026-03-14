@@ -1,0 +1,354 @@
+#!/bin/bash
+
+debug_flag=0
+
+ipmi_val=0
+ctrl_mode_val=0
+fan_pwm_val=0
+fan_rpm_val=0
+
+bmc_sensor_read()
+{
+    ipmi_val=$(ipmitool raw 0x30 0x92 2>>/dev/null)
+    if [ $? -eq 0 ];then
+        return 0
+    fi
+
+    return 1
+}
+
+#$1=get(0)/set(1), $2=ctrl_mode(1:manual, 0:auto)
+#get rtn: ctrl_mode_val, fan_pwm_val
+bmc_fan_speed_ctrl()
+{
+    if [ -e /sys/bus/i2c/devices/0-0066/fan_duty_cycle_percentage ];then
+        if [ $1 -eq 1 ];then
+            #Set Fan Speed Control
+            if [ $2 -eq 0 ];then
+                ipmitool raw 0x30 0x20 0x0 0x0 1>/dev/null 2>/dev/null
+            else
+                fan_pwm_input=$(cat /sys/bus/i2c/devices/0-0066/fan_duty_cycle_percentage | awk '{printf $1}')
+                fan_pwm_input=$( printf "%d" 0x$fan_pwm_input )
+                ipmitool raw 0x30 0x20 0x1 $fan_pwm_input 1>/dev/null 2>/dev/null
+            fi
+        else
+            #Get Fan Speed Control
+            ctrl_mode_val=$(echo $ipmi_val | awk '{printf $1}')
+            fan_pwm_val=$(echo $ipmi_val | awk '{printf $2}')
+            ctrl_mode_val=$( printf "%d" 0x$ctrl_mode_val )
+            fan_pwm_val=$( printf "%d" 0x$fan_pwm_val )
+            echo $fan_pwm_val > /sys/bus/i2c/devices/0-0066/fan_duty_cycle_percentage
+        fi
+    fi
+}
+
+bmc_fan_presence()
+{
+    if [ -e /sys/bus/i2c/devices/0-0066/fan1_presence ];then
+        fan_pre_val=$(echo $ipmi_val | awk '{printf $44}')
+        fan_pre_val=$( printf "%d" 0x$fan_pre_val )
+        for i in $(seq 0 6);
+        do
+            tmp=$((1 << $i))
+            tmp1=$(($fan_pre_val & $tmp))
+            if [ $tmp1 -eq 0 ];then
+                if [ $i == 0 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan1_presence
+                elif [ $i == 1 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan2_presence
+                elif [ $i == 2 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan3_presence
+                elif [ $i == 3 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan4_presence
+                elif [ $i == 4 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan5_presence
+                elif [ $i == 5 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan6_presence
+                else
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan7_presence
+                fi
+            else
+                if [ $i == 0 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan1_presence
+                elif [ $i == 1 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan2_presence
+                elif [ $i == 2 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan3_presence
+                elif [ $i == 3 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan4_presence
+                elif [ $i == 4 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan5_presence
+                elif [ $i == 5 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan6_presence
+                else
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan7_presence
+                fi
+            fi
+        done
+    fi
+}
+
+bmc_fan_enable()
+{
+    if [ -e /sys/bus/i2c/devices/0-0066/fan1_enable ];then
+        fan_en_val=$(echo $ipmi_val | awk '{printf $45}')
+        fan_en_val=$( printf "%d" 0x$fan_en_val )
+        for i in $(seq 0 6);
+        do
+            tmp=$((1 << $i))
+            tmp1=$(($fan_en_val & $tmp))
+            if [ $tmp1 -ne 0 ];then
+                if [ $i == 0 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan1_enable
+                elif [ $i == 1 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan2_enable
+                elif [ $i == 2 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan3_enable
+                elif [ $i == 3 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan4_enable
+                elif [ $i == 4 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan5_enable
+                elif [ $i == 5 ];then
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan6_enable
+                else
+                    echo 1 > /sys/bus/i2c/devices/0-0066/fan7_enable
+                fi
+            else
+                if [ $i == 0 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan1_enable
+                elif [ $i == 1 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan2_enable
+                elif [ $i == 2 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan3_enable
+                elif [ $i == 3 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan4_enable
+                elif [ $i == 4 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan5_enable
+                elif [ $i == 5 ];then
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan6_enable
+                else
+                    echo 0 > /sys/bus/i2c/devices/0-0066/fan7_enable
+                fi
+            fi
+        done
+    fi
+}
+
+bmc_fan_speed_rpm()
+{
+    if [ -e /sys/bus/i2c/devices/0-0066/fan1_front_speed_rpm ];then
+        #fan1 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $1}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $2}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan1_front_speed_rpm
+
+        #fan1 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $15}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $16}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan1_rear_speed_rpm
+
+        #fan2 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $3}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $4}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan2_front_speed_rpm
+
+        #fan2 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $17}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $18}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan2_rear_speed_rpm
+
+        #fan3 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $5}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $6}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan3_front_speed_rpm
+
+        #fan3 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $19}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $20}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan3_rear_speed_rpm
+
+        #fan4 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $7}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $8}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan4_front_speed_rpm
+
+        #fan4 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $21}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $22}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan4_rear_speed_rpm
+
+        #fan5 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $9}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $10}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan5_front_speed_rpm
+
+        #fan5 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $23}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $24}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan5_rear_speed_rpm
+
+        #fan6 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $11}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $12}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan6_front_speed_rpm
+
+        #fan6 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $25}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $26}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan6_rear_speed_rpm
+
+        #fan7 front
+        hi_byte=$(echo $ipmi_val | awk '{printf $13}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $14}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan7_front_speed_rpm
+
+        #fan7 rear
+        hi_byte=$(echo $ipmi_val | awk '{printf $27}')
+        lo_byte=$(echo $ipmi_val | awk '{printf $28}')
+        hi_byte=$( printf "%d" 0x$hi_byte )
+        lo_byte=$( printf "%d" 0x$lo_byte )
+        fan_rpm_val=$((hi_byte<<8))
+        fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+        echo $fan_rpm_val > /sys/bus/i2c/devices/0-0066/fan7_rear_speed_rpm
+    fi
+}
+
+do_fan_update()
+{
+    #fan presence
+    bmc_fan_presence
+
+    #fan enable
+    bmc_fan_enable
+
+    #fan speed rpm
+    bmc_fan_speed_rpm
+
+    if [ $debug_flag -eq 0 ];then
+        #Get Fan RPM
+        bmc_fan_speed_ctrl 0
+    else
+        bmc_fan_speed_ctrl 1 1
+    fi
+}
+
+do_thermal_update()
+{
+    if [ -e /sys/bus/i2c/devices/0-004f/temp1_input ];then
+        #lm75_1
+        thermal_val=$(echo $ipmi_val | awk '{printf $29}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004f/temp1_input
+
+        #lm75_2
+        thermal_val=$(echo $ipmi_val | awk '{printf $30}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-0049/temp1_input
+
+        #lm75_3
+        thermal_val=$(echo $ipmi_val | awk '{printf $31}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004a/temp1_input
+
+        #lm75_4
+        thermal_val=$(echo $ipmi_val | awk '{printf $32}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004b/temp1_input
+
+        #lm75_5
+        thermal_val=$(echo $ipmi_val | awk '{printf $32}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004c/temp1_input
+
+        #lm75_6
+        thermal_val=$(echo $ipmi_val | awk '{printf $33}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004d/temp1_input
+
+        #lm75_7
+        thermal_val=$(echo $ipmi_val | awk '{printf $34}')
+        thermal_val=$( printf "%d" 0x$thermal_val )
+        thermal_val=`expr $thermal_val \* 1000`
+        echo $thermal_val > /sys/bus/i2c/devices/0-004e/temp1_input
+    fi
+}
+
+FAN_Thermal_monitor()
+{
+    if [ $debug_flag -eq 1 ];then
+        fan_pwm_input=100
+        echo $fan_pwm_input > /sys/bus/i2c/devices/0-0066/fan_duty_cycle_percentage
+    fi
+
+    while true
+    do
+        #get bmc sensor value
+        bmc_sensor_read
+        if [ $? -eq 0 ];then
+            do_fan_update
+            do_thermal_update
+        fi
+
+        sleep 1
+    done
+}
+
+FAN_Thermal_monitor

@@ -1,0 +1,217 @@
+{% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
+[]
+{% else %}
+
+{# Check if the ASIC is Broadcom #}
+{% set is_broadcom = false %}
+{% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
+  {% set is_broadcom = true %}
+{% endif %}
+
+{% set is_broadcom_t1 = false %}
+{% if is_broadcom and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] %}
+    {% set is_broadcom_t1 = true %}
+{% endif %}
+
+{% set ipv4_addresses = [] %}
+{% set ipv6_addresses = [] %}
+{% set ipv4_vlan_addresses = [] %}
+{% set ipv6_vlan_addresses = [] %}
+{% set ipv4_loopback_addresses = [] %}
+{% set ipv6_loopback_addresses = [] %}
+{% if DEVICE_METADATA['localhost']['sub_role'] == 'FrontEnd' or  DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd'%}
+{% set loopback_intf_names = ['Loopback0', 'Loopback4096'] %}
+{% else %}
+{% set loopback_intf_names = ['Loopback0', 'Loopback2', 'Loopback3'] %}
+{% endif %}
+{% for (name, prefix) in LOOPBACK_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 and name in loopback_intf_names %}
+        {%- set ipv4_addresses = ipv4_addresses.append(prefix) %}
+        {%- set ipv4_loopback_addresses = ipv4_loopback_addresses.append(prefix) %}
+    {%- endif %}
+    {%- if prefix | ipv6 and name in loopback_intf_names   %}
+        {%- set ipv6_addresses = ipv6_addresses.append(prefix) %}
+        {%- set ipv6_loopback_addresses = ipv6_loopback_addresses.append(prefix) %}
+    {%- endif %}
+{% endfor %}
+{% set subnet_decap = namespace(enable=false) %}
+{% for config in SUBNET_DECAP %}
+    {%- if SUBNET_DECAP[config].status == 'enable' %}
+        {%- set subnet_decap.enable = true %}
+    {%- endif %}
+{% endfor %}
+{% for (name, prefix) in INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 %}
+        {%- set ipv4_addresses = ipv4_addresses.append(prefix) %}
+    {%- endif %}
+    {%- if prefix | ipv6 %}
+        {%- set ipv6_addresses = ipv6_addresses.append(prefix) %}
+    {%- endif %}
+{% endfor %}
+{% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 %}
+        {%- set ipv4_addresses = ipv4_addresses.append(prefix) %}
+    {%- endif %}
+    {%- if prefix | ipv6 %}
+        {%- set ipv6_addresses = ipv6_addresses.append(prefix) %}
+    {%- endif %}
+{% endfor %}
+{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 %}
+        {%- set ipv4_vlan_addresses = ipv4_vlan_addresses.append(prefix) %}
+    {%- endif %}
+    {%- if prefix | ipv6 %}
+        {%- set ipv6_vlan_addresses = ipv6_vlan_addresses.append(prefix) %}
+    {%- endif %}
+{% endfor %}
+{%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
+{# SAI report tunnel TABLE_FULL for large topo. Only generating for VLAN and loopback if over 128 routed interfaces.#}
+{% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
+{%- set ipv4_addresses = ipv4_loopback_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_loopback_addresses + ipv6_vlan_addresses %}
+{% endif %}
+
+{# Check if AZURE QoS map exists #}
+{% set azure_qos_exists = false %}
+{% if DSCP_TO_TC_MAP is defined and DSCP_TO_TC_MAP.AZURE is defined %}
+{% set azure_qos_exists = true %}
+{% endif %}
+
+[
+{% if ipv4_loopback_addresses %}
+{% if subnet_decap.enable %}
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
+            "tunnel_type":"IPINIP",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
+            "dscp_mode":"uniform",
+{% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+{% for prefix in ipv4_vlan_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET:{{ prefix | network }}/{{ prefix | prefixlen }}" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+{% endfor %}
+{% endif %}
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
+            "tunnel_type":"IPINIP",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
+            "dscp_mode":"uniform",
+{% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    }
+{%- if ipv4_addresses -%}
+,
+{% endif %}
+{% for prefix in ipv4_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:{{ prefix | ip }}" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    }{% if not loop.last %},
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if ipv4_loopback_addresses and ipv6_loopback_addresses %},
+{% endif %}
+{% if ipv6_loopback_addresses %}
+{% if subnet_decap.enable %}
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
+            "tunnel_type":"IPINIP",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
+            "dscp_mode":"uniform",
+{% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+{% for prefix in ipv6_vlan_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET_V6:{{ prefix | network }}/{{ prefix | prefixlen }}" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+{% endfor %}
+{% endif %}
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
+            "tunnel_type":"IPINIP",
+{% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
+            "dscp_mode":"uniform",
+{% endif %}
+{% else %}
+            "dscp_mode":"pipe",
+{% if azure_qos_exists %}
+            "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
+{% endif %}
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    }{% if ipv6_addresses %},
+{% endif %}
+{% for prefix in ipv6_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:{{ prefix | ip }}" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    }
+{%- if not loop.last -%}
+,
+{% endif %}
+{% endfor %}
+{% endif %}
+
+]
+{% endif %}
+

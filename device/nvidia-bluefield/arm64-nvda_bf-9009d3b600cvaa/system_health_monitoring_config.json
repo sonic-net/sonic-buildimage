@@ -1,0 +1,6 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": ["psu", "fan"],
+    "user_defined_checkers": ["python3 -m sonic_platform.throttling_checks.cpu_check", "python3 -m sonic_platform.throttling_checks.ddr_check"],
+    "polling_interval": 60
+}

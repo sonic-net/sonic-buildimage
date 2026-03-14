@@ -1,0 +1,10 @@
+DPATH       := $($(DOCKER_P4RT)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-p4rt.mk rules/docker-p4rt.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_P4RT)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_P4RT)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_P4RT)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_P4RT),$(DOCKER_P4RT_DBG)))

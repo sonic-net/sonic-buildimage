@@ -1,0 +1,827 @@
+{
+    "DEVICE_METADATA_DEFAULT_BGP_STATUS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65000",
+                    "docker_routing_config_mode": "separated",
+                    "hostname": "DUT-ASW",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_ASIC_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "DUT-CSW",
+                    "asic_id": "06:00.0",
+                    "asic_name": "asic0",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_ASIC_NAME": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "DUT-CSW",
+                    "asic_id": "06:00.0",
+                    "asic_name": "asic0",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_DOCKER_ROUTING_CONFIG_MODE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "DUT-CSW",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_PFCWD_STATUS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "hostname": "DUT-CSW",
+                    "platform": "DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_INCORRECT_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "ToRrouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "BackEndToRRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "SpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "UpperSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "FabricSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LowerSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "BmcMgmtToRRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtToRRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtLeafRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtAccessRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_LOWER_MGMT_AGGREGATOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LowerMgmtAggregator"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "UpperMgmtAggregator"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MINI_TS_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MiniTs"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_LEAF_TS_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LeafTs"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_SPINE_TS_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "SpineTs"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_CORE_TS_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "CoreTs"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_CONSOLE_SERVER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "ConsoleServer"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_TERMINAL_SERVER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "TerminalServer"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "SmartSwitchDPU"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "SonicHost"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "FilterLeaf"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "not-provisioned"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_SYNCHRONOUS_MODE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "hostname": "DUT-CSW",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_YANG_CONFIG_VALIDATION": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "hostname": "DUT-CSW",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEV_META_DEV_NEIGH_VERSION_TABLE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "64850",
+                    "docker_routing_config_mode": "separated",
+                    "hostname": "asw.dc",
+                    "hwsku": "Stone",
+                    "mac": "00:11:22:33:44:55",
+                    "type": "ToRRouter"
+                }
+            }
+        },
+        "sonic-device_neighbor:sonic-device_neighbor": {
+            "sonic-device_neighbor:DEVICE_NEIGHBOR": {
+                "DEVICE_NEIGHBOR_LIST": [
+                    {
+                        "name": "dccsw03.nw",
+                        "peer_name": "Ethernet116",
+                        "port": "Eth18"
+                    },
+                    {
+                        "name": "dccsw02.nw",
+                        "peer_name": "Ethernet114",
+                        "port": "Eth18"
+                    },
+                    {
+                        "name": "dccsw01.nw",
+                        "peer_name": "Ethernet112",
+                        "port": "Eth18"
+                    },
+                    {
+                        "name": "dccsw04.nw",
+                        "peer_name": "Ethernet118",
+                        "port": "Eth18"
+                    }
+                ]
+            }
+        },
+        "sonic-versions:sonic-versions": {
+            "sonic-versions:VERSIONS": {
+                "DATABASE": {
+                    "VERSION": "version_2_10_31"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_CORRECT_BUFFER_MODEL_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+             "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                "buffer_model": "dynamic"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_CORRECT_BUFFER_MODEL_PATTERN2": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                "buffer_model": "traditional"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INCORRECT_BUFFER_MODEL_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                "buffer_model": "incorrect_pattern"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_FRR_MGMT_FWK_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "frr_mgmt_framework_config": true,
+                    "hostname": "DUT-CSW",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_CORRECT_CLOUDTYPE_REGION_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "cloudtype": "Public",
+                    "region": "usfoo"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_DOWNSTREAM_SUBROLE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "downstream_subrole": "downstream_subrole_y"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "resource_type": "resource_type_x"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "mgmt_type": "mgmt_type_x"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_CLUSTER": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "cluster": "AAA00PrdStr00"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "DualToR"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "Supervisor"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "UpstreamLC"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "DownstreamLC"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "LowerSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_SUBTYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "FakeSubtype"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_PEER_SWITCH": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "peer_switch": "peer_01_hostname"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_PEER_SWITCH": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "peer_switch": "this_super_duper_long_hostname_is_too_long_according_to_RFC_1035"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_STORAGE_DEVICE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "storage_device": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_STORAGE_DEVICE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "storage_device": "yes"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INCORRECT_VOQ_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "asic_name": "Asic0",
+                    "switch_id": "2",
+                    "switch_type": "incorrect_pattern",
+                    "max_cores": "8"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_CORRECT_VOQ_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "asic_name": "Asic0",
+                    "switch_id": "2",
+                    "switch_type": "voq",
+                    "max_cores": "8"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUB_ROLE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "sub_role": "FrontEnd"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_DHCP_SERVER": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "dhcp_server": "enabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_DHCP_SERVER": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "dhcp_server": "invalid"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_ADVERTISE_LO_PREFIX_AS_128": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "bgp_adv_lo_prefix_as_128": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "enable",
+                    "suppress-fib-pending": "enabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_DISABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "disable",
+                    "suppress-fib-pending": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "disable",
+                    "suppress-fib-pending": "enabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_RACK_MGMT_MAP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "rack_mgmt_map": "dummy_value"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_TIMEZONE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "timezone": "UTC"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_RACK_MGMT_MAP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "rack_mgmt_map": "dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_TIMEZONE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "timezone": ""
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "create_only_config_db_buffers": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "create_only_config_db_buffers": "invalid"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "supporting_bulk_counter_groups": ["QUEUE_WATERMARK_STAT_COUNTER","PG_WATERMARK_STAT_COUNTER"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_router_id": "8.8.8.8"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_router_id": "8.8.8.300"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "chassis_hostname": "sonic-chassis-1"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SLICE_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "slice_type": "AZNG_Production"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "location_type": "DUMMY_LOCATION"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "nexthop_group": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_RING_THREAD_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "ring_thread_enabled": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "t2_group_asns": ["65000", "65001", "65002"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "t2_group_asns": ["str"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "anchor_route_source": ["local"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ORCH_DASH_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_northbond_dash_zmq_enabled": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ORCH_ROUTE_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_northbond_route_zmq_enabled": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SYSLOG_WITH_OS_VERSION_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "syslog_with_osversion": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SYSLOG_COUNTER_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "syslog_counter": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "zebra_nexthop": "disabled"
+                }
+            }
+        }
+    }
+}

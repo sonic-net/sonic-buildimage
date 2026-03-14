@@ -1,0 +1,39 @@
+#! /bin/bash
+### BEGIN INIT INFO
+# Provides:          gpe
+# Required-Start:
+# Required-Stop:
+# Default-Start:     rc.local
+# Default-Stop:
+# Short-Description: Daemon gpe
+### END INIT INFO
+
+# Load kernel modules
+load_module () {
+	if [ `lsmod | grep -c "gpe "` -eq 0 ]; then
+		insmod /lib/modules/`uname -r`/extra/mitac_ly1200_32x_gpe.ko
+	fi
+}
+
+remove_module () {
+	rmmod mitac-ly1200-32x_gpe
+}
+
+case "$1" in
+  start)
+	load_module
+	;;
+  stop)
+	remove_module
+	;;
+  reload|restart|force-reload)
+	remove_module
+	load_module
+	;;
+  *)
+	echo "Usage: $N {start|stop|reload|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

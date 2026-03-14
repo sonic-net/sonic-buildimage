@@ -1,0 +1,42 @@
+From ac505e5f4528f6ce85673e518d1df0c7c10a6ac1 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 11 Jul 2025 19:19:15 -0400
+Subject: [PATCH] mgmt: Note that a DS is locked or not in output
+
+Modify the `show mgmt datastore ..` command to note
+if the data store is locked and by which session-id.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ mgmtd/mgmt_ds.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/mgmtd/mgmt_ds.c b/mgmtd/mgmt_ds.c
+index 91592df22f..a0e6c83393 100644
+--- a/mgmtd/mgmt_ds.c
++++ b/mgmtd/mgmt_ds.c
+@@ -514,15 +514,21 @@ void mgmt_ds_dump_tree(struct vty *vty, struct mgmt_ds_ctx *ds_ctx,
+ 
+ void mgmt_ds_status_write_one(struct vty *vty, struct mgmt_ds_ctx *ds_ctx)
+ {
++	uint64_t session_id;
++	bool locked;
++
+ 	if (!ds_ctx) {
+ 		vty_out(vty, "    >>>>> Datastore Not Initialized!\n");
+ 		return;
+ 	}
+ 
++	locked = mgmt_ds_is_locked(ds_ctx, &session_id);
+ 	vty_out(vty, "  DS: %s\n", mgmt_ds_id2name(ds_ctx->ds_id));
+ 	vty_out(vty, "    DS-Hndl: \t\t\t%p\n", ds_ctx);
+ 	vty_out(vty, "    Config: \t\t\t%s\n",
+ 		ds_ctx->config_ds ? "True" : "False");
++	vty_out(vty, "    Locked: \t\t\t%s Session-ID: %Lu\n", locked ? "True" : "False",
++		locked ? session_id : 0);
+ }
+ 
+ void mgmt_ds_status_write(struct vty *vty)
+-- 
+2.34.1
+

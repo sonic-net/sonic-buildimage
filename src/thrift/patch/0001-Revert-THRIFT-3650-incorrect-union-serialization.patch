@@ -1,0 +1,42 @@
+From f44f148bb9cff81f320e7094e7956d98fc5ac423 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@mellanox.com>
+Date: Wed, 20 Mar 2019 16:32:56 +0200
+Subject: [PATCH] Revert "THRIFT-3650 incorrect union serialization"
+
+This reverts commit b72bb94a8212edc83864edc435896fdcda6e796c.
+
+Signed-off-by: Stepan Blyschak <stepanb@mellanox.com>
+---
+ compiler/cpp/src/thrift/parse/t_struct.h | 16 ++++++----------
+ 1 file changed, 6 insertions(+), 10 deletions(-)
+
+diff --git a/compiler/cpp/src/thrift/parse/t_struct.h b/compiler/cpp/src/thrift/parse/t_struct.h
+index 4102da7..880e79b 100644
+--- a/compiler/cpp/src/thrift/parse/t_struct.h
++++ b/compiler/cpp/src/thrift/parse/t_struct.h
+@@ -66,16 +66,12 @@ public:
+   void validate_union_member(t_field* field) {
+     if (is_union_ && (!name_.empty())) {
+ 
+-      // 1) unions can't have required fields
+-      // 2) union members are implicitly optional, otherwise bugs like THRIFT-3650 wait to happen
+-      if (field->get_req() != t_field::T_OPTIONAL) {
+-        // no warning on default requiredness, but do warn on anything else that is explicitly asked for
+-        if(field->get_req() != t_field::T_OPT_IN_REQ_OUT) {
+-          pwarning(1,
+-                   "Union %s field %s: union members must be optional, ignoring specified requiredness.\n",
+-                   name_.c_str(),
+-                   field->get_name().c_str());
+-        }
++      // unions can't have required fields
++      if (field->get_req() == t_field::T_REQUIRED) {
++        pwarning(1,
++                 "Required field %s of union %s set to optional.\n",
++                 field->get_name().c_str(),
++                 name_.c_str());
+         field->set_req(t_field::T_OPTIONAL);
+       }
+ 
+-- 
+1.9.1
+

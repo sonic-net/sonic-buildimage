@@ -1,0 +1,295 @@
+module sonic-nat {
+    namespace "http://github.com/sonic-net/sonic-nat";
+    prefix snat;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    // Comment sonic-acl import here until libyang back-links issue is resolved for ACL_TABLE leaf reference.
+    // import sonic-acl {
+    //     prefix sacl;
+    // }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC NAT yang model";
+
+    revision 2021-03-14 {
+        description
+            "Initial revision.";
+    }
+
+    typedef nat-type {
+        type enumeration {
+            enum snat {
+                description "Source NAT.";
+            }
+            enum dnat {
+                description "Destination NAT.";
+            }
+        }
+    }
+
+    typedef ip-address-range {
+        type union {
+          type inet:ipv4-address;
+          type string {
+                          pattern '(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(-(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))?';
+                      }
+        }
+
+        description
+          "This type denotes a single IP address or a range of addresses.";
+    }
+
+    container sonic-nat {
+
+        container STATIC_NAPT {
+
+            description "STATIC_NAPT table part of config_db.json";
+
+            list STATIC_NAPT_LIST {
+                key "global_ip ip_protocol global_l4_port";
+
+                leaf global_ip {
+                    description "Global ip for the Static NAPT entry.";
+
+                    type inet:ipv4-address;
+                }
+
+                leaf ip_protocol {
+                    description "IP Protocol (tcp or udp) for the Static NAPT entry.";
+
+                    type stypes:ip-protocol-type;
+                }
+
+                leaf global_l4_port {
+                    description "Global L4 port for the Static NAPT entry.";
+
+                    type inet:port-number;
+                }
+
+                leaf local_ip {
+                    description "Local ip for the Static NAPT entry.";
+
+                    mandatory true;
+                    type inet:ipv4-address;
+                }
+
+                leaf local_port {
+                    description "Local port for the Static NAPT entry.";
+
+                    mandatory true;
+                    type inet:port-number ;
+                }
+
+                leaf nat_type {
+                    description "Nat type for the static napt entry - snat or dnat";
+
+                    type nat-type;
+                    default dnat;
+                }
+
+                leaf twice_nat_id {
+                    description "Twice nat id for the static napt to achieve the twice napt";
+
+                    type uint16 {
+                        range "1..9999" {
+                            error-message "Invalid twice nat id for the static NAPT.";
+                            error-app-tag twice-nat-id-invalid;
+                        }
+                    }
+                }
+            }
+        }
+
+        container STATIC_NAT {
+
+            description "STATIC_NAT table part of config_db.json";
+
+            list STATIC_NAT_LIST {
+                key "global_ip";
+
+                leaf global_ip {
+                    description "Global ip for the Static NAT entry.";
+
+                    type inet:ipv4-address;
+                }
+
+                leaf local_ip {
+                    description "Local ip for the Static NAT entry.";
+
+                    mandatory true;
+                    type inet:ipv4-address;
+                }
+
+                leaf nat_type {
+                    description "Nat type for the static nat entry - snat or dnat";
+
+                    type nat-type;
+                    default dnat;
+                }
+
+                leaf twice_nat_id {
+                    description "Twice nat id for the static nat to achieve the twice nat";
+
+                    type uint16 {
+                        range "1..9999" {
+                            error-message "Invalid twice nat id for the static NAT.";
+                            error-app-tag twice-nat-id-invalid;
+                        }
+                    }
+                }
+            }
+        }
+
+        container NAT_GLOBAL {
+
+            description "NAT_GLOBAL table part of config_db.json";
+
+            container Values {
+
+                leaf admin_mode {
+                    description "Admin mode of the NAT feature.";
+
+                    type stypes:admin_mode;
+                    default disabled;
+                }
+
+                leaf nat_timeout {
+                    description "Timeout for the nat entries within the range of 300 sec to 432000 secs.";
+
+                    type uint32 {
+                        range "300..432000" {
+                            error-message "Invalid NAT Timeout, valid range 300 sec to 432000 sec.";
+                            error-app-tag nat-timeout-invalid;
+                        }
+                    }
+                    default "600";
+                }
+                leaf nat_tcp_timeout {
+                    description "Timeout for the nat tcp entries within the range of 300 sec to 432000 secs.";
+
+                    type uint32 {
+                        range "300..432000" {
+                            error-message "Invalid NAT TCP Timeout, valid range 300 sec to 432000 sec.";
+                            error-app-tag nat-tcp-timeout-invalid;
+                        }
+                    }
+                    default "86400";
+                }
+                leaf nat_udp_timeout {
+                    description "Timeout for the nat udp entries within the range of 120 sec to 600 secs.";
+
+                    type uint16 {
+                        range "120..600" {
+                            error-message "Invalid NAT UDP Timeout, valid range 120 sec to 600 sec.";
+                            error-app-tag nat-udp-timeout-invalid;
+                        }
+                    }
+                    default "300";
+                }
+            }
+        }
+
+        container NAT_POOL {
+
+            description "NAT_POOL table part of config_db.json";
+
+            list NAT_POOL_LIST {
+                key "name";
+                max-elements 16;
+
+                leaf name {
+                    description "Key - Name of the NAT Pool";
+
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for the pool name.";
+                            error-app-tag pool-name-invalid-length;
+                        }
+                    }
+                }
+
+                leaf nat_ip {
+                    description "Single IP address or a range of addresses for a NAT pool.";
+
+                    mandatory true;
+
+                    type ip-address-range;
+                }
+
+                leaf nat_port {
+                    description "Range of port values for a NAT pool.";
+
+                    type string {
+                        pattern "(([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-4])(-)([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))";
+                    }
+                }
+            }
+        }
+
+        container NAT_BINDINGS {
+
+            description "NAT_BINDINGS table part of config_db.json";
+
+            list NAT_BINDINGS_LIST {
+                key "name";
+                max-elements 16;
+
+                leaf name {
+                    description "Key - Name of the NAT Binding";
+
+                    type string {
+
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for the binding name.";
+                            error-app-tag binding-name-invalid-length;
+                        }
+                    }
+                }
+
+                leaf nat_pool {
+                    description "NAT Pool name mapping for the binding";
+
+                    mandatory true;
+
+                    type leafref {
+                        path "../../../NAT_POOL/NAT_POOL_LIST/name";
+                    }
+                }
+
+                leaf nat_type {
+                    description "Nat type for the binding - snat or dnat";
+
+                    type nat-type;
+                    default snat;
+                }
+
+                leaf twice_nat_id {
+                    description "Twice nat id for the binding to achieve the Dynamic twice nat";
+
+                    type uint16 {
+                        range "1..9999" {
+                            error-message "Invalid twice nat id for the binding.";
+                            error-app-tag twice-nat-id-invalid;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

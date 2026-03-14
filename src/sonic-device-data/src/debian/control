@@ -1,0 +1,11 @@
+Source: sonic-device-data
+Maintainer: Joe LeVeque <jolevequ@microsoft.com>
+Section: misc
+Priority: optional
+Standards-Version: 0.1
+Build-Depends: debhelper (>=9)
+
+Package: sonic-device-data
+Architecture: all
+Depends: ${misc:Depends}
+Description: Device-specific data files for SONiC

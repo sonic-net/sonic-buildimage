@@ -1,0 +1,799 @@
+From 49ce7fc078dfa8c1a1688e05de4e2d151dbcd76a Mon Sep 17 00:00:00 2001
+From: Harish Venkatraman <Harish_Venkatraman@dell.com>
+Date: Wed, 17 Oct 2018 15:22:04 -0700
+Subject: [PATCH] Linux-VRF 5.7.3 Support from https://sourceforge.net/p/net-snmp/patches/1376/
+
+Sourceforge commits related to this consolidated patch are given below.
+https://sourceforge.net/p/net-snmp/code/ci/0b637fea62c7b6dc467b94206d0bd2dec6f912ca/
+https://sourceforge.net/p/net-snmp/code/ci/19ba7b0a6b56d201a8563fe6505cd82e313c1c9c/
+https://sourceforge.net/p/net-snmp/code/ci/76336fb63bb74b4dede5dda5c14fb8cf2d60be8e/
+https://sourceforge.net/p/net-snmp/code/ci/c7398de4122102b3250e6dac7c09dbc5d09f1840/
+https://sourceforge.net/p/net-snmp/code/ci/0831ed64a39a34dc040eabe39d0229b07fa2a8a5/
+https://sourceforge.net/p/net-snmp/code/ci/62f6babcc7cfc54c79b442b8a7f45662b4ddc807/
+https://sourceforge.net/p/net-snmp/code/ci/313949522c4d0ddfeac72195fa63512955d9eb28/
+
+
+This consolidated patch adds native support for VRFs to snmpd. NCLU patches in this same
+CCR will be added shortly.  The VRF is specified for both listening
+addresses as well as TRAP sinks with the 'ipaddr%iface' syntax:
+
+agentAddress 10.0.1.7%mgmt,22.22.22.22%red
+trapsink 10.0.1.9%mgmt
+trap2sink 22.22.22.25%red
+
+The SO_BINDTODEVICE socket option is used to bind a VRF to a particular
+socket.
+
+Testing done included VRFs as well as non-VRF functionality with traps
+(v1, v2, and v3)
+
+---
+ agent/agent_trap.c                               | 20 ++++++++++--
+ agent/mibgroup/agentx/master.c                   |  2 +-
+ agent/mibgroup/agentx/subagent.c                 |  2 +-
+ agent/mibgroup/target/target.c                   |  3 +-
+ agent/snmp_agent.c                               | 21 ++++++++++++-
+ apps/agentxtrap.c                                |  2 +-
+ apps/snmptrap.c                                  |  2 +-
+ apps/snmptrapd.c                                 |  2 +-
+ include/net-snmp/library/snmpTCPDomain.h         |  2 +-
+ include/net-snmp/library/snmpUDPBaseDomain.h     |  2 +-
+ include/net-snmp/library/snmpUDPDomain.h         |  2 +-
+ include/net-snmp/library/snmpUDPIPv4BaseDomain.h |  2 +-
+ include/net-snmp/library/snmpUDPIPv6Domain.h     |  2 +-
+ include/net-snmp/library/snmp_transport.h        | 19 +++++++-----
+ snmplib/snmp_api.c                               |  4 +--
+ snmplib/snmp_transport.c                         | 26 ++++++++--------
+ snmplib/transports/snmpAliasDomain.c             |  6 ++--
+ snmplib/transports/snmpTCPDomain.c               | 16 +++++++---
+ snmplib/transports/snmpUDPBaseDomain.c           | 39 ++++++++++++++++++------
+ snmplib/transports/snmpUDPDomain.c               | 15 ++++-----
+ snmplib/transports/snmpUDPIPv4BaseDomain.c       |  4 +--
+ snmplib/transports/snmpUDPIPv6Domain.c           | 19 ++++-----
+ snmplib/transports/snmpUnixDomain.c              |  5 +--
+ 23 files changed, 141 insertions(+), 76 deletions(-)
+
+diff --git a/agent/agent_trap.c b/agent/agent_trap.c
+index 080b8bf..c488ac9 100644
+--- a/agent/agent_trap.c
++++ b/agent/agent_trap.c
+@@ -226,6 +226,7 @@ create_trap_session2(const char *sink, const char* sinkport,
+ {
+     netsnmp_transport *t;
+     netsnmp_session session, *sesp;
++    char *iface;
+ 
+     memset(&session, 0, sizeof(netsnmp_session));
+     session.version = version;
+@@ -250,7 +251,14 @@ create_trap_session2(const char *sink, const char* sinkport,
+         ((0 == strcmp("localhost",sink)) || (0 == strcmp("127.0.0.1",sink))))
+         session.localname = strdup("localhost");
+ 
+-    t = netsnmp_tdomain_transport_full("snmptrap", sink, 0, NULL, sinkport);
++    /*
++     * if given an iface (ip%iface) in sink, send the iface too
++     */
++    iface = strchr(sink, '%');
++    if (iface)
++        *iface++ = '\0';
++
++    t = netsnmp_tdomain_transport_full("snmptrap", sink, 0, NULL, sinkport, iface);
+     if (t != NULL) {
+ 	sesp = snmp_add(&session, t, NULL, NULL);
+ 
+@@ -1219,6 +1227,7 @@ snmpd_parse_config_trapsess(const char *word, char *cptr)
+     netsnmp_session session, *ss;
+     netsnmp_transport *transport;
+     size_t          len;
++    char            *iface;
+ 
+     /*
+      * inform or trap?  default to trap 
+@@ -1240,7 +1249,14 @@ snmpd_parse_config_trapsess(const char *word, char *cptr)
+                        NETSNMP_PARSE_ARGS_NOLOGGING |
+                        NETSNMP_PARSE_ARGS_NOZERO);
+ 
+-    transport = netsnmp_transport_open_client("snmptrap", session.peername);
++    /*
++     * if iface is given in peer, we will need to bind to that iface
++     */
++    iface = strchr(session.peername, '%');
++    if (iface)
++	*iface++ = '\0';
++
++    transport = netsnmp_transport_open_client("snmptrap", session.peername, iface);
+     if (transport == NULL) {
+         config_perror("snmpd: failed to parse this line.");
+         return;
+diff --git a/agent/mibgroup/agentx/master.c b/agent/mibgroup/agentx/master.c
+index baeebaf..6733e7f 100644
+--- a/agent/mibgroup/agentx/master.c
++++ b/agent/mibgroup/agentx/master.c
+@@ -126,7 +126,7 @@ real_init_master(void)
+         sess.remote_port = 0;
+         sess.callback = handle_master_agentx_packet;
+         errno = 0;
+-        t = netsnmp_transport_open_server("agentx", sess.peername);
++        t = netsnmp_transport_open_server("agentx", sess.peername, NULL);
+         if (t == NULL) {
+             /*
+              * diagnose snmp_open errors with the input netsnmp_session
+diff --git a/agent/mibgroup/agentx/subagent.c b/agent/mibgroup/agentx/subagent.c
+index 1f9d31c..6d38a34 100644
+--- a/agent/mibgroup/agentx/subagent.c
++++ b/agent/mibgroup/agentx/subagent.c
+@@ -843,7 +843,7 @@ subagent_open_master_session(void)
+ 
+     agentx_socket = netsnmp_ds_get_string(NETSNMP_DS_APPLICATION_ID,
+                                           NETSNMP_DS_AGENT_X_SOCKET);
+-    t = netsnmp_transport_open_client("agentx", agentx_socket);
++    t = netsnmp_transport_open_client("agentx", agentx_socket, NULL);
+     if (t == NULL) {
+         /*
+          * Diagnose snmp_open errors with the input
+diff --git a/agent/mibgroup/target/target.c b/agent/mibgroup/target/target.c
+index 5619e35..6f58817 100644
+--- a/agent/mibgroup/target/target.c
++++ b/agent/mibgroup/target/target.c
+@@ -154,7 +154,8 @@ get_target_sessions(char *taglist, TargetFilterFunction * filterfunct,
+                                                               tAddress,
+                                                               targaddrs->
+                                                               tAddressLen,
+-                                                              0);
++                                                              0,
++							      NULL);
+                             if (t == NULL) {
+                                 DEBUGMSGTL(("target_sessions",
+                                             "bad dest \""));
+diff --git a/agent/snmp_agent.c b/agent/snmp_agent.c
+index b96d650..281e8b2 100644
+--- a/agent/snmp_agent.c
++++ b/agent/snmp_agent.c
+@@ -1270,6 +1270,7 @@ init_master_agent(void)
+     char           *cptr;
+     char           *buf = NULL;
+     char           *st;
++    char           *iface;
+ 
+     /* default to a default cache size */
+     netsnmp_set_lookup_cache_size(-1);
+@@ -1318,6 +1319,9 @@ init_master_agent(void)
+          * AAL5PVC:itf.vpi.vci        (if supported)
+          * IPX:[network]:node[/port] (if supported)
+          * 
++         *
++         * New format to specify an interface for binding along with IP address
++         *  address%iface
+          */
+ 
+ 	cptr = st;
+@@ -1334,7 +1338,22 @@ init_master_agent(void)
+ 			"requested\n"));
+             break;
+         }
+-        transport = netsnmp_transport_open_server("snmp", cptr);
++
++	/*
++	 * at some point, we may want to add the special listendevice
++	 * keyword support. Not sure how to interact with ip%iface
++	   iface = netsnmp_ds_get_string(NETSNMP_DS_APPLICATION_ID,
++				NETSNMP_DS_AGENT_LISTEN_DEVICE);
++	*/
++
++	/* Look for %iface so we can send along a specific interface to
++	   setsockopt SO_BINDTODEVICE later. */
++	iface = strchr(cptr, '%');
++	if (iface)
++	    *iface++ = '\0';
++
++	transport = netsnmp_transport_open_server("snmp", cptr, iface);
++ 
+ 
+         if (transport == NULL) {
+             snmp_log(LOG_ERR, "Error opening specified endpoint \"%s\"\n",
+diff --git a/apps/agentxtrap.c b/apps/agentxtrap.c
+index 4df423c..ebd81a3 100644
+--- a/apps/agentxtrap.c
++++ b/apps/agentxtrap.c
+@@ -231,7 +231,7 @@ ConnectingEntry(UNUSED tState self)
+ 
+     if(!(t = netsnmp_transport_open_client(
+              "agentx", netsnmp_ds_get_string(
+-                 NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_X_SOCKET)))) {
++                 NETSNMP_DS_APPLICATION_ID, NETSNMP_DS_AGENT_X_SOCKET), NULL))) {
+         snmp_log(LOG_ERR, "Failed to connect to AgentX server\n");
+         change_state(&Exit);
+     } else if(!(sess = snmp_sess_add_ex(
+diff --git a/apps/snmptrap.c b/apps/snmptrap.c
+index 7c086db..28d5257 100644
+--- a/apps/snmptrap.c
++++ b/apps/snmptrap.c
+@@ -215,7 +215,7 @@ main(int argc, char *argv[])
+     }
+ 
+     ss = snmp_add(&session,
+-                  netsnmp_transport_open_client("snmptrap", session.peername),
++                  netsnmp_transport_open_client("snmptrap", session.peername, NULL),
+                   NULL, NULL);
+     if (ss == NULL) {
+         /*
+diff --git a/apps/snmptrapd.c b/apps/snmptrapd.c
+index bce0d47..122a502 100644
+--- a/apps/snmptrapd.c
++++ b/apps/snmptrapd.c
+@@ -1186,7 +1186,7 @@ main(int argc, char *argv[])
+             *sep = 0;
+         }
+ 
+-        transport = netsnmp_transport_open_server("snmptrap", cp);
++        transport = netsnmp_transport_open_server("snmptrap", cp, NULL);
+         if (transport == NULL) {
+             snmp_log(LOG_ERR, "couldn't open %s -- errno %d (\"%s\")\n",
+                      cp, errno, strerror(errno));
+diff --git a/include/net-snmp/library/snmpTCPDomain.h b/include/net-snmp/library/snmpTCPDomain.h
+index c45856b..3b1fef5 100644
+--- a/include/net-snmp/library/snmpTCPDomain.h
++++ b/include/net-snmp/library/snmpTCPDomain.h
+@@ -25,7 +25,7 @@ extern          "C" {
+ #define TRANSPORT_DOMAIN_TCP_IP		1,3,6,1,2,1,100,1,5
+ NETSNMP_IMPORT oid netsnmp_snmpTCPDomain[];
+ 
+-netsnmp_transport *netsnmp_tcp_transport(struct sockaddr_in *addr, int local);
++netsnmp_transport *netsnmp_tcp_transport(struct sockaddr_in *addr, int local, char *iface);
+ 
+ /*
+  * "Constructor" for transport domain object.  
+diff --git a/include/net-snmp/library/snmpUDPBaseDomain.h b/include/net-snmp/library/snmpUDPBaseDomain.h
+index b9d2c34..0ab2fe5 100644
+--- a/include/net-snmp/library/snmpUDPBaseDomain.h
++++ b/include/net-snmp/library/snmpUDPBaseDomain.h
+@@ -18,7 +18,7 @@ extern          "C" {
+ /*
+  * Prototypes
+  */
+-    void _netsnmp_udp_sockopt_set(int fd, int local);
++    void _netsnmp_udp_sockopt_set(int fd, int local, char *iface);
+     int netsnmp_udpbase_recv(netsnmp_transport *t, void *buf, int size,
+                              void **opaque, int *olength);
+     int netsnmp_udpbase_send(netsnmp_transport *t, void *buf, int size,
+diff --git a/include/net-snmp/library/snmpUDPDomain.h b/include/net-snmp/library/snmpUDPDomain.h
+index 3a09dfd..e402cd8 100644
+--- a/include/net-snmp/library/snmpUDPDomain.h
++++ b/include/net-snmp/library/snmpUDPDomain.h
+@@ -18,7 +18,7 @@ extern          "C" {
+ config_require(UDPIPv4Base)
+ #include <net-snmp/library/snmpUDPIPv4BaseDomain.h>
+ 
+-netsnmp_transport *netsnmp_udp_transport(struct sockaddr_in *addr, int local);
++netsnmp_transport *netsnmp_udp_transport(struct sockaddr_in *addr, int local, char*iface);
+ 
+ 
+ /*
+diff --git a/include/net-snmp/library/snmpUDPIPv4BaseDomain.h b/include/net-snmp/library/snmpUDPIPv4BaseDomain.h
+index 6f7f2c2..8d3e906 100644
+--- a/include/net-snmp/library/snmpUDPIPv4BaseDomain.h
++++ b/include/net-snmp/library/snmpUDPIPv4BaseDomain.h
+@@ -25,7 +25,7 @@ extern          "C" {
+  */
+ 
+     netsnmp_transport *netsnmp_udpipv4base_transport(struct sockaddr_in *addr,
+-                                                     int local);
++                                                     int local, char *iface);
+ 
+ #if defined(HAVE_IP_PKTINFO) || defined(HAVE_IP_RECVDSTADDR)
+     int netsnmp_udpipv4_recvfrom(int s, void *buf, int len,
+diff --git a/include/net-snmp/library/snmpUDPIPv6Domain.h b/include/net-snmp/library/snmpUDPIPv6Domain.h
+index 83eba2c..009c510 100644
+--- a/include/net-snmp/library/snmpUDPIPv6Domain.h
++++ b/include/net-snmp/library/snmpUDPIPv6Domain.h
+@@ -23,7 +23,7 @@ config_require(UDPBase)
+ NETSNMP_IMPORT oid      netsnmp_UDPIPv6Domain[];
+ 
+ netsnmp_transport *netsnmp_udp6_transport(struct sockaddr_in6 *addr,
+-                                          int local);
++                                          int local, char *iface);
+ 
+ 
+ /*
+diff --git a/include/net-snmp/library/snmp_transport.h b/include/net-snmp/library/snmp_transport.h
+index 4162897..a3deda7 100644
+--- a/include/net-snmp/library/snmp_transport.h
++++ b/include/net-snmp/library/snmp_transport.h
+@@ -206,14 +206,14 @@ typedef struct netsnmp_tdomain_s {
+      * The f_create_from_tstring field is deprecated, please do not use it
+      * for new code and try to migrate old code away from using it.
+      */
+-    netsnmp_transport *(*f_create_from_tstring) (const char *, int);
++    netsnmp_transport *(*f_create_from_tstring) (const char *, int, char *);
+ 
+-    netsnmp_transport *(*f_create_from_ostring) (const u_char *, size_t, int);
++    netsnmp_transport *(*f_create_from_ostring) (const u_char *, size_t, int, char *);
+ 
+     struct netsnmp_tdomain_s *next;
+ 
+     netsnmp_transport *(*f_create_from_tstring_new) (const char *, int,
+-						     const char*);
++						     const char*, char *);
+ 
+ } netsnmp_tdomain;
+ 
+@@ -273,29 +273,32 @@ void            netsnmp_tdomain_init(void);
+ NETSNMP_IMPORT
+ netsnmp_transport *netsnmp_tdomain_transport(const char *str,
+ 					     int local,
+-					     const char *default_domain);
++					     const char *default_domain,
++					     char *iface);
+ 
+ NETSNMP_IMPORT
+ netsnmp_transport *netsnmp_tdomain_transport_full(const char *application,
+ 						  const char *str,
+ 						  int local,
+ 						  const char *default_domain,
+-						  const char *default_target);
++						  const char *default_target,
++						  char *iface);
+ 
+ NETSNMP_IMPORT
+ netsnmp_transport *netsnmp_tdomain_transport_oid(const oid * dom,
+ 						 size_t dom_len,
+ 						 const u_char * o,
+ 						 size_t o_len,
+-						 int local);
++						 int local,
++						 char *iface);
+ 
+ NETSNMP_IMPORT
+ netsnmp_transport*
+-netsnmp_transport_open_client(const char* application, const char* str);
++netsnmp_transport_open_client(const char* application, const char* str, char *iface);
+ 
+ NETSNMP_IMPORT
+ netsnmp_transport*
+-netsnmp_transport_open_server(const char* application, const char* str);
++netsnmp_transport_open_server(const char* application, const char* str, char *iface);
+ 
+ netsnmp_transport*
+ netsnmp_transport_open(const char* application, const char* str, int local);
+diff --git a/snmplib/snmp_api.c b/snmplib/snmp_api.c
+index d155c99..5128c56 100644
+--- a/snmplib/snmp_api.c
++++ b/snmplib/snmp_api.c
+@@ -1557,12 +1557,12 @@ _sess_open(netsnmp_session * in_session)
+             transport =
+                 netsnmp_tdomain_transport_full("snmp", in_session->peername,
+                                                in_session->local_port, "tcp,tcp6",
+-                                               NULL);
++                                               NULL, NULL);
+         } else {
+             transport =
+                 netsnmp_tdomain_transport_full("snmp", in_session->peername,
+                                                in_session->local_port, "udp,udp6",
+-                                               NULL);
++                                               NULL, NULL);
+         }
+ 
+         if (NULL != clientaddr_save)
+diff --git a/snmplib/snmp_transport.c b/snmplib/snmp_transport.c
+index ada4781..40cd631 100644
+--- a/snmplib/snmp_transport.c
++++ b/snmplib/snmp_transport.c
+@@ -491,7 +491,8 @@ netsnmp_transport *
+ netsnmp_tdomain_transport_full(const char *application,
+                                const char *str, int local,
+                                const char *default_domain,
+-                               const char *default_target)
++                               const char *default_target,
++			       char *iface)
+ {
+     netsnmp_tdomain    *match = NULL;
+     const char         *addr = NULL;
+@@ -646,10 +647,10 @@ netsnmp_tdomain_transport_full(const char *application,
+                 NETSNMP_LOGONCE((LOG_WARNING,
+                                  "transport domain %s uses deprecated f_create_from_tstring\n",
+                                  match->prefix[0]));
+-                t = match->f_create_from_tstring(addr, local);
++                t = match->f_create_from_tstring(addr, local, iface);
+             }
+             else
+-                t = match->f_create_from_tstring_new(addr, local, addr2);
++                t = match->f_create_from_tstring_new(addr, local, addr2, iface);
+             if (t) {
+                 if (lspec) {
+                     free(lspec[0]);
+@@ -676,10 +677,11 @@ netsnmp_tdomain_transport_full(const char *application,
+ 
+ netsnmp_transport *
+ netsnmp_tdomain_transport(const char *str, int local,
+-			  const char *default_domain)
++			  const char *default_domain,
++			  char *iface)
+ {
+     return netsnmp_tdomain_transport_full("snmp", str, local, default_domain,
+-					  NULL);
++					  NULL, iface);
+ }
+ 
+ 
+@@ -687,7 +689,7 @@ netsnmp_tdomain_transport(const char *str, int local,
+ netsnmp_transport *
+ netsnmp_tdomain_transport_oid(const oid * dom,
+                               size_t dom_len,
+-                              const u_char * o, size_t o_len, int local)
++                              const u_char * o, size_t o_len, int local, char *iface)
+ {
+     netsnmp_tdomain *d;
+     int             i;
+@@ -700,7 +702,7 @@ netsnmp_tdomain_transport_oid(const oid * dom,
+         for (i = 0; d->prefix[i] != NULL; i++) {
+             if (netsnmp_oid_equals(dom, dom_len, d->name, d->name_length) ==
+                 0) {
+-                return d->f_create_from_ostring(o, o_len, local);
++                return d->f_create_from_ostring(o, o_len, local, iface);
+             }
+         }
+     }
+@@ -713,19 +715,19 @@ netsnmp_tdomain_transport_oid(const oid * dom,
+ netsnmp_transport*
+ netsnmp_transport_open(const char* application, const char* str, int local)
+ {
+-    return netsnmp_tdomain_transport_full(application, str, local, NULL, NULL);
++    return netsnmp_tdomain_transport_full(application, str, local, NULL, NULL, NULL);
+ }
+ 
+ netsnmp_transport*
+-netsnmp_transport_open_server(const char* application, const char* str)
++netsnmp_transport_open_server(const char* application, const char* str, char *iface)
+ {
+-    return netsnmp_tdomain_transport_full(application, str, 1, NULL, NULL);
++    return netsnmp_tdomain_transport_full(application, str, 1, NULL, NULL, iface);
+ }
+ 
+ netsnmp_transport*
+-netsnmp_transport_open_client(const char* application, const char* str)
++netsnmp_transport_open_client(const char* application, const char* str, char *iface)
+ {
+-    return netsnmp_tdomain_transport_full(application, str, 0, NULL, NULL);
++    return netsnmp_tdomain_transport_full(application, str, 0, NULL, NULL, iface);
+ }
+ 
+ /** adds a transport to a linked list of transports.
+diff --git a/snmplib/transports/snmpAliasDomain.c b/snmplib/transports/snmpAliasDomain.c
+index eb50cad..dd7a007 100644
+--- a/snmplib/transports/snmpAliasDomain.c
++++ b/snmplib/transports/snmpAliasDomain.c
+@@ -75,7 +75,7 @@ free_alias_config(void) {
+ 
+ netsnmp_transport *
+ netsnmp_alias_create_tstring(const char *str, int local,
+-			   const char *default_target)
++			   const char *default_target, char *iface)
+ {
+     const char *aliasdata;
+ 
+@@ -85,13 +85,13 @@ netsnmp_alias_create_tstring(const char *str, int local,
+         return NULL;
+     }
+ 
+-    return netsnmp_tdomain_transport(aliasdata,local,default_target);
++    return netsnmp_tdomain_transport(aliasdata,local,default_target, iface);
+ }
+ 
+ 
+ 
+ netsnmp_transport *
+-netsnmp_alias_create_ostring(const u_char * o, size_t o_len, int local)
++netsnmp_alias_create_ostring(const u_char * o, size_t o_len, int local, char *iface)
+ {
+     fprintf(stderr, "make ostring\n");
+     return NULL;
+diff --git a/snmplib/transports/snmpTCPDomain.c b/snmplib/transports/snmpTCPDomain.c
+index 7feb028..6eb717e 100644
+--- a/snmplib/transports/snmpTCPDomain.c
++++ b/snmplib/transports/snmpTCPDomain.c
+@@ -144,7 +144,7 @@ netsnmp_tcp_accept(netsnmp_transport *t)
+  */
+ 
+ netsnmp_transport *
+-netsnmp_tcp_transport(struct sockaddr_in *addr, int local)
++netsnmp_tcp_transport(struct sockaddr_in *addr, int local, char *iface)
+ {
+     netsnmp_transport *t = NULL;
+     netsnmp_udp_addr_pair *addr_pair = NULL;
+@@ -212,6 +212,11 @@ netsnmp_tcp_transport(struct sockaddr_in *addr, int local)
+          * We should set SO_REUSEADDR too.  
+          */
+ 
++        if (iface && setsockopt(t->sock, SOL_SOCKET, SO_BINDTODEVICE,
++                                iface, strlen(iface)) == -1)
++                snmp_log(LOG_ERR, "Bind interface %s to socket: %s\n",
++                                iface, strerror(errno));
++
+         setsockopt(t->sock, SOL_SOCKET, SO_REUSEADDR, (void *)&opt,
+ 		   sizeof(opt));
+ 
+@@ -305,12 +310,13 @@ netsnmp_tcp_transport(struct sockaddr_in *addr, int local)
+ 
+ netsnmp_transport *
+ netsnmp_tcp_create_tstring(const char *str, int local,
+-			   const char *default_target)
++			   const char *default_target,
++			   char *iface)
+ {
+     struct sockaddr_in addr;
+ 
+     if (netsnmp_sockaddr_in2(&addr, str, default_target)) {
+-        return netsnmp_tcp_transport(&addr, local);
++        return netsnmp_tcp_transport(&addr, local, iface);
+     } else {
+         return NULL;
+     }
+@@ -319,7 +325,7 @@ netsnmp_tcp_create_tstring(const char *str, int local,
+ 
+ 
+ netsnmp_transport *
+-netsnmp_tcp_create_ostring(const u_char * o, size_t o_len, int local)
++netsnmp_tcp_create_ostring(const u_char * o, size_t o_len, int local, char *iface)
+ {
+     struct sockaddr_in addr;
+ 
+@@ -328,7 +334,7 @@ netsnmp_tcp_create_ostring(const u_char * o, size_t o_len, int local)
+         addr.sin_family = AF_INET;
+         memcpy((u_char *) & (addr.sin_addr.s_addr), o, 4);
+         addr.sin_port = htons(porttmp);
+-        return netsnmp_tcp_transport(&addr, local);
++        return netsnmp_tcp_transport(&addr, local, iface);
+     }
+     return NULL;
+ }
+diff --git a/snmplib/transports/snmpUDPBaseDomain.c b/snmplib/transports/snmpUDPBaseDomain.c
+index 8497f71..7b415bc 100644
+--- a/snmplib/transports/snmpUDPBaseDomain.c
++++ b/snmplib/transports/snmpUDPBaseDomain.c
+@@ -21,6 +21,9 @@
+ #if HAVE_NETINET_IN_H
+ #include <netinet/in.h>
+ #endif
++#if HAVE_NET_IF_H
++#include <net/if.h>
++#endif
+ #if HAVE_ARPA_INET_H
+ #include <arpa/inet.h>
+ #endif
+@@ -53,8 +56,14 @@
+ #endif
+ 
+ void
+-_netsnmp_udp_sockopt_set(int fd, int local)
++_netsnmp_udp_sockopt_set(int fd, int local, char *iface)
+ {
++
++    if (iface && setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, iface, strlen(iface)) == -1)
++        snmp_log(LOG_ERR, "Bind socket on interface: %s: %s\n", iface, strerror(errno));
++    else if (iface)
++        DEBUGMSGTL(("socket:option", "setting SO_BINDTODEVICE to %s\n", iface));
++
+ #ifdef  SO_BSDCOMPAT
+     /*
+      * Patch for Linux.  Without this, UDP packets that fail get an ICMP
+@@ -237,7 +246,10 @@ int netsnmp_udpbase_sendto(int fd, struct in_addr *srcip, int if_index,
+     struct msghdr m = { 0 };
+     char          cmsg[CMSG_SPACE(cmsg_data_size)];
+     int           rc;
+-
++    char          iface[IFNAMSIZ];
++    socklen_t     ifacelen = IFNAMSIZ;
++ 
++    iface[0] = '\0';
+     iov.iov_base = data;
+     iov.iov_len  = len;
+ 
+@@ -269,14 +281,23 @@ int netsnmp_udpbase_sendto(int fd, struct in_addr *srcip, int if_index,
+ 
+             memset(&ipi, 0, sizeof(ipi));
+             /*
+-             * Except in the case of responding
+-             * to a broadcast, setting the ifindex
+-             * when responding results in incorrect
+-             * behavior of changing the source address
+-             * that the manager sees the response
+-             * come from.
++             * For asymmetric multihomed users, we only set ifindex to 0
++             * to let kernel handle return if there was no iface bound to the socket.
+              */
+-            ipi.ipi_ifindex = 0;
++            if (getsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, iface, &ifacelen) != 0)  {
++                DEBUGMSGTL(("socket:option", "error getsockopt %s\n", strerror(errno)));
++                DEBUGMSGTL(("socket:option", "sendto: SO_BINDTODEVICE not set ifindex=0\n"));
++                ipi.ipi_ifindex = 0;
++            } else if (!ifacelen) {
++                DEBUGMSGTL(("socket:option", "sendto: SO_BINDTODEVICE not set ifacelen=%d ifindex=0\n",
++                            ifacelen));
++                ipi.ipi_ifindex = 0;
++            } else {
++                DEBUGMSGTL(("socket:option", "sendto: SO_BINDTODEVICE dev=%s using ifindex=%d\n",
++                            iface, if_index));
++                ipi.ipi_ifindex = if_index;
++            }
++
+ #if defined(cygwin)
+             ipi.ipi_addr.s_addr = srcip->s_addr;
+ #else
+diff --git a/snmplib/transports/snmpUDPDomain.c b/snmplib/transports/snmpUDPDomain.c
+index a0abd8c..fc68303 100644
+--- a/snmplib/transports/snmpUDPDomain.c
++++ b/snmplib/transports/snmpUDPDomain.c
+@@ -84,7 +84,7 @@ typedef netsnmp_indexed_addr_pair netsnmp_udp_addr_pair;
+  * not static, since snmpUDPIPv6Domain needs it, but not public, either.
+  * (ie don't put it in a public header.)
+  */
+-void _netsnmp_udp_sockopt_set(int fd, int server);
++void _netsnmp_udp_sockopt_set(int fd, int server, char *iface);
+ int
+ netsnmp_sockaddr_in2(struct sockaddr_in *addr,
+                      const char *inpeername, const char *default_target);
+@@ -125,11 +125,11 @@ int netsnmp_udp_sendto(int fd, struct in_addr *srcip, int if_index, struct socka
+  */
+ 
+ netsnmp_transport *
+-netsnmp_udp_transport(struct sockaddr_in *addr, int local)
++netsnmp_udp_transport(struct sockaddr_in *addr, int local, char *iface)
+ {
+     netsnmp_transport *t = NULL;
+ 
+-    t = netsnmp_udpipv4base_transport(addr, local);
++    t = netsnmp_udpipv4base_transport(addr, local, iface);
+     if (NULL == t) {
+         return NULL;
+     }
+@@ -473,12 +473,13 @@ netsnmp_udp_getSecName(void *opaque, int olength,
+ 
+ netsnmp_transport *
+ netsnmp_udp_create_tstring(const char *str, int local,
+-			   const char *default_target)
++			   const char *default_target,
++			   char *iface)
+ {
+     struct sockaddr_in addr;
+ 
+     if (netsnmp_sockaddr_in2(&addr, str, default_target)) {
+-        return netsnmp_udp_transport(&addr, local);
++        return netsnmp_udp_transport(&addr, local, iface);
+     } else {
+         return NULL;
+     }
+@@ -486,7 +487,7 @@ netsnmp_udp_create_tstring(const char *str, int local,
+ 
+ 
+ netsnmp_transport *
+-netsnmp_udp_create_ostring(const u_char * o, size_t o_len, int local)
++netsnmp_udp_create_ostring(const u_char * o, size_t o_len, int local, char *iface)
+ {
+     struct sockaddr_in addr;
+ 
+@@ -495,7 +496,7 @@ netsnmp_udp_create_ostring(const u_char * o, size_t o_len, int local)
+         addr.sin_family = AF_INET;
+         memcpy((u_char *) & (addr.sin_addr.s_addr), o, 4);
+         addr.sin_port = htons(porttmp);
+-        return netsnmp_udp_transport(&addr, local);
++        return netsnmp_udp_transport(&addr, local, iface);
+     }
+     return NULL;
+ }
+diff --git a/snmplib/transports/snmpUDPIPv4BaseDomain.c b/snmplib/transports/snmpUDPIPv4BaseDomain.c
+index 8c0fb05..7991b6a 100644
+--- a/snmplib/transports/snmpUDPIPv4BaseDomain.c
++++ b/snmplib/transports/snmpUDPIPv4BaseDomain.c
+@@ -57,7 +57,7 @@ int netsnmp_udpipv4_sendto(int fd, struct in_addr *srcip, int if_index,
+ #endif /* HAVE_IP_PKTINFO || HAVE_IP_RECVDSTADDR */
+ 
+ netsnmp_transport *
+-netsnmp_udpipv4base_transport(struct sockaddr_in *addr, int local)
++netsnmp_udpipv4base_transport(struct sockaddr_in *addr, int local, char *iface)
+ {
+     netsnmp_transport *t = NULL;
+     int             rc = 0, rc2;
+@@ -95,7 +95,7 @@ netsnmp_udpipv4base_transport(struct sockaddr_in *addr, int local)
+         return NULL;
+     }
+ 
+-    _netsnmp_udp_sockopt_set(t->sock, local);
++    _netsnmp_udp_sockopt_set(t->sock, local, iface);
+ 
+     if (local) {
+ #ifndef NETSNMP_NO_LISTEN_SUPPORT
+diff --git a/snmplib/transports/snmpUDPIPv6Domain.c b/snmplib/transports/snmpUDPIPv6Domain.c
+index 18de876..6b44b22 100644
+--- a/snmplib/transports/snmpUDPIPv6Domain.c
++++ b/snmplib/transports/snmpUDPIPv6Domain.c
+@@ -74,12 +74,6 @@ oid netsnmp_UDPIPv6Domain[] = { TRANSPORT_DOMAIN_UDP_IPV6 };
+ static netsnmp_tdomain udp6Domain;
+ 
+ /*
+- * from snmpUDPDomain. not static, but not public, either.
+- * (ie don't put it in a public header.)
+- */
+-extern void _netsnmp_udp_sockopt_set(int fd, int server);
+-
+-/*
+  * Return a string representing the address in data, or else the "far end"
+  * address if data is NULL.  
+  */
+@@ -186,7 +186,7 @@ netsnmp_udp6_send(netsnmp_transport *t, void *buf, int size,
+  */
+ 
+ netsnmp_transport *
+-netsnmp_udp6_transport(struct sockaddr_in6 *addr, int local)
++netsnmp_udp6_transport(struct sockaddr_in6 *addr, int local, char *iface)
+ {
+     netsnmp_transport *t = NULL;
+     int             rc = 0;
+@@ -223,7 +223,7 @@ netsnmp_udp6_transport(struct sockaddr_in6 *addr, int local)
+         return NULL;
+     }
+ 
+-    _netsnmp_udp_sockopt_set(t->sock, local);
++    _netsnmp_udp_sockopt_set(t->sock, local, iface);
+ 
+     if (local) {
+ #ifndef NETSNMP_NO_LISTEN_SUPPORT
+@@ -724,12 +724,13 @@ netsnmp_udp6_getSecName(void *opaque, int olength,
+ 
+ netsnmp_transport *
+ netsnmp_udp6_create_tstring(const char *str, int local,
+-			    const char *default_target)
++			    const char *default_target,
++			    char *iface)
+ {
+     struct sockaddr_in6 addr;
+ 
+     if (netsnmp_sockaddr_in6_2(&addr, str, default_target)) {
+-        return netsnmp_udp6_transport(&addr, local);
++        return netsnmp_udp6_transport(&addr, local, iface);
+     } else {
+         return NULL;
+     }
+@@ -746,7 +747,7 @@ netsnmp_udp6_create_tstring(const char *str, int local,
+  */
+ 
+ netsnmp_transport *
+-netsnmp_udp6_create_ostring(const u_char * o, size_t o_len, int local)
++netsnmp_udp6_create_ostring(const u_char * o, size_t o_len, int local, char *iface)
+ {
+     struct sockaddr_in6 addr;
+ 
+@@ -755,7 +756,7 @@ netsnmp_udp6_create_ostring(const u_char * o, size_t o_len, int local)
+         addr.sin6_family = AF_INET6;
+         memcpy((u_char *) & (addr.sin6_addr.s6_addr), o, 16);
+         addr.sin6_port = htons((o[16] << 8) + o[17]);
+-        return netsnmp_udp6_transport(&addr, local);
++        return netsnmp_udp6_transport(&addr, local, iface);
+     }
+     return NULL;
+ }
+diff --git a/snmplib/transports/snmpUnixDomain.c b/snmplib/transports/snmpUnixDomain.c
+index 47dffc1..af56c5d 100644
+--- a/snmplib/transports/snmpUnixDomain.c
++++ b/snmplib/transports/snmpUnixDomain.c
+@@ -450,7 +450,8 @@ netsnmp_unix_transport(struct sockaddr_un *addr, int local)
+ 
+ netsnmp_transport *
+ netsnmp_unix_create_tstring(const char *string, int local,
+-			    const char *default_target)
++			    const char *default_target,
++			    char *iface)
+ {
+     struct sockaddr_un addr;
+ 
+@@ -476,7 +477,7 @@ netsnmp_unix_create_tstring(const char *string, int local,
+ 
+ 
+ netsnmp_transport *
+-netsnmp_unix_create_ostring(const u_char * o, size_t o_len, int local)
++netsnmp_unix_create_ostring(const u_char * o, size_t o_len, int local, char *iface)
+ {
+     struct sockaddr_un addr;
+ 
+-- 
+2.7.4
+

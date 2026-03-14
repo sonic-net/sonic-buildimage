@@ -1,0 +1,33 @@
+module sonic-mgmt_vrf {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-mgmt_vrf";
+    prefix mvrf;
+
+    description
+        "SONiC MGMT VRF";
+
+    revision 2021-04-07 {
+        description
+            "First revision";
+    }
+
+    container sonic-mgmt_vrf {
+        container MGMT_VRF_CONFIG {
+
+            container vrf_global {
+
+                leaf mgmtVrfEnabled {
+                    type boolean;
+                    default false;
+                }
+
+            } /* end of container vrf_global */
+
+        } /* end of container MGMT_VRF_CONFIG */
+
+    } /* end of container sonic-mgmt_vrf */
+
+} /* end of module sonic-mgmt_vrf */
+

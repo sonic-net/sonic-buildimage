@@ -1,0 +1,93 @@
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ENV PYTHONPATH=/usr/share/sonic/platform
+
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+{% if ARTIFACTORY_URL is defined and ARTIFACTORY_URL|length -%}
+# Insert Artifactory URL references
+COPY ["files/03_stretch_af.list", "/etc/apt/sources.list.d/"]
+{%- endif %}
+
+# Update apt's cache of available packages
+RUN apt-get update && apt-get install -y ipmitool telnet busybox kmod libpcap-dev
+
+# Packages for benchmark tool - nench.sh
+RUN apt-get install -y bzip2 curl ioping openssl bc sysstat
+
+# Packages for PDDF
+RUN apt-get install -y python3-jsonschema i2c-tools
+
+RUN pip3 install pytest pexpect
+
+{% if docker_pde_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+COPY \
+{% for deb in docker_pde_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+/debs/
+
+# Install locally-built Debian packages and implicitly install their dependencies
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; }{%- for deb in docker_pde_debs.split(' ') %}; \
+dpkg_apt /debs/{{ deb }}
+{%- endfor %}
+{%- endif %}
+
+{% if docker_pde_pydebs.strip() -%}
+# Copy locally-built Debian package dependencies
+COPY \
+{% for deb in docker_pde_pydebs.split(' ') -%}
+python-debs/{{ deb }}{{' '}}
+{%- endfor -%}
+/debs/
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{%- for deb in docker_pde_pydebs.split(' ') %}
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; }; dpkg_apt /debs/{{ deb }}
+{%- endfor %}
+{%- endif %}
+
+{% if docker_pde_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+COPY \
+{% for whl in docker_pde_whls.split(' ') -%}
+python-wheels/{{ whl }}{{' '}}
+{%- endfor -%}
+/python-wheels/
+
+# Install locally-built Python wheel dependencies
+
+RUN pip3  install \
+
+
+{% for whl in docker_pde_whls.split(' ') -%}
+/python-wheels/{{ whl }}{{' '}}
+{%- endfor %}
+{% endif %}
+
+{% if ARTIFACTORY_URL is defined and ARTIFACTORY_URL|length -%}
+# Remove Artifactory URL references
+RUN rm -f /etc/apt/sources.list.d/03_stretch_af.list && apt-get update
+{%- endif %}
+
+# Clean up
+RUN apt-get clean -y; \
+    apt-get autoclean -y; \
+    apt-get autoremove -y
+RUN rm -rf /debs ~/.cache
+
+RUN mkdir -p /home/pde
+
+COPY ["bench.sh", "/usr/bin/"]
+COPY ["stress-sfp-i2c.py", "/home/pde"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["syseeprom.py", "/usr/bin/"]
+COPY ["docker_init.sh", "/usr/bin/"]
+COPY ["cancun_files/cancun_4.6.0/*", "cancun_files/cancun_6.9.1/*", "cancun_files/cancun_4.8.0/*", "/usr/lib/cancun/"]
+COPY ["syncd_init_common.sh", "/usr/bin/"]
+
+ENTRYPOINT ["/usr/bin/docker_init.sh"]

@@ -1,0 +1,112 @@
+From 430f8942fe086553fcd6ad1444e886a343bfd658 Mon Sep 17 00:00:00 2001
+From: Guillaume Valadon <guillaume@valadon.net>
+Date: Mon, 10 May 2021 12:02:32 +0200
+Subject: [PATCH] Do not resolve the interface name globally
+
+---
+ doc/scapy/usage.rst |  2 ++
+ scapy/sendrecv.py   | 16 ++++++++--------
+ test/regression.uts | 31 +++++++++++++++++++++++++++++--
+ 3 files changed, 39 insertions(+), 10 deletions(-)
+
+diff --git a/doc/scapy/usage.rst b/doc/scapy/usage.rst
+index 45266430fe..c6cb273f62 100644
+--- a/doc/scapy/usage.rst
++++ b/doc/scapy/usage.rst
+@@ -711,6 +711,8 @@ We can sniff and do passive OS fingerprinting::
+ 
+ The number before the OS guess is the accuracy of the guess.
+ 
++.. note:: When sniffing on several interfaces (e.g. ``iface=["eth0", ...]``), you can check what interface a packet was sniffed on by using the ``sniffed_on`` attribute, as shown in one of the examples above.
++
+ Asynchronous Sniffing
+ ---------------------
+ 
+diff --git a/scapy/sendrecv.py b/scapy/sendrecv.py
+index 503c6a3b15..f97fc4153e 100644
+--- a/scapy/sendrecv.py
++++ b/scapy/sendrecv.py
+@@ -1108,24 +1108,24 @@ def _run(self,
+                             quiet=quiet)
+                 )] = offline
+         if not sniff_sockets or iface is not None:
+-            iface = resolve_iface(iface or conf.iface)
+-            if L2socket is None:
+-                L2socket = iface.l2listen()
++            # The _RL2 function resolves the L2socket of an iface
++            _RL2 = lambda i: L2socket or resolve_iface(i).l2listen()  # type: Callable[[_GlobInterfaceType], Callable[..., SuperSocket]]  # noqa: E501
+             if isinstance(iface, list):
+                 sniff_sockets.update(
+-                    (L2socket(type=ETH_P_ALL, iface=ifname, **karg),
++                    (_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg),
+                      ifname)
+                     for ifname in iface
+                 )
+             elif isinstance(iface, dict):
+                 sniff_sockets.update(
+-                    (L2socket(type=ETH_P_ALL, iface=ifname, **karg),
++                    (_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg),
+                      iflabel)
+                     for ifname, iflabel in six.iteritems(iface)
+                 )
+             else:
+-                sniff_sockets[L2socket(type=ETH_P_ALL, iface=iface,
+-                                       **karg)] = iface
++                iface = iface or conf.iface
++                sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
++                                          **karg)] = iface
+ 
+         # Get select information from the sockets
+         _main_socket = next(iter(sniff_sockets))
+@@ -1248,7 +1248,7 @@ def stop(self, join=True):
+                 return self.results
+             return None
+         else:
+-            raise Scapy_Exception("Not started !")
++            raise Scapy_Exception("Not running ! (check .running attr)")
+ 
+     def join(self, *args, **kwargs):
+         # type: (*Any, **Any) -> None
+diff --git a/test/regression.uts b/test/regression.uts
+index 38644b7d75..972af2f8cd 100644
+--- a/test/regression.uts
++++ b/test/regression.uts
+@@ -1379,9 +1379,36 @@ def _test():
+     assert (ans.time - req.sent_time) >= 0
+     assert (ans.time - req.sent_time) <= 1e-3
+ 
+-retry_test(_test)
++try:
++    retry_test(_test)
++finally:
++    conf.L3socket = sock
++
++= Test sniffing on multiple sockets
++~ netaccess needs_root sniff
++
++# This test sniffs on the same interface twice at the same time, to
++# simulate sniffing on multiple interfaces.
++
++iface = conf.route.route("www.google.com")[0]
++port = int(RandShort())
++pkt = IP(dst="www.google.com")/TCP(sport=port, dport=80, flags="S")
++
++def cb():
++    sr1(pkt, timeout=3)
++
++sniffer = AsyncSniffer(started_callback=cb,
++                       iface=[iface, iface],
++                       lfilter=lambda x: TCP in x and x[TCP].dport == port,
++                       prn=lambda x: x.summary(),
++                       count=2)
++sniffer.start()
++sniffer.join(timeout=3)
++
++assert len(sniffer.results) == 2
+ 
+-conf.L3socket = sock
++for pkt in sniffer.results:
++    assert pkt.sniffed_on == iface
+ 
+ = Sending a TCP syn 'forever' at layer 2 and layer 3
+ ~ netaccess IP

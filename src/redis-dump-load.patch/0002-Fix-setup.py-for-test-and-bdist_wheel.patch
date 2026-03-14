@@ -1,0 +1,26 @@
+From c2c93fa3b702a4f2364383fd4ae69763068686d2 Mon Sep 17 00:00:00 2001
+From: Qi Luo <qiluo-msft@users.noreply.github.com>
+Date: Tue, 20 Nov 2018 03:21:31 +0000
+Subject: [PATCH] Fix setup.py for test and bdist_wheel
+
+Signed-off-by: Qi Luo <qiluo-msft@users.noreply.github.com>
+---
+ setup.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/setup.py b/setup.py
+index 8ccf31f..6457163 100644
+--- a/setup.py
++++ b/setup.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python
+ 
+ import os.path
+-from distutils.core import setup
++from setuptools import setup, find_packages
+ 
+ package_name = 'redis-dump-load'
+ package_version = '1.1'
+-- 
+2.18.0
+

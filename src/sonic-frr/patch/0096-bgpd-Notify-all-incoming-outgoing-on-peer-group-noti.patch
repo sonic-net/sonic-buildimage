@@ -1,0 +1,37 @@
+From b1e7da304a61755bba4825fefcd250bc5fc00e85 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 28 Oct 2025 16:01:52 -0400
+Subject: bgpd: Notify all incoming/outgoing on peer group notify unconfig
+
+The peer_group_notify_unconfig function was only sending Notification
+to either the incoming or outgoing connection, but not both.
+If you are in early stages of bringing up a neighbor on both
+incoming and outgoing connections. If the cli is changed
+that something about a peer group changes the code is only
+notifying either incoming or outgoing, but not both.  If
+we need to reset the connections, which is what peer_notify_unconfig
+does, then we need to reset both.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgpd.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index d65c49fb14..015b14554d 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -3157,8 +3157,8 @@ void peer_group_notify_unconfig(struct peer_group *group)
+ 		if (other && other->connection->status != Deleted) {
+ 			other->group = NULL;
+ 			peer_notify_unconfig(other->connection);
+-		} else
+-			peer_notify_unconfig(peer->connection);
++		}
++		peer_notify_unconfig(peer->connection);
+ 	}
+ }
+ 
+-- 
+2.48.1
+

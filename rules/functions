@@ -1,0 +1,242 @@
+###############################################################################
+## FUNCTIONS
+###############################################################################
+
+###############################################################################
+## Colored output
+###############################################################################
+
+# Enable colored output
+ifeq ($(SONIC_CONFIG_ENABLE_COLORS),y)
+ifeq ($(MAKE_TERMOUT),)
+RED=\033[1;31m
+PURPLE=\033[1;35m
+CYAN=\033[1;36m
+GREEN=\033[1;32m
+GRAY=\033[0m
+endif
+endif
+
+ifeq ($(BUILD_LOG_TIMESTAMP),simple)
+PROCESS_LOG_OPTION = -t
+endif
+
+# Print red colored output
+# call:
+#       log_red message
+log_red = echo -e "$(RED)$(1)$(GRAY)"
+
+# Print purple colored output
+# call:
+#       log_purple message
+log_purple = echo -e "$(PURPLE)$(1)$(GRAY)"
+
+# Print blue colored output
+# call:
+#       log_blue message
+log_blue = echo -e "$(CYAN)$(1)$(GRAY)"
+
+# Print green colored output
+# call:
+#       log_green message
+log_green = echo -e "$(GREEN)$(1)$(GRAY)"
+
+###############################################################################
+## Logging
+###############################################################################
+
+FLUSH_LOG = rm -f $@.log
+
+LOG_SIMPLE = &>> $(PROJECT_ROOT)/$@.log || { [ $$? -eq 0 ] || pushd $(PROJECT_ROOT) > /dev/null ; ./update_screen.sh -e $@ ; popd > /dev/null ; false ; }
+LOG = < /dev/null |& $(PROJECT_ROOT)/scripts/process_log.sh $(PROCESS_LOG_OPTION) &>> $(PROJECT_ROOT)/$@.log ; test $${PIPESTATUS[-2]} -eq 0 || { [ $$? -eq 0 ] || pushd $(PROJECT_ROOT) > /dev/null ; ./update_screen.sh -e $@ ; popd > /dev/null ; false ; }
+
+###############################################################################
+## Header and footer for each target
+###############################################################################
+START_TIME = echo Build start time: $$(date -ud "@$($@_TSTMP_ST)") $(LOG)
+END_TIME = echo Build end time: $$(date -ud "@$($@_TSTMP_END)") $(LOG)
+ELAPSED_TIME = echo Elapsed time: $$(date -ud "@$$(( $($@_TSTMP_END) - $($@_TSTMP_ST) ))" +'%-Hh %-Mm %-Ss') $(LOG)
+
+# Dump targets taht current depends on
+ifeq ($(SONIC_CONFIG_PRINT_DEPENDENCIES),y)
+PRINT_DEPENDENCIES = echo Dependencies for $@ are $^ $(LOG)
+endif
+
+# header for each rule
+define HEADER
+@
+$(PRINT_DEPENDENCIES)
+$(FLUSH_LOG)
+$(eval $@_TSTMP_ST := $(shell date +%s))
+$(START_TIME)
+./update_screen.sh -a $@ $*
+endef
+
+# footer for each rule
+define FOOTER
+$(eval $@_TSTMP_END := `date +%s`)
+$(END_TIME)
+$(ELAPSED_TIME)
+./update_screen.sh -d $@ $($*_CACHE_LOADED)
+endef
+
+###############################################################################
+## Definition of derived target
+###############################################################################
+
+# call:
+#     add_derived_package some_deb.deb, some_derived_deb
+define add_derived_package
+$(2)_DEPENDS += $(1)
+$(2)_RDEPENDS += $($(1)_RDEPENDS)
+$(2)_MAIN_DEB = $(1)
+$(1)_DERIVED_DEBS += $(2)
+$(2)_URL = $($(1)_URL)
+$(2)_SRC_PATH = $($(1)_SRC_PATH)
+$(2)_NAME = $($(1)_NAME)
+$(2)_VERSION = $($(1)_VERSION)
+SONIC_DERIVED_DEBS += $(2)
+endef
+
+# call:
+#     add_extra_package some_deb.deb, some_extra_deb
+define add_extra_package
+$(2)_MAIN_DEB = $(1)
+$(1)_EXTRA_DEBS += $(2)
+SONIC_EXTRA_DEBS += $(2)
+endef
+
+###############################################################################
+## Definition of conflict packages
+###############################################################################
+
+# call:
+#     add_conflict_package some_deb.deb, conflict_deb
+define add_conflict_package
+$(1)_CONFLICT_DEBS += $(2)
+$(2)_CONFLICT_DEBS += $(1)
+endef
+
+###############################################################################
+## Definition of debug dockers
+###############################################################################
+
+# call:
+#     add_dbg_docker some_docker.gz, some-docker-dbg.gz
+define add_dbg_docker
+$(2)_PATH = $($(1)_PATH)
+$(2)_DBG_DEPENDS += $($(1)_DBG_DEPENDS)
+$(2)_DBG_IMAGE_PACKAGES += $($(1)_DBG_IMAGE_PACKAGES)
+$(2)_PYTHON_DEBS += $($(1)_PYTHON_DEBS)
+$(2)_PYTHON_WHEELS += $($(1)_PYTHON_WHEELS)
+$(2)_LOAD_DOCKERS += $($(1)_LOAD_DOCKERS)
+$(2)_CACHE_MODE += $($(1)_CACHE_MODE)
+$(2)_DEP_FLAGS += $($(1)_DEP_FLAGS)
+$(2)_DEP_FILES += $($(1)_DEP_FILES)
+$(2)_SMDEP_FILES += $($(1)_SMDEP_FILES)
+$(2)_SMDEP_PATHS += $($(1)_SMDEP_PATHS)
+$(2)_DEPENDS += $($(1)_DEPENDS)
+$(2)_RDEPENDS += $($(1)_RDEPENDS)
+$(2)_MAIN_DOCKER = $(1)
+$(1)_DBG_DOCKER += $(2)
+SONIC_DBG_DOCKERS += $(2)
+endef
+
+
+###############################################################################
+## Definition of docker feature composition
+###############################################################################
+
+# Merge a feature docker's components into a target docker.
+# This automatically includes the feature's DEPENDS, PYTHON_WHEELS, and FILES,
+# and records it for runtime merging of supervisord/start.sh/Dockerfile snippets.
+#
+# call:
+#     add_docker_feature target_docker.gz, FEATURE_NAME, source_docker.gz
+define add_docker_feature
+$(1)_DEPENDS += $$($(3)_DEPENDS)
+$(1)_PYTHON_WHEELS += $$($(3)_PYTHON_WHEELS)
+$(1)_FILES += $$($(3)_FILES)
+$(1)_DOCKERS += $(3)
+$(1)_DOCKER_FEATURES += $(2)
+$(1)_DOCKER_FEATURE_$(2)_PATH = $$($(3)_PATH)
+$(1)_BUILD_CONTEXTS += --build-context $(2)=$$($(3)_PATH)
+$(1)_J2_INCLUDE_PATHS += -I $$(dir $$($(3)_PATH))
+endef
+
+# Process _INCLUDE_DOCKER list: automatically call add_docker_feature for each entry.
+# Usage in .mk:  $(DOCKER_FOO)_INCLUDE_DOCKER += $(DOCKER_LLDP)
+# Feature name is derived from docker name: docker-lldp.gz → lldp
+# Must be called after all docker .mk files are loaded (see slave.mk).
+define process_include_dockers
+$(foreach docker,$($(1)_INCLUDE_DOCKER),\
+  $(eval $(call add_docker_feature,$(1),$(patsubst docker-%.gz,%,$(docker)),$(docker))))
+endef
+
+###############################################################################
+## Utility functions
+###############################################################################
+# Recursive wildcard function
+rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+expand = $(foreach d,$(1),$(call expand,$($(d)_$(2)),$(2))) $(1)
+
+###############################################################################
+## Uninstall debs
+###############################################################################
+define UNINSTALL_DEBS
+if [ -n "$(1)" ]; then \
+    flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive dpkg -P $(foreach deb,$(1),$(firstword $(subst _, ,$(basename $(deb))))) $(LOG) ; \
+fi
+endef
+
+###############################################################################
+## Setup overlay fs for dpkg admin directory /var/lib/dpkg
+###############################################################################
+define SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR
+upperdir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
+workdir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
+mergedir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
+sudo mount -t overlay overlay -olowerdir=/var/lib/dpkg,upperdir=$$upperdir,workdir=$$workdir $$mergedir
+export SONIC_DPKG_ADMINDIR=$$mergedir
+trap "sudo umount $$mergedir && rm -rf $$mergedir $$upperdir $$workdir" EXIT
+endef
+
+
+###############################################################################
+## Manifest generation routine
+## TODO: changelog generation
+###############################################################################
+# call:
+#     generate_manifest some_docker.gz, version_suffix
+define generate_manifest
+    $(eval export version=$($(1).gz_VERSION))
+    $(eval export version_suffix=$(2))
+    $(eval export name=$($(1).gz_CONTAINER_NAME))
+    $(eval export package_name=$($(1).gz_PACKAGE_NAME))
+    $(eval export asic_service=$(shell [ -f files/build_templates/per_namespace/$(name).service.j2 ] && echo true || echo false))
+    $(eval export host_service=$(shell [ -f files/build_templates/$(name).service.j2 ] && echo true || echo false))
+    $(eval export depends=$($(1).gz_PACKAGE_DEPENDS))
+    $(eval export requires=$($(1).gz_SERVICE_REQUIRES))
+    $(eval export after=$($(1).gz_SERVICE_AFTER))
+    $(eval export before=$($(1).gz_SERVICE_BEFORE))
+    $(eval export dependent_of=$($(1).gz_SERVICE_DEPENDENT_OF))
+    $(eval export warm_shutdown_after=$($*.gz_WARM_SHUTDOWN_AFTER))
+    $(eval export warm_shutdown_before=$($*.gz_WARM_SHUTDOWN_BEFORE))
+    $(eval export fast_shutdown_after=$($*.gz_FAST_SHUTDOWN_AFTER))
+    $(eval export fast_shutdown_before=$($*.gz_FAST_SHUTDOWN_BEFORE))
+    $(eval export privileged=$($(1).gz_CONTAINER_PRIVILEGED))
+    $(eval export volumes=$($(1).gz_CONTAINER_VOLUMES))
+    $(eval export tmpfs=$($(1).gz_CONTAINER_TMPFS))
+    $(eval export config_cli_plugin=$($(1).gz_CLI_CONFIG_PLUGIN))
+    $(eval export show_cli_plugin=$($(1).gz_CLI_SHOW_PLUGIN))
+    $(eval export clear_cli_plugin=$($(1).gz_CLI_CLEAR_PLUGIN))
+    $(eval export support_rate_limit=$($(1).gz_SUPPORT_RATE_LIMIT))
+    j2 --customize scripts/j2cli/json_filter.py files/build_templates/manifest.json.j2 > $($(1).gz_PATH)/manifest.common.json
+    if [ -f $($*.gz_PATH)/manifest.part.json.j2 ]; then
+        j2 --customize scripts/j2cli/json_filter.py $($(1).gz_PATH)/manifest.part.json.j2 > $($(1).gz_PATH)/manifest.part.json
+        jq -s '.[0] * .[1]' $($(1).gz_PATH)/manifest.common.json $($(1).gz_PATH)/manifest.part.json > $($(1).gz_PATH)/manifest.json
+    else
+        mv $($(1).gz_PATH)/manifest.common.json $($(1).gz_PATH)/manifest.json
+    fi
+endef

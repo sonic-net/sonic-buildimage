@@ -1,0 +1,13 @@
+[Unit]
+Description=Inventec d6254qs Platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-d6254qs start
+ExecStop=-/etc/init.d/platform-modules-d6254qs stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

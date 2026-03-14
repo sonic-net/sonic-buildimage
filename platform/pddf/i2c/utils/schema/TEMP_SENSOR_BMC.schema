@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "TEMP_SENSOR": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type"
+          ]
+        },
+        "dev_attr": {
+          "type": "object",
+          "properties": {
+            "display_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "display_name"
+          ]
+        },
+        "bmc": {
+          "type": "object",
+          "properties": {
+            "ipmitool": {
+              "type": "object",
+              "properties": {
+                "attr_list": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "attr_list"
+              ]
+            }
+          },
+          "required": [
+            "ipmitool"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "dev_attr",
+        "bmc"
+      ]
+    }
+  },
+  "required": [
+    "TEMP_SENSOR"
+  ]
+}

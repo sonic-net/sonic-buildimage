@@ -1,0 +1,41 @@
+module sonic-extension {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-extension";
+    prefix sonic-extension;
+
+    description "Extension yang Module for SONiC OS";
+
+    revision 2019-07-01 {
+        description "First Revision";
+    }
+
+    /* For complete guide of using these extensions in SONiC yangs, refer
+    SONiC yang guidelines at
+    https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md */
+
+    extension db-name {
+        description "DB name, e.g. APPL_DB, CONFIG_DB";
+        argument "value";
+    }
+
+    {% if yang_model_type == "cvl" %}
+    extension custom-validation-cvl {
+        description "Extension for registering cvl based custom validation handler.";
+        argument "handler";
+    }
+
+    extension dependent-on {
+        description
+            "Extension to define dependency on other table. During CREATE/UPDATE,
+            the action will be performed first on the Parent table and then on the
+            Dependent table. In DELETE operation, the Dependent table will be
+            deleted first and then the Parent table. This extension can be defined
+            only under List nodes. Table name should always be suffixed with '_list'
+            as modeled in yang.  e.g. - dependent-on stp-list";
+        argument "value";
+    }
+    {% else %}
+    {% endif %}
+}

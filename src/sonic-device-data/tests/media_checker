@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+
+import glob
+import json
+import re
+import sys
+
+level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS", "GEARBOX_GLOBAL_MEDIA_SETTINGS", "GEARBOX_PORT_MEDIA_SETTINGS"]
+
+si_param_list = [
+    "preemphasis",
+    "idriver",
+    "ipredriver",
+    "main",
+    "pre1",
+    "pre2",
+    "pre3",
+    "post1",
+    "post2",
+    "post3",
+    "gb_line_pre1",
+    "gb_line_pre2",
+    "gb_line_pre3",
+    "gb_line_main",
+    "gb_line_post1",
+    "gb_line_post2",
+    "gb_line_post3",
+    "gb_system_pre1",
+    "gb_system_pre2",
+    "gb_system_pre3",
+    "gb_system_main",
+    "gb_system_post1",
+    "gb_system_post2",
+    "gb_system_post3",
+    "attn",
+    "ob_m2lp",
+    "ob_alev_out",
+    "obplev", 
+    "obnlev",
+    "regn_bfm1p",
+    "regn_bfm1n",
+    "unreliable_los",
+    "rxpolarity",
+    "interface_type"
+]
+lane_speed_key_prefix = 'speed:'
+lane_prefix = "lane"
+comma_separator = ","
+range_separator = "-"
+
+
+def check_lane_and_value(lane_name, lane_value):
+    if lane_prefix in lane_name:
+        try:
+            lane_num = int(lane_name.strip()[len(lane_prefix):])
+            lane_val = int(lane_value.strip(), 16)
+            return True
+
+        except ValueError:
+            print("Invalid lane values " + lane_name + " " + lane_value)
+            return False
+
+    else:
+        return False
+
+
+def usage():
+    print("Usage: " + sys.argv[0] + " <media_settings_file>")
+    sys.exit(1)
+
+
+def check_media_dict(vendor_dict):
+    if len(vendor_dict) == 0:
+        print("Expecting values for media type " + keys)
+        return False
+
+    for vendor_key in vendor_dict:
+        value_dict = vendor_dict[vendor_key]
+        if len(value_dict) == 0:
+            print("Expecting settings for vendor type " + vendor_key)
+            return False
+
+        lane_speed_hierarchy_exists = None
+
+        for value_key in value_dict:
+            if value_key.startswith(lane_speed_key_prefix):
+                if lane_speed_hierarchy_exists is False:
+                    print("Inconsistent lane speed hierarchy levels for the same entry")
+                    return False
+                lane_speed_hierarchy_exists = True
+                settings_dict = value_dict[value_key]
+            else:
+                if lane_speed_hierarchy_exists is True:
+                    print("Inconsistent lane speed hierarchy levels for the same entry")
+                    return False
+                lane_speed_hierarchy_exists = False
+                settings_dict = value_dict
+
+            for si_param in settings_dict:
+                if si_param not in si_param_list:
+                    print("Unknown media setting " + si_param)
+                    return False
+
+                lane_dict = settings_dict[si_param]
+                if isinstance(lane_dict, dict):
+                    for lanes in lane_dict:
+                        if not check_lane_and_value(lanes, lane_dict[lanes]):
+                            return False
+    return True
+
+def check_valid_port(port_name):
+    try:
+        val = int(port_name.strip())
+        return True
+    except ValueError:
+        return False
+
+
+def check_port_keys(port_media_dict, gearbox=False):
+    for port in port_media_dict:
+
+        if not check_valid_port(port):
+            print("Invalid port name " + port)
+            return False
+
+        if gearbox:
+            if not check_media_dict(port_media_dict[port]["line"]):
+                return False
+            if not check_media_dict(port_media_dict[port]["system"]):
+                return False
+        else:
+            if not check_media_dict(port_media_dict[port]):
+                return False
+    return True
+
+
+def check_global_keys(global_media_dict, gearbox=False):
+    for keys in global_media_dict:
+        if comma_separator in keys:
+            port_list = keys.split(comma_separator)
+            for port in port_list:
+                if range_separator in port:
+                    range_list = port.split(range_separator)
+                    for port_val in range_list:
+                        if not check_valid_port(port_val):
+                            print("Error: Unrecognized port number " + port_val)
+                            print("Invalid range " + port)
+                            return False
+                else:
+                    if not check_valid_port(port):
+                        print("Error: Unrecognized portname " + port)
+                        return False
+        elif range_separator in keys:
+            range_list = keys.split(range_separator)
+            for port_val in range_list:
+                if not check_valid_port(port_val):
+                    print("Error: Unrecognized portname " + port_val)
+                    print("Invalid range " + keys)
+                    return False
+        else:
+            print("Invalid range " + keys)
+            return False
+
+        if gearbox:
+            if not check_media_dict(global_media_dict[keys]["line"]):
+                return False
+            if not check_media_dict(global_media_dict[keys]["system"]):
+                return False
+        else:
+            if not check_media_dict(global_media_dict[keys]):
+                return False
+
+    return True
+
+
+def check_file(media_settings_file):
+    try:
+        media_file = open(media_settings_file,"r")
+        media_settings = media_file.read()
+        media_dict = json.loads(media_settings)
+        #Validate keys at level1
+
+        for key_l1 in media_dict:
+            if key_l1 not in level1_keys:
+                print("Error: Unknown key " + key_l1 + " at top level")
+                return False
+        if "GLOBAL_MEDIA_SETTINGS" in media_dict:
+            if not check_global_keys(media_dict["GLOBAL_MEDIA_SETTINGS"]):
+                return False
+        if "PORT_MEDIA_SETTINGS" in media_dict:
+            if not check_port_keys(media_dict["PORT_MEDIA_SETTINGS"]):
+                return False
+        if "GEARBOX_GLOBAL_MEDIA_SETTINGS" in media_dict:
+            if not check_global_keys(media_dict["GEARBOX_GLOBAL_MEDIA_SETTINGS"], gearbox=True):
+                return False
+        if "GEARBOX_PORT_MEDIA_SETTINGS" in media_dict:
+            if not check_port_keys(media_dict["GEARBOX_PORT_MEDIA_SETTINGS"], gearbox=True):
+                return False
+
+
+
+    except IOError:
+        print("Error: Cannot open file " + media_settings_file)
+        return False
+    except ValueError as e:
+        print("Error in parsing json file " + media_settings_file + " ")
+        print(str(e))
+        return False
+
+    return True
+
+
+def main(argv):
+
+    if len(argv) > 0 and argv[0] == "-h":
+        usage()
+
+    # Load target file
+    if len(argv) == 0:
+        files = glob.glob('*media_settings.json')
+    else:
+        files = argv
+
+    all_good = True
+    for f in files:
+        good = check_file(f)
+        if good:
+            print("File " + f + " passed validity check")
+        else:
+            print("File " + f + " failed validity check")
+
+        all_good = all_good and good
+
+    if not all_good:
+        sys.exit(-1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -1,0 +1,7 @@
+IFCS_INIT_FILE : "/usr/share/sonic/hwsku/config_128x100G_midstone200i.yaml"
+IFCS_SKU_FILE : "/usr/share/sonic/hwsku/innovium.77700_B"
+IFCS_INNO_CLI_PORT : "9999"
+IFCS_TARGET : "device"
+ULIMIT : "65536"
+INNOVIUM_DIR : "/innovium"
+PYTHONPATH : "$INNOVIUM_DIR:$INNOVIUM_DIR/cmds:$INNOVIUM_DIR/scripts:$INNOVIUM_DIR/test/:$INNOVIUM_DIR/test/utils:$INNOVIUM_DIR/utils:$INNOVIUM_DIR/pyctypes"

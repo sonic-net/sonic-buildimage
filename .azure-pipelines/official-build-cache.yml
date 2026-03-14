@@ -1,0 +1,53 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+schedules:
+- cron: "0 */6 * * *"
+  displayName: Build cache quickly
+  branches:
+    include:
+    - master
+    - 202012
+
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+trigger: none
+pr: none
+
+stages:
+- stage: Build
+  pool: sonicso1ES-amd64
+  variables:
+  - name: CACHE_MODE
+    value: cache
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+  - template: .azure-pipelines/template-variables.yml@buildimage
+  jobs:
+  - template: azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+        - name: vs
+        - name: broadcom
+          variables:
+            swi_image: yes
+            docker_syncd_rpc_image: yes
+            platform_rpc: brcm
+        - name: mellanox
+          variables:
+            docker_syncd_rpc_image: yes
+            platform_rpc: mlnx
+        - name: marvell-prestera-armhf
+          pool: sonicso1ES-armhf
+          timeoutInMinutes: 1200
+          variables:
+            PLATFORM_NAME: marvell-prestera
+            PLATFORM_ARCH: armhf

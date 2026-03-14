@@ -1,0 +1,38 @@
+!
+! template: bgpd/templates/dynamic/instance.conf.j2
+!
+{% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
+!
+  neighbor {{ bgp_session['name'] }} peer-group
+  neighbor {{ bgp_session['name'] }} passive
+  neighbor {{ bgp_session['name'] }} ebgp-multihop 255
+  neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
+  neighbor {{ bgp_session['name'] }} route-map FROM_BGP_SPEAKER in
+  neighbor {{ bgp_session['name'] }} route-map TO_BGP_SPEAKER out
+!
+{% if bgp_session['peer_asn'] is defined %}
+  neighbor {{ bgp_session['name'] }} remote-as {{ bgp_session['peer_asn'] }}
+{% else %}
+  neighbor {{ bgp_session['name'] }} remote-as {{ constants.deployment_id_asn_map[CONFIG_DB__DEVICE_METADATA['localhost']['deployment_id']] }}
+{% endif %}
+!
+{# FIXME: bgp_session['ip_range'] check the type #}
+{% for ip_range in bgp_session['ip_range'].split(',') %}
+  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+{% if bgp_session['src_address'] is defined %}
+  neighbor {{ bgp_session['name'] }} update-source {{ bgp_session['src_address'] | ip }}
+{% else %}
+  neighbor {{ bgp_session['name'] }} update-source {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback1") | ip }}
+{% endif %}
+!
+  address-family ipv4
+    neighbor {{ bgp_session['name'] }} activate
+  exit-address-family
+  address-family ipv6
+    neighbor {{ bgp_session['name'] }} activate
+  exit-address-family
+!
+! end of template: bgpd/templates/dynamic/instance.conf.j2
+!

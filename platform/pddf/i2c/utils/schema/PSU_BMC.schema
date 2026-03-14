@@ -1,0 +1,336 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "PSU": {
+      "type": "object",
+      "properties": {
+        "dev_info": {
+          "type": "object",
+          "properties": {
+            "device_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device_type"
+          ]
+        },
+        "dev_attr": {
+          "type": "object",
+          "properties": {
+            "dev_idx": {
+              "type": "string"
+            },
+            "num_psu_fans": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "dev_idx",
+            "num_psu_fans"
+          ]
+        },
+        "bmc": {
+          "type": "object",
+          "properties": {
+            "ipmitool": {
+              "type": "object",
+              "properties": {
+                "attr_list": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "mask": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "type",
+                        "mask"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "type"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "type"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "type"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "type"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        },
+                        "mult": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos",
+                        "mult"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        },
+                        "mult": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos",
+                        "mult"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        },
+                        "mult": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos",
+                        "mult"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "attr_name": {
+                          "type": "string"
+                        },
+                        "bmc_cmd": {
+                          "type": "string"
+                        },
+                        "raw": {
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "type": "string"
+                        },
+                        "field_pos": {
+                          "type": "string"
+                        },
+                        "mult": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "attr_name",
+                        "bmc_cmd",
+                        "raw",
+                        "field_name",
+                        "field_pos",
+                        "mult"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "attr_list"
+              ]
+            }
+          },
+          "required": [
+            "ipmitool"
+          ]
+        }
+      },
+      "required": [
+        "dev_info",
+        "dev_attr",
+        "bmc"
+      ]
+    }
+  },
+  "required": [
+    "PSU"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "true",
+        "fan_speed_when_suspend": "80"
+    },
+    "info_types": [
+        {
+            "type": "chassis_info"
+        },
+        {
+            "type": "fandrawer_info"
+        },
+        {
+            "type": "psu_fan_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "over temperature",
+            "conditions" : [
+                {
+                    "type": "chassis.over_temperature"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "chassis.thermal_shutdown"
+                }
+            ]
+        },
+        {
+            "name": "any fandrawer fault",
+            "conditions": [
+                {
+                    "type": "fandrawer.any.fault"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_max_speed"
+                },
+                {
+                    "type": "fandrawer.fault.set_status_led"
+                }
+            ]
+        },
+        {
+            "name": "all fandrawer normal",
+            "conditions": [
+                {
+                    "type": "fandrawer.all.normal"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_thermal_level_speed"
+                },
+                {
+                    "type": "fandrawer.normal.set_status_led"
+                }
+            ]
+        }
+    ]
+}

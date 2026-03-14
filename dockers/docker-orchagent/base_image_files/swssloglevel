@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+
+function help()
+{
+    echo -e "Usage: $0 -n [0 to $(($NUM_ASIC-1))] [OPTION]... " 1>&2; exit 1;
+}
+
+DOCKER_EXEC_FLAGS="i"
+
+# Determine whether stdout is on a terminal
+if [ -t 1 ] ; then
+    DOCKER_EXEC_FLAGS+="t"
+fi
+
+DEV=""
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+
+# Parse the device specific asic conf file, if it exists
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+[ -f $ASIC_CONF ] && . $ASIC_CONF
+
+if [[ ($NUM_ASIC -gt 1) ]]; then
+    while getopts ":n:h:" opt; do
+        case "${opt}" in
+            h) help
+               ;;
+            n) DEV=${OPTARG}
+               [ $DEV -lt $NUM_ASIC -a  $DEV -ge 0 ] || help
+               ;;
+        esac
+    done
+
+    if [ -z "${DEV}" ]; then
+        help
+    fi
+
+    # Skip the arguments -n <inst> while passing to docker command
+    shift 2
+fi
+
+docker exec -$DOCKER_EXEC_FLAGS swss$DEV swssloglevel "$@"

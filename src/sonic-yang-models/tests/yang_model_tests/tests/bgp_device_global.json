@@ -1,0 +1,77 @@
+{
+    "BGP_DEVICE_GLOBAL_WITH_TSA_DEFAULT_VALUE": {
+        "desc": "Load bgp device global table with tsa_enabled set to default value",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/tsa_enabled",
+            "key": "sonic-bgp-device-global:tsa_enabled",
+            "value": false
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSA_TEST": {
+        "desc": "Load bgp device global table with tsa_enabled set to true"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSB_TEST": {
+        "desc": "Load bgp device global table with tsa_enabled set to false"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSA_INVALID_VALUE": {
+        "desc": "Load bgp device global table with tsa_enabled set to invalid value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["tsa_enabled"]
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DEFAULT_VALUE": {
+        "desc": "Verify default value for WCMP_ENABLED field in BGP_DEVICE_GLOBAL.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/wcmp_enabled",
+            "key": "sonic-bgp-device-global:wcmp_enabled",
+            "value": false
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_ENABLED": {
+        "desc": "Verify value for WCMP_ENABLED in BGP_DEVICE_GLOBAL is set to true.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/wcmp_enabled",
+            "key": "sonic-bgp-device-global:wcmp_enabled",
+            "value": true
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DISABLED": {
+        "desc": "Verify value for WCMP_ENABLED in BGP_DEVICE_GLOBAL is set to false.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/wcmp_enabled",
+            "key": "sonic-bgp-device-global:wcmp_enabled",
+            "value": false
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_INVALID_VALUE": {
+        "desc": "Configure invalid WCMP_ENABLED in BGP_DEVICE_GLOBAL.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["wcmp_enabled"]
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_DEFAULT_VALUE": {
+        "desc": "Load bgp device global table with idf_isolation_state set to default value",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-bgp-device-global:sonic-bgp-device-global/BGP_DEVICE_GLOBAL/STATE/idf_isolation_state",
+            "key": "sonic-bgp-device-global:idf_isolation_state",
+            "value": "unisolated"
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_1": {
+        "desc": "Load bgp device global table with idf_isolation_state set to isolated_no_export"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_2": {
+        "desc": "Load bgp device global table with idf_isolation_state set to isolated_withdraw_all"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_3": {
+        "desc": "Load bgp device global table with idf_isolation_state set to unisolated"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_INVALID_VALUE": {
+        "desc": "Load bgp device global table with idf_isolation_state set to invalid value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["idf_isolation_state"]
+    }
+}

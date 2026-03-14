@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Disable exit on non zero
+set +e
+
+# Unloading this module as it contains the reboot
+# notifier hook. When the kexec is invoked with platform
+# reset handlers, it results in a cold reboot. Removing
+# the reset handlers ensures that kernel does a kexec
+# based fast reboot
+rmmod x86-64-juniper-qfx5210-64x-psu > /dev/null 2>&1
+
+/usr/bin/qfx5210-warm-reboot/warm-reboot $@
+
+# Re-load the module if the warm-reboot script returns
+# here
+modprobe x86-64-juniper-qfx5210-64x-psu > /dev/null 2>&1

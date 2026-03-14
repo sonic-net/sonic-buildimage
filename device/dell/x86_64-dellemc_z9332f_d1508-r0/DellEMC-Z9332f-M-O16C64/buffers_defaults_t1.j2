@@ -1,0 +1,57 @@
+{%- set default_cable = '300m' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,12) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8)) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 2) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 4) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 6) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(12,16) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(16,20) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8)) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 2) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 4) %}{%- endif %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8) + 6) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(20,32) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 8)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "66394076",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "8644128"
+        },
+        "egress_lossless_pool": {
+            "size": "55921148",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "static_th":"66394076"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "static_th":"67117468"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"1778",
+            "dynamic_th":"1"
+        }
+    },
+{%- endmacro %}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS6712-32X Platform Monitoring service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as6712_util.py install
+ExecStart=/usr/local/bin/accton_as6712_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,2 @@
+m0 load 0 0x0 /usr/share/sonic/hwsku/linkscan_led_fw.bin
+m0 load 0 0x3800 /usr/share/sonic/hwsku/custom_led.bin

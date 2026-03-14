@@ -1,0 +1,19 @@
+[Unit]
+Description=Telemetry container
+Requires=database.service
+After=database.service swss.service syncd.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=root
+ExecStartPre=/usr/local/bin/telemetry.sh start   # start: now returns in non-blocking (fire-and-forget pod deletion)
+ExecStart=/usr/local/bin/telemetry.sh wait       # wait: long-lived loop that observes pod status
+ExecStop=/usr/local/bin/telemetry.sh stop        # stop will not be working after kubesonic since pod will be auto-deployed via kubernetes
+RestartSec=30
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+Restart=always

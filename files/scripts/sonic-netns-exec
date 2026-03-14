@@ -1,0 +1,12 @@
+#!/bin/bash
+# Wrapper to execute any command in a specific
+# network namespace.
+# Usage:
+# sonic-netns-exec <namespace name> <command to be executed>
+NS="$1"
+shift
+if [ ! -z "$NS" ]; then
+    ip netns exec $NS "$@"
+else
+    "$@"
+fi

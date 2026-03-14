@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+#
+# Name: platform_poweroff  version: 1.0
+#
+# Description: This file contains the implementation of qfx5210 poweroff 
+# sequences
+#
+# Copyright (c) 2019, Juniper Networks, Inc.
+# All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the GNU General 
+# Public License as published by the Free Software Foundation, version 2 or 
+# any later version. This code is not an official Juniper product. You can 
+# obtain a copy of the License at <https://www.gnu.org/licenses/>
+#
+# OSS License:
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# Third-Party Code: This code may depend on other components under separate 
+# copyright notice and license terms.  Your use of the source code for those 
+# components is subject to the terms and conditions of the respective license 
+# as noted in the Third-Party source code file.
+
+LOGFILE="/var/log/poweroff_log"
+TIMESTAMP=`date "+%Y-%m-%d %H:%M:%S"`
+
+retry()
+{
+  local ret_value=0
+
+  if [ $# -ne 3 ]; then
+     echo 'usage: retry <num retries> <wait retry secs> "<command>"'
+     exit 1
+  fi
+  retries=$1
+  wait_retry=$2
+  command=$3
+  for i in `seq 1 $retries`; do
+      echo "$TIMESTAMP $command" >> $LOGFILE
+      $command
+      ret_value=$?
+      [ $ret_value -eq 0 ] && break
+      echo "$TIMESTAMP Error: Command Execution failed with $ret_value, waiting to retry..." >> $LOGFILE
+      sleep $wait_retry
+  done
+  return $ret_value
+}
+
+
+if [ -f /usr/sbin/i2cset ] && [ -f /usr/sbin/i2cget ]; then
+  #Check if the CPU CPLD address is present on the bus or not
+  #0x65 - Azurite CPU CPLD I2C Addr
+  retry 128 1 "i2cget -y 0 0x65 0x0"
+  ret_val=$?
+   if [ $ret_val -ne 0 ]; then
+      echo "$TIMESTAMP CPU CPLD I2C Addr is not accessible...Terminating the halt.." >> $LOGFILE
+      return $ret_value
+   fi
+   #Initing Halt condition
+   retry 128 1 "/usr/sbin/i2cset -f -y 0 0x65 0x14 0x00"
+   ret_val=$?
+   if [ $ret_val -ne 0 ]; then
+      echo "$TIMESTAMP Halt Init Failed..." >> $LOGFILE
+      return $ret_value
+   fi
+   #Enable 0x77 MUX's First channel to access 0x76 MUX
+   retry 128 1 "/usr/sbin/i2cset -f -y 0 0x77 0 0x01"
+   ret_val=$?
+   if [ $ret_val -ne 0 ]; then
+      echo "$TIMESTAMP Mux Level1 enabling failed..." >> $LOGFILE
+      return $ret_value
+   fi
+   #Enable 0x76 MUX's Third channel to access Main Board CPLD @0x60
+   retry 128 1 "/usr/sbin/i2cset -f -y 0 0x76 0 0x04"
+   ret_val=$?
+   if [ $ret_val -ne 0 ]; then
+      echo "$TIMESTAMP Mux Level2 enabling failed..." >> $LOGFILE
+      return $ret_value
+   fi
+
+   sync
+
+   echo "$TIMESTAMP System is going to Halt now ........" | tee $LOGFILE
+   #Sleeping for sometime, so that Print can reach to logger
+   sleep 1
+   #Asserting the Halt on Azurite
+   retry 128 1 "/usr/sbin/i2cset -f -y 0 0x60 0x24 0x00"
+   ret_val=$?
+   if [ $ret_val -ne 0 ]; then
+      echo "$TIMESTAMP Halt command execution failed...Terminating the halt.." | tee $LOGFILE
+      return $ret_value
+   fi
+fi

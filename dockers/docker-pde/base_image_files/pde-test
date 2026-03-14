@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Make sure only root can run our script
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# Make sure SWSS is deactivated
+if [ $(docker ps | grep -c swss) -ne 0 ]; then
+    systemctl stop swss
+    sleep 3
+fi
+
+# Start PDE if it's deactivated
+if [ $(docker ps | grep -c pde) -eq 0 ]; then
+    pde.sh start
+fi
+
+# Allow 5 seconds for PDE to be coming up
+for t in $(seq 1 5)
+do
+    if [ $(docker ps | grep -c pde) -gt 0 ]; then
+        break
+    fi
+done
+if [ $(docker ps | grep -c pde) -eq 0 ]; then
+    echo "docker-pde is not alive, existing ..."
+    exit 1
+fi
+
+usage()
+{
+    echo "usage: $0 <help/list/commands>"
+    exit 1
+}
+
+if [ $# -lt 1 ]
+then
+    usage
+fi
+
+case $1 in
+-h | help)
+    usage
+    ;;
+-l | ls | list)
+    docker exec -it -w /usr/local/sonic_pde_tests pde ls
+    exit 0
+    ;;
+*)
+    ;;
+esac
+
+# Now launch the PDE pytest
+docker exec -it -w /usr/local/sonic_pde_tests pde pytest $*
+
+# Reactivate the SWSS
+systemctl start swss

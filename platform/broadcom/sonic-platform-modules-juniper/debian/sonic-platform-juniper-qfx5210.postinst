@@ -1,0 +1,37 @@
+#!/bin/bash
+
+systemctl enable qfx5210-platform-init.service
+systemctl start qfx5210-platform-init.service
+
+# There are primary and secondary bios in qfx5210 platform.
+# There is a problem with bios which prevents the OS booting from the
+# secondary bios when the OS was installed using primary bios.
+# Secondary bios fails to detect the UEFI partition. Right now
+# the workaround is to have a folder structure /EFI/BOOT/BOOT64x.efi
+
+SONIC_VERSION=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
+FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
+
+if [ -f $FIRST_BOOT_FILE ]; then
+    mkdir /tmp/sda1
+    mount /dev/sda1 /tmp/sda1
+    cd /tmp/sda1/EFI
+    mkdir BOOT > /dev/null 2>&1
+    cp SONiC-OS/grubx64.efi BOOT/BOOTX64.EFI
+    cd /tmp
+    umount sda1
+    # This code block ensures that no additional entries
+    # are added. This is applicable during SONiC image 
+    # upgrades.
+    entries=`efibootmgr -v | grep "BOOTX64"`
+    if [ -z "$entries" ]; then
+        # Creating the UEFI entry for the first time.
+        efibootmgr -c -L "SONiC" -l "\EFI\BOOT\BOOTX64.EFI" > /var/tmp/efi_log 2>&1
+    fi
+    mkdir /usr/bin/qfx5210-warm-reboot
+    mkdir /usr/bin/qfx5210-fast-reboot
+    cp /usr/bin/warm-reboot /usr/bin/qfx5210-warm-reboot
+    cp /usr/bin/fast-reboot /usr/bin/qfx5210-fast-reboot
+    cp /usr/local/bin/wrapper-warm-reboot /usr/bin/warm-reboot
+    cp /usr/local/bin/wrapper-fast-reboot /usr/bin/fast-reboot
+fi

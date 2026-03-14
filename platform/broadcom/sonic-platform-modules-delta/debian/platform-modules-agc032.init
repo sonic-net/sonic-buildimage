@@ -1,0 +1,62 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup agc032 board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    depmod -a
+    rmmod i2c-i801
+    rmmod i2c-ismt
+    modprobe i2c-dev
+    modprobe i2c-i801
+    modprobe i2c-ismt
+    modprobe i2c-mux-pca954x
+    modprobe dni_agc032_psu
+    modprobe dni_emc2305
+    modprobe dni_emc2302
+    modprobe at24
+    modprobe optoe
+    modprobe delta_agc032_cpupld
+# Switch CPUPLD to ONIE EEPROM Mux
+    echo 0 |sudo tee /sys/devices/platform/delta-agc032-cpupld.0/cpu_i2c_mux_sel
+    modprobe eeprom
+
+# Switch CPUPLD to Front Port Mux
+    echo 3 |sudo tee /sys/devices/platform/delta-agc032-cpupld.0/cpu_i2c_mux_sel
+    modprobe delta_agc032_qsfp
+
+# Switch CPUPLD to MainBoard Mux
+    echo 1 |sudo tee /sys/devices/platform/delta-agc032-cpupld.0/cpu_i2c_mux_sel
+    modprobe delta_agc032_platform
+    modprobe delta_agc032_swpld
+
+    /usr/local/bin/agc032_platform_init.sh
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-agc032.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

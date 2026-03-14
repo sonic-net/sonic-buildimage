@@ -1,0 +1,13 @@
+
+SPATH       := $($(SONIC_ZTP)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-ztp.mk rules/sonic-ztp.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files|grep -Ev "dhclient-enter-hooks.d|dhclient-exit-hooks.d"))
+
+
+$(SONIC_ZTP)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(SONIC_ZTP)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SONIC_ZTP)_DEP_FILES   := $(DEP_FILES)
+$(SONIC_ZTP)_SMDEP_FILES := $(SMDEP_FILES)
+$(SONIC_ZTP)_SMDEP_PATHS := $(SPATH)
+

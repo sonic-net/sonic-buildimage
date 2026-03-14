@@ -1,0 +1,127 @@
+#
+# Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+# Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '0154'
+  name: 'Host bridge: Intel Corporation 3rd Gen Core processor DRAM Controller (rev
+    09)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '0151'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: '0155'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: '0159'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
+    Express Root Port (rev 09)'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: '0153'
+  name: 'Signal processing controller: Intel Corporation 3rd Gen Core Processor Thermal
+    Subsystem (rev 09)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: 1e3a
+  name: 'Communication controller: Intel Corporation 7 Series/C216 Chipset Family
+    MEI Controller #1 (rev 04)'
+- bus: '00'
+  dev: '19'
+  fn: '0'
+  id: '1502'
+  name: 'Ethernet controller: Intel Corporation 82579LM Gigabit Network Connection
+    (rev 04)'
+- bus: '00'
+  dev: 1a
+  fn: '0'
+  id: 1e2d
+  name: 'USB controller: Intel Corporation 7 Series/C216 Chipset Family USB Enhanced
+    Host Controller #2 (rev 04)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: 1e10
+  name: 'PCI bridge: Intel Corporation 7 Series/C216 Chipset Family PCI Express Root
+    Port 1 (rev c4)'
+- bus: '00'
+  dev: 1c
+  fn: '4'
+  id: 1e18
+  name: 'PCI bridge: Intel Corporation 7 Series/C210 Series Chipset Family PCI Express
+    Root Port 5 (rev c4)'
+- bus: '00'
+  dev: 1c
+  fn: '6'
+  id: 1e1c
+  name: 'PCI bridge: Intel Corporation 7 Series/C210 Series Chipset Family PCI Express
+    Root Port 7 (rev c4)'
+- bus: '00'
+  dev: 1c
+  fn: '7'
+  id: 1e1e
+  name: 'PCI bridge: Intel Corporation 7 Series/C210 Series Chipset Family PCI Express
+    Root Port 8 (rev c4)'
+- bus: '00'
+  dev: 1d
+  fn: '0'
+  id: 1e26
+  name: 'USB controller: Intel Corporation 7 Series/C216 Chipset Family USB Enhanced
+    Host Controller #1 (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: 1e55
+  name: 'ISA bridge: Intel Corporation QM77 Express Chipset LPC Controller (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '2'
+  id: 1e03
+  name: 'SATA controller: Intel Corporation 7 Series Chipset Family 6-port SATA Controller
+    [AHCI mode] (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '3'
+  id: 1e22
+  name: 'SMBus: Intel Corporation 7 Series/C216 Chipset Family SMBus Controller (rev
+    04)'
+- bus: '00'
+  dev: 1f
+  fn: '6'
+  id: 1e24
+  name: 'Signal processing controller: Intel Corporation 7 Series/C210 Series Chipset
+    Family Thermal Management Controller (rev 04)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: cb84
+  name: 'Ethernet controller: Mellanox Technologies MT52100'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: 150c
+  name: 'Ethernet controller: Intel Corporation 82583V Gigabit Network Connection'

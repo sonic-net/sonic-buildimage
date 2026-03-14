@@ -1,0 +1,14 @@
+[Unit]
+Description=Database container
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+User=root
+ExecStartPre=/usr/local/bin/database.sh start %i
+ExecStart=/usr/local/bin/database.sh wait %i
+ExecStop=/usr/local/bin/database.sh stop %i
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,169 @@
+{
+    "chassis": {
+        "name": "SN4800",
+        "components": [
+            {
+                "name": "ONIE"
+            },
+            {
+                "name": "SSD"
+            },
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "CPLD1"
+            },
+            {
+                "name": "CPLD2"
+            },
+            {
+                "name": "CPLD3"
+            },
+            {
+                "name": "CPLD4"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "drawer1",
+                "fans": [
+                    {
+                        "name": "fan1"
+                    }
+                ]
+            },
+            {
+                "name": "drawer2",
+                "fans": [
+                    {
+                        "name": "fan2"
+                    }
+                ]
+            },
+            {
+                "name": "drawer3",
+                "fans": [
+                    {
+                        "name": "fan3"
+                    }
+                ]
+            },
+            {
+                "name": "drawer4",
+                "fans": [
+                    {
+                        "name": "fan4"
+                    }
+                ]
+            },
+            {
+                "name": "drawer5",
+                "fans": [
+                    {
+                        "name": "fan5"
+                    }
+                ]
+            },
+            {
+                "name": "drawer6",
+                "fans": [
+                    {
+                        "name": "fan6"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU 1",
+                "fans": [
+                    {
+                        "name": "psu1_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-1 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "PSU 2",
+                "fans": [
+                    {
+                        "name": "psu2_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-2 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "PSU 3",
+                "fans": [
+                    {
+                        "name": "psu3_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-3 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "PSU 4",
+                "fans": [
+                    {
+                        "name": "psu4_fan1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU-4 Temp"
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "ASIC"
+            },
+            {
+                "name": "Ambient Fan Side Temp"
+            },
+            {
+                "name": "Ambient Port Side Temp"
+            },
+            {
+                "name": "CPU Core 0 Temp"
+            },
+            {
+                "name": "CPU Core 1 Temp"
+            },
+            {
+                "name": "CPU Core 2 Temp"
+            },
+            {
+                "name": "CPU Core 3 Temp"
+            },
+            {
+                "name": "CPU Core 4 Temp"
+            },
+            {
+                "name": "CPU Core 5 Temp"
+            },
+            {
+                "name": "CPU Pack Temp"
+            }
+        ],
+        "sfps": [
+        ]
+    },
+    "interfaces": {
+    }
+}

@@ -1,0 +1,72 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-14,16": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c5602"
+                }
+            }
+        },
+        "15,17-20,22-24,36-48": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x085804"
+                }
+            }
+        },
+        "21,25-31,35": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x065806"
+                }
+            }
+        },
+        "32-34": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x075805"
+                }
+            }
+        },
+        "49,50,52": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0c5404",
+                    "lane1": "0x0c5404",
+                    "lane2": "0x0c5404",
+                    "lane3": "0x0c5404"
+                }
+            }
+        },
+        "51,54,56": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x105202",
+                    "lane1": "0x105202",
+                    "lane2": "0x105202",
+                    "lane3": "0x105202"
+                }
+            }
+        },
+        "53-53": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0d5205",
+                    "lane1": "0x0d5205",
+                    "lane2": "0x0d5205",
+                    "lane3": "0x0d5205"
+                }
+            }
+        },
+        "55-55": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x115201",
+                    "lane1": "0x115201",
+                    "lane2": "0x115201",
+                    "lane3": "0x115201"
+                }
+            }
+        }
+    }
+}

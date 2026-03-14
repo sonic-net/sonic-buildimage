@@ -1,0 +1,252 @@
+#!/bin/sh -e
+
+PREREQS="varlog"
+
+prereqs() { echo "$PREREQS"; }
+
+case $1 in
+  prereqs)
+  prereqs
+    exit 0
+    ;;
+esac
+
+docker_inram=false
+docker_inram_algo=tmpfs
+docker_inram_size={{ DOCKER_RAMFS_SIZE }}
+logs_inram=false
+secureboot=false
+bootloader=generic
+in_kdump=false
+varlog_size=0
+
+# Extract kernel parameters
+for x in $(cat /proc/cmdline); do
+    case "$x" in
+        Aboot=*)
+            bootloader=aboot
+            ;;
+        docker_inram=on)
+            docker_inram=true
+            ;;
+        docker_inram_algo=*)
+            docker_inram_algo="${x#docker_inram_algo=}"
+            ;;
+        docker_inram_size=*)
+            docker_inram_size="${x#docker_inram_size=}"
+            ;;
+        logs_inram=on)
+            logs_inram=true
+            ;;
+        varlog_size=*)
+            varlog_size="${x#varlog_size=}"
+            ;;
+        secure_boot_enable=[y1])
+            secureboot=true
+            docker_inram=true
+            ;;
+        platform=*)
+            platform_flag="${x#platform=}"
+            ;;
+        systemd.unit=kdump-tools.service)
+            in_kdump=true
+            ;;
+    esac
+done
+
+set_tmpfs_log_partition_size()
+{
+    if [ $varlog_size -gt 0 ]; then
+        # Use the varlog_size passed in from command line
+        varlogsize=$varlog_size
+    else
+        varlogsize=128
+
+        # set varlogsize to existing var-log.ext4 size
+        if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
+            varlogsize=$(ls -l ${rootmnt}/host/disk-img/var-log.ext4 | awk '{print $5}')
+            varlogsize=$(($varlogsize/1024/1024))
+        fi
+    fi
+
+    # make sure varlogsize is between 5% to 10% of total memory size
+    memkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    memmb=$(($memkb/1024))
+    minsize=$(($memmb*5/100))
+    maxsize=$(($memmb*10/100))
+
+    if [ $minsize -ge $varlogsize ]; then
+        varlogsize=$minsize
+    fi
+    if [ $maxsize -le $varlogsize ]; then
+        varlogsize=$maxsize
+    fi
+}
+
+remove_not_in_allowlist_files()
+{
+    local allowlist_file="$1"
+    local targeted_dir="$2"
+    local allowlist_pattern_file=/tmp/allowlist_paths.pattern
+
+    # Return if the allowlist file does not exist
+    if ! test -f "${allowlist_file}"; then
+        echo "The file ${allowlist_file} is missing, failed to mount rw folder." 1>&2
+        exit 1
+    fi
+
+    # Set the grep pattern file, remove the blank line in config file
+    awk -v rw_dir="$targeted_dir" 'NF {print rw_dir"/"$0"$"}' ${allowlist_file} > $allowlist_pattern_file
+
+    # Find the files in the rw folder, and remove the files not in the allowlist
+    find ${targeted_dir} -type f | grep -v -f $allowlist_pattern_file | xargs /bin/rm -f
+    rm -f $allowlist_pattern_file
+}
+
+mount_docker_inram()
+{
+    if [ "$docker_inram_algo" = "tmpfs" ]; then
+        echo "Creating tmpfs to extract {{ FILESYSTEM_DOCKERFS }}"
+        mount -t tmpfs -o "rw,nodev,size=$docker_inram_size" tmpfs "${rootmnt}/var/lib/docker"
+    else
+        echo "Creating zram to extract {{ FILESYSTEM_DOCKERFS }}"
+        modprobe zram num_devices=0
+        # create new zram device
+        local zid="$(cat /sys/class/zram-control/hot_add)"
+        local zname="zram$zid"
+        # attempt to use desired algorithm
+        if ! echo $docker_inram_algo > /sys/block/$zname/comp_algorithm 2>/dev/null; then
+            echo "zram algorithm $docker_inram_algo is not supported"
+            echo "using default instead: $(cat /sys/block/$zname/comp_algorithm)"
+        fi
+        echo $docker_inram_size > /sys/block/$zname/disksize
+        # create filesystem on the newly created zram block device
+        mkfs.ext4 -m 0 -L dockerfs -O '^has_journal' -q /dev/$zname
+        mount -o rw,nodev /dev/$zname "${rootmnt}/var/lib/docker"
+    fi
+}
+
+extract_dockerfs()
+{
+    echo "Extracting {{ FILESYSTEM_DOCKERFS }}"
+    if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
+        # Check if the file is zstd compressed
+        file_type=$(file -b --mime-type "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}")
+        if [ "$file_type" = "application/zstd" ]; then
+            echo "Detected zstd compression, extracting with pzstd..."
+            pzstd -d -q ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -c | tar x --numeric-owner -C ${rootmnt}/var/lib/docker
+        else
+            echo "Using default extraction method (gzip assumed)..."
+            tar xz --numeric-owner -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" -C "${rootmnt}/var/lib/docker"
+        fi
+    elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
+        # Aboot swi images also support extracting dockerfs.tar.gz directly from them
+        unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
+    else
+        # Warn but allow the system to boot to at least have ssh access
+        echo "No {{ FILESYSTEM_DOCKERFS }} to extract, SONiC will be broken"
+    fi
+}
+
+mount_docker()
+{
+    if [ "$in_kdump" = true ]; then
+        # There is no point in mounting the docker filesystem in kdump environment
+        # Especially when there is some space mitigation in place
+        return
+    fi
+
+    if [ "$docker_inram" = true ]; then
+        # Create an in memory filesystem (tmpfs, zram) and extract dockerfs.tar.gz
+        mount_docker_inram
+        extract_dockerfs
+    else
+        # Mount the working directory of docker engine in the raw partition, bypass the overlay
+        mount --bind ${rootmnt}/host/$image_dir/{{ DOCKERFS_DIR }} ${rootmnt}/var/lib/docker
+    fi
+}
+
+## Mount the overlay file system: rw layer over squashfs
+image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
+rw_dir=${rootmnt}/host/$image_dir/rw
+work_dir=${rootmnt}/host/$image_dir/work
+mkdir -p "$rw_dir"
+mkdir -p "$work_dir"
+
+## Remove the files not in allowlist in the rw folder
+if [ "$secureboot" = true ] && [ "$in_kdump" = false ]; then
+    if [ "$bootloader" = "aboot" ]; then
+        swi_path="${rootmnt}/host/$(sed -E 's/.*loop=([^ ]+).*/\1/' /proc/cmdline)"
+        unzip -q "$swi_path" allowlist_paths.conf -d /tmp
+        allowlist_file=/tmp/allowlist_paths.conf
+    else
+        allowlist_file=${rootmnt}/host/$image_dir/allowlist_paths.conf
+    fi
+
+    remove_not_in_allowlist_files "$allowlist_file" "$rw_dir"
+
+    ## Remove the executable permission for all the files in rw folder except home folder
+    find ${rw_dir} -type f -not -path ${rw_dir}/home -exec chmod a-x {} +
+fi
+
+mount -n -o lowerdir=${rootmnt},upperdir=${rw_dir},workdir=${work_dir} -t overlay root-overlay ${rootmnt}
+
+## Check if the root block device is still there
+[ -b ${ROOT} ] || mdev -s
+case "${ROOT}" in
+    ubi*)
+        mtd=$(cat /proc/cmdline | sed -e 's/.*ubi.mtd=\([0-9]\) .*/\1/')
+        if [ ! -f /dev/${ROOT}_0 ]; then
+            ubiattach /dev/ubi_ctrl -m $mtd 2>dev/null || true
+        fi
+        mount -t ubifs /dev/${ROOT}_0 ${rootmnt}/host
+        ;;
+    *)
+        ## Mount the raw partition again
+        mount -t ext4 ${ROOT} ${rootmnt}/host
+        tune2fs -m 0 -r 0 ${ROOT}
+        ;;
+esac
+
+## Mount the docker storage path
+mkdir -p ${rootmnt}/var/lib/docker
+mount_docker
+
+## Mount the boot directory in the raw partition, bypass the overlay
+mkdir -p ${rootmnt}/boot
+# make sure that the boot folder exists before attempting a mount
+mkdir -p ${rootmnt}/host/$image_dir/boot
+mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
+
+## Mount loop device or tmpfs for /var/log
+if $logs_inram; then
+    # NOTE: some platforms, when reaching initramfs stage, have a small
+    #       limit of mounting tmpfs partition, potentially due to amount
+    #       of RAM available in this stage. Therefore limiting the size
+    #       set for tmpfs partitions.
+    #
+    #       Another reason for using tmpfs /var/log partition is:
+    #       Some platforms have a small flash and therefore the log partition takes valuable space.
+    #       To improve the longevity of these devices storing the logs in memory will permit more
+    #       SONiC image growth before being bottlenecked.
+    set_tmpfs_log_partition_size
+    mount -t tmpfs -o rw,nosuid,nodev,size=${varlogsize}M tmpfs ${rootmnt}/var/log
+    if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
+        rm -rf ${rootmnt}/host/disk-img/var-log.ext4
+    fi
+else
+    if [ -f ${rootmnt}/host/disk-img/var-log.ext4 ]; then
+        fsck.ext4 -v -p ${rootmnt}/host/disk-img/var-log.ext4 2>&1 | gzip -c >> /tmp/fsck.log.gz
+        mount -t ext4 -o loop,rw ${rootmnt}/host/disk-img/var-log.ext4 ${rootmnt}/var/log
+    fi
+fi
+
+## fscklog file: /tmp will be lost when overlayfs is mounted
+if [ -f /tmp/fsck.log.gz ]; then
+    mv /tmp/fsck.log.gz ${rootmnt}/var/log
+fi
+
+## ssd-fw-upgrade log file: /tmp will be lost when overlayfs is mounted
+if [ -f /tmp/ssd-fw-upgrade.log.gz ]; then
+    mv /tmp/ssd-fw-upgrade.log.gz ${rootmnt}/var/log
+fi

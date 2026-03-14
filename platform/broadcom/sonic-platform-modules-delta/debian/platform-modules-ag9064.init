@@ -1,0 +1,64 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup ag9064 board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    if [ `grep -c usemsi /etc/init.d/opennsl-modules` = "0" ]; then
+        sed -i "s/debug=4 dma_debug=1/debug=4 dma_debug=1 usemsi=1/g" /etc/init.d/opennsl-modules
+        rmmod linux_knet_cb
+        rmmod linux_bcm_knet
+        rmmod linux_user_bde
+        rmmod linux_kernel_bde
+        /etc/init.d/opennsl-modules start
+        modprobe linux_kernel_bde
+        modprobe linux_user_bde
+        modprobe linux_bcm_knet
+        modprobe linux_knet_cb
+    fi
+    depmod -a
+    rmmod i2c-i801
+    rmmod i2c-ismt
+    modprobe i2c-dev
+    modprobe i2c-i801
+    modprobe i2c-ismt
+    modprobe ipmi_devintf
+    modprobe ipmi_si ports=0xca2
+    modprobe i2c-mei
+    modprobe i2c-mux-pca954x
+    modprobe at24
+    modprobe delta_ag9064_platform
+    modprobe delta_ag9064_cpld
+    modprobe delta_ag9064_swpld
+
+    /usr/local/bin/ag9064_platform_init.sh
+
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-ag9064.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0

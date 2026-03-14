@@ -1,0 +1,54 @@
+#!/bin/sh -e
+
+PREREQS=""
+
+prereqs() { echo "$PREREQS"; }
+
+case $1 in
+  prereqs)
+  prereqs
+    exit 0
+    ;;
+esac
+
+logs_inram=false
+
+# Extract kernel parameters
+set -- $(cat /proc/cmdline)
+for x in "$@"; do
+    case "$x" in
+        varlog_size=*)
+            varlog_size="${x#varlog_size=}"
+            ;;
+        logs_inram=on)
+            logs_inram=true
+            ;;
+    esac
+done
+
+[ -z "$varlog_size" ] && exit 0
+
+# If logs are being stored in memory, then don't bother
+# creating the log file just to have it deleted afterwards.
+$logs_inram && exit 0
+
+# exit when the var_log.ext4 exists and the size matches
+if [ -e "${rootmnt}/host/disk-img/var-log.ext4" ]; then
+    cur_varlog_size=$(ls -l ${rootmnt}/host/disk-img/var-log.ext4 | awk '{print $5}')
+    if [ $cur_varlog_size == $((1024*1024*$varlog_size)) ]; then
+        exit 0
+    else
+        rm -rf ${rootmnt}/host/disk-img
+    fi
+fi
+
+# create varlog disk
+case "${ROOT}" in 
+    ubi*)
+        # sys_fallocate is NOT supported over UBIFS
+        mkdir -p ${rootmnt}/host/disk-img && ${rootmnt}/usr/bin/truncate -s "$varlog_size"M ${rootmnt}/host/disk-img/var-log.ext4 && mkfs.ext4 -q -F ${rootmnt}/host/disk-img/var-log.ext4
+        ;;
+    *)
+        mkdir -p ${rootmnt}/host/disk-img && ${rootmnt}/usr/bin/fallocate -l "$varlog_size"M ${rootmnt}/host/disk-img/var-log.ext4 && mkfs.ext4 -q -F ${rootmnt}/host/disk-img/var-log.ext4
+        ;;
+esac

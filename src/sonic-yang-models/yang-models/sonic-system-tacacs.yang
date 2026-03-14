@@ -1,0 +1,181 @@
+module sonic-system-tacacs {
+    namespace "http://github.com/sonic-net/sonic-system-tacacs";
+    prefix ssys;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    /*
+    import sonic-vlan {
+        prefix vlan;
+    }
+    */
+
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
+    import sonic-mgmt_port {
+        prefix mgmt-port;
+    }
+
+    revision 2021-04-15 {
+        description "Initial revision.";
+    }
+
+    typedef auth_type_enumeration {
+        type enumeration {
+            enum pap;
+            enum chap;
+            enum mschap;
+            enum login;
+        }
+    }
+
+    typedef key_encrypt_type {
+        type boolean;
+        default false;
+        description "Indicates if the passkey is encrypted.";
+    }
+
+    container sonic-system-tacacs {
+
+        container TACPLUS_SERVER {
+            list TACPLUS_SERVER_LIST {
+                max-elements 8;
+                key "ipaddress";
+
+                leaf ipaddress {
+                    type inet:host;
+                    description
+                        "TACACS+ server's Domain name or IP address (IPv4 or IPv6)";
+                }
+
+                leaf priority {
+                    default 1;
+                    type uint8 {
+                        range "1..64" {
+                            error-message "TACACS server priority must be 1..64";
+                        }
+                    }
+                    description "Server priority";
+                }
+
+                leaf tcp_port {
+                    type inet:port-number;
+                    default 49;
+                    description "TCP port to communite with TACACS+ server";
+                }
+
+                leaf timeout {
+                    default 5;
+                    type uint16 {
+                        range "1..60" {
+                            error-message "TACACS server timeout must be 1..60";
+                        }
+                    }
+                    description "TACACS+ server timeout";
+                }
+
+                leaf auth_type {
+                    type auth_type_enumeration;
+                    default pap;
+                    description "Authentication type";
+                }
+
+                leaf key_encrypt {
+                    type key_encrypt_type;
+                }
+
+                leaf passkey {
+                    type string {
+                        length "1..256";
+                        pattern "[^ #,]*" {
+                            error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                        }
+                    }
+                }
+
+                leaf vrf {
+                    type string {
+                        pattern "mgmt|default" {
+                            error-message "Error: Invalid VRF name";
+                        }
+                    }
+                    description
+                        "VRF name";
+                }
+            }
+        }
+
+        container TACPLUS {
+
+            container global {
+
+                leaf auth_type {
+                    type auth_type_enumeration;
+                    default pap;
+                }
+
+                leaf timeout {
+                    type uint16 {
+                        range "1..60" {
+                            error-message "TACACS timeout must be 1..60";
+                        }
+                    }
+                    default 5;
+                }
+
+                leaf key_encrypt {
+                    type key_encrypt_type;
+                }
+
+                leaf passkey {
+                    type string {
+                        length "1..256";
+                        pattern "[^ #,]*" {
+                            error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                        }
+                    }
+                    description "Shared secret used for encrypting the communication";
+                }
+
+                leaf src_intf {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        /*
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        }
+                        */
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                        type leafref {
+                            path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+                        }
+                        type leafref {
+                            path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                    }
+                    description "Source IP to use from source interface for TACACS+ server communication.";
+                }
+            }
+        }
+    }
+}

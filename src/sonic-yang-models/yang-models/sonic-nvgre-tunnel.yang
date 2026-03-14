@@ -1,0 +1,109 @@
+module sonic-nvgre-tunnel {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-nvgre-tunnel";
+    prefix nvgre;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "NVGRE Tunnel YANG Module for SONiC OS";
+
+    revision 2021-10-31 {
+        description
+            "First Revision";
+    }
+
+    container sonic-nvgre-tunnel {
+
+        container NVGRE_TUNNEL {
+
+            description "NVGRE_TUNNEL part of config_db.json";
+
+            list NVGRE_TUNNEL_LIST {
+
+                key "tunnel_name";
+
+                leaf tunnel_name {
+                    description "NVGRE Tunnel name";
+
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf src_ip {
+                    description "Source IP address";
+
+                    mandatory true;
+                    type inet:ip-address;
+                }
+
+            }
+            /* end of NVGRE_TUNNEL_LIST */
+
+        }
+        /* end of container NVGRE_TUNNEL */
+
+        container NVGRE_TUNNEL_MAP {
+
+            description "NVGRE_TUNNEL_MAP part of config_db.json";
+
+            list NVGRE_TUNNEL_MAP_LIST {
+
+                key "tunnel_name tunnel_map_name";
+
+                leaf tunnel_name {
+                    description "NVGRE Tunnel name";
+
+                    type leafref {
+                        path /nvgre:sonic-nvgre-tunnel/nvgre:NVGRE_TUNNEL/nvgre:NVGRE_TUNNEL_LIST/nvgre:tunnel_name;
+                    }
+                }
+
+                leaf tunnel_map_name {
+                    description "NVGRE Tunnel map name";
+
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf vlan_id {
+                    description "VLAN identifier";
+
+                    mandatory true;
+                    type uint16 {
+                        range 1..4094;
+                    }
+                }
+
+                leaf vsid {
+                    description "Virtual Subnet Identifier";
+
+                    mandatory true;
+                    type uint32 {
+                        range 0..16777214;
+                    }
+                }
+
+            }
+            /* end of NVGRE_TUNNEL_MAP_LIST */
+
+        }
+        /* end of container NVGRE_TUNNEL_MAP */
+
+    }
+    /* end of container sonic-nvgre-tunnel */
+
+}
+/* end of module sonic-nvgre-tunnel */

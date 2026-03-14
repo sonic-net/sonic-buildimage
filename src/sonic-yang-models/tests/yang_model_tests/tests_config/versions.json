@@ -1,0 +1,20 @@
+{
+    "VERSIONS_WITH_INCORRECT_PATTERN": {
+        "sonic-versions:sonic-versions": {
+            "sonic-versions:VERSIONS": {
+                "DATABASE": {
+                    "VERSION": "version_1_2"
+                }
+            }
+        }
+    },
+    "VERSIONS_WITH_INCORRECT_PATTERN2": {
+        "sonic-versions:sonic-versions": {
+            "sonic-versions:VERSIONS": {
+                "DATABASE": {
+                    "VERSION": "version_0_2_77"
+                }
+            }
+        }
+    }
+}

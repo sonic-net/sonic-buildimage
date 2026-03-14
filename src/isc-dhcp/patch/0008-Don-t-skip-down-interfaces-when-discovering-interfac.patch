@@ -1,0 +1,32 @@
+From 06850e9beb2c50b5cc23fc94168acd9ae58d8ef8 Mon Sep 17 00:00:00 2001
+From: Joe LeVeque <jolevequ@microsoft.com>
+Date: Fri, 6 Dec 2019 05:53:09 +0000
+Subject: [PATCH] Don't skip down interfaces when discovering interfaces in
+ relay mode
+
+When discovering interfaces in relay mode, don't skip interfaces just
+because they're down. If we fail to discover the interfaces because they
+are down when the relay starts, but then are brought up at a later point
+in time, the relay will discard any packets received on them because it
+didn't discover the interface(s) when it started up.
+---
+ common/discover.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/common/discover.c b/common/discover.c
+index 32f2516..31dae3c 100644
+--- a/common/discover.c
++++ b/common/discover.c
+@@ -668,7 +668,8 @@ discover_interfaces(int state) {
+ 		      info.flags & IFF_LOOPBACK ||
+ 		      info.flags & IFF_POINTOPOINT) && !tmp) ||
+ 		    (!(info.flags & IFF_UP) &&
+-		     state != DISCOVER_UNCONFIGURED))
++		     state != DISCOVER_UNCONFIGURED &&
++		     state != DISCOVER_RELAY))
+ 			continue;
+ 
+ 		/* If there isn't already an interface by this name,
+-- 
+2.25.1
+

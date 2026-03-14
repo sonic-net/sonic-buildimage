@@ -1,0 +1,133 @@
+{
+    "FEATURE_WITH_CORRECT_VALUES": {
+        "sonic-feature:sonic-feature": {
+            "sonic-feature:FEATURE": {
+                "FEATURE_LIST": [
+                    {
+                        "name": "database",
+                        "state": "always_enabled",
+                        "auto_restart": "always_enabled",
+                        "delayed": "False",
+                        "has_global_scope": "True",
+                        "has_per_asic_scope": "True",
+                        "has_per_dpu_scope": "True",
+                        "set_owner": "local",
+                        "check_up_status": "False",
+                        "support_syslog_rate_limit": "true"
+                    },
+                    {
+                        "name": "swss",
+                        "state": "always_enabled",
+                        "auto_restart": "always_enabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "true",
+                        "set_owner": "local",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    },
+                    {
+                        "name": "syncd",
+                        "state": "always_enabled",
+                        "auto_restart": "always_enabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "true",
+                        "set_owner": "local",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    },
+                    {
+                        "name": "snmp",
+                        "state": "enabled",
+                        "auto_restart": "enabled",
+                        "delayed": "false",
+                        "has_global_scope": "true",
+                        "has_per_asic_scope": "false",
+                        "set_owner": "kube",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    },
+                    {
+                        "name": "lldp",
+                        "state": "disabled",
+                        "auto_restart": "disabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+                        "set_owner": "kube",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    },
+                    {
+                        "name": "dhcp_relay",
+                        "state": "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] != 'ToRRouter') %}enabled{% else %}disabled{% endif %}",
+                        "auto_restart": "disabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "true",
+                        "set_owner": "kube",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "FEATURE_WITH_INVALID_OWNER": {
+        "sonic-feature:sonic-feature": {
+            "sonic-feature:FEATURE": {
+                "FEATURE_LIST": [
+                    {
+                        "name": "lldp",
+                        "state": "disabled",
+                        "auto_restart": "disabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+                        "set_owner": "invalid",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "FEATURE_WITH_NO_OWNER": {
+        "sonic-feature:sonic-feature": {
+            "sonic-feature:FEATURE": {
+                "FEATURE_LIST": [
+                    {
+                        "name": "lldp",
+                        "state": "disabled",
+                        "auto_restart": "disabled",
+                        "delayed": "false",
+                        "has_global_scope": "false",
+                        "has_per_asic_scope": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
+                        "check_up_status": "false",
+                        "support_syslog_rate_limit": "true"
+
+                    }
+                ]
+            }
+        }
+    },
+    "FEATURE_WITH_INVALID_BOOLEAN_TYPE": {
+        "sonic-feature:sonic-feature": {
+            "sonic-feature:FEATURE": {
+                "FEATURE_LIST": [
+                    {
+                        "name": "database",
+                        "state": "always_enabled",
+                        "auto_restart": "always_enabled",
+                        "delayed": "FALSE",
+                        "has_global_scope": "TRUE",
+                        "has_per_asic_scope": "TRUE",
+                        "check_up_status": "FALSE",
+                        "support_syslog_rate_limit": "TRUE"
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,223 @@
+module sonic-portchannel {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-portchannel";
+    prefix lag;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import sonic-port {
+        prefix port;
+        revision-date 2019-07-01;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    description "PORTCHANNEL yang Module for SONiC OS";
+
+    revision 2021-06-13 {
+        description "Change min-links valid range from 1-128 to 1-1024";
+    }
+
+    revision 2021-03-31 {
+        description "Add PortChannel Interface List with VRF attribute";
+    }
+
+    revision 2021-03-15 {
+        description "Add SONiC PortChannel Interface model";
+    }
+
+    revision 2019-07-01 {
+        description "First Revision";
+    }
+
+    container sonic-portchannel {
+
+        container PORTCHANNEL {
+
+            description "PORTCHANNEL part of config_db.json";
+
+            list PORTCHANNEL_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern 'PortChannel[0-9]{1,4}';
+                    }
+                }
+
+                leaf min_links {
+                    type uint16 {
+                        range 1..1024;
+                    }
+                }
+
+               leaf mode {
+                   description "PortChannel SwitchPort Mode possible values are routed|access|trunk. Default value for mode is routed.";
+                   type stypes:switchport_mode;
+
+                }
+
+                leaf description {
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf mtu {
+                    type uint16 {
+                        range 1..9216;
+                    }
+                }
+
+                leaf admin_status {
+                    mandatory true;
+                    type stypes:admin_status;
+                }
+
+                leaf lacp_key {
+                    /* lacp key should be either auto or a integer in the range of 1 to 65535 */
+                    /* When lacp_key is set to 'auto' the lacp key would be set to be the number */
+                    /* on the end of the PortChannel name with a prefix of 1 */
+                    type union {
+                        type string {
+                            pattern "auto";
+                        }
+                        type uint16 {
+                            range 1..65535;
+                        }
+                    }
+                }
+
+                leaf tpid {
+                    description "This leaf describes the possible TPID value that can be configured
+                                to the specified portchannel if the HW supports TPID configuration. The possible
+                                values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
+                    type stypes:tpid_type;
+                }
+
+                leaf fallback {
+                    description "Enable LACP fallback feature";
+                    type stypes:boolean_type;
+                }
+                leaf fast_rate {
+                    description "Enable LACP fast rate";
+                    type stypes:boolean_type;
+                }
+
+            } /* end of list PORTCHANNEL_LIST */
+
+        } /* end of container PORTCHANNEL */
+
+        container PORTCHANNEL_MEMBER {
+
+            description "PORTCHANNEL_MEMBER part of config_db.json";
+
+            list PORTCHANNEL_MEMBER_LIST {
+
+                key "name port";
+
+                leaf name {
+                    type leafref {
+                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                    }
+                }
+
+                leaf port {
+                    /* key elements are mandatory by default */
+                    type leafref {
+                        path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                    }
+                }
+            } /* end of list PORTCHANNEL_MEMBER_LIST */
+
+        } /* end of container PORTCHANNEL_MEMBER */
+
+        container PORTCHANNEL_INTERFACE {
+
+            description "PORTCHANNEL_INTERFACE part of config_db.json";
+
+            list PORTCHANNEL_INTERFACE_LIST {
+                key "name";
+
+                leaf name {
+                    /* key elements are mandatory by default */
+                    type leafref {
+                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                    }
+                }
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                }
+
+                leaf loopback_action {
+                    description "Packet action when a packet ingress and gets routed on the same IP interface";
+                    type stypes:loopback_action;
+                }
+
+		leaf nat_zone {
+		    description "NAT Zone for the portchannel interface";
+		    type uint8 {
+		        range "0..3" {
+			    error-message "Invalid nat zone for the portchannel interface.";
+			    error-app-tag nat-zone-invalid;
+			}
+		    }
+		    default "0";
+		}
+		leaf mpls {
+			description "Enable/disable MPLS routing for the portchannel interface";
+                        type enumeration {
+				enum enable;
+				enum disable;
+			}
+		}
+
+		leaf ipv6_use_link_local_only {
+			description "Enable/Disable IPv6 link local address on portchannel interface";
+			type stypes:mode-status;
+			default disable;
+		}
+
+                leaf mac_addr {
+                    description "Assign administrator-provided MAC address to Interface";
+                    type yang:mac-address;
+                }
+
+            } /* end of list PORTCHANNEL_INTERFACE_LIST */
+
+            list PORTCHANNEL_INTERFACE_IPPREFIX_LIST {
+
+                key "name ip_prefix";
+
+                leaf name {
+                    /* key elements are mandatory by default */
+                    type leafref {
+                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                    }
+                }
+
+                leaf ip_prefix {
+                    /* key elements are mandatory by default */
+                    type stypes:sonic-ip-prefix;
+                }
+            } /* end of list PORTCHANNEL_INTERFACE_IPPREFIX_LIST */
+
+        } /* end of container PORTCHANNEL_INTERFACE */
+
+    } /* end of container sonic-portchannel */
+
+} /* end of module sonic-portchannel */

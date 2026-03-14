@@ -1,0 +1,77 @@
+module sonic-system-aaa {
+    namespace "http://github.com/sonic-net/sonic-system-aaa";
+    prefix ssys;
+    yang-version 1.1;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-system-tacacs{
+        prefix tacacs;
+    }
+
+    revision 2021-10-12 {
+        description "Add AAA authorization/accounting support.";
+    }
+
+    revision 2021-04-15 {
+        description "Initial revision.";
+    }
+
+    container sonic-system-aaa {
+        container AAA {
+            list AAA_LIST {
+                key "type";
+
+                leaf type {
+                    type enumeration {
+                        enum authentication;
+                        enum authorization;
+                        enum accounting;
+                    }
+                    description "AAA type authentication/authorization/accounting";
+                }
+
+                leaf login {
+                    type string {
+                        pattern '((ldap|tacacs\+|local|radius|default),)*(ldap|tacacs\+|local|radius|default)' {
+                            error-message "Invalid login choice";
+                        }
+                    }
+                    description "AAA authentication/authorization/accounting methods - radius/tacacs+/ldap|local/default";
+                    default "local";
+                }
+
+                must 'not(./type = "authentication" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
+                    error-message "Authentication with 'tacacs+' is not allowed when passkey not exists.";
+                }
+
+                leaf failthrough {
+                    type stypes:boolean_type;
+                    description "When set to true, authentication is attempted on next configured server/local in the list upon failure.";
+                    default False;
+                }
+
+                leaf fallback {
+                    type stypes:boolean_type;
+                    description "Allow AAA fallback";
+                    default False;
+                }
+
+                leaf debug {
+                    type stypes:boolean_type;
+                    description "Enable/disable AAA debugging";
+                    default False;
+                }
+
+                leaf trace {
+                    type stypes:boolean_type;
+                    description "AAA packet trace";
+                    default False;
+                }
+            }
+        }
+    }
+}
+

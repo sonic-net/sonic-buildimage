@@ -1,0 +1,10 @@
+
+DPATH       := $($(DOCKER_BASE)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-base.mk rules/docker-base.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_BASE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_BASE)_DEP_FILES   := $(DEP_FILES)
+

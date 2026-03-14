@@ -1,0 +1,160 @@
+From 49526a27e90647ed4e48c1d1d88e0c75a1ce221b Mon Sep 17 00:00:00 2001
+From: Venkatesan Mahalingam <venkatesan_mahalinga@dell.com>
+Date: Thu, 2 Jul 2020 09:57:28 +0800
+Subject: [PATCH 1/4] Add support to specify source address for TACACS+
+
+---
+ pam_tacplus.c |  8 ++++----
+ support.c     | 54 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ support.h     |  1 +
+ 3 files changed, 57 insertions(+), 6 deletions(-)
+
+diff --git a/pam_tacplus.c b/pam_tacplus.c
+index 7544b2e..9fc6be7 100644
+--- a/pam_tacplus.c
++++ b/pam_tacplus.c
+@@ -177,7 +177,7 @@ int _pam_account(pam_handle_t *pamh, int argc, const char **argv,
+ 
+     status = PAM_SESSION_ERR;
+     for(srv_i = 0; srv_i < tac_srv_no; srv_i++) {
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, tac_source_addr, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+             _pam_log(LOG_WARNING, "%s: error sending %s (fd)",
+                 __FUNCTION__, typemsg);
+@@ -276,7 +276,7 @@ int pam_sm_authenticate (pam_handle_t * pamh, int flags,
+         if (ctrl & PAM_TAC_DEBUG)
+             syslog(LOG_DEBUG, "%s: trying srv %d", __FUNCTION__, srv_i );
+ 
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, tac_source_addr, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+             _pam_log(LOG_ERR, "%s: connection to srv %d failed", __FUNCTION__, srv_i);
+             continue;
+@@ -579,7 +579,7 @@ int pam_sm_acct_mgmt (pam_handle_t * pamh, int flags,
+     if(tac_protocol[0] != '\0')
+       tac_add_attrib(&attr, "protocol", tac_protocol);
+ 
+-    tac_fd = tac_connect_single(active_server.addr, active_server.key, NULL, tac_timeout, __vrfname);
++    tac_fd = tac_connect_single(active_server.addr, active_server.key, tac_source_addr, tac_timeout, __vrfname);
+     if(tac_fd < 0) {
+         _pam_log (LOG_ERR, "TACACS+ server unavailable");
+         if(arep.msg != NULL)
+@@ -762,7 +762,7 @@ int pam_sm_chauthtok(pam_handle_t * pamh, int flags,
+         if (ctrl & PAM_TAC_DEBUG)
+             syslog(LOG_DEBUG, "%s: trying srv %d", __FUNCTION__, srv_i );
+ 
+-        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, NULL, tac_timeout, __vrfname);
++        tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key, tac_source_addr, tac_timeout, __vrfname);
+         if (tac_fd < 0) {
+             _pam_log(LOG_ERR, "connection failed srv %d: %m", srv_i);
+             continue;
+diff --git a/support.c b/support.c
+index 8f42a0c..164df62 100644
+--- a/support.c
++++ b/support.c
+@@ -37,6 +37,8 @@ char tac_service[64];
+ char tac_protocol[64];
+ char tac_prompt[64];
+ char *__vrfname=NULL;
++char tac_source_ip[64];
++struct addrinfo *tac_source_addr = NULL;
+ 
+ void _pam_log(int err, const char *format,...) {
+     char msg[256];
+@@ -171,6 +173,44 @@ int tacacs_get_password (pam_handle_t * pamh, int flags
+     return PAM_SUCCESS;
+ }
+ 
++/* set source ip address for the outgoing tacacs packets */
++void set_source_ip(const char *tac_source_ip) {
++    /*
++        addrinfo created by getaddrinfo must be released with freeaddrinfo.
++        so source ip address will be stored in following static variables.
++    */
++    static struct addrinfo tac_source_address;
++    static struct sockaddr tac_source_sock_addr;
++    static struct sockaddr_in6 tac_source_sock6_addr;
++
++    struct addrinfo hints, *source_address;
++    int rv;
++
++    /* set the source ip address for the tacacs packets */
++    memset(&hints, 0, sizeof(hints));
++    hints.ai_family = AF_UNSPEC;
++    hints.ai_socktype = SOCK_STREAM;
++    if ((rv = getaddrinfo(tac_source_ip, NULL, &hints,
++                          &source_address)) != 0) {
++        _pam_log(LOG_ERR, "error setting the source ip information");
++    } else {
++        tac_source_addr = &tac_source_address;
++        memcpy(tac_source_addr, source_address, sizeof(struct addrinfo));
++
++        if (source_address->ai_family == AF_INET6) {
++            tac_source_addr->ai_addr = (struct sockaddr *)&(tac_source_sock6_addr);
++            memcpy(tac_source_addr->ai_addr, source_address->ai_addr, sizeof(struct sockaddr_in6));
++        }
++        else {
++            tac_source_addr->ai_addr = &(tac_source_sock_addr);
++            memcpy(tac_source_addr->ai_addr, source_address->ai_addr, sizeof(struct sockaddr));
++        }
++
++        freeaddrinfo(source_address);
++        _pam_log(LOG_DEBUG, "source ip is set");
++    }
++}
++
+ int _pam_parse (int argc, const char **argv) {
+     int ctrl = 0;
+     const char *current_secret = NULL;
+@@ -183,6 +223,12 @@ int _pam_parse (int argc, const char **argv) {
+     tac_protocol[0] = 0;
+     tac_prompt[0] = 0;
+     tac_login[0] = 0;
++    tac_source_ip[0] = 0;
++
++    if (tac_source_addr != NULL) {
++        /* reset source address */
++        tac_source_addr = NULL;
++    }
+ 
+     for (ctrl = 0; argc-- > 0; ++argv) {
+         if (!strcmp (*argv, "debug")) { /* all */
+@@ -274,6 +320,10 @@ int _pam_parse (int argc, const char **argv) {
+             }
+         } else if(!strncmp(*argv, "vrf=", 4)) {
+             __vrfname = strdup(*argv + 4);
++        } else if (!strncmp (*argv, "source_ip=", strlen("source_ip="))) {
++            /* source ip for the packets */
++            strncpy (tac_source_ip, *argv + strlen("source_ip="), sizeof(tac_source_ip));
++            set_source_ip(tac_source_ip);
+         } else {
+             _pam_log (LOG_WARNING, "unrecognized option: %s", *argv);
+         }
+@@ -292,8 +342,8 @@ int _pam_parse (int argc, const char **argv) {
+         _pam_log(LOG_DEBUG, "tac_protocol='%s'", tac_protocol);
+         _pam_log(LOG_DEBUG, "tac_prompt='%s'", tac_prompt);
+         _pam_log(LOG_DEBUG, "tac_login='%s'", tac_login);
++        _pam_log(LOG_DEBUG, "tac_source_ip='%s'", tac_source_ip);
+     }
+ 
+     return ctrl;
+-}    /* _pam_parse */
+-
++}    /* _pam_parse */
+\ No newline at end of file
+diff --git a/support.h b/support.h
+index 9cbd040..b1faf43 100644
+--- a/support.h
++++ b/support.h
+@@ -37,6 +37,7 @@ extern int tac_srv_no;
+ extern char tac_service[64];
+ extern char tac_protocol[64];
+ extern char tac_prompt[64];
++extern struct addrinfo *tac_source_addr;
+ 
+ int _pam_parse (int, const char **);
+ unsigned long _resolve_name (char *);
+-- 
+2.17.1.windows.2
+

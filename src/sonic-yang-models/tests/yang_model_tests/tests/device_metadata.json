@@ -1,0 +1,270 @@
+{
+    "DEV_META_DEV_NEIGH_VERSION_TABLE": {
+        "desc": "DEVICE_METADATA DEVICE_NEIGHBOR VERSION TABLE."
+    },
+    "DEVICE_METADATA_ASIC_ID": {
+        "desc": "DEVICE_METADATA ASIC ID."
+    },
+    "DEVICE_METADATA_ASIC_NAME": {
+        "desc": "DEVICE_METADATA ASIC NAME."
+    },
+    "DEVICE_METADATA_DEFAULT_BGP_STATUS": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR BGP_STATUS FIELD.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:default_bgp_status",
+            "value": "up"
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_DOCKER_ROUTING_CONFIG_MODE": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR DOCKER_ROUTING_CONFIG_MODE FIELD.",
+        "eStrKey" : "Verify",
+        "verify": {
+        "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:docker_routing_config_mode",
+            "value": "unified"
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_PFCWD_STATUS": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR PFCWD FIELD.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:default_pfcwd_status",
+            "value": "disable"
+        }
+    },
+    "DEVICE_METADATA_TYPE_INCORRECT_PATTERN": {
+        "desc": "DEVICE_METADATA_TYPE_INCORRECT_PATTERN pattern failure.",
+        "eStrKey" : "Pattern"
+    },
+    "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
+        "desc": "DEVICE_METADATA correct value for Type field"
+    },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtLeafRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LOWER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerMgmtAggregator for Type field"
+    },
+    "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperMgmtAggregator for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MINI_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as MiniTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_LEAF_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as LeafTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SPINE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as SpineTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CORE_TS_PATTERN": {
+        "desc": "DEVICE_METADATA value as CoreTs for Type field"
+    },
+    "DEVICE_METADATA_TYPE_CONSOLE_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as ConsoleServer for Type field"
+    },
+    "DEVICE_METADATA_TYPE_TERMINAL_SERVER_PATTERN": {
+        "desc": "DEVICE_METADATA value as TerminalServer for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
+        "desc": "DEVICE_METADATA value as SonicHost for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
+        "desc": "DEVICE_METADATA value as FilterLeaf for Type field"
+    },
+    "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
+        "desc": "DEVICE_METADATA value as not-provisioned for Type field"
+    },
+    "DEVICE_METADATA_DEFAULT_SYNCHRONOUS_MODE": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR SYNCHRONOUS MODE.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:synchronous_mode",
+            "value": "enable"
+        }
+    },
+    "DEVICE_METADATA_DEFAULT_YANG_CONFIG_VALIDATION": {
+        "desc": "DEVICE_METADATA DEFAULT VALUE FOR YANG CONFIG VALIDATION.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
+            "key": "sonic-device_metadata:yang_config_validation",
+            "value": "disable"
+        }
+    },
+    "DEVICE_METADATA_CORRECT_BUFFER_MODEL_PATTERN": {
+        "desc": "DEVICE_METADATA correct value for BUFFER_MODEL field"
+    },
+    "DEVICE_METADATA_CORRECT_BUFFER_MODEL_PATTERN2": {
+        "desc": "DEVICE_METADATA correct value for BUFFER_MODEL field"
+    },
+    "DEVICE_METADATA_INCORRECT_BUFFER_MODEL_PATTERN": {
+        "desc": "DEVICE_METADATA wrong value for BUFFER_MODEL field.",
+        "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_FRR_MGMT_FWK_CONFIG": {
+        "desc": "Verifying FRR MGMT framework configuration."
+    },
+    "DEVICE_METADATA_CORRECT_CLOUDTYPE_REGION_CONFIG": {
+        "desc": "Verifying cloudtype and region configuration."
+    },
+    "DEVICE_METADATA_DOWNSTREAM_SUBROLE_CONFIG": {
+        "desc": "Verifying downstream subrole configuration."
+    },
+    "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
+        "desc": "Verifying resource type configuration."
+    },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "desc": "Verifying mgmt type configuration."
+    },
+    "DEVICE_METADATA_VALID_CLUSTER": {
+        "desc": "Verifying valid cluster configuration."
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "desc": "Verifying valid subtype value dualtor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "desc": "Verifying valid subtype value supervisor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "desc": "Verifying valid subtype value upstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value LowerSpineRouter"
+    },
+    "DEVICE_METADATA_INVALID_SUBTYPE": {
+        "desc": "Verifying invalid subtype value",
+        "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_VALID_PEER_SWITCH": {
+        "desc": "Verifying valid peer switch hostname"
+    },
+    "DEVICE_METADATA_INVALID_PEER_SWITCH": {
+        "desc": "Verifying test fails with hostname that is too long",
+        "eStrKey": "Length"
+    },
+    "DEVICE_METADATA_VALID_STORAGE_DEVICE": {
+        "desc": "Verifying valid storage device value"
+    },
+    "DEVICE_METADATA_INVALID_STORAGE_DEVICE": {
+        "desc": "Verifying invalid storage device value",
+        "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_INCORRECT_VOQ_CONFIG": {
+        "desc": "Verifying incorrect switch_type configuration.",
+	"eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_CORRECT_VOQ_CONFIG": {
+        "desc": "Verifying VOQ configuration."
+    },
+    "DEVICE_METADATA_VALID_SUB_ROLE_CONFIG": {
+        "desc": "Verifying valid sub_role configuration."
+    },
+    "DEVICE_METADATA_VALID_DHCP_SERVER": {
+        "desc": "Verifying dhcp_server configuration."
+    },
+    "DEVICE_METADATA_INVALID_DHCP_SERVER": {
+        "desc": "Verifying invalid dhcp_server configuration.",
+        "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_ADVERTISE_LO_PREFIX_AS_128": {
+        "desc": "Verifying advertising lo prefix as /128."
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED": {
+        "desc": "Enable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_DISABLED": {
+        "desc": "Disable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
+        "desc": "Enable bgp-suppress-fib-pending when synchronous mode is disabled",
+        "eStr": ["ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature"]
+    },
+    "DEVICE_METADATA_VALID_RACK_MGMT_MAP": {
+        "desc": "Verifying rack_mgmt_map configuration."
+    },
+    "DEVICE_METADATA_INVALID_RACK_MGMT_MAP": {
+        "desc": "Verifying invalid rack_mgmt_map configuration.",
+        "eStr": "Invalid length for the rack mgmt map."
+    },
+    "DEVICE_METADATA_VALID_TIMEZONE": {
+        "desc": "Verifying valid timezone value"
+    },
+    "DEVICE_METADATA_INVALID_TIMEZONE": {
+        "desc": "Verifying invalid timezone value",
+        "eStrKey": "Length"
+    },
+    "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "desc": "Verifying the create_only_config_db_buffers value"
+    },
+    "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "desc": "Verifying invalid create_only_config_db_buffers value",
+        "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "desc": "Verifying the supporting_bulk_counter_groups value"
+    },
+    "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
+        "desc": "Verifying bgp_router_id configuration."
+    },
+    "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
+        "desc": "Verifying invalid bgp_router_id configuration.",
+        "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
+        "desc": "Verifying valid chassis hostname configuration."
+    },
+    "DEVICE_METADATA_VALID_SLICE_TYPE": {
+        "desc": "Verifying valid slice_type configuration."
+    },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "desc": "Verifying valid location_type configuration."
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "desc": "Verifying nexthop_group configuration."
+    },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "desc": "Verifying valid zebra_nexthop configuration."
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "desc": "Verifying valid t2_group_asns."
+    },
+     "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+         "desc": "Verifying invalid t2_group_asns.",
+         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "desc": "Verifying valid anchor_route_source."
+    }
+}

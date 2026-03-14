@@ -1,0 +1,13 @@
+s5224f/scripts/s5224f_platform.sh usr/local/bin
+s5224f/scripts/check_qsfp.sh usr/local/bin
+s5224f/scripts/platform_sensors.py usr/local/bin
+s5224f/scripts/sensors usr/bin
+s5224f/scripts/pcisysfs.py usr/bin
+s5224f/scripts/qsfp_irq_enable.py usr/bin
+s5224f/cfg/s5224f-modules.conf etc/modules-load.d
+s5224f/cfg/s5224f-params.conf etc/modprobe.d
+s5224f/systemd/platform-modules-s5224f.service etc/systemd/system
+build-s5224f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5224f_c3538-r0
+common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5224f_c3538-r0
+common/fw-updater usr/local/bin
+common/onie_mode_set usr/local/bin

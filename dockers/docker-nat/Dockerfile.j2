@@ -1,0 +1,36 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+## Install redis-tools dependencies
+## TODO: implicitly install dependencies
+RUN apt-get update        \
+&& apt-get install -f -y \
+       bridge-utils      \
+       conntrack
+
+{% if docker_nat_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{copy_files ("debs/", docker_nat_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_nat_debs.split(' ')) }}
+{%- endif %}
+
+COPY ["start.sh", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["restore_nat_entries.py", "/usr/bin/"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+FROM $BASE
+
+{{ rsync_from_builder_stage() }}
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/local/bin/supervisord"]

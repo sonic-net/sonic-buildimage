@@ -1,0 +1,17 @@
+{
+    "local_work": {
+        "core_upload": "/tmp/core_upload/"
+    },
+    "azure_sonic_core_storage": {
+        "account_name": "corefilecollection",
+        "account_key": "",
+        "share_name": "corefiles-root"
+    },
+    "metadata_files_in_archive": {
+        "version": "/etc/sonic/sonic_version.yml",
+        "core_info": "core_info.json"
+    },
+    "env": {
+        "https_proxy": ""
+    }
+}

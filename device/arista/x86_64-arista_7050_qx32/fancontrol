@@ -1,0 +1,10 @@
+INTERVAL=5
+DEVPATH=hwmon1=devices/platform/sb800-fans hwmon2=devices/pci0000:00/0000:00:09.0/0000:04:00.0/i2c-5/5-004c
+DEVNAME=hwmon1=fans hwmon2=max6658
+FCTEMPS=hwmon1/pwm4=hwmon2/temp1_input hwmon1/pwm3=hwmon2/temp1_input hwmon1/pwm2=hwmon2/temp1_input hwmon1/pwm1=hwmon2/temp1_input
+FCFANS=hwmon1/pwm4=hwmon1/fan4_input hwmon1/pwm3=hwmon1/fan3_input hwmon1/pwm2=hwmon1/fan2_input hwmon1/pwm1=hwmon1/fan1_input
+MINTEMP=hwmon1/pwm4=30 hwmon1/pwm3=30 hwmon1/pwm2=30 hwmon1/pwm1=30
+MINPWM=hwmon1/pwm4=179 hwmon1/pwm3=179 hwmon1/pwm2=179 hwmon1/pwm1=179
+MAXTEMP=hwmon1/pwm4=40 hwmon1/pwm3=40 hwmon1/pwm2=40 hwmon1/pwm1=40
+MINSTART=hwmon1/pwm4=179 hwmon1/pwm3=179 hwmon1/pwm2=179 hwmon1/pwm1=179
+MINSTOP=hwmon1/pwm4=179 hwmon1/pwm3=179 hwmon1/pwm2=179 hwmon1/pwm1=179

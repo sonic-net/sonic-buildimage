@@ -1,0 +1,41 @@
+From 9ea3d8b93c9bb7da7fea13ee6c92356a6b82a5fb Mon Sep 17 00:00:00 2001
+From: Bart Van Assche <bvanassche@acm.org>
+Date: Wed, 14 Apr 2021 20:03:15 -0700
+Subject: [PATCH] Makefile.in: Make sure that 'sedscript' is built before
+ subdirectories
+
+This is a follow-up for commit 855e1c28dad5 ("Makefile.in, agent/Makefile.in:
+Fix parallel compilation").
+---
+ Makefile.in    | 1 +
+ Makefile.rules | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index 3271823143..f1cbbf5ca3 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -6,6 +6,7 @@
+ VPATH		= @srcdir@
+ 
+ SUBDIRS		= snmplib @MAINSUBS@
++SUBDIRDEPS      = sedscript
+ FTSUBDIRS	= @FTMAINSUBS@ snmplib
+ TESTDIRS	= testing
+ 
+diff --git a/Makefile.rules b/Makefile.rules
+index 92082e5429..100e0011ee 100644
+--- a/Makefile.rules
++++ b/Makefile.rules
+@@ -70,7 +70,7 @@ cleanfeaturessubdirs:
+ 		> $(top_builddir)/include/net-snmp/feature-details.h
+ 	$(FEATURECHECK) --feature-global $(top_builddir)/include/net-snmp/feature-details.h $(mysubdir) $< $@ $(CC) -E $(CPPFLAGS) $(CFLAGS) -c
+ 
+-subdirs:
++subdirs: $(SUBDIRDEPS)
+ 	@if test "$(SUBDIRS)" != ""; then \
+ 		it="$(SUBDIRS)" ; \
+ 		for i in $$it ; do \
+-- 
+2.34.1
+

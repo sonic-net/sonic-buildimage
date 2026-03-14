@@ -1,0 +1,83 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python3_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+# Enable -O for all Python calls
+ENV PYTHONOPTIMIZE=1
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Update apt's cache of available packages
+# Install make/gcc which is required for installing hiredis
+RUN apt-get update   && \
+    apt-get install -y  \
+        python3-dev     \
+        gcc             \
+        make            \
+        ipmitool
+
+{% if docker_snmp_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_snmp_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_snmp_debs.split(' ')) }}
+{%- endif %}
+
+# Install dependencies used by some plugins
+RUN pip3 install --no-cache-dir \
+        hiredis                             \
+        pyyaml                              \
+        smbus
+
+{% if docker_snmp_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_snmp_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python3_wheels(docker_snmp_whls.split(' ')) }}
+{% endif %}
+
+RUN python3 -m sonic_ax_impl install
+
+# Clean up
+RUN apt-get -y purge     \
+        python3-dev      \
+        gcc              \
+        make
+
+COPY ["docker-snmp-init.sh", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
+COPY ["snmp_yml_to_configdb.py", "/usr/bin/"]
+COPY ["*.j2", "/usr/share/sonic/templates/"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+# Although exposing ports is not needed for host net mode, keep it for possible bridge mode
+EXPOSE 161/udp 162/udp
+
+RUN chmod +x /usr/bin/docker-snmp-init.sh
+
+FROM $BASE
+
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+
+# Enable -O for all Python calls
+ENV PYTHONOPTIMIZE=1
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENTRYPOINT ["/usr/bin/docker-snmp-init.sh"]

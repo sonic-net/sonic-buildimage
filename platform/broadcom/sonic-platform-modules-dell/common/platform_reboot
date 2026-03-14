@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+import os
+import struct
+
+PORT_RES = '/dev/port'
+
+
+def portio_reg_write(resource, offset, val):
+    fd = os.open(resource, os.O_RDWR)
+    if(fd < 0):
+        print('file open failed %s' % resource)
+        return
+    if(os.lseek(fd, offset, os.SEEK_SET) != offset):
+        print('lseek failed on %s' % resource)
+        return
+    ret = os.write(fd, struct.pack('B', val))
+    if(ret != 1):
+        print('write failed %d' % ret)
+        return
+    os.close(fd)
+
+if __name__ == "__main__":
+    portio_reg_write(PORT_RES, 0xcf9, 0xe)

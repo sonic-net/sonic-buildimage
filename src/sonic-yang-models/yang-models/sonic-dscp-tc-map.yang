@@ -1,0 +1,67 @@
+module sonic-dscp-tc-map {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-dscp-tc-map";
+
+    prefix dtm;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "DSCP_TO_TC_MAP yang Module for SONiC OS";
+
+    revision 2021-04-15 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-dscp-tc-map {
+
+        container DSCP_TO_TC_MAP {
+
+            description "DSCP_TO_TC_MAP part of config_db.json";
+
+            list DSCP_TO_TC_MAP_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for map name.";
+                            error-app-tag map-name-invalid-length;
+                        }
+                    }
+                }
+
+                list DSCP_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+
+                    key "dscp";
+
+                    leaf dscp {
+                        type string {
+                            pattern "6[0-3]|[1-5][0-9]?|[0-9]?" {
+                                error-message "Invalid DSCP";
+                                error-app-tag dscp-invalid;
+                            }
+                        }
+                    }
+
+                    leaf tc {
+                        type stypes:tc_type;
+                    }
+                }
+            }
+        }
+    }
+}

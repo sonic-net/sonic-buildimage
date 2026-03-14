@@ -1,0 +1,21 @@
+#!/bin/bash
+
+HW_VERSION="/var/run/hw-management/system/config1"
+SENSORS_CONF_FILE="/usr/share/sonic/platform/sensors.conf"
+SENSORS_CONF_FILE_A1="/usr/share/sonic/platform/sensors.conf.a1"
+
+function get_sensor_conf_path() {
+    local _HW_VERSION="0"
+    if [[ -e $HW_VERSION ]]; then
+        _HW_VERSION=$(cat $HW_VERSION 2>&1)
+        if [[ "$_HW_VERSION" == "1" ]]; then
+            if [[ -e $SENSORS_CONF_FILE_A1 ]]; then
+                echo $SENSORS_CONF_FILE_A1
+                return
+            fi
+        fi
+    fi
+    echo $SENSORS_CONF_FILE
+}
+
+get_sensor_conf_path

@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+      ### type    1 result/1000
+          type    2 result/100
+          type    3 read bit
+     ### property need check must add int front
+-->
+<catalog>
+    <fans>
+        <fan id="fan1" >
+            <property name="present" location="/sys/bus/i2c/devices/14-000d/fan_present" type="3"  bit="0" decode="fanpresent" default="0"/>
+            <property name="status" location="/sys/bus/i2c/devices/14-000d/fan_status1" type="3" bit="0" decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/63-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/63-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/63-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/63-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/14-000d/hwmon/*/fan1_input"/>
+        </fan>    
+        <fan id="fan2" >
+            <property name="present" location="/sys/bus/i2c/devices/13-000d/fan_present" type="3"  bit="0" decode="fanpresent" default="0" />
+            <property name="status" location="/sys/bus/i2c/devices/13-000d/fan_status1" type="3" bit="0" decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/55-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/55-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/55-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/55-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/13-000d/hwmon/*/fan3_input"/>
+        </fan>        
+        <fan id="fan3" >
+            <property name="present" location="/sys/bus/i2c/devices/14-000d/fan_present" type="3"  bit="1"  decode="fanpresent" default="0"/>
+            <property name="status" location="/sys/bus/i2c/devices/14-000d/fan_status1" type="3" bit="1"     decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/64-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/64-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/64-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/64-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/14-000d/hwmon/*/fan5_input"/>
+        </fan>    
+        <fan id="fan4" >
+            <property name="present" location="/sys/bus/i2c/devices/13-000d/fan_present" type="3"  bit="1"  decode="fanpresent" default="0"/>
+            <property name="status" location="/sys/bus/i2c/devices/13-000d/fan_status1" type="3" bit="1"     decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/56-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/56-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/56-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/56-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/13-000d/hwmon/*/fan7_input"/>
+        </fan>    
+        <fan id="fan5" >
+            <property name="present" location="/sys/bus/i2c/devices/14-000d/fan_present" type="3"  bit="2"  decode="fanpresent" default="0"/>
+            <property name="status" location="/sys/bus/i2c/devices/14-000d/fan_status1" type="3" bit="2"     decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/65-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/65-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/65-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/65-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/14-000d/hwmon/*/fan9_input"/>
+        </fan>
+        <fan id="fan6" >
+            <property name="present" location="/sys/bus/i2c/devices/13-000d/fan_present" type="3"  bit="2"  decode="fanpresent" default="0"/>
+            <property name="status" location="/sys/bus/i2c/devices/13-000d/fan_status1" type="3" bit="2"     decode="fanstatus" default="1"/>
+    		<property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/57-0050/eeprom"/>
+            <!--property name="hw_version" location="/sys/bus/i2c/devices/57-0050/fan_hw_version" type="0"    bit="0"/>
+            <property name="fan_type"    location="/sys/bus/i2c/devices/57-0050/fan_type"/>
+            <property name="sn"       location="/sys/bus/i2c/devices/57-0050/fan_sn"/-->
+            <property name="Speed" location="/sys/bus/i2c/devices/13-000d/hwmon/*/fan11_input"/>
+        </fan>
+    </fans>     
+    <temps>
+        <temp id="lm75in" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/29-004f/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/29-004f/hwmon/*/temp1_max" type="1" />
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/29-004f/hwmon/*/temp1_crit_hyst" type="1" /-->
+        </temp> 
+        <temp id="lm75out" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/28-004b/hwmon/*/temp1_input" type="1" />
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/28-004b/hwmon/*/temp1_max" type="1" />
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/28-004b/hwmon/*/temp1_crit_hyst" type="1" /-->
+        </temp> 
+        <temp id="lm75hot" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/28-004c/hwmon/*/temp2_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/28-004c/hwmon/*/temp2_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/28-004c/hwmon/*/temp2_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot1lm75a1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/32-0048/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/32-0048/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/32-0048/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot1lm75a2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/32-0049/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/32-0049/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/32-0049/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot1lm75a3" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/32-004d/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/32-004d/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/32-004d/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot2lm75a1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/48-0048/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/48-0048/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/48-0048/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot2lm75a2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/48-0049/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/48-0049/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/48-0049/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot2lm75a3" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/48-004d/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/48-004d/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/48-004d/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot3lm75a1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/40-0048/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/40-0048/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/40-0048/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot3lm75a2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/40-0049/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/40-0049/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/40-0049/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot3lm75a3" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/40-004d/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/40-004d/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/40-004d/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot4lm75a1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/16-0048/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/16-0048/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/16-0048/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot4lm75a2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/16-0049/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/16-0049/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/16-0049/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+        <temp id="slot4lm75a3" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/16-004d/hwmon/*/temp1_input" type="1"/>
+            <!--property name="temp1_max"     location="/sys/bus/i2c/devices/16-004d/hwmon/*/temp1_max" type="1"/>
+            <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/16-004d/hwmon/*/temp1_crit_hyst" type="1"/-->
+        </temp> 
+    </temps> 
+    <psus>
+        <psu id="psu1" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_1" type="3"  bit="0" decode="psucheck" default="0"/>
+            <property name="status" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_1" type="3"  bit="1" decode="psustatus" default="1"/>
+            <property name="sn"    location="/sys/bus/i2c/devices/23-0050/psu_sn" />
+            <property name="type1"    location="/sys/bus/i2c/devices/23-0050/psu_type" decode="psutype"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/23-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/23-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/23-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/23-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/23-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="hw"    location="/sys/bus/i2c/devices/23-0050/psu_hw" />        
+        </psu> 
+        <psu id="psu2" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_2" type="3"  bit="0" decode="psucheck" default="0"/>
+            <property name="status" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_2" type="3"  bit="1" decode="psustatus" default="1"/>
+            <property name="sn"    location="/sys/bus/i2c/devices/25-0050/psu_sn" />
+            <property name="type1"    location="/sys/bus/i2c/devices/25-0050/psu_type" decode="psutype"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/25-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/25-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/25-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/25-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/25-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="hw"    location="/sys/bus/i2c/devices/25-0050/psu_hw" />
+        </psu> 
+         <psu id="psu3" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_3" type="3"  bit="0" decode="psucheck" default="0"/>
+            <property name="status" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_3" type="3"  bit="1" decode="psustatus" default="1"/>
+            <property name="sn"    location="/sys/bus/i2c/devices/24-0050/psu_sn" />
+            <property name="type1"    location="/sys/bus/i2c/devices/24-0050/psu_type" decode="psutype"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/24-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/24-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/24-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/24-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/24-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="hw"    location="/sys/bus/i2c/devices/24-0050/psu_hw" />
+        </psu> 
+        <psu id="psu4" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_4" type="3"  bit="0" decode="psucheck" default="0"/>
+            <property name="status" location="/sys/devices/pci0000:00/0000:00:1f.0/psu_status_4" type="3"  bit="1" decode="psustatus" default="1"/>
+            <property name="sn"    location="/sys/bus/i2c/devices/26-0050/psu_sn" />
+            <property name="type1"    location="/sys/bus/i2c/devices/26-0050/psu_type" decode="psutype"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/26-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/26-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/26-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/26-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/26-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="hw"    location="/sys/bus/i2c/devices/26-0050/psu_hw" />
+        </psu> 
+    </psus> 
+    <slots>
+        <slot id="slot1" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/slot_present" type="3" bit="4" decode="slotpresent" default="0"/>
+        </slot>    
+        <slot id="slot2" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/slot_present" type="3" bit="5" decode="slotpresent" default="0"/>
+        </slot>    
+        <slot id="slot3" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/slot_present" type="3" bit="6" decode="slotpresent" default="0"/>
+        </slot>    
+        <slot id="slot4" >
+            <property name="present" location="/sys/devices/pci0000:00/0000:00:1f.0/slot_present" type="3" bit="7" decode="slotpresent" default="0"/>
+        </slot>    
+    </slots>     
+    <cpus location="/sys/class/hwmon/hwmon0"/>
+    <decode>
+    <fanpresent>
+        <code key="1" value="ABSENT"/>
+        <code key="0" value="PRESENT"/>
+    </fanpresent>
+    <fanstatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </fanstatus>
+    <psucheck>
+        <code key="1" value="ABSENT"/>
+        <code key="0" value="PRESENT"/>
+    </psucheck>
+    <psustatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </psustatus>
+    
+    <psutype>        
+        <code key="CSU800AP-3-300" value="RG-PA800I-F"/>
+        <code key="CSU550AP-3-300" value="RG-PA550I-F"/>
+        <code key="FSP1200-20ERM" value="FSP1200-20ERM"/>
+        <code key="DPS-1300AB-6 S" value="DPS-1300AB-6 S"/>
+        
+    </psutype>
+    <slotpresent>
+        <code key="1" value="ABSENT"/>
+        <code key="0" value="PRESENT"/>
+    </slotpresent>
+    </decode>
+</catalog>
+

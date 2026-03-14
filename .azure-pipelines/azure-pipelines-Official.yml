@@ -1,0 +1,31 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger: none
+pr: none
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily Build
+  branches:
+    include:
+    - 202012
+  always: true
+
+pool: sonicso1ES-amd64
+
+stages:
+- stage: Build
+  jobs:
+  - template: azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'SONIC_CONFIG_BUILD_JOBS=1 SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web'
+      postSteps:
+      - script: |
+          make freeze
+          git status files/build/versions
+          git add files/build/versions
+          git diff HEAD files/build/versions
+        displayName: "Show git diff"

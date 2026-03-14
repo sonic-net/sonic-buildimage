@@ -1,0 +1,13 @@
+[Unit]
+Description=Delta ag9032v1 Platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-ag9032v1 start
+ExecStop=-/etc/init.d/platform-modules-ag9032v1 stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

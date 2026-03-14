@@ -1,0 +1,51 @@
+module sonic-buffer-port-ingress-profile-list {
+    namespace "http://github.com/sonic-net/sonic-buffer-port-ingress-profile-list";
+    prefix bpg;
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    import sonic-buffer-profile {
+        prefix bpf;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BUFFER PORT INGRESS PROFILE LIST";
+
+    revision 2021-07-01 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-buffer-port-ingress-profile-list {
+
+        container BUFFER_PORT_INGRESS_PROFILE_LIST {
+            list BUFFER_PORT_INGRESS_PROFILE_LIST_LIST {
+
+                key "port";
+
+                leaf port {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                }
+
+                leaf-list profile_list {
+                    type leafref {
+                        path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
+                    }
+                    ordered-by user;
+                    description "a list of references to BUFFER_PROFILE_TABLE object for a port";
+                }
+
+            }
+        }
+    }
+}

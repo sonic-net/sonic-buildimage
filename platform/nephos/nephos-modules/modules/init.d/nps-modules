@@ -1,0 +1,54 @@
+#!/bin/bash
+# This script load/unload nps kernel modules
+
+### BEGIN INIT INFO
+# Provides:          load-nps-modules
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load nps kernel modules
+### END INIT INFO
+
+case "$1" in
+start)
+        echo -n "Load nps kernel modules... "
+
+        RMEM_SIZE=`cat /proc/sys/net/core/rmem_max`
+        if [ $RMEM_SIZE -lt 8388608 ]; then
+            echo "8388608" > /proc/sys/net/core/rmem_max
+        fi
+        WMEM_SIZE=`cat /proc/sys/net/core/wmem_max`
+        if [ $WMEM_SIZE -lt 25165824 ]; then
+            echo "25165824" > /proc/sys/net/core/wmem_max
+        fi
+
+	modprobe nps_dev
+        modprobe nps_netif
+
+        echo "done."
+        ;;
+
+stop)
+        echo -n "Unload nps kernel modules... "
+
+        rmmod nps_netif
+        rmmod nps_dev
+
+        echo "done."
+        ;;
+
+force-reload|restart)
+        echo "Not supported"
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/nps-modules {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0
+

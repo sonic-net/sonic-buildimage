@@ -1,0 +1,17 @@
+Source: libnss-radius
+Section: libs
+Priority: optional
+Maintainer: Arun Barboza <29963827+a-barboza@users.noreply.github.com>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: http://www.broadcom.com
+
+Package: libnss-radius
+Section: libs
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: NSS module for RADIUS authentication absent local account.
+ NSS lookups for RADIUS authenticated users using the Management Privilege
+ Level (MPL) cached attribute.

@@ -1,0 +1,256 @@
+From a8047116d3724bf77cb4306f0440ea62f0a453ca Mon Sep 17 00:00:00 2001
+From: Mykola Faryma <mykolaf@mellanox.com>
+Date: Tue, 19 Mar 2019 14:41:15 +0000
+Subject: [PATCH] patch the debian package info to get sensord
+
+Signed-off-by: Mykola Faryma <mykolaf@mellanox.com>
+---
+ debian/sensord.NEWS           | 12 ++++
+ debian/sensord.README.Debian  | 23 ++++++++
+ debian/sensord.default        | 20 +++++++
+ debian/sensord.dirs           |  3 +
+ debian/sensord.init           | 64 ++++++++++++++++++++++
+ debian/sensord.install        |  2 +
+ debian/sensord.maintscript    |  2 +
+ debian/sensord.postinst       | 23 ++++++++
+ debian/sensord.substvars      |  2 +
+ debian/control                | 14 ++++++++++++++
+ 11 files changed, 167 insertions(+), 1 deletion(-)
+ create mode 100644 /debian/sensord.NEWS
+ create mode 100644 /debian/sensord.README.Debian
+ create mode 100644 /debian/sensord.default
+ create mode 100644 /debian/sensord.dirs
+ create mode 100644 /debian/sensord.init
+ create mode 100644 /debian/sensord.install
+ create mode 100644 /debian/sensord.maintscript
+ create mode 100644 /debian/sensord.postinst
+ create mode 100644 /debian/sensord.substvars
+
+diff --git a/debian/sensord.NEWS b/debian/sensord.NEWS
+new file mode 100644
+index 0000000..4bcfdb9
+--- /dev/null
++++ b/debian/sensord.NEWS
+@@ -0,0 +1,12 @@
++lm-sensors (1:2.9.0-7) unstable; urgency=low
++
++  Since version 2.9.0 sensord doesn't scale the loadavg itself (* 10) as
++  RRDs work with floating-point values and thus do very well with
++  non-integer values even < 1.
++
++  They can even be scaled later at display time by rrdtool itself using:
++	DEF:load=sensord.rrd:loadavg:AVERAGE
++		CDEF:load10=load,10,*
++
++ -- Aurelien Jarno <aurel32@debian.org>  Tue, 11 Jan 2005 22:41:34 +0100
++
+diff --git a/debian/sensord.README.Debian b/debian/sensord.README.Debian
+new file mode 100644
+index 0000000..9159fbc
+--- /dev/null
++++ b/debian/sensord.README.Debian
+@@ -0,0 +1,23 @@
++This is the Debian packaging of sensord, the sensord logging daemon.
++
++The file /etc/default/sensord specifies the configuration parameters
++used to start the daemon. In particular, the syslog facility is set
++to `daemon' and not `local4'.
++
++You must load the appropriate lm-sensors modules during system boot in
++order for the daemon to function correctly.
++
++The file /etc/modules is a useful place to list these modules; for
++example, you might list i2c-amd756 (an I2C/SMBUS module) and w83781d
++(a sensor chip module).
++
++The daemon does not setup the sensors limits from /etc/sensors3.conf,
++this is the job of sensors, when called with -s. Note that 'sensors -s'
++is called at boot time from /etc/init.d/lm-sensors, so that the sensors
++limits should be the right ones in normal use. Don't forget to run
++sensors -s again if you changed the limits in /etc/sensors3.conf.
++
++For full documentation on setting up lm-sensors on your system,
++see /usr/share/doc/lm-sensors.
++
++-- David Z. Maze <dmaze@debian.org>
+diff --git a/debian/sensord.default b/debian/sensord.default
+new file mode 100644
+index 0000000..589b94c
+--- /dev/null
++++ b/debian/sensord.default
+@@ -0,0 +1,20 @@
++# Interval between scanning for alarms; e.g., 30s, 1m, 1h
++# ALARM_INTERVAL=1m
++# Interval between logging sensor measurements; e.g., 30s, 1m, 1h
++# LOG_INTERVAL=30m
++# Syslog facility to use
++SYSLOG_FACILITY=daemon
++# Libsensors config file to use
++# CONFIG_FILE=/etc/sensors3.conf
++# Chips to scan
++# SCAN_CHIPS=...
++
++# Uncomment this to enable a 7-day round-robin database of sensor
++# readings.  See the ROUND ROBIN DATABASES section of the sensord
++# manual page for details.
++# RRD_FILE=/var/log/sensord.rrd
++# Interval between RRD readings; e.g. 30s, 5m (default), 1h
++# RRD_INTERVAL=5m
++# Include the load average in the RRD file.  If you enable this you
++# must remove your old RRD file and rebuild your CGI script.
++# RRD_LOADAVG=yes
+diff --git a/debian/sensord.dirs b/debian/sensord.dirs
+new file mode 100644
+index 0000000..b9cd814
+--- /dev/null
++++ b/debian/sensord.dirs
+@@ -0,0 +1,3 @@
++usr/sbin
++usr/share/man/man8
++etc/default
+diff --git a/debian/sensord.init b/debian/sensord.init
+new file mode 100644
+index 0000000..4d70d43
+--- /dev/null
++++ b/debian/sensord.init
+@@ -0,0 +1,64 @@
++#!/bin/sh
++
++### BEGIN INIT INFO
++# Provides:          sensord
++# Required-Start:    $remote_fs $syslog lm-sensors
++# Required-Stop:     $remote_fs $syslog
++# Default-Start:     2 3 4 5
++# Default-Stop:
++# Short-Description: lm-sensors daemon
++# Description:       hardware sensor information logging daemon
++### END INIT INFO
++
++. /lib/lsb/init-functions
++
++[ -f /etc/default/rcS ] && . /etc/default/rcS
++PATH=/bin:/usr/bin:/sbin:/usr/sbin
++DAEMON=/usr/sbin/sensord
++DESC="sensor daemon"
++NAME="sensord"
++PIDFILE=/var/run/sensord.pid
++CONFIG=/etc/default/sensord
++
++test -x $DAEMON || exit 0
++
++if [ -f $CONFIG ]; then . $CONFIG; fi
++
++if [ -n "$ALARM_INTERVAL" ]; then ALARM_INTERVAL="-i $ALARM_INTERVAL"; fi
++if [ -n "$LOG_INTERVAL" ]; then LOG_INTERVAL="-l $LOG_INTERVAL"; fi
++if [ -n "$SYSLOG_FACILITY" ]; then SYSLOG_FACILITY="-f $SYSLOG_FACILITY"; fi
++if [ -n "$CONFIG_FILE" ]; then CONFIG_FILE="-c $CONFIG_FILE"; fi
++if [ -n "$RRD_FILE" ]; then RRD_FILE="-r $RRD_FILE"; fi
++if [ -n "$RRD_INTERVAL" ]; then RRD_INTERVAL="-t $RRD_INTERVAL"; fi
++if [ -n "$RRD_LOADAVG" ]; then RRD_LOADAVG="-a"; fi
++
++case "$1" in
++  start)
++	log_daemon_msg "Starting $DESC" "$NAME"
++	/sbin/start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $ALARM_INTERVAL $LOG_INTERVAL $SYSLOG_FACILITY $RRD_INTERVAL $RRD_FILE $RRD_LOADAVG $CONFIG_FILE $SCAN_CHIPS
++	log_end_msg $?
++	;;
++  stop)
++	log_daemon_msg "Stopping $DESC" "$NAME"
++	start-stop-daemon --stop --quiet --pidfile $PIDFILE --oknodo --exec $DAEMON
++	log_end_msg $?
++	;;
++  restart)
++	$0 stop
++	sleep 1
++	$0 start
++	;;
++  force-reload)
++	if start-stop-daemon --stop --test --quiet --pidfile $PIDFILE --exec $DAEMON ; then
++		$0 restart
++	fi
++	;;
++  status)
++	status_of_proc $DAEMON $NAME && exit 0 || exit $?
++	;;
++  *)
++	echo "Usage: /etc/init.d/sensord {start|stop|restart|force-reload|status}"
++	exit 1
++esac
++
++exit 0
+diff --git a/debian/sensord.install b/debian/sensord.install
+new file mode 100644
+index 0000000..9713fee
+--- /dev/null
++++ b/debian/sensord.install
+@@ -0,0 +1,2 @@
++usr/sbin/sensord
++usr/share/man/man8/sensord.8
+diff --git a/debian/sensord.maintscript b/debian/sensord.maintscript
+new file mode 100644
+index 0000000..0e0ff03
+--- /dev/null
++++ b/debian/sensord.maintscript
+@@ -0,0 +1,2 @@
++# Remove old logcheck ignore file
++rm_conffile /etc/logcheck/ignore.d.server/sensord 1:3.3.5-1~
+diff --git a/debian/sensord.postinst b/debian/sensord.postinst
+new file mode 100644
+index 0000000..3418fa6
+--- /dev/null
++++ b/debian/sensord.postinst
+@@ -0,0 +1,23 @@
++#!/bin/sh
++# postinst script for sensord
++#
++# see: dh_installdeb(1)
++set -e
++
++case "$1" in
++    configure)
++        # Remove shutdown and reboot links; this init script does not need them.
++        if dpkg --compare-versions "$2" lt "1:3.1.1-5"; then
++	    rm -f /etc/rc0.d/K[0-9][0-9]sensord /etc/rc1.d/K[0-9][0-9]sensord /etc/rc6.d/K[0-9][0-9]sensord
++        fi
++    ;;
++    abort-upgrade|abort-remove|abort-deconfigure)
++    ;;
++
++    *)
++        echo "postinst called with unknown argument \`$1'" >&2
++	exit 1
++    ;;
++esac
++
++#DEBHELPER#
+diff --git a/debian/sensord.substvars b/debian/sensord.substvars
+new file mode 100644
+index 0000000..978fc8b
+--- /dev/null
++++ b/debian/sensord.substvars
+@@ -0,0 +1,2 @@
++misc:Depends=
++misc:Pre-Depends=
+diff --git a/debian/control b/debian/control
+--- a/debian/control
++++ b/debian/control
+@@ -68,3 +68,17 @@ Description: utility to control the fan speed
+  and sets the corresponding PWM outputs to the computed values. This is
+  useful when this feature is not provided by the BIOS or ACPI, which should
+  normally be the case on a laptop.
++
++Package: sensord
++Architecture: any
++Section: utils
++Depends: lm-sensors, lsb-base (>= 3.2-13), ${shlibs:Depends}, ${misc:Depends}
++Suggests: rrdtool
++Description: hardware sensor information logging daemon
++ Lm-sensors is a hardware health monitoring package for Linux. It allows you
++ to access information from temperature, voltage, and fan speed sensors. It
++ works with most newer systems.
++ .
++ This package contains a daemon that logs hardware health status to the
++ system log with optional warnings on potential system problems.
++
+--
+1.9.1

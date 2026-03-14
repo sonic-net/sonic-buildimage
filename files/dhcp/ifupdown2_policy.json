@@ -1,0 +1,12 @@
+{
+  "dhcp" : {
+    "defaults" : {
+       "dhcp-wait" : "no"
+    },
+    "iface_defaults" : {
+     "eth0" : {
+         "dhcp6-duid" : "LL"
+      }
+    }
+  }
+}

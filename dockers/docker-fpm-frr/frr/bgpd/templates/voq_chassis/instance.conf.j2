@@ -1,0 +1,36 @@
+!
+! template: bgpd/templates/voq_chassis/instance.conf.j2
+!
+  bgp bestpath as-path multipath-relax
+  bgp bestpath peer-type multipath-relax
+!
+{% if neighbor_addr | ipv4 %}
+  neighbor {{ neighbor_addr }} peer-group VOQ_CHASSIS_V4_PEER
+{% elif neighbor_addr | ipv6 %}
+  neighbor {{ neighbor_addr }} peer-group VOQ_CHASSIS_V6_PEER
+{% endif %}
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+  neighbor {{ neighbor_addr }} timers 2 7
+  neighbor {{ neighbor_addr }} timers connect 10
+!
+{% if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}
+  neighbor {{ neighbor_addr }} shutdown
+{% endif %}
+!
+  address-family ipv4
+{% if constants.bgp.maximum_paths.enabled is defined and constants.bgp.maximum_paths.enabled %}
+    maximum-paths ibgp {{ constants.bgp.maximum_paths.ipv4 | default(64) }}
+{% endif %}
+!
+  exit-address-family
+!
+  address-family ipv6
+{% if constants.bgp.maximum_paths.enabled is defined and constants.bgp.maximum_paths.enabled %}
+    maximum-paths ibgp {{ constants.bgp.maximum_paths.ipv6 | default(64) }}
+{% endif %}
+!
+  exit-address-family
+!
+! end of template: bgpd/templates/voq_chassis/instance.conf.j2
+!

@@ -1,0 +1,19 @@
+pr: none
+trigger: none
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily build
+  branches:
+    include:
+      - master
+      - 202???
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
+jobs:
+- template: .azure-pipelines/template-commonlib.yml@buildimage

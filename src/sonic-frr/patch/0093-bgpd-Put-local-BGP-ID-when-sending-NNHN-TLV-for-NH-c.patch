@@ -1,0 +1,77 @@
+From 966d2c8088af2e3683b9c7e7c88d5d6de530f4ab Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Wed, 22 Oct 2025 16:14:19 +0300
+Subject: bgpd: Put local BGP ID when sending NNHN TLV for NH characteristic
+
+draft-ietf-idr-next-next-hop-nodes (adopted by IDR WG) defines that local BGP ID
+should be sent as well before encoding Next-next BGP IDs.
+
+Fixes: d311a698de ("bgpd: Implement BGP Next Hop Dependent Characteristics Attribute")
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_attr.c  | 4 +++-
+ bgpd/bgp_nhc.h   | 2 +-
+ bgpd/bgp_route.c | 4 +++-
+ 3 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index bf2412d4ce..ac04d26507 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -3742,7 +3742,7 @@ static int bgp_attr_nhc(struct bgp_attr_parser_args *args)
+ 			zlog_debug("%pBP rcvd BGP NHC TLV code %d, length %d, value %p", peer,
+ 				   tlv->code, tlv->length, tlv->value);
+ 
+-		/* draft-wang-idr-next-next-hop-nodes */
++		/* draft-ietf-idr-next-next-hop-nodes-00 */
+ 		if (tlv->code == BGP_ATTR_NHC_TLV_NNHN) {
+ 			uint16_t len = tlv->length;
+ 
+@@ -4617,6 +4617,7 @@ static void bgp_packet_nhc(struct stream *s, struct peer *peer, afi_t afi, safi_
+ 		return;
+ 
+ 	total = bgp_path_info_mpath_count(bpi) * IPV4_MAX_BYTELEN;
++	total += IPV4_MAX_BYTELEN; /* Next-hop BGP ID */
+ 
+ 	/* NHC now supports only draft-wang-idr-next-next-hop-nodes, thus
+ 	 * do not sent NHC attribute if the path is not multipath or self
+@@ -4657,6 +4658,7 @@ static void bgp_packet_nhc(struct stream *s, struct peer *peer, afi_t afi, safi_
+ 	/* Begin NNHN TLV */
+ 	stream_putw(s, BGP_ATTR_NHC_TLV_NNHN);
+ 	stream_putw(s, total);
++	stream_put_ipv4(s, bpi->peer->local_id.s_addr);
+ 	stream_put_ipv4(s, bpi->peer->remote_id.s_addr);
+ 
+ 	for (exists = bgp_path_info_mpath_first(bpi); exists;
+diff --git a/bgpd/bgp_nhc.h b/bgpd/bgp_nhc.h
+index b874c83e3b..45587075fc 100644
+--- a/bgpd/bgp_nhc.h
++++ b/bgpd/bgp_nhc.h
+@@ -45,7 +45,7 @@ struct bgp_nhc {
+ #define BGP_NHC_MIN_IPV6_LEN 24
+ 
+ /* TLV values: */
+-/* draft-wang-idr-next-next-hop-nodes */
++/* draft-ietf-idr-next-next-hop-nodes-00 */
+ #define BGP_ATTR_NHC_TLV_NNHN 2
+ 
+ extern void bgp_nhc_tlv_add(struct bgp_nhc *nhc, struct bgp_nhc_tlv *tlv);
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index d733d0df83..df2fec3e6d 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -12290,7 +12290,9 @@ void route_vty_out_detail(struct vty *vty, struct bgp *bgp, struct bgp_dest *bn,
+ 					else
+ 						json_nhc_nnhn = json_object_new_array();
+ 
+-					for (i = 0; i < tlv->length; i += IPV4_MAX_BYTELEN) {
++					/* First is Next-hop BGP ID, skip it. */
++					for (i = IPV4_MAX_BYTELEN; i < tlv->length;
++					     i += IPV4_MAX_BYTELEN) {
+ 						if (!json_paths) {
+ 							vty_out(vty, "       %pI4\n",
+ 								(struct in_addr *)&tlv->value[i]);
+-- 
+2.48.1
+

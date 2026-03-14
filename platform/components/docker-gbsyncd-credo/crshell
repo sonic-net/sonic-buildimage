@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import socket
+import time
+from subprocess import call
+
+HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+PORT = 8299        # Port to listen on (non-privileged ports are > 1023)
+
+def main() -> None:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    s.connect((HOST, PORT))
+    s.send(b'debug_shell')
+
+    time.sleep(1)
+
+    call(["/usr/bin/crcli"])
+
+    s.close()
+    return
+
+if __name__ == '__main__':
+    main()
+

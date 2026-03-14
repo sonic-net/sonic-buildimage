@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+# main packaging script based on dh7 syntax
+%:
+	dh $@
+
+override_dh_auto_install:
+	dh_auto_install
+	rm -r debian/psample/usr/include
+
+override_dh_auto_test:
+

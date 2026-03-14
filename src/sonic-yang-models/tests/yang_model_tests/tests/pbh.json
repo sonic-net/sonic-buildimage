@@ -1,0 +1,107 @@
+{
+    "PBH_TABLE_RULE_HASH_HASH_FIELD_VALID": {
+        "desc": "Configure PBH_TABLE, PBH_RULE, PBH_HASH and PBH_HASH_FIELD."
+    },
+    "PBH_TABLE_INVALID_INTERFACE": {
+        "desc": "Configure non-existing PORT/PORTCHANNEL in PBH_TABLE.",
+        "eStrKey": "InvalidValue"
+    },
+    "PBH_TABLE_EMPTY_INTERFACE_LIST": {
+        "desc": "Configure empty INTERFACE_LIST in PBH_TABLE.",
+        "eStrKey": "MinElements"
+    },
+    "PBH_TABLE_INVALID_DESCRIPTION": {
+        "desc": "Configure invalid DESCRIPTION in PBH_TABLE.",
+        "eStrKey": "Length"
+    },
+    "PBH_RULE_INVALID_TABLE": {
+        "desc": "Configure non-existing PBH_TABLE in PBH_RULE.",
+        "eStrKey": "LeafRef"
+    },
+    "PBH_RULE_INVALID_PRIORITY": {
+        "desc": "Configure invalid PRIORITY in PBH_RULE.",
+        "eStrKey": "Bounds"
+    },
+    "PBH_RULE_INVALID_GRE_KEY": {
+        "desc": "Configure invalid GRE_KEY in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_ETHER_TYPE": {
+        "desc": "Configure invalid ETHER_TYPE in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_IP_PROTOCOL": {
+        "desc": "Configure invalid IP_PROTOCOL in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_IPV6_NEXT_HEADER": {
+        "desc": "Configure invalid IPV6_NEXT_HEADER in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_L4_DST_PORT": {
+        "desc": "Configure invalid L4_DST_PORT in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_INNER_ETHER_TYPE": {
+        "desc": "Configure invalid INNER_ETHER_TYPE in PBH_RULE.",
+        "eStrKey": "Pattern"
+    },
+    "PBH_RULE_INVALID_HASH": {
+        "desc": "Configure non-existing PBH_HASH in PBH_RULE.",
+        "eStrKey": "LeafRef"
+    },
+    "PBH_RULE_INVALID_PACKET_ACTION": {
+        "desc": "Configure invalid PACKET_ACTION in PBH_RULE.",
+        "eStrKey": "InvalidValue"
+    },
+    "PBH_RULE_INVALID_FLOW_COUNTER": {
+        "desc": "Configure invalid FLOW_COUNTER in PBH_RULE.",
+        "eStrKey": "InvalidValue"
+    },
+    "PBH_RULE_DEFAULT_VALUE_PACKET_ACTION": {
+        "desc": "Verify default value for PACKET_ACTION field in PBH_RULE.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-pbh:sonic-pbh/PBH_RULE/PBH_RULE_LIST[table_name='pbh_table'][rule_name='nvgre']/packet_action",
+            "key": "sonic-pbh:packet_action",
+            "value": "SET_ECMP_HASH"
+        }
+    },
+    "PBH_RULE_DEFAULT_VALUE_FLOW_COUNTER": {
+        "desc": "Verify default value for FLOW_COUNTER field in PBH_RULE.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-pbh:sonic-pbh/PBH_RULE/PBH_RULE_LIST[table_name='pbh_table'][rule_name='nvgre']/flow_counter",
+            "key": "sonic-pbh:flow_counter",
+            "value": "DISABLED"
+        }
+    },
+    "PBH_HASH_INVALID_HASH_FIELD": {
+        "desc": "Configure invalid HASH_FIELD in PBH_HASH.",
+        "eStrKey": "LeafRef"
+    },
+    "PBH_HASH_EMPTY_HASH_FIELD_LIST": {
+        "desc": "Configure empty HASH_FIELD_LIST in PBH_HASH.",
+        "eStrKey": "MinElements"
+    },
+    "PBH_HASH_FIELD_INVALID_HASH_FIELD": {
+        "desc": "Configure invalid HASH_FIELD in PBH_HASH_FIELD.",
+        "eStrKey": "InvalidValue"
+    },
+    "PBH_HASH_FIELD_INVALID_IP_MASK": {
+        "desc": "Configure invalid IP_MASK in PBH_HASH_FIELD.",
+        "eStrKey": "InvalidValue"
+    },
+    "PBH_HASH_FIELD_IPV4_MASK_HASH_FIELD_MISMATCH": {
+        "desc": "Configure HASH_FIELD (INNER_DST_IPV6) with IPV4_MASK in PBH_HASH_FIELD.",
+        "eStrKey": "Must"
+    },
+    "PBH_HASH_FIELD_IPV6_MASK_HASH_FIELD_MISMATCH": {
+        "desc": "Configure HASH_FIELD (INNER_DST_IPV4) with IPV6_MASK in PBH_HASH_FIELD.",
+        "eStrKey": "Must"
+    },
+    "PBH_HASH_FIELD_INVALID_SEQUENCE_ID": {
+        "desc": "Configure invalid SEQUENCE_ID in PBH_HASH_FIELD.",
+        "eStrKey": "Bounds"
+    }
+}

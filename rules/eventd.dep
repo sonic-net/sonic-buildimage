@@ -1,0 +1,10 @@
+
+SPATH       := $($(SONIC_EVENTD)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/eventd.mk rules/eventd.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+$(SONIC_EVENTD)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(SONIC_EVENTD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SONIC_EVENTD)_DEP_FILES   := $(DEP_FILES)
+

@@ -1,0 +1,11 @@
+[
+    {
+        "SWITCH_TABLE:switch": {
+{% if DEVICE_METADATA.localhost.vxlan_port_range == 'enable' %}
+            "vxlan_sport": "0xFF00",
+            "vxlan_mask": "8"
+{% endif %}
+        },
+        "OP": "SET"
+    }
+]

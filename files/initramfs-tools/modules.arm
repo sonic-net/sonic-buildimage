@@ -1,0 +1,15 @@
+crc16
+deflate
+zlib_deflate
+m25p80
+ubi
+ubifs
+squashfs
+marvell_nand
+i2c_mv64xxx
+ar7part
+ofpart
+mtdswap
+mtd_blkdevs
+adt7475
+i2c-dev

@@ -1,0 +1,12 @@
+
+SPATH       := $($(RESTAPI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/restapi.mk rules/restapi.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+$(RESTAPI)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(RESTAPI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(RESTAPI)_DEP_FILES   := $(DEP_FILES)
+$(RESTAPI)_SMDEP_FILES := $(SMDEP_FILES)
+$(RESTAPI)_SMDEP_PATHS := $(SPATH)
+

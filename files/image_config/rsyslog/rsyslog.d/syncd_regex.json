@@ -1,0 +1,12 @@
+[
+    {
+        "tag": "syncd-failure",
+        "regex": "(MMU ERR Type|L3 route add failed with error|Assertion failed|Received switch event|SER Parity Check Error)",
+        "params": [ "fail_type:ret=(arg==\"Received switch event\")and\"switch_event\"or((arg==\"Assertion Failed\")and\"assert\"or((arg==\"SER Parity Check Error\")and\"parity_check\"or((arg==\"MMU ERR Type\")and\"mmu_err\"or((arg==\"route add failed\")and\"route_add_failed\"or\"\"))))" ]
+    },
+    {
+        "tag": "alpm-parity-error",
+        "regex": "ALPM (delete|insert) operation.L3_DEFIP_ALPM_(IPV4|IPV6).*encountered parity error",
+        "params": [ "operation", "ip_family:ret=(arg==\"IPV4\")and\"IPv4\"or((arg==\"IPV6\")and\"IPv6\"or\"\")" ]
+    }
+]

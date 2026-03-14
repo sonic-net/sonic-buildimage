@@ -1,0 +1,10 @@
+{
+    "VLAN_INTERFACE": {
+        "Vlan1000|fc02:2000::2/24": {}
+    },
+    "FEATURE": {
+        "dhcp_server": {
+            "state": "disabled"
+        }
+    }
+}

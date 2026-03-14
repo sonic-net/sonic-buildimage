@@ -1,0 +1,578 @@
+{
+    "SCHEDULER_VALID": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                     "cbs": 256,
+                     "cir": 1250000,
+                     "meter_type": "bytes",
+                     "pbs": 1024,
+                     "pir": 25000000,
+                     "type": "DWRR",
+                     "weight": 10
+                },
+                {
+                    "name":"Test@1",
+                    "cbs": 1024,
+                    "cir": 1280000,
+                    "meter_type": "bytes",
+                    "pbs": 2048,
+                    "pir": 2560000,
+                    "type": "STRICT",
+                    "priority": 0
+                },
+                {
+                    "name":"Test@2",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "WRR",
+                    "weight": 20
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_UNDEFINED_TYPE": {
+        "sonic-scheduler:sonic-scheduler":{
+             "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                     "name":"Test@0",
+                     "type": "invalid"
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_INVALID_WEIGHT": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "weight": 120
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_INVALID_METER_TYPE": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "meter_type": "invalid"
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_CBS_NO_CIR": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 1024
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_PIR_NO_CIR": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "pir": 1024
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_PIR_VS_CIR": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cir": 2048,
+                    "pir": 1024
+                }
+                ]
+            }
+        }
+    },
+
+    "SCHEDULER_VALID_NAME": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"scheduler.0",
+                     "cbs": 256,
+                     "cir": 1250000,
+                     "meter_type": "bytes",
+                     "pbs": 1024,
+                     "pir": 25000000,
+                     "type": "DWRR",
+                     "weight": 10
+                },
+                {
+                    "name":"scheduler.1",
+                    "cbs": 1024,
+                    "cir": 1280000,
+                    "meter_type": "bytes",
+                    "pbs": 2048,
+                    "pir": 2560000,
+                    "type": "STRICT",
+                    "priority": 0
+                },
+                {
+                    "name":"scheduler.2",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "WRR",
+                    "weight": 20
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_EMPTY": {
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_VALID": {
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred2",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                },
+                {
+                    "name":"Wred3",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_all",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                },
+                {
+                    "name":"Wred4",
+                    "green_min_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "ecn": "ecn_all",
+                    "wred_green_enable": true
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "red_min_threshold": 1024,
+                    "red_max_threshold": 2048,
+                    "wred_red_enable": true,
+                    "red_drop_probability": 125,
+                    "green_drop_probability": 25,
+                    "yellow_drop_probability": 25,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "green_min_threshold": 4096,
+                    "green_max_threshold": 2048,
+                    "wred_green_enable": true,
+                    "green_drop_probability": 25,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_YELLOW_THRESHOLD": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "yellow_min_threshold": 4096,
+                    "yellow_max_threshold": 2048,
+                    "wred_yellow_enable": true,
+                    "yellow_drop_probability": 25,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+    "WRED_PROFILE_INVALID_RED_THRESHOLD": {
+        "sonic-wred-profile:sonic-wred-profile": {
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred4",
+                    "red_min_threshold": 4096,
+                    "red_max_threshold": 2048,
+                    "wred_red_enable": true,
+                    "red_drop_probability": 25,
+                    "ecn": "ecn_all"
+                }
+                ]
+            }
+        }
+    },
+
+
+    "QUEUE_VALID": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "DWRR",
+                    "weight": 10
+                }
+                ]
+            }
+        },
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                }
+                ]
+            }
+        },
+
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": 9000,
+                    "name": "Ethernet0",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "QUEUE_LIST": [
+                {
+                    "ifname": "Ethernet0",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
+    },
+
+    "QUEUE_PORT_NOT_EXIST": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "DWRR",
+                    "weight": 10
+                }
+                ]
+            }
+        },
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "QUEUE_LIST": [
+                {
+                    "ifname": "Ethernet0",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
+    },
+
+    "QUEUE_SCHEDULER_NOT_EXIST": {
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                }
+                ]
+            }
+        },
+
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": 9000,
+                    "name": "Ethernet4",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "QUEUE_LIST": [
+                {
+                    "ifname": "Ethernet4",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
+    },
+
+    "QUEUE_WRED_NOT_EXIST": {
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "DWRR",
+                    "weight": 10
+                }
+                ]
+            }
+        },
+
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet8",
+                    "lanes": "65",
+                    "mtu": 9000,
+                    "name": "Ethernet8",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "QUEUE_LIST": [
+                {
+                    "ifname": "Ethernet8",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "DWRR",
+                    "weight": 10
+                }
+                ]
+            }
+        },
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "ifname": "Ethernet0",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
+    }
+
+}

@@ -1,0 +1,23 @@
+{
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1,1,1,1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x100G": ["etp1"],
+                "1x100G[50G,40G,25G,10G]": ["etp1"],
+                "2x50G[25G,10G]": ["etp1a", "etp1b"],
+                "4x10G[25G]": ["etp1a", "etp1b", "etp1c", "etp1d"]
+            }
+        },
+        "Ethernet4": {
+            "index": "2,2,2,2",
+            "lanes": "4,5,6,7",
+            "breakout_modes": {
+                "1x100G": ["etp2"],
+                "1x100G[50G,40G,25G,10G]": ["etp2"],
+                "2x50G[25G,10G]": ["etp2a", "etp2b"]
+            }
+        }
+    }
+}

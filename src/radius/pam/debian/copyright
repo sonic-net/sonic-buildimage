@@ -1,0 +1,143 @@
+This package was debianized by Fabio M. Di Nitto <fabbione@fabbione.net> on
+Thu, 31 Oct 2002 09:56:49 +0100
+
+It was downloaded from ftp://ftp.freeradius.org/pub/radius/
+
+Copyright and license (extracted from src/pam_radius_auth.c):
+
+/*
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * The original pam_radius.c code is copyright (c) Cristian Gafton, 1996,
+ *                                             <gafton@redhat.com>
+ *
+ * Some challenge-response code is copyright (c) CRYPTOCard Inc, 1998.
+ *                                              All rights reserved.
+ */
+
+Copyright and license (extracted from src/radius.h):
+/*
+ *
+ *      RADIUS
+ *      Remote Authentication Dial In User Service
+ *
+ *
+ *      Livingston Enterprises, Inc.
+ *      6920 Koll Center Parkway
+ *      Pleasanton, CA   94566
+ *
+ *      Copyright 1992 Livingston Enterprises, Inc.
+ *
+ *      Permission to use, copy, modify, and distribute this software for any
+ *      purpose and without fee is hereby granted, provided that this
+ *      copyright and permission notice appear on all copies and supporting
+ *      documentation, the name of Livingston Enterprises, Inc. not be used
+ *      in advertising or publicity pertaining to distribution of the
+ *      program without specific prior permission, and notice be given
+ *      in supporting documentation that copying and distribution is by
+ *      permission of Livingston Enterprises, Inc.
+ *
+ *      Livingston Enterprises, Inc. makes no representations about
+ *      the suitability of this software for any purpose.  It is
+ *      provided "as is" without express or implied warranty.
+ *
+ */
+
+Copyright and license (from src/mschapv2):
+-----------------------------------------------------------------------------
+
+ XSupplicant --  A client-side 802.1x implementation
+
+  This code is released under both the GPL version 2 and BSD licenses.
+  Either license may be used.  The respective licenses are found below.
+
+  Copyright (C) 2002 Bryan D. Payne & Nick L. Petroni Jr.
+  Copyright (C) 2003, 2004 The Open1x Team
+  All Rights Reserved
+
+  --- GPL Version 2 License ---
+  This program is free software; you can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation; either version 2
+  of the License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+  --- BSD License ---
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+   - Redistributions of source code must retain the above copyright notice,
+     this list of conditions and the following disclaimer.
+   - Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+   - All advertising materials mentioning features or use of this software
+     must display the following acknowledgement:
+        This product includes software developed by the University of
+        Maryland at College Park, the Open1x team,  and its contributors.
+   - Neither the name of the University or Open1x team, nor the names
+     of its contributors may be used to endorse or promote products derived
+     from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+
+-----------------------------------------------------------------------------
+
+
+Copyright and license (from src/radpeapclient.c):
+-----------------------------------------------------------------------------
+
+/*
+ *    Copyright (c) 1996-2007 Brocade Communications Systems, Inc.
+ *    All rights reserved.
+ *
+ *    Module name: radpeapclient.c
+ *
+ *    Description:
+ *      This modules does with PEAP-MSCHAPv2 user authentication
+ *
+ *    Portions are of this code are extracted from freeradius-1.1.4,
+ *    with modifications for IPv6.
+ *
+ *    freeradius-1.1.4 libradius and libeap required for linking.
+ *
+ * Copyright 2019 Broadcom. All rights reserved.
+ * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ *
+ */
+
+-----------------------------------------------------------------------------
+
+
+On Debian GNU/Linux systems, the complete text of the GNU General
+Public License can be found in /usr/share/common-licenses/GPL-2 file.

@@ -1,0 +1,293 @@
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
+[eventlistener:supervisor-proc-exit-listener]
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name pmon
+events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
+autostart=true
+autorestart=unexpected
+buffer_size=1024
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n -iNONE
+priority=1
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+
+
+{% if delay_non_critical_daemon %}
+[program:delay]
+command=python3 /usr/bin/delay.py
+autostart=false
+autorestart=false
+startsecs=0
+dependent_startup=true
+{% endif %}
+
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
+[program:chassisd]
+command=/usr/local/bin/chassisd
+priority=3
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if not skip_chassis_db_init %}
+[program:chassis_db_init]
+command=/usr/local/bin/chassis_db_init
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=0
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if not skip_sensors and HAVE_SENSORS_CONF == 1 %}
+[program:lm-sensors]
+command=/usr/bin/lm-sensors.sh
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=0
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if not skip_fancontrol and HAVE_FANCONTROL_CONF == 1 %}
+[program:fancontrol]
+command=/usr/sbin/fancontrol
+priority=4
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if not skip_ledd %}
+[program:ledd]
+command={% if API_VERSION == 3 and 'ledd' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/ledd
+priority=5
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if not skip_xcvrd %}
+[program:xcvrd]
+{% set base_command = "python3 /usr/local/bin/xcvrd" %}
+{% set options = "" -%}
+
+{% if skip_xcvrd_cmis_mgr %}
+    {%- set options = options + " --skip_cmis_mgr" %}
+{% endif -%}
+
+{% if enable_xcvrd_sff_mgr %}
+    {%- set options = options + " --enable_sff_mgr" %}
+{% endif -%}
+
+{% if xcvrd and xcvrd.dom_temperature_poll_interval %}
+    {%- set options = options + " --dom_temperature_poll_interval " + xcvrd.dom_temperature_poll_interval|string %}
+{% endif -%}
+
+{% if delay_xcvrd %}
+    {%- set command = "bash -c \"sleep 30 && " ~ base_command ~ options ~ "\"" %}
+{% else %}
+    {%- set command = base_command ~ options %}
+{% endif -%}
+command={{ command }}
+priority=6
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if DEVICE_METADATA and 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}
+{% if not skip_ycabled %}
+[program:ycabled]
+{% if delay_ycabled %}
+command=bash -c "sleep 30 && nice -n -20 python3 /usr/local/bin/ycabled"
+{% else %}
+command=nice -n -20 python3 /usr/local/bin/ycabled
+{% endif %}
+priority=7
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+{% endif %}
+
+{% if not skip_psud %}
+[program:psud]
+command={% if API_VERSION == 3 and 'psud' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/psud
+priority=8
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if not skip_syseepromd %}
+[program:syseepromd]
+command={% if API_VERSION == 3 and 'syseepromd' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/syseepromd
+priority=9
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if not skip_thermalctld %}
+[program:thermalctld]
+{% set base_command = (
+    "python3 /usr/local/bin/thermalctld"
+    if API_VERSION == 3 and 'thermalctld' not in python2_daemons
+    else "python2 /usr/local/bin/thermalctld"
+) %}
+{% set options = "" -%}
+
+{% if thermalctld is defined %}
+    {% if thermalctld.thermal_monitor_initial_interval is defined and thermalctld.thermal_monitor_initial_interval is not none %}
+        {%- set options = options + " --thermal-monitor-initial-interval " + thermalctld.thermal_monitor_initial_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_interval is defined and thermalctld.thermal_monitor_update_interval is not none %}
+        {%- set options = options + " --thermal-monitor-update-interval " + thermalctld.thermal_monitor_update_interval|string %}
+    {% endif -%}
+
+    {% if thermalctld.thermal_monitor_update_elapsed_threshold is defined and thermalctld.thermal_monitor_update_elapsed_threshold is not none %}
+        {%- set options = options + " --thermal-monitor-update-elapsed-threshold " + thermalctld.thermal_monitor_update_elapsed_threshold|string %}
+    {% endif -%}
+
+    {% if thermalctld.enable_liquid_cooling %}
+    {%- set options = options + " --enable_liquid_cooling" %}
+    {% endif -%}
+
+    {% if thermalctld.liquid_cooling_update_interval %}
+    {%- set options = options ~ " --liquid_cooling_update_interval " ~ thermalctld.liquid_cooling_update_interval %}
+    {% endif -%}
+{% endif -%}
+
+{%- set command = base_command ~ options %}
+command={{ command }}
+priority=10
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+startretries=50
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if not skip_pcied %}
+[program:pcied]
+command=/usr/local/bin/pcied
+priority=11
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if include_sensormond %}
+[program:sensormond]
+command=/usr/local/bin/sensormond
+priority=10
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
+{% endif %}
+
+{% if not skip_stormond %}
+[program:stormond]
+command=/usr/local/bin/stormond
+priority=10
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}

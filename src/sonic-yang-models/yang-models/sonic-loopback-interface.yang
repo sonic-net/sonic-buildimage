@@ -1,0 +1,104 @@
+module sonic-loopback-interface {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-loopback-interface";
+    prefix lointf;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    description
+        "SONIC LOOPBACK INTERFACE";
+
+    revision 2021-04-05 {
+        description "Modify the type of vrf name";
+    }
+
+    revision 2020-02-05 {
+        description "First Revision";
+    }
+
+    container sonic-loopback-interface {
+
+        container LOOPBACK_INTERFACE {
+
+            list LOOPBACK_INTERFACE_LIST {
+                key "name";
+
+                leaf name{
+                    type stypes:interface_name;
+                }
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                }
+
+                leaf nat_zone {
+                    description "NAT Zone for the loopback interface";
+                    type uint8 {
+                        range "0..3" {
+                            error-message "Invalid nat zone for the loopback interface.";
+                            error-app-tag nat-zone-invalid;
+                        }
+                    }
+                    default "0";
+                }
+
+                leaf admin_status {
+                    type stypes:admin_status;
+                    default up;
+                }
+            }
+            /* end of LOOPBACK_INTERFACE_LIST */
+
+            list LOOPBACK_INTERFACE_IPPREFIX_LIST {
+
+                key "name ip-prefix";
+
+                leaf name{
+                    description "Loopback interface name";
+
+                    type leafref {
+                        path "../../LOOPBACK_INTERFACE_LIST/name";
+                    }
+                }
+
+                leaf ip-prefix {
+                    type union {
+                        type stypes:sonic-ip4-prefix;
+                        type stypes:sonic-ip6-prefix;
+                    }
+                }
+
+                leaf scope {
+                    type enumeration {
+                        enum global;
+                        enum local;
+                    }
+                }
+
+                leaf family {
+
+                    /* family leaf needed for backward compatibility
+                       Both ip4 and ip6 address are string in IETF RFC 6021,
+                       so must statement can check based on : or ., family
+                       should be IPv4 or IPv6 according.
+                     */
+
+                    must "(contains(../ip-prefix, ':') and current()='IPv6') or
+                        (contains(../ip-prefix, '.') and current()='IPv4')";
+                    type stypes:ip-family;
+                }
+            }
+        }
+        /* end of LOOPBACK_INTERFACE_IPPREFIX_LIST */
+    }
+}

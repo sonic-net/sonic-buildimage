@@ -1,0 +1,64 @@
+# This series applies on GIT commit 18c5597832fcf6988111b05a9a1607ae148723c
+# Note: Markers should start with "###->". 
+#       Header should end with .*-start eg: any_description-start
+#       Footer must end with .*-end eg: any_description-end
+#       Markers should not be nested
+
+# Backport from 5.15
+0001-x86-platform-Increase-maximum-GPIO-number-for-X86_64.patch
+
+# Backport from 5.16
+0001-net-arp-introduce-arp_evict_nocarrier-sysctl-paramet.patch
+
+# Backport from 5.19
+0001-net-ipv6-Introduce-accept_unsolicited_na-knob-to-imp.patch
+0002-net-ipv6-Expand-and-rename-accept_unsolicited_na-to-.patch
+
+#
+# This series applies on GIT commit 1451b36b2b0d62178e42f648d8a18131af18f7d8
+# Tkernel-sched-core-fix-cgroup-fork-race.patch
+# Tconfig-mlnx-sn2700.patch
+# Tdriver-at24-fix-odd-length-two-byte-access.patch
+# Tdriver-hwmon-lm75b-update.patch
+# Tdriver-hwmon-pmbus-add-dps460-support.patch
+# Tdriver-hwmon-pmbus-ucd9200-mlnx.patch
+# Trtnetlink-catch-EOPNOTSUPP-errors.patch
+# Tbridge-per-port-multicast-broadcast-flood-flags.patch
+#
+
+# Mellanox patches for 5.10
+###-> mellanox_sdk-start
+###-> mellanox_sdk-end
+
+###-> mellanox_hw_mgmt-start
+0001-i2c-mlxcpld-Update-module-license.patch
+0002-i2c-mlxcpld-Decrease-polling-time-for-performan.patch
+0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-s.patch
+0004-i2c-mux-mlxcpld-Update-module-license.patch
+0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-rea.patch
+0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driv.patch
+0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastru.patch
+0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enfo.patch
+###-> mellanox_hw_mgmt-end
+
+# Cisco patches for 5.10 kernel
+cisco-mtd-part.patch
+cisco-mdio-mux-support-acpi.patch
+cisco-x86-gpio-config.patch
+
+# sFlow + dropmon support
+0001-psample-Encapsulate-packet-metadata-in-a-struct.patch
+0002-psample-Add-additional-metadata-attributes.patch
+0003-psample-define-the-macro-PSAMPLE_MD_EXTENDED_ATTR.patch
+
+#
+# Marvell platform patches for 4.19
+armhf_secondary_boot_online.patch
+#
+#
+############################################################
+#
+# Internal patches will be added below (placeholder)
+# Do not add any public patch below this marker
+#
+############################################################

@@ -1,0 +1,16 @@
+Source: sonic-supermicro-platform-modules
+Section: main
+Priority: extra
+Maintainer: SuperMicro Team <support@supermicro.com>
+Build-Depends:
+   dh-python,
+   debhelper (>= 9.0.0),
+   python3(>=3.5),
+   python3-setuptools,
+   bzip2
+
+Standards-Version: 3.9.3
+Package: platform-modules-sse-t7132s
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+

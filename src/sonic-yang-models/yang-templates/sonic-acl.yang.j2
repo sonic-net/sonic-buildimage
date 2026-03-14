@@ -1,0 +1,415 @@
+{% if yang_model_type == "cvl" %}
+/* this is sonic cvl yang model */
+{% else %}
+/* this is sonic py yang model */
+{% endif %}
+module sonic-acl {
+
+	yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-acl";
+	prefix acl;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+	
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import sonic-types {
+		prefix stypes;
+		revision-date 2019-07-01;
+	}
+
+	import sonic-extension {
+		prefix ext;
+		revision-date 2019-07-01;
+	}
+
+	import sonic-port {
+		prefix port;
+		revision-date 2019-07-01;
+	}
+
+	import sonic-portchannel {
+		prefix lag;
+	}
+
+	import sonic-mirror-session {
+		prefix sms;
+	}
+
+	description "ACL YANG Module for SONiC OS";
+
+	revision 2019-07-01 {
+		description "First Revision";
+	}
+
+	container sonic-acl {
+
+		container ACL_RULE {
+
+			description "ACL_RULE part of config_db.json";
+
+			list ACL_RULE_LIST {
+
+				key "ACL_TABLE_NAME RULE_NAME";
+
+				leaf ACL_TABLE_NAME {
+					type leafref {
+						path "/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST/acl:ACL_TABLE_NAME";
+					}
+				}
+
+				leaf RULE_NAME {
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf PACKET_ACTION {
+					type stypes:packet_action;
+				}
+
+				/* Validating 'PACKET_ACTION' exist if ACL type is 'CTRLPLANE' */
+				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'CTRLPLANE')) or (boolean(PACKET_ACTION))";
+
+				leaf MIRROR_INGRESS_ACTION {
+					type leafref {
+						path "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST/sms:name";
+					}
+				}
+
+				leaf MIRROR_EGRESS_ACTION {
+					type leafref {
+						path "/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST/sms:name";
+					}
+				}
+
+				leaf INNER_SRC_MAC_REWRITE_ACTION {
+					description "Inner Source Mac-adress rewrite action mapped to mac address";
+					type yang:mac-address;
+				}
+
+				leaf IP_TYPE {
+					type stypes:ip_type;
+				}
+
+				leaf PRIORITY {
+					mandatory true;
+					type uint32 {
+						range 0..999999;
+					}
+				}
+
+				choice src_dst_address {
+					case l2_src_dst_address {
+						when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/acl:ACL_TABLE_NAME]/acl:type = 'L2')";
+						leaf SRC_MAC {
+                            type stypes:mac-addr-and-mask;
+						}
+						leaf DST_MAC {
+                            type stypes:mac-addr-and-mask;
+						}
+					}
+					case ip4_prefix {
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
+						leaf SRC_IP {
+							type inet:ipv4-prefix;
+						}
+
+						leaf DST_IP {
+							type inet:ipv4-prefix;
+						}
+
+						leaf INNER_SRC_IP {
+							description "Source IP prefix for inner packet";
+							type inet:ipv4-prefix;
+						}
+					}
+
+					case ip6_prefix {
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
+						leaf SRC_IPV6 {
+							type inet:ipv6-prefix;
+						}
+
+						leaf DST_IPV6 {
+							type inet:ipv6-prefix;
+						}
+					}
+				}
+
+				leaf IN_PORTS {
+					/* Values is a list of SONiC port name (/port:sonic-port/port:PORT/port:PORT_LIST/port:name) joined by comma */
+					type string;
+				}
+
+				leaf OUT_PORTS {
+					/* Values is a list of SONiC port name (/port:sonic-port/port:PORT/port:PORT_LIST/port:name) joined by comma */
+					type string;
+				}
+
+				choice src_port {
+					case l4_src_port {
+						leaf L4_SRC_PORT {
+							type uint16;
+						}
+					}
+
+					case l4_src_port_range {
+						leaf L4_SRC_PORT_RANGE {
+							type string {
+								pattern '([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])';
+							}
+						}
+					}
+				}
+
+				choice dst_port {
+					case l4_dst_port {
+						leaf L4_DST_PORT {
+							type uint16;
+						}
+					}
+
+					case l4_dst_port_range {
+						leaf L4_DST_PORT_RANGE {
+							type string {
+								pattern '([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])';
+							}
+						}
+					}
+				}
+
+				leaf ETHER_TYPE {
+					type string {
+						pattern "0x0[6-9a-fA-F][0-9a-fA-F]{2}|0x[1-9a-fA-F][0-9a-fA-F]{3}|153[6-9]|15[4-9][0-9]|1[6-9][0-9][0-9]|[2-9][0-9]{3}|[1-5][0-9]{4}|6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}";
+					}
+				}
+
+				leaf IP_PROTOCOL {
+					type uint8 {
+						range 1..143;
+					}
+				}
+
+				leaf TCP_FLAGS {
+					type string {
+						pattern '0[xX][0-9a-fA-F]{1,2}(/0[xX][0-9a-fA-F]{1,2})?';
+					}
+				}
+
+				leaf DSCP {
+					type uint8;
+				}
+
+				leaf TC {
+					type uint8;
+				}
+
+				choice icmp {
+
+					case icmp4 {
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
+						leaf ICMP_TYPE {
+							type uint8 {
+								range 0..255;
+							}
+						}
+
+						leaf ICMP_CODE {
+							type uint8 {
+								range 0..255;
+							}
+						}
+					}
+
+					case icmp6 {
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
+						leaf ICMPV6_TYPE {
+							type uint8 {
+								range 0..255;
+							}
+						}
+
+						leaf ICMPV6_CODE {
+							type uint8 {
+								range 0..255;
+							}
+						}
+					}
+				}
+
+				leaf INNER_ETHER_TYPE {
+					type string {
+						pattern "(0x88CC|0x8100|0x8915|0x0806|0x0800|0x86DD|0x8847)";
+					}
+				}
+
+				leaf INNER_IP_PROTOCOL {
+					type uint8 {
+						range 1..143;
+					}
+				}
+
+				leaf INNER_L4_SRC_PORT {
+					type uint16;
+				}
+
+				leaf INNER_L4_DST_PORT {
+					type uint16;
+				}
+
+				leaf VLAN_ID {
+					type uint16 {
+						range 1..4094;
+					}
+				}
+
+				leaf TUNNEL_VNI {
+					description "VXLAN Network Identifier";
+					type stypes:vnid_type;
+				}
+
+				leaf PCP {
+					when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/../acl:ACL_TABLE_NAME]/acl:type = 'L2')";
+					type string {
+						pattern "[0-7]|[0-7]/[0-7]";
+					}
+				}
+
+				leaf DEI {
+					when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/../acl:ACL_TABLE_NAME]/acl:type = 'L2')";
+					type uint8 {
+						range "0..1";
+					}
+				}
+
+				leaf BTH_OPCODE {
+				        description "RoCEv2 BTH OPCODE field";
+					type string {
+						pattern '0[xX][0-9a-fA-F]{1,2}/0[xX][0-9a-fA-F]{1,2}';
+					}
+				}
+
+				leaf AETH_SYNDROME {
+				        description "RoCEv2 AETH SYNDROME field";
+					type string {
+						pattern '0[xX][0-9a-fA-F]{1,2}/0[xX][0-9a-fA-F]{1,2}';
+					}
+				}
+
+				leaf TUNNEL_TERM {
+					description "Tunnel Termination Flag";
+					type boolean;
+				}
+			}
+			/* end of ACL_RULE_LIST */
+		}
+		/* end of container ACL_RULE */
+
+		container ACL_TABLE_TYPE {
+			list ACL_TABLE_TYPE_LIST {
+				key "ACL_TABLE_TYPE_NAME";
+
+				leaf ACL_TABLE_TYPE_NAME {
+					type string;
+				}
+
+				leaf-list MATCHES {
+					type string;
+					ordered-by user;
+					min-elements 1;
+				}
+
+				leaf-list ACTIONS {
+					type string;
+					ordered-by user;
+					default "";
+				}
+
+				leaf-list BIND_POINTS {
+					type enumeration {
+						enum PORT;
+						enum PORTCHANNEL;
+					}
+					ordered-by user;
+					min-elements 1;
+				}
+			}
+		}
+
+		container ACL_TABLE {
+
+			description "ACL_TABLE part of config_db.json";
+
+			list ACL_TABLE_LIST {
+
+				key "ACL_TABLE_NAME";
+
+				leaf ACL_TABLE_NAME {
+					type string;
+				}
+
+				leaf policy_desc {
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf type {
+					mandatory true;
+					type union {
+						type leafref {
+							path "/acl:sonic-acl/acl:ACL_TABLE_TYPE/acl:ACL_TABLE_TYPE_LIST/acl:ACL_TABLE_TYPE_NAME";
+						}
+						type stypes:acl_table_type;
+					}
+				}
+
+				leaf stage {
+					type string {
+						pattern "ingress|egress|INGRESS|EGRESS";
+					}
+					default "INGRESS";
+				}
+
+				leaf-list services {
+					type string;
+					ordered-by user;
+				}
+
+				/* Validating 'services' exist if ACL type is 'CTRLPLANE' */
+				must "(not(type = 'CTRLPLANE')) or (boolean(services))";
+
+				leaf-list ports {
+					/* union of leafref is allowed in YANG 1.1 */
+					type union {
+						type leafref {
+							path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+						}
+						type leafref {
+							path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+						}
+						type string {
+							pattern "";
+						}
+					}
+					ordered-by user;
+					/* Today in SONiC, we do not delete the list once
+					 * created, instead we set to empty list. Due to that
+					 * below default values are needed.
+					 */
+					default "";
+				}
+			}
+			/* end of ACL_TABLE_LIST */
+		}
+        /* end of container ACL_TABLE */
+	}
+    /* end of container sonic-acl */
+}
+/* end of module sonic-acl */

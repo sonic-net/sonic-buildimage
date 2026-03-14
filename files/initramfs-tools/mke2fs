@@ -1,0 +1,53 @@
+#!/bin/sh
+#Part of the code is revised based on initramfs-tools/hooks/fsck and initramfs-tool is under GPL v2.
+
+PREREQ=""
+
+prereqs()
+{
+    echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+copy_exec /usr/sbin/mke2fs /usr/local/sbin/
+copy_exec /sbin/sfdisk
+copy_exec /sbin/fdisk
+copy_exec /sbin/resize2fs
+copy_exec /sbin/tune2fs
+copy_exec /sbin/findfs
+
+fstypes="ext4 ext3"
+
+for type in $fstypes; do
+    prog="/sbin/mkfs.${type}"
+    if [ -h "$prog" ]; then
+        link=$(readlink -f "$prog")
+        copy_exec "$link"
+        ln -s "/usr/local/sbin/$(basename $link)" "${DESTDIR}/$prog"
+    elif [ -x "$prog" ] ; then
+        copy_exec "$prog"
+    else
+        echo "Warning: /sbin/mkfs.${type} doesn't exist, can't install to initramfs, ignoring."
+    fi
+done
+
+for type in $fstypes; do
+    prog="/sbin/fsck.${type}"
+    if [ -h "$prog" ]; then
+        link=$(readlink -f "$prog")
+        copy_exec "$link"
+        ln -s "$link" "${DESTDIR}/$prog"
+    elif [ -x "$prog" ] ; then
+        copy_exec "$prog"
+    else
+        echo "Warning: /sbin/fsck.${type} doesn't exist, can't install to initramfs, ignoring."
+    fi
+done

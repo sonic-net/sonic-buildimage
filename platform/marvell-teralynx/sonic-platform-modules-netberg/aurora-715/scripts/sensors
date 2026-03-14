@@ -1,0 +1,8 @@
+#!/bin/bash
+docker exec -i pmon sensors "$@"
+
+#To probe sensors not part of lm-sensors
+if [ -r /usr/local/bin/netberg_nba715_sensors.py ]; then
+        python /usr/local/bin/netberg_nba715_sensors.py fan_status
+        python /usr/local/bin/netberg_nba715_sensors.py sensor_status
+fi

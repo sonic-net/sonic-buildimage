@@ -1,0 +1,7 @@
+# postinst script for S6100
+
+# Enable Dell-S6100-platform-service
+systemctl enable platform-modules-s6100.service
+systemctl start --no-block platform-modules-s6100.service
+
+#DEBHELPER#

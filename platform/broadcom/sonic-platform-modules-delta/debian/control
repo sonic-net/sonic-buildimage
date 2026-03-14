@@ -1,0 +1,36 @@
+Source: sonic-delta-platform-modules
+Section: main
+Priority: extra
+Maintainer: Neal Tai <neal.tai@deltaww.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-ag9032v1
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-ag9064
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-ag5648
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-et-6248brb
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-ag9032v2a
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as syseeprom, sfp
+
+Package: platform-modules-agc032
+Architecture: amd64
+Depends: linux-image-4.19.0-12-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp

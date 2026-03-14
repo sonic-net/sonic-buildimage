@@ -1,0 +1,38 @@
+{% if DEVICE_METADATA is defined and 'type' in DEVICE_METADATA['localhost'] and 
+(DEVICE_METADATA['localhost']['type'] == 'LeafRouter' or DEVICE_METADATA['localhost']['subtype'] == 'DualToR') %}
+{%- macro generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) %}
+    "BUFFER_QUEUE": {
+{% for port in port_names.split(',') %}
+{% if port in port_names_require_extra_buffer.split(',') %}
+        "{{ port }}|0-1": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port }}|2-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port }}|5": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port }}|6": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port }}|7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% else %}
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port }}|5-7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+    }
+{% endmacro %}
+{% endif %}

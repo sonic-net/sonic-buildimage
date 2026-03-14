@@ -1,0 +1,4 @@
+{
+global: _nss_radius_getpwnam_r;
+local: *;
+};

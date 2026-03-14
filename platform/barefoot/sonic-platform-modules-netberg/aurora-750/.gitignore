@@ -1,0 +1,23 @@
+# kernel module build
+*.o
+*.ko
+*.mod.c
+*.mod.o
+*.cmd
+Module.symvers
+modules.order
+
+# debian packaging
+*.debhelper
+*.log
+DEBIAN
+.tmp_versions
+.finished.build
+*.substvars
+
+# python
+*.pyc
+/build
+/*.egg-info
+/venv
+/.pybuild

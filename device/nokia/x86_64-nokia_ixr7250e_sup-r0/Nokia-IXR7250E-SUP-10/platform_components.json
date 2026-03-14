@@ -1,0 +1,81 @@
+{
+    "chassis": {
+        "Nokia-IXR7250E-SUP-10": {
+            "component": {
+                "BIOS": { },
+                "FPGA1": { },
+                "SFM-FPGA": { }
+            }
+        }
+    },
+    "module": {
+      "SUPERVISOR0": {
+	    "component": {
+	    }
+      },
+      "LINE-CARD0": {
+	"component": {
+	}
+      },
+      "LINE-CARD1": {
+	"component": {
+	}
+      },
+      "LINE-CARD2": {
+	"component": {
+	}
+      },
+      "LINE-CARD3": {
+	"component": {
+	}
+      },
+      "LINE-CARD4": {
+	"component": {
+	}
+      },
+      "LINE-CARD5": {
+	"component": {
+	}
+      },
+      "LINE-CARD6": {
+	"component": {
+	}
+      },
+      "LINE-CARD7": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD0": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD1": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD2": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD3": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD4": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD5": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD6": {
+	"component": {
+	}
+      },
+      "FABRIC-CARD7": {
+	"component": {
+	}
+      }
+   }
+}

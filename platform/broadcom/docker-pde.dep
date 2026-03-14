@@ -1,0 +1,12 @@
+
+DPATH       := $($(DOCKER_PDE)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/docker-pde.mk platform/broadcom/docker-pde.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(SONIC_COMMON_DOCKER_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_PDE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_PDE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_PDE)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_PDE),$(DOCKER_PDE_DBG)))

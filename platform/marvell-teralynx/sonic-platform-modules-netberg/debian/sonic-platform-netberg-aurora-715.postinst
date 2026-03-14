@@ -1,0 +1,8 @@
+#!/bin/sh
+
+depmod -a
+systemctl enable nba715-platform-init.service
+systemctl start nba715-platform-init.service
+
+
+/usr/local/bin/netberg_nba715_platform.sh

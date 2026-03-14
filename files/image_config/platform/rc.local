@@ -1,0 +1,428 @@
+#!/bin/sh -x
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
+FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
+
+# Move sonic-environment to /etc/sonic
+SONIC_CONFIG_DIR="/host/image-${SONIC_VERSION}/sonic-config"
+SONIC_ENV_FILE=${SONIC_CONFIG_DIR}/sonic-environment
+if [ -d ${SONIC_CONFIG_DIR} -a -f ${SONIC_ENV_FILE} ]; then
+    echo "moving file ${SONIC_ENV_FILE} to /etc/sonic" 1>&2
+    mv ${SONIC_ENV_FILE} /etc/sonic
+fi
+
+# In case the unit is migrating from another NOS, save the logs
+log_migration() {
+    echo $1 >> /host/migration/migration.log
+}
+
+# Import files from another NOS's partition onto SONiC
+nos_migration_import() {
+    [ -f $1 ] && cp $1 $2 || log_migration "ERROR: $1 not found!"
+}
+
+# While migrating form another NOS, we need to preserve the MAC addresses
+# of eth0 (and eventually switchports).
+# Update the eth0 mac and also the EEPROM using ethtool so that subsequent
+# reboots use the NOS's mac.
+# Input : mgmt_interface.cfg file imported from the previous NOS.
+update_mgmt_interface_macaddr() {
+    mgmt_config=$1
+    if [ ! -f "$mgmt_config" ]; then
+        log_migration "ERROR : unable update eth0 MAC : $mgmt_config not found!"
+        return
+    fi
+
+    # Save the previous NOS's mac
+    old_mac=`ip link show eth0 | grep ether | awk '{print $2}'`
+    [ -z "$old_mac" ] && log_migration "Unable to retrieve old mac address !" && return
+
+    # Extract, validate and set the eth0's mac address for the current session
+    new_mac=$(grep "macaddr" $mgmt_config | awk -F'=' '{print $2}')
+    log_migration "Setting eth0 mac as $new_mac."
+    if [ `echo $new_mac | egrep "^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$"` ]; then
+        ip link set eth0 down
+        ip link set eth0 address $new_mac
+        ip link set eth0 up
+    else
+        log_migration "ERROR: mac imported from NOS is invalid : $new_mac !"
+        return
+    fi
+
+    # Get the ethtool magic and offset for changing the mac address in the EEPROM
+    ethtool_magic=$(grep "ethtool_magic" $mgmt_config | awk -F'=' '{print $2}')
+    ethtool_offset=$(grep "ethtool_offset" $mgmt_config | awk -F'=' '{print $2}')
+    if [ -z "$ethtool_magic" ] || [ -z "$ethtool_offset" ]; then
+        log_migration "Unable to retrieve ethtool params ($ethtool_magic,$ethtool_offset)"
+        return
+    fi
+
+    log_migration "eth0 mac in EEPROM before update:"
+    ethtool -e eth0 offset $ethtool_offset length 6 >> /host/migration/migration.log
+
+    # Update the mac address in the EEPROM for subsequent reboots
+    # Write only changed octets
+    for i in 1 2 3 4 5 6; do
+        offset=$(($ethtool_offset+$i-1))
+        old_mac_octet="$(echo $old_mac | cut -d":" -f$i)"
+        new_mac_octet="$(echo $new_mac | cut -d":" -f$i)"
+
+        if [ "$old_mac_octet" != "$new_mac_octet" ]; then
+            ethtool -E eth0 magic $ethtool_magic offset $offset value 0x$new_mac_octet
+            if [ $? != 0 ]; then
+                log_migration "ERROR: unable to update eth0 EEPROM!"
+                log_migration "index $i, magic $ethtool_magic offset $offset, value $new_mac_octet"
+                return
+            fi
+        fi
+    done
+
+    log_migration "eth0 mac in EEPROM after update:"
+    ethtool -e eth0 offset $ethtool_offset length 6 >> /host/migration/migration.log
+}
+
+migrate_nos_configuration()
+{
+    rm -rf /host/migration
+    mkdir -p /host/migration
+
+    # Extract the previous NOS's partition that contains the migration artifacts
+    set -- $(cat /proc/cmdline)
+    for x in "$@"; do
+        case "$x" in
+            nos-config-part=*)
+                nos_dev="${x#nos-config-part=}"
+                ;;
+            SONIC_BOOT_TYPE=fast*)
+                sonic_fast_reboot=true
+                ;;
+        esac
+    done
+
+    if [ -n "$nos_dev" ]; then
+        # remove nos-config-part from cmdline
+        sed -r -i.bak "s/nos-config-part=[^[:space:]]+//" /host/grub/grub.cfg
+
+        # remove ssd-upgrader-part from cmdline
+        sed -r -i.bak "s/ssd-upgrader-part=[^[:space:]]+//" /host/grub/grub.cfg
+
+        # Mount the previous NOS's partition
+        NOS_DIR=/mnt/nos_migration
+        MG_GZFILE=$NOS_DIR/minigraph.xml.gz.base64.txt
+        MG_FILE=$NOS_DIR/minigraph.xml
+        ACL_GZFILE=$NOS_DIR/acl.json.gz.base64.txt
+        ACL_FILE=$NOS_DIR/acl.json
+        PORT_CONFIG_GZFILE=$NOS_DIR/port_config.json.gz.base64.txt
+        PORT_CONFIG_FILE=$NOS_DIR/port_config.json
+        SNMP_FILE=$NOS_DIR/snmp.yml
+        GOLDEN_CONFIG_DB_GZFILE=$NOS_DIR/golden_config_db.json.gz.base64.txt
+        GOLDEN_CONFIG_DB_FILE=$NOS_DIR/golden_config_db.json
+        mkdir -p $NOS_DIR
+
+        mount $nos_dev $NOS_DIR
+        if [ $? != 0 ]; then
+            log_migration "ERROR: cannot mount $nos_dev"
+        else
+
+            # decode & unzip minigraph.xml.gz.base64.txt
+            [ -f $MG_GZFILE ] && /usr/bin/base64 -d $MG_GZFILE | /bin/gunzip > $MG_FILE
+            [ -f $ACL_GZFILE ] && /usr/bin/base64 -d $ACL_GZFILE | /bin/gunzip > $ACL_FILE
+            [ -f $PORT_CONFIG_GZFILE ] && /usr/bin/base64 -d $PORT_CONFIG_GZFILE | /bin/gunzip > $PORT_CONFIG_FILE
+            [ -f $GOLDEN_CONFIG_DB_GZFILE] && /usr/bin/base64 -d $GOLDEN_CONFIG_DB_GZFILE| /bin/gunzip > $GOLDEN_CONFIG_DB_FILE
+
+            # Copy relevant files
+            nos_migration_import $NOS_DIR/mgmt_interface.cfg /host/migration
+            nos_migration_import $MG_FILE /host/migration
+            nos_migration_import $ACL_FILE /host/migration
+            nos_migration_import $PORT_CONFIG_FILE /host/migration
+            nos_migration_import $SNMP_FILE /host/migration
+            nos_migration_import $GOLDEN_CONFIG_DB_FILE /host/migration
+
+            if [ "$sonic_fast_reboot" == true ]; then
+                mkdir -p /host/fast-reboot
+                nos_migration_import $NOS_DIR/arp.json /host/fast-reboot
+                nos_migration_import $NOS_DIR/fdb.json /host/fast-reboot
+                nos_migration_import $NOS_DIR/default_routes.json /host/fast-reboot
+            fi
+
+            umount $NOS_DIR
+            rmdir $NOS_DIR
+        fi
+
+        [ -f /host/migration/mgmt_interface.cfg ] && update_mgmt_interface_macaddr /host/migration/mgmt_interface.cfg
+
+        migration="TRUE"
+    fi
+}
+
+firsttime_exit() {
+    rm -rf $FIRST_BOOT_FILE
+    exit 0
+}
+
+# Given a string of tuples of the form field=value, extract the value for a field
+# In : $string, $field
+# Out: $value
+value_extract() {
+    set -- $string
+    for x in "$@"; do
+        case "$x" in
+            $field=*)
+                value="${x#$field=}"
+        esac
+    done
+}
+
+program_console_speed()
+{
+    speed=$(cat /proc/cmdline | grep -Eo 'console=tty(S|AMA)[0-9]+,[0-9]+' | cut -d "," -f2)
+    if [ -z "$speed" ]; then
+        CONSOLE_SPEED=9600
+    else
+        CONSOLE_SPEED=$speed
+    fi
+
+    # Set correct baud rate in getty service
+    # First boot will find keep-baud argument with multiple baud rates as per Debian convention
+    # Subsequent boots may have new baud rate without finding keep-baud argument
+    grep agetty /lib/systemd/system/serial-getty@.service |grep keep-baud
+    if [ $? = 0 ]; then
+        sed -i "s|\-\-keep\-baud .* -| $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+    else
+        sed -i "s|u' .* -|u' $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
+    fi
+
+    # Reload systemd config
+    systemctl daemon-reload
+}
+
+request_dpu_midplane_ip()
+{
+    local INTERFACE="eth0-midplane"
+    if ip link show "$INTERFACE" 2> /dev/null; then
+        echo "dhclient -r $INTERFACE"
+        /usr/sbin/dhclient -r "$INTERFACE"
+        sleep 1
+        echo "timeout 5s dhclient $INTERFACE"
+        timeout 5s /usr/sbin/dhclient "$INTERFACE"
+    fi
+}
+
+#### Begin Main Body ####
+
+logger "SONiC version ${SONIC_VERSION} starting up..."
+
+# If the machine.conf is absent, it indicates that the unit booted
+# into SONiC from another NOS. Extract the machine.conf from ONIE.
+grub_installation_needed=""
+if [ ! -e /host/machine.conf ]; then
+    onie_dev=$(blkid | grep ONIE-BOOT | head -n 1 | awk '{print $1}' |  sed -e 's/:.*$//')
+    mkdir -p /mnt/onie-boot
+    mount $onie_dev /mnt/onie-boot
+    onie_grub_cfg=/mnt/onie-boot/onie/grub/grub-machine.cfg
+
+    if [ ! -e $onie_grub_cfg ]; then
+        log_migration "$onie_grub_cfg not found"
+    else
+        . ./$onie_grub_cfg
+        grep = $onie_grub_cfg | sed -e 's/onie_//' -e 's/=.*$//' | while read var ; do
+            eval val='$'onie_$var
+            echo "onie_${var}=${val}" >> /host/machine.conf
+        done
+        grub_installation_needed="TRUE"
+    fi
+
+    migrate_nos_configuration
+    umount /mnt/onie-boot
+fi
+
+. /host/machine.conf
+
+program_console_speed
+
+platform=""
+if [ -n "$aboot_platform" ]; then
+    platform=$aboot_platform
+elif [ -n "$onie_platform" ]; then
+    platform=$onie_platform
+else
+    echo "Unknown SONiC platform"
+fi
+
+# W/A for https://github.com/sonic-net/sonic-buildimage/issues/24086
+if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2>/dev/null; then
+    echo "DPU type detected. Requesting IP ..."
+    request_dpu_midplane_ip
+fi
+
+if [ -f $FIRST_BOOT_FILE ]; then
+
+    echo "First boot detected. Performing first boot tasks..."
+
+    if [ -z "$platform" ]; then
+        firsttime_exit
+    fi
+
+    # Try to take old configuration saved during installation
+    # and create a flag in /tmp/
+    if [ -d /host/old_config ]; then
+        mv -f /host/old_config /etc/sonic/
+        rm -rf /etc/sonic/old_config/old_config
+        touch /tmp/pending_config_migration
+    elif [ -f /host/minigraph.xml ]; then
+        mkdir -p /etc/sonic/old_config
+        mv /host/minigraph.xml /etc/sonic/old_config/
+        [ -f /host/acl.json ] && mv /host/acl.json /etc/sonic/old_config/
+        [ -f /host/port_config.json ] && mv /host/port_config.json /etc/sonic/old_config/
+        [ -f /host/snmp.yml ] && mv /host/snmp.yml /etc/sonic/old_config/
+        [ -f /host/golden_config_db.json ] && mv /host/golden_config_db.json /etc/sonic/old_config/
+        touch /tmp/pending_config_migration
+    elif [ -n "$migration" ] && [ -f /host/migration/minigraph.xml ];  then
+        mkdir -p /etc/sonic/old_config
+        mv /host/migration/minigraph.xml /etc/sonic/old_config/
+        [ -f /host/migration/acl.json ] && mv /host/migration/acl.json /etc/sonic/old_config/
+        [ -f /host/migration/port_config.json ] && mv /host/migration/port_config.json /etc/sonic/old_config/
+        [ -f /host/migration/snmp.yml ] && mv /host/migration/snmp.yml /etc/sonic/old_config/
+        [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
+        touch /tmp/pending_config_migration
+    else
+        touch /tmp/pending_config_initialization
+    fi
+
+    # Notify firstboot to Platform, to use it for reboot-cause
+    touch /tmp/notify_firstboot_to_platform
+
+    # Create /host/reboot-cause/platform/ directory
+    # can be used to track last reboot reason by some platforms
+    if [ ! -d /host/reboot-cause/platform ]; then
+        mkdir -p /host/reboot-cause/platform
+    fi
+
+    if [ -d /host/image-$SONIC_VERSION/platform/$platform ]; then
+        if [ -f /host/image-$SONIC_VERSION/platform/common/Packages.gz ]; then
+            # Use only the trivial repo and apt to support lazy package dependencies
+            mv /etc/apt/sources.list /etc/apt/sources.list.rc-local
+            echo "deb [trusted=yes] file:///host/image-$SONIC_VERSION/platform/common /" > /etc/apt/sources.list.d/sonic_debian_extension.list
+            LANG=C DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=1 update
+            LANG=C DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Path=$PATH:/usr/local/bin -y install /host/image-$SONIC_VERSION/platform/$platform/*.deb
+            # Cleanup
+            rm -f /etc/apt/sources.list.d/sonic_debian_extension.list
+            rm -f /var/lib/apt/lists/_host_image-${SONIC_VERSION}_platform_common_Packages.lz4
+            # This is first boot so there should be no package lists or indices to restore, just the sources
+            mv /etc/apt/sources.list.rc-local /etc/apt/sources.list
+        else
+            dpkg -i /host/image-$SONIC_VERSION/platform/$platform/*.deb
+        fi
+    fi
+
+    sync
+
+    # If the unit booted into SONiC from another NOS's grub,
+    # we now install a grub for SONiC.
+    if [ -n "$onie_platform" ] && [ -n  "$grub_installation_needed" ]; then
+
+        grub_bin=$(ls /host/image-$SONIC_VERSION/platform/grub/grub*.deb 2> /dev/null)
+        if [ -z "$grub_bin" ]; then
+            log_migration "Unable to locate grub package !"
+            firsttime_exit
+        fi
+
+        dpkg -i $grub_bin > /dev/null 2>&1
+        if [ $? != 0 ]; then
+            log_migration "Unable to install grub package !"
+            firsttime_exit
+        fi
+
+        # Determine the block device to install grub
+        sonic_dev=$(blkid | grep SONiC-OS | head -n 1 | awk '{print $1}' |  sed -e 's/[0-9]:.*$//')
+        if [ -z "$sonic_dev" ]; then
+            log_migration "Unable to determine sonic partition !"
+            firsttime_exit
+        fi
+
+        grub-install --boot-directory=/host --recheck $sonic_dev 2>/dev/null
+        if [ $? != 0 ]; then
+            log_migration "grub install failed !"
+            firsttime_exit
+        fi
+
+        # The SONiC "raw" build mode has already generated a proto grub.cfg
+        # as part of the migration. Platform specific constants need to be
+        # retrieved from installer.conf (if present) and assigned.
+        . /usr/share/sonic/device/$platform/installer.conf
+
+        if [ ! -z "$CONSOLE_PORT" ]; then
+            field="\-\-port"
+            string=$(grep $field /host/grub.cfg)
+            value_extract $string $field
+            console_port=$value
+            if [ ! -z "$console_port" ] && [ "$console_port" != "$CONSOLE_PORT" ]; then
+                sed -i -e "s/\-\-port=$console_port/\-\-port=$CONSOLE_PORT/g" /host/grub.cfg
+            fi
+            log_migration "grub.cfg console port=$console_port & installer.conf CONSOLE_PORT=$CONSOLE_PORT"
+        fi
+
+        if [ ! -z "$CONSOLE_DEV" ]; then
+            field="console"
+            string=$(grep $field /host/grub.cfg)
+            value_extract $string $field
+            console_dev_name=$(echo $value | sed -e "s/^.*=//" -e "s/,.*//")
+            console_dev="${console_dev_name#ttyS}"
+            if [ "$console_dev" != "$CONSOLE_DEV" ]; then
+                sed -i -e "s/console=ttyS$console_dev/console=ttyS$CONSOLE_DEV/g" /host/grub.cfg
+            fi
+            log_migration "grub.cfg console dev=$console_dev & installer.conf CONSOLE_DEV=$CONSOLE_DEV"
+        fi
+
+        if [ ! -z "$VAR_LOG_SIZE" ]; then
+            field="var_log_size"
+            string=$(grep $field /host/grub.cfg)
+            value_extract $string $field
+            var_log_size=$value
+            if [ ! -z "$var_log_size" ] && [ "$var_log_size" != "$VAR_LOG_SIZE" ]; then
+                sed -i -e "s/var_log_size=$var_log_size/var_log_size=$VAR_LOG_SIZE/g" /host/grub.cfg
+            fi
+            log_migration "grub.cfg var_log_size=$var_log_size & installer.conf VAR_LOG_SIZE=$VAR_LOG_SIZE"
+        fi
+
+        # Set the root based on the label
+        sonic_root=$(blkid | grep SONiC-OS | head -n 1 | awk '{print $1}' |  sed -e 's/:.*$//')
+        sonic_root=$(echo "$sonic_root" | sed 's/\//\\\//g')
+        sed -i -e "s/%%SONIC_ROOT%%/$sonic_root/g" /host/grub.cfg
+
+        # Add the Diag and ONIE entries
+        mount $onie_dev /mnt/onie-boot
+        . /mnt/onie-boot/onie/grub.d/50_onie_grub >> /host/grub.cfg
+        umount /mnt/onie-boot
+
+        # Initialize the SONiC's grub config
+        mv /host/grub.cfg /host/grub/grub.cfg
+    fi
+
+    # Create dir where following scripts put their output files
+    mkdir -p /var/platform
+
+    # Kdump tools configuration
+    [ -f /etc/default/kdump-tools ] && sed -i -e "s/__PLATFORM__/$platform/g" /etc/default/kdump-tools
+
+    firsttime_exit
+fi
+
+# Copy the fsck log into syslog
+if [ -f /var/log/fsck.log.gz ]; then
+    gunzip -d -c /var/log/fsck.log.gz | logger -t "FSCK"
+    rm -f /var/log/fsck.log.gz
+fi
+
+exit 0

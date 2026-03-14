@@ -1,0 +1,10 @@
+#DPKG FRK
+DPATH       := $($(DOCKER_SONIC_VS)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-sonic-vs.mk platform/vs/docker-sonic-vs.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_SONIC_VS)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_SONIC_VS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SONIC_VS)_DEP_FILES   := $(DEP_FILES)
+

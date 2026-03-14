@@ -1,0 +1,13 @@
+[Unit]
+Description=Centec e582 48x2q4z platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-e582-48x2q4z start
+ExecStop=-/etc/init.d/platform-modules-e582-48x2q4z stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

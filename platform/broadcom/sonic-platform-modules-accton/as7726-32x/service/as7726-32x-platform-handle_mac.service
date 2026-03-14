@@ -1,0 +1,15 @@
+[Unit]
+Description=Accton AS7726-32X Platform MAC handle service
+Before=opennsl-modules.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/idt_init.sh
+RemainAfterExit=yes
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=opennsl-modules.service

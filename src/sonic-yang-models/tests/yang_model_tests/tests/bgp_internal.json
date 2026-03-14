@@ -1,0 +1,17 @@
+{
+    "BGP_INTERNAL_TEST": {
+        "desc": "Load bgp internal neighbor table with ipv4 and ipv6 neighbors."
+    },
+    "BGP_INTERNAL_INVALID_ASN_TEST": {
+        "desc": "Load bgp internal neighbor table with ipv4 neighbor having incorrect asn.",
+        "eStr": ["Internal iBGP neighbors should have same ASN as defined in device metadata"]
+    },
+    "BGP_INVALID_LOCAL_ADDRESS_FAMILY_TEST": {
+        "desc":  "Load bgp internal ipv4 neighboripv6 local address.",
+        "eStr": ["local address and neighbor address family doesnt match"]
+    },
+    "BGP_LOCAL_ADDRESS_ABSENT_TEST": {
+        "desc":"Load bgp internal neighbor table no local address.",
+        "eStrKey" : "Mandatory"
+    }
+}

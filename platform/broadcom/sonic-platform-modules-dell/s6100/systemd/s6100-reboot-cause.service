@@ -1,0 +1,12 @@
+[Unit]
+Description=Read Dell S6100 reboot cause
+Before=process-reboot-cause.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/sonic/device/x86_64-dell_s6100_c2538-r0/track_reboot_reason.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

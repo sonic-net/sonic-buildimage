@@ -1,0 +1,141 @@
+module sonic-scheduler {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-scheduler";
+
+    prefix sch;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SCHEDULER yang Module for SONiC OS";
+
+    revision 2021-04-01 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-scheduler {
+
+        container SCHEDULER {
+
+            description "SCHEDULER part of config_db.json";
+
+            list SCHEDULER_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Scheduler name";
+                }
+
+                leaf type {
+                    type enumeration {
+                        enum DWRR {
+                            description "Deficit Weighted Round-Robin Scheduling";
+                        }
+                        enum WRR {
+                            description "Weighted Round-Robin Scheduling";
+                        }
+                        enum STRICT {
+                            description "Strict Scheduling";
+                        }
+                    }
+                    default WRR;
+                    description "Scheduling algorithm type";
+                }
+
+                leaf weight {
+                    type uint8 {
+                        range "1..100";
+                    }
+                    default 1;
+                    description "Scheduling algorithm weight";
+                }
+
+                leaf priority {
+                    type uint8 {
+                        range "0..9";
+                    }
+                    description "Scheduler priority";
+                }
+
+                leaf meter_type {
+                    type enumeration {
+                        enum packets {
+                            description "Metering is based on packets";
+                        }
+                        enum bytes {
+                            description "Metering is based on bytes";
+                        }
+                    }
+                    default bytes;
+                    description "meter type";
+                }
+
+                leaf cir {
+                    type uint64;
+                    description
+                        "Committed information rate for the dual-rate token
+                        bucket policer.This value represents the rate at which
+                        tokens are added to the primary bucket.nt Units is
+                        Bps(Bytes per second) for meter type is bytes else
+                        Pps(packets per second) for meter type is packets";
+                }
+
+                leaf pir {
+                    must "((current()/../cir) and (current()/../cir > 0))" {
+                        error-message "pir can't be configured without cir.";
+                    }
+                    must "(current() >= current()/../cir)" {
+                        error-message "pir must be greater than or equal to cir";
+                    }
+                    type uint64;
+                    description
+                        "Peak information rate for the dual-rate token bucket
+                        policer.This value represents the rate at which tokens
+                        are added to the secondary bucket.Unit is Bps(Bytes
+                        per second) for meter type bytes else Pps(packets per
+                        second) for meter type is packets";
+                }
+
+                leaf cbs {
+
+                    must "((current()/../cir) and (current()/../cir > 0))" {
+                        error-message "cbs can't be configured without cir.";
+                    }
+
+                    type uint32;
+                    description
+                        "Committed burst size for the dual-rate token bucket
+                        policer.This value represents the depth of the token
+                        bucket.Unit is bytes for meter type bytes else packets
+                        for meter type is packets";
+                }
+
+                leaf pbs {
+                    must "((current()/../pir) and (current()/../pir > 0))" {
+                       error-message "pbs can't be configured without pir.";
+                    }
+
+                    must "((not(current()/../cbs)) or (current() >= current()/../cbs))" {
+                        error-message "pbs must be greater than or equal to cbs";
+                    }
+
+                    type uint32;
+                    description
+                        "Excess burst size for the dual-rate token bucket policer.
+                        This value represents the depth of the secondary bucket.
+                        Unit is bytes for meter type bytes else packets for meter type
+                        is packets";
+                }
+            }
+        }
+    }
+}

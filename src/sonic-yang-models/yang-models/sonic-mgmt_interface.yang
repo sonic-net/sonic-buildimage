@@ -1,0 +1,71 @@
+module sonic-mgmt_interface {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-mgmt_interface";
+    prefix mgmtintf;
+
+    import sonic-mgmt_port {
+        prefix mgmtprt;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description
+        "SONiC MANAGEMENT INTERFACE";
+
+    revision 2021-04-07 {
+        description "First revision";
+    }
+
+    container sonic-mgmt_interface {
+
+        container MGMT_INTERFACE {
+
+            description "MANAGEMENT INTERFACE part of config_db.json";
+
+            list MGMT_INTERFACE_LIST {
+
+                key "name ip_prefix";
+
+                leaf name{
+                    type leafref {
+                        path /mgmtprt:sonic-mgmt_port/mgmtprt:MGMT_PORT/mgmtprt:MGMT_PORT_LIST/mgmtprt:name;
+                    }
+                }
+
+                leaf ip_prefix {
+                    must "(contains(current(), ':') and contains(../gwaddr, ':')) or (contains(current(), '.') and contains(../gwaddr, '.'))";
+                    type stypes:sonic-ip-prefix;
+                }
+
+                leaf gwaddr {
+                    must "(contains(current(), ':') and contains(../ip_prefix, ':')) or (contains(current(), '.') and contains(../ip_prefix, '.'))";
+                    type inet:ip-address;
+                }
+
+                leaf-list forced_mgmt_routes {
+                    type union {
+                        type stypes:sonic-ip-prefix;
+                        type inet:ip-address;
+                    }
+                    ordered-by user;
+                    description
+                        "This configuration allows addtional routes to be added to default VRF table
+                         or mgmt VRF table, based on if Management VRF is configured.
+                         Details can be found in interfaces.j2.";
+                }
+
+            } /* end of list MGMT_INTERFACE_IPADDR_LIST */
+
+        } /* end of container MGMT_INTERFACE */
+
+    } /* end of container sonic-mgmt_interface */
+
+} /* end of module sonic-mgmt_interface */

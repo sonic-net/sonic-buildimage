@@ -1,0 +1,11 @@
+[
+    {
+        "ASIC_TABLE:VS-ASIC": {
+            "cell_size": "128",
+            "pipeline_latency": "18",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8"
+        },
+        "OP": "SET"
+    }
+]

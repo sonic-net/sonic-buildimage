@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python3 -m sonic_platform.bfn_extensions.platform_fancontrol "$@"

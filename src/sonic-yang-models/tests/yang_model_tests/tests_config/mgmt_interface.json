@@ -1,0 +1,114 @@
+{
+    "MGMT_INTERFACE_TEST": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_interface:sonic-mgmt_interface": {
+            "sonic-mgmt_interface:MGMT_INTERFACE": {
+                "MGMT_INTERFACE_LIST": [
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "10.11.12.13/16",
+                        "gwaddr": "10.11.12.254"
+                    },
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "2001:aa:aa::aa/64",
+                        "gwaddr": "2001:aa:aa::fe",
+                        "forced_mgmt_routes": [
+                            "10.3.145.14",
+                            "2001:aa:aa::aa",
+                            "10.0.0.100/31",
+                            "10.250.0.8/24"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_INTERFACE_WITH_NON_EXIST_PORT": {
+        "sonic-mgmt_interface:sonic-mgmt_interface": {
+            "sonic-mgmt_interface:MGMT_INTERFACE": {
+                "MGMT_INTERFACE_LIST": [
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "2001:aa:aa::aa/64",
+                        "gwaddr": "2001:aa:aa::fe"
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_INTERFACE_WITH_WRONG_PORT": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth1"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_interface:sonic-mgmt_interface": {
+            "sonic-mgmt_interface:MGMT_INTERFACE": {
+                "MGMT_INTERFACE_LIST": [
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "10.11.12.13/16",
+                        "gwaddr": "10.11.12.254"
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_INTERFACE_IPV4_ADDR_WITH_IPV6_GW": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_interface:sonic-mgmt_interface": {
+            "sonic-mgmt_interface:MGMT_INTERFACE": {
+                "MGMT_INTERFACE_LIST": [
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "10.11.12.13/24",
+                        "gwaddr": "2001:aa:aa::aa"
+                    }
+                ]
+            }
+        }
+    },
+    "MGMT_INTERFACE_IPV6_ADDR_WITH_IPV4_GW": {
+        "sonic-mgmt_port:sonic-mgmt_port": {
+            "sonic-mgmt_port:MGMT_PORT": {
+                "MGMT_PORT_LIST": [
+                    {
+                        "name": "eth0"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_interface:sonic-mgmt_interface": {
+            "sonic-mgmt_interface:MGMT_INTERFACE": {
+                "MGMT_INTERFACE_LIST": [
+                    {
+                        "name": "eth0",
+                        "ip_prefix": "2001:aa:aa::aa/64",
+                        "gwaddr": "10.11.12.13"
+                    }
+                ]
+            }
+        }
+    }
+}

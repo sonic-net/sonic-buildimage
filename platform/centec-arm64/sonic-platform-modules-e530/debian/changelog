@@ -1,0 +1,23 @@
+sonic-centec-platform-modules (1.3) unstable; urgency=low
+
+  * Add support for centec e530-24x2q
+
+ -- shil <shil@centecnetworks.com>  Mon, 21 Sep 2020 13:34:33 +0800
+
+sonic-centec-platform-modules (1.2) unstable; urgency=low
+
+  * Add support for centec e530-48t4x-p and e530-24x2c and e530-48s4x
+
+ -- shil <shil@centecnetworks.com>  Mon, 18 May 2020 13:21:57 +0800
+
+sonic-centec-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for centec e530-48t4x-p and e530-24x2c
+
+ -- shil <shil@centecnetworks.com>  Fri, 15 Nov 2019 13:36:54 +0800
+
+sonic-centec-platform-modules (1.0) unstable; urgency=low
+
+  * Initial release
+
+ -- shil <shil@centecnetworks.com>  Fri, 15 Nov 2019 13:35:06 +0800

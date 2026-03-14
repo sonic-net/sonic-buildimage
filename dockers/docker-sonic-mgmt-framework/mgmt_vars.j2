@@ -1,0 +1,4 @@
+{
+    "rest_server": {% if REST_SERVER is defined and "default" in REST_SERVER.keys() %}{{ REST_SERVER['default'] }}{% else %}""{% endif %},
+    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}
+}

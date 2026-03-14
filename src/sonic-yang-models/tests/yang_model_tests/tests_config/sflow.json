@@ -1,0 +1,291 @@
+{
+    "SFLOW_COLLECTOR_TEST": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_port": "6343"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_COLLECTOR_WRONG_NAME_TEST": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1111111111111111111111111111111111111111111111111111111111111111",
+                        "collector_ip": "10.100.12.13"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITHOUT_COLLECTOR_IP": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_EXCEEDING_MAX_ELEMENTS": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13"
+                    },
+		    {
+                        "name": "collector2",
+                        "collector_ip": "10.144.1.2"
+                    },
+		    {
+                        "name": "collector3",
+                        "collector_ip": "10.100.12.15"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "2001:1:2::23",
+                        "collector_vrf": "default"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_MGMT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "mgmt"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_vrf:sonic-mgmt_vrf": {
+            "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": "true"
+                }
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_NON_EXISTING_MGMT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "mgmt"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_INVALID_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "Vrf1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_SESSION_TEST": {
+	"sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "admin_state": "up",
+                        "sample_direction": "both",
+                        "sample_rate": "40000"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_SESSION_TEST_WITH_NON_EXIST_PORT": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "Ethernet4",
+                        "admin_state": "down",
+                        "sample_direction": "tx",
+                        "sample_rate": "32768"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_PORT_NAME_PATTERN": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "allllll",
+                        "admin_state": "down"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_SAMPLE_RATE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "admin_state": "up",
+                        "sample_rate": "40"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_SESSION_TEST_WITH_INCORRECT_PORT_TYPE_IN_SAMPLE_RATE": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_SESSION": {
+                "SFLOW_SESSION_LIST": [
+                    {
+                        "port": "all",
+                        "admin_state": "up",
+                        "sample_rate": "40000"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW": {
+                "global": {
+                    "agent_id": "Ethernet0",
+                    "admin_state": "up",
+                    "sample_direction": "both",
+                    "polling_interval": "20"
+                }
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_NON_EXIST_PORT": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW": {
+                "global": {
+                    "agent_id": "Ethernet0",
+                    "admin_state": "up",
+                    "polling_interval": "20"
+                }
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_INCORRECT_POLLING_INTERVAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW": {
+                "global": {
+                    "admin_state": "up",
+                    "polling_interval": "305"
+                }
+            }
+        }
+    }
+}

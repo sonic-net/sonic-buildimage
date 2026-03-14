@@ -1,0 +1,68 @@
+module sonic-pfc-priority-queue-map {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-pfc-priority-queue-map";
+
+    prefix ppqm;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "PFC_PRIORITY_TO_QUEUE_MAP yang Module for SONiC OS";
+
+    revision 2021-04-15 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-pfc-priority-queue-map {
+
+        container MAP_PFC_PRIORITY_TO_QUEUE {
+
+            description "MAP_PFC_PRIORITY_TO_QUEUE part of config_db.json";
+
+            list MAP_PFC_PRIORITY_TO_QUEUE_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for map name.";
+                            error-app-tag map-name-invalid-length;
+                        }
+                    }
+                }
+
+                list MAP_PFC_PRIORITY_TO_QUEUE { //this is list inside list for storing mapping between two fields
+
+                    key "pfc_priority";
+
+                    leaf pfc_priority {
+                        type string {
+                            pattern "[0-7]?" {
+                               error-message "Invalid pfc priority";
+                               error-app-tag pfc-priority-invalid;
+                            }
+                        }
+                    }
+
+                    leaf qindex {
+                        type string {
+                            pattern "[0-7]?" {
+                               error-message "Invalid queue index";
+                               error-app-tag queue-index-invalid;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

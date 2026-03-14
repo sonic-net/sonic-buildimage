@@ -1,0 +1,14 @@
+Source: sonic-juniper-platform-modules
+Section: main
+Priority: extra
+Maintainer: Juniper Networks <crajank@juniper.net>
+Build-Depends: debhelper (>= 9), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-juniper-qfx5210
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-juniper-qfx5200
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp

@@ -1,0 +1,36 @@
+From 2170e345858738e65d3156a49d3186e4a9288821 Mon Sep 17 00:00:00 2001
+From: Zhenggen Xu <zxu@linkedin.com>
+Date: Fri, 12 Oct 2018 17:13:54 -0700
+Subject: [PATCH] Subject: [PATCH] CHANGES: BUG: 2743: snmpd crashes when
+ receiving a GetNext  PDU with multiple Varbinds
+
+skip out-of-range varbinds when calling next handler
+---
+ agent/helpers/table.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/agent/helpers/table.c b/agent/helpers/table.c
+index 882e84c..b943d6e 100644
+--- a/agent/helpers/table.c
++++ b/agent/helpers/table.c
+@@ -406,6 +406,8 @@ table_helper_handler(netsnmp_mib_handler *handler,
+             if (reqinfo->mode == MODE_GET)
+                 table_helper_cleanup(reqinfo, request,
+                                      SNMP_NOSUCHOBJECT);
++            else
++                request->processed = 1; /* skip if next handler called */
+             continue;
+         }
+ 
+@@ -483,6 +485,8 @@ table_helper_handler(netsnmp_mib_handler *handler,
+ #endif /* NETSNMP_NO_WRITE_SUPPORT */
+                     table_helper_cleanup(reqinfo, request,
+                                          SNMP_NOSUCHOBJECT);
++                else
++                    request->processed = 1; /* skip if next handler called */
+                 continue;
+             }
+             /*
+-- 
+2.18.0
+

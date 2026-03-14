@@ -1,0 +1,47 @@
+
+{%- set default_cable = '40m' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "egress_lossy_pool": {
+            "size": "67108864",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "ingress_lossless_pool": {
+            "mode": "dynamic",
+            "size": "59001152",
+            "xoff": "7428992",
+            "type": "ingress"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"[BUFFER_POOL|ingress_lossless_pool]",
+            "size":"0",
+            "static_th":"67108864"
+        },
+        "egress_lossy_profile": {
+            "pool":"[BUFFER_POOL|egress_lossy_pool]",
+            "size":"0",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_pg_profils(port_names_active) %}
+    "BUFFER_PG": {
+        "{{ port_names_active }}|0": {
+            "profile" : "[BUFFER_PROFILE|ingress_lossy_profile]"
+        }
+    },
+{%- endmacro %}
+
+{% macro generate_queue_buffers(port_names_active) %}
+    "BUFFER_QUEUE": {
+        "{{ port_names_active }}|0-6": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        }
+    }
+{% endmacro %}
+

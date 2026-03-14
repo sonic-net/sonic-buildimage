@@ -1,0 +1,211 @@
+From a5782d0673044ad0c621daed7975f53238bb038e Mon Sep 17 00:00:00 2001
+From: Renuka Manavalan <remanava@microsoft.com>
+Date: Tue, 10 Sep 2019 17:51:45 +0000
+Subject: [PATCH] Patch from SourceForge: net-snmp commit #793d59 Avoids snmpd
+ crash when sub agent timesout.
+
+---
+ agent/mibgroup/agentx/master_admin.c |  1 +
+ agent/snmp_agent.c                   | 81 ++++++++++++++++++----------
+ include/net-snmp/agent/snmp_agent.h  |  5 ++
+ 3 files changed, 60 insertions(+), 27 deletions(-)
+
+diff --git a/agent/mibgroup/agentx/master_admin.c b/agent/mibgroup/agentx/master_admin.c
+index 4dc1aa7..8c1d194 100644
+--- a/agent/mibgroup/agentx/master_admin.c
++++ b/agent/mibgroup/agentx/master_admin.c
+@@ -158,6 +158,7 @@ close_agentx_session(netsnmp_session * session, int sessid)
+     for (sp = session->subsession; sp != NULL; sp = sp->next) {
+ 
+         if (sp->sessid == sessid) {
++            netsnmp_remove_delegated_requests_for_session(sp);
+             unregister_mibs_by_session(sp);
+             unregister_index_by_session(sp);
+             unregister_sysORTable_by_session(sp);
+diff --git a/agent/snmp_agent.c b/agent/snmp_agent.c
+index b96d650..7cacd1a 100644
+--- a/agent/snmp_agent.c
++++ b/agent/snmp_agent.c
+@@ -1409,6 +1409,7 @@ init_agent_snmp_session(netsnmp_session * session, netsnmp_pdu *pdu)
+     asp->treecache_num = -1;
+     asp->treecache_len = 0;
+     asp->reqinfo = SNMP_MALLOC_TYPEDEF(netsnmp_agent_request_info);
++    asp->flags = SNMP_AGENT_FLAGS_NONE;
+     DEBUGMSGTL(("verbose:asp", "asp %p reqinfo %p created\n",
+                 asp, asp->reqinfo));
+ 
+@@ -1457,6 +1458,9 @@ netsnmp_check_for_delegated(netsnmp_agent_session *asp)
+ 
+     if (NULL == asp->treecache)
+         return 0;
++
++    if (asp->flags & SNMP_AGENT_FLAGS_CANCEL_IN_PROGRESS)
++        return 0;
+     
+     for (i = 0; i <= asp->treecache_num; i++) {
+         for (request = asp->treecache[i].requests_begin; request;
+@@ -1535,39 +1539,48 @@ int
+ netsnmp_remove_delegated_requests_for_session(netsnmp_session *sess)
+ {
+     netsnmp_agent_session *asp;
+-    int count = 0;
++    int total_count = 0;
+     
+     for (asp = agent_delegated_list; asp; asp = asp->next) {
+         /*
+          * check each request
+          */
++        int i;
++        int count = 0;
+         netsnmp_request_info *request;
+-        for(request = asp->requests; request; request = request->next) {
+-            /*
+-             * check session
+-             */
+-            netsnmp_assert(NULL!=request->subtree);
+-            if(request->subtree->session != sess)
+-                continue;
++        for (i = 0; i <= asp->treecache_num; i++) {
++            for (request = asp->treecache[i].requests_begin; request;
++                 request = request->next) {
++                /*
++                 * check session
++                 */
++                netsnmp_assert(NULL!=request->subtree);
++                if(request->subtree->session != sess)
++                    continue;
+ 
+-            /*
+-             * matched! mark request as done
+-             */
+-            netsnmp_request_set_error(request, SNMP_ERR_GENERR);
+-            ++count;
++                /*
++                 * matched! mark request as done
++                 */
++                netsnmp_request_set_error(request, SNMP_ERR_GENERR);
++                ++count;
++            }
++        }
++        if (count) {
++            asp->flags |= SNMP_AGENT_FLAGS_CANCEL_IN_PROGRESS;
++            total_count += count;
+         }
+     }
+ 
+     /*
+      * if we found any, that request may be finished now
+      */
+-    if(count) {
++    if(total_count) {
+         DEBUGMSGTL(("snmp_agent", "removed %d delegated request(s) for session "
+-                    "%8p\n", count, sess));
+-        netsnmp_check_outstanding_agent_requests();
++                    "%8p\n", total_count, sess));
++        netsnmp_check_delegated_requests();
+     }
+     
+-    return count;
++    return total_count;
+ }
+ 
+ int
+@@ -2739,19 +2752,11 @@ handle_var_requests(netsnmp_agent_session *asp)
+     return final_status;
+ }
+ 
+-/*
+- * loop through our sessions known delegated sessions and check to see
+- * if they've completed yet. If there are no more delegated sessions,
+- * check for and process any queued requests
+- */
+ void
+-netsnmp_check_outstanding_agent_requests(void)
++netsnmp_check_delegated_requests(void)
+ {
+     netsnmp_agent_session *asp, *prev_asp = NULL, *next_asp = NULL;
+ 
+-    /*
+-     * deal with delegated requests
+-     */
+     for (asp = agent_delegated_list; asp; asp = next_asp) {
+         next_asp = asp->next;   /* save in case we clean up asp */
+         if (!netsnmp_check_for_delegated(asp)) {
+@@ -2790,6 +2795,23 @@ netsnmp_check_outstanding_agent_requests(void)
+             prev_asp = asp;
+         }
+     }
++}
++
++
++/*
++ * loop through our sessions known delegated sessions and check to see
++ * if they've completed yet. If there are no more delegated sessions,
++ * check for and process any queued requests
++ */
++void
++netsnmp_check_outstanding_agent_requests(void)
++{
++    netsnmp_agent_session *asp;
++
++    /*
++     * deal with delegated requests
++     */
++    netsnmp_check_delegated_requests();
+ 
+     /*
+      * if we are processing a set and there are more delegated
+@@ -2819,7 +2841,8 @@ netsnmp_check_outstanding_agent_requests(void)
+ 
+             netsnmp_processing_set = netsnmp_agent_queued_list;
+             DEBUGMSGTL(("snmp_agent", "SET request remains queued while "
+-                        "delegated requests finish, asp = %8p\n", asp));
++                        "delegated requests finish, asp = %8p\n",
++                        agent_delegated_list));
+             break;
+         }
+ #endif /* NETSNMP_NO_WRITE_SUPPORT */
+@@ -2880,6 +2903,10 @@ check_delayed_request(netsnmp_agent_session *asp)
+     case SNMP_MSG_GETBULK:
+     case SNMP_MSG_GETNEXT:
+         netsnmp_check_all_requests_status(asp, 0);
++        if (asp->flags & SNMP_AGENT_FLAGS_CANCEL_IN_PROGRESS) {
++            DEBUGMSGTL(("snmp_agent","canceling next walk for asp %p\n", asp));
++            break;
++        }
+         handle_getnext_loop(asp);
+         if (netsnmp_check_for_delegated(asp) &&
+             netsnmp_check_transaction_id(asp->pdu->transid) !=
+diff --git a/include/net-snmp/agent/snmp_agent.h b/include/net-snmp/agent/snmp_agent.h
+index aad8837..43f4fff 100644
+--- a/include/net-snmp/agent/snmp_agent.h
++++ b/include/net-snmp/agent/snmp_agent.h
+@@ -32,6 +32,9 @@ extern          "C" {
+ #define SNMP_MAX_PDU_SIZE 64000 /* local constraint on PDU size sent by agent
+                                  * (see also SNMP_MAX_MSG_SIZE in snmp_api.h) */
+ 
++#define SNMP_AGENT_FLAGS_NONE                   0x0
++#define SNMP_AGENT_FLAGS_CANCEL_IN_PROGRESS     0x1
++
+     /*
+      * If non-zero, causes the addresses of peers to be logged when receptions
+      * occur.  
+@@ -205,6 +208,7 @@ extern          "C" {
+         int             treecache_num;  /* number of current cache entries */
+         netsnmp_cachemap *cache_store;
+         int             vbcount;
++        int             flags;
+     } netsnmp_agent_session;
+ 
+     /*
+@@ -240,6 +244,7 @@ extern          "C" {
+     int             init_master_agent(void);
+     void            shutdown_master_agent(void);
+     int             agent_check_and_process(int block);
++    void            netsnmp_check_delegated_requests(void);
+     void            netsnmp_check_outstanding_agent_requests(void);
+ 
+     int             netsnmp_request_set_error(netsnmp_request_info *request,
+-- 
+2.17.1
+

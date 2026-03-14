@@ -1,0 +1,136 @@
+{#
+    SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+    Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    Apache-2.0
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['platform'] is defined %}
+{%-     set platform = DEVICE_METADATA['localhost']['platform'] %}
+{%- else -%}
+{%-     set platform = "vs-platform" %}
+{%- endif -%}
+
+
+[
+{% set platform2asic = {
+        'x86_64-mlnx_lssn2700-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2010-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2100-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2410-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2700-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2700a1-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2700_simx-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2740-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn3420-r0':'MELLANOX-SPECTRUM-2',
+        'x86_64-mlnx_msn3700c-r0':'MELLANOX-SPECTRUM-2',
+        'x86_64-mlnx_msn3700-r0':'MELLANOX-SPECTRUM-2',
+        'x86_64-mlnx_msn3700_simx-r0':'MELLANOX-SPECTRUM-2',
+        'x86_64-mlnx_msn3800-r0':'MELLANOX-SPECTRUM-2',
+        'x86_64-mlnx_msn4410-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-mlnx_msn4700_simx-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-mlnx_msn4700-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-mlnx_msn4600c-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-mlnx_msn4600-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-nvidia_sn4280_simx-r0':'MELLANOX-SPECTRUM-3',
+	'x86_64-nvidia_sn4800-r0':'MELLANOX-SPECTRUM-3',
+	'x86_64-nvidia_sn4800_simx-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-nvidia_sn2201-r0':'MELLANOX-SPECTRUM',
+        'x86_64-nvidia_sn5400-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn5600-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn5610n-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn5400_simx-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn5600_simx-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn4280-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-nvidia_sn5640-r0':'MELLANOX-SPECTRUM-5',
+        'x86_64-nvidia_sn5640_simx-r0':'MELLANOX-SPECTRUM-5',
+        'x86_64-nvidia_sn6600_simx-r0':'MELLANOX-SPECTRUM-6',
+        'x86_64-nvidia_sn6600_ld-r0':'MELLANOX-SPECTRUM-6',
+        'vs-platform':'vs'
+    }
+%}
+{% set asic_type = platform2asic[platform] %}
+{% if asic_type == 'MELLANOX-SPECTRUM' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM": {
+            "cell_size": "96",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-2' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-2": {
+            "cell_size": "144",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-3' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-3": {
+            "cell_size": "144",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-4' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-4": {
+            "cell_size": "192",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-5' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-5": {
+            "cell_size": "192",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "6144"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-6' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-6": {
+            "cell_size": "256",
+            "pipeline_latency": "42",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "6144"
+        },
+        "OP": "SET"
+    }
+{% endif %}
+]

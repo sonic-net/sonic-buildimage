@@ -1,0 +1,37 @@
+From 95d166079087ed4c0015719355e01beb0ac83350 Mon Sep 17 00:00:00 2001
+From: Igor Ryzhov <idryzhov@gmail.com>
+Date: Sat, 25 Oct 2025 14:19:54 +0300
+Subject: zebra: fix yang data for mcast-group
+
+Zebra currently returns data even if it's not set, resulting in YANG
+pattern match failure:
+```
+zebra[3900358]: libyang: Unsatisfied pattern - "0.0.0.0" does not conform to "(2((2[4-9])|(3[0-9]))\.).*". (Schema location "/frr-interface:lib/interface/frr-zebra:zebra/state/mcast-group".)
+```
+
+The whole "get-data" transaction fails because of this. Fix by checking
+for an empty IP.
+
+Signed-off-by: Igor Ryzhov <idryzhov@gmail.com>
+---
+ zebra/zebra_nb_state.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/zebra/zebra_nb_state.c b/zebra/zebra_nb_state.c
+index 88908f988a..98610323de 100644
+--- a/zebra/zebra_nb_state.c
++++ b/zebra/zebra_nb_state.c
+@@ -189,6 +189,10 @@ lib_interface_zebra_state_mcast_group_get_elem(struct nb_cb_get_elem_args *args)
+ 		return NULL;
+ 
+ 	vni = zebra_vxlan_if_vni_find(zebra_if, 0);
++
++	if (vni->mcast_grp.s_addr == INADDR_ANY)
++		return NULL;
++
+ 	return yang_data_new_ipv4(args->xpath, &vni->mcast_grp);
+ }
+ 
+-- 
+2.48.1
+

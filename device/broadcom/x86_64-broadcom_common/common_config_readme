@@ -1,0 +1,226 @@
+/* Enable/Disable Memory table cache */
+#define spn_MEM_CACHE_ENABLE  "mem_cache_enable"
+
+/* Property to explicitly enable InPorts Qualifier support in Ingress Field Module. */
+#define spn_IFP_INPORTS_SUPPORT_ENABLE  "ifp_inports_support_enable"
+
+/* Enable IPv6 128b prefix LPM routes. */
+#define spn_IPV6_LPM_128B_ENABLE  "ipv6_lpm_128b_enable"
+
+/* Control the scalability of ECMP groups */
+#define spn_L3_MAX_ECMP_MODE  "l3_max_ecmp_mode"
+
+/*
+ * 1: Allow adding 64B IPV6 LPM entries in unreserved paired TCAM.
+ * 0: Do not allow adding 64B IPV6 LPM entries in paired TCAM.
+ */
+#define spn_LPM_SCALING_ENABLE  "lpm_scaling_enable"
+
+/* Initial number of CoS queues bcm_init() configures the chip for. */
+#define spn_BCM_NUM_COS  "bcm_num_cos"
+
+/* Set the default MMU lossless behavior */
+#define spn_MMU_LOSSLESS  "mmu_lossless"
+
+/*
+ * This soc property is used to enable/disable HOST AS ROUTE feature
+ * which allows the entry to be automatically added to the route table
+ * if the host table is either full or there is a hash collision by calling
+ * bcm_l3_host_add API with BCM_L3_HOST_AS_ROUTE flag.
+ * 0 = Enable HOST AS ROUTE(default). 1 = Disable HOST AS ROUTE.
+ */
+#define spn_HOST_AS_ROUTE_DISABLE  "host_as_route_disable"
+
+/*
+ * Enable/Disable Flex flows Vs Legacy VXLAN module.
+ * flow_init_mode = 0 loads Legacy VXLAN module on sdk initialization.
+ * flow_init_mode = 1 loads flex flow module on sdk initialization.
+ */
+#define spn_FLOW_INIT_MODE  "flow_init_mode"
+
+/* Number of widest MPLS mem entries. */
+#define spn_MPLS_MEM_ENTRIES  "mpls_mem_entries"
+
+/* Number of VLAN_XLATE_1 mem entries. */
+#define spn_VLAN_XLATE_1_MEM_ENTRIES  "vlan_xlate_1_mem_entries"
+
+/* Number of VLAN_XLATE_2 mem entries. */
+#define spn_VLAN_XLATE_2_MEM_ENTRIES  "vlan_xlate_2_mem_entries"
+
+/*
+ * 1 - enable flow tracker(FTv1) embedded app
+ * 2 - enable flow tracker(FTv2) embedded app
+ * default value: 0 (disabled)
+ */
+#define spn_FLOWTRACKER_ENABLE  "flowtracker_enable"
+/*
+ * Maximum number of flow groups monitored by flowtracker embedded app
+ * default value: 255
+ */
+#define spn_FLOWTRACKER_MAX_FLOW_GROUPS  "flowtracker_max_flow_groups"
+/*
+ * Maximum number of flows that can be learnt. In multi-pipe devices, the flow limit
+ * is equally distributed among all the pipes, per pipe flow limit can be imposed by
+ * suffixing with _pipe<pipe_num>
+ * default value: 16K
+ */
+#define spn_FLOWTRACKER_MAX_FLOWS  "flowtracker_max_flows"
+/*
+ * Maximum number of counters that can be assigned to a single flow.
+ * Valid values currently supported are 1, 2 and 4.
+ * default value: 1
+ */
+#define spn_FLOWTRACKER_MAX_COUNTERS_PER_FLOW  "flowtracker_max_counters_per_flow"
+/*
+ * Maximum length of an export packet in bytes that will be sent by Flowtracker embedded app
+ * default value: 1500
+ */
+#define spn_FLOWTRACKER_MAX_EXPORT_PKT_LENGTH  "flowtracker_max_export_pkt_length"
+
+/* Enable elephant monitoring, 0 - Disable, 1 - Enable */
+#define spn_FLOWTRACKER_ELEPHANT_ENABLE  "flowtracker_elephant_enable"
+
+/* Interval at which the flow table is scanned to detect elephant flows. */
+#define spn_FLOWTRACKER_ELEPHANT_SCAN_INTERVAL_USECS  "flowtracker_elephant_scan_interval_usecs"
+
+/* Enables the tracking the flow start timestamp information element, 0 - Disable, 1 - Enable. */
+#define spn_FLOWTRACKER_FLOW_START_TIMESTAMP_IE_ENABLE  "flowtracker_flow_start_timestamp_ie_enable"
+
+/* Export interval of the active flows in usecs */
+#define spn_FLOWTRACKER_EXPORT_INTERVAL_USECS  "flowtracker_export_interval_usecs"
+/*
+ * Expected time required to drain the egress COS queues. Used to
+ * prevent re-ordering when demoting elephant flows to mice
+ */
+#define spn_FLOWTRACKER_ELEPHANT_EXPECTED_QUEUE_DRAIN_TIME_USECS  "flowtracker_elephant_expected_queue_drain_time_usecs"
+
+/* Enterprise number to be used when exporting template sets containing enterprise specific information elements */
+#define spn_FLOWTRACKER_ENTERPRISE_NUMBER  "flowtracker_enterprise_number"
+
+/* Drop monitoring, 0 - Disable, 1 - Enable */
+#define spn_FLOWTRACKER_DROP_MONITOR_ENABLE  "flowtracker_drop_monitor_enable"
+
+/* Enable host memory access  0 - Disable, 1 - Enable */
+#define spn_FLOWTRACKER_HOSTMEM_ENABLE  "flowtracker_hostmem_enable"
+
+/* Maximum length of the reinjected FSP packet. Packets larger than this number are truncated prior to re-injection */
+#define spn_FLOWTRACKER_FSP_REINJECT_MAX_LENGTH  "flowtracker_fsp_reinject_max_length"
+
+/* Interval at which the flow table is scanned to collect counter information in micro seconds. Minimum value allowed is 100000 micro seconds */
+#define spn_FLOWTRACKER_SCAN_INTERVAL_USECS  "flowtracker_scan_interval_usecs"
+
+/*
+ * Normally, the system will use polling for register/memory S-Channel
+ * operations and interrupts for time-consuming operations such as ARL
+ * insert/delete.  If this schan_intr_enable is set to 0, polling will be
+ * used for ALL operations.
+ */
+#define spn_SCHAN_INTR_ENABLE  "schan_intr_enable"
+
+/*
+ * Mode control to select L2 Table DMA mode aka L2MODE_POLL (0) or
+ * L2MOD_FIFO mechanism aka L2MODE_FIFO (1) for L2 table change notification.
+ */
+#define spn_L2XMSG_MODE  "l2xmsg_mode"
+
+/*
+ * Timeout for hardware-accelerated ARL delete operations including:
+ * delete by port, delete by port+modid, delete by VLAN, delete by trunk.
+ */
+#define spn_ARL_CLEAN_TIMEOUT_USEC  "arl_clean_timeout_usec"
+
+/*
+ * BCM56960/BCM56970 : MMU Cell Buffer Allocation Profile to support ASF (cut-thru) Forwarding
+ * 0: No cut-through support
+ * 1: Similar speed profile (Default)
+ * 2: Extreme speed profile
+ */
+#define spn_ASF_MEM_PROFILE  "asf_mem_profile"
+
+/*
+ * Flag values to be ORd together:
+ *    0x0 indicates that counter DMA should NOT be used
+ *    0x1 indicates that counter DMA should be used (default).
+ */
+#define spn_BCM_STAT_FLAGS  "bcm_stat_flags"
+
+/*
+ * Threshold value for oversize (*OVR) frame size.
+ * Values over 1518 affect the *OVR statistics computation
+ */
+#define spn_BCM_STAT_JUMBO  "bcm_stat_jumbo"
+
+/* Counter DMA collection pass timeout in microseconds */
+#define spn_CDMA_TIMEOUT_USEC  "cdma_timeout_usec"
+
+/* SBUSDMA descriptor mode operation timeout in microseconds */
+#define spn_DMA_DESC_TIMEOUT_USEC  "dma_desc_timeout_usec"
+
+/*
+ * The maximum number of virtual port trunk groups
+ * (default is the maximum number supported by the device).
+ */
+#define spn_MAX_VP_LAGS  "max_vp_lags"
+
+/*
+ * If miim_intr_enable variable is set to 1, the system will use
+ * interrupts for MII operations since they take a while (70 usec or so).
+ * If this variable is set to 0, polling will be used for all MII
+ * operations.
+ */
+#define spn_MIIM_INTR_ENABLE  "miim_intr_enable"
+
+/* Device that can support more than 32 ports per single modid will operate in configuration where all ports are mapped to the base modid */
+#define spn_MODULE_64PORTS  "module_64ports"
+
+/*
+ * Config to describe the system Linerate or Oversubscribe mode.
+ * 0: Linerate only (default).
+ * 1: Oversubscribe mode (all ports will be oversub).
+ * 2: Mixed mode. Check device specification for applicability. Port bitmap specified via pbmp_oversubscribe.
+ */
+#define spn_OVERSUBSCRIBE_MODE  "oversubscribe_mode"
+
+
+/*
+ * If phy_null_<port> is set to 1, the port will use the null PHY driver.
+ * This is useful for configuring direct-connect GMII links such as the
+ * chip-to-chip links on a 48-port board (example shown for 48 port board).
+ */
+#define spn_PHY_NULL  "phy_null"
+
+/* Core clock frequency applied to switch chip, any unsupported frequency will be ignored */
+#define spn_CORE_CLOCK_FREQUENCY  "core_clock_frequency"
+
+/* DPR clock frequency applied to switch chip, any unsupported frequency will be ignored. */
+#define spn_DPR_CLOCK_FREQUENCY  "dpr_clock_frequency"
+
+/*
+ * Indicates that the port module(macro) on which this physical port resides
+ * is flex enable or not.
+ * For BCM56860 based devices, the following applies:
+ * This property is per port macro. For port macros consisting of multiple
+ * smaller port macros, enabling flex on that port macro also enables
+ * flex on the smaller port macros.
+ * port_flex_enable{physical port number}=1 or 0
+ *  Valid values are 0 or 1. Default value is 0.
+ * The given physical port number has to be the first physical port residing
+ * on the port macro.
+ */
+#define spn_PORT_FLEX_ENABLE  "port_flex_enable"
+
+/*
+ * Number of unicast and multicast queues per port
+ * mmu_port_num_mc_queue = 0 (12 unicast, 0 multicast)
+ * mmu_port_num_mc_queue = 1 (10 unicast, 2 multicast)
+ * mmu_port_num_mc_queue = 2 (8 unicast, 4 multicast)
+ * mmu_port_num_mc_queue = 3 (6 unicast, 6 multicast)
+ */
+#define spn_MMU_PORT_NUM_MC_QUEUE  "mmu_port_num_mc_queue"
+
+/*
+ * In BCM568xx and BCM567xx devices, some L2 and L3 multicast
+ * information is stored in a shared resource.  This value describes
+ * the number of resource entries devoted to L2 multicast.
+ */
+#define spn_MULTICAST_L2_RANGE  "multicast_l2_range"

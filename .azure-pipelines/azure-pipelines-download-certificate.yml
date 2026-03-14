@@ -1,0 +1,33 @@
+parameters:
+- name: connectionName
+  type: string
+  default: sonic-dev-connection
+- name: kevaultName
+  type: string
+  default: sonic-kv
+- name: certificateName
+  type: string
+  default: sonic-secure-boot
+
+steps:
+- task: AzureKeyVault@2
+  inputs:
+    connectedServiceName: ${{ parameters.connectionName }}
+    keyVaultName: ${{ parameters.kevaultName }}
+    secretsFilter: ${{ parameters.certificateName }}
+
+- script: |
+    set -e
+    TMP_FILE=$(mktemp)
+    echo "$CERTIFICATE" | base64 -d > $TMP_FILE
+    sudo mkdir -p /etc/certificates
+    mkdir -p $(Build.StagingDirectory)/target
+    # Save the public key
+    openssl pkcs12 -in $TMP_FILE -clcerts --nokeys -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN CERTIFICATE\)/\1/" > $(SIGNING_CERT)
+    # Save the private key
+    openssl pkcs12 -in $TMP_FILE -nocerts -nodes -passin pass: | sed -z -e "s/.*\(-----BEGIN PRIVATE KEY\)/\1/" | sudo tee $(SIGNING_KEY) 1>/dev/null
+    ls -lt $(SIGNING_CERT) $(SIGNING_KEY)
+    rm $TMP_FILE
+  env:
+    CERTIFICATE: $(${{ parameters.certificateName }})
+  displayName: "Save certificate"

@@ -1,0 +1,143 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 15d0
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Root Complex'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: 15d1
+  name: 'IOMMU: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 IOMMU'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: 15d3
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 PCIe GPP Bridge
+    [6:0]'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '1452'
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-1fh)
+    PCIe Dummy Host Bridge'
+- bus: '00'
+  dev: 08
+  fn: '1'
+  id: 15db
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Internal PCIe
+    GPP Bridge 0 to Bus A'
+- bus: '00'
+  dev: 08
+  fn: '2'
+  id: 15dc
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Internal PCIe
+    GPP Bridge 0 to Bus B'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 790b
+  name: 'SMBus: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller (rev 61)'
+- bus: '00'
+  dev: '14'
+  fn: '3'
+  id: 790e
+  name: 'ISA bridge: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge (rev 51)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: 15e8
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    0'
+- bus: '00'
+  dev: '18'
+  fn: '1'
+  id: 15e9
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    1'
+- bus: '00'
+  dev: '18'
+  fn: '2'
+  id: 15ea
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    2'
+- bus: '00'
+  dev: '18'
+  fn: '3'
+  id: 15eb
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    3'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: 15ec
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    4'
+- bus: '00'
+  dev: '18'
+  fn: '5'
+  id: 15ed
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    5'
+- bus: '00'
+  dev: '18'
+  fn: '6'
+  id: 15ee
+  name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Raven/Raven2 Device 24: Function
+    6'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b274
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device b274 (rev 02)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function'
+- bus: '02'
+  dev: '00'
+  fn: '2'
+  id: 15df
+  name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 17h (Models
+    10h-1fh) Platform Security Processor'
+- bus: '02'
+  dev: '00'
+  fn: '3'
+  id: 15e5
+  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Raven2 USB 3.1'
+- bus: '02'
+  dev: '00'
+  fn: '5'
+  id: 15e2
+  name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] Raven/Raven2/FireFlight/Renoir
+    Audio Processor'
+- bus: '02'
+  dev: '00'
+  fn: '6'
+  id: 15e3
+  name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 10h-1fh)
+    HD Audio Controller'
+- bus: '02'
+  dev: '00'
+  fn: '7'
+  id: 15e6
+  name: 'Non-VGA unclassified device: Advanced Micro Devices, Inc. [AMD] Raven/Raven2/Renoir
+    Non-Sensor Fusion Hub KMDF driver'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: 145a
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Zeppelin/Raven/Raven2 PCIe Dummy Function (rev 51)'
+- bus: '03'
+  dev: '00'
+  fn: '1'
+  id: '1458'
+  name: 'Ethernet controller: Advanced Micro Devices, Inc. [AMD] Device 1458'

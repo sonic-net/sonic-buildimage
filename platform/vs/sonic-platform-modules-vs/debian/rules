@@ -1,0 +1,58 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+PYTHON        ?= python3
+PACKAGE_PRE_NAME := sonic-platform-vs
+SRC_DIR:= $(shell pwd)
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+
+build:
+	# Nothing to do
+
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch:
+	# Nothing to do
+
+binary-indep:
+# temporary commented out
+#	dh_testdir
+	dh_installdirs
+
+	# Custom package commands
+	$(PYTHON) setup.py install --root=$(SRC_DIR)/debian/$(PACKAGE_PRE_NAME) --install-layout=deb;
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+.PHONY: build binary binary-arch binary-indep clean

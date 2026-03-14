@@ -1,0 +1,11 @@
+s6000/scripts/s6000_platform.sh usr/local/bin
+s6000/scripts/reset-qsfp usr/local/bin
+s6000/scripts/set-fan-speed usr/local/bin
+s6000/scripts/hw-management-generate-dump.sh usr/bin
+s6000/systemd/platform-modules-s6000.service etc/systemd/system
+common/io_rd_wr.py usr/local/bin
+common/actions.sh usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
+s6000/scripts/platform_reboot_override usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
+s6000/scripts/platform_update_reboot_cause usr/share/sonic/device/x86_64-dell_s6000_s1220-r0
+s6000/scripts/override.conf /etc/systemd/system/systemd-reboot.service.d
+build-s6000/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s6000_s1220-r0

@@ -1,0 +1,8 @@
+[Match]
+Name=eth0-midplane
+
+[Network]
+DHCP=yes
+
+[DHCPv4]
+ClientIdentifier=mac

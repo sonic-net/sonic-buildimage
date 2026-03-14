@@ -1,0 +1,51 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Update apt's cache of available packages
+RUN apt-get update
+
+{% if docker_lldp_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_lldp_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_lldp_debs.split(' ')) }}
+{%- endif %}
+
+{% if docker_lldp_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_lldp_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_lldp_whls.split(' ')) }}
+{% endif %}
+
+COPY ["docker-lldp-init.sh", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf.common.j2", "/usr/share/sonic/templates/"]
+{% include "Dockerfile.common.j2" %}
+COPY ["critical_processes", "/etc/supervisor"]
+
+FROM $BASE
+
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/bin/docker-lldp-init.sh"]

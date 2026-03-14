@@ -1,0 +1,140 @@
+parameters:
+- name: platform
+  type: string
+  values:
+  - broadcom
+  - centec-arm64
+  - marvell-prestera-armhf
+  - mellanox
+  - vs
+
+- name: platform_arch
+  type: string
+  values:
+  - amd64
+  - armhf
+  - arm64
+  default: amd64
+
+- name: platform_short
+  type: string
+  values:
+  - brcm
+  - centec-arm64
+  - marvell-prestera-armhf
+  - mlnx
+  - vs
+
+- name: cache_mode
+  type: string
+  values:
+  - wcache
+  - rcache
+  - cache
+
+- name: pool
+  type: string
+  values:
+  - sonicso1ES-amd64
+  - sonicso1ES-arm64
+  - sonicso1ES-armhf
+  default: sonicso1ES-amd64
+
+- name: dbg_image
+  type: boolean
+  default: false
+
+- name: swi_image
+  type: boolean
+  default: false
+
+- name: raw_image
+  type: boolean
+  default: false
+
+- name: sync_rpc_image
+  type: boolean
+  default: false
+
+- name: timeout
+  type: number
+  default: 600
+
+jobs:
+- job:
+  pool: ${{ parameters.pool }}
+  displayName: ${{ parameters.platform }}
+  timeoutInMinutes: ${{ parameters.timeout }}
+  steps:
+  - template: cleanup.yml
+  - checkout: self
+    clean: true
+    submodules: recursive
+    displayName: 'Checkout code'
+  - script: |
+      git submodule foreach --recursive 'git clean -xfdf || true'
+      git submodule foreach --recursive 'git reset --hard || true'
+      git submodule foreach --recursive 'git remote update || true'
+      git submodule update --init --recursive
+    displayName: 'Reset submodules'
+  - script: |
+      set -e
+      sudo modprobe overlay
+      sudo apt-get install -y acl
+      export DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker
+      CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=${{ parameters.cache_mode }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.platform }}"
+      ENABLE_DOCKER_BASE_PULL=y make configure PLATFORM=${{ parameters.platform }} PLATFORM_ARCH=${{ parameters.platform_arch }}
+      trap "sudo rm -rf fsroot" EXIT
+
+      if [ ${{ parameters.platform }} == vs ]; then
+        if [ ${{ parameters.dbg_image }} == true ]; then
+          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz && \
+            mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
+        fi
+
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+      else
+        if [ ${{ parameters.dbg_image }} == true ]; then
+          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
+            mv target/sonic-${{ parameters.platform }}.bin target/sonic-${{ parameters.platform }}-dbg.bin
+        fi
+        if [ ${{ parameters.swi_image }} == true ]; then
+          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
+        fi
+        if [ ${{ parameters.sync_rpc_image }} == true ]; then
+          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
+          # workaround for issue in rules/sairedis.dep,  git ls-files will list un-exist files for cache
+          pushd ./src/sonic-sairedis/SAI
+          git stash
+          popd 
+          if [ ${{ parameters.platform }} == broadcom ]; then
+            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
+            pushd ./src/sonic-sairedis/SAI
+            git stash
+            popd 
+          fi
+          if [ ${{ parameters.platform }} == barefoot ]; then
+            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
+            pushd ./src/sonic-sairedis/SAI
+            git stash
+            popd 
+          fi
+        fi
+
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin
+      fi
+    displayName: 'Build sonic image'
+  - template: cleanup.yml
+  - publish: $(System.DefaultWorkingDirectory)/
+    artifact: sonic-buildimage.${{ parameters.platform }}
+    displayName: "Archive sonic image"
+  - script: |
+      set -x
+      find target -name "*.log" | xargs -I{} cp {} $(Build.ArtifactStagingDirectory)/
+    condition: failed()
+    displayName: "Copy build logs"
+  - publish: $(Build.ArtifactStagingDirectory)/
+    artifact: sonic-buildimage.${{ parameters.platform}}.logs@$(System.JobAttempt)
+    displayName: "Archive build logs"
+    condition: failed()

@@ -1,0 +1,270 @@
+module sonic-pbh {
+
+	yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-pbh";
+	prefix pbh;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import sonic-types {
+		prefix stypes;
+	}
+
+	import sonic-port {
+		prefix port;
+	}
+
+	import sonic-portchannel {
+		prefix lag;
+	}
+
+	description "PBH YANG Module for SONiC OS: hashing for NVGRE & VxLAN with IPv4/IPv6 inner 5-tuple";
+
+	revision 2021-04-23 {
+		description "First Revision";
+	}
+
+	typedef hash-field {
+		description "Represents native hash field";
+		type stypes:hash-field {
+			enum INNER_IP_PROTOCOL;
+			enum INNER_L4_DST_PORT;
+			enum INNER_L4_SRC_PORT;
+			enum INNER_DST_IPV4;
+			enum INNER_SRC_IPV4;
+			enum INNER_DST_IPV6;
+			enum INNER_SRC_IPV6;
+		}
+	}
+
+	typedef packet-action {
+		description "Represents packet action";
+		type enumeration {
+			enum SET_ECMP_HASH;
+			enum SET_LAG_HASH;
+		}
+	}
+
+	typedef flow-counter {
+		description "Represents flow counter state";
+		type enumeration {
+			enum DISABLED;
+			enum ENABLED;
+		}
+	}
+
+	container sonic-pbh {
+
+		container PBH_HASH_FIELD {
+
+			description "PBH_HASH_FIELD part of config_db.json";
+
+			list PBH_HASH_FIELD_LIST {
+
+				key "hash_field_name";
+
+				leaf hash_field_name {
+					description "The name of this hash field";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf hash_field {
+					description "Configures native hash field for this hash field";
+					mandatory true;
+					type pbh:hash-field;
+				}
+
+				leaf ip_mask {
+					description "Configures IPv4/IPv6 address mask for this hash field";
+					mandatory true;
+					type inet:ip-address-no-zone;
+					must "(boolean(../hash_field[.='INNER_DST_IPV4' or .='INNER_SRC_IPV4']) and contains(current(), '.'))
+					or (boolean(../hash_field[.='INNER_DST_IPV6' or .='INNER_SRC_IPV6']) and contains(current(), ':'))";
+					when "boolean(../hash_field[.='INNER_DST_IPV4' or .='INNER_SRC_IPV4' or .='INNER_DST_IPV6' or .='INNER_SRC_IPV6'])";
+				}
+
+				leaf sequence_id {
+					description "Configures in which order the fields are hashed and defines which fields should be associative";
+					mandatory true;
+					type uint32;
+				}
+
+			}
+			/* end of PBH_HASH_FIELD_LIST */
+		}
+		/* end of container PBH_HASH_FIELD */
+
+		container PBH_HASH {
+
+			description "PBH_HASH part of config_db.json";
+
+			list PBH_HASH_LIST {
+
+				key "hash_name";
+
+				leaf hash_name {
+					description "The name of this hash";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf-list hash_field_list {
+					description "The list of hash fields to apply with this hash";
+					min-elements 1;
+					type leafref {
+						path "/pbh:sonic-pbh/pbh:PBH_HASH_FIELD/pbh:PBH_HASH_FIELD_LIST/pbh:hash_field_name";
+					}
+					ordered-by user;
+				}
+
+			}
+			/* end of PBH_HASH_LIST */
+		}
+		/* end of container PBH_HASH */
+
+		container PBH_RULE {
+
+			description "PBH_RULE part of config_db.json";
+
+			list PBH_RULE_LIST {
+
+				key "table_name rule_name";
+
+				leaf table_name {
+					description "The name of table which holds this rule";
+					type leafref {
+						path "/pbh:sonic-pbh/pbh:PBH_TABLE/pbh:PBH_TABLE_LIST/pbh:table_name";
+					}
+				}
+
+				leaf rule_name {
+					description "The name of this rule";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf priority {
+					description "Configures priority for this rule";
+					mandatory true;
+					type uint32;
+				}
+
+				leaf gre_key {
+					description "Configures packet match for this rule: GRE key (value/mask)";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,8}/(0x){1}[a-fA-F0-9]{1,8}";
+					}
+				}
+
+				leaf ether_type {
+					description "Configures packet match for this rule: EtherType (IANA Ethertypes)";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,4}";
+					}
+				}
+
+				leaf ip_protocol {
+					description "Configures packet match for this rule: IP protocol (IANA Protocol Numbers)";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,2}";
+					}
+				}
+
+				leaf ipv6_next_header {
+					description "Configures packet match for this rule: IPv6 Next header (IANA Protocol Numbers)";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,2}";
+					}
+				}
+
+				leaf l4_dst_port {
+					description "Configures packet match for this rule: L4 destination port";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,4}";
+					}
+				}
+
+				leaf inner_ether_type {
+					description "Configures packet match for this rule: inner EtherType (IANA Ethertypes)";
+					type string {
+						pattern "(0x){1}[a-fA-F0-9]{1,4}";
+					}
+				}
+
+				leaf hash {
+					description "The hash to apply with this rule";
+					mandatory true;
+					type leafref {
+						path "/pbh:sonic-pbh/pbh:PBH_HASH/pbh:PBH_HASH_LIST/pbh:hash_name";
+					}
+				}
+
+				leaf packet_action {
+					description "Configures packet action for this rule";
+					type pbh:packet-action;
+					default "SET_ECMP_HASH";
+				}
+
+				leaf flow_counter {
+					description "Enables/Disables packet/byte counter for this rule";
+					type pbh:flow-counter;
+					default "DISABLED";
+				}
+
+			}
+			/* end of PBH_RULE_LIST */
+		}
+		/* end of container PBH_RULE */
+
+		container PBH_TABLE {
+
+			description "PBH_TABLE part of config_db.json";
+
+			list PBH_TABLE_LIST {
+
+				key "table_name";
+
+				leaf table_name {
+					description "The name of this table";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf-list interface_list {
+					description "Interfaces to which this table is applied";
+					min-elements 1;
+					type union {
+						type leafref {
+							path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+						}
+						type leafref {
+							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+						}
+					}
+					ordered-by user;
+				}
+
+				leaf description {
+					description "The description of this table";
+					mandatory true;
+					type string {
+						length 1..255;
+					}
+				}
+
+			}
+			/* end of PBH_TABLE_LIST */
+		}
+		/* end of container PBH_TABLE */
+	}
+	/* end of container sonic-pbh */
+}
+/* end of module sonic-pbh */

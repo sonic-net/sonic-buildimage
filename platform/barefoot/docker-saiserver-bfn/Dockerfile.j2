@@ -1,0 +1,78 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+COPY \
+{% for deb in docker_saiserver_bfn_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get install -y \
+        libxml2 \
+        libpcap-dev \
+        libusb-1.0-0 \
+        libcurl3-gnutls \
+        libunwind8-dev \
+        libc-ares2 \
+        libedit2 \
+        libgoogle-perftools4
+
+## Pre-install the fundamental packages
+RUN apt-get update      \
+ && apt-get -y install  \
+    wget                \
+    cmake               \
+    libqt5core5a        \
+    libqt5network5      \
+    python3-setuptools  \
+    python3-pip         \
+    python-is-python3   \
+    libboost-atomic1.74.0
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_saiserver_bfn_debs.split(' ')) }}
+
+## Support nanomsg, plesae install those package as needed
+## If don't need to run cases inside saiserver locally with nn_agent, plesae remove them.
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+ && tar xvfz 1.0.0.tar.gz \
+ && cd nanomsg-1.0.0    \
+ && mkdir -p build      \
+ && cmake .             \
+ && make install        \
+ && ldconfig            \
+ && cd ..               \
+ && rm -fr nanomsg-1.0.0 \
+ && rm -f 1.0.0.tar.gz  \
+ && pip3 install cffi==1.7.0 \
+ && pip3 install --upgrade cffi==1.7.0 \
+ && pip3 install wheel  \
+ && pip3 install nnpy   \
+ && mkdir -p /opt       \
+ && cd /opt             \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
+ && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
+ && rm -rf /root/deps
+
+
+COPY ["start.sh", "/usr/bin/"]
+COPY ["saiserver_start.sh", "/usr/bin/"]
+COPY ["files/syncd_init_common.sh", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+RUN chmod +x /usr/bin/saiserver_start.sh /usr/bin/syncd_init_common.sh
+
+## If don't need to run cases inside saiserver locally with nn_agent, plesae remove it.
+COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

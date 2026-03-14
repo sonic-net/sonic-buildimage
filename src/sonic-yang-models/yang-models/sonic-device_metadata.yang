@@ -1,0 +1,381 @@
+module sonic-device_metadata {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-device_metadata";
+    prefix device_metadata;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "DEVICE_METADATA YANG Module for SONiC OS";
+
+    revision 2021-02-27 {
+        description "Added frr_mgmt_framework_config field to handle BGP
+            config DB schema events to configure FRR protocols.";
+    }
+
+    revision 2020-04-10 {
+        description "First Revision";
+    }
+
+    container sonic-device_metadata {
+
+        container DEVICE_METADATA {
+
+            description "DEVICE_METADATA part of config_db.json";
+
+            container localhost{
+
+                leaf hwsku {
+                    type stypes:hwsku;
+                }
+
+                leaf asic_id {
+                    type string {
+                        length 1..16;
+                    }
+                    description "asic_id is unique identifier of the asic used by SAI for initialization.";
+                }
+
+                leaf default_bgp_status {
+                    type enumeration {
+                        enum up;
+                        enum down;
+                    }
+                    default up;
+                }
+
+                leaf docker_routing_config_mode {
+                    description "This leaf allows different configuration modes for FRR:
+                                - separated: FRR config generated from ConfigDB, each FRR daemon has its own config file
+                                - unified: FRR config generated from ConfigDB, single FRR config file
+                                - split: FRR config not generated from ConfigDB, each FRR daemon has its own config file
+                                - split-unified: FRR config not generated from ConfigDB, single FRR config file";
+                    type string {
+                        pattern "separated|unified|split|split-unified";
+                    }
+                    default "unified";
+                }
+
+                leaf hostname {
+                    type stypes:hostname;
+                }
+
+                leaf platform {
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf mac {
+                    type yang:mac-address;
+                }
+
+                leaf default_pfcwd_status {
+                    type enumeration {
+                        enum disable;
+                        enum enable;
+                    }
+                    default disable;
+                }
+
+                leaf bgp_asn {
+                    type inet:as-number;
+                }
+
+                leaf deployment_id {
+                    type uint32;
+                }
+
+                leaf type {
+                    type string {
+                        length 1..255;
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|MiniTs|LeafTs|SpineTs|CoreTs|ConsoleServer|TerminalServer|SonicHost|SmartSwitchDPU|FilterLeaf|not-provisioned";
+                    }
+                }
+
+                leaf buffer_model {
+                    description "This leaf is added for dynamic buffer calculation.
+                                The dynamic model represents the model in which the buffer configurations,
+                                like the headroom sizes and buffer pool sizes, are dynamically calculated based
+                                on the ports' speed, cable length, and MTU. This model is used by Mellanox so far.
+                                The traditional model represents the model in which all the buffer configurations
+                                are statically configured in CONFIG_DB tables. This is the default model used by all other vendors";
+                    type string {
+                        pattern "dynamic|traditional";
+                    }
+                }
+
+                leaf frr_mgmt_framework_config {
+                    type boolean;
+                    description "FRR configurations are handled by sonic-frr-mgmt-framework module when set to true,
+                        otherwise, sonic-bgpcfgd handles the FRR configurations based on the predefined templates.";
+                    default "false";
+                }
+
+                leaf synchronous_mode {
+                    type enumeration {
+                        enum enable;
+                        enum disable;
+                    }
+                    default enable;
+                }
+
+                leaf yang_config_validation {
+                    type stypes:mode-status;
+                    default disable;
+                }
+
+                leaf cloudtype {
+                    type string;
+                }
+
+                leaf region {
+                    type string;
+                }
+
+                leaf sub_role {
+                    type string;
+                    description "sub_role indicates if ASIC is FrontEnd or BackEnd.";
+                }
+
+                leaf downstream_subrole {
+                    type string;
+                }
+
+                leaf resource_type {
+                    type string;
+                }
+
+                leaf mgmt_type {
+                    type string;
+                    description "Indicates the management type of this device.";
+                }
+
+                leaf cluster {
+                    type string;
+                    description "The switch is a member of this cluster.";
+                }
+
+                leaf subtype {
+                    type string {
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|LowerSpineRouter";
+                    }
+                }
+
+                leaf peer_switch {
+                    type stypes:hostname;
+                }
+
+                leaf storage_device {
+                    type boolean;
+                }
+
+                leaf asic_name {
+                    type string;
+                    description "On a VoQ switch, the ASIC Name is used as a qualifier in global
+                                 database keys to create a system wide unique key.";
+                }
+
+                leaf switch_id {
+                    type uint16;
+                    description "Vendor specific switch ID. Identifies switch chip.";
+                }
+
+                leaf switch_type {
+                    type string {
+                        pattern "chassis-packet|fabric|npu|voq|dpu|dummy-sup";
+                    }
+                    description "Type of switch. Default is NPU, on a VOQ switch voq is used for a regular
+                                 switching device while fabric is used for a fabric device.
+                                 chassis-packet is used for chassis in packet mode.";
+                }
+
+                leaf max_cores {
+                    type uint8;
+                    description "Maximum number of cores in a VoQ Switch (chassis).";
+                }
+
+                leaf dhcp_server {
+                    type stypes:admin_mode;
+                    description "Indicate whether enable the embedded DHCP server.";
+                }
+
+                leaf bgp_adv_lo_prefix_as_128 {
+                    type boolean;
+                    description "Advertise Loopback0 interface IPv6 /128 subnet address as it is with set to true.
+                                 By default SONiC advertises /128 subnet prefix in Loopback0 as /64 subnet route";
+                }
+
+                leaf suppress-fib-pending {
+                    description "Enable BGP suppress FIB pending feature. BGP will wait for route FIB installation before announcing routes";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+
+                    must "((current() = 'disabled') or (current() = 'enabled' and ../synchronous_mode = 'enable'))" {
+                        error-message "ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature";
+                    }
+                }
+                leaf rack_mgmt_map {
+                    type string {
+                        length 0..128 {
+                            error-message "Invalid length for the rack mgmt map.";
+                        }
+                    }
+                    description "Information of rack mgmt map.";
+                }
+
+                leaf timezone {
+                    type stypes:timezone-name-type {
+                        length 1..255;
+                    }
+                    default "UTC";
+                    description "The TZ database name to use for the system, such as 'Europe/Stockholm'.";
+                    reference "IANA Time Zone Database http://www.iana.org/time-zones";
+                }
+
+                leaf create_only_config_db_buffers {
+                    type boolean;
+                    description "If this attribute exists and is equal to true - the buffers will be created
+                                 according to the config_db configuration (for example BUFFER_QUEUE|* table),
+                                 otherwise the maximum available buffers (which are read from SAI) will be
+                                 created, regardless of the CONFIG_DB buffers configuration.";
+                }
+
+                leaf-list supporting_bulk_counter_groups {
+                    type string;
+                    ordered-by user;
+                    description "This field contains a list of counter groups that support bulk operation.";
+                }
+
+                leaf bgp_router_id {
+                    type inet:ipv4-address;
+                    description "BGP Router identifier";
+                }
+
+                leaf chassis_hostname {
+                    description "hostname of the chassis to which this linecard or supervisor belongs to";
+                    type stypes:hostname;
+                }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
+                leaf location_type {
+                    description "Location type for the device.";
+                    type string;
+                }
+
+                leaf nexthop_group {
+                    description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
+
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
+                }
+
+                leaf-list t2_group_asns {
+                    type inet:as-number;
+                    description "ASNs inner same group";
+                }
+
+                leaf-list anchor_route_source {
+                    type string;
+                    description "Set source of anchor route";
+                }
+
+                leaf orch_northbond_dash_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature on APPL_DB DASH tables.";
+                    default "true";
+                }
+
+                leaf orch_northbond_route_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature on APPL_DB ROUTE tables.";
+                    default "false";
+                }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
+
+                leaf syslog_counter {
+                    type boolean;
+                    description "Enable syslog counter feature.";
+                    default "false";
+                }
+
+                leaf has_sonic_dhcpv4_relay {
+                     description "This configuration controls the dhcpv4 relay process";
+                     type stypes:boolean_type;
+                     default "false";
+                }
+
+                leaf zebra_nexthop {
+                    description "Enable or disable next hop group support. This value only takes effect during boot time";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default enabled;
+                }
+            }
+            /* end of container localhost */
+
+            container bmc {
+                description "BMC configuration information";
+
+                leaf bmc_if_name {
+                    type string {
+                        length 1..64;
+                    }
+                    description "BMC interface name";
+                }
+
+                leaf bmc_if_addr {
+                    type inet:ipv4-address;
+                    description "BMC interface IP address";
+                }
+
+                leaf bmc_addr {
+                    type inet:ipv4-address;
+                    description "BMC IP address";
+                }
+
+                leaf bmc_net_mask {
+                    type inet:ipv4-address;
+                    description "BMC network mask";
+                }
+            }
+            /* end of container bmc */
+        }
+        /* end of container DEVICE_METADATA */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-device_metadata */

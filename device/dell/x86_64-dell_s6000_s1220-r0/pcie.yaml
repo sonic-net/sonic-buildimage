@@ -1,0 +1,65 @@
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 0c46
+  name: 'PCI bridge: Intel Corporation Atom Processor S1200 PCI Express Root Port 1'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 0c47
+  name: 'PCI bridge: Intel Corporation Atom Processor S1200 PCI Express Root Port 2'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 0c48
+  name: 'PCI bridge: Intel Corporation Atom Processor S1200 PCI Express Root Port 3'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: 0c49
+  name: 'PCI bridge: Intel Corporation Atom Processor S1200 PCI Express Root Port 4'
+- bus: '00'
+  dev: 0e
+  fn: '0'
+  id: 0c54
+  name: 'IOMMU: Intel Corporation Atom Processor S1200 Internal'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: 0c59
+  name: 'System peripheral: Intel Corporation Atom Processor S1200 SMBus 2.0 Controller 0'
+- bus: '00'
+  dev: '13'
+  fn: '1'
+  id: 0c5a
+  name: 'System peripheral: Intel Corporation Atom Processor S1200 SMBus 2.0 Controller 1'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: b850
+  name: 'Ethernet controller: Broadcom Limited Broadcom BCM56850 Switch ASIC'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: '9170'
+  name: 'SATA controller: Marvell Technology Group Ltd. Device 9170'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: 400a
+  name: 'PCI bridge: Pericom Semiconductor PI7C9X442SL PCI Express Bridge Port'
+- bus: '04'
+  dev: '01'
+  fn: '0'
+  id: 400a
+  name: 'PCI bridge: Pericom Semiconductor PI7C9X442SL PCI Express Bridge Port'
+- bus: '04'
+  dev: '02'
+  fn: '0'
+  id: 400a
+  name: 'PCI bridge: Pericom Semiconductor PI7C9X442SL PCI Express Bridge Port'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: 10d3
+  name: 'Ethernet controller: Intel Corporation 82574L Gigabit Network Connection'

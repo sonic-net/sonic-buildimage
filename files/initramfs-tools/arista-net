@@ -1,0 +1,129 @@
+#!/bin/sh
+
+case $1 in
+    prereqs)
+        exit 0
+        ;;
+esac
+
+set -e
+
+# Extract kernel parameters
+set -- $(cat /proc/cmdline)
+items=""
+for x in "$@"; do
+    case "$x" in
+        Aboot=*)
+            aboot_flag="${x#Aboot=}"
+            ;;
+        net_*)
+            item="${x#net_}"
+            items="$items $item"
+            ;;
+        platform=*)
+            platform_flag="${x#platform=}"
+            ;;
+    esac
+done
+
+random() {
+    echo $(od -vAn -N1 -tu1 < /dev/urandom)
+}
+
+arista_net_devname() {
+    local pciaddr="$1"
+    local devname_prefix="$2"
+    for path in $(ls -d /sys/class/net/${devname_prefix}* 2>/dev/null); do
+        local devid="$(realpath "$path/device")"
+        if echo "$devid" | grep -q "$pciaddr"; then
+            echo "${path##*/}"
+            return
+        fi
+    done
+}
+
+arista_net_rename() {
+    local device_path="$1"
+    local new_name="$2"
+    local from_name="$3"
+    devname=$(arista_net_devname "$device_path" "$from_name")
+    if [ -n "$devname" ]; then
+        ip link set "$devname" name "$new_name"
+    fi
+}
+
+# Sets the MAC address to the value passed by Aboot through /proc/cmdline
+tg3fixhwaddr()
+{
+    local default_tg3_hwaddr="00:10:18:00:00:00"
+    local pciaddr="$1"
+    local hwaddr="$2"
+
+    devname=$(arista_net_devname "$pciaddr")
+    if [ -z "$devname" ]; then
+        return
+    fi
+
+    driver=$(basename $(readlink "/sys/class/net/$devname/device/driver"))
+    if [ "$driver" != "tg3" ]; then
+        return 0
+    fi
+
+    if [ "$hwaddr" = "$default_tg3_hwaddr" ]; then
+        hwaddr=$(cat /sys/class/net/$devname/address)
+    fi
+
+    if [ "$hwaddr" = "$default_tg3_hwaddr" ]; then
+        hwaddr=$(printf "%02x" "$(($(random) & 0xfe | 0x02))")
+        for i in 1 2 3 4 5; do
+            hwaddr=$(printf "$hwaddr:%02x" "$(($(random) & 0xfe | 0x02))")
+        done
+    fi
+
+    ip link set dev "$devname" addr "$hwaddr"
+}
+
+if [ -n "$aboot_flag" ]; then
+    for item in $items; do
+        key="${item%=*}"
+        value="${item#*=}"
+        hwaddr=$(eval echo \${hwaddr_${key}})
+        if [ -n "$hwaddr" ]; then
+            tg3fixhwaddr "$value" "$hwaddr"
+        fi
+    done
+fi
+
+# Iterate over all the net_maX items found in the cmdline two times.
+# First time renaming the interfaces to maX.
+# The second time renaming them to their final name ethX.
+if [ -n "$aboot_flag" ]; then
+   if [ "$platform_flag" = 'rook' -o "$platform_flag" = 'lorikeet' -o "$platform_flag" = 'redstart' ]; then
+      # Rename existing ethX interfaces to tmpX
+      for x in $(ls /sys/class/net/); do
+         case $x in
+            eth*)
+               value="${x#*eth}"
+               newname="tmp$value"
+               ip link set $x down
+               ip link set $x name "$newname"
+               ;;
+            *)
+         esac
+      done
+      for item in $items; do
+         key="${item%=*}"
+         value="${item#*=}"
+         arista_net_rename "$value" "$key" tmp
+      done
+      for item in $items; do
+         key="${item%=*}"
+         value="${item#*=}"
+         index="${key#ma}"
+         index="$(( $index - 1 ))"
+         newKey="eth$index"
+         arista_net_rename "$value" "$newKey" ma
+      done
+   fi
+fi
+

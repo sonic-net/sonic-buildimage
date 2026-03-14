@@ -1,0 +1,62 @@
+{
+    "SONIC_EVENTS_SYNCD_SYNCD_FAILURE_INCORRECT_FAIL_TYPE": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:syncd-failure": {
+                "fail_type": "INCORRECT_FAIL_TYPE",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_SYNCD_FAILURE_INCORRECT_TIMESTAMP": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:syncd-failure": {
+                "fail_type": "mmu_err",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_SYNCD_FAILURE_VALID": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:syncd-failure": {
+                "fail_type": "switch_event",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_ALPM_PARITY_ERROR_INCORRECT_OPERATION": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:alpm-parity-error": {
+                "operation": "INVALID_OPERATION",
+                "ip_family": "IPv4",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_ALPM_PARITY_ERROR_INCORRECT_IP_FAMILY": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:alpm-parity-error": {
+                "operation": "insert",
+                "ip_family": "INCORRECT_IP_FAMILY",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_ALPM_PARITY_ERROR_INCORRECT_TIMESTAMP": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:alpm-parity-error": {
+                "operation": "delete",
+                "ip_family": "IPv6",
+                "timestamp": "INCORRECT_TIMESTAMP"
+            }
+        }
+    },
+    "SONIC_EVENTS_SYNCD_ALPM_PARITY_ERROR_VALID": {
+        "sonic-events-syncd:sonic-events-syncd": {
+            "sonic-events-syncd:alpm-parity-error": {
+                "operation": "insert",
+                "ip_family": "IPv4",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{# Get sai.profile based on switch_role #}
+{%- if DEVICE_METADATA is defined -%}
+{%-     set switch_role = DEVICE_METADATA['localhost']['type'] -%}
+{%-     if 'torrouter' in switch_role.lower() %}
+{%         set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th-s6100-64x40G-t0.config.bcm' -%}
+{%-     else %}
+{%-         set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th-s6100-64x40G-t1.config.bcm' -%}
+{%-     endif %}
+{%- else %}
+{%-     set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th-s6100-64x40G-t1.config.bcm' -%}
+{%- endif %}
+{# Write the contents of sai_ profile_filename to sai.profile file #}
+{{ sai_profile_contents }}
+SAI_NUM_ECMP_MEMBERS=64

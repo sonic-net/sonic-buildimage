@@ -1,0 +1,15 @@
+#!/bin/sh
+# postinst
+
+kernel_version=$(uname -r)
+
+if [ -e /boot/System.map-${kernel_version} ]; then
+    depmod -a -F /boot/System.map-${kernel_version} ${kernel_version} || true
+fi
+
+# Enable Ruijie-B6510-48VS8CQ-platform-service
+depmod -a
+systemctl enable platform-modules-b6510-48vs8cq.service
+systemctl start platform-modules-b6510-48vs8cq.service
+
+#DEBHELPER#

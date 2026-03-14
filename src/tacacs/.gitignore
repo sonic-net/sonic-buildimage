@@ -1,0 +1,12 @@
+*
+!.gitignore
+audisp/*
+!audisp/Makefile
+!audisp/*.patch
+!bash_tacplus/*
+nsm/*
+!nsm/Makefile
+!nsm/*.patch
+pam/*
+!pam/Makefile
+!pam/*.patch

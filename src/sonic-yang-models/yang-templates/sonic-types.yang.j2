@@ -1,0 +1,542 @@
+module sonic-types {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-head";
+    prefix sonic-types;
+
+    description "SONiC type for yang Models of SONiC OS";
+    /*
+     * Try to define only sonic specific types here. Rest can be written in
+     * respective YANG files.
+     */
+
+    revision 2019-07-01 {
+        description "First Revision";
+    }
+
+    typedef ip-family {
+        type enumeration {
+            enum IPv4;
+            enum IPv6;
+        }
+    }
+
+    typedef sonic-ip4-prefix {
+        type string {
+            pattern
+             '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+            +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+            + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
+        }
+    }
+
+    typedef sonic-ip6-prefix {
+        type string {
+            pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+                 + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+                 + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
+                 + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+                 + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
+            pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
+                 + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+                 + '(/.+)';
+        }
+    }
+
+    typedef sonic-ip-prefix {
+      type union {
+        type sonic-ip4-prefix;
+        type sonic-ip6-prefix;
+      }
+    }
+
+    typedef ipv4-address-list {
+        type string {
+            pattern '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+                + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+                + '(%[\p{N}\p{L}]+)?'
+                + '(,(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+                + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+                + '(%[\p{N}\p{L}]+)?)*';
+        }
+        description
+            "Comma-separated IPv4 addresses";
+    }
+
+    typedef admin_status {
+        type enumeration {
+            enum up;
+            enum down;
+        }
+    }
+
+    typedef packet_action{
+        type enumeration {
+            enum DROP;
+            enum ACCEPT;
+            enum FORWARD;
+            enum REDIRECT;
+            enum DO_NOT_NAT;
+            enum DISABLE_TRIM;
+        }
+    }
+
+    typedef ip_type {
+        type enumeration {
+            enum ANY;
+            enum IP;
+            enum NON_IP;
+            enum IPV4;
+            enum IPV6;
+            enum IPv4ANY;
+            enum IPV4ANY;
+            enum NON_IP4;
+            enum IPv6ANY;
+            enum IPV6ANY;
+            enum NON_IPv6;
+            enum ARP;
+        }
+    }
+
+    typedef acl_table_type {
+        type enumeration {
+            enum L2;
+            enum L3;
+            enum L3V6;
+            enum L3V4V6;
+            enum MIRROR;
+            enum MIRRORV6;
+            enum MIRROR_DSCP;
+            enum CTRLPLANE;
+        }
+    }
+
+    typedef hwsku {
+        type string {
+            length 1..255;
+            /* Should we list all hwsku here */
+        }
+    }
+
+    typedef vlan_tagging_mode {
+        type enumeration {
+            enum tagged;
+            enum untagged;
+            enum priority_tagged;
+        }
+    }
+
+    typedef crm_threshold_type {
+        type string {
+            length 1..64;
+            pattern "percentage|used|free|PERCENTAGE|USED|FREE";
+        }
+    }
+
+    typedef loopback_action {
+        type string {
+            pattern "drop|forward";
+        }
+    }
+
+    typedef admin_mode {
+        type enumeration {
+            enum enabled;
+            enum disabled;
+        }
+    }
+
+    typedef ip-protocol-type {
+        type enumeration {
+            enum TCP;
+            enum UDP;
+        }
+    }
+
+    typedef interface_type {
+        type enumeration {
+            enum CR;
+            enum CR2;
+            enum CR4;
+            enum CR8;
+            enum SR;
+            enum SR2;
+            enum SR4;
+            enum SR8;
+            enum LR;
+            enum LR4;
+            enum LR8;
+            enum KR;
+            enum KR4;
+            enum KR8;
+            enum CAUI;
+            enum GMII;
+            enum SFI;
+            enum XLAUI;
+            enum KR2;
+            enum CAUI4;
+            enum XAUI;
+            enum XFI;
+            enum XGMII;
+            enum none;
+        }
+    }
+
+    typedef oper-status {
+        type enumeration {
+            enum unknown;
+            enum up;
+            enum down;
+        }
+        description "Operational status of an entity such as Port, MCLAG etc";
+    }
+
+    typedef mode-status {
+        type enumeration {
+            enum enable;
+            enum disable;
+        }
+        description
+            "This type can be used where toggle functionality required.
+            For ex. IPv6-link-local-only, Dhcp-replay-link-select, SNMP traps etc";
+    }
+
+    typedef dhcp-relay-policy-action {
+        type enumeration {
+            enum discard;
+            enum append;
+            enum replace;
+        }
+        description "DHCP relay policy action value";
+    }
+
+    typedef percentage {
+        type uint8 {
+            range "0..100";
+        }
+        description
+            "Integer indicating a percentage value";
+    }
+
+    typedef tpid_type {
+        type string {
+            pattern "0x8100|0x9100|0x9200|0x88a8|0x88A8";
+        }
+    }
+
+    typedef switchport_mode {
+        type string {
+            pattern "routed|access|trunk";
+        }
+        description
+            "SwitchPort Modes for Port & PortChannel";
+    }
+
+    typedef meter_type {
+        type enumeration {
+            enum packets;
+            enum bytes;
+        }
+    }
+
+    typedef policer_mode {
+        type enumeration {
+            enum sr_tcm;
+            enum tr_tcm;
+            enum storm;
+        }
+    }
+
+    typedef policer_color_source {
+        type enumeration {
+	    enum aware;
+	    enum blind;
+        }
+    }
+
+
+    typedef policer_packet_action {
+        type enumeration {
+            enum drop;
+            enum forward;
+            enum copy;
+            enum copy_cancel;
+            enum trap;
+            enum log;
+            enum deny;
+            enum transit;
+        }
+    }
+
+    typedef boolean_type {
+        type string {
+            pattern "false|true|False|True";
+        }
+    }
+
+    typedef mac-addr-and-mask {
+        type string {
+            pattern "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}|[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}/[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
+        }
+    }
+
+    typedef mac-address-list {
+        type string {
+            pattern '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})(,([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}))*';
+        }
+        description
+            "Comma-separated MAC addresses";
+    }
+
+    typedef hostname {
+        type string {
+            length 1..63;
+        }
+    }
+
+    typedef vnid_type {
+        type uint32 {
+             range "1..16777215";
+        }
+        description
+            "VXLAN Network Identifier";
+    }
+
+    typedef vnid-list {
+        type string {
+            pattern '([1-9][0-9]{0,6}|1[0-5][0-9]{6}|16[0-6][0-9]{5}|167[0-6][0-9]{4}|1677[0-6][0-9]{3}|16777[01][0-9]{2}|1677720[0-9]|1677721[0-5])'
+                + '(,([1-9][0-9]{0,6}|1[0-5][0-9]{6}|16[0-6][0-9]{5}|167[0-6][0-9]{4}|1677[0-6][0-9]{3}|16777[01][0-9]{2}|1677720[0-9]|1677721[0-5]))*';
+        }
+        description
+            "Comma-separated VNIs";
+    }
+
+    typedef tc_type {
+        type uint8 {
+            range "0..15" {
+                error-message "Invalid Traffic Class";
+                error-app-tag tc-invalid;
+            }
+        }
+    }
+
+    typedef process_name {
+        type string {
+            pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                error-message "Invalid process_name.";
+                error-app-tag invalid-process-name;
+            }
+            length 1..32 {
+                error-message "Invalid length for process_name.";
+                error-app-tag invalid-process-name-length;
+            }
+        }
+    }
+
+    typedef ctr_name {
+        type string {
+            pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                error-message "Invalid ctr_name.";
+                error-app-tag invalid-ctr-name;
+            }
+            length 1..32 {
+                error-message "Invalid length for ctr_name.";
+                error-app-tag invalid-ctr-name-length;
+            }
+        }
+    }
+
+    typedef interface_name {
+        description "Represents IFNAMSIZ defined in <net/if.h>";
+        type string {
+            length 1..15 {
+                error-message "Invalid interface name length, it must not exceed 16 characters.";
+                error-app-tag invalid-interface-name-length;
+            }
+        }
+    }
+
+    typedef hash-field {
+        description "Represents native hash field";
+        type enumeration {
+            enum IN_PORT;
+            enum DST_MAC;
+            enum SRC_MAC;
+            enum ETHERTYPE;
+            enum VLAN_ID;
+            enum IP_PROTOCOL;
+            enum DST_IP;
+            enum SRC_IP;
+            enum L4_DST_PORT;
+            enum L4_SRC_PORT;
+            enum INNER_DST_MAC;
+            enum INNER_SRC_MAC;
+            enum INNER_ETHERTYPE;
+            enum INNER_IP_PROTOCOL;
+            enum INNER_DST_IP;
+            enum INNER_DST_IPV4;
+            enum INNER_DST_IPV6;
+            enum INNER_SRC_IP;
+            enum INNER_SRC_IPV4;
+            enum INNER_SRC_IPV6;
+            enum INNER_L4_DST_PORT;
+            enum INNER_L4_SRC_PORT;
+            enum IPV6_FLOW_LABEL;
+        }
+    }
+
+    typedef hash-algorithm {
+        description "Represents hash algorithm";
+        type enumeration {
+            enum CRC;
+            enum XOR;
+            enum RANDOM;
+            enum CRC_32LO;
+            enum CRC_32HI;
+            enum CRC_CCITT;
+            enum CRC_XOR;
+        }
+    }
+
+    typedef timezone-name-type {
+        type string;
+        description
+            "A time zone name as used by the Time Zone Database,
+            sometimes referred to as the 'Olson Database'.
+
+            The exact set of valid values is an implementation-specific
+            matter.  Client discovery of the exact set of time zone names
+            for a particular server is out of scope.";
+        reference
+            "BCP 175: Procedures for Maintaining the Time Zone Database";
+    }
+
+    typedef yes-no {
+        description "Yes/No configuration";
+        type enumeration {
+            enum yes;
+            enum no;
+        }
+    }
+
+    typedef on-off {
+        description "On/Off configuration";
+        type enumeration {
+            enum on;
+            enum off;
+        }
+    }
+
+    typedef asic_name {
+        type string {
+            pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
+        }
+    }
+
+    typedef debug_counter_type {
+        type enumeration {
+            enum PORT_INGRESS_DROPS;
+            enum PORT_EGRESS_DROPS;
+            enum SWITCH_INGRESS_DROPS;
+            enum SWITCH_EGRESS_DROPS;
+        }
+    }
+
+    typedef counter_drop_reason {
+        type enumeration {
+            enum L2_ANY;
+            enum SMAC_MULTICAST;
+            enum SMAC_EQUALS_DMAC;
+            enum DMAC_RESERVED;
+            enum VLAN_TAG_NOT_ALLOWED;
+            enum INGRESS_VLAN_FILTER;
+            enum INGRESS_STP_FILTER;
+            enum FDB_UC_DISCARD;
+            enum FDB_MC_DISCARD;
+            enum L2_LOOPBACK_FILTER;
+            enum EXCEEDS_L2_MTU;
+            enum L3_ANY;
+            enum EXCEEDS_L3_MTU;
+            enum TTL;
+            enum L3_LOOPBACK_FILTER;
+            enum NON_ROUTABLE;
+            enum NO_L3_HEADER;
+            enum IP_HEADER_ERROR;
+            enum UC_DIP_MC_DMAC;
+            enum DIP_LOOPBACK;
+            enum SIP_LOOPBACK;
+            enum SIP_MC;
+            enum SIP_CLASS_E;
+            enum SIP_UNSPECIFIED;
+            enum MC_DMAC_MISMATCH;
+            enum SIP_EQUALS_DIP;
+            enum SIP_BC;
+            enum DIP_LOCAL;
+            enum DIP_LINK_LOCAL;
+            enum SIP_LINK_LOCAL;
+            enum IPV6_MC_SCOPE0;
+            enum IPV6_MC_SCOPE1;
+            enum IRIF_DISABLED;
+            enum ERIF_DISABLED;
+            enum LPM4_MISS;
+            enum LPM6_MISS;
+            enum BLACKHOLE_ROUTE;
+            enum BLACKHOLE_ARP;
+            enum UNRESOLVED_NEXT_HOP;
+            enum L3_EGRESS_LINK_DOWN;
+            enum DECAP_ERROR;
+            enum ACL_ANY;
+            enum ACL_INGRESS_PORT;
+            enum ACL_INGRESS_LAG;
+            enum ACL_INGRESS_VLAN;
+            enum ACL_INGRESS_RIF;
+            enum ACL_INGRESS_SWITCH;
+            enum ACL_EGRESS_PORT;
+            enum ACL_EGRESS_LAG;
+            enum ACL_EGRESS_VLAN;
+            enum ACL_EGRESS_RIF;
+            enum ACL_EGRESS_SWITCH;
+            enum EGRESS_VLAN_FILTER;
+        }
+    }
+    
+    typedef relay-agent-mode {
+        type enumeration {
+            enum forward_and_append {
+                description "Forward and append our own relay option";
+            }
+            enum forward_and_replace {
+                description "Forward, but replace theirs with ours";
+            }
+            enum forward_untouched {
+                description "Forward without changes";
+            }
+            enum discard {
+                description "Discard the packet";
+            }
+        }
+        description "This enumeration type defines what to do about a dhcp packets that already has a relay option.";
+    }    
+
+    {% if yang_model_type == "cvl" %}
+    /* Required for CVL */
+    container operation {
+        description
+            "This definition is used internally by CVL and
+            is not exposed in NBI. Leaf 'operation' allows
+            evaluation of must expression for
+            CREATE/UPDATE/DELETE operation.";
+
+        leaf operation {
+            type enumeration {
+                enum NOP;
+                enum CREATE;
+                enum UPDATE;
+                enum DELETE;
+            }
+        }
+    }
+    {% else %}
+    {% endif %}
+}

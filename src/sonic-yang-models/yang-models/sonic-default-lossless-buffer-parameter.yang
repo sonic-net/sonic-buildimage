@@ -1,0 +1,53 @@
+module sonic-default-lossless-buffer-parameter {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-default-lossless-buffer-parameter";
+
+    prefix default-lossless-buffer-parameter;
+
+    description "DEFAULT_LOSSLESS_BUFFER_PARAMETER YANG module for SONiC OS";
+
+    revision 2022-05-31 {
+        description "Initial version";
+    }
+
+    container sonic-default-lossless-buffer-parameter {
+        container DEFAULT_LOSSLESS_BUFFER_PARAMETER {
+
+            description "DEFAULT_LOSSLESS_BUFFER_PARAMETER part of config_db.json";
+
+            list DEFAULT_LOSSLESS_BUFFER_PARAMETER_LIST {
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                            error-message "Invalid default lossless buffer parameter list name.";
+                            error-app-tag default-lossless-buffer-parameter-invalid-list-name;
+                        }
+                        length 1..32 {
+                            error-message "Invalid length for the default lossless buffer parameter list name.";
+                            error-app-tag default-lossless-buffer-parameter-invalid-list-name-length;
+                        }
+                    }
+                }
+
+                leaf default_dynamic_th {
+                    type int8 {
+                        range -8..7 {
+                            error-message "Invalid default dynamic_th which should be a number in the range [-8, 7].";
+                        }
+                    }
+                    mandatory true;
+                    description "The default dynamic_th used in lossless buffer profile generated dynamically";
+                }
+
+                leaf over_subscribe_ratio {
+                    type uint16;
+                    description "The over subscribe ratio of shared headroom pool";
+                }
+            }
+        }
+    }
+}

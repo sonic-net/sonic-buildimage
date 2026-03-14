@@ -1,0 +1,213 @@
+###############################################################################
+# Managed by sonic-config-engine
+###############################################################################
+#
+# EXAMPLE.conf:
+#   An example configuration file for configuring the Net-SNMP agent ('snmpd')
+#   See the 'snmpd.conf(5)' man page for details
+#
+#  Some entries are deliberately commented out, and will need to be explicitly activated
+#
+###############################################################################
+#
+#  AGENT BEHAVIOUR
+#
+
+# Listen for connections on all ip addresses, including eth0, ipv4 lo for multi-asic platform
+# Listen on managment and loopback0 ips for single asic platform
+#
+{% macro protocol(ip_addr) %}
+{%- if ip_addr.split('%')[0]|ipv6 -%}
+{{ 'udp6' }}
+{%- else -%}
+{{ 'udp' }}
+{%- endif -%}
+{% endmacro %}
+
+{% if SNMP_AGENT_ADDRESS_CONFIG %}
+{% for (agentip, port, vrf) in SNMP_AGENT_ADDRESS_CONFIG %}
+agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if vrf %}@{{ vrf }}{% endif %}{% if port %}:{{ port }}{% endif %}{{ "" }}
+{% endfor %}
+{% else %}
+agentAddress udp:161
+agentAddress udp6:161
+{% endif %}
+
+###############################################################################
+#
+#  ACCESS CONTROL
+#
+
+                                                 #  system + hrSystem groups only
+view   systemonly  included   .1.3.6.1.2.1.1
+view   systemonly  included   .1.3.6.1.2.1.25.1
+
+                                                 #  Default access to basic system info
+
+
+{% if SNMP_COMMUNITY is defined %}
+{% for community in SNMP_COMMUNITY %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RO' %}
+rocommunity {{ community }}
+rocommunity6 {{ community }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if SNMP_COMMUNITY is defined %}
+{% for community in SNMP_COMMUNITY %}
+{% if SNMP_COMMUNITY[community]['TYPE'] == 'RW' %}
+rwcommunity {{ community }}
+rwcommunity6 {{ community }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if SNMP_USER is defined %}
+{% for user in SNMP_USER %}
+{% if SNMP_USER[user]['SNMP_USER_PERMISSION'] == 'RO' %}
+rouser {{ user }} {{ SNMP_USER[user]['SNMP_USER_TYPE'] }}
+CreateUser {{ user }} {{ SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] }} {{ SNMP_USER[user]['SNMP_USER_AUTH_PASSWORD'] }} {{ SNMP_USER[user]['SNMP_USER_ENCRYPTION_TYPE'] }} {{ SNMP_USER[user]['SNMP_USER_ENCRYPTION_PASSWORD'] }}
+{% elif SNMP_USER[user]['SNMP_USER_PERMISSION'] == 'RW' %}
+rwuser {{ user }} {{ SNMP_USER[user]['SNMP_USER_TYPE'] }}
+CreateUser {{ user }} {{ SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] }} {{ SNMP_USER[user]['SNMP_USER_AUTH_PASSWORD'] }} {{ SNMP_USER[user]['SNMP_USER_ENCRYPTION_TYPE'] }} {{ SNMP_USER[user]['SNMP_USER_ENCRYPTION_PASSWORD'] }}
+{% endif %}
+{% endfor %}
+{% else %}
+{% endif %}
+
+
+###############################################################################
+#
+#  SYSTEM INFORMATION
+#
+
+#  Note that setting these values here, results in the corresponding MIB objects being 'read-only'
+#  See snmpd.conf(5) for more details
+
+{% if SNMP is defined and SNMP.LOCATION is defined %}
+sysLocation    {{ SNMP.LOCATION.Location }}
+{% else %}
+sysLocation    public
+{% endif %}
+{% if SNMP is defined and SNMP.CONTACT is defined %}
+sysContact     {{ SNMP.CONTACT.keys() | first }} {{ SNMP.CONTACT.values() | first }}
+{% else %}
+sysContact     Azure Cloud Switch vteam <linuxnetdev@microsoft.com>
+{% endif %}
+
+                                                 # Application + End-to-End layers
+sysServices    72
+
+
+#
+#  Process Monitoring
+#
+# todo: should we enable snmp based monitoring of sswsyncd and other processes?
+
+# At least one 'sendmail' process, but no more than 10
+#proc  sendmail 10 1
+
+#  Walk the UCD-SNMP-MIB::prTable to see the resulting output
+#  Note that this table will be empty if there are no "proc" entries in the snmpd.conf file
+
+
+#
+#  Disk Monitoring
+#
+                               # 10MBs required on root disk, 5% free on /var, 10% free on all other disks
+disk       /     10000
+disk       /var  5%
+includeAllDisks  10%
+
+#  Walk the UCD-SNMP-MIB::dskTable to see the resulting output
+#  Note that this table will be empty if there are no "disk" entries in the snmpd.conf file
+
+
+#
+#  System Load
+#
+                               # Unacceptable 1-, 5-, and 15-minute load averages
+load   12 10 5
+
+#  Walk the UCD-SNMP-MIB::laTable to see the resulting output
+#  Note that this table *will* be populated, even without a "load" entry in the snmpd.conf file
+
+
+
+###############################################################################
+#
+#  ACTIVE MONITORING
+#
+# Note: disabled snmp traps due to side effect of causing snmpd to listen on all ports (0.0.0.0)
+#
+#   send SNMPv1  traps
+{% if SNMP_TRAP_CONFIG and SNMP_TRAP_CONFIG['v1TrapDest'] %}
+{% set v1SnmpTrapIp = SNMP_TRAP_CONFIG['v1TrapDest']['DestIp'] %}
+{% set v1SnmpTrapPort = SNMP_TRAP_CONFIG['v1TrapDest']['DestPort'] %}
+{% set v1SnmpTrapVrf = SNMP_TRAP_CONFIG['v1TrapDest']['vrf'] %}
+{% set v1SnmpTrapComm = SNMP_TRAP_CONFIG['v1TrapDest']['Community'] %}
+trapsink {{ v1SnmpTrapIp }}:{{ v1SnmpTrapPort }}{% if v1SnmpTrapVrf != 'None' %}%{{ v1SnmpTrapVrf }}{% endif %} {{ v1SnmpTrapComm }}{{ "" }}
+{% else %}
+#trapsink     localhost public
+{% endif %}
+#   send SNMPv2c traps
+{% if SNMP_TRAP_CONFIG and SNMP_TRAP_CONFIG['v2TrapDest'] %}
+{% set v2SnmpTrapIp = SNMP_TRAP_CONFIG['v2TrapDest']['DestIp'] %}
+{% set v2SnmpTrapPort = SNMP_TRAP_CONFIG['v2TrapDest']['DestPort'] %}
+{% set v2SnmpTrapVrf = SNMP_TRAP_CONFIG['v2TrapDest']['vrf'] %}
+{% set v2SnmpTrapComm = SNMP_TRAP_CONFIG['v2TrapDest']['Community'] %}
+trap2sink {{ v2SnmpTrapIp }}:{{ v2SnmpTrapPort }}{% if v2SnmpTrapVrf != 'None' %}%{{ v2SnmpTrapVrf }}{% endif %} {{ v2SnmpTrapComm }}{{ "" }}
+{% else %}
+#trap2sink    localhost public
+{% endif %}
+#   send SNMPv2c INFORMs
+{% if SNMP_TRAP_CONFIG and SNMP_TRAP_CONFIG['v3TrapDest'] %}
+{% set v3SnmpTrapIp = SNMP_TRAP_CONFIG['v3TrapDest']['DestIp'] %}
+{% set v3SnmpTrapPort = SNMP_TRAP_CONFIG['v3TrapDest']['DestPort'] %}
+{% set v3SnmpTrapVrf = SNMP_TRAP_CONFIG['v3TrapDest']['vrf'] %}
+{% set v3SnmpTrapComm = SNMP_TRAP_CONFIG['v3TrapDest']['Community'] %}
+trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}%{{ v3SnmpTrapVrf }}{% endif %} {{ v3SnmpTrapComm }}{{ "" }}
+{% else %}
+#informsink   localhost public
+{% endif %}
+
+#  Note that you typically only want *one* of these three lines
+#  Uncommenting two (or all three) will result in multiple copies of each notification.
+
+
+#
+#  Event MIB - automatically generate alerts
+#
+# Remember to activate the 'createUser' lines above
+#iquerySecName   internalUser
+#rouser          internalUser
+# generate traps on UCD error conditions
+#defaultMonitors          yes
+#note, this release of snmpd does not support linkUpDownNotifications
+# generate traps on linkUp/Down
+#linkUpDownNotifications  yes
+
+
+#
+#  AgentX Sub-agents
+#
+                                           #  Run as an AgentX master agent
+master          agentx
+agentXTimeout   5
+agentXRetries   4
+
+# internal socket to allow extension to other docker containers
+# Currently the other container using this is docker-fpm-frr
+# make sure this line matches bgp:/etc/snmp/frr.conf 
+# please see testing procedure in the same file to verify this works
+# to verify the SNMP docker side look for the following string in the log file:
+# INFO snmp-subagent [ax_interface] INFO: Using agentx socket type tcp with path tcp:localhost:3161
+# INFO supervisord snmp-subagent INFO:ax_interface:Using agentx socket type tcp with path tcp:localhost:3161
+agentxsocket    tcp:localhost:3161
+
+#
+#  SysDescription pass-through
+#
+
+pass -p 10 .1.3.6.1.2.1.1.1 /usr/share/snmp/sysDescr_pass.py

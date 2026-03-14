@@ -1,0 +1,56 @@
+module sonic-storm-control {
+    namespace "http://github.com/sonic-net/sonic-storm-control";
+    yang-version "1";
+
+    prefix ssc;
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "This module defines configuration and operational state
+        data for broadcast, unknown-unicast and unknown-multicast (BUM) storm-control.
+        storm-control can be enabled on ethernet interfaces.
+        Rate is defined in bits-per-second. All three types of storm-control can be
+        enabled on an interface.";
+
+    revision 2021-12-13 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-storm-control {
+        container PORT_STORM_CONTROL {
+            list PORT_STORM_CONTROL_LIST {
+                key "ifname storm_type";
+                /*scommon:key-pattern "PORT_STORM_CONTROL|{ifname}|{storm_type}";*/
+                leaf ifname {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                }
+                leaf storm_type {
+                    type enumeration{
+                        enum broadcast;
+                        enum unknown-unicast;
+                        enum unknown-multicast;
+                    }
+                }
+                leaf kbps {
+                    type uint64 {
+                        range "0..100000000" {
+                            error-message "kbps value out of range";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

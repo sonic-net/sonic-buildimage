@@ -1,0 +1,10 @@
+
+DPATH       := $($(DOCKER_SAISERVER_BRCM)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/docker-saiserver-brcm.mk platform/broadcom/docker-saiserver-brcm.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_SAISERVER_BRCM)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_SAISERVER_BRCM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SAISERVER_BRCM)_DEP_FILES   := $(DEP_FILES)
+

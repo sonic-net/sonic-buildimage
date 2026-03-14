@@ -1,0 +1,79 @@
+{
+    
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-OSFP": {"1":true, "0":false },
+               "valmap-QSFP-DD": {"1":true, "0":false }
+           }
+      },
+      "plug_status":
+      {
+        "inserted": "1",
+        "removed": "0"
+      }
+    },
+    "PSU":
+    {
+        "psu_present": 
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good": 
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "i2c":
+            {
+                "valmap": { "F2B":"exhaust", "B2F":"intake" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"18000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "i2c":
+            {
+                "valmap": {"1":"intake", "0":"exhaust"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            }
+        },
+
+        "FAN_INLET_MAX_SPEED":"14000",
+        "FAN_EXHAUST_MAX_SPEED":"12500",
+        "FAN_MAX_SPEED_TOLERANCE":"10",
+
+        "duty_cycle_to_pwm": "lambda dc: ((dc*100)/625 -1)",
+
+        "pwm_to_duty_cycle": "lambda pwm: (((pwm+1)*625+75)/100)"
+    },
+
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

@@ -1,0 +1,40 @@
+From 855e1c28dad53d6263c6c0c302438d2dc3128cc5 Mon Sep 17 00:00:00 2001
+From: Bart Van Assche <bvanassche@acm.org>
+Date: Wed, 14 Apr 2021 09:35:24 -0700
+Subject: [PATCH] Makefile.in, agent/Makefile.in: Fix parallel compilation
+
+See also https://github.com/net-snmp/net-snmp/issues/283 .
+---
+ Makefile.in       | 2 +-
+ agent/Makefile.in | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index ed729604fc..3271823143 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -179,7 +179,7 @@ perlmodules: perlmakefiles subdirs
+ 
+ perlmakefiles: perl/Makefile net-snmp-config-x
+ 
+-perl/Makefile: perl/Makefile.PL
++perl/Makefile: perl/Makefile.PL subdirs
+ 	dir=`pwd` &&							\
+ 	cd perl &&							\
+ 	if false; then							\
+diff --git a/agent/Makefile.in b/agent/Makefile.in
+index b5d692d7fe..3dab06eabd 100644
+--- a/agent/Makefile.in
++++ b/agent/Makefile.in
+@@ -303,7 +303,7 @@ libnetsnmpagent.$(LIB_EXTENSION)$(LIB_VERSION):    ${LLIBAGENTOBJS} $(USELIBS)
+ 	$(LIB_LD_CMD) $(AGENTLIB) ${LLIBAGENTOBJS} $(USELIBS) ${LAGENTLIBS} @LD_NO_UNDEFINED@ $(LDFLAGS) $(PERLLDOPTS_FOR_LIBS) @AGENTLIBS@
+ 	$(RANLIB) $(AGENTLIB)
+ 
+-libnetsnmpmibs.$(LIB_EXTENSION)$(LIB_VERSION): ${LMIBOBJS} $(AGENTLIB) $(USELIBS)
++libnetsnmpmibs.$(LIB_EXTENSION)$(LIB_VERSION): ${LMIBOBJS} $(AGENTLIB) $(USELIBS) subdirs
+ 	$(LIB_LD_CMD) $(MIBLIB) ${LMIBOBJS} $(AGENTLIB) $(USELIBS) @LD_NO_UNDEFINED@ $(LDFLAGS) ${LMIBLIBS} $(PERLLDOPTS_FOR_LIBS) @AGENTLIBS@
+ 	$(RANLIB) $(MIBLIB)
+ 
+-- 
+2.34.1
+

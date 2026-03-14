@@ -1,0 +1,9 @@
+{
+  "PORT_DATA": {
+    "PORT_TABLE:Ethernet0": {
+      "value": {
+        "oper_status": "up"
+      }
+    }
+  }
+}

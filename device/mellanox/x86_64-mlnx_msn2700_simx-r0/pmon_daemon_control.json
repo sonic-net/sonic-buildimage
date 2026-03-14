@@ -1,0 +1,8 @@
+{
+        "skip_ledd": true,
+        "skip_xcvrd": true,
+        "skip_psud": true,
+        "skip_pcied": true,
+        "skip_thermalctld": true,
+        "skip_chassis_db_init": true
+}

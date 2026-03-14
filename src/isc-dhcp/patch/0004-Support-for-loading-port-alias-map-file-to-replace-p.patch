@@ -1,0 +1,189 @@
+From 9d255bbd7d7aadac5b57cba2ab4e29cecdf0180f Mon Sep 17 00:00:00 2001
+From: Joe LeVeque <jolevequ@microsoft.com>
+Date: Fri, 26 Apr 2019 01:26:45 +0000
+Subject: [PATCH] Support for loading port alias map file to replace port name
+ with alias in circuit id
+
+---
+ relay/dhcrelay.c | 105 ++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 104 insertions(+), 1 deletion(-)
+
+diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
+index 0d9b2e7..b72b1bc 100644
+--- a/relay/dhcrelay.c
++++ b/relay/dhcrelay.c
+@@ -133,6 +133,14 @@ static void setup_streams(void);
+ char *dhcrelay_sub_id = NULL;
+ #endif
+ 
++struct interface_name_alias_tuple {
++	char if_name[IFNAMSIZ];
++	char if_alias[IFNAMSIZ];
++};
++
++static struct interface_name_alias_tuple *g_interface_name_alias_map = NULL;
++static size_t g_interface_name_alias_map_size = 0;
++
+ #ifndef UNIT_TEST
+ static void do_relay4(struct interface_info *, struct dhcp_packet *,
+ 	              unsigned int, unsigned int, struct iaddr,
+@@ -152,6 +160,10 @@ extern int strip_relay_agent_options(struct interface_info *,
+ #ifndef UNIT_TEST
+ static void request_v4_interface(const char* name, int flags);
+ 
++static int load_interface_alias_map(const char *port_alias_map_file_path);
++static int get_interface_alias_by_name(const char *if_name, char *if_alias_out);
++static void free_interface_alias_map(void);
++
+ static const char copyright[] =
+ "Copyright 2004-2022 Internet Systems Consortium.";
+ static const char arr[] = "All rights reserved.";
+@@ -167,7 +179,7 @@ char *progname;
+ "\n" \
+ "  %%%%  A single %%\n" \
+ "  %%h  Hostname of device\n" \
+-"  %%p  Name of interface that generated the request\n" \
++"  %%p  Alias of interface that generated the request\n" \
+ "  %%P  Hardware address of interface that generated the request\n" \
+ "  %%C  Client hardware address\n" \
+ "  %%I  DHCP relay agent IP Address\n" \
+@@ -180,6 +192,7 @@ char *progname;
+ "                     [-p <port> | -rp <relay-port>]\n" \
+ "                     [-pf <pid-file>] [--no-pid]\n"\
+ "                     [-m append|replace|forward|discard]\n" \
++"                     [--name-alias-map-file <name-alias-map-file>]\n" \
+ "                     [-i interface0 [ ... -i interfaceN]\n" \
+ "                     [-iu interface0 [ ... -iu interfaceN]\n" \
+ "                     [-id interface0 [ ... -id interfaceN]\n" \
+@@ -188,6 +201,7 @@ char *progname;
+ "       %s -6   [-d] [-q] [-I] [-c <hops>]\n" \
+ "                     [-p <port> | -rp <relay-port>]\n" \
+ "                     [-pf <pid-file>] [--no-pid]\n" \
++"                     [--name-alias-map-file <name-alias-map-file>]\n" \
+ "                     [-s <subscriber-id>]\n" \
+ "                     -l lower0 [ ... -l lowerN]\n" \
+ "                     -u upper0 [ ... -u upperN]\n" \
+@@ -643,6 +657,11 @@ main(int argc, char **argv) {
+ 			no_dhcrelay_pid = ISC_TRUE;
+ 		} else if (!strcmp(argv[i], "--no-pid")) {
+ 			no_pid_file = ISC_TRUE;
++		} else if (!strcmp(argv[i], "--name-alias-map-file")) {
++			if (++i == argc)
++				usage(use_noarg, argv[i-1]);
++			if (load_interface_alias_map(argv[i]) != 0)
++				log_fatal("Failed to load interface name-alias map.");
+  		} else if (argv[i][0] == '-') {
+ 			usage("Unknown command: %s", argv[i]);
+  		} else {
+@@ -865,6 +884,7 @@ main(int argc, char **argv) {
+ 	dispatch();
+ 
+ 	/* In fact dispatch() never returns. */
++	free_interface_alias_map();
+ 	return (0);
+ }
+ 
+@@ -1307,6 +1327,7 @@ format_relay_agent_rfc3046_msg(const struct interface_info *ip, struct dhcp_pack
+ 					*/
+ 					if (packet->htype && !packet->giaddr.s_addr) {
+ 						int ret = 0, vlanid = 0;
++						char ifalias[IFNAMSIZ] = { 0 };
+ 
+ 						ret = _bridgefdbquery(print_hw_addr(packet->htype, packet->hlen, packet->chaddr),
+ 											  ifname,
+@@ -1322,6 +1343,18 @@ format_relay_agent_rfc3046_msg(const struct interface_info *ip, struct dhcp_pack
+ 
+ 							strncpy(ifname, ip->name, IFNAMSIZ);
+ 						}
++
++						// Attempt to translate SONiC interface name to vendor alias
++						ret = get_interface_alias_by_name(ifname, ifalias);
++						if (ret < 0) {
++							//log_debug("Failed to retrieve alias for interface name '%s'. Defaulting to interface name.", ifname);
++						}
++						else {
++							//log_debug("Mapped interface name '%s' to alias '%s'. Adding as option 82 interface alias for MAC Address %s",
++							//		  ifname, ifalias, print_hw_addr (packet->htype, packet->hlen, packet->chaddr));
++
++							strncpy(ifname, ifalias, IFNAMSIZ);
++						}
+ 
+ 						str = ifname;
+ 					}
+@@ -2361,3 +2394,73 @@ void request_v4_interface(const char* name, int flags) {
+         interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
+         interface_dereference(&tmp, MDL);
+ }
++
++#define MAX_PORT_CONFIG_LINE_LEN 1024
++
++// Allocates and loads global map g_interface_name_alias_map
++// Also sets global g_interface_name_alias_map_size
++static int
++load_interface_alias_map(const char *port_alias_map_file_path) {
++	int i = 0;
++	FILE *fp = NULL;
++	char line[MAX_PORT_CONFIG_LINE_LEN] = { 0 };
++
++	fp = fopen(port_alias_map_file_path,"r");
++	if (fp == NULL) {
++		log_error("Unable to open %s", port_alias_map_file_path);
++		return -1;
++	}
++
++	g_interface_name_alias_map_size = 0;
++
++	// Count the number of interfaces listed in the file
++	while (fgets(line, sizeof(line), fp)) {
++		g_interface_name_alias_map_size++;
++	}
++
++	// Allocate our map accordingly
++	g_interface_name_alias_map = ((struct interface_name_alias_tuple *)
++			dmalloc((sizeof(struct interface_name_alias_tuple) * g_interface_name_alias_map_size),
++					 MDL));
++
++	// Reset file position indicator to beginning of file
++	fseek(fp, 0, SEEK_SET);
++
++	 // Every line should contain exactly one name-alias pair
++	while (fgets(line, sizeof(line), fp)) {
++		 // Each line should read as "<name><whitespace><alias>"
++		 sscanf(line, "%s %s", g_interface_name_alias_map[i].if_name, g_interface_name_alias_map[i].if_alias);
++		i++;
++	}
++
++	fclose(fp);
++
++	log_info("Loaded %d interface name-alias mappings", i);
++
++	return 0;
++}
++
++// Locates alias for port named if_name, copies alias into if_alias_out, up to a
++// max of IFNAMSIZ bytes.
++// Returns 0 on success, -1 on failure
++static int
++get_interface_alias_by_name(const char *if_name, char *if_alias_out) {
++	int i = 0;
++
++	for (i = 0; i < g_interface_name_alias_map_size; i++) {
++		if (strncmp(if_name, g_interface_name_alias_map[i].if_name, IFNAMSIZ) == 0) {
++			strncpy(if_alias_out, g_interface_name_alias_map[i].if_alias, IFNAMSIZ);
++			return 0;
++		}
++	}
++
++	return -1;
++}
++
++// Frees global map g_interface_name_alias_map
++// Sets g_interface_name_alias_map_size to 0
++static void
++free_interface_alias_map(void) {
++	free(g_interface_name_alias_map);
++	g_interface_name_alias_map_size = 0;
++}
+-- 
+2.25.1
+

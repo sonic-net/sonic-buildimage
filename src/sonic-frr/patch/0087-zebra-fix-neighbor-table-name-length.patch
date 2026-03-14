@@ -1,0 +1,47 @@
+From dd7de24d85e2a525c99bf9056dd834ba97d9a849 Mon Sep 17 00:00:00 2001
+From: Kaarle Ritvanen <kaarle.ritvanen@datakunkku.fi>
+Date: Fri, 21 Feb 2025 15:21:46 +0200
+Subject: zebra: fix neighbor table name length
+
+Toggling user-space neighbor discovery for IPv6 did not work because the
+table name was not fully copied to the Netlink message.
+
+Signed-off-by: Kaarle Ritvanen <kaarle.ritvanen@datakunkku.fi>
+---
+ zebra/rt_netlink.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 134f023f1a..37ed926144 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -22,6 +22,7 @@
+ #include <linux/neighbour.h>
+ #include <linux/rtnetlink.h>
+ #include <linux/nexthop.h>
++#include <string.h>
+ 
+ /* Hack for GNU libc version 2. */
+ #ifndef MSG_TRUNC
+@@ -5165,6 +5166,7 @@ static int netlink_neigh_table_update_ctx(const struct zebra_dplane_ctx *ctx,
+ 		struct ndtmsg ndtm;
+ 		char buf[];
+ 	} *req = data;
++	const char *name;
+ 	struct rtattr *nest;
+ 	uint8_t family;
+ 	ifindex_t idx;
+@@ -5181,8 +5183,8 @@ static int netlink_neigh_table_update_ctx(const struct zebra_dplane_ctx *ctx,
+ 	req->n.nlmsg_type = RTM_SETNEIGHTBL;
+ 	req->ndtm.ndtm_family = family;
+ 
+-	nl_attr_put(&req->n, datalen, NDTA_NAME,
+-		    family == AF_INET ? "arp_cache" : "ndisc_cache", 10);
++	name = family == AF_INET ? "arp_cache" : "ndisc_cache";
++	nl_attr_put(&req->n, datalen, NDTA_NAME, name, strlen(name) + 1);
+ 	nest = nl_attr_nest(&req->n, datalen, NDTA_PARMS);
+ 	if (nest == NULL)
+ 		return 0;
+-- 
+2.48.1
+

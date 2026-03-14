@@ -1,0 +1,129 @@
+module sonic-auto_techsupport {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-auto_techsupport";
+    prefix auto_techsupport;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Event Driven Techsupport & CoreDump Mgmt Capability in SONiC OS";
+
+    revision 2021-08-09 {
+        description "First Revision";
+    }
+
+    typedef decimal-repr {
+        type decimal64 {
+            fraction-digits 2;
+            range 0.0..99.99;
+        }
+    }
+
+    container sonic-auto_techsupport {
+
+        container AUTO_TECHSUPPORT {
+
+                description "AUTO_TECHSUPPORT part of config_db.json";
+
+                container GLOBAL {
+
+                    leaf state {
+                        description "Knob to make techsupport invocation event-driven based on core-dump generation";
+                        type stypes:admin_mode;
+                    }
+
+                    leaf rate_limit_interval  {
+                        description "Minimum time in seconds between two successive techsupport invocations. Configure 0 to explicitly disable";
+                        type uint16;
+                    }
+
+                    leaf max_techsupport_limit {
+                        /*
+                        A value between 0.0-99.99 should be specified.
+                        The actual value in bytes is calculate based on the available space in the filesystem hosting /var/dump
+                        When the limit is crossed, the older dump files are incrementally deleted
+                        */
+                        description "Max Limit in percentage for the cummulative size of ts dumps. No cleanup is performed if the value isn't configured or is 0.0";
+                        type decimal-repr;
+                    }
+
+                    leaf max_core_limit {
+                        /*
+                        A value between 0.0-99.99 should be specified.
+                        The actual value in bytes is calculated based on the available space in the filesystem hosting /var/core
+                        When the limit is crossed, the older core files are incrementally deleted
+                        */
+                        description "Max Limit in percentage for the cummulative size of core dumps. No cleanup is performed if the value isn't congiured or is 0.0";
+                        type decimal-repr;
+                    }
+
+                    leaf available_mem_threshold {
+                        description "Memory threshold; 0 to disable techsupport invocation on memory usage threshold crossing";
+                        type decimal-repr;
+                        default 10.0;
+                    }
+
+                    leaf min_available_mem {
+                        description "Minimum Free memory (in MB) that should be available for the techsupport execution to start";
+                        type uint32;
+                        default 200;
+                    }
+
+                    leaf since {
+                        /*
+                        Any valid date string of the formats specified here (https://www.gnu.org/software/coreutils/manual/html_node/Date-input-formats.html)
+                        can be used.
+                        */
+                        description "Only collect the logs & core-dumps generated since the time provided. A default value of '2 days ago' is used if this value is not set explicitly or a non-valid string is provided";
+                        type string {
+                            length 1..255;
+                        }
+                    }
+            }
+            /* end of container GLOBAL */
+        }
+        /* end of container AUTO_TECHSUPPORT */
+
+        container AUTO_TECHSUPPORT_FEATURE {
+
+            description "AUTO_TECHSUPPORT_FEATURE part of config_db.json";
+
+            list AUTO_TECHSUPPORT_FEATURE_LIST {
+
+                key "feature_name";
+
+                leaf feature_name {
+                    description "The name of this feature";
+                    /* TODO: Leafref once the FEATURE YANG is added*/
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf state {
+                    description "Enable auto techsupport invocation on the processes running inside this feature";
+                    type stypes:admin_mode;
+                }
+
+                leaf available_mem_threshold {
+                    description "Memory threshold; 0 to disable techsupport invocation on memory usage threshold crossing";
+                    type decimal-repr;
+                    default 10.0;
+                }
+
+                leaf rate_limit_interval {
+                    description "Rate limit interval for the corresponding feature. Configure 0 to explicitly disable";
+                    type uint16;
+                }
+
+            }
+            /* end of AUTO_TECHSUPPORT_FEATURE_LIST */
+        }
+        /* end of container AUTO_TECHSUPPORT_FEATURE */
+    }
+    /* end of top level container */
+}
+

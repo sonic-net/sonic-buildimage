@@ -1,0 +1,122 @@
+module sonic-vlan-sub-interface {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-vlan-sub-interface";
+
+    prefix vlan-sub-interface;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-vnet {
+        prefix svnet;
+    }
+
+    description "VLAN sub interface for SONiC OS";
+
+	revision 2025-03-06 {
+		description "Add leaf vnet_name";
+	}
+    
+    revision 2021-11-11 {
+        description "Initial version";
+    }
+
+    container sonic-vlan-sub-interface {
+        container VLAN_SUB_INTERFACE {
+
+            description "VLAN SUB INTERFACE part of config_db.json";
+
+            list VLAN_SUB_INTERFACE_LIST {
+
+                description "VLAN_SUB_INTERFACE part of config_db.json with vrf";
+
+                // encap vlan is mandatory for short name subinterfaces
+                must "(substring-before(name, '.') = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
+                     "(substring-before(name, '.') = /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name) or " +
+                     "vlan"
+                {
+                    error-message "Must condition not satisfied, no encap vlan provided for short-name format vlan sub interface";
+                }
+
+                key "name";
+
+                leaf name {
+                    must "(string-length(current()) <= 15) and " +
+                         "((substring-before(current(), '.') = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
+                         "(starts-with(substring-before(current(), '.'), 'Eth') and concat('Ethernet', substring-after(substring-before(current(), '.'), 'Eth')) = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
+                         "(substring-before(current(), '.') = /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name) or " +
+                         "(starts-with(substring-before(current(), '.'), 'Po') and concat('PortChannel', substring-after(substring-before(current(), '.'), 'Po')) = /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name))"
+                    {
+                        error-message "Must condition not satisfied, please follow vlan sub interface naming convention";
+                    }
+
+                    // check if the vlan sub interface have the form as <portname>.<vlan_id>
+                    // the vlan_id should be chosen from range [1, 4094]
+                    type string {
+                        pattern '(\w+)\.([1-9][0-9]{0,2}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    }
+                }
+
+                leaf admin_status {
+                    type stypes:admin_status;
+                }
+
+                leaf vrf_name {
+                    type leafref {
+                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                }
+
+                leaf vnet_name {
+                    description "Reference to the name of a VNET in sonic-vnet model";
+                    type leafref {
+                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                    }   
+                }
+
+                leaf loopback_action {
+                    description "Packet action when a packet ingress and gets routed on the same IP interface";
+                    type stypes:loopback_action;
+                }
+
+                leaf vlan {
+                    type uint16 {
+                        range 1..4094;
+                    }
+                }
+            }
+
+            list VLAN_SUB_INTERFACE_IPPREFIX_LIST {
+
+                description "VLAN_SUB_INTERFACE part of config_db.json with ip-prefix";
+
+                key "name ip-prefix";
+
+                leaf name {
+                    type leafref {
+                        path "../../VLAN_SUB_INTERFACE_LIST/name";
+                    }
+                }
+
+                leaf ip-prefix {
+                    type stypes:sonic-ip-prefix;
+                }
+            }
+        }
+    }
+}

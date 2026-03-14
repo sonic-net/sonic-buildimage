@@ -1,0 +1,144 @@
+module test-vlan {
+
+	namespace "http://github.com/Azure/vlan";
+	prefix vlan;
+
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import test-head {
+		prefix head;
+		revision-date 2019-07-01;
+	}
+
+	import test-port {
+		prefix port;
+		revision-date 2019-07-01;
+	}
+
+	revision 2019-07-01 {
+		description "First Revision";
+	}
+
+	container test-vlan {
+		container VLAN_INTERFACE {
+
+			description "VLAN_INTERFACE part of config_db.json";
+
+			list VLAN_INTERFACE_LIST {
+
+				key "vlanid ip-prefix";
+
+				leaf vlanid {
+					type leafref {
+						path ../../../VLAN/VLAN_LIST/vlanid;
+					}
+				}
+
+				leaf ip-prefix {
+					mandatory true;
+					type inet:ip-prefix;
+				}
+
+				leaf scope {
+					type enumeration {
+						enum global;
+						enum local;
+					}
+				}
+
+				leaf family {
+
+					/* family leaf needed for backward compatibility
+					   Both ip4 and ip6 address are string in IETF RFC 6021,
+					   so must statement can check based on : or ., family
+					   should be IPv4 or IPv6 according.
+					 */
+
+					must "(contains(../ip-prefix, ':') and current()='IPv6') or
+						(contains(../ip-prefix, '.') and current()='IPv4')";
+					type head:ip-family;
+				}
+			}
+			/* end of VLAN_INTERFACE_LIST */
+		}
+		/* end of VLAN_INTERFACE container */
+
+		container VLAN {
+
+			description "VLAN part of config_db.json";
+
+			list VLAN_LIST {
+
+				key "vlanid";
+
+				leaf vlanid {
+					type uint16 {
+						range 1..4094;
+					}
+				}
+
+				leaf description {
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf-list dhcp_servers {
+					type inet:ip-address;
+				}
+
+				leaf mtu {
+					type uint16 {
+						range 1..9216;
+					}
+				}
+
+				leaf admin_status {
+					mandatory true;
+					type head:admin_status;
+				}
+			}
+			/* end of VLAN_LIST */
+		}
+		/* end of container VLAN */
+
+		container VLAN_MEMBER {
+
+			description "VLAN_MEMBER part of config_db.json";
+
+			list VLAN_MEMBER_LIST {
+
+				key "vlanid port";
+
+				leaf vlanid {
+					type leafref {
+						path ../../../VLAN/VLAN_LIST/vlanid;
+					}
+				}
+
+				leaf port {
+					/* key elements are mandatory by default */
+					mandatory true;
+					type leafref {
+						path /port:test-port/port:PORT/port:PORT_LIST/port:port_name;
+					}
+				}
+
+				leaf tagging_mode {
+					mandatory true;
+					type head:vlan_tagging_mode;
+				}
+			}
+            /* end of list VLAN_MEMBER_LIST */
+		}
+        /* end of container VLAN_MEMBER */
+	}
+    /* end of container vlan */
+}
+/* end of module vlan */

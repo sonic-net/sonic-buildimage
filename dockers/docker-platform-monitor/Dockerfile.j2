@@ -1,0 +1,121 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Install required packages
+RUN apt-get update &&   \
+    apt-get install -y  \
+        build-essential \
+        python3-dev     \
+        ipmitool        \
+        librrd8         \
+        librrd-dev      \
+        rrdtool         \
+        python3-smbus   \
+        dmidecode       \
+        i2c-tools       \
+        psmisc          \
+        python3-netifaces \
+        libpci3         \
+        iputils-ping    \
+        pciutils        \
+        nvme-cli        \
+        ethtool         \
+        xxd
+{% if sonic_asic_platform == 'mellanox' %}
+RUN apt-get install -y dbus
+{% endif %}
+
+# smartmontools version should match the installed smartmontools in sonic_debian_extension build template
+RUN apt-get install -y -t bookworm-backports \
+        smartmontools
+
+# On Arista devices, the sonic_platform wheel is not installed in the container.
+# Instead, the installation directory is mounted from the host OS. However, this method
+# doesn't ensure all dependencies are installed in the container. So here we
+# install any dependencies required by the Arista sonic_platform package.
+# TODO: eliminate the need to install these explicitly.
+RUN pip3 install grpcio==1.51.1 \
+        grpcio-tools==1.51.1 --no-build-isolation && \
+    find /usr/local/lib/python3*/dist-packages/grpc* -name '*.so' -exec strip --strip-unneeded {} +
+
+# Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
+RUN pip3 install thrift==0.13.0
+
+# Ragile platform vendors' sonic_platform packages import these Python libraries
+RUN pip3 install requests
+
+# We install the libpci module in order to be able to do PCI transactions
+RUN pip3 install libpci
+
+# Install psutil for process and system monitoring operations
+RUN pip3 install psutil
+
+# Install blkinfo for block device information gathering operations
+RUN pip3 install blkinfo
+
+# Install smbus2 for SMBus/PMBus I2C transactions
+RUN pip3 install smbus2
+
+{% if docker_platform_monitor_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_platform_monitor_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_platform_monitor_debs.split(' ')) }}
+{%- endif %}
+
+{% if docker_platform_monitor_pydebs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("python-debs/", docker_platform_monitor_pydebs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_platform_monitor_pydebs.split(' ')) }}
+{%- endif %}
+
+{% if docker_platform_monitor_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_platform_monitor_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_platform_monitor_whls.split(' ')) }}
+{% endif %}
+
+
+# Clean up
+RUN apt-get purge -y           \
+        build-essential        \
+        python3-dev
+
+COPY ["lm-sensors.sh", "/usr/bin/"]
+COPY ["docker-pmon.supervisord.conf.j2", "docker_init.j2", "/usr/share/sonic/templates/"]
+COPY ["ssd_tools/*", "/usr/bin/"]
+COPY ["critical_processes", "/etc/supervisor"]
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+
+RUN mkdir -p /usr/share/stormond
+RUN sonic-cfggen -a "{\"CONFIGURED_PLATFORM\":\"{{CONFIGURED_PLATFORM}}\"}" -t /usr/share/sonic/templates/docker_init.j2 > /usr/bin/docker_init.sh
+RUN rm -f /usr/share/sonic/templates/docker_init.j2
+RUN chmod 755 /usr/bin/docker_init.sh
+
+FROM $BASE
+
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENTRYPOINT ["/usr/bin/docker_init.sh"]

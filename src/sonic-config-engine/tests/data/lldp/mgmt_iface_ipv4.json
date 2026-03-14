@@ -1,0 +1,12 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "switch-t0"
+        }
+    },
+    "MGMT_INTERFACE": {
+        "eth0|10.0.0.100/24": {
+            "gwaddr": "10.0.0.100"
+        }
+    }
+}

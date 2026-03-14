@@ -1,0 +1,49 @@
+module sonic-bgp-monitor {
+    namespace "http://github.com/sonic-net/sonic-bgp-monitor";
+    prefix bgpmon;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-bgp-common {
+        prefix bgpcmn;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Monitor";
+
+    revision 2022-01-11 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-monitor {
+        container BGP_MONITORS {
+            list BGP_MONITORS_LIST {
+                description "This list is to support BGP monitor configuration handled by bgpcfgd";
+                key "addr";
+
+                leaf addr {
+                    type inet:ip-address;
+                    description "BGP monitor address";
+                }
+
+                uses bgpcmn:sonic-bgp-cmn-neigh {
+                    refine name {
+                        must "current() = 'BGPMonitor'" {
+                            error-message "Invalid BGP monitor name";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

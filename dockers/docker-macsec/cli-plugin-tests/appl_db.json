@@ -1,0 +1,247 @@
+{
+  "MACSEC_EGRESS_SA_TABLE:Ethernet1:5254008f4f1c0001:1": {
+    "type": "hash",
+    "value": {
+      "sak": "1EC8572B75A840BA6B3833DC550C620D2C65BBDDAD372D27A1DFEB0CD786671B",
+      "auth_key": "35FC8F2C81BCA28A95845A4D2A1EE6EF",
+      "next_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2301455
+  },
+  "MACSEC_PORT_TABLE:Ethernet5": {
+    "type": "hash",
+    "value": {
+      "enable": "true",
+      "cipher_suite": "GCM-AES-256",
+      "send_sci": "true",
+      "enable_protect": "true",
+      "enable_encrypt": "true",
+      "enable_replay_protect": "false",
+      "replay_window": "0"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2302043
+  },
+  "MACSEC_EGRESS_SC_TABLE:Ethernet1:5254008f4f1c0001": {
+    "type": "hash",
+    "value": {
+      "encoding_an": "1"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2302194
+  },
+  "MACSEC_INGRESS_SA_TABLE:Ethernet1:525400edac5b0001:1": {
+    "type": "hash",
+    "value": {
+      "active": "true",
+      "sak": "1EC8572B75A840BA6B3833DC550C620D2C65BBDDAD372D27A1DFEB0CD786671B",
+      "auth_key": "35FC8F2C81BCA28A95845A4D2A1EE6EF",
+      "lowest_acceptable_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2302353
+  },
+  "MACSEC_INGRESS_SC_TABLE:Ethernet1:525400edac5b0001": {
+    "type": "hash",
+    "value": {
+      "Null": "Null"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2302475
+  },
+  "MACSEC_INGRESS_SC_TABLE:Ethernet0:525400edac5b0001": {
+    "type": "hash",
+    "value": {
+      "Null": "Null"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.230258
+  },
+  "MACSEC_EGRESS_SA_TABLE:Ethernet5:5254008f4f1c0001:2": {
+    "type": "hash",
+    "value": {
+      "sak": "3BEBB5BB2539D7231EB95F312B843966180B6C941750B9F1A08AF71BA4508599",
+      "auth_key": "7C59E0CD393A3BA36B8DDC4C663A11FC",
+      "next_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2302718
+  },
+  "MACSEC_INGRESS_SA_TABLE:Ethernet0:525400edac5b0001:2": {
+    "type": "hash",
+    "value": {
+      "active": "true",
+      "sak": "7F2651140F12C434F782EF9AD7791EE2CFE2BF315A568A48785E35FC803C9DB6",
+      "auth_key": "5A8B8912139551D3678B43DD0F10FFA5",
+      "lowest_acceptable_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.230298
+  },
+  "MACSEC_EGRESS_SC_TABLE:Ethernet5:5254008f4f1c0001": {
+    "type": "hash",
+    "value": {
+      "encoding_an": "2"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2303102
+  },
+  "MACSEC_PORT_TABLE:Ethernet0": {
+    "type": "hash",
+    "value": {
+      "enable": "true",
+      "cipher_suite": "GCM-AES-256",
+      "send_sci": "true",
+      "enable_protect": "true",
+      "enable_encrypt": "true",
+      "enable_replay_protect": "false",
+      "replay_window": "0"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.23036
+  },
+  "MACSEC_INGRESS_SA_TABLE:Ethernet5:5254002003660001:2": {
+    "type": "hash",
+    "value": {
+      "active": "true",
+      "sak": "3BEBB5BB2539D7231EB95F312B843966180B6C941750B9F1A08AF71BA4508599",
+      "auth_key": "7C59E0CD393A3BA36B8DDC4C663A11FC",
+      "lowest_acceptable_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2304032
+  },
+  "MACSEC_PORT_TABLE:Ethernet4": {
+    "type": "hash",
+    "value": {
+      "enable": "true",
+      "cipher_suite": "GCM-AES-256",
+      "send_sci": "true",
+      "enable_protect": "true",
+      "enable_encrypt": "true",
+      "enable_replay_protect": "false",
+      "replay_window": "0"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2304454
+  },
+  "MACSEC_EGRESS_SA_TABLE:Ethernet4:5254008f4f1c0001:1": {
+    "type": "hash",
+    "value": {
+      "sak": "234128B1F6A679E02759D521C1FF448D5CE47B2E691852281EE8E34690B348DD",
+      "auth_key": "575FC253C395DFC3E1EE42C3DB665913",
+      "next_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2304764
+  },
+  "MACSEC_INGRESS_SA_TABLE:Ethernet0:525400edac5b0001:1": {
+    "type": "hash",
+    "value": {
+      "active": "true",
+      "sak": "AE8C9BB36EA44B60375E84BC8E778596289E79240FDFA6D7BA33D3518E705A5E",
+      "auth_key": "849B69D363E2B0AA154BEBBD7C1D9487",
+      "lowest_acceptable_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.230506
+  },
+  "MACSEC_EGRESS_SC_TABLE:Ethernet0:5254008f4f1c0001": {
+    "type": "hash",
+    "value": {
+      "encoding_an": "2"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305164
+  },
+  "MACSEC_INGRESS_SA_TABLE:Ethernet4:5254002003660001:1": {
+    "type": "hash",
+    "value": {
+      "active": "true",
+      "sak": "234128B1F6A679E02759D521C1FF448D5CE47B2E691852281EE8E34690B348DD",
+      "auth_key": "575FC253C395DFC3E1EE42C3DB665913",
+      "lowest_acceptable_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305293
+  },
+  "MACSEC_EGRESS_SA_TABLE:Ethernet0:5254008f4f1c0001:2": {
+    "type": "hash",
+    "value": {
+      "sak": "7F2651140F12C434F782EF9AD7791EE2CFE2BF315A568A48785E35FC803C9DB6",
+      "auth_key": "5A8B8912139551D3678B43DD0F10FFA5",
+      "next_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305422
+  },
+  "MACSEC_INGRESS_SC_TABLE:Ethernet5:5254002003660001": {
+    "type": "hash",
+    "value": {
+      "Null": "Null"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305527
+  },
+  "MACSEC_INGRESS_SC_TABLE:Ethernet4:5254002003660001": {
+    "type": "hash",
+    "value": {
+      "Null": "Null"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305627
+  },
+  "MACSEC_PORT_TABLE:Ethernet1": {
+    "type": "hash",
+    "value": {
+      "enable": "true",
+      "cipher_suite": "GCM-AES-256",
+      "send_sci": "true",
+      "enable_protect": "true",
+      "enable_encrypt": "true",
+      "enable_replay_protect": "false",
+      "replay_window": "0"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305753
+  },
+  "MACSEC_EGRESS_SA_TABLE:Ethernet0:5254008f4f1c0001:1": {
+    "type": "hash",
+    "value": {
+      "sak": "AE8C9BB36EA44B60375E84BC8E778596289E79240FDFA6D7BA33D3518E705A5E",
+      "auth_key": "849B69D363E2B0AA154BEBBD7C1D9487",
+      "next_pn": "1",
+      "ssci": "0",
+      "salt": "000000000000000000000000"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305882
+  },
+  "MACSEC_EGRESS_SC_TABLE:Ethernet4:5254008f4f1c0001": {
+    "type": "hash",
+    "value": {
+      "encoding_an": "1"
+    },
+    "ttl": -0.001,
+    "expireat": 1651807960.2305987
+  }
+}

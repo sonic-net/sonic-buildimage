@@ -1,0 +1,11 @@
+[Unit]
+Description=Create device nodes for i2c devices.
+Requires=driver_load.service
+After=driver_load.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/bin/device_node.sh
+
+[Install]
+WantedBy=multi-user.target

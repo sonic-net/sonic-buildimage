@@ -1,0 +1,74 @@
+{#
+    Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES.
+    Apache-2.0
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+
+[
+    {
+        "BUFFER_POOL_TABLE:ingress_zero_pool": {
+            "mode": "static",
+            "type": "ingress",
+            "size": "0"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossy_pg_zero_profile" : {
+            "pool":"ingress_zero_pool",
+            "size":"0",
+            "static_th":"0"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossy_zero_profile" : {
+            "pool":"ingress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:ingress_lossless_zero_profile" : {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:egress_lossy_zero_profile" : {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "BUFFER_PROFILE_TABLE:egress_lossless_zero_profile" : {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-8"
+        },
+        "OP": "SET"
+    },
+    {
+        "control_fields" : {
+            "pgs_to_apply_zero_profile":"0",
+            "ingress_zero_profile":"ingress_lossy_pg_zero_profile"
+        },
+        "OP": "SET"
+    }
+]

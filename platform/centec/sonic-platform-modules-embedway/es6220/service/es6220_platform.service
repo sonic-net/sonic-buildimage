@@ -1,0 +1,13 @@
+[Unit]
+Description=embedway es6220 platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-embedway-es6220 start
+ExecStop=-/etc/init.d/platform-modules-embedway-es6220 stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

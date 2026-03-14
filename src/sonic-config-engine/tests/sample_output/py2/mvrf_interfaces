@@ -1,0 +1,67 @@
+#
+# =============== Managed by SONiC Config Engine DO NOT EDIT! ===============
+# generated from /usr/share/sonic/templates/interfaces.j2 using sonic-cfggen
+# file: /etc/network/interfaces
+#
+auto mgmt
+iface mgmt
+    vrf-table 5000
+# The loopback network interface for mgmt VRF that is required for applications like NTP
+    up ip link add lo-m type dummy
+    up ip link set dev lo-m master mgmt
+    up ip addr add 127.0.0.1/16 dev lo-m
+    up ip link set lo-m up
+    down ip link delete dev lo-m
+# The loopback network interface
+auto lo
+iface lo inet loopback
+   address 127.0.0.1
+   netmask 255.255.0.0
+   scope host
+   post-up ip addr del 127.0.0.1/8 dev lo
+   pre-down ip addr add 127.0.0.1/8 dev lo
+
+# The management network interface
+auto eth0
+iface eth0 inet static
+    address 10.0.0.100
+    netmask 255.255.255.0
+    network 10.0.0.0
+    broadcast 10.0.0.255
+    vrf mgmt
+    ########## management network policy routing rules
+    # management port up rules
+    up ip -4 route add default via 10.0.0.1 dev eth0 table 5000 metric 201
+    up ip -4 route add 10.0.0.0/24 dev eth0 table 5000
+    up ip -4 rule add pref 32765 from 10.0.0.100/32 table 5000
+    up ip -4 rule add pref 32764 to 11.11.11.11 table 5000
+    up ip -4 rule add pref 32764 to 22.22.22.0/23 table 5000
+    up ip rule add pref 32764 to 10.20.6.16/32 table 5000
+    # management port down rules
+    pre-down ip -4 route delete default via 10.0.0.1 dev eth0 table 5000
+    pre-down ip -4 route delete 10.0.0.0/24 dev eth0 table 5000
+    pre-down ip -4 rule delete pref 32765 from 10.0.0.100/32 table 5000
+    pre-down ip -4 rule delete pref 32764 to 11.11.11.11 table 5000
+    pre-down ip -4 rule delete pref 32764 to 22.22.22.0/23 table 5000
+    down ip rule delete pref 32764 to 10.20.6.16/32 table 5000
+iface eth0 inet6 static
+    address 2603:10e2:0:2902::8
+    netmask 64
+    network 2603:10e2:0:2902::
+    broadcast 2603:10e2:0:2902:ffff:ffff:ffff:ffff
+    vrf mgmt
+    ########## management network policy routing rules
+    # management port up rules
+    up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table 5000 metric 201
+    up ip -6 route add 2603:10e2:0:2902::/64 dev eth0 table 5000
+    up ip -6 rule add pref 32765 from 2603:10e2:0:2902::8/128 table 5000
+    up ip -6 rule add pref 32764 to 33:33:33::0/64 table 5000
+    # management port down rules
+    pre-down ip -6 route delete default via 2603:10e2:0:2902::1 dev eth0 table 5000
+    pre-down ip -6 route delete 2603:10e2:0:2902::/64 dev eth0 table 5000
+    pre-down ip -6 rule delete pref 32765 from 2603:10e2:0:2902::8/128 table 5000
+    pre-down ip -6 rule delete pref 32764 to 33:33:33::0/64 table 5000
+#
+source /etc/network/interfaces.d/*
+#
+

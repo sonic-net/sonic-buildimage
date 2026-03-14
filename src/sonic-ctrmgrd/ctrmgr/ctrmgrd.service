@@ -1,0 +1,15 @@
+[Unit]
+Description=Container Manager watcher daemon
+Requires=caclmgrd.service
+After=caclmgrd.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ctrmgrd.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

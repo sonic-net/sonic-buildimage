@@ -1,0 +1,4 @@
+48y8c-d/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-centec_v682_48y8c_d-r0
+48y8c-d/service/release.py usr/local/lib/python3.9/dist-packages
+48y8c-d/service/_Susi4.so usr/local/lib/python3.9/dist-packages
+48y8c-d/service/libSUSI-4.00.so.1 usr/local/lib/python3.9/dist-packages

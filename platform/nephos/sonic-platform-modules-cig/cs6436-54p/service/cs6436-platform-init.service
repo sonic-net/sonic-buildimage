@@ -1,0 +1,13 @@
+[Unit]
+Description=Cig CS6436-54P Platform initialization service
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cig_cs6436_util.py install
+ExecStop=/usr/local/bin/cig_cs6436_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

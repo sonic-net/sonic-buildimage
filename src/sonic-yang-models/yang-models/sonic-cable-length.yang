@@ -1,0 +1,61 @@
+module sonic-cable-length {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-cable-length";
+
+    prefix cable-length;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    description "CABLE_LENGTH YANG module for SONiC OS";
+
+    revision 2021-11-11 {
+        description "Initial version";
+    }
+
+    container sonic-cable-length {
+        container CABLE_LENGTH {
+
+            description "CABLE_LENGTH part of config_db.json";
+
+            list CABLE_LENGTH_LIST {
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                            error-message "Invalid cable length list name.";
+                            error-app-tag cable-length-invalid-list-name;
+                        }
+                        length 1..32 {
+                            error-message "Invalid length for the cable length list name.";
+                            error-app-tag cable-length-invalid-list-name-length;
+                        }
+                    }
+                }
+
+                list CABLE_LENGTH {
+                    key "port";
+
+                    leaf port {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                    }
+
+                    leaf length {
+                        type string {
+                            pattern '[0-9]+m' {
+                                error-message "Invalid cable length.";
+                                error-app-tag cable-length-invalid-length;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

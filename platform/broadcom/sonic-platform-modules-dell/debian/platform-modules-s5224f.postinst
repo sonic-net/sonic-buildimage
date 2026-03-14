@@ -1,0 +1,10 @@
+# postinst script for S5224f
+
+# Enable Dell-S5224f-platform-service
+depmod -a
+systemctl enable platform-modules-s5224f.service
+systemctl start platform-modules-s5224f.service
+
+
+#DEBHELPER#
+

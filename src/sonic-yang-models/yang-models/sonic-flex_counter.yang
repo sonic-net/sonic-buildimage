@@ -1,0 +1,435 @@
+module sonic-flex_counter {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-flex_counter";
+    prefix flex_counter;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "FLEX COUNTER YANG Module for SONiC OS";
+
+    revision 2020-04-10 {
+        description "First Revision";
+    }
+
+    container sonic-flex_counter {
+
+        container FLEX_COUNTER_TABLE {
+
+            /* typedef specific to FLEX_COUNTER_TABLE */
+            typedef flex_status {
+                type enumeration {
+                    enum enable;
+                    enum disable;
+                }
+            }
+
+            typedef flex_delay_status {
+                type stypes:boolean_type;
+            }
+
+            typedef poll_interval {
+                type uint32 {
+                    range 100..4294967295;
+                }
+            }
+
+            typedef bulk_chunk_size {
+                type uint32 {
+                    range 1..4294967295;
+                }
+            }
+
+            typedef bulk_chunk_size_per_prefix {
+                type string;
+                description "Bulk chunk size per counter name prefix";
+            }
+
+            description "FLEX_COUNTER_TABLE part of config_db.json";
+
+            /* below are in alphabetical order */
+
+            container BUFFER_POOL_WATERMARK {
+                /* BUFFER_POOL_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container DEBUG_COUNTER {
+                /* DEBUG_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+            }
+
+            container ENI {
+                /* ENI_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container DASH_METER {
+                /* METER_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container PFCWD {
+                /* PFC_WD_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+            }
+
+            container PG_DROP {
+                /* PG_DROP_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container PG_WATERMARK {
+                /* PG_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container PORT {
+                /* PORT_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container PORT_RATES {
+                /* PORT_RATES_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+            }
+
+            container PORT_BUFFER_DROP {
+                /* PORT_BUFFER_DROP_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container PORT_PHY_ATTR {
+                /* PORT_PHY_ATTR_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container QUEUE {
+                /* QUEUE_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container QUEUE_WATERMARK {
+                /* QUEUE_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
+            }
+
+            container RIF {
+                /* RIF_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container RIF_RATES {
+                /* RIF_RATE_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+            }
+
+            container ACL {
+                /* ACL_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container FLOW_CNT_TRAP {
+                /* HOSTIF_TRAP_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container FLOW_CNT_ROUTE {
+                /* ROUTE_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container TUNNEL {
+                /* TUNNEL_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container WRED_ECN_QUEUE {
+                /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP  */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container WRED_ECN_PORT {
+                /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container SRV6 {
+                /* SRV6_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container SWITCH {
+                /* SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+        }
+        /* end of container FLEX_COUNTER_TABLE */
+
+        container FLOW_COUNTER_ROUTE_PATTERN {
+            description "Flow counter route pattern of config_db.json";
+
+            list FLOW_COUNTER_ROUTE_PATTERN_LIST {
+
+                key "ip_prefix";
+
+                leaf ip_prefix {
+                    type inet:ip-prefix;
+                }
+
+                leaf max_match_count {
+                    type uint32 {
+                        range 1..50;
+                    }
+                }
+
+            }
+
+            list FLOW_COUNTER_ROUTE_PATTERN_VRF_LIST {
+
+                key "vrf_name ip_prefix";
+
+                leaf vrf_name {
+                    /*
+                    We don't use vrf_name reference here because:
+                    1. User is allowed to configure a VRF that does not exist yet here, orchagent is designed to resolve the VRF name once the VRF is created.
+                    2. The field vrf_name accept both VRF name and VNET name.
+                    */
+                    type string {
+                        length 0..16;
+                    }
+                }
+
+                leaf ip_prefix {
+                    type inet:ip-prefix;
+                }
+
+                leaf max_match_count {
+                    type uint32 {
+                        range 1..50;
+                    }
+                }
+
+            }
+        }
+        /* end of container FLOW_COUNTER_ROUTE_PATTERN */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-flex_counter */

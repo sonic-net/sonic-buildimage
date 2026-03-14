@@ -1,0 +1,12 @@
+sonic-pddf-platform-modules (1.1) unstable; urgency=low
+
+  * Enhancing PDDF: Added support for cpldmux, gpio and some extra attributes
+
+ -- Broadcom <fuzail.khan@broadcom.com>  Wed, 10 Jun 2020 10:10:10 -0800
+
+sonic-pddf-platform-modules (1.0) unstable; urgency=low
+
+  * Basic tempelate for PDDF
+  * Initial release
+
+ -- Broadcom <satish-k.kumar@broadcom.com>  Wed, 26 Jun 2019 10:10:10 -0800

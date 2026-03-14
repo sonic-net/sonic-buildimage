@@ -1,0 +1,256 @@
+{
+    "BUFFER_POOL_CORRECT_TYPE_INGRESS_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_TYPE_EGRESS_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "egress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "both"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_TYPE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "wrong"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_MANDATORY_TYPE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_MODE_STATIC_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_MODE_DYNAMIC_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "dynamic",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_MODE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "wrong",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_XOFF_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "xoff": "300",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_XOFF_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "xoff": "wrong",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_SIZE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_SIZE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "wrong",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost":{
+                        "buffer_model": "dynamic"
+                }
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "ingress_lossless_pool",
+                    "mode": "dynamic",
+                    "percentage": "99",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_CORRECT_LARGE_PERCENTAGE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost":{
+                        "buffer_model": "dynamic"
+                }
+            }
+        },
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "ingress_lossless_pool",
+                    "mode": "dynamic",
+                    "percentage": "200",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "ingress_lossless_pool",
+                    "mode": "static",
+                    "percentage": "-10",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "ingress_lossless_pool",
+                    "mode": "static",
+                    "percentage": "NaN",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_WITH_SIZE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "ingress_lossless_pool",
+                    "mode": "static",
+                    "percentage": "90",
+                    "size": "12766208",
+                    "type": "ingress"
+                }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+Source: sonic-ruijie-platform-modules
+Section: main
+Priority: extra
+Maintainer: Ruijie Network <sonic_rd@ruijie.com.cn>
+Standards-Version: 3.9.3
+
+Package: platform-modules-ruijie-b6510-48vs8cq
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+

@@ -1,0 +1,177 @@
+module sonic-wred-profile {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-wred-profile";
+
+    prefix wrd;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "WRED_PROFILE yang Module for SONiC OS";
+
+    revision 2021-04-01 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-wred-profile {
+
+        container WRED_PROFILE {
+
+            description "WRED_PROFILE part of config_db.json";
+
+            list WRED_PROFILE_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
+                        length 1..32 {
+                            error-message "Invalid length for wred profile name.";
+                            error-app-tag wred-profile-name-invalid-length;
+                        }
+                    }
+                    description "WRED profile name";
+                }
+
+                leaf yellow_min_threshold {
+                    type uint64;
+                    units bytes;
+                    description "Yellow minimum threshold bytes";
+                }
+
+                leaf green_min_threshold {
+                    type uint64;
+                    units bytes;
+                    description "Green minimum threshold bytes";
+                }
+
+                leaf red_min_threshold {
+                    type uint64;
+                    units bytes;
+                    description "Red minimum threshold bytes";
+                }
+
+                leaf yellow_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../yellow_min_threshold)" {
+                        error-message "Yellow max threshold must be greater than or equal to min threshold";
+                    }
+                    description "Yellow maximum threshold bytes";
+                }
+
+                leaf green_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../green_min_threshold)" {
+                         error-message "Green max threshold must be greater than or equal to min threshold";
+                    }
+                    description "Green maximum threshold bytes";
+                }
+
+                leaf red_max_threshold {
+                    type uint64;
+                    units bytes;
+                    must "(current() >= current()/../red_min_threshold)" {
+                        error-message "Red max threshold must be greater than or equal to min threshold";
+                    }
+                    description "Red maximum threshold bytes";
+                }
+
+                leaf ecn {
+
+                    type enumeration {
+
+                        enum ecn_none {
+                            description "Disable ECN marking for all colors.";
+                        }
+
+                        enum ecn_green {
+                            description "Enable ECN marking for green color. Yellow and red are disabled.";
+                        }
+
+                        enum ecn_yellow {
+                            description "Enable ECN marking for yellow color. Green and red are disabled.";
+                        }
+
+                        enum ecn_red {
+                            description "Enable ECN marking for red color. Green and red are disabled.";
+                        }
+
+                        enum ecn_green_yellow {
+                            description "Enable ECN marking for green and yellow colors. Red is disabled.";
+                        }
+
+                        enum ecn_green_red {
+                            description "Enable ECN marking for green and red colors. Yellow is disabled.";
+                        }
+
+                        enum ecn_yellow_red {
+                            description "Enable ECN marking for yellow and red colors. Green is disabled.";
+                        }
+
+                        enum ecn_all {
+                            description "Enable ECN marking for all colors.";
+
+                        }
+                    }
+                    default ecn_none;
+                    description "ECN mode";
+                }
+
+                leaf wred_green_enable {
+                    type boolean;
+                    default false;
+                    description "Green enable";
+                }
+
+                leaf wred_yellow_enable {
+                    type boolean;
+                    default false;
+                    description "Yellow enable";
+                }
+
+                leaf wred_red_enable {
+                    type boolean;
+                    default false;
+                    description "Red enable";
+                }
+
+                leaf yellow_drop_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    default 100;
+                    description "Yellow drop probability";
+                }
+
+                leaf green_drop_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    default 100;
+                    description "Green drop probability";
+                }
+
+                leaf red_drop_probability {
+                    type uint64 {
+                        range "0..100";
+                    }
+                    units percent;
+                    default 100;
+                    description "Red drop probability";
+                }
+            }
+        }
+    }
+}
