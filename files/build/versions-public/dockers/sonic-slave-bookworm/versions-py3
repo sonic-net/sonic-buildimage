@@ -111,7 +111,7 @@ pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.21
 pyelftools==0.29
-pyfakefs==6.1.1
+pyfakefs==6.1.4
 pygments==2.14.0
 pygobject==3.42.2
 pyhamcrest==2.0.3
@@ -132,8 +132,8 @@ pytz==2022.7.1
 pyxdg==0.28
 pyyaml==6.0
 pyyaml-include==2.2
-redis==7.2.0
-regex==2026.2.19
+redis==7.3.0
+regex==2026.2.28
 requests==2.28.1
 roman==3.3
 scapy==2.5.0

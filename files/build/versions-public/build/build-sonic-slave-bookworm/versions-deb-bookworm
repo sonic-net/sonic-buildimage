@@ -10,7 +10,7 @@ libdoca-sdk-dpdk-bridge-dev==3.3.0055-1
 libdoca-sdk-flow-dev==3.3.0055-1
 libgrpc-dev==1.39.0-1
 libibverbs-dev==2601.0.1-1
-libnl-3-200==3.7.0-0.2+b1sonic1
+libnetsnmptrapd40==5.9.3+dfsg-2+deb12u1
 libnl-3-dev==3.7.0-0.2+b1sonic1
 libnl-cli-3-200==3.7.0-0.2+b1sonic1
 libnl-cli-3-dev==3.7.0-0.2+b1sonic1
@@ -18,7 +18,6 @@ libnl-genl-3-200==3.7.0-0.2+b1sonic1
 libnl-genl-3-dev==3.7.0-0.2+b1sonic1
 libnl-nf-3-200==3.7.0-0.2+b1sonic1
 libnl-nf-3-dev==3.7.0-0.2+b1sonic1
-libnl-route-3-200==3.7.0-0.2+b1sonic1
 libnl-route-3-dev==3.7.0-0.2+b1sonic1
 libnvhws-dev==26.01.3-1
 libnvhws1==26.01.3-1
@@ -31,6 +30,9 @@ libsairedis-dev==1.0.0
 libsaithrift-dev==0.9.4
 libsaivs==1.0.0
 libsaivs-dev==1.0.0
+libsnmp-base==5.9.3+dfsg-2+deb12u1
+libsnmp-dev==5.9.3+dfsg-2+deb12u1
+libsnmp40==5.9.3+dfsg-2+deb12u1
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libteam-dev==1.31-1
@@ -39,7 +41,7 @@ libteam5==1.31-1
 libteamdctl0==1.31-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-libyang-dev==3.12.2-1
+libyang-dev==1.0.73
 libyang3==3.12.2-1
 mlnx-dpdk==22.11.0-2510.2.1
 mlnx-dpdk-dev==22.11.0-2510.2.1
@@ -58,5 +60,5 @@ sonic-bmp==0.1
 sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 stp==1.0.0
-sys-sdk-dev==1.mlnx.4.8.3404
-sys-sdk-main==1.mlnx.4.8.3404
+sys-sdk-dev==1.mlnx.4.8.3412
+sys-sdk-main==1.mlnx.4.8.3412
