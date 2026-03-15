@@ -1,6 +1,8 @@
+#!/bin/bash
+
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +18,21 @@
 # limitations under the License.
 #
 
-# sedutil package for Mellanox platforms
-SEDUTIL_GITHUB_URL = https://github.com/ChubbyAnt/sedutil
-SEDUTIL_VERSION = 1.15-5ad84d8
-SEDUTIL = sedutil_$(SEDUTIL_VERSION)_$(CONFIGURED_ARCH).deb
-$(SEDUTIL)_SRC_PATH = $(PLATFORM_PATH)/sedutil
+# Mellanox: read default SED password from TPM bank 3 (0x81010003).
+# Outputs the password to stdout on success; nothing on failure.
 
-SONIC_MAKE_DEBS += $(SEDUTIL)
+TPM_BANK_DEFAULT="0x81010003"
+tpm_sed_auth=""
 
-export SEDUTIL_GITHUB_URL
-export SEDUTIL_VERSION
-export SEDUTIL
+source /usr/local/bin/sed_pw_utils.sh
+
+get_tpm_sed_auth
+
+if [ -z "$tpm_sed_auth" ]; then
+    out=$(tpm2_unseal -c "$TPM_BANK_DEFAULT" 2>/dev/null)
+else
+    out=$(tpm2_unseal -c "$TPM_BANK_DEFAULT" -p "$tpm_sed_auth" 2>/dev/null)
+fi
+if [ -n "$out" ]; then
+    printf '%s' "$out"
+fi

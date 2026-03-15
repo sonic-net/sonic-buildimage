@@ -587,6 +587,19 @@ j2 files/build_templates/bmc_config.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/soni
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/bmc_config.json
 sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/bmc_config.json
 
+# SED TPM bank addresses (platform-specific)
+if [[ $CONFIGURED_PLATFORM == mellanox ]]; then
+    export sed_tpm_bank_a="0x81010001"
+    export sed_tpm_bank_b="0x81010002"
+fi
+
+# Generate /etc/sonic/sed_config.conf when SED TPM bank addresses were set
+if [ -n "$sed_tpm_bank_a" ] && [ -n "$sed_tpm_bank_b" ]; then
+    j2 files/build_templates/sed_config.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/sonic/sed_config.conf
+    sudo LANG=c chroot $FILESYSTEM_ROOT chown root:root /etc/sonic/sed_config.conf
+fi
+
 ## Copy over clean-up script
 sudo cp ./files/scripts/core_cleanup.py $FILESYSTEM_ROOT/usr/bin/core_cleanup.py
 
