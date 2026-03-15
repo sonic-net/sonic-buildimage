@@ -2163,15 +2163,19 @@
                 "dhcpv6_servers": [
                     "2a04:5555:41::11"
                 ],
-                "rfc6939_support": "true",
-                "interface_id": "true"
+                "dhcpv6_option": {
+                    "rfc6939_support": "true",
+                    "interface_id": "true"
+                }
             },
             "Vlan777": {
                 "dhcpv6_servers": [
                     "2a04:5555:41::11"
                 ],
-                "rfc6939_support": "true",
-                "interface_id": "true"
+                "dhcpv6_option": {
+                    "rfc6939_support": "true",
+                    "interface_id": "true"
+                }
             }
         },
         "DHCPV4_RELAY": {
