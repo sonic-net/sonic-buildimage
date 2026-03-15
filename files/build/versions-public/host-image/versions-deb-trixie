@@ -22,7 +22,7 @@ ca-certificates==20250419
 cgroup-tools==3.1.0-2+b2
 chrony==4.6.1-3
 conntrack==1:1.4.8-2+b1
-containerd.io==1.7.27-1
+containerd.io==1.7.28-2~debian.13~trixie
 cpio==2.15+dfsg-2
 cpp==4:14.2.0-1
 cpp-14==14.2.0-19
@@ -43,8 +43,8 @@ device-tree-compiler==1.7.2-2+b1
 distro-info-data==0.66+deb13u1
 dmidecode==3.6-2
 dmsetup==2:1.02.205-2
-docker-ce==5:28.2.2-1~debian.13~trixie
-docker-ce-cli==5:28.2.2-1~debian.13~trixie
+docker-ce==5:28.5.2-1~debian.13~trixie
+docker-ce-cli==5:28.5.2-1~debian.13~trixie
 dpkg-dev==1.22.21
 e2fsprogs==1.47.2-3+b7
 eatmydata==131-2
@@ -80,7 +80,7 @@ grub2-common==2.06-13+deb13u1
 haveged==1.9.19-12
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
-hw-management==1.mlnx.7.0050.2930
+hw-management==1.mlnx.7.0050.3002
 i2c-tools==4.4-2
 ifmetric==0.3-5+b1
 ifupdown2==3.0.0-1
@@ -211,6 +211,7 @@ libncursesw6==6.5+20250216-2
 libnet1==1.3+dfsg-2
 libnetfilter-conntrack3==1.1.0-1
 libnfnetlink0==1.0.2-3
+libnftables1==1.1.3-1
 libnftnl11==1.2.9-1
 libnghttp2-14==1.64.0-1.1
 libnghttp3-9==1.8.0-1
@@ -324,8 +325,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.73-1
-linux-perf==6.12.73-1
+linux-libc-dev==6.12.74-2
+linux-perf==6.12.74-2
 linux-sysctl-defaults==4.12
 locales==2.41-12+deb13u1
 logrotate==3.22.0-1+b2
@@ -352,9 +353,9 @@ ndisc6==1.0.7-1+b1
 net-tools==2.10-1.3
 netbase==6.5
 netfilter-persistent==1.0.23
+nftables==1.1.3-1
 nslcd==0.9.13-1
 nvme-cli==2.13-2
-opennsl-modules==7.1.0.0
 openssh-client==1:10.0p1-7+fips
 openssh-server==1:10.0p1-7+fips
 openssh-sftp-server==1:10.0p1-7+fips
@@ -406,6 +407,7 @@ python3-pip==25.1.1+dfsg-1
 python3-pkg-resources==78.1.1-0.1
 python3-ply==3.11-9
 python3-prefixed==0.7.0-1
+python3-psutil==7.0.0-2
 python3-pycparser==2.22-2
 python3-regex==0.1.20241106-1+b1
 python3-requests==2.32.3+dfsg-5
@@ -449,7 +451,7 @@ sqlite3==3.46.1-7
 squashfs-tools==1:4.6.1-1+b1
 ssh==1:10.0p1-7+fips
 sudo==1.9.16p2-3
-sx-kernel==1.mlnx.4.8.3404
+sx-kernel==1.mlnx.4.8.3412
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-7
 syslog-counter==1.0.0
@@ -469,6 +471,7 @@ ucf==3.0052
 udev==257.9-1~deb13u1
 unzip==6.0-29
 usbutils==1:018-2
+util-linux-extra==2.41-5
 uuid-runtime==2.41-5
 vim==2:9.1.1230-2
 vim-common==2:9.1.1230-2
