@@ -1,0 +1,773 @@
+From f79a24fa06b9845920edbd532cf53d2d817409d8 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 28 Oct 2025 18:54:31 +0100
+Subject: [PATCH 1/8] zebra: Use zebra enums for seg6local actions
+
+The switch statement for seg6local actions in the netlink encoding path
+switches on a variable of type `seg6local_action_t`, a Zebra-internal
+enum. However, the `case` labels are using constants from the Linux
+kernel header (`SEG6_LOCAL_ACTION_*`).
+
+This only works because the values of the Zebra enum and the kernel
+enum are currently identical. This is conceptually incorrect and would
+lead to bugs if the values diverge.
+
+This commit fixes the `case` statements to use the proper, Zebra enum
+constants (`ZEBRA_SEG6_LOCAL_ACTION_*`).
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index f8913e6cbd00..1705ed5e9304 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -3326,14 +3326,14 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 						return 0;
+ 
+ 					switch (action) {
+-					case SEG6_LOCAL_ACTION_END:
++					case ZEBRA_SEG6_LOCAL_ACTION_END:
+ 						if (!nl_attr_put32(
+ 						    &req->n, buflen,
+ 						    SEG6_LOCAL_ACTION,
+ 						    SEG6_LOCAL_ACTION_END))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_X:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+ 						if (!nl_attr_put32(
+ 						    &req->n, buflen,
+ 						    SEG6_LOCAL_ACTION,
+@@ -3345,7 +3345,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 						    sizeof(struct in6_addr)))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_T:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+ 						if (!nl_attr_put32(
+ 						    &req->n, buflen,
+ 						    SEG6_LOCAL_ACTION,
+@@ -3357,7 +3357,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 						    ctx6->table))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_DX4:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+ 						if (!nl_attr_put32(
+ 						    &req->n, buflen,
+ 						    SEG6_LOCAL_ACTION,
+@@ -3369,7 +3369,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 						    sizeof(struct in_addr)))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_DX6:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+ 						if (!nl_attr_put32(&req->n,
+ 								   buflen,
+ 								   SEG6_LOCAL_ACTION,
+@@ -3381,7 +3381,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 								 sizeof(struct in6_addr)))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_DT6:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+ 						if (!nl_attr_put32(
+ 						    &req->n, buflen,
+ 						    SEG6_LOCAL_ACTION,
+@@ -3393,7 +3393,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 						    ctx6->table))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_DT4:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+ 						if (!nl_attr_put32(
+ 							    &req->n, buflen,
+ 							    SEG6_LOCAL_ACTION,
+@@ -3405,7 +3405,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 							    ctx6->table))
+ 							return 0;
+ 						break;
+-					case SEG6_LOCAL_ACTION_END_DT46:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+ 						if (!nl_attr_put32(
+ 							    &req->n, buflen,
+ 							    SEG6_LOCAL_ACTION,
+
+From d9e3ada542688798f2ac2a8e4622df8a8b1a2203 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 28 Oct 2025 18:55:42 +0100
+Subject: [PATCH 2/8] zebra: Fix a typo in the error log for unsupported
+ seg6local behaviors
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 1705ed5e9304..3d938d6d61d6 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -2055,8 +2055,7 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+-				zlog_err("%s: unsupport seg6local behaviour action=%u",
+-					 __func__,
++				zlog_err("%s: unsupported seg6local behavior, action=%u", __func__,
+ 					 nexthop->nh_srv6->seg6local_action);
+ 				return false;
+ 			}
+@@ -3424,7 +3423,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 											 nh, buflen);
+ 						break;
+ 					default:
+-						zlog_err("%s: unsupport seg6local behaviour action=%u",
++						zlog_err("%s: unsupported seg6local behavior, action=%u",
+ 							 __func__, action);
+ 						return 0;
+ 					}
+
+From cdd70e2db2c5927c5924ee1d340296ee1a8cd065 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 28 Oct 2025 19:03:46 +0100
+Subject: [PATCH 3/8] zebra: Generalize signature of End.B6.Encaps encoding
+ helper
+
+Change the parameter of `netlink_nexthop_msg_encode_end_b6_encaps`
+from `struct buf_req *` to `struct nlmsghdr *`.
+
+This change is required to enable the function to be called from
+`_netlink_route_build_singlepath` in a subsequent commit.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 3d938d6d61d6..47856383ff2b 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -3084,18 +3084,18 @@ static ssize_t fill_srh_end_b6_encaps(char *buffer, size_t buflen, struct seg6_s
+ 	return srhlen;
+ }
+ 
+-static int netlink_nexthop_msg_encode_end_b6_encaps(struct buf_req *req, const struct nexthop *nh,
+-						    size_t buflen)
++static int netlink_nexthop_msg_encode_end_b6_encaps(struct nlmsghdr *nlmsg,
++						    const struct nexthop *nh, size_t buflen)
+ {
+ 	int srh_len;
+ 	char srh_buf[4096];
+ 
+-	if (!nl_attr_put32(&req->n, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_B6_ENCAP))
++	if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_B6_ENCAP))
+ 		return 0;
+ 	srh_len = fill_srh_end_b6_encaps(srh_buf, sizeof(srh_buf), nh->nh_srv6->seg6_segs);
+ 	if (srh_len < 0)
+ 		return 0;
+-	if (!nl_attr_put(&req->n, buflen, SEG6_LOCAL_SRH, srh_buf, srh_len))
++	if (!nl_attr_put(nlmsg, buflen, SEG6_LOCAL_SRH, srh_buf, srh_len))
+ 		return 0;
+ 	return 1;
+ }
+@@ -3417,10 +3417,9 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 							return 0;
+ 						break;
+ 					case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+-						netlink_nexthop_msg_encode_end_b6_encaps((struct buf_req
+-												  *)
+-												 req,
+-											 nh, buflen);
++						netlink_nexthop_msg_encode_end_b6_encaps(&req->n,
++											 nh,
++											 buflen);
+ 						break;
+ 					default:
+ 						zlog_err("%s: unsupported seg6local behavior, action=%u",
+
+From 9ea8f3146ea0504a89a406d6a02d311e16da6419 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 28 Oct 2025 19:04:35 +0100
+Subject: [PATCH 4/8] zebra: Handle End.B6.Encaps behavior in single-path route
+ encoding
+
+The ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP action is handled
+in the nexthop encoding path (`netlink_nexthop_msg_encode`), but it
+is missing from the single-path route encoding path
+(`_netlink_route_build_singlepath`).
+
+As a result, the installation of a seg6local route with the
+End.B6.Encaps behavior fails when kernel nexthop objects are not
+used.
+
+This commit extends the rt_netlink code to handle this action in the
+single-path route encoding path as well.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 47856383ff2b..9493dd7e660c 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -104,6 +104,9 @@ struct buf_req {
+ static const char ipv4_ll_buf[16] = "169.254.0.1";
+ static struct in_addr ipv4_ll;
+ 
++static int netlink_nexthop_msg_encode_end_b6_encaps(struct nlmsghdr *nlmsg,
++						    const struct nexthop *nh, size_t buflen);
++
+ /* Is this a ipv4 over ipv6 route? */
+ static bool is_route_v4_over_v6(unsigned char rtm_family,
+ 				enum nexthop_types_t nexthop_type)
+@@ -2046,9 +2049,11 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 						   ctx->table))
+ 					return false;
+ 				break;
++			case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
++				netlink_nexthop_msg_encode_end_b6_encaps(nlmsg, nexthop, req_size);
++				break;
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_S:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+
+From 2789dbe0e0495b19da9ddaa30d3f52707e1cef21 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 28 Oct 2025 19:07:26 +0100
+Subject: [PATCH 5/8] zebra: Explicitly list all seg6local action cases in
+ switch statement
+
+The switch statement for handling seg6local actions in
+`netlink_nexthop_msg_encode` uses a `default` case to catch all
+unsupported actions.
+
+This commit replaces the `default` with explicit `case` statements
+for each unsupported action. This is a safer pattern that ensures
+the compiler will generate a warning if a new enum member is added
+without being explicitly handled.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 9493dd7e660c..30fc88a9f0b2 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -3426,7 +3426,14 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 											 nh,
+ 											 buflen);
+ 						break;
+-					default:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_S:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
++					case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
++					case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+ 						zlog_err("%s: unsupported seg6local behavior, action=%u",
+ 							 __func__, action);
+ 						return 0;
+
+From df4a41fd2efdf59c9f33086c52b62c556555dca5 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 29 Oct 2025 09:55:54 +0100
+Subject: [PATCH 6/8] zebra: Refactor seg6local encoding into common helper
+ function
+
+The logic for encoding SRv6 seg6local info is
+duplicated across two different code paths: the single-path route
+builder (`_netlink_route_build_singlepath`) and the nexthop message
+encoder (`netlink_nexthop_msg_encode`).
+
+This commit extracts the common logic into a new static helper
+function and refactors original functions to use this new helper.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 294 ++++++++++++---------------------------------
+ 1 file changed, 80 insertions(+), 214 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 30fc88a9f0b2..cd80b1445c39 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1926,6 +1926,83 @@ _netlink_nexthop_encode_seg6local_flavor(const struct nexthop *nexthop,
+ 	return true;
+ }
+ 
++static bool _netlink_nexthop_encode_seg6local_info(const struct nexthop *nexthop,
++						   struct nlmsghdr *nlmsg, size_t buflen)
++{
++	const struct seg6local_context *ctx;
++
++	ctx = &nexthop->nh_srv6->seg6local_ctx;
++
++	switch (nexthop->nh_srv6->seg6local_action) {
++	case ZEBRA_SEG6_LOCAL_ACTION_END:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_X))
++			return false;
++		if (!nl_attr_put(nlmsg, buflen, SEG6_LOCAL_NH6, &ctx->nh6, sizeof(struct in6_addr)))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_T:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_T))
++			return false;
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_TABLE, ctx->table))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_DX4))
++			return false;
++		if (!nl_attr_put(nlmsg, buflen, SEG6_LOCAL_NH4, &ctx->nh4, sizeof(struct in_addr)))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_DX6))
++			return false;
++		if (!nl_attr_put(nlmsg, buflen, SEG6_LOCAL_NH6, &ctx->nh6, sizeof(struct in6_addr)))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_DT6))
++			return false;
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_TABLE, ctx->table))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_DT4))
++			return false;
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_VRFTABLE, ctx->table))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_ACTION, SEG6_LOCAL_ACTION_END_DT46))
++			return false;
++		if (!nl_attr_put32(nlmsg, buflen, SEG6_LOCAL_VRFTABLE, ctx->table))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
++		if (!netlink_nexthop_msg_encode_end_b6_encaps(nlmsg, nexthop, buflen))
++			return false;
++		break;
++	case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_S:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
++	case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
++		zlog_err("%s: unsupported seg6local behavior, action=%u", __func__,
++			 nexthop->nh_srv6->seg6local_action);
++		return false;
++	}
++
++	if (!_netlink_nexthop_encode_seg6local_flavor(nexthop, nlmsg, buflen))
++		return false;
++
++	return true;
++}
++
+ /* This function takes a nexthop as argument and adds
+  * the appropriate netlink attributes to an existing
+  * netlink message.
+@@ -1961,9 +2038,7 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 		if (nexthop->nh_srv6->seg6local_action !=
+ 		    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+ 			struct rtattr *nest;
+-			const struct seg6local_context *ctx;
+ 
+-			ctx = &nexthop->nh_srv6->seg6local_ctx;
+ 			if (!nl_attr_put16(nlmsg, req_size, RTA_ENCAP_TYPE,
+ 					   LWTUNNEL_ENCAP_SEG6_LOCAL))
+ 				return false;
+@@ -1972,101 +2047,7 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 			if (!nest)
+ 				return false;
+ 
+-			switch (nexthop->nh_srv6->seg6local_action) {
+-			case ZEBRA_SEG6_LOCAL_ACTION_END:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_X))
+-					return false;
+-				if (!nl_attr_put(nlmsg, req_size,
+-						 SEG6_LOCAL_NH6, &ctx->nh6,
+-						 sizeof(struct in6_addr)))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_T))
+-					return false;
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_TABLE,
+-						   ctx->table))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_DX4))
+-					return false;
+-				if (!nl_attr_put(nlmsg, req_size,
+-						 SEG6_LOCAL_NH4, &ctx->nh4,
+-						 sizeof(struct in_addr)))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_DX6))
+-					return false;
+-				if (!nl_attr_put(nlmsg, req_size,
+-						 SEG6_LOCAL_NH6, &ctx->nh6,
+-						 sizeof(struct in6_addr)))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_DT6))
+-					return false;
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_TABLE,
+-						   ctx->table))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_DT4))
+-					return false;
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_VRFTABLE,
+-						   ctx->table))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_ACTION,
+-						   SEG6_LOCAL_ACTION_END_DT46))
+-					return false;
+-				if (!nl_attr_put32(nlmsg, req_size,
+-						   SEG6_LOCAL_VRFTABLE,
+-						   ctx->table))
+-					return false;
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+-				netlink_nexthop_msg_encode_end_b6_encaps(nlmsg, nexthop, req_size);
+-				break;
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_S:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+-			case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
+-			case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+-				zlog_err("%s: unsupported seg6local behavior, action=%u", __func__,
+-					 nexthop->nh_srv6->seg6local_action);
+-				return false;
+-			}
+-
+-			if (!_netlink_nexthop_encode_seg6local_flavor(
+-				    nexthop, nlmsg, req_size))
++			if (!_netlink_nexthop_encode_seg6local_info(nexthop, nlmsg, req_size))
+ 				return false;
+ 
+ 			nl_attr_nest_end(nlmsg, nest);
+@@ -3311,12 +3292,7 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 			if (nh->nh_srv6) {
+ 				if (nh->nh_srv6->seg6local_action !=
+ 				    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+-					uint32_t action;
+-					const struct seg6local_context *ctx6;
+-
+ 					req->nhm.nh_family = AF_INET6;
+-					action = nh->nh_srv6->seg6local_action;
+-					ctx6 = &nh->nh_srv6->seg6local_ctx;
+ 					encap = LWTUNNEL_ENCAP_SEG6_LOCAL;
+ 					if (!nl_attr_put(&req->n, buflen,
+ 							 NHA_ENCAP_TYPE,
+@@ -3329,119 +3305,9 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 					if (!nest)
+ 						return 0;
+ 
+-					switch (action) {
+-					case ZEBRA_SEG6_LOCAL_ACTION_END:
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_ACTION,
+-						    SEG6_LOCAL_ACTION_END))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_ACTION,
+-						    SEG6_LOCAL_ACTION_END_X))
+-							return 0;
+-						if (!nl_attr_put(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_NH6, &ctx6->nh6,
+-						    sizeof(struct in6_addr)))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_ACTION,
+-						    SEG6_LOCAL_ACTION_END_T))
+-							return 0;
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_TABLE,
+-						    ctx6->table))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_ACTION,
+-						    SEG6_LOCAL_ACTION_END_DX4))
+-							return 0;
+-						if (!nl_attr_put(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_NH4, &ctx6->nh4,
+-						    sizeof(struct in_addr)))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+-						if (!nl_attr_put32(&req->n,
+-								   buflen,
+-								   SEG6_LOCAL_ACTION,
+-								   SEG6_LOCAL_ACTION_END_DX6))
+-							return 0;
+-						if (!nl_attr_put(&req->n, buflen,
+-								 SEG6_LOCAL_NH6,
+-								 &ctx6->nh6,
+-								 sizeof(struct in6_addr)))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_ACTION,
+-						    SEG6_LOCAL_ACTION_END_DT6))
+-							return 0;
+-						if (!nl_attr_put32(
+-						    &req->n, buflen,
+-						    SEG6_LOCAL_TABLE,
+-						    ctx6->table))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+-						if (!nl_attr_put32(
+-							    &req->n, buflen,
+-							    SEG6_LOCAL_ACTION,
+-							    SEG6_LOCAL_ACTION_END_DT4))
+-							return 0;
+-						if (!nl_attr_put32(
+-							    &req->n, buflen,
+-							    SEG6_LOCAL_VRFTABLE,
+-							    ctx6->table))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+-						if (!nl_attr_put32(
+-							    &req->n, buflen,
+-							    SEG6_LOCAL_ACTION,
+-							    SEG6_LOCAL_ACTION_END_DT46))
+-							return 0;
+-						if (!nl_attr_put32(
+-							    &req->n, buflen,
+-							    SEG6_LOCAL_VRFTABLE,
+-							    ctx6->table))
+-							return 0;
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+-						netlink_nexthop_msg_encode_end_b6_encaps(&req->n,
+-											 nh,
+-											 buflen);
+-						break;
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_S:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+-					case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
+-					case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+-						zlog_err("%s: unsupported seg6local behavior, action=%u",
+-							 __func__, action);
++					if (!_netlink_nexthop_encode_seg6local_info(nh, &req->n,
++										    buflen))
+ 						return 0;
+-					}
+-
+-					if (!_netlink_nexthop_encode_seg6local_flavor(
+-						    nh, &req->n, buflen))
+-						return false;
+ 
+ 					nl_attr_nest_end(&req->n, nest);
+ 				}
+
+From 857d5dc912b5b01f667cd838dd6f7d9c15adcd85 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 29 Oct 2025 09:56:32 +0100
+Subject: [PATCH 7/8] zebra: Refactor seg6 encoding into common helper function
+
+The logic for encoding SRv6 seg6 info is
+duplicated across two different code paths: the single-path route
+builder (`_netlink_route_build_singlepath`) and the nexthop message
+encoder (`netlink_nexthop_msg_encode`).
+
+This commit extracts the common logic into a new static helper
+function and refactors original functions to use this new helper.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 39 ++++++++++++++++++++-------------------
+ 1 file changed, 20 insertions(+), 19 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index cd80b1445c39..848937541ae7 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1886,6 +1886,21 @@ static ssize_t fill_seg6ipt_encap(char *buffer, size_t buflen,
+ 	return sizeof(struct seg6_iptunnel_encap) + srhlen;
+ }
+ 
++static bool _netlink_nexthop_encode_seg6_info(struct nlmsghdr *nlmsg, size_t buflen,
++					      struct seg6_seg_stack *segs)
++{
++	char tun_buf[4096];
++	ssize_t tun_len;
++
++	tun_len = fill_seg6ipt_encap(tun_buf, sizeof(tun_buf), segs);
++	if (tun_len < 0)
++		return false;
++	if (!nl_attr_put(nlmsg, buflen, SEG6_IPTUNNEL_SRH, tun_buf, tun_len))
++		return false;
++
++	return true;
++}
++
+ static bool
+ _netlink_nexthop_encode_seg6local_flavor(const struct nexthop *nexthop,
+ 					 struct nlmsghdr *nlmsg, size_t buflen)
+@@ -2056,8 +2071,6 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 		if (nexthop->nh_srv6->seg6_segs &&
+ 		    nexthop->nh_srv6->seg6_segs->num_segs &&
+ 		    !sid_zero(nexthop->nh_srv6->seg6_segs)) {
+-			char tun_buf[4096];
+-			ssize_t tun_len;
+ 			struct rtattr *nest;
+ 
+ 			if (!nl_attr_put16(nlmsg, req_size, RTA_ENCAP_TYPE,
+@@ -2066,13 +2079,8 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 			nest = nl_attr_nest(nlmsg, req_size, RTA_ENCAP);
+ 			if (!nest)
+ 				return false;
+-			tun_len =
+-				fill_seg6ipt_encap(tun_buf, sizeof(tun_buf),
+-						   nexthop->nh_srv6->seg6_segs);
+-			if (tun_len < 0)
+-				return false;
+-			if (!nl_attr_put(nlmsg, req_size, SEG6_IPTUNNEL_SRH,
+-					 tun_buf, tun_len))
++			if (!_netlink_nexthop_encode_seg6_info(nlmsg, req_size,
++							       nexthop->nh_srv6->seg6_segs))
+ 				return false;
+ 			nl_attr_nest_end(nlmsg, nest);
+ 		}
+@@ -3315,8 +3323,6 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 				if (nh->nh_srv6->seg6_segs && nh->nh_srv6->seg6_segs->num_segs &&
+ 				    !sid_zero(nh->nh_srv6->seg6_segs) &&
+ 				    nh->nh_srv6->seg6local_action == ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+-					char tun_buf[4096];
+-					ssize_t tun_len;
+ 
+ 					if (!nl_attr_put16(&req->n, buflen,
+ 					    NHA_ENCAP_TYPE,
+@@ -3326,14 +3332,9 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 					    NHA_ENCAP | NLA_F_NESTED);
+ 					if (!nest)
+ 						return 0;
+-					tun_len = fill_seg6ipt_encap(
+-						tun_buf, sizeof(tun_buf),
+-						nh->nh_srv6->seg6_segs);
+-					if (tun_len < 0)
+-						return 0;
+-					if (!nl_attr_put(&req->n, buflen,
+-							 SEG6_IPTUNNEL_SRH,
+-							 tun_buf, tun_len))
++					if (!_netlink_nexthop_encode_seg6_info(&req->n, buflen,
++									       nh->nh_srv6
++										       ->seg6_segs))
+ 						return 0;
+ 					nl_attr_nest_end(&req->n, nest);
+ 				}
+
+From 4826a8c44d2a10317409816459abf00f3084e50b Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Sun, 2 Nov 2025 15:00:23 +0000
+Subject: [PATCH 8/8] zebra: Fix a couple of style issues reported by
+ clang-format
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/rt_netlink.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 848937541ae7..d1cfc4e545c7 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -2068,8 +2068,7 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 			nl_attr_nest_end(nlmsg, nest);
+ 		}
+ 
+-		if (nexthop->nh_srv6->seg6_segs &&
+-		    nexthop->nh_srv6->seg6_segs->num_segs &&
++		if (nexthop->nh_srv6->seg6_segs && nexthop->nh_srv6->seg6_segs->num_segs &&
+ 		    !sid_zero(nexthop->nh_srv6->seg6_segs)) {
+ 			struct rtattr *nest;
+ 
+@@ -3322,8 +3321,8 @@ ssize_t netlink_nexthop_msg_encode(uint16_t cmd,
+ 
+ 				if (nh->nh_srv6->seg6_segs && nh->nh_srv6->seg6_segs->num_segs &&
+ 				    !sid_zero(nh->nh_srv6->seg6_segs) &&
+-				    nh->nh_srv6->seg6local_action == ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+-
++				    nh->nh_srv6->seg6local_action ==
++					    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+ 					if (!nl_attr_put16(&req->n, buflen,
+ 					    NHA_ENCAP_TYPE,
+ 					    LWTUNNEL_ENCAP_SEG6))
