@@ -40,8 +40,20 @@ if [ -z "$syslog_counter" ]; then
     syslog_counter="false"
 fi
 
+tmpconf=$(mktemp /tmp/rsyslog.conf.XXXXXX)
+trap 'rm -f "$tmpconf"' EXIT
+
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
-    > /etc/rsyslog.conf
+    > "$tmpconf"
 
-systemctl restart rsyslog
+# Only restart rsyslog when the generated config differs from the running one.
+# This avoids the ~4s restart delay on Trixie caused by systemd sandboxing
+# directives (PrivateTmp, ProtectSystem, etc.) tearing down namespaces on stop.
+# On first boot (no existing config) or after config changes, a full restart
+# is performed. When config is unchanged (e.g. warm/fast reboot), we skip the
+# restart entirely — no delay, no log gap.
+if ! cmp -s "$tmpconf" /etc/rsyslog.conf; then
+    cp "$tmpconf" /etc/rsyslog.conf
+    systemctl restart rsyslog
+fi
