@@ -115,6 +115,13 @@ start() {
         # Leave a mark for syncd scripts running inside docker.
         touch /host/warmboot$DEV/warm-starting
     else
+        # Flush ASIC_DB to prevent stale data issues on syncd restart
+        # This ensures that if syncd restarts before swss, it won't read stale lane maps
+        # Flush ASIC_DB unless in warm boot (do not flush during warm boot)
+        debug "Flushing ASIC_DB before syncd start to prevent stale data on restart..."
+        $SONIC_DB_CLI ASIC_DB FLUSHDB
+        debug "ASIC_DB flushed successfully"
+    else
         rm -f /host/warmboot$DEV/warm-starting
     fi
 
