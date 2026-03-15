@@ -306,6 +306,12 @@ module sonic-acl {
 					description "Tunnel Termination Flag";
 					type boolean;
 				}
+
+				leaf DISABLE_ARS_FORWARDING {
+					description "Disable ARS forwarding on matching packets";
+					type boolean;
+					default false;
+				}
 			}
 			/* end of ACL_RULE_LIST */
 		}
