@@ -99,6 +99,16 @@ if [ -e /etc/bf.cfg ]; then
 	. /etc/bf.cfg
 fi
 
+if [ -n "$NPU_TIME" ]; then
+	log "Setting system time from NPU: $NPU_TIME"
+	date -s "@$NPU_TIME"
+	log "System time set to: $(date)"
+	if [ -e /dev/rtc0 ]; then
+		hwclock --systohc --utc
+		log "Hardware clock synced from system time"
+	fi
+fi
+
 # Flags that can be overwritten by the bf.cfg
 declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
 declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"
