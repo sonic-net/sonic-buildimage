@@ -76,7 +76,6 @@ ply==3.11
 prompt-toolkit==3.0.14
 protobuf==4.25.3
 psutil==5.8.0
-ptyprocess==0.7.0
 py==1.10.0
 pyang==2.4.0
 pyangbind==0.8.1
@@ -95,13 +94,12 @@ pyroute2==0.5.14
 pytest==6.0.2
 pytest-cov==2.10.1
 pytest-runner==5.2
-python-apt==2.2.1
+python-apt==2.2.1.1
 python-dateutil==2.8.1
 python-debian==0.1.39
 python-magic==0.4.20
 pytz==2021.1
 pyxdg==0.27
-pyyaml==5.4.1
 redis==5.0.4
 regex==2024.5.15
 requests==2.25.1
@@ -109,6 +107,7 @@ roman==2.0.0
 scapy==2.4.4
 service-identity==18.1.0
 setuptools==49.6.0
+setuptools-scm==8.1.0
 six==1.16.0
 snowballstemmer==2.1.0
 soupsieve==2.2.1
@@ -118,6 +117,7 @@ stdeb==0.10.0
 stgit==0.19
 thrift==0.13.0
 toml==0.10.1
+tomli==2.4.0
 traitlets==5.0.5
 twisted==20.3.0
 typing-extensions==3.7.4.3

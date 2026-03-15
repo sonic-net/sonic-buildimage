@@ -2,4 +2,4 @@ libnl-3-200==3.5.0-1
 libnl-3-dev==3.5.0-1
 libnl-route-3-200==3.5.0-1
 libnl-route-3-dev==3.5.0-1
-linux-headers-6.1.0-29-2-armmp==6.1.123-1
+linux-headers-6.1.0-29-2-arm64==6.1.123-1
