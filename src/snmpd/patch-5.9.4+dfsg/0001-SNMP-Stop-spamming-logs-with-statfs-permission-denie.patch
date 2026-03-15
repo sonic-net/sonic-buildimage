@@ -1,0 +1,25 @@
+From 8bb8849524aba2124be3279a5197ad5fbfe166b2 Mon Sep 17 00:00:00 2001
+From: pavel-shirshov <pavelsh@microsoft.com>
+Date: Mon, 27 Aug 2018 16:50:16 +0800
+Subject: [PATCH] [SNMP] Stop spamming logs with statfs permission denied log
+
+---
+ agent/mibgroup/hardware/fsys/fsys_mntctl.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/agent/mibgroup/hardware/fsys/fsys_mntctl.c b/agent/mibgroup/hardware/fsys/fsys_mntctl.c
+index 782c8ed..7819fe4 100644
+--- a/agent/mibgroup/hardware/fsys/fsys_mntctl.c
++++ b/agent/mibgroup/hardware/fsys/fsys_mntctl.c
+@@ -167,8 +167,6 @@ netsnmp_fsys_arch_load( void )
+             continue;
+ 
+         if ( statfs( entry->path, &stat_buf ) < 0 ) {
+-            snprintf( tmpbuf, sizeof(tmpbuf), "Cannot statfs %s", entry->path );
+-            snmp_log_perror( tmpbuf );
+             continue;
+         }
+         entry->units =  stat_buf.f_bsize;
+-- 
+2.18.0
+
