@@ -16,11 +16,14 @@
 # limitations under the License.
 #
 
-# Mellanox Firmware Manager package
+# Mellanox Platform Utils package
 
-MELLANOX_FW_MANAGER = mellanox_fw_manager-1.0.0-py3-none-any.whl
-$(MELLANOX_FW_MANAGER)_SRC_PATH = $(PLATFORM_PATH)/fw-manager
-$(MELLANOX_FW_MANAGER)_PYTHON_VERSION = 3
-SONIC_PYTHON_WHEELS += $(MELLANOX_FW_MANAGER)
+MELLANOX_PLATFORM_UTILS = mellanox_platform_utils-1.0.0-py3-none-any.whl
+$(MELLANOX_PLATFORM_UTILS)_SRC_PATH = $(PLATFORM_PATH)/platform-utils
+$(MELLANOX_PLATFORM_UTILS)_DEPENDS = $(SONIC_PLATFORM_API_PY3)
+$(MELLANOX_PLATFORM_UTILS)_DEBS_DEPENDS = $(PYTHON3_SWSSCOMMON)
 
-export mellanox_fw_manager_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(MELLANOX_FW_MANAGER))"
+$(MELLANOX_PLATFORM_UTILS)_PYTHON_VERSION = 3
+SONIC_PYTHON_WHEELS += $(MELLANOX_PLATFORM_UTILS)
+
+export mellanox_platform_utils_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(MELLANOX_PLATFORM_UTILS))"
