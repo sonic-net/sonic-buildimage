@@ -60,7 +60,8 @@ while :; do
         
         if [[ "$clock_name" != "mlx5_ptp" ]]; then
             # set CLOCK_REALTIME
-            "$PHC_CTL" "$dev" set 2>/dev/null
+            # Keep successful syncs silent to avoid rsyslogd ratelimit memory issue due to PID churn.
+            "$PHC_CTL" -q -Q "$dev" set >/dev/null
             PHC_CTL_EXIT_CODE=$?
             if [[ $PHC_CTL_EXIT_CODE -ne 0 ]]; then
                 echo "Error: Failed to sync clock for $dev (phc_ctl exit code: $PHC_CTL_EXIT_CODE)" >&2
