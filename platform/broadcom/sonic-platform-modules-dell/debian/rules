@@ -10,7 +10,7 @@ endif
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f s5448f z9332f z9432f s5296f n3248pxe n3248te e3224f z9664f
+MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f s5448f z9332f z9432f s5296f n3248pxe n3248te e3224f z9664f z9864f
 COMMON_DIR := common
 
 %:
@@ -54,6 +54,9 @@ override_dh_auto_configure:
 		elif [ $$mod = "z9664f" ]; then \
 			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9664f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+		elif [ $$mod = "z9864f" ]; then \
+                        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9864f_fpga_ocores.c; \
+                        cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 		fi; \
 	done)
 
@@ -134,6 +137,9 @@ override_dh_auto_clean:
 		elif [ $$mod = "z9664f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9664f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+                elif [ $$mod = "z9864f" ]; then \
+                        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9864f_fpga_ocores.c; \
+                        rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 		fi; \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
 	done)

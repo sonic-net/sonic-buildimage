@@ -5,7 +5,7 @@ import json
 import re
 import sys
 
-level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS", "GEARBOX_GLOBAL_MEDIA_SETTINGS", "GEARBOX_PORT_MEDIA_SETTINGS"]
+level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS", "SPEED_MEDIA_SETTINGS", "GEARBOX_GLOBAL_MEDIA_SETTINGS", "GEARBOX_PORT_MEDIA_SETTINGS"]
 
 si_param_list = [
     "preemphasis",
@@ -43,6 +43,7 @@ si_param_list = [
     "rxpolarity",
     "interface_type"
 ]
+
 lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
