@@ -43,10 +43,10 @@ parameters:
   - stretch
 - name: registry_url
   type: string
-  default: sonicdev-microsoft.azurecr.io
+  default: publicmirror.azurecr.io
 - name: registry_conn
   type: string
-  default: sonicdev
+  default: publicmirror
 
 stages:
 - stage: Build

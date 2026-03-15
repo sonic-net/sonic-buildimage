@@ -343,7 +343,7 @@ SONIC_VERSION_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/vcache
 #
 # Set the env variable ENABLE_DOCKER_BASE_PULL = y to enable pulling sonic-slave docker from registry
 REGISTRY_PORT ?= 443
-REGISTRY_SERVER ?= sonicdev-microsoft.azurecr.io
+REGISTRY_SERVER ?= publicmirror.azurecr.io
 REGISTRY_SERVER_PATH ?=
 
 # BUILD_MULTIASIC_KVM - if set to y multi-asic KVM images will be generated.
