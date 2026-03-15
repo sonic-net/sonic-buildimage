@@ -1,0 +1,65 @@
+From e32619b050bc83a4604dc9035c0bdb82ce81a987 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 25 Sep 2025 07:17:44 +0000
+Subject: [PATCH] bgpd: Fix incorrect flag checks for SRv6 SID allocation
+
+BGP has a command to allocate a SID for a specific address family:
+
+```
+router bgp ASN vrf VRFNAME
+ address-family <ipv4|ipv6> unicast
+  sid vpn export <auto | explicit X:X::X:X>
+ !
+!
+```
+
+We use two `vpn_policy` flags to indicate the allocation mode:
+- `BGP_VPN_POLICY_TOVPN_SID_AUTO` is set when the SID is allocated in
+  auto mode.
+- `BGP_VPN_POLICY_TOVPN_SID_EXPLICIT` is set when the SID is allocated
+  in explicit mode.
+
+The BGP Vty code has a check to prevent configuring both auto and
+explicit modes at the same time:
+
+- If a user tries to allocate a SID in auto mode for an address family
+  and the `BGP_VPN_POLICY_TOVPN_SID_EXPLICIT` flag is already set, it
+  indicates that the SID has been already allocated in explicit mode,
+  and the configuration should be rejected.
+- If a user tries to allocate a SID in explicit mode and the
+  `BGP_VPN_POLICY_TOVPN_SID_AUTO` flag is already set, it indicates
+  that the SID has been already allocated in auto mode, and the
+  configuration should be rejected.
+
+However, the current implementation incorrectly checks the wrong flags
+`BGP_VRF_TOVPN_SID_EXPLICIT` and `BGP_VRF_TOVPN_SID_AUTO`, which are
+intended for different use cases.
+
+This commit resolves the issue by ensuring the BGP Vty code
+checks the correct flags, `BGP_VPN_POLICY_TOVPN_SID_AUTO` and
+`BGP_VPN_POLICY_TOVPN_SID_EXPLICIT`.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_vty.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 1a5b22403733..71990cdebb84 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10266,12 +10266,12 @@ DEFPY (af_sid_vpn_export,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 	if ((sid_auto || sid_idx != 0) &&
+-	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VRF_TOVPN_SID_EXPLICIT)) {
++	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT)) {
+ 		vty_out(vty, "it's already configured as explicit-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 	if ((sid_idx != 0 || sid_explicit) &&
+-	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VRF_TOVPN_SID_AUTO)) {
++	    CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO)) {
+ 		vty_out(vty, "it's already configured as auto-mode.\n");
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}

@@ -1,0 +1,216 @@
+From 415d2bde2d8fe91192b8f910eae29af071a15fc3 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 29 Sep 2025 11:41:15 +0200
+Subject: [PATCH 1/4] bgpd: remove useless blank line
+
+Remove useless blank line from a previous commit.
+
+Fixes: eee085f4ab99 ("bgpd: add support to export both SRv6 and MPLS VPN prefixes")
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 64e7e3501e10..1096c4e8e2c7 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -1830,7 +1830,6 @@ void vpn_leak_from_vrf_update(struct bgp *to_bgp,	     /* to */
+ 	struct ecommunity *new_ecom = NULL;
+ 	struct ecommunity *rtlist_ecom;
+ 
+-
+ 	if (debug)
+ 		zlog_debug("%s: from vrf %s", __func__, from_bgp->name_pretty);
+ 
+
+From 4c3290b9badf934bb1d71dc07cc66e42c59c4bb3 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 29 Sep 2025 11:42:06 +0200
+Subject: [PATCH 2/4] bgpd: ease srv6 encapsulation code readability
+
+Add a common if brace for MPLS.
+
+Fixes: 8e6bb4a07078 ("bgpd: add neighbor <encapsulation-srv6|encapsulation-mpls> command")
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_route.c | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 5de3e25eeee6..bfa7ab32deb7 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -2620,19 +2620,19 @@ bool subgroup_announce_check(struct bgp_dest *dest, struct bgp_path_info *pi,
+ 		}
+ 	}
+ 
+-	if (safi == SAFI_MPLS_VPN &&
+-	    CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
+-	    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
+-	    !pi->attr->srv6_l3vpn && !pi->attr->srv6_vpn)
+-		/* MPLS update not advertised if SRv6 is autorised, but not MPLS */
+-		return false;
++	if (safi == SAFI_MPLS_VPN) {
++		if (CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
++		    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
++		    !pi->attr->srv6_l3vpn && !pi->attr->srv6_vpn)
++			/* MPLS update not advertised if SRv6 is autorised, but not MPLS */
++			return false;
+ 
+-	if (safi == SAFI_MPLS_VPN &&
+-	    CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
+-	    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
+-	    (pi->attr->srv6_l3vpn || pi->attr->srv6_vpn))
+-		/* SRv6 update not advertised if MPLS is autorised, but not SRv6 */
+-		return false;
++		if (CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_MPLS) &&
++		    !CHECK_FLAG(peer->af_flags[afi][safi], PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) &&
++		    (pi->attr->srv6_l3vpn || pi->attr->srv6_vpn))
++			/* SRv6 update not advertised if MPLS is autorised, but not SRv6 */
++			return false;
++	}
+ 
+ 	bgp_peer_remove_private_as(bgp, afi, safi, peer, attr);
+ 	bgp_peer_as_override(bgp, afi, safi, peer, attr);
+
+From 767b52e46827e7ba3c7094fd75617b6c27102471 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 29 Sep 2025 11:46:49 +0200
+Subject: [PATCH 3/4] bgpd: change order of if condition
+
+The test on the safi case is the most important here. Put it in first
+order.
+
+Fixes: 6ea7565da1b5 ("bgpd: handle l3vpn bgp updates at reception, be it MPLS or SRv6")
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_route.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index bfa7ab32deb7..4932f4a6b07c 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -5058,8 +5058,8 @@ void bgp_update_check_valid_flags(struct bgp *bgp, struct peer *peer, struct bgp
+ 		    CHECK_FLAG(peer->flags, PEER_FLAG_IS_RFAPI_HD)) {
+ 			if (accept_own)
+ 				bgp_path_info_set_flag(dest, pi, BGP_PATH_ACCEPT_OWN);
+-			if (pi->peer && pi->peer->bgp->peer_self != pi->peer &&
+-			    safi == SAFI_MPLS_VPN) {
++			if (safi == SAFI_MPLS_VPN && pi->peer &&
++			    pi->peer->bgp->peer_self != pi->peer) {
+ 				if (pi->attr->srv6_l3vpn || pi->attr->srv6_vpn) {
+ 					if (peergroup_af_flag_check(peer, afi, SAFI_MPLS_VPN,
+ 								    PEER_FLAG_CONFIG_ENCAPSULATION_SRV6) ||
+
+From bb3cc609aa78ae3f77cc0293c77a47d6f217f07c Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 29 Sep 2025 11:58:24 +0200
+Subject: [PATCH 4/4] topotests: bgp_srv6l3vpn_sid, use retry decorator to
+ control bgp paths
+
+Simplify the code by using the retry decorator available in
+common_config. Apply it to the _check_show_bgp_ipv6_vpn_selected
+command.
+
+Fixes: 46eccc620771 ("topotests: bgp_srv6l3vpn_sid, add test to check for incoming BGP paths")
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../test_bgp_srv6l3vpn_sid.py                 | 38 ++++++-------------
+ 1 file changed, 12 insertions(+), 26 deletions(-)
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+index cd35873ef594..933152bc92ee 100755
+--- a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
++++ b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+@@ -33,7 +33,7 @@
+ from lib import topotest
+ from lib.topogen import Topogen, TopoRouter, get_topogen
+ from lib.topolog import logger
+-from lib.common_config import required_linux_kernel_version
++from lib.common_config import required_linux_kernel_version, retry
+ from lib.checkping import check_ping
+ 
+ 
+@@ -760,6 +760,7 @@ def test_sid_reenable_both_srv6_and_mpls():
+     )
+ 
+ 
++@retry(retry_timeout=10)
+ def _check_show_bgp_ipv6_vpn_selected(router, prefix, mpls, srv6):
+     output = json.loads(router.vtysh_cmd(f"show bgp ipv6 vpn {prefix} json"))
+     found_srv6 = False
+@@ -789,7 +790,7 @@ def _check_show_bgp_ipv6_vpn_selected(router, prefix, mpls, srv6):
+                     f"MPLS path 'valid' value for {prefix} unexpected, expected {mpls}"
+                 )
+     if found_mpls and found_srv6:
+-        return None
++        return True
+     return f"only one path has been found : MPLS {found_mpls}, SRv6 {found_srv6}"
+ 
+ 
+@@ -809,16 +810,11 @@ def test_sid_configure_r2_listener_as_srv6():
+         """
+     )
+ 
+-    test_func = functools.partial(
+-        _check_show_bgp_ipv6_vpn_selected,
+-        tgen.gears["r2"],
+-        "2001:8::/64",
+-        mpls=False,
+-        srv6=True,
++    success = _check_show_bgp_ipv6_vpn_selected(
++        tgen.gears["r2"], "2001:8::/64", mpls=False, srv6=True
+     )
+-    success, _ = topotest.run_and_expect(test_func, None, count=10, wait=3)
+     assert (
+-        success
++        success is True
+     ), "network 2001:8::/64 selected for SRv6, unselected for MPLS: not found on r2"
+ 
+ 
+@@ -838,16 +834,11 @@ def test_sid_configure_r2_listener_as_srv6_and_mpls():
+         """
+     )
+ 
+-    test_func = functools.partial(
+-        _check_show_bgp_ipv6_vpn_selected,
+-        tgen.gears["r2"],
+-        "2001:8::/64",
+-        mpls=True,
+-        srv6=True,
++    success = _check_show_bgp_ipv6_vpn_selected(
++        tgen.gears["r2"], "2001:8::/64", mpls=True, srv6=True
+     )
+-    success, _ = topotest.run_and_expect(test_func, None, count=10, wait=3)
+     assert (
+-        success
++        success is True
+     ), "network 2001:8::/64 selected for MPLS, selected for SRv6: not found on r2"
+ 
+ 
+@@ -867,16 +858,11 @@ def test_sid_configure_r2_listener_as_mpls():
+         """
+     )
+ 
+-    test_func = functools.partial(
+-        _check_show_bgp_ipv6_vpn_selected,
+-        tgen.gears["r2"],
+-        "2001:8::/64",
+-        mpls=True,
+-        srv6=False,
++    success = _check_show_bgp_ipv6_vpn_selected(
++        tgen.gears["r2"], "2001:8::/64", mpls=True, srv6=False
+     )
+-    success, _ = topotest.run_and_expect(test_func, None, count=10, wait=3)
+     assert (
+-        success
++        success is True
+     ), "network 2001:8::/64 selected for MPLS, unselected for SRv6: not found on r2"
+ 
+ 

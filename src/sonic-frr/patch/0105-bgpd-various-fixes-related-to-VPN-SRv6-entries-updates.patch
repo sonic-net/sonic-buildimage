@@ -1,0 +1,1644 @@
+From e3c2bc32f0654c0173dba753cd78c6da247c0683 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 20 Aug 2025 15:45:06 +0200
+Subject: [PATCH 1/8] topotests: bgp_srv6l3vpn_sid, check that locator change
+ impacts VRF only
+
+When removing the BGP instance from a VRF instance, all SIDs from all
+BGP instances are reallocated. To illustrate, before:
+
+> r1# show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2002:db8:1:1:1::  End.DT6     VRF 'vrf20'    bgp(0)             loc2       dynamic
+
+The expectation is to only reallocate the SID of the BGP which has its
+locator updated.
+
+> r1# show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf20'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:3::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../topotests/bgp_srv6l3vpn_sid/r2/vrf20_rib_one_locator.json | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/r2/vrf20_rib_one_locator.json b/tests/topotests/bgp_srv6l3vpn_sid/r2/vrf20_rib_one_locator.json
+index acf65e8fe01d..8bc2fc23f147 100644
+--- a/tests/topotests/bgp_srv6l3vpn_sid/r2/vrf20_rib_one_locator.json
++++ b/tests/topotests/bgp_srv6l3vpn_sid/r2/vrf20_rib_one_locator.json
+@@ -39,14 +39,14 @@
+           "vrf":"default",
+           "active":true,
+           "labels":[
+-            32
++            48
+           ],
+           "weight":1,
+           "seg6local":{
+             "action":"unspec"
+           },
+           "seg6":{
+-            "segs":"2001:db8:1:1:2::"
++            "segs":"2001:db8:1:1:3::"
+           }
+         }
+       ]
+
+From 8d6c366ca69db39c9acdb2addc0cc069db9ca7f6 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 8 Sep 2025 09:25:48 +0200
+Subject: [PATCH 2/8] bgpd: add comment to inform default l3vpn sid entries are
+ ignored
+
+The current code has some limitations when supporting SID entries in the
+default VRF instance. Add a comment to explain the reason.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c   | 2 ++
+ bgpd/bgp_zebra.c | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index e11f228b6bda..5820bd20bac8 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -315,6 +315,7 @@ static int bgp_srv6_locator_unset(struct bgp *bgp)
+ 	/* refresh tovpn_sid */
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+ 		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		/* refresh vpnv4 tovpn_sid */
+@@ -335,6 +336,7 @@ static int bgp_srv6_locator_unset(struct bgp *bgp)
+ 	/* refresh tovpn_sid_locator */
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+ 		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		/* refresh vpnv4 tovpn_sid_locator */
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index bdf2e3a4edc8..937775509c47 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3862,6 +3862,7 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 			continue;
+ 
+ 		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		// refresh vpnv4 tovpn_sid
+@@ -3908,6 +3909,7 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 			continue;
+ 
+ 		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		/* refresh vpnv4 tovpn_sid_locator */
+
+From 6b33ff7f1d574f68c29e87a77d5b8fbdf2aead37 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Thu, 28 Aug 2025 08:55:01 +0200
+Subject: [PATCH 3/8] bgpd: fix sids not removed when changing locator
+
+When removing a locator, the SID is not released from the srv6 SID
+manager:
+
+> r1(config-router-srv6)# do show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2002:db8:2:1:3::  End.DT6     VRF 'vrf20'    bgp(0)             loc1       dynamic
+>
+> r1(config-router-srv6)# no locator loc2
+> r1(config-router-srv6)# do show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2002:db8:2:1:3::  End.DT6     VRF 'vrf20'    bgp(0)             loc1       dynamic
+
+Also, when adding a locator on a VRF instance, the old SID is not
+release from the srv6 SID manager.
+
+> r1(config-router-srv6)# locator loc2
+> r1(config-router-srv6)# do show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2002:db8:1:1:3::  End.DT6     VRF 'vrf20'    bgp(0)             loc1       dynamic
+>
+> r1(config-router-srv6)# locator loc2
+> r1(config-router-srv6)# do show segment-routing srv6 sid
+>  SID               Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:1:1:1::  End.DT4     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:2::  End.DT6     VRF 'vrf10'    bgp(0)             loc1       dynamic
+>  2001:db8:1:1:3::  End.DT6     VRF 'vrf20'    bgp(0)             loc1       dynamic
+
+The dereferencement of a locator has not been modified for the
+introduction of the locator per bgp instance configuration. Change the
+algorithm by creating a separate function, bgp_srv6_sids_unset().The
+passed BGP instance will be refreshed to release SIDs, locator and
+routes. Afer this call, the vpn_leak_postchange_all() function will
+look for new SIDs/locator routes if necessary.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c | 83 ++++++++++++++++++++++++++++++++++++++------------
+ 1 file changed, 64 insertions(+), 19 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 5820bd20bac8..ff2757c69f17 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -292,13 +292,34 @@ static const char *get_afi_safi_json_str(afi_t afi, safi_t safi)
+ 	return "Unknown";
+ }
+ 
+-/* unset srv6 locator */
+-static int bgp_srv6_locator_unset(struct bgp *bgp)
++static void bgp_srv6_sids_unset(struct bgp *bgp)
+ {
+ 	struct listnode *node, *nnode;
+ 	struct srv6_locator_chunk *chunk;
+ 	struct bgp_srv6_function *func;
+ 	struct bgp *bgp_vrf;
++	struct srv6_sid_ctx ctx = {};
++
++	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
++		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
++			continue;
++
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
++			continue;
++
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_DEFAULT && bgp != bgp_vrf &&
++		    bgp_vrf->srv6_locator)
++			/* bgp_vrf has an active locator, we have to keep it */
++			continue;
++
++		if (bgp_vrf->vpn_policy[AFI_IP].tovpn_sid)
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP, bgp_get_default(),
++					   bgp_vrf);
++		if (bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid)
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP6, bgp_get_default(),
++					   bgp_vrf);
++	}
+ 
+ 	/* refresh chunks */
+ 	for (ALL_LIST_ELEMENTS(bgp->srv6_locator_chunks, node, nnode, chunk)) {
+@@ -318,26 +339,41 @@ static int bgp_srv6_locator_unset(struct bgp *bgp)
+ 			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+-		/* refresh vpnv4 tovpn_sid */
+-		XFREE(MTYPE_BGP_SRV6_SID,
+-		      bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
++			continue;
+ 
+-		/* refresh vpnv6 tovpn_sid */
+-		XFREE(MTYPE_BGP_SRV6_SID,
+-		      bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_DEFAULT && bgp != bgp_vrf &&
++		    bgp_vrf->srv6_locator)
++			/* bgp_vrf has an active locator, we have to keep it */
++			continue;
+ 
+-		/* refresh per-vrf tovpn_sid */
+-		XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
+-	}
++		ctx.vrf_id = bgp_vrf->vrf_id;
+ 
+-	/* update vpn bgp processes */
+-	vpn_leak_postchange_all();
++		if (bgp_vrf->vpn_policy[AFI_IP].tovpn_sid) {
++			/* release vpnv4 tovpn_sid */
++			ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT4;
++			bgp_zebra_release_srv6_sid(&ctx, bgp_vrf->vpn_policy[AFI_IP]
++								 .tovpn_sid_locator->name);
++			/* refresh vpnv4 tovpn_sid */
++			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++		}
+ 
+-	/* refresh tovpn_sid_locator */
+-	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+-		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
+-			/* TODO: accept SRv6 entries on default VRF */
+-			continue;
++		if (bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid) {
++			/* release vpnv6 tovpn_sid */
++			ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++			bgp_zebra_release_srv6_sid(&ctx, bgp_vrf->vpn_policy[AFI_IP6]
++								 .tovpn_sid_locator->name);
++			/* refresh vpnv6 tovpn_sid */
++			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++		}
++
++		if (bgp_vrf->tovpn_sid) {
++			/* release vpnvx tovpn_sid */
++			ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
++			bgp_zebra_release_srv6_sid(&ctx, bgp_vrf->tovpn_sid_locator->name);
++			/* refresh per-vrf tovpn_sid */
++			XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
++		}
+ 
+ 		/* refresh vpnv4 tovpn_sid_locator */
+ 		srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator);
+@@ -352,6 +388,13 @@ static int bgp_srv6_locator_unset(struct bgp *bgp)
+ 		srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+ 		bgp_vrf->tovpn_sid_locator = NULL;
+ 	}
++}
++
++/* unset srv6 locator */
++static int bgp_srv6_locator_unset(struct bgp *bgp)
++{
++	/* clear function, sids */
++	bgp_srv6_sids_unset(bgp);
+ 
+ 	/* clear locator name */
+ 	memset(bgp->srv6_locator_name, 0, sizeof(bgp->srv6_locator_name));
+@@ -361,7 +404,7 @@ static int bgp_srv6_locator_unset(struct bgp *bgp)
+ 		srv6_locator_free(bgp->srv6_locator);
+ 		bgp->srv6_locator = NULL;
+ 	}
+-
++	vpn_leak_postchange_all();
+ 	return 0;
+ }
+ 
+@@ -11158,6 +11201,8 @@ DEFPY (bgp_srv6_locator,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
++	bgp_srv6_sids_unset(bgp);
++
+ 	snprintf(bgp->srv6_locator_name,
+ 		 sizeof(bgp->srv6_locator_name), "%s", name);
+ 
+
+From 948a25b4e886c2e57ce5eda0e44867c55240555a Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 1 Sep 2025 10:54:52 +0200
+Subject: [PATCH 4/8] bgpd: fix sids not removed when locator info is deleted
+
+When locator is removed from the srv6 zebra configuration, BGP VPN
+entries are unselected, but still keep the old SID information.
+Fix this by flushing the related VPN entries.
+Also simplify the code by using a single loop to modify both locators
+and sids.
+Call the vpn_leak_postchange_all() function in the end.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c   |   6 +--
+ bgpd/bgp_zebra.c | 124 +++++++++++++++++++++++------------------------
+ 2 files changed, 63 insertions(+), 67 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index ff2757c69f17..607ad3c30cfd 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -335,11 +335,11 @@ static void bgp_srv6_sids_unset(struct bgp *bgp)
+ 
+ 	/* refresh tovpn_sid */
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+-		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
+-			/* TODO: accept SRv6 entries on default VRF */
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
+ 			continue;
+ 
+-		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
++		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
+ 			continue;
+ 
+ 		if (bgp->inst_type == BGP_INSTANCE_TYPE_DEFAULT && bgp != bgp_vrf &&
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 937775509c47..6027dec3b82b 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3832,10 +3832,35 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 	struct in6_addr *tovpn_sid;
+ 	struct prefix_ipv6 tmp_prefi;
+ 
+-	// clear SRv6 locator
+-	if (bgp->srv6_locator) {
+-		srv6_locator_free(bgp->srv6_locator);
+-		bgp->srv6_locator = NULL;
++	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
++		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
++			continue;
++
++		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp_vrf != bgp)
++			continue;
++
++		tovpn_sid_locator = bgp_srv6_locator_lookup(bgp_vrf, bgp);
++		if (!tovpn_sid_locator)
++			continue;
++
++		if (!strmatch(tovpn_sid_locator->name, loc->name))
++			continue;
++
++		if (bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator)
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP, bgp_get_default(),
++					   bgp_vrf);
++
++		if (bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator)
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP6, bgp_get_default(),
++					   bgp_vrf);
++
++		if (bgp_vrf->tovpn_sid_locator) {
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP, bgp_get_default(),
++					   bgp_vrf);
++			vpn_leak_prechange(BGP_VPN_POLICY_DIR_TOVPN, AFI_IP6, bgp_get_default(),
++					   bgp_vrf);
++		}
+ 	}
+ 
+ 	// refresh chunks
+@@ -3856,13 +3881,20 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 		}
+ 	}
+ 
+-	// refresh tovpn_sid
++	// refresh tovpn_sid and tovpn_sid_locator
+ 	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
++		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
++			/* TODO: accept SRv6 entries on default VRF */
++			continue;
++
+ 		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp != bgp_vrf)
+ 			continue;
+ 
+-		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
+-			/* TODO: accept SRv6 entries on default VRF */
++		tovpn_sid_locator = bgp_srv6_locator_lookup(bgp_vrf, bgp);
++		if (!tovpn_sid_locator)
++			continue;
++
++		if (!strmatch(tovpn_sid_locator->name, loc->name))
+ 			continue;
+ 
+ 		// refresh vpnv4 tovpn_sid
+@@ -3872,9 +3904,13 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+ 			tmp_prefi.prefix = *tovpn_sid;
+ 			if (prefix_match((struct prefix *)&loc->prefix,
+-					 (struct prefix *)&tmp_prefi))
++					 (struct prefix *)&tmp_prefi)) {
+ 				XFREE(MTYPE_BGP_SRV6_SID,
+ 				      bgp_vrf->vpn_policy[AFI_IP].tovpn_sid);
++				/* refresh vpnv4 tovpn_sid_locator */
++				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator);
++				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator = NULL;
++			}
+ 		}
+ 
+ 		// refresh vpnv6 tovpn_sid
+@@ -3884,9 +3920,13 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+ 			tmp_prefi.prefix = *tovpn_sid;
+ 			if (prefix_match((struct prefix *)&loc->prefix,
+-					 (struct prefix *)&tmp_prefi))
++					 (struct prefix *)&tmp_prefi)) {
+ 				XFREE(MTYPE_BGP_SRV6_SID,
+ 				      bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid);
++				/* refresh vpnv6 tovpn_sid_locator */
++				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator);
++				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator = NULL;
++			}
+ 		}
+ 
+ 		/* refresh per-vrf tovpn_sid */
+@@ -3895,68 +3935,24 @@ static void bgp_zebra_process_srv6_locator_delete_per_bgp(struct srv6_locator *l
+ 			tmp_prefi.family = AF_INET6;
+ 			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+ 			tmp_prefi.prefix = *tovpn_sid;
+-			if (prefix_match((struct prefix *)&loc->prefix,
+-					 (struct prefix *)&tmp_prefi))
+-				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
+-		}
+-	}
+-
+-	vpn_leak_postchange_all();
+-
+-	/* refresh tovpn_sid_locator */
+-	for (ALL_LIST_ELEMENTS_RO(bm->bgp, node, bgp_vrf)) {
+-		if (bgp->inst_type == BGP_INSTANCE_TYPE_VRF && bgp != bgp_vrf)
+-			continue;
+-
+-		if (bgp_vrf->inst_type != BGP_INSTANCE_TYPE_VRF)
+-			/* TODO: accept SRv6 entries on default VRF */
+-			continue;
+-
+-		/* refresh vpnv4 tovpn_sid_locator */
+-		tovpn_sid_locator =
+-			bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator;
+-		if (tovpn_sid_locator) {
+-			tmp_prefi.family = AF_INET6;
+-			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+-			tmp_prefi.prefix = tovpn_sid_locator->prefix.prefix;
+-			if (prefix_match((struct prefix *)&loc->prefix,
+-					 (struct prefix *)&tmp_prefi)) {
+-				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP]
+-							  .tovpn_sid_locator);
+-				bgp_vrf->vpn_policy[AFI_IP].tovpn_sid_locator =
+-					NULL;
+-			}
+-		}
+-
+-		/* refresh vpnv6 tovpn_sid_locator */
+-		tovpn_sid_locator =
+-			bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator;
+-		if (tovpn_sid_locator) {
+-			tmp_prefi.family = AF_INET6;
+-			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+-			tmp_prefi.prefix = tovpn_sid_locator->prefix.prefix;
+-			if (prefix_match((struct prefix *)&loc->prefix,
+-					 (struct prefix *)&tmp_prefi)) {
+-				srv6_locator_free(bgp_vrf->vpn_policy[AFI_IP6]
+-							  .tovpn_sid_locator);
+-				bgp_vrf->vpn_policy[AFI_IP6].tovpn_sid_locator =
+-					NULL;
+-			}
+-		}
+-
+-		/* refresh per-vrf tovpn_sid_locator */
+-		tovpn_sid_locator = bgp_vrf->tovpn_sid_locator;
+-		if (tovpn_sid_locator) {
+-			tmp_prefi.family = AF_INET6;
+-			tmp_prefi.prefixlen = IPV6_MAX_BITLEN;
+-			tmp_prefi.prefix = tovpn_sid_locator->prefix.prefix;
+ 			if (prefix_match((struct prefix *)&loc->prefix,
+ 					 (struct prefix *)&tmp_prefi)) {
++				XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
++				/* refresh per-vrf tovpn_sid_locator */
+ 				srv6_locator_free(bgp_vrf->tovpn_sid_locator);
+ 				bgp_vrf->tovpn_sid_locator = NULL;
+ 			}
+ 		}
+ 	}
++
++	// clear SRv6 locator
++	if (bgp->srv6_locator) {
++		srv6_locator_free(bgp->srv6_locator);
++		bgp->srv6_locator = NULL;
++	}
++
++
++	vpn_leak_postchange_all();
+ }
+ 
+ static int bgp_zebra_process_srv6_locator_delete(ZAPI_CALLBACK_ARGS)
+
+From 890b926b04231328d1976be95037564babb4fcc0 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 29 Aug 2025 17:44:24 +0200
+Subject: [PATCH 5/8] bgpd: fix do not export bgp updates when sid exportation
+ fails
+
+The below configuration without any configured locator exports BGP
+VPN updates with label set to implicit-null.
+
+> router bgp 65500 vrf vrf20
+>  address-family ipv6 unicast
+>   sid vpn export auto
+>   rd vpn export 1:20
+>   rt vpn both 88:88
+>   export vpn
+>   import vpn
+
+This case should happen only if SRv6 exportation is not configured.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.h | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index bad7a43a5f1d..42b8a826ba51 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -188,6 +188,15 @@ static inline int vpn_leak_to_vpn_active(struct bgp *bgp_vrf, afi_t afi,
+ 			 BGP_VPN_POLICY_TOVPN_LABEL_MANUAL_REG);
+ 	}
+ 
++	/* Is there an export SID that isn't allocted yet? */
++	if ((CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_AUTO) ||
++	     CHECK_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_EXPLICIT) ||
++	     bgp_vrf->vpn_policy[afi].tovpn_sid_index) &&
++	    !bgp_vrf->vpn_policy[afi].tovpn_sid) {
++		if (pmsg)
++			*pmsg = "SID could not be allocated";
++		return 0;
++	}
+ 	return 1;
+ }
+ 
+
+From 00778621560d5d3365139c9c5c0eaff70b3ffa27 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 27 Aug 2025 09:37:17 +0200
+Subject: [PATCH 6/8] topotests: bgp_srv6l3vpn_sid, remove vpn entries
+
+When disabling srv6, the vpn entries are unselected, and are no more
+exported to vpn network. Update r1 and r2 RIB entries when locator is
+suppressed from BGP configuration.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../r1/vpnv6_rib_unselected.json              | 77 +------------------
+ .../test_bgp_srv6l3vpn_sid.py                 |  5 +-
+ 2 files changed, 5 insertions(+), 77 deletions(-)
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/r1/vpnv6_rib_unselected.json b/tests/topotests/bgp_srv6l3vpn_sid/r1/vpnv6_rib_unselected.json
+index c51e8cabeb9f..9fd91a70b59a 100644
+--- a/tests/topotests/bgp_srv6l3vpn_sid/r1/vpnv6_rib_unselected.json
++++ b/tests/topotests/bgp_srv6l3vpn_sid/r1/vpnv6_rib_unselected.json
+@@ -5,79 +5,6 @@
+   "localAS": 1,
+   "routes": {
+     "routeDistinguishers": {
+-      "1:10": {
+-        "2001:1::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:1::",
+-            "prefixLen": 64,
+-            "network": "2001:1::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf10",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ],
+-        "2001:3::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:3::",
+-            "prefixLen": 64,
+-            "network": "2001:3::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf10",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ]
+-      },
+-      "1:20": {
+-        "2001:5::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:5::",
+-            "prefixLen": 64,
+-            "network": "2001:5::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf20",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ]
+-      },
+       "2:20": {
+         "2001:4::/64": [
+           {
+@@ -130,6 +57,6 @@
+       }
+     }
+   },
+-  "totalRoutes": 5,
+-  "totalPaths": 5
++  "totalRoutes": 2,
++  "totalPaths": 2
+ }
+diff --git a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+index c479c3f0669b..81e0c838e401 100755
+--- a/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
++++ b/tests/topotests/bgp_srv6l3vpn_sid/test_bgp_srv6l3vpn_sid.py
+@@ -458,9 +458,10 @@ def test_sid_suppress_locator_vrf_default():
+           no segment-routing srv6
+         """
+     )
+-    # 2001:5::/64 should be removed, r2 should have 3 entries only
++    # r2 should have 3 entries
+     check_rib("r2", "show bgp ipv6 vpn json", "r2/vpnv6_rib_unselected.json")
+-    # 2001:5::/64 should be present, along with prefixes from vrf10
++
++    # no vpn prefixes from r1 are exported
+     check_rib("r1", "show bgp ipv6 vpn json", "r1/vpnv6_rib_unselected.json")
+ 
+ 
+
+From 7199cc16d8dd651d93677a92726291581a1505ab Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 1 Sep 2025 11:29:01 +0200
+Subject: [PATCH 7/8] topotests: bgp_srv6l3vpn_to_bgp_vrf, remove vpn entries
+
+Modify test, because upon locator deletion, VPN entries are flushed.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../r1/vpnv6_rib_locator_deleted.json         | 100 +-----------------
+ 1 file changed, 2 insertions(+), 98 deletions(-)
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf/r1/vpnv6_rib_locator_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf/r1/vpnv6_rib_locator_deleted.json
+index a3a5f0438a18..ddd5cc0b044f 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf/r1/vpnv6_rib_locator_deleted.json
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf/r1/vpnv6_rib_locator_deleted.json
+@@ -6,102 +6,6 @@
+   "localAS": 65500,
+   "routes": {
+     "routeDistinguishers": {
+-      "1:10": {
+-        "2001:1::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:1::",
+-            "prefixLen": 64,
+-            "network": "2001:1::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf10",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ],
+-        "2001:3::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:3::",
+-            "prefixLen": 64,
+-            "network": "2001:3::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf10",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ],
+-        "2011:1::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2011:1::",
+-            "prefixLen": 64,
+-            "network": "2011:1::/64",
+-            "metric": 0,
+-            "weight": 0,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "IGP",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf10",
+-            "nexthops": [
+-              {
+-                "ip": "2001:1::2",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ]
+-      },
+-      "1:20": {
+-        "2001:5::/64": [
+-          {
+-            "pathFrom": "external",
+-            "prefix": "2001:5::",
+-            "prefixLen": 64,
+-            "network": "2001:5::/64",
+-            "metric": 0,
+-            "weight": 32768,
+-            "peerId": "(unspec)",
+-            "path": "",
+-            "origin": "incomplete",
+-            "announceNexthopSelf": true,
+-            "nhVrfName": "vrf20",
+-            "nexthops": [
+-              {
+-                "ip": "::",
+-                "hostname": "r1",
+-                "afi": "ipv6",
+-                "used": true
+-              }
+-            ]
+-          }
+-        ]
+-      },
+       "2:10": {
+         "2001:2::/64": [
+           {
+@@ -180,6 +84,6 @@
+       }
+     }
+   },
+-  "totalRoutes": 7,
+-  "totalPaths": 7
++  "totalRoutes": 3,
++  "totalPaths": 3
+ }
+
+From 81142c853b37fd917fa66a80f96f787bbd39e9f6 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 1 Sep 2025 14:47:34 +0200
+Subject: [PATCH 8/8] topotests: bgp_srv6l3vpn_to_bgp_vrf3, remove vpn entries
+
+When removing the srv6 locator, the vpn entries are unselected, and are
+no more exported to vpn network.
+The case where bgp has its locator unconfigured leads to maintaining vpn
+entries, but without srv6.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../r1/vpnv4_rib_locator_deleted.json         |  12 +-
+ .../r1/vpnv4_rib_locator_zebra_deleted.json   | 160 +++++++++++++++++
+ .../r1/vpnv6_rib_locator_deleted.json         |  12 +-
+ .../r1/vpnv6_rib_locator_zebra_deleted.json   | 163 ++++++++++++++++++
+ .../r2/vpnv4_rib_locator_deleted.json         |  76 ++++++++
+ .../r2/vpnv4_rib_locator_zebra_deleted.json   |  90 ++++++++++
+ .../r2/vpnv6_rib_locator_deleted.json         |  76 ++++++++
+ .../r2/vpnv6_rib_locator_zebra_deleted.json   |  93 ++++++++++
+ .../test_bgp_srv6l3vpn_to_bgp_vrf3.py         |  10 +-
+ 9 files changed, 682 insertions(+), 10 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_zebra_deleted.json
+ create mode 100644 tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_zebra_deleted.json
+ create mode 100644 tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_zebra_deleted.json
+ create mode 100644 tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_zebra_deleted.json
+
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_deleted.json
+index 4e803a05141c..15bf1580ff33 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_deleted.json
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_deleted.json
+@@ -9,7 +9,9 @@
+       "1:10": {
+         "192.168.1.0/24": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "192.168.1.0",
+             "prefixLen": 24,
+@@ -32,7 +34,9 @@
+         ],
+         "192.168.3.0/24": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "192.168.3.0",
+             "prefixLen": 24,
+@@ -57,7 +61,9 @@
+       "1:20": {
+         "192.168.5.0/24": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "192.168.5.0",
+             "prefixLen": 24,
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_zebra_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_zebra_deleted.json
+new file mode 100644
+index 000000000000..3957f6baad46
+--- /dev/null
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv4_rib_locator_zebra_deleted.json
+@@ -0,0 +1,160 @@
++{
++  "vrfId": 0,
++  "vrfName": "default",
++  "routerId": "1.1.1.1",
++  "defaultLocPrf": 100,
++  "localAS": 1,
++  "routes": {
++    "routeDistinguishers": {
++      "1:10": {
++        "192.168.1.0/24": [
++            {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "192.168.1.0",
++            "prefixLen": 24,
++            "network": "192.168.1.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "192.168.3.0/24": [
++          {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "192.168.3.0",
++            "prefixLen": 24,
++            "network": "192.168.3.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "1:20": {
++        "192.168.5.0/24": [
++          {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "192.168.5.0",
++            "prefixLen": 24,
++            "network": "192.168.5.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:10": {
++        "192.168.2.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.2.0",
++            "prefixLen": 24,
++            "network": "192.168.2.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:20": {
++        "192.168.4.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.4.0",
++            "prefixLen": 24,
++            "network": "192.168.4.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "192.168.6.0/24": [
++             {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.6.0",
++            "prefixLen": 24,
++            "network": "192.168.6.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      }
++    }
++  }
++}
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_deleted.json
+index 547b262d4b34..448e227abc34 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_deleted.json
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_deleted.json
+@@ -9,7 +9,9 @@
+       "1:10": {
+         "2001:1::/64": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "2001:1::",
+             "prefixLen": 64,
+@@ -33,7 +35,9 @@
+         ],
+         "2001:3::/64": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "2001:3::",
+             "prefixLen": 64,
+@@ -59,7 +63,9 @@
+       "1:20": {
+         "2001:5::/64": [
+           {
+-            "multipath": true,
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
+             "pathFrom": "external",
+             "prefix": "2001:5::",
+             "prefixLen": 64,
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_zebra_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_zebra_deleted.json
+new file mode 100644
+index 000000000000..547b262d4b34
+--- /dev/null
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r1/vpnv6_rib_locator_zebra_deleted.json
+@@ -0,0 +1,163 @@
++{
++  "vrfId": 0,
++  "vrfName": "default",
++  "routerId": "1.1.1.1",
++  "defaultLocPrf": 100,
++  "localAS": 1,
++  "routes": {
++    "routeDistinguishers": {
++      "1:10": {
++        "2001:1::/64": [
++          {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "2001:1::",
++            "prefixLen": 64,
++            "network": "2001:1::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "2001:3::/64": [
++          {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "2001:3::",
++            "prefixLen": 64,
++            "network": "2001:3::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "1:20": {
++        "2001:5::/64": [
++          {
++            "multipath": true,
++            "pathFrom": "external",
++            "prefix": "2001:5::",
++            "prefixLen": 64,
++            "network": "2001:5::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:10": {
++        "2001:2::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:2::",
++            "prefixLen": 64,
++            "network": "2001:2::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:20": {
++        "2001:4::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:4::",
++            "prefixLen": 64,
++            "network": "2001:4::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "2001:6::/64": [
++             {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:6::",
++            "prefixLen": 64,
++            "network": "2001:6::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::2",
++            "path": "2",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      }
++    }
++  }
++}
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_deleted.json
+index e3edee172b03..0dcdec678f35 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_deleted.json
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_deleted.json
+@@ -6,6 +6,82 @@
+   "localAS": 2,
+   "routes": {
+     "routeDistinguishers": {
++      "1:10": {
++        "192.168.1.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.1.0",
++            "prefixLen": 24,
++            "network": "192.168.1.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "192.168.3.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.3.0",
++            "prefixLen": 24,
++            "network": "192.168.3.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "1:20": {
++        "192.168.5.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.5.0",
++            "prefixLen": 24,
++            "network": "192.168.5.0/24",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
+       "2:10": {
+         "192.168.2.0/24": [
+           {
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_zebra_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_zebra_deleted.json
+new file mode 100644
+index 000000000000..e3edee172b03
+--- /dev/null
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv4_rib_locator_zebra_deleted.json
+@@ -0,0 +1,90 @@
++{
++  "vrfId": 0,
++  "vrfName": "default",
++  "routerId": "2.2.2.2",
++  "defaultLocPrf": 100,
++  "localAS": 2,
++  "routes": {
++    "routeDistinguishers": {
++      "2:10": {
++        "192.168.2.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.2.0",
++            "prefixLen": 24,
++            "network": "192.168.2.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:20": {
++        "192.168.4.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.4.0",
++            "prefixLen": 24,
++            "network": "192.168.4.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "192.168.6.0/24": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "192.168.6.0",
++            "prefixLen": 24,
++            "network": "192.168.6.0/24",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "2001::2",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      }
++    }
++  }
++}
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_deleted.json
+index 25cdf031c3de..03bbcc008d90 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_deleted.json
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_deleted.json
+@@ -6,6 +6,82 @@
+   "localAS": 2,
+   "routes": {
+     "routeDistinguishers": {
++      "1:10": {
++        "2001:1::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:1::",
++            "prefixLen": 64,
++            "network": "2001:1::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "2001:3::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:3::",
++            "prefixLen": 64,
++            "network": "2001:3::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "1:20": {
++        "2001:5::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:5::",
++            "prefixLen": 64,
++            "network": "2001:5::/64",
++            "metric": 0,
++            "weight": 0,
++            "peerId": "2001::1",
++            "path": "1",
++            "origin": "incomplete",
++            "nexthops": [
++              {
++                "ip": "2001::1",
++                "hostname": "r1",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
+       "2:10": {
+         "2001:2::/64": [
+           {
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_zebra_deleted.json b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_zebra_deleted.json
+new file mode 100644
+index 000000000000..25cdf031c3de
+--- /dev/null
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/r2/vpnv6_rib_locator_zebra_deleted.json
+@@ -0,0 +1,93 @@
++{
++  "vrfId": 0,
++  "vrfName": "default",
++  "routerId": "2.2.2.2",
++  "defaultLocPrf": 100,
++  "localAS": 2,
++  "routes": {
++    "routeDistinguishers": {
++      "2:10": {
++        "2001:2::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:2::",
++            "prefixLen": 64,
++            "network": "2001:2::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf10",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      },
++      "2:20": {
++        "2001:4::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:4::",
++            "prefixLen": 64,
++            "network": "2001:4::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ],
++        "2001:6::/64": [
++          {
++            "valid": true,
++            "bestpath": true,
++            "selectionReason": "First path received",
++            "pathFrom": "external",
++            "prefix": "2001:6::",
++            "prefixLen": 64,
++            "network": "2001:6::/64",
++            "metric": 0,
++            "weight": 32768,
++            "peerId": "(unspec)",
++            "path": "",
++            "origin": "incomplete",
++            "announceNexthopSelf": true,
++            "nhVrfName": "vrf20",
++            "nexthops": [
++              {
++                "ip": "::",
++                "hostname": "r2",
++                "afi": "ipv6",
++                "used": true
++              }
++            ]
++          }
++        ]
++      }
++    }
++  }
++}
+diff --git a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/test_bgp_srv6l3vpn_to_bgp_vrf3.py b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/test_bgp_srv6l3vpn_to_bgp_vrf3.py
+index 9e588d1d7110..3b65220fd76a 100644
+--- a/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/test_bgp_srv6l3vpn_to_bgp_vrf3.py
++++ b/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf3/test_bgp_srv6l3vpn_to_bgp_vrf3.py
+@@ -235,10 +235,11 @@ def test_locator_delete():
+             no locator loc1
+         """
+     )
+-    check_rib("r1", "show bgp ipv4 vpn json", "r1/vpnv4_rib_locator_deleted.json")
+-    check_rib("r2", "show bgp ipv4 vpn json", "r2/vpnv4_rib_locator_deleted.json")
+-    check_rib("r1", "show bgp ipv6 vpn json", "r1/vpnv6_rib_locator_deleted.json")
+-    check_rib("r2", "show bgp ipv6 vpn json", "r2/vpnv6_rib_locator_deleted.json")
++    # expectation is that VPN prefixes are not selected
++    check_rib("r1", "show bgp ipv4 vpn json", "r1/vpnv4_rib_locator_zebra_deleted.json")
++    check_rib("r2", "show bgp ipv4 vpn json", "r2/vpnv4_rib_locator_zebra_deleted.json")
++    check_rib("r1", "show bgp ipv6 vpn json", "r1/vpnv6_rib_locator_zebra_deleted.json")
++    check_rib("r2", "show bgp ipv6 vpn json", "r2/vpnv6_rib_locator_zebra_deleted.json")
+     check_ping("ce1", "192.168.2.2", False, 10, 0.5)
+     check_ping("ce1", "2001:2::2", False, 10, 1)
+ 
+@@ -275,6 +276,7 @@ def test_bgp_locator_unset():
+            no locator loc1
+         """
+     )
++    # expectation is that VPN prefixes are still selected, but with a label set to 3
+     check_rib("r1", "show bgp ipv4 vpn json", "r1/vpnv4_rib_locator_deleted.json")
+     check_rib("r2", "show bgp ipv4 vpn json", "r2/vpnv4_rib_locator_deleted.json")
+     check_rib("r1", "show bgp ipv6 vpn json", "r1/vpnv6_rib_locator_deleted.json")
