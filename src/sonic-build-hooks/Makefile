@@ -32,7 +32,7 @@ $(SONIC_BUILD_HOOKS_TARGET): $(DEPENDS)
 	@cp debian/* $(DEBIAN_DIR)/
 	@cp scripts/* $(SCRIPTS_PATH)/
 	@cp hooks/* $(HOOKS_PATH)/
-	@for url in $$(echo $(TRUSTED_GPG_URLS) | sed 's/[,;]/ /g'); do wget -q "$$url" -P "$(TRUSTED_GPG_PATH)/"; done
+	@set -e; for url in $$(echo $(TRUSTED_GPG_URLS) | sed 's/[,;]/ /g'); do wget -q "$$url" -P "$(TRUSTED_GPG_PATH)/"; done
 	@for f in $(SYMBOL_LINKS); do ln -s $(SYMBOL_LINKS_SRC_DIR)/$$f $(SYMBOL_LINK_PATH)/$$f; done
 	@$(BUILD_COMMAND)
 
