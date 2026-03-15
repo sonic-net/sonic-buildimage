@@ -354,6 +354,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     squashfs-tools          \
     $bootloader_packages    \
     rsyslog                 \
+    rsyslog-relp            \
     screen                  \
     hping3                  \
     tcptraceroute           \
