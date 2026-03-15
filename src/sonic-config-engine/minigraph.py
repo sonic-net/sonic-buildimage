@@ -643,14 +643,14 @@ def parse_png(png, hname, dpg_ecmp_content = None):
                 bandwidth_node = link.find(str(QName(ns, "Bandwidth")))
                 bandwidth = bandwidth_node.text if bandwidth_node is not None else None
                 if enddevice.lower() == hname.lower():
-                    if endport in port_alias_map:
+                    if endport in port_alias_map and endport not in port_names_map:
                         endport = port_alias_map[endport]
                     if linktype != "DeviceMgmtLink":
                         neighbors[endport] = {'name': startdevice, 'port': startport}
                     if bandwidth:
                         port_speeds[endport] = bandwidth
                 elif startdevice.lower() == hname.lower():
-                    if startport in port_alias_map:
+                    if startport in port_alias_map and startport not in port_names_map:
                         startport = port_alias_map[startport]
                     if linktype != "DeviceMgmtLink":
                         neighbors[startport] = {'name': enddevice, 'port': endport}
@@ -707,7 +707,7 @@ def parse_png(png, hname, dpg_ecmp_content = None):
                 if link.find(str(QName(ns, "ElementType"))).text == "LogicalLink":
                     intf_name = link.find(str(QName(ns, "EndPort"))).text
                     start_device = link.find(str(QName(ns, "StartDevice"))).text
-                    if intf_name in port_alias_map:
+                    if intf_name in port_alias_map and intf_name not in port_names_map:
                         intf_name = port_alias_map[intf_name]
 
                     mux_cable_ports[intf_name] = start_device
@@ -761,14 +761,14 @@ def parse_asic_internal_link(link, asic_name, hostname):
     bandwidth = bandwidth_node.text if bandwidth_node is not None else None
     if ((enddevice.lower() == asic_name.lower()) and
             (startdevice.lower() != hostname.lower())):
-        if endport in port_alias_map:
+        if endport in port_alias_map and endport not in port_names_map:
             endport = port_alias_map[endport]
             neighbors[endport] = {'name': startdevice, 'port': startport}
             if bandwidth:
                 port_speeds[endport] = bandwidth
     elif ((startdevice.lower() == asic_name.lower()) and
             (enddevice.lower() != hostname.lower())):
-        if startport in port_alias_map:
+        if startport in port_alias_map and startport not in port_names_map:
             startport = port_alias_map[startport]
             neighbors[startport] = {'name': enddevice, 'port': endport}
             if bandwidth:
@@ -910,7 +910,7 @@ def parse_dpg(dpg, hname):
                 voq_inband_intfs["%s|%s" % (intfalias, ipprefix)] = {}
 
                 continue
-            intfname = port_alias_map.get(intfalias, intfalias)
+            intfname = intfalias if intfalias in port_names_map else port_alias_map.get(intfalias, intfalias)
             intfs[(intfname, ipprefix)] = {}
             ip_intfs_map[ipprefix] = intfalias
         lo_intfs = parse_loopback_intf(child)
@@ -919,7 +919,7 @@ def parse_dpg(dpg, hname):
         if subintfs is not None:
             for subintf in subintfs.findall(str(QName(ns, "SubInterface"))):
                 intfalias = subintf.find(str(QName(ns, "AttachTo"))).text
-                intfname = port_alias_map.get(intfalias, intfalias)
+                intfname = intfalias if intfalias in port_names_map else port_alias_map.get(intfalias, intfalias)
                 ipprefix = subintf.find(str(QName(ns, "Prefix"))).text
                 subintfvlan = subintf.find(str(QName(ns, "Vlan"))).text
                 subintfname = intfname + VLAN_SUB_INTERFACE_SEPARATOR + subintfvlan
