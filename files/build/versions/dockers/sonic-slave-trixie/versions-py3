@@ -7,7 +7,6 @@ automat==25.4.16
 babel==2.17.0
 bcrypt==4.2.0
 beautifulsoup4==4.13.4
-bitarray==3.8.0
 blessed==1.21.0
 blkinfo==0.2.0
 bottleneck==1.4.2
@@ -121,7 +120,7 @@ pure_eval==0.2.3
 puremagic==1.28
 py-cpuinfo==9.0.0
 pyang==2.4.0
-pyangbind==0.8.2
+pyangbind==0.8.7
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 pycparser==2.22
