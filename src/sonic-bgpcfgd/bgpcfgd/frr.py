@@ -25,32 +25,32 @@ class FRR(object):
         log_info("Required daemons: %s" % str(self.daemons))
 
         retry_count = 0
+        poll_interval = 0.1
+        next_log_time = start_time
 
         while datetime.datetime.now() < stop_time:
             retry_count += 1
             ret_code, out, err = run_command(["vtysh", "-c", "show daemons"], hide_errors=True)
-
-            if ret_code == 0 and all(daemon in out for daemon in self.daemons):
-                elapsed = (datetime.datetime.now() - start_time).total_seconds()
-                log_info("All required daemons have connected to vtysh after %.1fs (attempt %d): %s" %
-                        (elapsed, retry_count, str(datetime.datetime.now())))
-                return
-
-            # Log status on each retry
             current_time = datetime.datetime.now()
             elapsed = (current_time - start_time).total_seconds()
-            remaining = (stop_time - current_time).total_seconds()
 
-            if ret_code == 0:
-                found_daemons = [d for d in self.daemons if d in out]
-                missing_daemons = [d for d in self.daemons if d not in out]
-                log_warn("Waiting for daemons (%.1fs elapsed, %.1fs remaining, attempt %d): found=%s missing=%s" %
-                        (elapsed, remaining, retry_count, found_daemons, missing_daemons))
-            else:
-                log_warn("Can't read daemon status from FRR (%.1fs elapsed, %.1fs remaining, attempt %d): %s" %
-                        (elapsed, remaining, retry_count, str(err)))
+            if ret_code == 0 and all(daemon in out for daemon in self.daemons):
+                log_info("All required daemons have connected to vtysh after %.1fs (attempt %d): %s" %
+                        (elapsed, retry_count, str(current_time)))
+                return
 
-            time.sleep(1.0)
+            if current_time >= next_log_time:
+                if ret_code == 0:
+                    found_daemons = [d for d in self.daemons if d in out]
+                    missing_daemons = [d for d in self.daemons if d not in out]
+                    log_warn("Waiting for daemons (%.1fs elapsed, attempt %d): found=%s missing=%s" %
+                            (elapsed, retry_count, found_daemons, missing_daemons))
+                else:
+                    log_warn("Can't read daemon status from FRR (%.1fs elapsed, attempt %d): %s" %
+                            (elapsed, retry_count, str(err)))
+                next_log_time = current_time + datetime.timedelta(seconds=1)
+
+            time.sleep(poll_interval)
 
         raise RuntimeError("FRR daemons hasn't been started in %d seconds" % seconds)
 
