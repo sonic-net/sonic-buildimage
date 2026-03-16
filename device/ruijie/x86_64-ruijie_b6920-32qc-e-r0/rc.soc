@@ -1,0 +1,9 @@
+m0 load 0 0x3800 /usr/share/sonic/device/x86_64-micas_m2-w6510-48gt4v-r0/custom_led.bin
+echo "load m0 end"
+
+init all
+echo "init all end"
+
+led auto on
+led start
+echo "init led end"
