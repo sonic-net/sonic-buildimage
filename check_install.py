@@ -44,6 +44,15 @@ def main():
         if i == 0:
             # send user name
             p.sendline(args.u)
+            # If password is empty, the shell prompt may appear directly (no Password: prompt)
+            if not args.P:
+                try:
+                    p.expect([passwd_prompt, cmd_prompt], timeout=5)
+                    if p.match.group(0).strip() != passwd_prompt.strip():
+                        # got shell directly, no password needed
+                        break
+                except pexpect.TIMEOUT:
+                    break
         elif i == 1:
             # send password
             p.sendline(args.P)
