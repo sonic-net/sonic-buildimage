@@ -16,17 +16,22 @@ struct HealthStatus {
     restapi_status: String,
 }
 
-// Opens a Redis connection to CONFIG DB and then fetches a hash field from CONFIG DB.
-// Returns None if any error happens.
-fn redis_hget(hash: &str, field: &str) -> Option<String> {
+// Opens a Redis connection to CONFIG DB.
+// Returns None on any error (client creation or connection).
+fn redis_connect() -> Option<Connection> {
     let client = match redis::Client::open(format!("redis://127.0.0.1:{}/{}", REDIS_PORT, CONFIG_DB)) {
         Ok(c) => c,
         Err(e) => { eprintln!("Redis client error: {e}"); return None; }
     };
-    let mut conn = match client.get_connection() {
-        Ok(c) => c,
-        Err(e) => { eprintln!("Redis connection error: {e}"); return None; }
-    };
+    match client.get_connection() {
+        Ok(conn) => Some(conn),
+        Err(e) => { eprintln!("Redis connection error: {e}"); None }
+    }
+}
+
+// Fetches a hash field from CONFIG DB.
+// Returns None if HGET fails.
+fn redis_hget(conn: &mut Connection, hash: &str, field: &str) -> Option<String> {
     match conn.hget::<_, _, Option<String>>(hash, field) {
         Ok(v) => v,
         Err(e) => { eprintln!("Redis HGET error {hash}.{field}: {e}"); None }
@@ -35,16 +40,21 @@ fn redis_hget(hash: &str, field: &str) -> Option<String> {
 
 // Check if root cert, server cert, and server key exist
 fn check_certificates() -> bool {
+    // Connect to Redis
+    let mut conn = match redis_connect() {
+        Some(c) => c,
+        None => { eprintln!("Failed to connect to Redis. Assuming certificates do not exist."); return false; }
+    };
     // Read the certificate and key paths from Redis
-    let root_cert_path = match redis_hget(RESTAPI_CERTS, "ca_crt") {
+    let root_cert_path = match redis_hget(&mut conn, RESTAPI_CERTS, "ca_crt") {
         Some(path) => path,
         None => { eprintln!("Root certificate path not found in Redis. Assuming the cert does not exist."); return false; }
     };
-    let server_cert_path = match redis_hget(RESTAPI_CERTS, "server_crt") {
+    let server_cert_path = match redis_hget(&mut conn, RESTAPI_CERTS, "server_crt") {
         Some(path) => path,
         None => { eprintln!("Server certificate path not found in Redis. Assuming the cert does not exist."); return false; }
     };
-    let server_key_path = match redis_hget(RESTAPI_CERTS, "server_key") {
+    let server_key_path = match redis_hget(&mut conn, RESTAPI_CERTS, "server_key") {
         Some(path) => path,
         None => { eprintln!("Server key path not found in Redis. Assuming the key does not exist."); return false; }
     };
