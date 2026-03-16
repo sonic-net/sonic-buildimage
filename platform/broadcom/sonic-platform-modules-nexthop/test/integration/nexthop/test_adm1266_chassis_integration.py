@@ -14,11 +14,8 @@ from unittest.mock import Mock, patch
 def mock_unimportant_modules():
     """Mock modules that aren't important for integration testing."""
     modules = {}
-    modules["sonic_py_common"] = Mock()
     modules["sonic_platform.dpm"] = Mock()
     modules["sonic_platform.dpm"].SystemDPMLogHistory = Mock()
-    modules.update(mock_syslog_modules())
-    modules.update(fake_swsscommon_modules())
 
     with patch.dict(sys.modules, modules):
         yield

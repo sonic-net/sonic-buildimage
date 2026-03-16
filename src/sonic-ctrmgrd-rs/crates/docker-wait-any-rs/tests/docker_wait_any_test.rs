@@ -151,9 +151,71 @@ async fn test_teamd_exits_warm_restart_main_will_not_exit() {
     // Mock warm restart enabled using injectorpp - keep injector alive for entire test
     let mut injector = InjectorPP::new();
     injector
-        .when_called(func!(sonic_rs_common::device_info::is_warm_restart_enabled, fn(&str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
+        .when_called(func!(sonic_rs_common::device_info::is_warm_restart_enabled_in_namespace, fn(&str, &str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
         .will_execute(fake!(
-            func_type: fn(container_name: &str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>,
+            func_type: fn(container_name: &str, namespace: &str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>,
+            returns: Ok(true)
+        ));
+    injector
+        .when_called(func!(sonic_rs_common::device_info::is_fast_reboot_enabled, fn() -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
+        .will_execute(fake!(
+            func_type: fn() -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>,
+            returns: Ok(false)
+        ));
+
+    // Test run_main - should timeout because warm restart is enabled and main will not exit
+    let result = timeout(
+        Duration::from_secs(3),
+        run_main(Arc::new(mock_docker), Some(services), Some(dependents))
+    )
+    .await;
+
+    // Should timeout because warm restart is enabled and dependent service teamd exits but main continues
+    assert!(result.is_err(), "run_main should timeout when warm restart is enabled and teamd exits");
+}
+
+#[tokio::test]
+#[serial]
+async fn test_teamd_exits_warm_restart_main_will_not_exit_mutli_asic() {
+
+    let services = vec!["swss1".to_string()];
+    let dependents = vec!["syncd1".to_string(), "teamd1".to_string()];
+
+    let mut mock_docker = MockDockerApi::new();
+
+    // teamd exits (simulates container exit, warm restart will cause it to be called again)
+    mock_docker
+        .expect_wait_container()
+        .with(eq("teamd1".to_string()), always())
+        .returning(|_, _| {
+            Box::pin(futures_util::stream::iter(vec![Ok(
+                bollard::models::ContainerWaitResponse {
+                    status_code: 0,
+                    error: None,
+                }
+            )]).then(|item| async move {
+                // Add context switch to allow timeout to work
+                tokio::task::yield_now().await;
+                item
+            }))
+        });
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("swss1".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("syncd1".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    // Mock warm restart enabled using injectorpp - keep injector alive for entire test
+    let mut injector = InjectorPP::new();
+    injector
+        .when_called(func!(sonic_rs_common::device_info::is_warm_restart_enabled_in_namespace, fn(&str, &str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>))
+        .will_execute(fake!(
+            func_type: fn(container_name: &str, namespace: &str) -> Result<bool, sonic_rs_common::device_info::DeviceInfoError>,
             returns: Ok(true)
         ));
     injector
