@@ -27,8 +27,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
+    name: yue-fred-gao/sonic-mgmt
+    ref: enable_vpp_pr_checker
     endpoint: sonic-net
   - repository: buildimage
     type: github
