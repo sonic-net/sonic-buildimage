@@ -1,3 +1,50 @@
+#!/bin/bash
+
+# Generate platform-specific YANG models from templates
+TEMPLATE_DIR="/usr/local/platform-yang-templates"
+OUTPUT_DIR="/usr/local/platform-yang-models"
+
+# Resolve the canonical platform name. sonic-cfggen is not yet available at
+# postinst time. Prefer /host/machine.conf (onie_platform); fall back to
+# parsing the postinst script filename.
+PLATFORM_NAME=""
+if [ -f /host/machine.conf ]; then
+    PLATFORM_NAME=$(awk -F= '/^onie_platform=/{print $2}' /host/machine.conf)
+fi
+if [ -z "$PLATFORM_NAME" ]; then
+    SCRIPT_NAME=$(basename "$0")
+    PLATFORM_SUFFIX=$(echo "$SCRIPT_NAME" | sed 's/^sonic-platform-//' | sed 's/\.postinst$//')
+    PLATFORM_NAME="x86_64-${PLATFORM_SUFFIX}"
+    PLATFORM_NAME=$(echo "$PLATFORM_NAME" | sed 's/nexthop-/nexthop_/')
+fi
+FEATURE_CAPABILITIES_JSON="/usr/share/sonic/device/${PLATFORM_NAME}/feature_capabilities.json"
+
+# Check if all required components exist
+if [ -n "$PLATFORM_NAME" ] && [ -d "$TEMPLATE_DIR" ] && [ -f "$FEATURE_CAPABILITIES_JSON" ] && command -v j2 >/dev/null 2>&1; then
+    mkdir -p "$OUTPUT_DIR"
+
+    # Render each template directly to its final path. If the render fails
+    # (j2 non-zero, empty output, or pyang syntax check fails), delete the
+    # output file. We deliberately don't use a temp-file + mv pattern: a
+    # silent mv failure could hide a missing artifact, whereas a stray bad
+    # file is loud at sonic_yang load time.
+    for template in "$TEMPLATE_DIR"/*.yang.j2; do
+        [ -e "$template" ] || continue
+        filename=$(basename "$template" .j2)
+        output_file="$OUTPUT_DIR/$filename"
+
+        if j2 "$template" "$FEATURE_CAPABILITIES_JSON" > "$output_file" 2>/dev/null \
+            && [ -s "$output_file" ] \
+            && { ! command -v pyang >/dev/null 2>&1 \
+                 || pyang --ignore-error=MODULE_NOT_FOUND --ignore-error=MODULENAME_MISMATCH "$output_file" >/dev/null 2>&1; }; then
+            echo "Generated: $output_file"
+        else
+            rm -f "$output_file"
+            echo "Warning: failed to generate $output_file" >&2
+        fi
+    done
+fi
+
 depmod -a
 systemctl enable rename-mgmt-interface.service
 systemctl start rename-mgmt-interface.service
