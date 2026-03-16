@@ -1,6 +1,6 @@
 # XSight SAI
 
-XSIGHT_LIBSAI_VERSION = 1.16.3-0
+XSIGHT_LIBSAI_VERSION = 1.16.3-1
 XSIGHT_LIBSAI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/sonic-xsight-binaries/main/amd64/sai-plugin/master"
 
 XSIGHT_LIBSAI = xsai-main_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
