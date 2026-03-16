@@ -8,6 +8,7 @@ from json import dump, dumps, loads
 from xmltodict import parse
 from glob import glob
 import copy
+import os
 from sonic_yang_path import SonicYangPathMixin
 
 Type_1_list_maps_model = [
@@ -54,6 +55,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
         try:
             # get all files
             self.yangFiles = glob(self.yang_dir +"/*.yang")
+            # Get yang files from generated platform-specific YANG models directory
+            generated_yang_dir = "/usr/local/platform-yang-models"
+            if os.path.exists(generated_yang_dir):
+                generated_yang = glob(generated_yang_dir+"/*.yang")
+                self.yangFiles.extend(generated_yang)
+                self.sysLog(syslog.LOG_INFO,
+                    f"Loading {len(generated_yang)} platform-specific YANG models from {generated_yang_dir}")
             # load yang modules
             for file in self.yangFiles:
                 m = self._load_schema_module(file)
