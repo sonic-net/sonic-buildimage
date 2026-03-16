@@ -465,6 +465,8 @@ class TestJ2Files(TestCase):
 
         qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
         shutil.copy2(qos_config_file, dir_path)
+        buffer_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
+        shutil.copy2(buffer_config_file, dir_path)
 
         argument = ['-m', minigraph, '-p', port_config_ini_file, '-t', qos_file]
         self.run_script(argument, output_file=self.output_file)
@@ -472,6 +474,7 @@ class TestJ2Files(TestCase):
         # cleanup
         qos_config_file_new = os.path.join(dir_path, 'qos_config.j2')
         os.remove(qos_config_file_new)
+        os.remove(os.path.join(dir_path, 'buffers_config.j2'))
 
         with open(self.output_file, 'r') as f:
             output_json = json.load(f)
@@ -593,12 +596,15 @@ class TestJ2Files(TestCase):
 
         qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
         shutil.copy2(qos_config_file, dir_path)
+        buffer_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
+        shutil.copy2(buffer_config_file, dir_path)
 
         argument = ['-m', self.nokia_ixr7250e_36x100g_t2_minigraph, '-p', port_config_ini_file, '-t', qos_file]
         self.run_script(argument, output_file=self.output_file)
 
         # cleanup
         os.remove(os.path.join(dir_path, 'qos_config.j2'))
+        os.remove(os.path.join(dir_path, 'buffers_config.j2'))
 
         with open(self.output_file, 'r') as f:
             output_json = json.load(f)
