@@ -448,6 +448,11 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/in
 # Copy vmcore-sysctl.conf to add more vmcore dump flags to kernel
 sudo cp files/image_config/kdump/vmcore-sysctl.conf $FILESYSTEM_ROOT/etc/sysctl.d/
 
+# Required for kdump_remote_ssh_dump: Initialize network interfaces and enable DHCP.
+# Currently used on crash kernel boot only
+sudo cp files/scripts/network-interface-state-init.sh $FILESYSTEM_ROOT/usr/sbin/network-interface-state-init.sh
+sudo chmod +x $FILESYSTEM_ROOT/usr/sbin/network-interface-state-init.sh
+
 #Adds a locale to a debian system in non-interactive mode
 sudo sed -i '/^#.* en_US.* /s/^#//' $FILESYSTEM_ROOT/etc/locale.gen && \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT locale-gen "en_US.UTF-8"
