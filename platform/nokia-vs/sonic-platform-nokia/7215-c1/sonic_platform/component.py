@@ -279,7 +279,7 @@ class Component(ComponentBase):
             success_flag = False
             FPGA_UPDATE_COMMAND1 = ['sudo', 'mkdir', mount_point]
             FPGA_UPDATE_COMMAND2 = ['sudo', 'mount', '/dev/mmcblk0p1', mount_point]
-            FPGA_UPDATE_COMMAND3 = ['cp', image_path, '/mnt/p1/EFI/fpga']
+            FPGA_UPDATE_COMMAND3 = ['cp', image_path, '/mnt/p1/EFI/UpdateCapsule']
             FPGA_UPDATE_COMMAND4 = ['sudo', 'umount', mount_point]
             FPGA_UPDATE_COMMAND5 = ['sudo', 'rmdir', mount_point]
             FPGA_UPDATE_COMMAND6 = ['sudo', 'reboot']
