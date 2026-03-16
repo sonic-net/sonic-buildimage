@@ -329,7 +329,12 @@ bfb_install_call() {
     remove_cx_pci_device "$rshim" "$dpu"
 
     # Create config file with NPU time for DPU time synchronization
-    local config_file=$(mktemp "${WORK_DIR}/bf_cfg.XXXXX")
+    local config_file
+    config_file=$(mktemp "${WORK_DIR}/bf_cfg.XXXXX") || {
+        log_error "$rid: Failed to create temporary config file in ${WORK_DIR}"
+        return 1
+    }
+    trap "rm -f '$config_file'; stop_rshim_daemon $rid" EXIT
     if [ -n "$appendix" ]; then
         cat "$appendix" > "$config_file"
     fi
@@ -359,8 +364,6 @@ bfb_install_call() {
     if [ $exit_status -ne 0 ] || [ $verbose = true ]; then
         cat "$result_file"
     fi
-
-    rm -f "$config_file"
 
     # Stop rshim application and reset DPU
     stop_rshim_daemon "$rid"
