@@ -9,29 +9,24 @@ use redis::{Commands, Connection};
 const CONFIG_DB: i32 = 4;
 const REDIS_PORT: i32 = 6379;
 const RESTAPI_CERTS: &str = "RESTAPI|certs";
-const DEFAULT_RESTAPI_CERT_DIR: &str = "/etc/sonic/credentials";
+const DEFAULT_RESTAPI_CERT_DIR: &str = "/etc/sonic/credentials/";
 
 #[derive(Serialize)]
 struct HealthStatus {
     restapi_status: String,
 }
 
-// Opens a Redis connection to CONFIG DB.
-// Returns None on any error (client creation or connection).
-fn redis_connect() -> Option<Connection> {
+// Opens a Redis connection to CONFIG DB and then fetches a hash field from CONFIG DB.
+// Returns None if any error happens.
+fn redis_hget(hash: &str, field: &str) -> Option<String> {
     let client = match redis::Client::open(format!("redis://127.0.0.1:{}/{}", REDIS_PORT, CONFIG_DB)) {
         Ok(c) => c,
         Err(e) => { eprintln!("Redis client error: {e}"); return None; }
     };
-    match client.get_connection() {
-        Ok(conn) => Some(conn),
-        Err(e) => { eprintln!("Redis connection error: {e}"); None }
-    }
-}
-
-// Fetches a hash field from CONFIG DB.
-// Returns None if HGET fails.
-fn redis_hget(conn: &mut Connection, hash: &str, field: &str) -> Option<String> {
+    let mut conn = match client.get_connection() {
+        Ok(c) => c,
+        Err(e) => { eprintln!("Redis connection error: {e}"); return None; }
+    };
     match conn.hget::<_, _, Option<String>>(hash, field) {
         Ok(v) => v,
         Err(e) => { eprintln!("Redis HGET error {hash}.{field}: {e}"); None }
@@ -39,17 +34,17 @@ fn redis_hget(conn: &mut Connection, hash: &str, field: &str) -> Option<String> 
 }
 
 // Check if root cert, server cert, and server key exist
-fn check_certificates(redis_conn: &mut Connection) -> bool {
+fn check_certificates() -> bool {
     // Read the certificate and key paths from Redis
-    let root_cert_path = match redis_hget(redis_conn, RESTAPI_CERTS, "ca_crt") {
+    let root_cert_path = match redis_hget(RESTAPI_CERTS, "ca_crt") {
         Some(path) => path,
         None => { eprintln!("Root certificate path not found in Redis. Assuming the cert does not exist."); return false; }
     };
-    let server_cert_path = match redis_hget(redis_conn, RESTAPI_CERTS, "server_crt") {
+    let server_cert_path = match redis_hget(RESTAPI_CERTS, "server_crt") {
         Some(path) => path,
         None => { eprintln!("Server certificate path not found in Redis. Assuming the cert does not exist."); return false; }
     };
-    let server_key_path = match redis_hget(redis_conn, RESTAPI_CERTS, "server_key") {
+    let server_key_path = match redis_hget(RESTAPI_CERTS, "server_key") {
         Some(path) => path,
         None => { eprintln!("Server key path not found in Redis. Assuming the key does not exist."); return false; }
     };
@@ -63,7 +58,7 @@ fn check_certificates(redis_conn: &mut Connection) -> bool {
         if path.starts_with(DEFAULT_RESTAPI_CERT_DIR) {
             Path::new(path).exists()
         } else {
-            println!("The path {path} is outside the expected directory. Assuming it exists.");
+            println!("The path {path} is outside the default directory. Assuming it exists.");
             true
         }
     )
@@ -83,14 +78,6 @@ fn check_restapi_status() -> String {
 
 fn main() {
     let watchdog_port = 50100;
-    // Connect to Redis
-    let mut redis_conn = match redis_connect() {
-        Some(conn) => conn,
-        None => {
-            eprintln!("Failed to connect to Redis. Exiting.");
-            return;
-        }
-    };
     // Start a HTTP server listening on port 50100
     let listener = TcpListener::bind(format!("127.0.0.1:{}", watchdog_port))
         .expect(&format!("Failed to bind to 127.0.0.1:{}", watchdog_port));
@@ -114,7 +101,7 @@ fn main() {
                         continue;
                     }
 
-                    let certs_exist = check_certificates(&mut redis_conn);
+                    let certs_exist = check_certificates();
                     let restapi_result = if !certs_exist {
                         println!("restapi is waiting for certificates.");
                         "OK".to_string()
