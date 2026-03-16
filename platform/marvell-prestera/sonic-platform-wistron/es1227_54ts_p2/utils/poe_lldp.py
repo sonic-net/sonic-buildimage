@@ -196,7 +196,12 @@ def parse_lldpcli_output(output):
         port_dict = config_db.get_table('PORT')
 
         lldp_data = json.loads(output)
-        interfaces = lldp_data['lldp']['interface']
+        lldp_root = lldp_data.get('lldp', {})
+        if not lldp_root:
+            return
+        interfaces = lldp_root.get('interface', [])
+        if isinstance(interfaces, dict):
+            interfaces = [interfaces]
 
         # print("lldp_debug: {}".format(lldp_debug))
 

@@ -306,13 +306,17 @@ def poe_cfg():
         # 2. Add the default poe cfg to redis DB
 
         # Use the default poe cfg json file
-        CONFIG_POE_DB_FILE = '/usr/share/sonic/device/arm64-wistron_es2227_54ts_p-r0/wistron_es2227_54ts_p/poe_default_cfg.json'
+        CONFIG_POE_DB_FILE = '/usr/share/sonic/device/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/poe_default_cfg.json'
         with open(CONFIG_POE_DB_FILE) as json_file:
             # Load the contents of the file
             data = json.load(json_file)
         port_dict = data['PORT']
 
         # Add the default poe cfg to redis DB
+        DB_CONFIG_FILE = '/var/run/redis/sonic-db/database_config.json'
+        while not os.path.exists(DB_CONFIG_FILE):
+            print(f"Waiting for {DB_CONFIG_FILE} to be ready...")
+            time.sleep(3)
         config_db = ConfigDBConnector()
         config_db.connect()
         for key in port_dict:
@@ -445,7 +449,12 @@ def parse_lldpcli_output(output):
         port_dict = config_db.get_table('PORT')
 
         lldp_data = json.loads(output)
-        interfaces = lldp_data['lldp']['interface']
+        lldp_root = lldp_data.get('lldp', {})
+        if not lldp_root:
+            return
+        interfaces = lldp_root.get('interface', [])
+        if isinstance(interfaces, dict):
+            interfaces = [interfaces]
 
         # print("lldp_debug: {}".format(lldp_debug))
 
