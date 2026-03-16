@@ -626,9 +626,6 @@ start() {
 {%- else %}
         NET="host"
 {%- endif %}
-    else
-        NET="host"
-    fi
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
