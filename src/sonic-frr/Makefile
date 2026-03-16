@@ -35,6 +35,8 @@ endif
 	git clean -xfdf
 	git checkout build-$(FRR_TAG)
 	stg branch --delete --force $(STG_BRANCH)
+	git checkout refs/tags/$(FRR_TAG)
+	git branch -D build-$(FRR_TAG)
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	git reset --hard
 endif
