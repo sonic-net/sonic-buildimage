@@ -56,7 +56,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 				i=$$(($$i+1)); \
 			fi; \
 			while IFS= read -r line || [ -n "$$line" ]; do \
-				if ! grep -q "^#" <<< "$$line"; then \
+				if [ -n "$$line" ] && ! grep -q "^#" <<< "$$line"; then \
 					i=$$(($$i+1)); \
 					lanes=$$(echo "$$line" | awk '{print $$2}'); \
 					echo "eth$$i:$$lanes" >> device/x86_64-kvm_x86_64-r0/$$(basename $$d)/lanemap.ini; \
@@ -98,7 +98,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 					last_line=$$(tail -n 1 device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/port_config.ini); \
 					num_columns=$$(echo $$last_line | awk '{print NF}'); \
 					while IFS= read -r line || [ -n "$$line" ]; do \
-						if ! grep -q "^#" <<< "$$line"; then \
+						if [ -n "$$line" ] && ! grep -q "^#" <<< "$$line"; then \
 							i=$$(($$i+1)); \
 							lanes=$$(echo "$$line" | awk '{print $$2}'); \
 							echo "eth$$i:$$lanes" >> device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/lanemap.ini; \

@@ -2056,6 +2056,7 @@ ucode_port_339.BCM8887X_ADAPTER=OAMP:core_7.239
 oamp_dual_mode.BCM8887X=1
 
 sai_disable_srcmacqedstmac_ctrl=1
+sai_instru_stat_accum_enable=1
 
 #RCY ports
 sai_recycle_port_lane_base=300

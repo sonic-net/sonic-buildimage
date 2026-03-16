@@ -59,13 +59,17 @@
             "unix_socket_path": "",
             "persistence_for_warm_boot" : "yes"
         }
-{% endif %},
+{% endif %}
+{% if DATABASE_TYPE is defined and (DATABASE_TYPE == "dpudb" or DATABASE_TYPE == "bmcdb") %}
+{% else %}
+        ,
         "redis_bmp":{
             "hostname" : "{{HOST_IP}}",
             "port" : {{BMP_DB_PORT}},
             "unix_socket_path" : "/var/run/redis{{DEV}}/redis_bmp.sock",
             "persistence_for_warm_boot" : "yes"
         }
+{% endif %}
     },
     "DATABASES" : {
        "APPL_DB": {
@@ -181,12 +185,16 @@
             "separator": ":",
             "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         }
-{% endif %},
-         "BMP_STATE_DB" : {
+{% elif DATABASE_TYPE is defined and DATABASE_TYPE == "bmcdb" %}
+        {# No BMP_STATE_DB for BMC devices #}
+{% else %}
+        ,
+        "BMP_STATE_DB" : {
             "id" : 20,
             "separator": "|",
             "instance" : "redis_bmp"
         }
+{% endif %}
     },
     "VERSION" : "1.0"
 }

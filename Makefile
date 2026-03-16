@@ -124,7 +124,7 @@ $(PLATFORM_PATH):
 configure : $(PLATFORM_PATH)
 	$(call make_work, $@)
 
-clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
+clean showtag docker-cleanup clean-docker sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h

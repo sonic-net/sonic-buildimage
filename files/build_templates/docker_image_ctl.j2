@@ -102,16 +102,18 @@ function getBootType()
 function preStartAction()
 {
 {%- if docker_container_name == "database" %}
-    WARM_DIR=/host/warmboot
+    WARM_DIR=/host/warmboot$DEV
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
         if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
-            # Load redis content from /host/warmboot/dump.rdb
+            # Load redis content from /host/warmboot$DEV/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
+                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            fi
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -479,20 +481,39 @@ start() {
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
+        HWSKU_MOUNT_MODE="ro"
+        {%- if docker_container_name == "swss" %}
+        if [ -f "$MOUNTPATH/hwsku-init" ]; then
+            HWSKU_MOUNT_MODE="rw"
+        fi
+        {%- endif %}
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
     # Insert "create_only_config_db_buffers" attribute
+    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
+
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ -d "$PLATFORM_FOLDER" ]; then
+        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
+            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
+        fi
+    fi
+
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
     if [ -d "$HWSKU_FOLDER" ]; then
-        CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
-        if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
+            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
         fi
+
         SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
         if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
+    fi
+
+    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
+        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
     fi
     {%- endif %}
 
@@ -600,12 +621,11 @@ start() {
     fi
     {%- elif docker_container_name == "dash-ha" %}
     REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
-    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
-    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
         NET="host"
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
@@ -616,7 +636,9 @@ start() {
         # The below logic extracts the base DIR's where database_config.json's for various namespaces exist.
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
-        {%- if docker_container_name != "database" %}
+        {%- if docker_container_name == "dash-ha" %}
+        REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+        {%- elif docker_container_name != "database" %}
 
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
@@ -634,6 +656,7 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
+            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -692,6 +715,7 @@ start() {
 {%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+        -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
 {%- endif %}
@@ -758,7 +782,7 @@ start() {
         $DB_OPT \
 {%- else %}
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
-        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
+        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
@@ -862,6 +886,10 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
+fi
+
+if [[ "$IS_BMC_DEVICE" == "true" ]]; then
+    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}
