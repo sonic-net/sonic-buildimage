@@ -154,6 +154,18 @@ class BGPPeerMgrBase(Manager):
         self.peer_group_mgr = BGPPeerGroupMgr(self.common_objs, base_template)
         return
 
+    @staticmethod
+    def normalize_ip_str(ip_str):
+        """
+        Normalize an IP address string that may be wrapped in Python list notation.
+        On chassis linecards, CONFIG_DB may store IPs as "['fc00::15']" instead of "fc00::15".
+        :param ip_str: IP address string, possibly list-wrapped
+        :return: cleaned IP address string
+        """
+        if isinstance(ip_str, str) and ip_str.startswith("["):
+            ip_str = ip_str.strip("[]'\" ")
+        return ip_str
+
     def set_handler(self, key, data):
         """
          It runs on 'SET' command
@@ -161,6 +173,9 @@ class BGPPeerMgrBase(Manager):
         :param data: the data associated with the change
         """
         vrf, nbr = self.split_key(key)
+        nbr = self.normalize_ip_str(nbr)
+        if "local_addr" in data:
+            data["local_addr"] = self.normalize_ip_str(data["local_addr"])
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             return self.add_peer(vrf, nbr, data)
@@ -422,6 +437,7 @@ class BGPPeerMgrBase(Manager):
         :param key: key of the neighbor
         """
         vrf, nbr = self.split_key(key)
+        nbr = self.normalize_ip_str(nbr)
         peer_key = (vrf, nbr)
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))

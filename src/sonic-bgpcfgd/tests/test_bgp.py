@@ -263,6 +263,50 @@ def test_del_handler_nonexist_peer(mocked_log_warn):
         m.del_handler("40.40.40.1")
         mocked_log_warn.assert_called_with("Peer '(default|40.40.40.1)' has not been found")
 
+
+# Tests for normalize_ip_str and list-wrapped IP handling (issue #25881)
+
+def test_normalize_ip_str_plain_ipv4():
+    result = bgpcfgd.managers_bgp.BGPPeerMgrBase.normalize_ip_str("10.0.0.1")
+    assert result == "10.0.0.1"
+
+def test_normalize_ip_str_plain_ipv6():
+    result = bgpcfgd.managers_bgp.BGPPeerMgrBase.normalize_ip_str("fc00::15")
+    assert result == "fc00::15"
+
+def test_normalize_ip_str_list_wrapped_ipv4():
+    result = bgpcfgd.managers_bgp.BGPPeerMgrBase.normalize_ip_str("['10.0.0.1']")
+    assert result == "10.0.0.1"
+
+def test_normalize_ip_str_list_wrapped_ipv6():
+    result = bgpcfgd.managers_bgp.BGPPeerMgrBase.normalize_ip_str("['fc00::15']")
+    assert result == "fc00::15"
+
+def test_normalize_ip_str_non_string():
+    result = bgpcfgd.managers_bgp.BGPPeerMgrBase.normalize_ip_str(12345)
+    assert result == 12345
+
+def test_add_peer_list_wrapped_ipv4():
+    """Test that list-wrapped IPv4 addresses are handled correctly in add_peer"""
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("['30.30.30.1']", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': "['30.30.30.30']", 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value for list-wrapped IPv4 peer"
+
+def test_add_peer_list_wrapped_ipv6():
+    """Test that list-wrapped IPv6 addresses are handled correctly in add_peer"""
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("['fc00:20::1']", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': "['fc00:20::20']", 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value for list-wrapped IPv6 peer"
+
+def test_add_peer_list_wrapped_local_addr_only():
+    """Test that list-wrapped local_addr is handled even when key is clean"""
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': "['30.30.30.30']", 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value for list-wrapped local_addr"
+
 @patch('bgpcfgd.managers_bgp.log_info')
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_del_handler_dynamic_nonexist_peer_template_exists(mocked_log_warn, mocked_log_info):
