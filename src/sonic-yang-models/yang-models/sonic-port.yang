@@ -276,6 +276,9 @@ module sonic-port{
 								 Must be less than or equal to max_suppress_time.
 								 A value of 0 means this parameter is not configured.
 								 Industry default: 5 seconds.";
+					must "current() = 0 or ../max_suppress_time = 0 or current() <= ../max_suppress_time" {
+						error-message "decay_half_life must be less than or equal to max_suppress_time";
+					}
 					type uint32;
 					default 0;
 				}
@@ -297,6 +300,9 @@ module sonic-port{
 								 Must be less than or equal to suppress_threshold.
 								 A value of 0 means this parameter is not configured.
 								 Industry default: 1000.";
+					must "current() = 0 or ../suppress_threshold = 0 or current() <= ../suppress_threshold" {
+						error-message "reuse_threshold must be less than or equal to suppress_threshold";
+					}
 					type uint32;
 					default 0;
 				}
