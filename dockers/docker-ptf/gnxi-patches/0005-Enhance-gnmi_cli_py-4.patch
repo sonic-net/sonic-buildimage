@@ -320,7 +320,7 @@ index dab2db6..e32b3ff 100644
 -grpcio-tools==1.15.0
 +grpcio==1.41.1
 +grpcio-tools==1.41.1
- protobuf==3.6.1 --no-binary=protobuf
+ protobuf==6.31.1 --no-binary=protobuf
  six==1.12.0
 -- 
 2.48.1.windows.1

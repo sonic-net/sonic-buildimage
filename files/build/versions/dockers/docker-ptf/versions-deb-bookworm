@@ -589,7 +589,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.162-1
+linux-libc-dev==6.1.164-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12

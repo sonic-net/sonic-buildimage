@@ -47,7 +47,7 @@ simplegeneric==0.8.1
 six==1.16.0
 supervisor==4.3.0
 thrift==0.22.0
-tornado==6.5.4
+tornado==6.5.5
 traitlets==5.14.3
 typing_extensions==4.15.0
 unittest-xml-reporting==4.0.0

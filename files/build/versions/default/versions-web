@@ -109,7 +109,7 @@ https://github.com/open-telemetry/opentelemetry-collector-releases/releases/down
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
 https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d
 https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.3/openapi-generator-cli-4.2.3.jar==cda48eb414c8b4585e280c3fb2656e24
-https://sh.rustup.rs==ddcc91013258e42c0df0ec1c26c92359
-https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init==17d1313bdd6bbcfcec9344f6dd7e05ca
-https://static.rust-lang.org/rustup/dist/armv7-unknown-linux-gnueabihf/rustup-init==e59124baaee31e5dce382b468f76c3e4
-https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==b492784060539969a92e14663c0796d1
+https://sh.rustup.rs==f5b23855b2cbe6b44a3f82433e979992
+https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init==c37eeefaa45bbf75ada591d3c641a6f0
+https://static.rust-lang.org/rustup/dist/armv7-unknown-linux-gnueabihf/rustup-init==6c66f99d772fc8522706535cc66195b1
+https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==a13dde59a1295a966c41031b1e7faa32

@@ -312,7 +312,7 @@ class Sysmonitor(ProcessTaskBase):
         try:
             service_status = "Down"
             service_up_status = "Down"
-            service_name,last_name = event.split('.')
+            service_name,last_name = event.rsplit('.', 1)
 
             sysctl_show = self.run_systemctl_show(event)
 
@@ -327,7 +327,7 @@ class Sysmonitor(ProcessTaskBase):
                 #Raise syslog for service state change
                 logger.log_info("{} service state changed to [{}/{}]".format(event, active_state, sub_state))
 
-                if status == "enabled" or status == "enabled-runtime" or status == "static":
+                if status in ("enabled", "enabled-runtime", "static", "generated"):
                     if fail_reason == "success":
                         fail_reason = "-"
                     if (active_state == "active" and sub_state == "exited"):
@@ -457,7 +457,7 @@ class Sysmonitor(ProcessTaskBase):
                 astate = "DOWN"
             self.publish_system_status(astate)
 
-            srv_name,last = event.split('.')
+            srv_name,last = event.rsplit('.', 1)
             # stop on service maybe propagated to timers and in that case,
             # the state_db entry for the service should not be deleted
             if last == "service":
