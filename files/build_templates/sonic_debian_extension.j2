@@ -368,6 +368,11 @@ sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/conf.d/*
+# Remove routeCheck and dualtorNeighborCheck from monit config on DPU platforms
+if [[ $CONFIGURED_PLATFORM == pensando ]] || [[ $CONFIGURED_PLATFORM == nvidia-bluefield ]]; then
+    sudo sed -i '/^# route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# dualtor_neighbor_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+fi
 sudo cp $IMAGE_CONFIGS/monit/container_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/memory_checker $FILESYSTEM_ROOT/usr/bin/
@@ -1225,7 +1230,7 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
 {% if installer_python_debs.strip() -%}
-# Install FIPS python package will break apt-get purge command, so install after all purge command finish 
+# Install FIPS python package will break apt-get purge command, so install after all purge command finish
 if [ "$INCLUDE_FIPS" == y ]; then
     install_deb_package {{installer_python_debs}}
 fi
