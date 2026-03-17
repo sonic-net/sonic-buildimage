@@ -134,6 +134,12 @@ INCLUDE_SNMP ?= y
 # INCLUDE_LLDP - build docker-lldp for LLDP support
 INCLUDE_LLDP ?= y
 
+# INCLUDE_SNMP - build docker-snmp for SNMP support
+INCLUDE_SNMP ?= y
+
+# INCLUDE_LLDP - build docker-lldp for LLDP support
+INCLUDE_LLDP ?= y
+
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
 
