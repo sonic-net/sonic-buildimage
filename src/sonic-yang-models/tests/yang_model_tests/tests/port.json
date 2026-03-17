@@ -189,7 +189,7 @@
     },
     "PORT_INVALID_DAMPING_HALFLIFE_GT_MAXSUPPRESS_TEST": {
         "desc": "PORT_INVALID_DAMPING_HALFLIFE_GT_MAXSUPPRESS_TEST must condition failure.",
-        "eStrKey" : "Must",
+        "eStrKey" : "None",
         "eStr": ["decay_half_life must be less than or equal to max_suppress_time"]
     }
 
