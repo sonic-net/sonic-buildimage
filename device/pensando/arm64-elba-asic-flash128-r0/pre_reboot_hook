@@ -28,5 +28,52 @@ sleep 2
 LOG_MSG "Writing pre-shutdown success to CPLD reg"
 docker exec "$(cat /host/dpu-docker-info/name)" /nic/bin/cpldapp -w 0xd 200
 
+# Spawn fully independent background process to ping host and trigger power cycle if unreachable
+# Algorithm: If ping fails, wait 10 seconds and retry. After 3 consecutive failures, trigger power cycle.
+# Using setsid + nohup to completely detach from parent process (daemonize)
+DPU_CONTAINER_NAME=$(cat /host/dpu-docker-info/name)
+setsid nohup bash -c "
+    DPU_CONTAINER='$DPU_CONTAINER_NAME'
+    HOST_IP='169.254.200.254'
+    TIMEOUT=120
+    POLL_INTERVAL=5
+    ELAPSED=0
+    MAX_FAILURES=3
+    RETRY_WAIT=10
+
+    while [ \$ELAPSED -lt \$TIMEOUT ]; do
+        if ping -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
+            echo \"Ping to \$HOST_IP successful, host is still reachable\" | tee /dev/kmsg /dev/console
+        else
+            echo \"Ping to \$HOST_IP failed, starting failure retry sequence\" | tee /dev/kmsg /dev/console
+            FAIL_COUNT=1
+
+            # Retry loop: wait 10 seconds between each retry, up to MAX_FAILURES total attempts
+            while [ \$FAIL_COUNT -lt \$MAX_FAILURES ]; do
+                echo \"Ping failure \$FAIL_COUNT/\$MAX_FAILURES, waiting \$RETRY_WAIT seconds before retry...\" | tee /dev/kmsg /dev/console
+                sleep \$RETRY_WAIT
+
+                if ping -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
+                    echo \"Ping to \$HOST_IP recovered after \$FAIL_COUNT failures\" | tee /dev/kmsg /dev/console
+                    FAIL_COUNT=0
+                    break
+                fi
+                FAIL_COUNT=\$((FAIL_COUNT + 1))
+            done
+
+            # If we exhausted all retries (3 consecutive failures), trigger power cycle
+            if [ \$FAIL_COUNT -ge \$MAX_FAILURES ]; then
+                echo \"Ping failure \$FAIL_COUNT/\$MAX_FAILURES, all retries exhausted\" | tee /dev/kmsg /dev/console
+                echo \"Triggering cpld power cycle after \$MAX_FAILURES consecutive ping failures\" | tee /dev/kmsg /dev/console
+                docker exec \"\$DPU_CONTAINER\" /nic/bin/cpldapp -pwrcycle
+                exit 0
+            fi
+        fi
+        sleep \$POLL_INTERVAL
+        ELAPSED=\$((ELAPSED + POLL_INTERVAL))
+    done
+    echo \"Ping to \$HOST_IP remained successful for \$TIMEOUT seconds, no power cycle triggered\" | tee /dev/kmsg /dev/console
+" </dev/null >/dev/null 2>&1 &
+
 LOG_MSG "Platform specific pre-shutdown is successful"
 
