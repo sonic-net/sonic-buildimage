@@ -248,9 +248,11 @@ while /bin/true; do
       ip="$( cut -d ':' -f 3- <<< "$neigh" )"
       if [[ $intf == *"Vlan"* ]]; then
           if [[ $ip == *"."* ]] && [[ ! $KERNEIGH4 =~ "${ip},${intf}" ]]; then
+              logger "mismatch arp entry, pinging ${ip} on ${intf}"
               run_with_retry_cmd "db/kernel mismatch ping to ${ip} on ${intf}" \
                 timeout 0.2 ping -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
           elif [[ $ip == *":"* ]] && [[ ! $KERNEIGH6 =~ "${ip},${intf}" ]]; then
+              logger "mismatch v6 nbr entry, pinging ${ip} on ${intf}"
               run_with_retry_cmd "db/kernel mismatch ping6 to ${ip} on ${intf}" \
                 timeout 0.2 ping6 -I "$intf" -n -q -i 0 -c 1 -W 1 "$ip" >/dev/null 2>&1
           fi
