@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 import time
 import argparse
-from typing import List
+from typing import Dict, List
 
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem,
@@ -21,11 +22,46 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 # CONFIG_DB reconcile env
 GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
-GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
-GNMI_CLIENT_ROLE = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly")
+def _parse_client_certs() -> List[Dict[str, str]]:
+    """
+    Build the list of GNMI client cert entries from env vars.
+
+    Preferred: GNMI_CLIENT_CERTS  (JSON array of {"cname": ..., "role": ...})
+    Fallback:  TELEMETRY_CLIENT_CNAME / GNMI_CLIENT_ROLE  (single entry, backward-compat)
+    """
+    raw = os.getenv("GNMI_CLIENT_CERTS", "").strip()
+    if raw:
+        try:
+            entries = json.loads(raw)
+            if not isinstance(entries, list):
+                raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
+            normalized: List[Dict[str, str]] = []
+            for e in entries:
+                if not isinstance(e, dict):
+                    raise ValueError(f"Each entry must be an object: {e!r}")
+                if "cname" not in e or "role" not in e:
+                    raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
+                cname = str(e.get("cname", "")).strip()
+                role = str(e.get("role", "")).strip()
+                if not cname or not role:
+                    raise ValueError(f"'cname' and 'role' must be non-empty strings: {e}")
+                normalized.append({"cname": cname, "role": role})
+            return normalized
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.log_error(f"Bad GNMI_CLIENT_CERTS env var: {exc}; falling back to legacy")
+
+    # Legacy single-entry env vars
+    cname = os.getenv("TELEMETRY_CLIENT_CNAME", "").strip()
+    role = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly").strip()
+    if cname:
+        return [{"cname": cname, "role": role}]
+    return []
+
+
+GNMI_CLIENT_CERTS: List[Dict[str, str]] = _parse_client_certs()
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
-logger.log_notice(f"GNMI_CLIENT_ROLE={GNMI_CLIENT_ROLE}")
+logger.log_notice(f"GNMI_CLIENT_CERTS={GNMI_CLIENT_CERTS}")
 
 _TELEMETRY_SRC = (
     "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"
@@ -134,31 +170,25 @@ POST_COPY_ACTIONS = {
 
 
 def _ensure_user_auth_cert() -> None:
-    cur = db_hget("GNMI|gnmi", "user_auth")
+    cur = db_hget("TELEMETRY|gnmi", "user_auth")
     if cur != "cert":
-        if db_hset("GNMI|gnmi", "user_auth", "cert"):
-            logger.log_notice(f"Set GNMI|gnmi.user_auth=cert (was: {cur or '<unset>'})")
+        if db_hset("TELEMETRY|gnmi", "user_auth", "cert"):
+            logger.log_notice(f"Set TELEMETRY|gnmi.user_auth=cert (was: {cur or '<unset>'})")
         else:
-            logger.log_error("Failed to set GNMI|gnmi.user_auth=cert")
+            logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
 
 
-def _ensure_cname_present(cname: str) -> None:
-    if not cname:
-        logger.log_warning("TELEMETRY_CLIENT_CNAME not set; skip CNAME creation")
-        return
-
+def _ensure_cname_present(cname: str, role: str) -> None:
     key = f"GNMI_CLIENT_CERT|{cname}"
     entry = db_hgetall(key)
     if not entry:
-        if db_hset(key, "role", GNMI_CLIENT_ROLE):
-            logger.log_notice(f"Created {key} with role={GNMI_CLIENT_ROLE}")
+        if db_hset(key, "role", role):
+            logger.log_notice(f"Created {key} with role={role}")
         else:
             logger.log_error(f"Failed to create {key}")
 
 
 def _ensure_cname_absent(cname: str) -> None:
-    if not cname:
-        return
     key = f"GNMI_CLIENT_CERT|{cname}"
     if db_hgetall(key):
         if db_del(key):
@@ -166,20 +196,21 @@ def _ensure_cname_absent(cname: str) -> None:
         else:
             logger.log_error(f"Failed to remove {key}")
 
-
 def reconcile_config_db_once() -> None:
     """
     Idempotent drift-correction for CONFIG_DB:
       - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
-          * Ensure GNMI|gnmi.user_auth=cert
-          * Ensure GNMI_CLIENT_CERT|<CNAME> exists with role=<GNMI_CLIENT_ROLE>
-      - When false: ensure the CNAME row is absent
+          * Ensure TELEMETRY|gnmi.user_auth=cert
+          * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
+      - When false: ensure all CNAME rows are absent
     """
     if GNMI_VERIFY_ENABLED:
         _ensure_user_auth_cert()
-        _ensure_cname_present(GNMI_CLIENT_CNAME)
+        for entry in GNMI_CLIENT_CERTS:
+            _ensure_cname_present(entry["cname"], entry["role"])
     else:
-        _ensure_cname_absent(GNMI_CLIENT_CNAME)
+        for entry in GNMI_CLIENT_CERTS:
+            _ensure_cname_absent(entry["cname"])
 
 # Host destination for service_checker.py
 HOST_SERVICE_CHECKER = "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"

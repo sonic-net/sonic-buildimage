@@ -36,5 +36,61 @@
     },
     "CONSOLE_PORT_VALID": {
         "desc": "Verifying CONSOLE_PORT configuration no failure."
+    },
+    "CONSOLE_SWITCH_VALID_DEFAULT_ESCAPE_CHAR": {
+        "desc": "CONSOLE_SWITCH valid default_escape_char configuration."
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_UPPERCASE": {
+        "desc": "CONSOLE_SWITCH invalid default_escape_char with uppercase letter.",
+        "eStrKey": "Pattern",
+        "eStr": ["default_escape_char"]
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_NUMBER": {
+        "desc": "CONSOLE_SWITCH invalid default_escape_char with number.",
+        "eStrKey": "Pattern",
+        "eStr": ["default_escape_char"]
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_SPECIAL": {
+        "desc": "CONSOLE_SWITCH invalid default_escape_char with special character.",
+        "eStrKey": "Pattern",
+        "eStr": ["default_escape_char"]
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_MULTIPLE": {
+        "desc": "CONSOLE_SWITCH invalid default_escape_char with multiple characters.",
+        "eStrKey": "Pattern",
+        "eStr": ["default_escape_char"]
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_EMPTY": {
+        "desc": "CONSOLE_SWITCH invalid default_escape_char with empty string.",
+        "eStrKey": "Pattern",
+        "eStr": ["default_escape_char"]
+    },
+    "CONSOLE_PORT_VALID_ESCAPE_CHAR": {
+        "desc": "CONSOLE_PORT valid escape_char configuration."
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_UPPERCASE": {
+        "desc": "CONSOLE_PORT invalid escape_char with uppercase letter.",
+        "eStrKey": "Pattern",
+        "eStr": ["escape_char"]
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_NUMBER": {
+        "desc": "CONSOLE_PORT invalid escape_char with number.",
+        "eStrKey": "Pattern",
+        "eStr": ["escape_char"]
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_SPECIAL": {
+        "desc": "CONSOLE_PORT invalid escape_char with special character.",
+        "eStrKey": "Pattern",
+        "eStr": ["escape_char"]
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_MULTIPLE": {
+        "desc": "CONSOLE_PORT invalid escape_char with multiple characters.",
+        "eStrKey": "Pattern",
+        "eStr": ["escape_char"]
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_EMPTY": {
+        "desc": "CONSOLE_PORT invalid escape_char with empty string.",
+        "eStrKey": "Pattern",
+        "eStr": ["escape_char"]
     }
 }
