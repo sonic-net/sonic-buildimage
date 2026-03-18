@@ -1,8 +1,8 @@
 #!/bin/bash
 # Shared Kubernetes pod control script for SONiC sidecar services
 # 1. Runs as root via systemd service, so direct access to kubelet.conf is available; sudo is not required
-# 2. Use kubectl to get pods and delete pods with retry
-# 3. start/stop/restart are NON-BLOCKING
+# 2. Pod listing queries the local kubelet API (localhost:10250)
+# 3. start/restart complete quickly (kubectl --wait=false); stop is a no-op
 # 4. Only target pods matching POD_SELECTOR (default: raw_container_name=<SERVICE_NAME>)
 #
 # Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
@@ -30,6 +30,15 @@ MAX_ATTEMPTS=10
 BACKOFF_START=1
 BACKOFF_MAX=8
 
+# Kubelet local API – queries stay on-node; avoids API server load
+# Note: -k (skip server cert verification) is used because the kubelet's
+# serving cert is self-signed and not signed by the cluster CA.  This is
+# safe because the connection is to localhost only (loopback); there is no
+# network path for MITM.  Client authentication is still performed via certs.
+KUBELET_URL="https://localhost:10250"
+KUBELET_CERT="/var/lib/kubelet/pki/kubelet-client-current.pem"
+KUBELET_KEY="/var/lib/kubelet/pki/kubelet-client-current.pem"
+
 # Label selector for pods; can be overridden via env
 # Example override: POD_SELECTOR="app=telemetry" telemetry.sh start
 POD_SELECTOR="${POD_SELECTOR:-raw_container_name=${SERVICE_NAME}}"
@@ -56,18 +65,59 @@ kubectl_retry() {
   done
 }
 
+kubelet_get_pods() {
+  local attempt=1 backoff=${BACKOFF_START} out rc http_code body err_msg
+  while true; do
+    # -w appends the 3-digit HTTP status code after the response body
+    out=$(curl -sk --cert "${KUBELET_CERT}" --key "${KUBELET_KEY}" \
+      --max-time 5 -w '%{http_code}' "${KUBELET_URL}/pods" 2>&1); rc=$?
+
+    http_code="" body="" err_msg="$out"
+    if (( rc == 0 )) && (( ${#out} >= 3 )); then
+      http_code="${out: -3}"
+      body="${out:0:${#out}-3}"
+      if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+        printf '%s' "$body"
+        return 0
+      fi
+      # Non-2xx: build a descriptive message and fall through to retry
+      if [[ "$http_code" == "401" || "$http_code" == "403" ]]; then
+        err_msg="HTTP ${http_code} from kubelet (authn/authz failure)"
+      else
+        err_msg="HTTP ${http_code} from kubelet"
+      fi
+      rc=1
+    fi
+
+    if (( attempt >= MAX_ATTEMPTS )); then
+      echo "$err_msg" >&2
+      return "${rc:-1}"
+    fi
+    log "kubelet curl retry ${attempt}/${MAX_ATTEMPTS}: ${err_msg}"
+    sleep "${backoff}"
+    (( backoff = backoff < BACKOFF_MAX ? backoff*2 : BACKOFF_MAX ))
+    (( attempt++ ))
+  done
+}
+
 pods_on_node() {
-  kubectl_retry -n "${NS}" get pods \
-    --field-selector "spec.nodeName=${NODE_NAME}" \
-    -l "${POD_SELECTOR}" \
-    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' || true
+  local key="${POD_SELECTOR%%=*}"
+  local val="${POD_SELECTOR#*=}"
+  kubelet_get_pods | jq -r \
+    --arg ns "${NS}" --arg key "$key" --arg val "$val" \
+    '.items[] | select(.metadata.namespace == $ns) |
+     select(.metadata.labels[$key] == $val) |
+     "\(.metadata.name) \(.status.phase)"' || true
 }
 
 pod_names_on_node() {
-  kubectl_retry -n "${NS}" get pods \
-    --field-selector "spec.nodeName=${NODE_NAME}" \
-    -l "${POD_SELECTOR}" \
-    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || true
+  local key="${POD_SELECTOR%%=*}"
+  local val="${POD_SELECTOR#*=}"
+  kubelet_get_pods | jq -r \
+    --arg ns "${NS}" --arg key "$key" --arg val "$val" \
+    '.items[] | select(.metadata.namespace == $ns) |
+     select(.metadata.labels[$key] == $val) |
+     .metadata.name' || true
 }
 
 delete_pod_with_retry() {
@@ -109,21 +159,16 @@ kill_pods() {
 }
 
 cmd_start() {
-  if command -v systemd-cat >/dev/null 2>&1; then
-    # background + pipe to journald with distinct priorities
-    ( kill_pods ) \
-      > >(systemd-cat -t "${SERVICE_NAME}-start" -p info) \
-      2> >(systemd-cat -t "${SERVICE_NAME}-start" -p err)
-  else
-    # background + pipe to syslog via logger in case systemd-journald is masked/disabled
-    ( kill_pods ) \
-      > >(logger -t "${SERVICE_NAME}-start" -p user.info) \
-      2> >(logger -t "${SERVICE_NAME}-start" -p user.err)
-  fi &
-  disown
-  exit 0
+  # Re-invoke ourselves with the "restart" action under a hard 20s cap.
+  # On a healthy node this finishes in 1-2s (kubectl --wait=false).
+  # If the API server is unreachable, timeout(1) kills the child so we
+  # stay well within the service's TimeoutStartSec (30s).
+  timeout 20 "${BASH_SOURCE[0]}" "${SERVICE_NAME}" restart 2>&1 \
+    | logger -t "${SERVICE_NAME}-start" || true
 }
 
+# stop is a no-op: K8s controls the pod lifecycle; deleting the pod here
+# would just cause the controller to recreate it immediately.
 cmd_stop()    { kill_pods; }
 cmd_restart() { kill_pods; }
 
@@ -145,16 +190,27 @@ cmd_status() {
 }
 
 cmd_wait() {
-  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME}…"
+  local max_rounds="${WAIT_MAX_ROUNDS:-15}"
+  local round=0
+  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME} (max ${max_rounds} rounds)…"
   while true; do
     local out=""; out="$(pods_on_node)"
     if [[ -z "$out" ]]; then
-      sleep 5; continue
+      if (( ++round > max_rounds )); then
+        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
+        exit 1
+      fi
+      sleep 20; continue
     fi
     if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
-      sleep 60
+      round=0
+      sleep 20
     else
-      sleep 5
+      if (( ++round > max_rounds )); then
+        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
+        exit 1
+      fi
+      sleep 20
     fi
   done
 }
