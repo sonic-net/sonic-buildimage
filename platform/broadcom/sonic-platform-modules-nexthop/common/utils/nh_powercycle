@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import os
 import sys
+import syslog
 import time
 
 from nexthop.pddf_config_parser import (
@@ -11,48 +11,45 @@ from nexthop.pddf_config_parser import (
 )
 from nexthop.fpga_lib import write_32
 from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf
-from sonic_py_common import logger
 
 REBOOT_DELAY_MS = 1000
 
-sonic_logger = logger.Logger(os.path.basename(__file__))
-sonic_logger.set_min_log_priority_info()
 
-
-def log_error(msg: str):
-    sonic_logger.log_error(msg)
+def log_to_kernel(message):
+    try:
+        with open("/dev/kmsg", "w") as k:
+            # Use ERR level so it's visible in dmesg and console.
+            print(f"<{syslog.LOG_ERR}>nh_powercycle: {message}\n", file=k, end="")
+    except Exception:
+        pass
 
 
 def main():
     try:
         config = load_pddf_device_config()
     except Exception as e:
-        log_error(f"Failed to load PDDF configuration: {str(e)}")
+        log_to_kernel(f"Failed to load PDDF configuration: {str(e)}")
         return 1
 
     fpga_types = (FpgaDeviceName.CPU_CARD.value, FpgaDeviceName.SWITCHCARD.value)
     try:
         fpga_attrs = extract_fpga_attrs(config, fpga_types)
     except Exception as e:
-        log_error(
-            f"Failed to extract FPGA attributes from PDDF configuration: {str(e)}"
-        )
+        log_to_kernel(f"Failed to extract FPGA attributes from PDDF configuration: {str(e)}")
         return 1
 
     if not fpga_attrs:
-        log_error("No FPGA attributes found in PDDF configuration")
+        log_to_kernel("No FPGA attributes found in PDDF configuration")
         return 1
 
     try:
-        sonic_logger.log_info(
-            "Writing to CPU card FPGA power cycle control register to initiate reboot"
-        )
+        log_to_kernel("Writing to CPU card FPGA power cycle control register to initiate reboot")
         bdf = None
         attrs = fpga_attrs[FpgaDeviceName.CPU_CARD.value]
         bdf = get_cpu_card_fpga_bdf()
         write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
     except Exception as e:
-        log_error(
+        log_to_kernel(
             "Error attempting power cycle via control register on CPU FPGA"
             f" {bdf if bdf else ''}: {str(e)}, trying switchcard FPGA"
         )
@@ -64,7 +61,7 @@ def main():
         bdf = get_switchcard_fpga_bdf()
         write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
     except Exception as e:
-        log_error(
+        log_to_kernel(
             "Error attempting power cycle via control register on switchcard FPGA"
             f" {bdf if bdf else ''}: {str(e)}"
         )
@@ -72,7 +69,7 @@ def main():
     time.sleep(REBOOT_DELAY_MS / 1000)
 
     # If we reach here, we silently failed to reboot the dataplane!
-    log_error(
+    log_to_kernel(
         "Failed to initiate reboot, the control plane will reboot and"
         " leave the dataplane in an undefined state"
     )

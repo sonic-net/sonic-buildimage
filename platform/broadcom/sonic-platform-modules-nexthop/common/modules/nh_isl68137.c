@@ -10,6 +10,7 @@
  *
  * Modifcations by Nexthop Systems Inc., 2025:
  *   - Prepend nh_ to usages of pmbus.h
+ *   - Expose sysfs attribute "mfr_revision" for programmable version.
  *
  * Copyright (C) 2025 Nexthop Systems Inc.
  */
@@ -165,8 +166,47 @@ static const struct attribute_group enable_group = {
 	.attrs = enable_attrs,
 };
 
+static ssize_t mfr_revision_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev->parent);
+	u8 read_buf[5];
+	int ret;
+
+	// Read the block data from PMBUS_MFR_REVISION register
+	ret = i2c_smbus_read_i2c_block_data(client, PMBUS_MFR_REVISION, 5, read_buf);
+	if (ret < 0)
+		return ret;
+
+	if (ret != 5)
+		return -EIO;
+
+	// Byte 0: Length of the MFR_REVISION data.
+	// Byte [4:1]: 4 bytes of space with no defined format.
+	// NH usage:
+	// Byte 1: Minor revision
+	// Byte 2: Major revision
+	return sprintf(buf, "%d.%d\n", read_buf[2], read_buf[1]);
+}
+
+static DEVICE_ATTR_RO(mfr_revision);
+
+static struct attribute *mfr_attrs[] = {
+	&dev_attr_mfr_revision.attr,
+	NULL,
+};
+
+static const struct attribute_group mfr_group = {
+	.attrs = mfr_attrs,
+};
+
 static const struct attribute_group *isl68137_attribute_groups[] = {
 	&enable_group,
+	&mfr_group,
+	NULL,
+};
+
+static const struct attribute_group *raa_default_attribute_groups[] = {
+	&mfr_group,
 	NULL,
 };
 
@@ -252,6 +292,7 @@ static int isl68137_probe(struct i2c_client *client)
 	case raa_dmpvr2_1rail:
 		info->pages = 1;
 		info->read_word_data = raa_dmpvr2_read_word_data;
+		info->groups = raa_default_attribute_groups;
 		break;
 	case raa_dmpvr2_2rail_nontc:
 		info->func[0] &= ~PMBUS_HAVE_TEMP3;
@@ -260,9 +301,11 @@ static int isl68137_probe(struct i2c_client *client)
 	case raa_dmpvr2_2rail:
 		info->pages = 2;
 		info->read_word_data = raa_dmpvr2_read_word_data;
+		info->groups = raa_default_attribute_groups;
 		break;
 	case raa_dmpvr2_3rail:
 		info->read_word_data = raa_dmpvr2_read_word_data;
+		info->groups = raa_default_attribute_groups;
 		break;
 	case raa_dmpvr2_hv:
 		info->pages = 1;
@@ -273,6 +316,7 @@ static int isl68137_probe(struct i2c_client *client)
 		info->m[PSC_POWER] = 2;
 		info->R[PSC_POWER] = -1;
 		info->read_word_data = raa_dmpvr2_read_word_data;
+		info->groups = raa_default_attribute_groups;
 		break;
 	default:
 		return -ENODEV;
