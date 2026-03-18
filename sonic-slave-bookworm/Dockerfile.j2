@@ -540,19 +540,19 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN eatmydata apt-get install -y golang
-{%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
- && eatmydata dpkg -i golang-go.deb golang-src.deb \
- && ln -sf /usr/lib/go-1.19 /usr/local/go \
- && rm golang-go.deb golang-src.deb
+# Golang in Debian is too old, golang supports FIPS after 1.24
+{%- if CONFIGURED_ARCH == "armhf" %}
+RUN wget https://go.dev/dl/go1.26.1.linux-armv6l.tar.gz \
+{%- elif CONFIGURED_ARCH == "arm64" %}
+RUN wget https://go.dev/dl/go1.26.1.linux-arm64.tar.gz \
 {%- else %}
-RUN eatmydata apt-get install -y golang-go \
- && ln -sf /usr/lib/go-1.19 /usr/local/go
+RUN wget https://go.dev/dl/go1.26.1.linux-amd64.tar.gz \
 {%- endif %}
+  && tar -C /usr/local -xzf go1.26.1.linux-*.tar.gz \
+  && rm go1.26.1.linux-*.tar.gz \
+  && ln -sf /usr/local/go/bin/go /usr/bin/go
 
-RUN pip3 install --upgrade pip==24.2
+RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 
 {%- if CONFIGURED_ARCH == "armhf" %}
@@ -576,14 +576,14 @@ RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in bookworm
-RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1 --no-build-isolation
+RUN pip3 install grpcio grpcio-tools
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2
 RUN pip3 install mockredispy==2.9.3
 RUN pip3 install pyfakefs
 
-RUN pip3 install pillow==10.0.0
+RUN pip3 install pillow
 
 # For p4 build
 RUN pip3 install \

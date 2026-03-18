@@ -560,17 +560,17 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN eatmydata apt-get install -y golang golang-go
-{%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb '{{ BUILD_PUBLIC_URL }}/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
- && eatmydata dpkg -i golang-go.deb golang-src.deb \
- && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
- && rm golang-go.deb golang-src.deb
+# Golang in Debian is too old, golang supports FIPS after 1.24
+{%- if CONFIGURED_ARCH == "armhf" %}
+RUN wget https://go.dev/dl/go1.26.1.linux-armv6l.tar.gz \
+{%- elif CONFIGURED_ARCH == "arm64" %}
+RUN wget https://go.dev/dl/go1.26.1.linux-arm64.tar.gz \
 {%- else %}
-RUN eatmydata apt-get install -y golang-go \
- && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go
+RUN wget https://go.dev/dl/go1.26.1.linux-amd64.tar.gz \
 {%- endif %}
+  && tar -C /usr/local -xzf go1.26.1.linux-*.tar.gz \
+  && rm go1.26.1.linux-*.tar.gz \
+  && ln -sf /usr/local/go/bin/go /usr/bin/go
 
 # For building sonic-utilities
 RUN pip3 install fastentrypoints mock
@@ -582,14 +582,14 @@ RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie
-RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0
+RUN pip3 install grpcio grpcio-tools
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2
 RUN pip3 install mockredispy==2.9.3
 RUN pip3 install pyfakefs
 
-RUN pip3 install pillow==11.1.0
+RUN pip3 install pillow
 
 # For p4 build
 RUN pip3 install \
