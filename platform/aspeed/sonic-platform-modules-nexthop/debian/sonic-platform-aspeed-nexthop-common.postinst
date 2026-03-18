@@ -1,0 +1,35 @@
+#!/bin/bash
+# postinst script for sonic-platform-aspeed-nexthop-common
+
+set -e
+
+case "$1" in
+    configure)
+        # Load USB gadget modules
+        # These may fail during image build (wrong arch/kernel) - that's OK
+        # On real hardware, if they fail, the service will fail to start (visible error)
+        echo "Loading USB gadget kernel modules..."
+        
+        for module in libcomposite usb_f_ncm u_ether aspeed_vhub; do
+            if modprobe "$module" 2>/dev/null; then
+                echo "  Loaded module: $module"
+            elif lsmod | grep -q "^${module} "; then
+                echo "  Module already loaded: $module"
+            else
+                echo "  WARNING: Could not load module: $module" >&2
+                echo "    (This is expected during image build)" >&2
+            fi
+        done
+        
+        # Update module dependencies
+        depmod -a 2>/dev/null || true
+        
+        # Enable USB network service
+        echo "Enabling USB network service..."
+        systemctl enable --now usb-network-init.service 2>/dev/null || true
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

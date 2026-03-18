@@ -10,7 +10,29 @@
 # SONIC_CONFIG_BUILD_JOBS - set number of jobs for parallel build.
 # Corresponding -j argument will be passed to make command inside docker
 # container.
-SONIC_CONFIG_BUILD_JOBS = 1
+# Default: auto-detect based on available CPU cores and RAM.
+# When SONIC_BUILD_MEMORY is set, uses that as the RAM limit instead of host RAM.
+# Formula: min(nproc/4, effective_ram_gb/8), clamped to [1, 8].
+# This balances parallelism with memory safety — each concurrent package
+# build can use up to ~8GB RAM (dpkg-buildpackage with nproc make jobs).
+# Override with a fixed number if needed, e.g. SONIC_CONFIG_BUILD_JOBS = 1
+# for sequential builds or higher values on machines with more RAM.
+SONIC_CONFIG_BUILD_JOBS = $(shell \
+	cores=$$(nproc 2>/dev/null || echo 4); \
+	host_ram=$$(awk '/^MemTotal/ {printf "%d", $$2/1048576}' /proc/meminfo 2>/dev/null || echo 8); \
+	ram_gb=$$host_ram; \
+	if [ -n "$(SONIC_BUILD_MEMORY)" ] && [ "$(SONIC_BUILD_MEMORY)" != "none" ]; then \
+		mem_val=$$(echo "$(SONIC_BUILD_MEMORY)" | sed 's/[gG]$$//'); \
+		if [ "$$mem_val" -gt 0 ] 2>/dev/null; then \
+			ram_gb=$$(( mem_val < host_ram ? mem_val : host_ram )); \
+		fi; \
+	fi; \
+	by_cores=$$(( cores / 4 )); \
+	by_ram=$$(( ram_gb / 8 )); \
+	jobs=$$(( by_cores < by_ram ? by_cores : by_ram )); \
+	[ $$jobs -lt 1 ] && jobs=1; \
+	[ $$jobs -gt 8 ] && jobs=8; \
+	echo $$jobs)
 
 # SONIC_CONFIG_MAKE_JOBS - set number of parallel make jobs per package.
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
@@ -147,7 +169,13 @@ INCLUDE_SYSTEM_TELEMETRY = n
 INCLUDE_SYSTEM_OTEL = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
-INCLUDE_ICCPD = n
+INCLUDE_ICCPD ?= n
+
+# INCLUDE_SNMP - build docker-snmp for SNMP support
+INCLUDE_SNMP ?= y
+
+# INCLUDE_LLDP - build docker-lldp for LLDP support
+INCLUDE_LLDP ?= y
 
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
@@ -173,6 +201,13 @@ INCLUDE_DHCP_SERVER ?= n
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
+
+# INCLUDE_PTF - build docker-ptf and docker-ptf-sai test containers.
+# These are only needed for PTF (Packet Test Framework) testing and are
+# not included in the final switch image. Disabling saves ~28 minutes
+# of build time by skipping p4lang-pi, p4lang-bmv2, p4lang-p4c, and
+# their dependencies.
+INCLUDE_PTF ?= y
 
 # INCLUDE_VS_DASH_SAI - build dash-sai for VS
 INCLUDE_VS_DASH_SAI ?= y
@@ -217,7 +252,7 @@ KUBERNETES_CNI_VERSION = 0.8.7-00
 KUBERNETES_CRI_TOOLS_VERSION = 1.26.0-00
 K8s_GCR_IO_PAUSE_VERSION = 3.5
 
-# INCLUDE_KUBERNETES_MASTER - if set to y kubernetes packages are installed o be able 
+# INCLUDE_KUBERNETES_MASTER - if set to y kubernetes packages are installed o be able
 # to run as master node in kubernetes cluster
 INCLUDE_KUBERNETES_MASTER ?= n
 
@@ -259,8 +294,8 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # SECURE_UPGRADE_MODE - enum value for secure upgrade mode, valid options are "dev", "prod" and "no_sign"
 # SECURE_UPGRADE_PROD_SIGNING_TOOL - path to a vendor signing tool for production flow.
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
-SECURE_UPGRADE_DEV_SIGNING_KEY ?= 
-SECURE_UPGRADE_SIGNING_CERT ?= 
+SECURE_UPGRADE_DEV_SIGNING_KEY ?=
+SECURE_UPGRADE_SIGNING_CERT ?=
 SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
@@ -352,7 +387,7 @@ PIP_HTTP_TIMEOUT ?= 60
 # BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
 BUILD_REDUCE_IMAGE_SIZE = n
 
-# SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the 
+# SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the
 # image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
 SONIC_PTF_ENV_PY_VER = py3
 
@@ -361,3 +396,16 @@ BUILD_PROCESS_TIMEOUT ?= 0
 
 # BUILD_SKIP_TEST - skip all tests when building to reduce build time
 BUILD_SKIP_TEST ?= n
+# SONIC_CONFIG_USE_DOCKER_CACHE - use Docker layer cache for image builds.
+# Removes --no-cache from docker build commands, allowing unchanged layers
+# to be reused. Significantly speeds up incremental builds (~20+ min savings)
+# but may use stale layers if base images changed without version bumps.
+# Recommended for local development; CI should leave this disabled.
+# SONIC_CONFIG_USE_DOCKER_CACHE = y
+
+# SONIC_CONFIG_USE_CCACHE - use ccache to speed up C/C++ compilation
+# When enabled, ccache caches compilation results so that rebuilds of
+# unchanged source files are near-instant. The cache is stored in
+# target/ccache/ and persists across builds.
+# Default: disabled (no impact on clean builds without a warm cache)
+SONIC_CONFIG_USE_CCACHE ?= n

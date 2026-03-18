@@ -1,0 +1,138 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+export INSTALL_MOD_DIR := extra
+
+export KVERSION   ?= $(shell uname -r)
+export KERNEL_SRC ?= /lib/modules/$(KVERSION)
+KERNEL_BUILD := $(KERNEL_SRC)/build
+MOD_SRC_DIR := $(shell pwd)
+MODULE_DIRS :=
+
+# Common - shared across all NextHop BMC cards
+MODULE_DIRS += common
+# Card-specific
+MODULE_DIRS += b27
+
+# Directory names used in card-specific directories
+SERVICE_DIR := service
+SYSTEMD_DIR := systemd
+SCRIPTS_DIR := scripts
+OBMC_CONSOLE_DIR := obmc-console
+CFG_DIR := cfg
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+PACKAGE_PRE_NAME := sonic-platform-aspeed-nexthop
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	set -e
+	# Build kernel modules if they exist
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			if [ ! -d "$(KERNEL_BUILD)" ]; then \
+				echo "WARNING: Kernel build directory $(KERNEL_BUILD) not found. Skipping kernel module build for $${mod}."; \
+			else \
+				$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+			fi; \
+		fi; \
+	done)
+	# Build Python wheel from root setup.py
+	python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
+	echo "Finished making sonic_platform whl package"
+
+override_dh_auto_test:
+# Skip tests for now
+
+override_dh_usrlocal:
+# Needed since we are installing files to /usr/local
+
+override_dh_installsystemd:
+# Disables dh_installsystemd from autogenerating postinst scripts which
+# prematurely start platform services.
+
+override_dh_auto_install:
+	set -e
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		pkg_name=$(PACKAGE_PRE_NAME)-$${mod}; \
+		dh_installdirs -p$${pkg_name} /lib/systemd/system; \
+		dh_installdirs -p$${pkg_name} /usr/local/bin; \
+		dh_installdirs -p$${pkg_name} etc/modules-load.d; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			if [ -d "$(KERNEL_BUILD)" ]; then \
+				dh_installdirs -p$${pkg_name} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+				if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/modules/*.ko 2>/dev/null)" ]; then \
+					cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
+						debian/$${pkg_name}$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
+				fi; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
+					debian/$${pkg_name}/lib/systemd/system/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/*.service 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(SYSTEMD_DIR)/*.service \
+					debian/$${pkg_name}/lib/systemd/system/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* \
+					debian/$${pkg_name}/usr/local/bin/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR) ]; then \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* \
+					debian/$${pkg_name}/etc/modules-load.d/; \
+			fi; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR) ]; then \
+			dh_installdirs -p$${pkg_name} etc/obmc-console; \
+			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR)/* 2>/dev/null)" ]; then \
+				cp $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR)/* \
+					debian/$${pkg_name}/etc/obmc-console/; \
+			fi; \
+		fi; \
+	done)
+
+override_dh_install:
+	set -e
+	# Get all package names from debian/control
+	(for pkg_name in $$(dh_listpackages); do \
+		set -e; \
+		if [ "$${pkg_name}" = "$(PACKAGE_PRE_NAME)-common" ]; then \
+			continue; \
+		fi; \
+		if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
+			card_name="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
+			device_name="arm64-nexthop_$${card_name}-r0"; \
+			dh_installdirs -p$${pkg_name} usr/share/sonic/device/$${device_name}/; \
+			dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
+				usr/share/sonic/device/$${device_name}/; \
+		fi; \
+	done)
+
+override_dh_clean:
+	set -e
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(MOD_SRC_DIR)/$${mod}/modules/Makefile" ]; then \
+			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		fi; \
+	done)
+	rm -f $(MOD_SRC_DIR)/*.whl
+	rm -rf $(MOD_SRC_DIR)/build $(MOD_SRC_DIR)/dist $(MOD_SRC_DIR)/*.egg-info
+
