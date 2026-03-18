@@ -72,7 +72,7 @@ logger.log_notice(f"telemetry source set to {_TELEMETRY_SRC}")
 
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
-    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"),
+    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-telemetry-sidecar/k8s_pod_control.sh"),
     SyncItem(CONTAINER_TELEMETRY_SERVICE, HOST_TELEMETRY_SERVICE, mode=0o644),
 ]
 
@@ -165,6 +165,10 @@ POST_COPY_ACTIONS = {
     ],
     "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py": [
         ["sudo", "systemctl", "restart", "system-health"],
+    ],
+    "/usr/share/sonic/scripts/docker-telemetry-sidecar/k8s_pod_control.sh": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "telemetry"],
     ],
 }
 

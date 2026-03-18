@@ -190,29 +190,9 @@ cmd_status() {
 }
 
 cmd_wait() {
-  local max_rounds="${WAIT_MAX_ROUNDS:-15}"
-  local round=0
-  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME} (max ${max_rounds} rounds)…"
-  while true; do
-    local out=""; out="$(pods_on_node)"
-    if [[ -z "$out" ]]; then
-      if (( ++round > max_rounds )); then
-        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
-        exit 1
-      fi
-      sleep 20; continue
-    fi
-    if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
-      round=0
-      sleep 20
-    else
-      if (( ++round > max_rounds )); then
-        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
-        exit 1
-      fi
-      sleep 20
-    fi
-  done
+  # No-op: just sleep forever so the systemd unit stays "active".
+  log "cmd_wait: sleeping indefinitely (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
+  while true; do sleep 300; done
 }
 
 case "${1:-}" in
