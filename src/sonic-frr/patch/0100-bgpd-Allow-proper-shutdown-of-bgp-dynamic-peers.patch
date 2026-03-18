@@ -1,0 +1,52 @@
+From aadfa2b22ea22a07c240a16a7b883495ba37d652 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 25 Nov 2025 13:12:07 -0500
+Subject: [PATCH] bgpd: Allow proper shutdown of bgp dynamic peers in rare case
+
+There exists a series of events that causes dynamic peers to
+accept new connections on a existing connection and leaving
+everything in a weird state.
+
+Series of events:
+
+a) Interface down event
+b) BGP places peering on queue to be cleared in the future
+*note* that BGP is completely swamped and doesn't get to
+this in a timely manner
+c) Interface comes up
+d) Peer is not loaded and attempts to reconnect the dynamic
+peer.
+
+At this point on the accept, BGP finds the existing dynamic
+peer and decides to reuse the connection, runs peer_xfer_config
+and messes up the CONFIG_NODE flag for the peer.  This is because
+dynamic peers are not meant to go through that code for handling
+resolution of peering and it causes issues.
+
+Let's just prevent dynamic peers from accepting an existing connection.
+This solves the issue.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_network.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/bgpd/bgp_network.c b/bgpd/bgp_network.c
+index a751f6b01e74..df08afb0d965 100644
+--- a/bgpd/bgp_network.c
++++ b/bgpd/bgp_network.c
+@@ -546,6 +546,14 @@ static void bgp_accept(struct event *event)
+ 					BGP_EVENT_ADD(incoming, TCP_connection_open);
+ 			}
+ 
++			return;
++		}
++	} else {
++		if (CHECK_FLAG(peer->flags, PEER_FLAG_DYNAMIC_NEIGHBOR)) {
++			zlog_debug("Received an open connection for a peering %s that we have not fully closed down yet",
++				   peer->host);
++			close(bgp_sock);
++
+ 			return;
+ 		}
+ 	}

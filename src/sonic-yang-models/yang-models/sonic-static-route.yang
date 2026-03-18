@@ -2,17 +2,9 @@ module sonic-static-route {
   yang-version 1.1;
   namespace "http://github.com/sonic-net/sonic-static-route";
   prefix sroute;
-
-  import sonic-vrf {
-    prefix vrf;
-  }
   import ietf-inet-types {
     prefix inet;
   }
-  import sonic-types {
-    prefix stypes;
-  }
-
   organization
     "SONiC";
   contact

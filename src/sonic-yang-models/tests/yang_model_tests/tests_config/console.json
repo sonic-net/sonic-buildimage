@@ -84,5 +84,152 @@
                 ]
             }
         }
+    },
+    "CONSOLE_SWITCH_VALID_DEFAULT_ESCAPE_CHAR": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": "a"
+                }
+            }
+        }
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_UPPERCASE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": "A"
+                }
+            }
+        }
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_NUMBER": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": "1"
+                }
+            }
+        }
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_SPECIAL": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": "!"
+                }
+            }
+        }
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_MULTIPLE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": "ab"
+                }
+            }
+        }
+    },
+    "CONSOLE_SWITCH_INVALID_DEFAULT_ESCAPE_CHAR_EMPTY": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "yes",
+                    "default_escape_char": ""
+                }
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID_ESCAPE_CHAR": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "x"
+                    },
+                    {
+                        "name": "2",
+                        "baud_rate": "9600",
+                        "escape_char": "z"
+                    },
+                    {
+                        "name": "3",
+                        "baud_rate": "115200"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_UPPERCASE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "X"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_NUMBER": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "5"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_SPECIAL": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "@"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_MULTIPLE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": "xy"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_ESCAPE_CHAR_EMPTY": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "escape_char": ""
+                    }
+                ]
+            }
+        }
     }
 }

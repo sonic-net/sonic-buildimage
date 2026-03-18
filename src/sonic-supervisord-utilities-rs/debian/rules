@@ -16,6 +16,10 @@ override_dh_auto_install:
 override_dh_auto_clean:
 	cargo clean --release
 
+override_dh_auto_install:
+	# do nothing
+	:
+
 override_dh_auto_test:
 	# do nothing
 	:

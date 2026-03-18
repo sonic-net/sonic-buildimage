@@ -23,6 +23,7 @@
 #
 #############################################################################
 
+
 try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
@@ -35,6 +36,7 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .bmc import BMC
     import re
     import select
     import threading
@@ -48,6 +50,7 @@ RJ45_TYPE = "RJ45"
 
 VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
 REVISION = "REV"
+VPD_DATA_WAIT_TIMEOUT = 60  # Timeout in seconds for waiting for VPD data file
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -137,6 +140,10 @@ class Chassis(ChassisBase):
         self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
         self.poll_obj = None
         self.registered_fds = None
+
+        self._bmc = None
+        self._bmc_data = None
+        self._bmc_initialized = False
 
         logger.log_info("Chassis loaded successfully")
 
@@ -915,6 +922,9 @@ class Chassis(ChassisBase):
             self._component_list.append(DeviceDataManager.get_bios_component())
             self._component_list.extend(DeviceDataManager.get_cpld_component_list())
 
+        # Initialize BMC and its components
+        self.initialize_bmc()
+
     def get_num_components(self):
         """
         Retrieves the number of components available on this chassis
@@ -1057,7 +1067,10 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
-                return result
+                logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
+                if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
+                    logger.log_error("VPD data file {} not available after timeout".format(filename))
+                    return result
 
             result = utils.read_key_value_file(filename, delimeter=": ")
                 
@@ -1204,7 +1217,27 @@ class Chassis(ChassisBase):
         """
         return False
 
-    
+    def initialize_bmc(self):
+        if self._bmc_initialized:
+            return
+        self._bmc = BMC.get_instance()
+        if self._bmc is not None:
+            try:
+                bmc_comp_list = self._bmc._get_component_list()
+                self._component_list.extend(bmc_comp_list)
+            except Exception as e:
+                logger.log_error("Fail to get BMC component list")
+        self._bmc_initialized = True
+
+    def _initialize_bmc(self):
+        self.initialize_components()
+        self.initialize_bmc()
+
+    def get_bmc(self):
+        self._initialize_bmc()
+        return self._bmc
+
+
     ##############################################
     # LiquidCooling methods
     ##############################################

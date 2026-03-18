@@ -1,6 +1,7 @@
+{% set use_instance_deps = (multi_instance == 'true' and not (is_smartswitch | default(false))) %}
 [Unit]
 Description=TEAMD container
-After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=swss{% if use_instance_deps %}@%i{% endif %}.service
 {% if multi_instance == 'true' and sonic_asic_platform == 'vs' %}
 Requires=topology.service
 After=topology.service
