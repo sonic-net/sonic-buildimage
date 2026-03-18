@@ -73,6 +73,7 @@ function start_polaris()
     mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt/work
     mkdir -p $DPU_DOCKER_INFO_DIR
     echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+    echo 1 > /sys/firmware/pensando/reboot/panic_reboot
 
     sync; sync;
     sleep 3;
