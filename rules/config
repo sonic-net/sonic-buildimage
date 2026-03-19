@@ -263,9 +263,6 @@ INCLUDE_KUBERNETES_MASTER ?= n
 # MASTER_CRI_DOCKERD = version of cri-dockerd container image
 # MASTER_UI_METRIC_VERSION = version of k8s metrics server container image
 # MASTER_UI_DASH_VERSION = version of k8s dashboard container image
-# MASTER_MDM_VERSION = version of mdm container image
-# MASTER_MDS_VERSION = version of mds container image
-# MASTER_FLUENTD_VERSION = version of fluentd container image
 MASTER_KUBERNETES_VERSION = 1.22.2-00
 MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION = v1.22.2
 MASTER_PAUSE_VERSION = 3.5
@@ -274,9 +271,6 @@ MASTER_ETCD_VERSION = 3.5.0-0
 MASTER_CRI_DOCKERD = 0.3.10
 MASTER_UI_METRIC_VERSION = v1.0.8
 MASTER_UI_DASH_VERSION = v2.7.0
-MASTER_MDM_VERSION = 2.2023.505.1124-45da18-20230505t1700
-MASTER_MDS_VERSION = mariner_20230517.1
-MASTER_FLUENTD_VERSION = mariner_20230517.1
 
 # SONIC_ENABLE_IMAGE_SIGNATURE - enable image signature
 # To not use the auto-generated self-signed certificate, the required files to sign the image as below:
