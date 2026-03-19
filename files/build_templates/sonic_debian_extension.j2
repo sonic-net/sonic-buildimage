@@ -317,6 +317,8 @@ install_deb_package $debs_path/libnss-tacplus_*.deb
 # Install bash-tacplus
 install_deb_package $debs_path/bash-tacplus_*.deb
 # Install audisp-tacplus
+# Install audisp-tacplus (depends on libauparse0 |libauparse0t64 ; ensure it is installed for Trixie/time64)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libauparse0t64
 install_deb_package $debs_path/audisp-tacplus_*.deb
 # Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
@@ -561,7 +563,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
@@ -723,6 +725,10 @@ done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
+# https://github.com/systemd/systemd/issues/29034
+sudo sed -i 's/#ManageForeignNextHops=yes/ManageForeignNextHops=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
