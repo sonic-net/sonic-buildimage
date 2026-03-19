@@ -51,6 +51,10 @@ class ServiceChecker(HealthChecker):
     # Monit 5.34.3+ (Debian 13) uses 'OK' for all service types
     EXPECTED_STATUS = 'OK'
 
+    # Whitelist of containers which are managed by KubeSonic to bypass health checking entirely.
+    # These containers will be excluded from both expected and running container sets.
+    CONTAINER_K8S_WHITELIST = {'telemetry', 'acms', 'restapi'}
+
     def __init__(self):
         HealthChecker.__init__(self)
         self.container_critical_processes = {}
@@ -92,6 +96,10 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
+            # Skip containers in the whitelist
+            if container_name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                logger.log_debug("Skipping whitelisted kubesonic managed container '{}' from expected running check".format(container_name))
+                continue
             # skip frr_bmp since it's not container just bmp option used by bgpd
             if container_name == "frr_bmp":
                 continue
@@ -152,6 +160,14 @@ class ServiceChecker(HealthChecker):
             lst = ctrs.list(filters={"status": "running"})
 
             for ctr in lst:
+                # Check if this is a Kubernetes-managed container
+                labels = ctr.labels or {}
+                ns = labels.get("io.kubernetes.pod.namespace")
+                if ns == "sonic":
+                    continue
+                # Skip kubesonic managed containers in the whitelist
+                if ctr.name in ServiceChecker.CONTAINER_K8S_WHITELIST:
+                    continue
                 running_containers.add(ctr.name)
                 if ctr.name not in self.container_critical_processes:
                     self.fill_critical_process_by_container(ctr.name)
@@ -387,7 +403,7 @@ class ServiceChecker(HealthChecker):
                 # it not always possible to get process cmdline in supervisor.conf. E.g, cmdline of orchagent is "/usr/bin/orchagent",
                 # however, in supervisor.conf it is "/usr/bin/orchagent.sh"
                 cmd = 'docker exec {} bash -c "supervisorctl status"'.format(container_name)
-                process_status = utils.run_command(cmd)
+                process_status = utils.run_command(cmd, timeout=15)
                 if process_status is None:
                     for process_name in critical_process_list:
                         self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))

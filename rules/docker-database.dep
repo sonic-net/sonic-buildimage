@@ -3,8 +3,9 @@ DPATH       := $($(DOCKER_DATABASE)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-database.mk rules/docker-database.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
+DEP_FILES   += dockers/dockerfile-macros.j2
 
-$(DOCKER_DATABASE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_DATABASE)_CACHE_MODE  := GIT_CONTENT_SHA
 $(DOCKER_DATABASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(DOCKER_DATABASE)_DEP_FILES   := $(DEP_FILES)
 
