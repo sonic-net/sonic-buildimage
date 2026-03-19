@@ -328,11 +328,20 @@ bfb_install_call() {
     fi
     remove_cx_pci_device "$rshim" "$dpu"
 
-    # Construct bfb-install command
-    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim"
+    # Create config file with NPU time for DPU time synchronization
+    local config_file
+    config_file=$(mktemp "${WORK_DIR}/bf_cfg.XXXXX") || {
+        log_error "$rid: Failed to create temporary config file in ${WORK_DIR}"
+        return 1
+    }
+    trap "rm -f '$config_file'; stop_rshim_daemon $rid" EXIT
     if [ -n "$appendix" ]; then
-        cmd="$cmd -c $appendix"
+        cat "$appendix" > "$config_file"
     fi
+    echo "NPU_TIME=$(date +%s)" >> "$config_file"
+
+    # Construct bfb-install command
+    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim -c $config_file"
     log_info "Installing bfb image on DPU connected to $rshim using $cmd"
 
     # Run installation with progress monitoring
