@@ -74,12 +74,91 @@ if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then
     fi
 fi
 
-# Aliases for redis-cli with correct database and port for each SONiC DB
-alias redis-appdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("APPL_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("APPL_DB")))')"
-alias redis-asicdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("ASIC_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("ASIC_DB")))')"
-alias redis-counterdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("COUNTERS_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("COUNTERS_DB")))')"
-alias redis-logleveldb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("LOGLEVEL_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("LOGLEVEL_DB")))')"
-alias redis-configdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("CONFIG_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("CONFIG_DB")))')"
-alias redis-flexcounterdb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("FLEX_COUNTER_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("FLEX_COUNTER_DB")))')"
-alias redis-statedb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("STATE_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("STATE_DB")))')"
-alias redis-appstatedb="redis-cli $(python -c 'import swsscommon.swsscommon; print(" -n "+str(swsscommon.swsscommon.SonicDBConfig.getDbId("APPL_STATE_DB"))+" -p "+str(swsscommon.swsscommon.SonicDBConfig.getDbPort("APPL_STATE_DB")))')"
+# Helper function to generate all redis-cli aliases at once
+generate_sonic_redis_aliases() {
+    # Define DB names and alias suffixes
+    local -A SONIC_DBS=(
+        ["APPL_DB"]="appdb"
+        ["ASIC_DB"]="asicdb"
+        ["COUNTERS_DB"]="counterdb"
+        ["LOGLEVEL_DB"]="logleveldb"
+        ["CONFIG_DB"]="configdb"
+        ["FLEX_COUNTER_DB"]="flexcounterdb"
+        ["STATE_DB"]="statedb"
+        ["APPL_STATE_DB"]="appstatedb"
+    )
+
+    # Run Python once to get all DB configurations
+    local python_output
+    python_output=$(python3 -c "
+import sys
+try:
+    import swsscommon.swsscommon
+
+    SonicDBConfig = None
+
+    if hasattr(swsscommon.swsscommon, 'SonicDBConfig'):
+        SonicDBConfig = swsscommon.swsscommon.SonicDBConfig
+
+    if SonicDBConfig is None:
+        print('ERROR:SonicDBConfig not found in swsscommon module', file=sys.stderr)
+        sys.exit(1)
+
+    # Initialize config (some versions require this)
+    try:
+        SonicDBConfig.loadSonicDBConfig()
+    except AttributeError:
+        pass  # Some versions don't have this method
+    except Exception:
+        pass  # Ignore if config file is missing
+
+    dbs = ['APPL_DB', 'ASIC_DB', 'COUNTERS_DB', 'LOGLEVEL_DB',
+           'CONFIG_DB', 'FLEX_COUNTER_DB', 'STATE_DB', 'APPL_STATE_DB']
+    for db in dbs:
+        try:
+            db_id = SonicDBConfig.getDbId(db)
+            db_port = SonicDBConfig.getDbPort(db)
+            print(f'{db}:{db_id}:{db_port}')
+        except Exception as e:
+            print(f'ERROR:Failed to get config for {db}: {e}', file=sys.stderr)
+            sys.exit(1)
+
+except ImportError as e:
+    print(f'ERROR:swsscommon module not found: {e}', file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f'ERROR:Unexpected error: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>&1)
+
+    # Check if Python command succeeded
+    if [ $? -ne 0 ]; then
+        echo "Error generating Redis aliases: $python_output" >&2
+        return 1
+    fi
+
+    # Check for Python-level errors in output
+    if [[ "$python_output" == ERROR:* ]]; then
+        echo "$python_output" >&2
+        return 1
+    fi
+
+    # Check if redis-cli exists
+    if ! command -v redis-cli &> /dev/null; then
+        echo "Error: redis-cli command not found" >&2
+        return 1
+    fi
+
+    # Parse output and create aliases
+    while IFS=: read -r db_name db_id db_port; do
+        if [ -n "$db_name" ] && [ -n "$db_id" ] && [ -n "$db_port" ]; then
+            local alias_name="redis-${SONIC_DBS[$db_name]}"
+            if [ -n "$alias_name" ]; then
+                eval "alias $alias_name='redis-cli -n $db_id -p $db_port'"
+            fi
+        fi
+    done <<< "$python_output"
+}
+
+# Generate all aliases at shell startup
+generate_sonic_redis_aliases
