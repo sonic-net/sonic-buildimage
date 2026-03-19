@@ -121,7 +121,6 @@ try:
             print(f'{db}:{db_id}:{db_port}')
         except Exception as e:
             print(f'ERROR:Failed to get config for {db}: {e}', file=sys.stderr)
-            sys.exit(1)
 
 except ImportError as e:
     print(f'ERROR:swsscommon module not found: {e}', file=sys.stderr)
