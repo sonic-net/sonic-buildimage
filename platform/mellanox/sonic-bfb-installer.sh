@@ -292,7 +292,7 @@ wait_for_module_transition_and_ensure_dpu_powered() {
         fi
         log_info "$dpu: Waiting for module transition to complete (timeout 13 minutes from transition_start_time)"
         while true; do
-            sleep 15
+            sleep 2
             log_info "$dpu: Checking module transition status... "
             transition_in_progress=$(sonic-db-cli STATE_DB HGET "$module_key" "transition_in_progress" 2>/dev/null)
             if [[ "$transition_in_progress" != "True" ]]; then
@@ -308,18 +308,6 @@ wait_for_module_transition_and_ensure_dpu_powered() {
         done
     fi
 
-    # Check DPU state using boot progress column (e.g. "5 - OS is running"); if state is 0, power on the DPU
-    local status_out
-    local boot_progress_state
-    status_out=$(dpuctl dpu-status "$dpu" 2>/dev/null)
-    # Parse boot progress: value is "N - description" in the boot progress column; extract N
-    boot_progress_state=$(echo "$status_out" | awk -v dpu="$dpu" '$1==dpu {print $4}')
-    if [[ "$boot_progress_state" == "0" ]]; then
-        log_info "$dpu: DPU boot progress state is 0, powering on with dpuctl dpu-power-on $dpu"
-        if ! dpuctl dpu-power-on ${verbose:+-v} "$dpu" 2>/dev/null; then
-            log_warning "$dpu: dpuctl dpu-power-on failed, continuing with installation"
-        fi
-    fi
 }
 
 # Function to start rshim daemon
