@@ -2,7 +2,7 @@
 Description=Initialize BCM Interfaces
 Wants=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
 After=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
-BindsTo=syncd.service
+BindsTo=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
 Before=syncd.service
 
 [Service]
