@@ -17,6 +17,7 @@
 #
 
 """Class Implementation for per DPU functionality"""
+import errno
 import os.path
 import time
 import multiprocessing
@@ -412,7 +413,14 @@ class DpuCtlPlat():
             raise e
 
     def read_boot_prog(self):
-        return utils.read_int_from_file(self.boot_prog_path, raise_exception=True)
+        for attempt in range(3):
+            try:
+                return utils.read_int_from_file(self.boot_prog_path, raise_exception=True)
+            except OSError as e:
+                if e.errno != errno.ENXIO or attempt == 2:
+                    raise
+                self.log_warning(f"ENXIO error on boot_progress read, attempt {attempt+1} of 3")
+                time.sleep(1)
 
     def read_force_power_path(self):
         return utils.read_int_from_file(self.pwr_f_path, raise_exception=True)
