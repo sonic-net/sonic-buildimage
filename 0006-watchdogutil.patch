@@ -1,0 +1,56 @@
+diff --git a/src/sonic-utilities/watchdogutil/main.py b/src/sonic-utilities/watchdogutil/main.py
+index 84380ff1..4dbe3cd5 100644
+--- a/src/sonic-utilities/watchdogutil/main.py
++++ b/src/sonic-utilities/watchdogutil/main.py
+@@ -8,6 +8,7 @@
+ try:
+     import os
+     import sys
++    import time
+ 
+     import click
+     import sonic_platform
+@@ -107,5 +108,43 @@ def arm(seconds):
+     else:
+         click.echo("Watchdog armed for {} seconds".format(result))
+ 
++# 'daemon' subcommand
++@watchdogutil.command()
++@click.option('-s', '--seconds', default=180, type=int, help="the default timeout of HW watchdog")
++@click.option('-i', '--interval', default=2, type=int, help="the interval to arm HW watchdog")
++def daemon(seconds, interval):
++    """Run watchdog daemon"""
++    click.echo("Starting watchdog daemon...")
++
++    # Try to identify watchdog device to hold it open
++    wd_dev = None
++    for dev in ["/dev/watchdog1", "/dev/watchdog"]:
++        if os.path.exists(dev):
++            wd_dev = dev
++            break
++
++    if wd_dev:
++        try:
++            # Initial arm to set timeout via platform API
++            platform_watchdog.arm(seconds)
++            # Open and hold the device to prevent "watchdog did not stop" logs
++            fd = os.open(wd_dev, os.O_WRONLY)
++            while True:
++                os.write(fd, b'\0')
++                time.sleep(interval)
++        except Exception as e:
++            log.log_error("Daemon mode direct access failed: {}. Falling back.".format(e))
++    else:
++        log.log_warning("No watchdog device found. Falling back to platform API.")
++
++    while True:
++        try:
++            result = int(platform_watchdog.arm(seconds))
++            if result < 0:
++                log.log_error("Failed to arm Watchdog for {} seconds".format(seconds))
++        except Exception as e:
++            log.log_error("Error arming watchdog: {}".format(e))
++        time.sleep(interval)
++
+ if __name__ == '__main__':
+     watchdogutil()

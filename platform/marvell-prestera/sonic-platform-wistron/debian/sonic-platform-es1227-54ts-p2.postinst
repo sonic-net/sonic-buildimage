@@ -23,8 +23,11 @@ case "$1" in
 	depmod -a
 	sh /usr/local/bin/es1227_54ts_p2_plt_setup.sh
 	chmod a+x /usr/local/bin/es1227_54ts_p2-init.sh
+	chmod a+x /usr/local/bin/es1227_54ts_p2-reboot-check
 	systemctl enable es1227_54ts_p2-init.service
 	systemctl start es1227_54ts_p2-init.service
+	systemctl enable es1227_54ts_p2-watchdog.service
+	systemctl start es1227_54ts_p2-watchdog.service
 
     ;;
 

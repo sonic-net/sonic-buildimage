@@ -1,0 +1,28 @@
+diff --git a/src/sonic-linux-kernel/patch/0016-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-board.patch b/src/sonic-linux-kernel/patch/0016-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-board.patch
+index 650d494..831bdcf 100644
+--- a/src/sonic-linux-kernel/patch/0016-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-board.patch
++++ b/src/sonic-linux-kernel/patch/0016-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-board.patch
+@@ -112,7 +112,7 @@ new file mode 100644
+ index 000000000..e3f7c4e0b
+ --- /dev/null
+ +++ b/arch/arm64/boot/dts/marvell/es1227-54ts.dtsi
+-@@ -0,0 +1,318 @@
++@@ -0,0 +1,310 @@
+ +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+ +/*
+ + * Copyright (C) 2021 Marvell International Ltd.
+@@ -241,14 +241,6 @@ index 000000000..e3f7c4e0b
+ +				compatible = "ti,tmp75";
+ +				reg = <0x4b>;
+ +			};
+-+			expander0: pca953x@20 {
+-+				compatible = "nxp,pca9555";
+-+				pinctrl-names = "default";
+-+				gpio-controller;
+-+				#gpio-cells = <2>;
+-+				reg = <0x20>;
+-+				status = "okay";
+-+			};
+ +		};
+ +
+ +		i2c@1 {

@@ -103,8 +103,11 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
 
     @classmethod
     def power_down(cls):
-        chassis = cls().get_chassis()
-        chassis.power_down()
+        # Directly power off the DUT using systemctl, fallback to poweroff command
+        import os
+        # systemctl returns 0 on success; if it fails, try plain poweroff
+        if os.system('systemctl poweroff') != 0:
+            os.system('poweroff')
 
     @classmethod
     def get_temp(cls, thermal_info_dict):
@@ -170,7 +173,31 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
                 sonic_logger.log_warning(
                     "Temp is over high critical threshold, system shutdown {} temperature is {}".format(key, temp_info[key]))
             import os
+            from sonic_platform.chassis import HOST_REBOOT_CAUSE_PATH, PMON_REBOOT_CAUSE_PATH, REBOOT_CAUSE_FILE
+
+            # Determine which components triggered the shutdown
+            components = set()
+            for key in temp_info.keys():
+                ukey = key.upper()
+                if 'PSU' in ukey: components.add('PSU')
+                elif 'CPU' in ukey: components.add('CPU')
+                elif 'ASIC' in ukey: components.add('ASIC')
+                elif 'DIMM' in ukey: components.add('DIMM')
+                else: components.add(key.split()[0]) # Fallback to first word of sensor name
+
+            # Write to the official reboot-cause file (for show reboot-cause history)
+            reboot_msg = "Thermal"
+            if components:
+                reboot_msg += " - " + "/".join(sorted(list(components)))
+
+            host_path = HOST_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE
+            pmon_path = PMON_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE
+            os.system(f"sudo sh -c 'echo \"{reboot_msg}\" > {host_path}'")
+            os.system(f"sudo sh -c 'echo \"{reboot_msg}\" > {pmon_path}'")
+
             os.system('sync')
+            # Stop watchdog service to avoid overwriting reboot-cause
+            os.system('systemctl stop es1227_54ts_p2-watchdog')
             SetFanSpeedAction.power_down()
         # import os
         # os.system('reboot')
