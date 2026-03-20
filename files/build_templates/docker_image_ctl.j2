@@ -761,6 +761,7 @@ start() {
         --env "CONTAINER_NAME"=$DOCKERNAME \
         --env "SYSLOG_TARGET_IP"=$SYSLOG_TARGET_IP \
         --env "PLATFORM"=$PLATFORM \
+        --env "IMAGE_VERSION"=$SONIC_VERSION \
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
