@@ -57,8 +57,10 @@
                 {%- endif -%}
             {%- endif -%}
         {%- endfor -%}
-    {%- else -%}
-        {#- Fallback: when local LC cannot be determined, all ports are considered active -#}
+    {%- endif -%}
+    {%- if SYSTEM_PORT_ACTIVE|length == 0 -%}
+        {#- Fallback: when local LC cannot be determined or no active ports found
+            (e.g. asic_name case mismatch on CI), all ports are considered active -#}
         {%- for system_port_name in SYSTEM_PORT_ALL -%}
             {%- if SYSTEM_PORT_ACTIVE.append(system_port_name) %}{%- endif -%}
         {%- endfor -%}
