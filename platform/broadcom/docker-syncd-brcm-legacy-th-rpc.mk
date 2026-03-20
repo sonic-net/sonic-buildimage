@@ -3,12 +3,12 @@
 DOCKER_SYNCD_BRCM_LEGACY_TH_RPC = docker-syncd-brcm-legacy-th-rpc.gz
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_PATH = $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th-rpc
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_DEPENDS += $(SYNCD_RPC)
-$(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_DEPENDS += $(SSWSYNCD)
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_DEPENDS += $(SYNCD_RPC_DBG) \
                                     $(LIBSWSSCOMMON_DBG) \
                                     $(LIBSAIMETADATA_DBG) \
-                                    $(LIBSAIREDIS_DBG)
+                                    $(LIBSAIREDIS_DBG) \
+                                    $(SSWSYNCD)
 endif
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_PYTHON_WHEELS += $(PTF_PY3)
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_LOAD_DOCKERS += $(DOCKER_SYNCD_LEGACY_TH_BASE)
@@ -30,5 +30,6 @@ $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_BASE_IMAGE_FILES += bcmcmd:/usr/bin/bcmcmd
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_BASE_IMAGE_FILES += bcmsh:/usr/bin/bcmsh
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_BASE_IMAGE_FILES += bcm_common:/usr/bin/bcm_common
 $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_MACHINE = broadcom-legacy-th
+$(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)_AFTER = $(DOCKER_SYNCD_LEGACY_TH_BASE)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_BRCM_LEGACY_TH_RPC)
