@@ -563,5 +563,9 @@
                 "1x25G[10G]": ["Eth54"]
             }
         }
+    },
+    "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
     }
 }
