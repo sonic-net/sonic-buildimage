@@ -5,4 +5,4 @@
 # Not needed (and not recommended) if the device is monitored by smartd
 #enable_smart="/dev/hda /dev/hdb"
 
-smartd_opts="-q nodev0"
+smartd_opts="-q never"
