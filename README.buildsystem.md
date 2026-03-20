@@ -42,7 +42,7 @@ You can find a make rule for every target that is defined in recipe there.
 *Makefile* is a wrapper over sonic-slave docker image.  
 
 Every part of build is executed in a docker container called sonic-slave, specifically crafted for this environment.
-If build is started for the first time on a particular host, a new sonic-slave image will be built form *sonic-slave/Dockerfile* on the machine.
+If build is started for the first time on a particular host, a new sonic-slave image will be built from *sonic-slave/Dockerfile* on the machine.
 It might take some time, so be patient.
 After that all subsequent make commands will be executed inside this container.
 *Makefile* takes every target that is passed to make command and delegates it as an entry point to a container,
