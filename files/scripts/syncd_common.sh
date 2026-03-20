@@ -15,7 +15,9 @@
 
 function debug()
 {
-    /usr/bin/logger $1
+    # Use --id=$$ so all messages from this script share the parent shell's PID,
+    # preventing rsyslog imuxsock ratelimiter memory growth.
+    /usr/bin/logger --id=$$ -- "$1"
     /bin/echo `date` "- $1" >> ${DEBUGLOG}
 }
 
