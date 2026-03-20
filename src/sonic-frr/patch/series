@@ -30,3 +30,10 @@
 0029-zebra-mac-sync-update-del-expiry-in-extern_learn-mod.patch
 0030-tests-topotests-EVPN-VXLAN-MH-extern-learn-mode-test.patch
 0031-bgpd-install-evpn-failure-logging.patch
+0032-lib-zebra-Make-Zebra-IPv6-VTEP-Aware.patch
+0033-zebra-Use-RTA_VIA-for-IPv4-hosts-over-IPv6-overlay-f.patch
+0034-bgpd-Make-BGP-V6-VTEP-Aware-for-Single-Homing-VxLAN.patch
+0035-bgpd-zebra-tests-Enable-V6-VTEP-for-Single-Homing-Vx.patch
+0036-tests-Add-V6-VTEP-variant-of-bgp_evpn_vxlan_topo1.patch
+0037-tests-Add-V6-VTEP-variant-for-bgp_evpn_vxlan_macvrf_.patch
+0038-doc-Extend-BGP-and-EVPN-to-reference-IPv6-VTEP-Suppo.patch

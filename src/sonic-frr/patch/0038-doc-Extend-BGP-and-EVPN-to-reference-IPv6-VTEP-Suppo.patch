@@ -1,0 +1,49 @@
+From 84d27a09cd126de0b278c26a4718260eda674556 Mon Sep 17 00:00:00 2001
+From: Mike RE Mallin <mremallin@gmail.com>
+Date: Wed, 9 Apr 2025 15:59:37 -0400
+Subject: [PATCH 7/7] doc: Extend BGP and EVPN to reference IPv6 VTEP Support
+
+Signed-off-by: Mike Mallin <mmallin@cisco.com>
+---
+ doc/user/bgp.rst  | 3 ++-
+ doc/user/evpn.rst | 3 +++
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index 3b8fc9fbc3..da965e5d84 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -3834,7 +3834,8 @@ EVPN Multihoming
+ 
+ All-Active Multihoming is used for redundancy and load sharing. Servers
+ are attached to two or more PEs and the links are bonded (link-aggregation).
+-This group of server links is referred to as an Ethernet Segment.
++This group of server links is referred to as an Ethernet Segment. Currently,
++IPv6 VTEP addresses are not supported with EVPN Multihoming.
+ 
+ Ethernet Segments
+ """""""""""""""""
+diff --git a/doc/user/evpn.rst b/doc/user/evpn.rst
+index a60f8b2fca..2c68d091b1 100644
+--- a/doc/user/evpn.rst
++++ b/doc/user/evpn.rst
+@@ -162,6 +162,8 @@ The VTEP-IP (100.64.0.1) needs to be reachable by other VTEPs in the EVPN
+ environment in order for VXLAN decapsulation to function. In this example we
+ will advertise our local VTEP-IP using BGP (via the ``network`` statement), but
+ static routes or other routing protocols like IS-IS or OSPF can also be used.
++The VTEP-IP can be either an IPv4 or IPv6 address for Singlehomed deployments.
++Only IPv4 is presently supported for Multihomed deployments.
+ 
+ In order to enable EVPN for a BGP instance, we must use the command
+ ``advertise-all-vni``. In this example we will be using the default VRF to
+@@ -250,6 +252,7 @@ environment described above.
+ Some high-level config considerations:
+ 
+ * The local VTEP-IP should always be set to a reachable IP on the lo device.
++* The local VTEP-IP can be either an IPv4 or IPv6 address.
+ * An L3VNI should always have an SVI (aka the L3-SVI).
+ * An L3-SVI should not be assigned an IP address, link-local or otherwise.
+ 
+-- 
+2.35.6
+

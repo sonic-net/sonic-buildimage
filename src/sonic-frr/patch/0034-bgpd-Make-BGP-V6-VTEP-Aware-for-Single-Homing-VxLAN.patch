@@ -1,0 +1,1491 @@
+From d5f838d83146fd6e05bfd7e51fd81244fa881040 Mon Sep 17 00:00:00 2001
+From: Mike RE Mallin <mremallin@gmail.com>
+Date: Mon, 31 Mar 2025 17:20:27 -0400
+Subject: [PATCH 3/7] bgpd: Make BGP V6 VTEP Aware for Single Homing VxLAN
+
+- %pI4 -> %pIA
+- struct in_addr -> struct ip_addr
+- Added zebra IPv6 VTEP handling code behind #if 0 (will enable in next
+  commit with the topotests for Single Homed IPv6 VTEP)
+- Use either "mp_nexthop_global_in" (IPv4 VTEP) or "mp_nexthop_global"
+  (IPv6 VTEP) for sending/receiving the nexthop of the route
+- Show commands with a VTEP filter will be extended for IPv6 support in
+  an upcoming commit
+
+Signed-off-by: Mike Mallin <mmallin@cisco.com>
+
+Co-authored-by: Tarek Saad <tsaad@cisco.com>
+---
+ bgpd/bgp_debug.c        |   7 +-
+ bgpd/bgp_evpn.c         | 207 ++++++++++++++++++++++++++++------------
+ bgpd/bgp_evpn.h         |   4 +-
+ bgpd/bgp_evpn_private.h |  13 ++-
+ bgpd/bgp_evpn_vty.c     | 166 ++++++++++++++++++--------------
+ bgpd/bgp_evpn_vty.h     |   3 +-
+ bgpd/bgp_nexthop.c      |  30 ++++--
+ bgpd/bgp_nexthop.h      |   6 +-
+ bgpd/bgp_route.c        |  34 +++++--
+ bgpd/bgp_vty.c          |   2 +-
+ bgpd/bgp_zebra.c        |  44 +++++++--
+ bgpd/bgpd.h             |   2 +-
+ 12 files changed, 344 insertions(+), 174 deletions(-)
+
+diff --git a/bgpd/bgp_debug.c b/bgpd/bgp_debug.c
+index 530203d860..ce9cd22ca0 100644
+--- a/bgpd/bgp_debug.c
++++ b/bgpd/bgp_debug.c
+@@ -651,8 +651,9 @@ static void bgp_debug_print_evpn_prefix(struct vty *vty, const char *desc,
+ 		}
+ 	} else if (p->u.prefix_evpn.route_type == BGP_EVPN_IMET_ROUTE) {
+ 		snprintfrr(evpn_desc, sizeof(evpn_desc),
+-			   "l2vpn evpn type multicast ip %pI4",
+-			   &p->u.prefix_evpn.imet_addr.ip.ipaddr_v4);
++			   "l2vpn evpn type multicast ip %pIA",
++			   &p->u.prefix_evpn.imet_addr.ip);
++
+ 	} else if (p->u.prefix_evpn.route_type == BGP_EVPN_IP_PREFIX_ROUTE) {
+ 		uint8_t family = is_evpn_prefix_ipaddr_v4(
+ 					(struct prefix_evpn *)p) ? AF_INET
+@@ -707,7 +708,7 @@ static int bgp_debug_parse_evpn_prefix(struct vty *vty, struct cmd_token **argv,
+ 			}
+ 
+ 		build_evpn_type3_prefix((struct prefix_evpn *)argv_p,
+-					ip.ipaddr_v4);
++					&ip);
+ 	} else if (evpn_type == BGP_EVPN_IP_PREFIX_ROUTE) {
+ 		struct prefix ip_prefix;
+ 
+diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
+index 435f035312..3089570f0c 100644
+--- a/bgpd/bgp_evpn.c
++++ b/bgpd/bgp_evpn.c
+@@ -77,7 +77,12 @@ static void bgp_evpn_remote_ip_hash_link_nexthop(struct hash_bucket *bucket,
+ 						 void *args);
+ static void bgp_evpn_remote_ip_hash_unlink_nexthop(struct hash_bucket *bucket,
+ 						   void *args);
+-static struct in_addr zero_vtep_ip;
++static struct ipaddr zero_vtep_ip = {
++	.ipa_type = IPADDR_V4,
++	.ip = {
++		._v4_addr = {0},
++	}
++};
+ 
+ static uint32_t bgp_evpn_addpath_id_for_path(const struct bgp *bgp, const struct bgp_path_info *pi,
+ 					     afi_t afi);
+@@ -913,12 +918,12 @@ struct bgp_dest *bgp_evpn_vni_node_lookup(const struct bgpevpn *vpn,
+  */
+ static enum zclient_send_status bgp_zebra_send_remote_macip(
+ 	struct bgp *bgp, struct bgpevpn *vpn, const struct prefix_evpn *p,
+-	const struct ethaddr *mac, struct in_addr remote_vtep_ip, int add,
++	const struct ethaddr *mac, struct ipaddr *remote_vtep_ip, int add,
+ 	uint8_t flags, uint32_t seq, esi_t *esi)
+ {
+ 	struct stream *s;
+ 	uint16_t ipa_len;
+-	static struct in_addr zero_remote_vtep_ip;
++	static struct ipaddr zero_remote_vtep_ip = { .ipa_type = IPADDR_V4, .ipaddr_v4 = { INADDR_ANY } };
+ 	bool esi_valid;
+ 
+ 	/* Check socket. */
+@@ -967,10 +972,18 @@ static enum zclient_send_status bgp_zebra_send_remote_macip(
+ 	 */
+ 	if (bgp_evpn_is_esi_valid(esi)) {
+ 		esi_valid = true;
+-		stream_put_in_addr(s, &zero_remote_vtep_ip);
++#if 1
++		stream_put_in_addr(s, &zero_remote_vtep_ip.ipaddr_v4);
++#else
++		stream_put_ipaddr(s, &zero_remote_vtep_ip);
++#endif /* 1 */
+ 	} else {
+ 		esi_valid = false;
+-		stream_put_in_addr(s, &remote_vtep_ip);
++#if 1
++		stream_put_in_addr(s, &remote_vtep_ip->ipaddr_v4);
++#else
++		stream_put_ipaddr(s, &remote_vtep_ip);
++#endif
+ 	}
+ 
+ 	/* TX flags - MAC sticky status and/or gateway mac */
+@@ -991,10 +1004,10 @@ static enum zclient_send_status bgp_zebra_send_remote_macip(
+ 		else
+ 			snprintf(esi_buf, sizeof(esi_buf), "-");
+ 		zlog_debug(
+-			"Tx %s MACIP, VNI %u MAC %pEA IP %pIA flags 0x%x seq %u remote VTEP %pI4 esi %s",
++			"Tx %s MACIP, VNI %u MAC %pEA IP %pIA flags 0x%x seq %u remote VTEP %pIA esi %s",
+ 			add ? "ADD" : "DEL", (vpn ? vpn->vni : 0),
+ 			(mac ? mac : &p->prefix.macip_addr.mac),
+-			&p->prefix.macip_addr.ip, flags, seq, &remote_vtep_ip,
++			&p->prefix.macip_addr.ip, flags, seq, remote_vtep_ip,
+ 			esi_buf);
+ 	}
+ 
+@@ -1038,23 +1051,27 @@ bgp_zebra_send_remote_vtep(struct bgp *bgp, struct bgpevpn *vpn,
+ 		s, add ? ZEBRA_REMOTE_VTEP_ADD : ZEBRA_REMOTE_VTEP_DEL,
+ 		bgp->vrf_id);
+ 	stream_putl(s, vpn ? vpn->vni : 0);
+-	if (is_evpn_prefix_ipaddr_v4(p))
+-		stream_put_in_addr(s, &p->prefix.imet_addr.ip.ipaddr_v4);
+-	else if (is_evpn_prefix_ipaddr_v6(p)) {
+-		flog_err(
+-			EC_BGP_VTEP_INVALID,
+-			"Bad remote IP when trying to %s remote VTEP for VNI %u",
+-			add ? "ADD" : "DEL", (vpn ? vpn->vni : 0));
+-		return ZCLIENT_SEND_FAILURE;
+-	}
++#if 1
++    if (is_evpn_prefix_ipaddr_v4(p))
++            stream_put_in_addr(s, &p->prefix.imet_addr.ip.ipaddr_v4);
++    else if (is_evpn_prefix_ipaddr_v6(p)) {
++            flog_err(
++                    EC_BGP_VTEP_INVALID,
++                    "Bad remote IP when trying to %s remote VTEP for VNI %u",
++                    add ? "ADD" : "DEL", (vpn ? vpn->vni : 0));
++            return ZCLIENT_SEND_FAILURE;
++    }
++#else
++	stream_put_ipaddr(s, &p->prefix.imet_addr.ip);
++#endif
+ 	stream_putl(s, flood_control);
+ 
+ 	stream_putw_at(s, 0, stream_get_endp(s));
+ 
+ 	if (bgp_debug_zebra(NULL))
+-		zlog_debug("Tx %s Remote VTEP, VNI %u (flood control %d) remote VTEP %pI4",
++		zlog_debug("Tx %s Remote VTEP, VNI %u (flood control %d) remote VTEP %pIA",
+ 			   add ? "ADD" : "DEL", (vpn ? vpn->vni : 0), flood_control,
+-			   &p->prefix.imet_addr.ip.ipaddr_v4);
++			   &p->prefix.imet_addr.ip);
+ 
+ 	frrtrace(3, frr_bgp, evpn_bum_vtep_zsend, add, vpn, p);
+ 
+@@ -1292,6 +1309,7 @@ enum zclient_send_status evpn_zebra_install(struct bgp *bgp, struct bgpevpn *vpn
+ 	int flood_control = VXLAN_FLOOD_DISABLED;
+ 	uint32_t seq;
+ 	enum zclient_send_status ret = ZCLIENT_SEND_SUCCESS;
++	struct ipaddr vtep_ip;
+ 
+ 	if (p->prefix.route_type == BGP_EVPN_MAC_IP_ROUTE) {
+ 		flags = 0;
+@@ -1342,13 +1360,26 @@ enum zclient_send_status evpn_zebra_install(struct bgp *bgp, struct bgpevpn *vpn
+ 						ZEBRA_MACIP_TYPE_PROXY_ADVERT);
+ 		}
+ 
++		uint8_t nhfamily = NEXTHOP_FAMILY(pi->attr->mp_nexthop_len);
++
++		switch (nhfamily) {
++		case AF_INET:
++			SET_IPADDR_V4(&vtep_ip);
++			vtep_ip.ipaddr_v4 = pi->attr->mp_nexthop_global_in;
++			break;
++		case AF_INET6:
++			SET_IPADDR_V6(&vtep_ip);
++			IPV6_ADDR_COPY(&vtep_ip.ipaddr_v6, &pi->attr->mp_nexthop_global);
++			break;
++		}
++
+ 		ret = bgp_zebra_send_remote_macip(
+ 			bgp, vpn, p,
+ 			(is_evpn_prefix_ipaddr_none(p)
+ 				 ? NULL /* MAC update */
+ 				 : evpn_type2_path_info_get_mac(
+ 					   pi) /* MAC-IP update */),
+-			pi->attr->nexthop, 1, flags, seq,
++			&vtep_ip, 1, flags, seq,
+ 			bgp_evpn_attr_get_esi(pi->attr));
+ 	} else if (p->prefix.route_type == BGP_EVPN_AD_ROUTE) {
+ 		ret = bgp_evpn_remote_es_evi_add(bgp, vpn, p);
+@@ -1386,6 +1417,22 @@ enum zclient_send_status evpn_zebra_uninstall(struct bgp *bgp,
+ 					      bool is_sync)
+ {
+ 	enum zclient_send_status ret = ZCLIENT_SEND_SUCCESS;
++	struct ipaddr vtep_ip;
++
++	if (p->prefix.route_type == BGP_EVPN_MAC_IP_ROUTE) {
++		uint8_t nhfamily = NEXTHOP_FAMILY(pi->attr->mp_nexthop_len);
++
++		switch (nhfamily) {
++		case AF_INET:
++			SET_IPADDR_V4(&vtep_ip);
++			vtep_ip.ipaddr_v4 = pi->attr->mp_nexthop_global_in;
++			break;
++		case AF_INET6:
++			SET_IPADDR_V6(&vtep_ip);
++			IPV6_ADDR_COPY(&vtep_ip.ipaddr_v6, &pi->attr->mp_nexthop_global);
++			break;
++		}
++	}
+ 
+ 	if (p->prefix.route_type == BGP_EVPN_MAC_IP_ROUTE)
+ 		ret = bgp_zebra_send_remote_macip(
+@@ -1394,7 +1441,7 @@ enum zclient_send_status evpn_zebra_uninstall(struct bgp *bgp,
+ 				 ? NULL /* MAC update */
+ 				 : evpn_type2_path_info_get_mac(
+ 					   pi) /* MAC-IP update */),
+-			(is_sync ? zero_vtep_ip : pi->attr->nexthop), 0, 0, 0,
++			(is_sync ? &zero_vtep_ip : &vtep_ip), 0, 0, 0,
+ 			NULL);
+ 	else if (p->prefix.route_type == BGP_EVPN_AD_ROUTE)
+ 		ret = bgp_evpn_remote_es_evi_del(bgp, vpn, p);
+@@ -1751,13 +1798,21 @@ static int update_evpn_type5_route(struct bgp *bgp_vrf, struct prefix_evpn *evp,
+ 	 */
+ 	if (!bgp_vrf->evpn_info->advertise_pip ||
+ 	    (!bgp_vrf->evpn_info->is_anycast_mac)) {
+-		attr.nexthop = bgp_vrf->originator_ip;
+-		attr.mp_nexthop_global_in = bgp_vrf->originator_ip;
++		if (IS_IPADDR_V4(&bgp_vrf->originator_ip)) {
++			attr.nexthop =  bgp_vrf->originator_ip.ipaddr_v4;
++			attr.mp_nexthop_global_in =  bgp_vrf->originator_ip.ipaddr_v4;
++			attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++		} else {
++			IPV6_ADDR_COPY(&attr.mp_nexthop_global, &bgp_vrf->originator_ip.ipaddr_v6);
++			attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
++		}
+ 		memcpy(&attr.rmac, &bgp_vrf->rmac, ETH_ALEN);
+ 	} else {
+ 		/* copy sys rmac */
+ 		memcpy(&attr.rmac, &bgp_vrf->evpn_info->pip_rmac, ETH_ALEN);
++		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+ 		if (bgp_vrf->evpn_info->pip_ip.s_addr != INADDR_ANY) {
++			/* V6_VTEP_PR_QUESTION: only V4 is configurable for PIP? */
+ 			attr.nexthop = bgp_vrf->evpn_info->pip_ip;
+ 			attr.mp_nexthop_global_in = bgp_vrf->evpn_info->pip_ip;
+ 		} else if (bgp_vrf->evpn_info->pip_ip.s_addr == INADDR_ANY)
+@@ -1769,15 +1824,13 @@ static int update_evpn_type5_route(struct bgp *bgp_vrf, struct prefix_evpn *evp,
+ 
+ 	if (bgp_debug_zebra(NULL))
+ 		zlog_debug(
+-			"VRF %s type-5 route evp %pFX RMAC %pEA nexthop %pI4",
++			"VRF %s type-5 route evp %pFX RMAC %pEA nexthop %pI4 mp_nexthop %pI6",
+ 			vrf_id_to_name(bgp_vrf->vrf_id), evp, &attr.rmac,
+-			&attr.nexthop);
++			&attr.nexthop, &attr.mp_nexthop_global);
+ 
+ 	frrtrace(4, frr_bgp, evpn_advertise_type5, bgp_vrf->vrf_id, evp,
+ 		 &attr.rmac, attr.nexthop);
+ 
+-	attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+-
+ 	if (src_afi == AFI_IP6 &&
+ 	    CHECK_FLAG(bgp_vrf->af_flags[AFI_L2VPN][SAFI_EVPN],
+ 		       BGP_L2VPN_EVPN_ADV_IPV6_UNICAST_GW_IP)) {
+@@ -2257,9 +2310,14 @@ static int update_evpn_route(struct bgp *bgp, struct bgpevpn *vpn,
+ 
+ 	/* Build path-attribute for this route. */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+-	attr.nexthop = vpn->originator_ip;
+-	attr.mp_nexthop_global_in = vpn->originator_ip;
+-	attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++	if (IS_IPADDR_V4(&vpn->originator_ip)) {
++		attr.nexthop = vpn->originator_ip.ipaddr_v4;
++		attr.mp_nexthop_global_in = vpn->originator_ip.ipaddr_v4;
++		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++	} else {
++		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &vpn->originator_ip.ipaddr_v6);
++		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
++	}
+ 	if (CHECK_FLAG(flags, ZEBRA_MACIP_TYPE_STICKY))
+ 		SET_FLAG(attr.evpn_flags, ATTR_EVPN_FLAG_STICKY);
+ 	if (CHECK_FLAG(flags, ZEBRA_MACIP_TYPE_GW))
+@@ -2294,11 +2352,11 @@ static int update_evpn_route(struct bgp *bgp, struct bgpevpn *vpn,
+ 		char buf3[ESI_STR_LEN];
+ 
+ 		zlog_debug(
+-			"VRF %s vni %u type-%u route evp %pFX RMAC %pEA nexthop %pI4 esi %s",
++			"VRF %s vni %u type-%u route evp %pFX RMAC %pEA nexthop %pIA esi %s",
+ 			vpn->bgp_vrf ? vrf_id_to_name(vpn->bgp_vrf->vrf_id)
+ 				     : "None",
+ 			vpn->vni, p->prefix.route_type, p, &attr.rmac,
+-			&attr.mp_nexthop_global_in,
++			&vpn->originator_ip,
+ 			esi_to_str(esi, buf3, sizeof(buf3)));
+ 	}
+ 
+@@ -2559,9 +2617,14 @@ void bgp_evpn_update_type2_route_entry(struct bgp *bgp, struct bgpevpn *vpn,
+ 	 * attributes will be shared in the hash table.
+ 	 */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+-	attr.nexthop = vpn->originator_ip;
+-	attr.mp_nexthop_global_in = vpn->originator_ip;
+-	attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++	if (IS_IPADDR_V4(&vpn->originator_ip)) {
++		attr.nexthop = vpn->originator_ip.ipaddr_v4;
++		attr.mp_nexthop_global_in = vpn->originator_ip.ipaddr_v4;
++		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++	} else {
++		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &vpn->originator_ip.ipaddr_v6);
++		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
++	}
+ 	attr.evpn_flags = local_pi->attr->evpn_flags;
+ 	attr.es_flags = local_pi->attr->es_flags;
+ 	if (CHECK_FLAG(local_pi->attr->evpn_flags, ATTR_EVPN_FLAG_DEFAULT_GW)) {
+@@ -2892,7 +2955,7 @@ int update_routes_for_vni(struct bgp *bgp, struct bgpevpn *vpn)
+ 	 */
+ 	if (bgp_evpn_vni_flood_mode_get(bgp, vpn)
+ 				== VXLAN_FLOOD_HEAD_END_REPL) {
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		ret = update_evpn_route(bgp, vpn, &p, 0, 0, NULL);
+ 		if (ret)
+ 			return ret;
+@@ -2933,7 +2996,7 @@ static int delete_routes_for_vni(struct bgp *bgp, struct bgpevpn *vpn)
+ 	 */
+ 	delete_all_type2_routes(bgp, vpn);
+ 
+-	build_evpn_type3_prefix(&p, vpn->originator_ip);
++	build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 
+ 	/*
+ 	 * To handle the following scenario:
+@@ -2971,7 +3034,7 @@ static int bgp_evpn_mcast_grp_change(struct bgp *bgp, struct bgpevpn *vpn,
+ 	vpn->mcast_grp = mcast_grp;
+ 
+ 	if (is_vni_live(vpn)) {
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		delete_evpn_route(bgp, vpn, &p);
+ 	}
+ 
+@@ -2989,10 +3052,10 @@ static int bgp_evpn_mcast_grp_change(struct bgp *bgp, struct bgpevpn *vpn,
+  */
+ static void handle_tunnel_ip_change(struct bgp *bgp_vrf, struct bgp *bgp_evpn,
+ 				    struct bgpevpn *vpn,
+-				    struct in_addr originator_ip)
++				    struct ipaddr *originator_ip)
+ {
+ 	struct prefix_evpn p;
+-	struct in_addr old_vtep_ip;
++	struct ipaddr old_vtep_ip;
+ 
+ 	if (bgp_vrf) /* L3VNI */
+ 		old_vtep_ip = bgp_vrf->originator_ip;
+@@ -3000,20 +3063,20 @@ static void handle_tunnel_ip_change(struct bgp *bgp_vrf, struct bgp *bgp_evpn,
+ 		old_vtep_ip = vpn->originator_ip;
+ 
+ 	/* TIP didn't change, nothing to do */
+-	if (IPV4_ADDR_SAME(&old_vtep_ip, &originator_ip))
++	if (ipaddr_is_same(&old_vtep_ip, originator_ip))
+ 		return;
+ 
+ 	/* If L2VNI is not live, we only need to update the originator_ip.
+ 	 * L3VNIs are updated immediately, so we can't bail out early.
+ 	 */
+ 	if (!bgp_vrf && !is_vni_live(vpn)) {
+-		vpn->originator_ip = originator_ip;
++		vpn->originator_ip = *originator_ip;
+ 		return;
+ 	}
+ 
+ 	/* Update the tunnel-ip hash */
+ 	bgp_tip_del(bgp_evpn, &old_vtep_ip);
+-	if (bgp_tip_add(bgp_evpn, &originator_ip))
++	if (bgp_tip_add(bgp_evpn, originator_ip))
+ 		/* The originator_ip was not already present in the
+ 		 * bgp martian next-hop table as a tunnel-ip, so we
+ 		 * need to go back and filter routes matching the new
+@@ -3026,12 +3089,12 @@ static void handle_tunnel_ip_change(struct bgp *bgp_vrf, struct bgp *bgp_evpn,
+ 		/* Need to withdraw type-3 route as the originator IP is part
+ 		 * of the key.
+ 		 */
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		delete_evpn_route(bgp_evpn, vpn, &p);
+ 
+-		vpn->originator_ip = originator_ip;
++		vpn->originator_ip = *originator_ip;
+ 	} else
+-		bgp_vrf->originator_ip = originator_ip;
++		bgp_vrf->originator_ip = *originator_ip;
+ 
+ 	return;
+ }
+@@ -4696,7 +4759,7 @@ static void update_advertise_vni_routes(struct bgp *bgp, struct bgpevpn *vpn)
+ 	 */
+ 	if (bgp_evpn_vni_flood_mode_get(bgp, vpn)
+ 				== VXLAN_FLOOD_HEAD_END_REPL) {
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		dest = bgp_evpn_vni_node_lookup(vpn, &p, NULL);
+ 		if (!dest) /* unexpected */
+ 			return;
+@@ -4750,7 +4813,7 @@ static int delete_withdraw_vni_routes(struct bgp *bgp, struct bgpevpn *vpn)
+ 	delete_global_type2_routes(bgp, vpn);
+ 
+ 	/* Remove type-3 route for this VNI from global table. */
+-	build_evpn_type3_prefix(&p, vpn->originator_ip);
++	build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 	global_dest = bgp_evpn_global_node_lookup(bgp->rib[afi][safi], safi, &p,
+ 						  &vpn->prd, NULL);
+ 	if (global_dest) {
+@@ -4826,7 +4889,7 @@ static void advertise_withdraw_type3(struct hash_bucket *bucket, void *data)
+ 	 * This is invoked upon flooding mode changing to head-end replication.
+ 	 */
+ 	if (flood_control == VXLAN_FLOOD_HEAD_END_REPL) {
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		if (update_evpn_route(bgp, vpn, &p, 0, 0, NULL))
+ 			flog_err(EC_BGP_EVPN_ROUTE_CREATE,
+ 				 "Type3 route creation failure for VNI %u", vpn->vni);
+@@ -4834,7 +4897,7 @@ static void advertise_withdraw_type3(struct hash_bucket *bucket, void *data)
+ 		/* Delete RT-3 for a VNI and schedule for processing and withdrawal.
+ 		 * This is invoked upon flooding mode changing to drop BUM packets.
+ 		 */
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		delete_evpn_route(bgp, vpn, &p);
+ 	}
+ }
+@@ -5025,8 +5088,11 @@ static int process_type3_route(struct peer *peer, afi_t afi, safi_t safi,
+ 	/* Get the IP. */
+ 	ipaddr_len = *pfx++;
+ 	if (ipaddr_len == IPV4_MAX_BITLEN) {
+-		p.prefix.imet_addr.ip.ipa_type = IPADDR_V4;
++		SET_IPADDR_V4(&p.prefix.imet_addr.ip);
+ 		memcpy(&p.prefix.imet_addr.ip.ip.addr, pfx, IPV4_MAX_BYTELEN);
++	} else if (ipaddr_len == IPV6_MAX_BITLEN) {
++		SET_IPADDR_V6(&p.prefix.imet_addr.ip);
++		IPV6_ADDR_COPY(&p.prefix.imet_addr.ip.ipaddr_v6, pfx);
+ 	} else {
+ 		flog_err(
+ 			EC_BGP_EVPN_ROUTE_INVALID,
+@@ -6103,12 +6169,27 @@ void bgp_evpn_encode_prefix(struct stream *s, const struct prefix *p,
+ 		break;
+ 
+ 	case BGP_EVPN_IMET_ROUTE:
+-		stream_putc(s, 17); // TODO: length - assumes IPv4 address
+-		stream_put(s, prd->val, 8);      /* RD */
+-		stream_putl(s, evp->prefix.imet_addr.eth_tag); /* Ethernet Tag ID */
+-		stream_putc(s, IPV4_MAX_BITLEN); /* IP address Length - bits */
+-		/* Originating Router's IP Addr */
+-		stream_put_in_addr(s, &evp->prefix.imet_addr.ip.ipaddr_v4);
++		{
++			uint8_t orig_ip_bits = 0;
++			uint8_t total_bytes = 13; /* Fixed part excluding Originator IP */
++
++			/* If Originator IP, add bytes to sizes */
++			if (IS_IPADDR_V4(&evp->prefix.imet_addr.ip)) {
++				orig_ip_bits = IPV4_MAX_BITLEN;
++				total_bytes += 4; /* V4 Originator IP */
++			} else if (IS_IPADDR_V6(&evp->prefix.imet_addr.ip)) {
++				orig_ip_bits = IPV6_MAX_BITLEN;
++				total_bytes += 16; /* V6 Originator IP */
++			}
++
++			stream_putc(s, total_bytes);
++			stream_put(s, prd->val, 8);      /* RD */
++			stream_putl(s, evp->prefix.imet_addr.eth_tag); /* Ethernet Tag ID */
++
++			stream_putc(s, orig_ip_bits); /* Originator IP address Length - bits */
++			if (orig_ip_bits)
++				stream_put(s, &evp->prefix.imet_addr.ip.ip, orig_ip_bits/8);
++		}
+ 		break;
+ 
+ 	case BGP_EVPN_ES_ROUTE:
+@@ -6427,7 +6508,7 @@ struct bgpevpn *bgp_evpn_lookup_vni(struct bgp *bgp, vni_t vni)
+  * Create a new vpn - invoked upon configuration or zebra notification.
+  */
+ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
+-		struct in_addr originator_ip,
++		struct ipaddr *originator_ip,
+ 		vrf_id_t tenant_vrf_id,
+ 		struct in_addr mcast_grp,
+ 		ifindex_t svi_ifindex)
+@@ -6438,7 +6519,7 @@ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
+ 
+ 	/* Set values - RD and RT set to defaults. */
+ 	vpn->vni = vni;
+-	vpn->originator_ip = originator_ip;
++	vpn->originator_ip = *originator_ip;
+ 	vpn->tenant_vrf_id = tenant_vrf_id;
+ 	vpn->mcast_grp = mcast_grp;
+ 	vpn->svi_ifindex = svi_ifindex;
+@@ -6938,7 +7019,7 @@ static void link_l2vni_hash_to_l3vni(struct hash_bucket *bucket,
+ int bgp_evpn_local_l3vni_add(vni_t l3vni, vrf_id_t vrf_id,
+ 			     struct ethaddr *svi_rmac,
+ 			     struct ethaddr *vrr_rmac,
+-			     struct in_addr originator_ip, int filter,
++			     struct ipaddr *originator_ip, int filter,
+ 			     ifindex_t svi_ifindex,
+ 			     bool is_anycast_mac)
+ {
+@@ -7268,7 +7349,7 @@ int bgp_evpn_local_vni_del(struct bgp *bgp, vni_t vni)
+  * about are for the local-tunnel-ip and the (tenant) VRF.
+  */
+ int bgp_evpn_local_vni_add(struct bgp *bgp, vni_t vni,
+-			   struct in_addr originator_ip,
++			   struct ipaddr *originator_ip,
+ 			   vrf_id_t tenant_vrf_id,
+ 			   struct in_addr mcast_grp,
+ 			   ifindex_t svi_ifindex)
+@@ -7282,7 +7363,7 @@ int bgp_evpn_local_vni_add(struct bgp *bgp, vni_t vni,
+ 	if (vpn) {
+ 
+ 		if (is_vni_live(vpn)
+-		    && IPV4_ADDR_SAME(&vpn->originator_ip, &originator_ip)
++		    && ipaddr_is_same(&vpn->originator_ip, originator_ip)
+ 		    && IPV4_ADDR_SAME(&vpn->mcast_grp, &mcast_grp)
+ 		    && vpn->tenant_vrf_id == tenant_vrf_id
+ 		    && vpn->svi_ifindex == svi_ifindex)
+@@ -7372,7 +7453,7 @@ int bgp_evpn_local_vni_add(struct bgp *bgp, vni_t vni,
+ 	/* Tunnel is newly active.
+ 	 * Add TIP to tip_hash of the EVPN underlay instance (bgp_get_evpn()).
+ 	 */
+-	if (bgp_tip_add(bgp, &originator_ip))
++	if (bgp_tip_add(bgp, originator_ip))
+ 		/* The originator_ip was not already present in the
+ 		 * bgp martian next-hop table as a tunnel-ip, so we
+ 		 * need to go back and filter routes matching the new
+@@ -7388,7 +7469,7 @@ int bgp_evpn_local_vni_add(struct bgp *bgp, vni_t vni,
+ 	 */
+ 	if (bgp_evpn_vni_flood_mode_get(bgp, vpn)
+ 			== VXLAN_FLOOD_HEAD_END_REPL) {
+-		build_evpn_type3_prefix(&p, vpn->originator_ip);
++		build_evpn_type3_prefix(&p, &vpn->originator_ip);
+ 		if (update_evpn_route(bgp, vpn, &p, 0, 0, NULL)) {
+ 			flog_err(EC_BGP_EVPN_ROUTE_CREATE,
+ 				 "%u: Type3 route creation failure for VNI %u",
+diff --git a/bgpd/bgp_evpn.h b/bgpd/bgp_evpn.h
+index 69f752fab4..5714ee61cd 100644
+--- a/bgpd/bgp_evpn.h
++++ b/bgpd/bgp_evpn.h
+@@ -159,13 +159,13 @@ extern int bgp_evpn_local_macip_add(struct bgp *bgp, vni_t vni,
+ extern int bgp_evpn_local_l3vni_add(vni_t vni, vrf_id_t vrf_id,
+ 				    struct ethaddr *rmac,
+ 				    struct ethaddr *vrr_rmac,
+-				    struct in_addr originator_ip, int filter,
++				    struct ipaddr *originator_ip, int filter,
+ 				    ifindex_t svi_ifindex, bool is_anycast_mac);
+ extern int bgp_evpn_local_l3vni_del(vni_t vni, vrf_id_t vrf_id);
+ extern void bgp_evpn_instance_down(struct bgp *bgp);
+ extern int bgp_evpn_local_vni_del(struct bgp *bgp, vni_t vni);
+ extern int bgp_evpn_local_vni_add(struct bgp *bgp, vni_t vni,
+-				  struct in_addr originator_ip,
++				  struct ipaddr *originator_ip,
+ 				  vrf_id_t tenant_vrf_id,
+ 				  struct in_addr mcast_grp,
+ 				  ifindex_t svi_ifindex);
+diff --git a/bgpd/bgp_evpn_private.h b/bgpd/bgp_evpn_private.h
+index 2d7cd68a68..4c500d1dc0 100644
+--- a/bgpd/bgp_evpn_private.h
++++ b/bgpd/bgp_evpn_private.h
+@@ -87,7 +87,7 @@ struct bgpevpn {
+ 	char *prd_pretty;
+ 
+ 	/* Route type 3 field */
+-	struct in_addr originator_ip;
++	struct ipaddr originator_ip;
+ 
+ 	/* PIM-SM MDT group for BUM flooding */
+ 	struct in_addr mcast_grp;
+@@ -506,14 +506,17 @@ build_type5_prefix_from_ip_prefix(struct prefix_evpn *evp,
+ }
+ 
+ static inline void build_evpn_type3_prefix(struct prefix_evpn *p,
+-					   struct in_addr originator_ip)
++					   struct ipaddr *originator_ip)
+ {
+ 	memset(p, 0, sizeof(struct prefix_evpn));
+ 	p->family = AF_EVPN;
+ 	p->prefixlen = EVPN_ROUTE_PREFIXLEN;
+ 	p->prefix.route_type = BGP_EVPN_IMET_ROUTE;
+-	p->prefix.imet_addr.ip.ipa_type = IPADDR_V4;
+-	p->prefix.imet_addr.ip.ipaddr_v4 = originator_ip;
++	if (IS_IPADDR_V4(originator_ip))
++		p->prefix.imet_addr.ip_prefix_length = IPV4_MAX_BITLEN;
++	else if (IS_IPADDR_V6(originator_ip))
++		p->prefix.imet_addr.ip_prefix_length = IPV6_MAX_BITLEN;
++	p->prefix.imet_addr.ip = *originator_ip;
+ }
+ 
+ static inline void build_evpn_type4_prefix(struct prefix_evpn *p,
+@@ -723,7 +726,7 @@ extern void bgp_evpn_derive_auto_rd(struct bgp *bgp, struct bgpevpn *vpn);
+ extern void bgp_evpn_derive_auto_rd_for_vrf(struct bgp *bgp);
+ extern struct bgpevpn *bgp_evpn_lookup_vni(struct bgp *bgp, vni_t vni);
+ extern struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
+-		struct in_addr originator_ip,
++		struct ipaddr *originator_ip,
+ 		vrf_id_t tenant_vrf_id,
+ 		struct in_addr mcast_grp,
+ 		ifindex_t svi_ifindex);
+diff --git a/bgpd/bgp_evpn_vty.c b/bgpd/bgp_evpn_vty.c
+index da6542ad9a..64691f4202 100644
+--- a/bgpd/bgp_evpn_vty.c
++++ b/bgpd/bgp_evpn_vty.c
+@@ -42,7 +42,7 @@
+ struct vni_walk_ctx {
+ 	struct bgp *bgp;
+ 	struct vty *vty;
+-	struct in_addr vtep_ip;
++	struct ipaddr vtep_ip;
+ 	json_object *json;
+ 	int detail;
+ 	int type;
+@@ -384,7 +384,7 @@ static void display_l3vni(struct vty *vty, struct bgp *bgp_vrf,
+ 		json_object_string_addf(json, "rd",
+ 					BGP_RD_AS_FORMAT(bgp_vrf->asnotation),
+ 					&bgp_vrf->vrf_prd);
+-		json_object_string_addf(json, "originatorIp", "%pI4",
++		json_object_string_addf(json, "originatorIp", "%pIA",
+ 					&bgp_vrf->originator_ip);
+ 		if (bgp_evpn && bgp_evpn->evpn_info) {
+ 			ecom_str = ecommunity_ecom2str(
+@@ -418,7 +418,7 @@ static void display_l3vni(struct vty *vty, struct bgp *bgp_vrf,
+ 		vty_out(vty, BGP_RD_AS_FORMAT(bgp_vrf->asnotation),
+ 			&bgp_vrf->vrf_prd);
+ 		vty_out(vty, "\n");
+-		vty_out(vty, "  Originator IP: %pI4\n",
++		vty_out(vty, "  Originator IP: %pIA\n",
+ 			&bgp_vrf->originator_ip);
+ 		if (bgp_evpn && bgp_evpn->evpn_info) {
+ 			ecom_str = ecommunity_ecom2str(
+@@ -502,7 +502,7 @@ static void display_vni(struct vty *vty, struct bgpevpn *vpn, json_object *json)
+ 				       is_vni_live(vpn) ? "True" : "False");
+ 		json_object_string_addf(
+ 			json, "rd", BGP_RD_AS_FORMAT(asnotation), &vpn->prd);
+-		json_object_string_addf(json, "originatorIp", "%pI4",
++		json_object_string_addf(json, "originatorIp", "%pIA",
+ 					&vpn->originator_ip);
+ 		json_object_string_addf(json, "mcastGroup", "%pI4",
+ 					&vpn->mcast_grp);
+@@ -553,7 +553,7 @@ static void display_vni(struct vty *vty, struct bgpevpn *vpn, json_object *json)
+ 		vty_out(vty, "  RD: ");
+ 		vty_out(vty, BGP_RD_AS_FORMAT(asnotation), &vpn->prd);
+ 		vty_out(vty, "\n");
+-		vty_out(vty, "  Originator IP: %pI4\n", &vpn->originator_ip);
++		vty_out(vty, "  Originator IP: %pIA\n", &vpn->originator_ip);
+ 		vty_out(vty, "  Mcast group: %pI4\n", &vpn->mcast_grp);
+ 		if (bgp_evpn && bgp_evpn->evpn_info) {
+ 			ecom_str = ecommunity_ecom2str(
+@@ -808,7 +808,7 @@ static void bgp_evpn_show_routes_mac_ip_global_es(struct vty *vty, esi_t *esi,
+ 
+ static void show_vni_routes(struct bgp *bgp, struct bgpevpn *vpn,
+ 			    struct vty *vty, int type, bool mac_table,
+-			    struct in_addr vtep_ip, json_object *json,
++			    struct ipaddr *vtep_ip, json_object *json,
+ 			    int detail)
+ {
+ 	struct bgp_dest *dest;
+@@ -862,9 +862,13 @@ static void show_vni_routes(struct bgp *bgp, struct bgpevpn *vpn,
+ 			struct prefix tmp_p;
+ 			json_object *json_path = NULL;
+ 
+-			if (vtep_ip.s_addr != INADDR_ANY
+-			    && !IPV4_ADDR_SAME(&(vtep_ip),
+-					       &(pi->attr->nexthop)))
++			if (IS_IPADDR_V4(vtep_ip)
++			    && !IPV4_ADDR_SAME(&(vtep_ip->ipaddr_v4), &pi->attr->nexthop))
++				continue;
++
++			if (IS_IPADDR_V6(vtep_ip)
++			    && !IPV6_ADDR_SAME(&(vtep_ip->ipaddr_v6),
++					       &(pi->attr->mp_nexthop_global)))
+ 				continue;
+ 
+ 			if (evp->prefix.route_type == BGP_EVPN_MAC_IP_ROUTE) {
+@@ -964,7 +968,7 @@ static void show_vni_routes_hash(struct hash_bucket *bucket, void *arg)
+ 	}
+ 
+ 	show_vni_routes(wctx->bgp, vpn, wctx->vty, wctx->type, wctx->mac_table,
+-			wctx->vtep_ip, json_vni, wctx->detail);
++			&wctx->vtep_ip, json_vni, wctx->detail);
+ 
+ 	if (json)
+ 		json_object_object_add(json, vni_str, json_vni);
+@@ -988,7 +992,7 @@ static void show_vni_routes_all_hash(struct hash_bucket *bucket, void *arg)
+ 		vty_out(vty, "\nVNI: %u\n\n", vpn->vni);
+ 	}
+ 
+-	show_vni_routes(wctx->bgp, vpn, wctx->vty, 0, false, wctx->vtep_ip,
++	show_vni_routes(wctx->bgp, vpn, wctx->vty, 0, false, &wctx->vtep_ip,
+ 			json_vni, wctx->detail);
+ 
+ 	if (json)
+@@ -999,7 +1003,7 @@ static void show_vni_routes_all_hash(struct hash_bucket *bucket, void *arg)
+ 	else
+ 		vty_out(vty, "\nVNI: %u MAC Table\n\n", vpn->vni);
+ 
+-	show_vni_routes(wctx->bgp, vpn, wctx->vty, 0, true, wctx->vtep_ip,
++	show_vni_routes(wctx->bgp, vpn, wctx->vty, 0, true, &wctx->vtep_ip,
+ 			json_vni_mac, wctx->detail);
+ 
+ 	if (json)
+@@ -1039,7 +1043,7 @@ static void show_l3vni_entry(struct vty *vty, struct bgp *bgp,
+ 		json_object_int_add(json_vni, "vni", bgp->l3vni);
+ 		json_object_string_add(json_vni, "type", "L3");
+ 		json_object_string_add(json_vni, "inKernel", "True");
+-		json_object_string_addf(json_vni, "originatorIp", "%pI4",
++		json_object_string_addf(json_vni, "originatorIp", "%pIA",
+ 					&bgp->originator_ip);
+ 		json_object_string_addf(json_vni, "rd",
+ 					BGP_RD_AS_FORMAT(bgp->asnotation),
+@@ -1184,7 +1188,7 @@ static void show_vni_entry(struct hash_bucket *bucket, void *args[])
+ 		json_object_string_addf(json_vni, "rd",
+ 					BGP_RD_AS_FORMAT(asnotation),
+ 					&vpn->prd);
+-		json_object_string_addf(json_vni, "originatorIp", "%pI4",
++		json_object_string_addf(json_vni, "originatorIp", "%pIA",
+ 					&vpn->originator_ip);
+ 		json_object_string_addf(json_vni, "mcastGroup", "%pI4",
+ 					&vpn->mcast_grp);
+@@ -2381,6 +2385,7 @@ static struct bgpevpn *evpn_create_update_vni(struct bgp *bgp, vni_t vni)
+ {
+ 	struct bgpevpn *vpn;
+ 	struct in_addr mcast_grp = {INADDR_ANY};
++	struct ipaddr orignator_ip;
+ 
+ 	vpn = bgp_evpn_lookup_vni(bgp, vni);
+ 	if (!vpn) {
+@@ -2396,7 +2401,9 @@ static struct bgpevpn *evpn_create_update_vni(struct bgp *bgp, vni_t vni)
+ 		/* tenant vrf will be updated when we get local_vni_add from
+ 		 * zebra
+ 		 */
+-		vpn = bgp_evpn_new(bgp, vni, bgp->router_id, 0, mcast_grp, 0);
++		SET_IPADDR_V4(&orignator_ip);
++		orignator_ip.ipaddr_v4 = bgp->router_id;
++		vpn = bgp_evpn_new(bgp, vni, &orignator_ip, 0, mcast_grp, 0);
+ 	}
+ 
+ 	/* Mark as configured. */
+@@ -2474,7 +2481,7 @@ static void evpn_show_import_rts(struct vty *vty, struct bgp *bgp,
+  * Display EVPN routes for all VNIs - vty handler.
+  */
+ static void evpn_show_routes_vni_all(struct vty *vty, struct bgp *bgp, int type,
+-				     bool mac_table, struct in_addr vtep_ip,
++				     bool mac_table, const union sockunion *vtep_ip,
+ 				     json_object *json, int detail)
+ {
+ 	uint32_t num_vnis;
+@@ -2488,7 +2495,16 @@ static void evpn_show_routes_vni_all(struct vty *vty, struct bgp *bgp, int type,
+ 	wctx.vty = vty;
+ 	wctx.type = type;
+ 	wctx.mac_table = mac_table;
+-	wctx.vtep_ip = vtep_ip;
++	SET_IPADDR_NONE(&wctx.vtep_ip);
++	if (vtep_ip) {
++		if (sockunion_family(vtep_ip) == AF_INET) {
++			SET_IPADDR_V4(&wctx.vtep_ip);
++			wctx.vtep_ip.ipaddr_v4 = vtep_ip->sin.sin_addr;
++		} else if (sockunion_family(vtep_ip) == AF_INET6) {
++			SET_IPADDR_V6(&wctx.vtep_ip);
++			wctx.vtep_ip.ipaddr_v6 = vtep_ip->sin6.sin6_addr;
++		}
++	}
+ 	wctx.json = json;
+ 	wctx.detail = detail;
+ 	hash_iterate(bgp->vnihash, (void (*)(struct hash_bucket *,
+@@ -2500,7 +2516,7 @@ static void evpn_show_routes_vni_all(struct vty *vty, struct bgp *bgp, int type,
+  * Display EVPN routes for all VNIs & all types - vty handler.
+  */
+ static void evpn_show_routes_vni_all_type_all(struct vty *vty, struct bgp *bgp,
+-					      struct in_addr vtep_ip,
++					      const union sockunion *vtep_ip,
+ 					      json_object *json, int detail)
+ {
+ 	uint32_t num_vnis;
+@@ -2513,7 +2529,16 @@ static void evpn_show_routes_vni_all_type_all(struct vty *vty, struct bgp *bgp,
+ 	memset(&wctx, 0, sizeof(struct vni_walk_ctx));
+ 	wctx.bgp = bgp;
+ 	wctx.vty = vty;
+-	wctx.vtep_ip = vtep_ip;
++	SET_IPADDR_NONE(&wctx.vtep_ip);
++	if (vtep_ip) {
++		if (sockunion_family(vtep_ip) == AF_INET) {
++			SET_IPADDR_V4(&wctx.vtep_ip);
++			wctx.vtep_ip.ipaddr_v4 = vtep_ip->sin.sin_addr;
++		} else if (sockunion_family(vtep_ip) == AF_INET6) {
++			SET_IPADDR_V6(&wctx.vtep_ip);
++			wctx.vtep_ip.ipaddr_v6 = vtep_ip->sin6.sin6_addr;
++		}
++	}
+ 	wctx.json = json;
+ 	wctx.detail = detail;
+ 	hash_iterate(bgp->vnihash,
+@@ -2526,7 +2551,7 @@ static void evpn_show_routes_vni_all_type_all(struct vty *vty, struct bgp *bgp,
+  * Display EVPN routes for a VNI -- for specific type-3 route (vty handler).
+  */
+ static void evpn_show_route_vni_multicast(struct vty *vty, struct bgp *bgp,
+-					  vni_t vni, struct in_addr orig_ip,
++					  vni_t vni, struct ipaddr *orig_ip,
+ 					  json_object *json)
+ {
+ 	struct bgpevpn *vpn;
+@@ -2749,9 +2774,10 @@ static void evpn_show_routes_esi(struct vty *vty, struct bgp *bgp,
+  */
+ static void evpn_show_routes_vni(struct vty *vty, struct bgp *bgp, vni_t vni,
+ 				 int type, bool mac_table,
+-				 struct in_addr vtep_ip, json_object *json)
++				 const union sockunion *_vtep_ip, json_object *json)
+ {
+ 	struct bgpevpn *vpn;
++	struct ipaddr vtep_ip;
+ 
+ 	/* Locate VNI. */
+ 	vpn = bgp_evpn_lookup_vni(bgp, vni);
+@@ -2761,8 +2787,18 @@ static void evpn_show_routes_vni(struct vty *vty, struct bgp *bgp, vni_t vni,
+ 		return;
+ 	}
+ 
++	if (sockunion_family(_vtep_ip) == AF_INET) {
++		SET_IPADDR_V4(&vtep_ip);
++		vtep_ip.ipaddr_v4 = _vtep_ip->sin.sin_addr;
++	} else if (sockunion_family(_vtep_ip) == AF_INET6) {
++		SET_IPADDR_V6(&vtep_ip);
++		vtep_ip.ipaddr_v6 = _vtep_ip->sin6.sin6_addr;
++	} else {
++		SET_IPADDR_NONE(&vtep_ip);
++	}
++
+ 	/* Walk this VNI's route table and display appropriate routes. */
+-	show_vni_routes(bgp, vpn, vty, type, mac_table, vtep_ip, json, 0);
++	show_vni_routes(bgp, vpn, vty, type, mac_table, &vtep_ip, json, 0);
+ }
+ 
+ /*
+@@ -5116,8 +5152,8 @@ DEFUN(show_bgp_l2vpn_evpn_route_esi,
+ /*
+  * Display per-VNI EVPN routing table.
+  */
+-DEFUN(show_bgp_l2vpn_evpn_route_vni, show_bgp_l2vpn_evpn_route_vni_cmd,
+-      "show bgp l2vpn evpn route vni " CMD_VNI_RANGE " [<type <ead|1|macip|2|multicast|3> | vtep A.B.C.D>] [json]",
++DEFPY(show_bgp_l2vpn_evpn_route_vni, show_bgp_l2vpn_evpn_route_vni_cmd,
++      "show bgp l2vpn evpn route vni " CMD_VNI_RANGE " [<type <ead|1|macip|2|multicast|3> | vtep <A.B.C.D|X:X::X:X>$vtep_ip>] [json]",
+       SHOW_STR
+       BGP_STR
+       L2VPN_HELP_STR
+@@ -5132,16 +5168,14 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni, show_bgp_l2vpn_evpn_route_vni_cmd,
+       EVPN_TYPE_2_HELP_STR
+       EVPN_TYPE_3_HELP_STR
+       EVPN_TYPE_3_HELP_STR
+-      "Remote VTEP\n"
+-      "Remote VTEP IP address\n"
++      "Remote VTEP address\n"
++      "Remote VTEP IPv4 address\n"
++      "Remote VTEP IPv6 address\n"
+       JSON_STR)
+ {
+-	vni_t vni;
+ 	struct bgp *bgp;
+-	struct in_addr vtep_ip;
+ 	int type = 0;
+ 	int idx = 0;
+-	int vtep_idx = 0;
+ 	bool uj = false;
+ 	json_object *json = NULL;
+ 
+@@ -5155,20 +5189,9 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni, show_bgp_l2vpn_evpn_route_vni_cmd,
+ 	if (!argv_find(argv, argc, "evpn", &idx))
+ 		return CMD_WARNING;
+ 
+-	vtep_ip.s_addr = 0;
+-
+-	vni = strtoul(argv[idx + 3]->arg, NULL, 10);
+-
+ 	if (bgp_evpn_cli_parse_type(&type, argv, argc) < 0)
+ 		return CMD_WARNING;
+ 
+-	if (argv_find(argv, argc, "vtep", &vtep_idx)) {
+-		if (!inet_aton(argv[vtep_idx + 1]->arg, &vtep_ip)) {
+-			vty_out(vty, "%% Malformed VTEP IP address\n");
+-			return CMD_WARNING;
+-		}
+-	}
+-
+ 	if (uj)
+ 		json = json_object_new_object();
+ 
+@@ -5268,7 +5291,7 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_multicast,
+ 	vni_t vni;
+ 	struct bgp *bgp;
+ 	int ret;
+-	struct in_addr orig_ip;
++	struct ipaddr orig_ip;
+ 	int idx = 0;
+ 	bool uj = false;
+ 	json_object *json = NULL;
+@@ -5287,7 +5310,8 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_multicast,
+ 	vni = strtoul(argv[idx + 3]->arg, NULL, 10);
+ 
+ 	/* get the ip */
+-	ret = inet_aton(argv[idx + 5]->arg, &orig_ip);
++	ret = inet_aton(argv[idx + 5]->arg, &orig_ip.ipaddr_v4);
++	SET_IPADDR_V4(&orig_ip);
+ 	if (!ret) {
+ 		vty_out(vty, "%% Malformed Originating Router IP address\n");
+ 		return CMD_WARNING;
+@@ -5296,7 +5320,7 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_multicast,
+ 	if (uj)
+ 		json = json_object_new_object();
+ 
+-	evpn_show_route_vni_multicast(vty, bgp, vni, orig_ip, json);
++	evpn_show_route_vni_multicast(vty, bgp, vni, &orig_ip, json);
+ 
+ 	if (uj)
+ 		vty_json(vty, json);
+@@ -5307,9 +5331,9 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_multicast,
+ /*
+  * Display per-VNI EVPN routing table - for all VNIs.
+  */
+-DEFUN(show_bgp_l2vpn_evpn_route_vni_all,
++DEFPY(show_bgp_l2vpn_evpn_route_vni_all,
+       show_bgp_l2vpn_evpn_route_vni_all_cmd,
+-      "show bgp l2vpn evpn route vni all [detail] [vtep A.B.C.D] [json]",
++      "show bgp l2vpn evpn route vni all [detail] [vtep <A.B.C.D|X:X::X:X>$vtep_ip] [json]",
+       SHOW_STR
+       BGP_STR
+       L2VPN_HELP_STR
+@@ -5319,11 +5343,11 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_all,
+       "All VNIs\n"
+       "Print Detailed Output\n"
+       "Remote VTEP\n"
+-      "Remote VTEP IP address\n"
++      "Remote VTEP IPv4 address\n"
++      "Remote VTEP IPv6 address\n"
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+-	struct in_addr vtep_ip;
+ 	int idx = 0;
+ 	bool uj = false;
+ 	json_object *json = NULL;
+@@ -5343,17 +5367,6 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_all,
+ 	if (argv_find(argv, argc, "detail", &da))
+ 		da = 1;
+ 
+-	/* vtep-ip position depends on detail option */
+-	vtep_ip.s_addr = 0;
+-	if ((!uj && (argc == (idx + 1 + 5 + da) && argv[idx + 5 + da]->arg))
+-	    || (uj
+-		&& (argc == (idx + 1 + 6 + da) && argv[idx + 5 + da]->arg))) {
+-		if (!inet_aton(argv[idx + 5 + da]->arg, &vtep_ip)) {
+-			vty_out(vty, "%% Malformed VTEP IP address\n");
+-			return CMD_WARNING;
+-		}
+-	}
+-
+ 	if (uj)
+ 		json = json_object_new_object();
+ 
+@@ -5372,13 +5385,14 @@ DEFUN(show_bgp_l2vpn_evpn_route_vni_all,
+  */
+ DEFPY(show_bgp_vni_all,
+       show_bgp_vni_all_cmd,
+-      "show bgp vni all [vtep A.B.C.D$addr] [detail$detail] [json$uj]",
++      "show bgp vni all [vtep <A.B.C.D|X:X::X:X>$addr] [detail$detail] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+       VNI_ALL_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       DETAIL_HELP_STR
+       JSON_STR)
+ {
+@@ -5406,7 +5420,7 @@ DEFPY(show_bgp_vni_all,
+  */
+ DEFPY(show_bgp_vni_all_ead,
+       show_bgp_vni_all_ead_cmd,
+-      "show bgp vni all type <1|ead> [vtep A.B.C.D$addr] [<detail$detail|json$uj>]",
++      "show bgp vni all type <1|ead> [vtep <A.B.C.D|X:X::X:X>$addr] [<detail$detail|json$uj>]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5416,6 +5430,7 @@ DEFPY(show_bgp_vni_all_ead,
+       EVPN_TYPE_1_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       DETAIL_HELP_STR
+       JSON_STR)
+ {
+@@ -5444,7 +5459,7 @@ DEFPY(show_bgp_vni_all_ead,
+  */
+ DEFPY(show_bgp_vni_all_macip_mac,
+       show_bgp_vni_all_macip_mac_cmd,
+-      "show bgp vni all type <2|macip> mac [vtep A.B.C.D$addr] [<detail$detail|json$uj>]",
++      "show bgp vni all type <2|macip> mac [vtep <A.B.C.D|X:X::X:X>$addr] [<detail$detail|json$uj>]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5455,6 +5470,7 @@ DEFPY(show_bgp_vni_all_macip_mac,
+       "MAC Table\n"
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       DETAIL_HELP_STR
+       JSON_STR)
+ {
+@@ -5483,7 +5499,7 @@ DEFPY(show_bgp_vni_all_macip_mac,
+  */
+ DEFPY(show_bgp_vni_all_macip_ip,
+       show_bgp_vni_all_macip_ip_cmd,
+-      "show bgp vni all type <2|macip> ip [vtep A.B.C.D$addr] [<detail$detail|json$uj>]",
++      "show bgp vni all type <2|macip> ip [vtep <A.B.C.D|X:X::X:X>$addr] [<detail$detail|json$uj>]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5494,6 +5510,7 @@ DEFPY(show_bgp_vni_all_macip_ip,
+       "IP Table\n"
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       DETAIL_HELP_STR
+       JSON_STR)
+ {
+@@ -5522,7 +5539,7 @@ DEFPY(show_bgp_vni_all_macip_ip,
+  */
+ DEFPY(show_bgp_vni_all_imet,
+       show_bgp_vni_all_imet_cmd,
+-      "show bgp vni all type <3|multicast> [vtep A.B.C.D$addr] [<detail$detail|json$uj>]",
++      "show bgp vni all type <3|multicast> [vtep <A.B.C.D|X:X::X:X>$addr] [<detail$detail|json$uj>]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5532,6 +5549,7 @@ DEFPY(show_bgp_vni_all_imet,
+       EVPN_TYPE_3_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       DETAIL_HELP_STR
+       JSON_STR)
+ {
+@@ -5560,13 +5578,14 @@ DEFPY(show_bgp_vni_all_imet,
+  */
+ DEFPY(show_bgp_vni,
+       show_bgp_vni_cmd,
+-      "show bgp vni "CMD_VNI_RANGE"$vni [vtep A.B.C.D$addr] [json$uj]",
++      "show bgp vni "CMD_VNI_RANGE"$vni [vtep <A.B.C.D|X:X::X:X>$addr] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+       VNI_NUM_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+@@ -5603,7 +5622,7 @@ DEFPY(show_bgp_vni,
+  */
+ DEFPY(show_bgp_vni_ead,
+       show_bgp_vni_ead_cmd,
+-      "show bgp vni "CMD_VNI_RANGE"$vni type <1|ead> [vtep A.B.C.D$addr] [json$uj]",
++      "show bgp vni "CMD_VNI_RANGE"$vni type <1|ead> [vtep <A.B.C.D|X:X::X:X>$addr] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5613,6 +5632,7 @@ DEFPY(show_bgp_vni_ead,
+       EVPN_TYPE_1_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+@@ -5640,7 +5660,7 @@ DEFPY(show_bgp_vni_ead,
+  */
+ DEFPY(show_bgp_vni_macip_mac,
+       show_bgp_vni_macip_mac_cmd,
+-      "show bgp vni "CMD_VNI_RANGE"$vni type <2|macip> mac [vtep A.B.C.D$addr] [json$uj]",
++      "show bgp vni "CMD_VNI_RANGE"$vni type <2|macip> mac [vtep <A.B.C.D|X:X::X:X>$addr] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5651,6 +5671,7 @@ DEFPY(show_bgp_vni_macip_mac,
+       "MAC Table\n"
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+@@ -5678,7 +5699,7 @@ DEFPY(show_bgp_vni_macip_mac,
+  */
+ DEFPY(show_bgp_vni_macip_ip,
+       show_bgp_vni_macip_ip_cmd,
+-      "show bgp vni "CMD_VNI_RANGE"$vni type <2|macip> ip [vtep A.B.C.D$addr] [json$uj]",
++      "show bgp vni "CMD_VNI_RANGE"$vni type <2|macip> ip [vtep <A.B.C.D|X:X::X:X>$addr] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5689,6 +5710,7 @@ DEFPY(show_bgp_vni_macip_ip,
+       "IP Table\n"
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+@@ -5716,7 +5738,7 @@ DEFPY(show_bgp_vni_macip_ip,
+  */
+ DEFPY(show_bgp_vni_imet,
+       show_bgp_vni_imet_cmd,
+-      "show bgp vni "CMD_VNI_RANGE"$vni type <3|multicast> [vtep A.B.C.D$addr] [json$uj]",
++      "show bgp vni "CMD_VNI_RANGE"$vni type <3|multicast> [vtep <A.B.C.D|X:X::X:X>$addr] [json$uj]",
+       SHOW_STR
+       BGP_STR
+       VNI_HELP_STR
+@@ -5726,6 +5748,7 @@ DEFPY(show_bgp_vni_imet,
+       EVPN_TYPE_3_HELP_STR
+       VTEP_HELP_STR
+       VTEP_IP_HELP_STR
++      VTEP_IPV6_HELP_STR
+       JSON_STR)
+ {
+ 	struct bgp *bgp;
+@@ -5812,10 +5835,11 @@ DEFPY(show_bgp_vni_macip_ip_addr, show_bgp_vni_macip_ip_addr_cmd,
+ 	} else {
+ 		ip_addr.ipa_type = IPADDR_V6;
+ 		memcpy(&ip_addr.ipaddr_v6, &ip->sin6.sin6_addr,
+-		       sizeof(struct in6_addr));
++				sizeof(struct in6_addr));
+ 	}
+ 	evpn_show_route_vni_macip(vty, bgp, vni, NULL, &ip_addr, json);
+ 
++
+ 	if (uj)
+ 		vty_json(vty, json);
+ 
+@@ -6528,7 +6552,7 @@ DEFUN (show_bgp_vrf_l3vni_info,
+ 
+ 	if (!json) {
+ 		vty_out(vty, "BGP VRF: %s\n", name);
+-		vty_out(vty, "  Local-Ip: %pI4\n", &bgp->originator_ip);
++		vty_out(vty, "  Local-Ip: %pIA\n", &bgp->originator_ip);
+ 		vty_out(vty, "  L3-VNI: %u\n", bgp->l3vni);
+ 		vty_out(vty, "  Rmac: %s\n",
+ 			prefix_mac2str(&bgp->rmac, buf, sizeof(buf)));
+@@ -6557,7 +6581,7 @@ DEFUN (show_bgp_vrf_l3vni_info,
+ 		vty_out(vty, "\n");
+ 	} else {
+ 		json_object_string_add(json, "vrf", name);
+-		json_object_string_addf(json, "local-ip", "%pI4",
++		json_object_string_addf(json, "local-ip", "%pIA",
+ 					&bgp->originator_ip);
+ 		json_object_int_add(json, "l3vni", bgp->l3vni);
+ 		json_object_string_add(
+diff --git a/bgpd/bgp_evpn_vty.h b/bgpd/bgp_evpn_vty.h
+index 83c41a5ade..b9d287861c 100644
+--- a/bgpd/bgp_evpn_vty.h
++++ b/bgpd/bgp_evpn_vty.h
+@@ -17,7 +17,8 @@ extern void bgp_ethernetvpn_init(void);
+ #define VNI_ALL_HELP_STR "All VNIs\n"
+ #define DETAIL_HELP_STR "Print Detailed Output\n"
+ #define VTEP_HELP_STR "Remote VTEP\n"
+-#define VTEP_IP_HELP_STR "Remote VTEP IP address\n"
++#define VTEP_IP_HELP_STR "Remote VTEP IPv4 address\n"
++#define VTEP_IPV6_HELP_STR "Remote VTEP IPv6 address\n"
+ 
+ extern int argv_find_and_parse_oly_idx(struct cmd_token **argv, int argc,
+ 				       int *oly_idx,
+diff --git a/bgpd/bgp_nexthop.c b/bgpd/bgp_nexthop.c
+index 0bc99a19de..33a18d0e12 100644
+--- a/bgpd/bgp_nexthop.c
++++ b/bgpd/bgp_nexthop.c
+@@ -133,12 +133,12 @@ static void bgp_nexthop_cache_reset(struct bgp_nexthop_cache_head *tree)
+ 
+ static void *bgp_tip_hash_alloc(void *p)
+ {
+-	const struct in_addr *val = (const struct in_addr *)p;
++	const struct ipaddr *val = (const struct ipaddr *)p;
+ 	struct tip_addr *addr;
+ 
+ 	addr = XMALLOC(MTYPE_TIP_ADDR, sizeof(struct tip_addr));
+ 	addr->refcnt = 0;
+-	addr->addr.s_addr = val->s_addr;
++	addr->addr = *val;
+ 
+ 	return addr;
+ }
+@@ -152,7 +152,12 @@ static unsigned int bgp_tip_hash_key_make(const void *p)
+ {
+ 	const struct tip_addr *addr = p;
+ 
+-	return jhash_1word(addr->addr.s_addr, 0);
++	if (IS_IPADDR_V4(&addr->addr)) {
++		return jhash_1word(addr->addr.ipaddr_v4.s_addr, 0);
++	} else {
++		return jhash2(addr->addr.ipaddr_v6.s6_addr32,
++				array_size(addr->addr.ipaddr_v6.s6_addr32), 0);
++	}
+ }
+ 
+ static bool bgp_tip_hash_cmp(const void *p1, const void *p2)
+@@ -160,7 +165,7 @@ static bool bgp_tip_hash_cmp(const void *p1, const void *p2)
+ 	const struct tip_addr *addr1 = p1;
+ 	const struct tip_addr *addr2 = p2;
+ 
+-	return addr1->addr.s_addr == addr2->addr.s_addr;
++	return ipaddr_is_same(&addr1->addr, &addr2->addr);
+ }
+ 
+ void bgp_tip_hash_init(struct bgp *bgp)
+@@ -181,7 +186,7 @@ void bgp_tip_hash_destroy(struct bgp *bgp)
+  * only need to update the refcnt, since the collection of known TIPs
+  * has not changed.
+  */
+-bool bgp_tip_add(struct bgp *bgp, struct in_addr *tip)
++bool bgp_tip_add(struct bgp *bgp, struct ipaddr *tip)
+ {
+ 	struct tip_addr tmp;
+ 	struct tip_addr *addr;
+@@ -200,7 +205,7 @@ bool bgp_tip_add(struct bgp *bgp, struct in_addr *tip)
+ 	return tip_added;
+ }
+ 
+-void bgp_tip_del(struct bgp *bgp, struct in_addr *tip)
++void bgp_tip_del(struct bgp *bgp, struct ipaddr *tip)
+ {
+ 	struct tip_addr tmp;
+ 	struct tip_addr *addr;
+@@ -566,14 +571,21 @@ bool bgp_nexthop_self(struct bgp *bgp, afi_t afi, uint8_t type,
+ 
+ 	if (new_afi == AF_INET && hashcount(bgp->tip_hash)) {
+ 		memset(&tmp_tip, 0, sizeof(tmp_tip));
+-		tmp_tip.addr = attr->nexthop;
++		SET_IPADDR_V4(&tmp_tip.addr);
++		IPV4_ADDR_COPY(&tmp_tip.addr.ipaddr_v4, &attr->nexthop);
+ 
+ 		if (CHECK_FLAG(attr->flag, ATTR_FLAG_BIT(BGP_ATTR_NEXT_HOP))) {
+-			tmp_tip.addr = attr->nexthop;
++			IPV4_ADDR_COPY(&tmp_tip.addr.ipaddr_v4, &attr->nexthop);
+ 		} else if ((attr->mp_nexthop_len) &&
+ 			   ((attr->mp_nexthop_len == BGP_ATTR_NHLEN_IPV4) ||
+ 			    (attr->mp_nexthop_len == BGP_ATTR_NHLEN_VPNV4))) {
+-			tmp_tip.addr = attr->mp_nexthop_global_in;
++			IPV4_ADDR_COPY(&tmp_tip.addr.ipaddr_v4, &attr->mp_nexthop_global_in);
++		} else if ((attr->mp_nexthop_len == BGP_ATTR_NHLEN_IPV6_GLOBAL) ||
++					(attr->mp_nexthop_len == BGP_ATTR_NHLEN_IPV6_GLOBAL_AND_LL) ||
++					(attr->mp_nexthop_len == BGP_ATTR_NHLEN_VPNV6_GLOBAL) ||
++					(attr->mp_nexthop_len == BGP_ATTR_NHLEN_VPNV6_GLOBAL_AND_LL)) {
++			SET_IPADDR_V6(&tmp_tip.addr);
++			IPV6_ADDR_COPY(&tmp_tip.addr.ipaddr_v6, &attr->mp_nexthop_global);
+ 		}
+ 
+ 		tip = hash_lookup(bgp->tip_hash, &tmp_tip);
+diff --git a/bgpd/bgp_nexthop.h b/bgpd/bgp_nexthop.h
+index 99473b3b0a..a0280ef02d 100644
+--- a/bgpd/bgp_nexthop.h
++++ b/bgpd/bgp_nexthop.h
+@@ -104,7 +104,7 @@ DECLARE_RBTREE_UNIQ(bgp_nexthop_cache, struct bgp_nexthop_cache, entry,
+ 
+ /* Own tunnel-ip address structure */
+ struct tip_addr {
+-	struct in_addr addr;
++	struct ipaddr addr;
+ 	int refcnt;
+ };
+ 
+@@ -151,8 +151,8 @@ extern void bgp_scan_finish(struct bgp *bgp);
+ extern void bgp_scan_vty_init(void);
+ extern void bgp_address_init(struct bgp *bgp);
+ extern void bgp_address_destroy(struct bgp *bgp);
+-extern bool bgp_tip_add(struct bgp *bgp, struct in_addr *tip);
+-extern void bgp_tip_del(struct bgp *bgp, struct in_addr *tip);
++extern bool bgp_tip_add(struct bgp *bgp, struct ipaddr *tip);
++extern void bgp_tip_del(struct bgp *bgp, struct ipaddr *tip);
+ extern void bgp_tip_hash_init(struct bgp *bgp);
+ extern void bgp_tip_hash_destroy(struct bgp *bgp);
+ 
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 27d65dca12..b08332c346 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -7690,6 +7690,7 @@ void bgp_static_update(struct bgp *bgp, const struct prefix *p,
+ 
+ 	if (safi == SAFI_EVPN || safi == SAFI_MPLS_VPN || safi == SAFI_ENCAP) {
+ 		if (afi == AFI_IP) {
++			/* TODO -- no support for V6 nexthop yet */
+ 			attr.mp_nexthop_global_in = bgp_static->igpnexthop;
+ 			attr.mp_nexthop_len = IPV4_MAX_BYTELEN;
+ 		}
+@@ -10582,12 +10583,29 @@ void route_vty_out(struct vty *vty, const struct prefix *p,
+ 				vty_out(vty, "%*s", len, " ");
+ 		}
+ 	} else if (safi == SAFI_EVPN) {
++		char buf[BUFSIZ];
++		char nexthop[128];
++		int af = NEXTHOP_FAMILY(attr->mp_nexthop_len);
++
++		switch (af) {
++		case AF_INET:
++			snprintf(nexthop, sizeof(nexthop), "%s",
++				 inet_ntop(af, &attr->mp_nexthop_global_in, buf,
++					   BUFSIZ));
++			break;
++		case AF_INET6:
++			snprintf(nexthop, sizeof(nexthop), "%s",
++				 inet_ntop(af, &attr->mp_nexthop_global, buf,
++					   BUFSIZ));
++			break;
++		default:
++			snprintf(nexthop, sizeof(nexthop), "?");
++			break;
++		}
+ 		if (json_paths) {
+ 			json_nexthop_global = json_object_new_object();
+ 
+-			json_object_string_addf(json_nexthop_global, "ip",
+-						"%pI4",
+-						&attr->mp_nexthop_global_in);
++			json_object_string_add(json_nexthop_global, "ip", nexthop);
+ 
+ 			if (path->peer->hostname)
+ 				json_object_string_add(json_nexthop_global,
+@@ -10595,17 +10613,17 @@ void route_vty_out(struct vty *vty, const struct prefix *p,
+ 						       path->peer->hostname);
+ 
+ 			json_object_string_add(json_nexthop_global, "afi",
+-					       "ipv4");
++					       (af == AF_INET) ? "ipv4" : "ipv6");
+ 			json_object_boolean_true_add(json_nexthop_global,
+ 						     "used");
+ 		} else {
+ 			if (nexthop_hostname)
+-				len = vty_out(vty, "%pI4(%s)%s",
+-					      &attr->mp_nexthop_global_in,
++				len = vty_out(vty, "%s(%s)%s",
++					      nexthop,
+ 					      nexthop_hostname, vrf_id_str);
+ 			else
+-				len = vty_out(vty, "%pI4%s",
+-					      &attr->mp_nexthop_global_in,
++				len = vty_out(vty, "%s%s",
++					      nexthop,
+ 					      vrf_id_str);
+ 
+ 			len = wide ? (41 - len) : (16 - len);
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index e21eeae317..1dce69af6a 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -12103,7 +12103,7 @@ static void show_tip_entry(struct hash_bucket *bucket, void *args)
+ 	struct vty *vty = (struct vty *)args;
+ 	struct tip_addr *tip = (struct tip_addr *)bucket->data;
+ 
+-	vty_out(vty, "addr: %pI4, count: %d\n", &tip->addr, tip->refcnt);
++	vty_out(vty, "addr: %pIA, count: %d\n", &tip->addr, tip->refcnt);
+ }
+ 
+ static void bgp_show_martian_nexthops(struct vty *vty, struct bgp *bgp)
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 0658beffa6..bcc05ba548 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3258,7 +3258,7 @@ static int bgp_zebra_process_local_l3vni(ZAPI_CALLBACK_ARGS)
+ 	int filter = 0;
+ 	vni_t l3vni = 0;
+ 	struct ethaddr svi_rmac, vrr_rmac = {.octet = {0} };
+-	struct in_addr originator_ip;
++	struct ipaddr originator_ip;
+ 	struct stream *s;
+ 	ifindex_t svi_ifindex;
+ 	bool is_anycast_mac = false;
+@@ -3269,14 +3269,24 @@ static int bgp_zebra_process_local_l3vni(ZAPI_CALLBACK_ARGS)
+ 	l3vni = stream_getl(s);
+ 	if (cmd == ZEBRA_L3VNI_ADD) {
+ 		stream_get(&svi_rmac, s, sizeof(struct ethaddr));
+-		originator_ip.s_addr = stream_get_ipv4(s);
++#if 1
++		originator_ip.ipaddr_v4.s_addr = stream_get_ipv4(s);
++		SET_IPADDR_V4(&originator_ip);
++#else
++		STREAM_GETW(s, originator_ip.ipa_type);
++		if (originator_ip.ipa_type == IPADDR_V4) {
++			STREAM_GET(&originator_ip.ipaddr_v4, s, IPV4_MAX_BYTELEN);
++		} else if (originator_ip.ipa_type == IPADDR_V6) {
++			STREAM_GET(&originator_ip.ipaddr_v6, s, IPV6_MAX_BYTELEN);
++		}
++#endif /* 1 */
+ 		stream_get(&filter, s, sizeof(int));
+ 		svi_ifindex = stream_getl(s);
+ 		stream_get(&vrr_rmac, s, sizeof(struct ethaddr));
+ 		is_anycast_mac = stream_getl(s);
+ 
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+-			zlog_debug("Rx L3VNI ADD VRF %s VNI %u Originator-IP %pI4 RMAC svi-mac %pEA vrr-mac %pEA filter %s svi-if %u",
++			zlog_debug("Rx L3VNI ADD VRF %s VNI %u Originator-IP %pIA RMAC svi-mac %pEA vrr-mac %pEA filter %s svi-if %u",
+ 				   vrf_id_to_name(vrf_id), l3vni,
+ 				   &originator_ip, &svi_rmac, &vrr_rmac,
+ 				   filter ? "prefix-routes-only" : "none",
+@@ -3287,7 +3297,7 @@ static int bgp_zebra_process_local_l3vni(ZAPI_CALLBACK_ARGS)
+ 			 svi_ifindex, is_anycast_mac);
+ 
+ 		bgp_evpn_local_l3vni_add(l3vni, vrf_id, &svi_rmac, &vrr_rmac,
+-					 originator_ip, filter, svi_ifindex,
++					 &originator_ip, filter, svi_ifindex,
+ 					 is_anycast_mac);
+ 	} else {
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+@@ -3307,7 +3317,7 @@ static int bgp_zebra_process_local_vni(ZAPI_CALLBACK_ARGS)
+ 	struct stream *s;
+ 	vni_t vni;
+ 	struct bgp *bgp;
+-	struct in_addr vtep_ip = {INADDR_ANY};
++	struct ipaddr vtep_ip = {0};
+ 	vrf_id_t tenant_vrf_id = VRF_DEFAULT;
+ 	struct in_addr mcast_grp = {INADDR_ANY};
+ 	ifindex_t svi_ifindex = 0;
+@@ -3315,7 +3325,22 @@ static int bgp_zebra_process_local_vni(ZAPI_CALLBACK_ARGS)
+ 	s = zclient->ibuf;
+ 	vni = stream_getl(s);
+ 	if (cmd == ZEBRA_VNI_ADD) {
+-		vtep_ip.s_addr = stream_get_ipv4(s);
++#if 1
++		SET_IPADDR_V4(&vtep_ip);
++		vtep_ip.ipaddr_v4.s_addr = stream_get_ipv4(s);
++#else
++		STREAM_GETW(s, vtep_ip.ipa_type);
++		if (vtep_ip.ipa_type == IPADDR_V4) {
++			STREAM_GET(&vtep_ip.ipaddr_v4, s, IPV4_MAX_BYTELEN);
++		} else if (vtep_ip.ipa_type == IPADDR_V6) {
++			STREAM_GET(&vtep_ip.ipaddr_v6, s, IPV6_MAX_BYTELEN);
++		} else {
++			if (BGP_DEBUG(zebra, ZEBRA))
++				zlog_err(
++					"Unexpected VTEP IP address type=%u", vtep_ip.ipa_type);
++			return 0;
++		}
++#endif /* 1 */
+ 		stream_get(&tenant_vrf_id, s, sizeof(vrf_id_t));
+ 		mcast_grp.s_addr = stream_get_ipv4(s);
+ 		stream_get(&svi_ifindex, s, sizeof(ifindex_t));
+@@ -3332,13 +3357,18 @@ static int bgp_zebra_process_local_vni(ZAPI_CALLBACK_ARGS)
+ 			vrf_id_to_name(vrf_id), vni,
+ 			vrf_id_to_name(tenant_vrf_id), svi_ifindex);
+ 
++	if (ipaddr_is_zero(&vtep_ip)) {
++		SET_IPADDR_V4(&vtep_ip);
++		vtep_ip.ipaddr_v4 = bgp->router_id;
++	}
++
+ 	if (cmd == ZEBRA_VNI_ADD) {
+ 		frrtrace(4, frr_bgp, evpn_local_vni_add_zrecv, vni, vtep_ip,
+ 			 tenant_vrf_id, mcast_grp);
+ 
+ 		return bgp_evpn_local_vni_add(
+ 			bgp, vni,
+-			vtep_ip.s_addr != INADDR_ANY ? vtep_ip : bgp->router_id,
++			&vtep_ip,
+ 			tenant_vrf_id, mcast_grp, svi_ifindex);
+ 	} else {
+ 		frrtrace(1, frr_bgp, evpn_local_vni_del_zrecv, vni);
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index c863ed2eeb..0701b024f5 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -874,7 +874,7 @@ struct bgp {
+ 	struct ethaddr rmac;
+ 
+ 	/* originator ip - to be used as NH for type-5 routes */
+-	struct in_addr originator_ip;
++	struct ipaddr originator_ip;
+ 
+ 	/* SVI associated with the L3-VNI corresponding to this vrf */
+ 	ifindex_t l3vni_svi_ifindex;
+-- 
+2.35.6
+
