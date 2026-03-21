@@ -110,6 +110,8 @@ RUN chmod 755 /usr/bin/docker_init.sh
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Pass the image_version to container
