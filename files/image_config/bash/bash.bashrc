@@ -76,7 +76,7 @@ fi
 
 # Helper function to generate all redis-cli aliases at once
 generate_sonic_redis_aliases() {
-    # Define DB names and alias suffixes
+    # Define DB names and alias suffixes (Single Source of Truth)
     local -A SONIC_DBS=(
         ["APPL_DB"]="appdb"
         ["ASIC_DB"]="asicdb"
@@ -88,57 +88,17 @@ generate_sonic_redis_aliases() {
         ["APPL_STATE_DB"]="appstatedb"
     )
 
-    # Run Python once to get all DB configurations
+    # Extract DB names (keys) from the associative array to pass to Python
+    local db_keys=("${!SONIC_DBS[@]}")
+
+    # Run the external Python script, passing DB names as arguments
     local python_output
-    python_output=$(python3 -c "
-import sys
-try:
-    import swsscommon.swsscommon
+    python_output=$(/usr/local/bin/sonic-db-aliases "${db_keys[@]}" 2>&1)
+    local python_exit_code=$?
 
-    SonicDBConfig = None
-
-    if hasattr(swsscommon.swsscommon, 'SonicDBConfig'):
-        SonicDBConfig = swsscommon.swsscommon.SonicDBConfig
-
-    if SonicDBConfig is None:
-        print('ERROR:SonicDBConfig not found in swsscommon module', file=sys.stderr)
-        sys.exit(1)
-
-    # Initialize config (some versions require this)
-    try:
-        SonicDBConfig.loadSonicDBConfig()
-    except AttributeError:
-        pass  # Some versions don't have this method
-    except Exception:
-        pass  # Ignore if config file is missing
-
-    dbs = ['APPL_DB', 'ASIC_DB', 'COUNTERS_DB', 'LOGLEVEL_DB',
-           'CONFIG_DB', 'FLEX_COUNTER_DB', 'STATE_DB', 'APPL_STATE_DB']
-    for db in dbs:
-        try:
-            db_id = SonicDBConfig.getDbId(db)
-            db_port = SonicDBConfig.getDbPort(db)
-            print(f'{db}:{db_id}:{db_port}')
-        except Exception as e:
-            print(f'ERROR:Failed to get config for {db}: {e}', file=sys.stderr)
-
-except ImportError as e:
-    print(f'ERROR:swsscommon module not found: {e}', file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print(f'ERROR:Unexpected error: {e}', file=sys.stderr)
-    sys.exit(1)
-" 2>&1)
-
-    # Check if Python command succeeded
-    if [ $? -ne 0 ]; then
+    # Check if Python command failed catastrophically (e.g., module not found)
+    if [ $python_exit_code -ne 0 ]; then
         echo "Error generating Redis aliases: $python_output" >&2
-        return 1
-    fi
-
-    # Check for Python-level errors in output
-    if [[ "$python_output" == ERROR:* ]]; then
-        echo "$python_output" >&2
         return 1
     fi
 
@@ -150,6 +110,12 @@ except Exception as e:
 
     # Parse output and create aliases
     while IFS=: read -r db_name db_id db_port; do
+        # Skip lines that contain errors printed by the python script
+        if [[ "$db_name" == "ERROR" ]]; then
+            echo "$db_name:$db_id:$db_port" >&2
+            continue
+        fi
+
         if [ -n "$db_name" ] && [ -n "$db_id" ] && [ -n "$db_port" ]; then
             local alias_name="redis-${SONIC_DBS[$db_name]}"
             if [ -n "$alias_name" ]; then
