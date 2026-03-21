@@ -93,7 +93,7 @@ generate_sonic_redis_aliases() {
 
     # Run the external Python script, passing DB names as arguments
     local python_output
-    python_output=$(/usr/local/bin/sonic-db-aliases "${db_keys[@]}" 2>&1)
+    python_output=$(/usr/local/bin/sonic-db-aliases.py "${db_keys[@]}" 2>&1)
     local python_exit_code=$?
 
     # Check if Python command failed catastrophically (e.g., module not found)
