@@ -521,32 +521,6 @@ def parse_device(device):
     if d_type is None and str(QName(ns3, "type")) in device.attrib:
         d_type = device.attrib[str(QName(ns3, "type"))]
 
-    # Validate HWSKU and log fallback behavior for Generic HWSKU compatibility
-    if hwsku and hwsku != "Generic":
-        try:
-            from sonic_py_common import device_info
-            platform = device_info.get_platform()
-            if platform:
-                # Check if HWSKU-specific folder exists by trying to get hwsku file
-                from portconfig import get_hwsku_file_name
-                hwsku_file = get_hwsku_file_name(hwsku=hwsku, platform=platform)
-                
-                # Check if the returned file is HWSKU-specific or platform-level (fallback)
-                if hwsku_file:
-                    platform_root = '/usr/share/sonic/device'
-                    hwsku_specific_path = os.path.join(platform_root, platform, hwsku, 'hwsku.json')
-                    platform_level_path = os.path.join(platform_root, platform, 'hwsku.json')
-                    
-                    if hwsku_file == platform_level_path and os.path.exists(platform_level_path):
-                        print(f"INFO: HWSKU '{hwsku}' from minigraph does not have specific folder, using platform-level files for Generic HWSKU compatibility", file=sys.stderr)
-                    elif hwsku_file == hwsku_specific_path:
-                        print(f"INFO: Using HWSKU-specific configuration for '{hwsku}'", file=sys.stderr)
-                else:
-                    print(f"WARNING: HWSKU '{hwsku}' from minigraph has no corresponding configuration files, provisioning may fail", file=sys.stderr)
-        except Exception as e:
-            # Don't fail minigraph parsing if validation fails
-            print(f"WARNING: Could not validate HWSKU '{hwsku}': {e}", file=sys.stderr)
-
     return (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, d_subtype, slice_type)
 
 

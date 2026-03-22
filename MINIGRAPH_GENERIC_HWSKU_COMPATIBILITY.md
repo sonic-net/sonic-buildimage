@@ -50,16 +50,22 @@ if hwsku and platform_path:
         port_config_candidates.append(platform_port_config)
 ```
 
-#### 3. HWSKU Validation in `minigraph.py`
-- **File**: `src/sonic-config-engine/minigraph.py`
-- **Change**: Added validation and logging in `parse_device()` function
-- **Logic**: Validates HWSKU folder existence and logs when fallback will be used
+#### 3. HWSKU Validation Utility
+- **File**: `src/sonic-config-engine/hwsku_validator.py` (New File)
+- **Change**: Created standalone HWSKU validation utility
+- **Logic**: Provides HWSKU validation without modifying protected minigraph.py
 
 ```python
-# Validate HWSKU and log fallback behavior for Generic HWSKU compatibility
-if hwsku and hwsku != "Generic":
+def validate_hwsku_compatibility(hwsku, platform=None):
+    """
+    Validate HWSKU and log fallback behavior for Generic HWSKU compatibility
+    
+    Returns:
+        dict: Validation results with status and messages
+    """
     # Check if HWSKU-specific folder exists
     # Log appropriate messages for fallback scenarios
+    # Return validation status and messages
 ```
 
 #### 4. Template Path Fallback in `sonic-cfggen`
