@@ -126,7 +126,7 @@ pyasn1_modules==0.4.1
 pycparser==2.22
 pycryptodomex==3.20.0
 pyelftools==0.32
-pyfakefs==6.1.4
+pyfakefs==6.1.6
 pygments==2.18.0
 pygobject==3.50.0
 pyhamcrest==2.1.0
