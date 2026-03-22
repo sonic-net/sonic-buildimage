@@ -1,6 +1,4 @@
 import sys
-import importlib.machinery
-import importlib.util
 from subprocess import Popen, STDOUT, PIPE, CalledProcessError, check_output
 
 
@@ -9,6 +7,8 @@ def load_module_from_source(module_name, file_path):
     This function will load the Python source file specified by <file_path>
     as a module named <module_name> and return an instance of the module
     """
+    import importlib.machinery
+    import importlib.util
     loader = importlib.machinery.SourceFileLoader(module_name, file_path)
     spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
