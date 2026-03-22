@@ -37,7 +37,7 @@ def validate_hwsku_compatibility(hwsku, platform=None):
         if not platform:
             return {
                 'status': 'warning',
-                'message': f'Could not determine platform for HWSKU validation: {hwsku}'
+                'message': 'Could not determine platform for HWSKU validation: {}'.format(os.path.basename(hwsku) if hwsku else 'unknown')
             }
         
         # Check if HWSKU-specific folder exists by trying to get hwsku file
@@ -45,11 +45,15 @@ def validate_hwsku_compatibility(hwsku, platform=None):
         
         if hwsku_file:
             platform_root = '/usr/share/sonic/device'
-            hwsku_specific_path = os.path.join(platform_root, platform, hwsku, 'hwsku.json')
-            platform_level_path = os.path.join(platform_root, platform, 'hwsku.json')
+            # Sanitize inputs to prevent path traversal
+            safe_platform = os.path.basename(platform) if platform else ''
+            safe_hwsku = os.path.basename(hwsku) if hwsku else ''
+            
+            hwsku_specific_path = os.path.join(platform_root, safe_platform, safe_hwsku, 'hwsku.json')
+            platform_level_path = os.path.join(platform_root, safe_platform, 'hwsku.json')
             
             if hwsku_file == platform_level_path and os.path.exists(platform_level_path):
-                message = f"INFO: HWSKU '{hwsku}' from minigraph does not have specific folder, using platform-level files for Generic HWSKU compatibility"
+                message = "INFO: HWSKU '{}' from minigraph does not have specific folder, using platform-level files for Generic HWSKU compatibility".format(safe_hwsku)
                 print(message, file=sys.stderr)
                 return {
                     'status': 'fallback',
@@ -57,7 +61,7 @@ def validate_hwsku_compatibility(hwsku, platform=None):
                     'hwsku_file': hwsku_file
                 }
             elif hwsku_file == hwsku_specific_path:
-                message = f"INFO: Using HWSKU-specific configuration for '{hwsku}'"
+                message = "INFO: Using HWSKU-specific configuration for '{}'".format(safe_hwsku)
                 print(message, file=sys.stderr)
                 return {
                     'status': 'hwsku_specific',
@@ -65,7 +69,8 @@ def validate_hwsku_compatibility(hwsku, platform=None):
                     'hwsku_file': hwsku_file
                 }
         else:
-            message = f"WARNING: HWSKU '{hwsku}' from minigraph has no corresponding configuration files, provisioning may fail"
+            safe_hwsku = os.path.basename(hwsku) if hwsku else ''
+            message = "WARNING: HWSKU '{}' from minigraph has no corresponding configuration files, provisioning may fail".format(safe_hwsku)
             print(message, file=sys.stderr)
             return {
                 'status': 'error',
@@ -74,7 +79,8 @@ def validate_hwsku_compatibility(hwsku, platform=None):
             
     except Exception as e:
         # Don't fail if validation fails
-        message = f"WARNING: Could not validate HWSKU '{hwsku}': {e}"
+        safe_hwsku = os.path.basename(hwsku) if hwsku else 'unknown'
+        message = "WARNING: Could not validate HWSKU '{}': {}".format(safe_hwsku, str(e))
         print(message, file=sys.stderr)
         return {
             'status': 'error',
@@ -84,7 +90,7 @@ def validate_hwsku_compatibility(hwsku, platform=None):
     
     return {
         'status': 'unknown',
-        'message': f'Unexpected validation result for HWSKU: {hwsku}'
+        'message': 'Unexpected validation result for HWSKU: {}'.format(os.path.basename(hwsku) if hwsku else 'unknown')
     }
 
 
@@ -101,9 +107,9 @@ def main():
     
     result = validate_hwsku_compatibility(hwsku, platform)
     
-    print(f"HWSKU Validation Result:")
-    print(f"  Status: {result['status']}")
-    print(f"  Message: {result['message']}")
+    print("HWSKU Validation Result:")
+    print("  Status: {}".format(result['status']))
+    print("  Message: {}".format(result['message']))
     
     if result['status'] == 'error':
         sys.exit(1)
