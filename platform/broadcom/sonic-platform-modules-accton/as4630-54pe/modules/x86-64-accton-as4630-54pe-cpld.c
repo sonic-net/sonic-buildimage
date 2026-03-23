@@ -532,12 +532,12 @@ static ssize_t show_version(struct device *dev, struct device_attribute *attr, c
 static u32 reg_val_to_duty_cycle(u8 reg_val)
 {
     reg_val &= FAN_DUTY_CYCLE_REG_MASK;
-    return ((u32)(reg_val) * 625)/ 100;
+    return ((u32)(reg_val) * 625 + 50)/ 100;
 }
 
 static u8 duty_cycle_to_reg_val(u8 duty_cycle)
 {
-    return ((u32)duty_cycle * 100 / 625);
+    return (((u32)duty_cycle * 100 + 312) / 625);
 }
 
 static u32 reg_val_to_speed_rpm(u8 reg_val)
