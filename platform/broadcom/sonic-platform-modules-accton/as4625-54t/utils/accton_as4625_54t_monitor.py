@@ -33,12 +33,14 @@ FUNCTION_NAME = '/usr/local/bin/accton_as4625_54t_monitor'
 I2C_PATH = "/sys/bus/i2c/devices/{}-00{}/"
 
 FAN_SPEED_DEFAULT_F2B = 38
-FAN_SPEED_DEFAULT_B2F = 25
+FAN_SPEED_DEFAULT_B2F = 31
 FAN_SPEED_MAX = 100
 
 ERROR_CONFIG_LOGGING = 1
 ERROR_CHASSIS_LOAD = 2
 ERROR_DEVICE_MONITOR_LOAD = 3
+
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 global log_file
 global log_level
@@ -101,17 +103,20 @@ class device_monitor(object):
 
     def __init__(self, chassis):
         self._api_helper = APIHelper()
+        self.fan_timer_start = time.time()
         self.chassis = chassis
         self.warning = False
         self.shutdown = False
         self.fan_failed = False
         self.pwm_state = self.PWM_STATE_NORMAL
+        self.fan_list = self.chassis.get_all_fans()
 
         self.pcb_id = self._get_pcb_id()
         if (self.pcb_id < self.PCB_ID_AS4625_54T_F2B or
             self.pcb_id > self.PCB_ID_AS4625_54T_B2F):
             self.pcb_id = self.PCB_ID_AS4625_54T_F2B
 
+        self._set_fans_tolerance_mode("off")
         self._set_all_fan_speed(self._get_default_speed())
 
     def _get_pcb_id(self):
@@ -122,6 +127,19 @@ class device_monitor(object):
 
         return None
 
+    def _set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def _is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
+
     def _set_all_fan_speed(self, speed):
         ret = True
 
@@ -131,6 +149,7 @@ class device_monitor(object):
                     logging.error("fan.set_speed error, drawer(%d)-fan(%d)", drawer_index, fan_index)
                     ret = False
 
+        self.fan_timer_start = time.time()
         return ret
 
     def _get_default_speed(self):
@@ -247,19 +266,28 @@ class device_monitor(object):
         return True
 
     def manage_fans(self):
+        if self._is_timer_expired():
+            self._set_fans_tolerance_mode("on")
+
         try:
             prev_warning = self.warning
             self._refresh_fan_status()
             self._refresh_thermal_status()
         except:
+            self._set_fans_tolerance_mode("off")
             self._set_all_fan_speed(FAN_SPEED_MAX)
             logging.error("Error occurred while updating fan and thermal status")
             return
 
-        if self.fan_failed is True:
+        if self.fan_failed:
+            self._set_fans_tolerance_mode("off")
             self._set_all_fan_speed(FAN_SPEED_MAX)
         else:
-            self._set_all_fan_speed(self._get_fan_speed())
+            ori_duty_cycle = self.fan_list[0].get_target_speed()
+            new_duty_cycle = self._get_fan_speed()
+            if new_duty_cycle != ori_duty_cycle:
+                self._set_fans_tolerance_mode("off")
+                self._set_all_fan_speed(new_duty_cycle)
 
         if prev_warning != self.warning:
             if self.warning is True:
