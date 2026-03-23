@@ -22,6 +22,8 @@
 #                   powering off the DUT.
 #                2. Change the decision of FAN direction
 #                3. Enhance test data
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
+#    01/05/2026: Richard_KUO Use fan speed to check for state change
 # ------------------------------------------------------------------
 
 try:
@@ -48,6 +50,9 @@ STATE_DB = 'STATE_DB'
 TRANSCEIVER_DOM_SENSOR_TABLE = 'TRANSCEIVER_DOM_SENSOR'
 TEMPERATURE_FIELD_NAME = 'temperature'
 
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
+
+FAN_DUTY_CYCLE_MAX = 100
 class switch(object):
     def __init__(self, value):
         self.value = value
@@ -322,9 +327,13 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
-
+        self.fan_timer_start = time.time()
         self.thermal = ThermalUtil()
         self.fan = FanUtil()
+
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -349,6 +358,23 @@ class device_monitor(object):
         #logging.debug('SET. logfile:%s / loglevel:%d', log_file, log_level)
 
         self.transceiver_dom_sensor_table = None
+
+        self.set_fans_tolerance_mode("off")
+        self.fan.set_fan_duty_cycle(FAN_DUTY_CYCLE_MAX)
+        self.fan_timer_start = time.time()
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def get_transceiver_temperature(self, iface_name):
         if self.transceiver_dom_sensor_table is None:
@@ -448,6 +474,9 @@ class device_monitor(object):
         thermal_val = []
         max_to_mid=0
         mid_to_min=0
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
 
         # After booting, the database might not be ready for
         # connection. So, it should try to connect to the database
@@ -706,6 +735,7 @@ class device_monitor(object):
                     logging.debug("current_state=LEVEL_FAN_MIN")
 
         #Check Fan fault status. True: fan not fault/present, 1: fan fault/un-present
+        fan_fail=0
         for i in range (fan.FAN_NUM_1_IDX, fan.FAN_NUM_ON_MAIN_BROAD+1):
             if fan.get_fan_status(i)==False:
                 new_duty_cycle=100
@@ -713,23 +743,27 @@ class device_monitor(object):
                 logging.debug('fan_%d fail, set duty_cycle to 100',i)
                 if test_temp==0:
                     fan_fail=1
+                    self.set_fans_tolerance_mode("off")
                     fan.set_fan_duty_cycle(new_duty_cycle)
+                    self.fan_timer_start = time.time()
                     break
-            else:
-                fan_fail=0
 
-        if current_state!=ori_state:
-            fan_policy_state=current_state
-            new_duty_cycle=fan_policy[current_state][0]
+        fan_policy_state = current_state
+        new_duty_cycle = fan_policy[current_state][0]
+        if new_duty_cycle != ori_duty_cycle:
             if current_state > ori_state:
                 logging.warning('Increase fan duty_cycle from %d%% to %d%%.', fan_policy[ori_state][0], new_duty_cycle)
             else:
                 logging.info('Decrease fan duty_cycle from %d%% to %d%%.', fan_policy[ori_state][0], new_duty_cycle)
             if new_duty_cycle!=ori_duty_cycle and fan_fail==0:
+                self.set_fans_tolerance_mode("off")
                 fan.set_fan_duty_cycle(new_duty_cycle)
+                self.fan_timer_start = time.time()
                 return True
             if new_duty_cycle==0 and fan_fail==0:
+                self.set_fans_tolerance_mode("off")
                 fan.set_fan_duty_cycle(FAN_DUTY_CYCLE_MAX)
+                self.fan_timer_start = time.time()
 
         return True
 
@@ -785,8 +819,6 @@ def main(argv):
     global platform_chassis
     platform_chassis = platform.Platform().get_chassis()
 
-    fan = FanUtil()
-    fan.set_fan_duty_cycle(100)
     monitor = device_monitor(log_file, log_level)
     # Loop forever, doing something useful hopefully:
     while True:
