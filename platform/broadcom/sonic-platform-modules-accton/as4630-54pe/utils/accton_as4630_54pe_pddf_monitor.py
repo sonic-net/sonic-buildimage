@@ -17,6 +17,7 @@
 # HISTORY:
 #    mm/dd/yyyy (A.D.)#
 #    10/24/2019:Jostar create for as4630_54pe thermal plan
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -36,9 +37,8 @@ except ImportError as e:
 VERSION = '1.0'
 FUNCTION_NAME = '/usr/local/bin/accton_as4630_54pe_pddf_monitor'
 
-
-
-
+DUTY_MAX = 100
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 # Temperature Policy
 # If any fan fail , please set fan speed register to 16
@@ -106,6 +106,10 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -125,6 +129,23 @@ class device_monitor(object):
         sys_handler = logging.handlers.SysLogHandler(address='/dev/log')
         sys_handler.setLevel(logging.WARNING)
         logging.getLogger('').addHandler(sys_handler)
+
+        self.set_fans_tolerance_mode("off")
+        as4630_54pe_set_fan_speed(50)
+        self.fan_timer_start = time.time()
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def get_state_from_fan_policy(self, temp, policy):
         state = 0
@@ -154,7 +175,7 @@ class device_monitor(object):
         LEVEL_TEMP_CRITICAL = 4
         fan_policy = {
             LEVEL_FAN_MIN:       [50,   8, 0,      140000],
-            LEVEL_FAN_NORMAL:    [62,  10, 140000, 150000],
+            LEVEL_FAN_NORMAL:    [63,  10, 140000, 150000],
             LEVEL_FAN_MID:       [75,  12, 150000, 160000],
             LEVEL_FAN_HIGH:      [88,  14, 160000, 240000],
             LEVEL_TEMP_CRITICAL: [100, 16, 240000, 300000],
@@ -164,8 +185,11 @@ class device_monitor(object):
         #thermal = ThermalUtil()
         #fan = FanUtil()
         # Supposedly all the fans are set with same duty cycle
-        ori_duty_cycle = platform_chassis.get_fan(0).get_speed()
+        ori_duty_cycle = platform_chassis.get_fan(0).get_target_speed()
         new_duty_cycle = 0
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
 
         if test_temp == 0:
             for i in range(0, 3):
@@ -195,6 +219,7 @@ class device_monitor(object):
                 break
             temp_val += temp[i]
 
+        fan_fail = 0
         # Check Fan status
         for i in range(NUM_FANS):
             if not platform_chassis.get_fan(i).get_status():
@@ -230,8 +255,9 @@ class device_monitor(object):
             # Set the 100% speed only for first fan failure detection
             logging.warning('Fan_{} failed, set remaining fan speed to 100%'.format(
                 ' Fan_'.join(str(item+1) for item, val in enumerate(fan_fail_list) if val == 1)))
-            new_pwm = 100
-            as4630_54pe_set_fan_speed(new_pwm)
+            self.set_fans_tolerance_mode("off")
+            as4630_54pe_set_fan_speed(DUTY_MAX)
+            self.fan_timer_start = time.time()
         else:
             fan_fail = 0
 
@@ -245,7 +271,9 @@ class device_monitor(object):
         # Decision : Decide new fan pwm percent.
         if fan_fail == 0 and ori_duty_cycle != fan_policy[fan_policy_state][0]:
             new_duty_cycle = fan_policy[fan_policy_state][0]
+            self.set_fans_tolerance_mode("off")
             as4630_54pe_set_fan_speed(new_duty_cycle)
+            self.fan_timer_start = time.time()
             if test_temp == 1:
                 time.sleep(3)
                 status, output = getstatusoutput_noshell(['pddf_fanutil', 'getspeed'])
@@ -343,8 +371,6 @@ def main(argv):
     global platform_chassis
     platform_chassis = platform.Platform().get_chassis()
 
-    as4630_54pe_set_fan_speed(50)
-    
     monitor = device_monitor(log_file, log_level)
     # Loop forever, doing something useful hopefully:
     while True:
