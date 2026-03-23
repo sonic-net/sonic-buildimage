@@ -1,0 +1,40 @@
+From d4614ee9033c3e776b74d6d8c96a0af3792e263f Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 29 Sep 2025 12:28:14 -0700
+Subject: [PATCH 06/29] lib: EVPNv6 MH increase pfx string len for v6 address
+
+The prefixlen is used for debug and cli purpose,
+EVPNv6 add ipv6 address in EVPN prefix which spill over
+current prefixlen limit.
+
+Before:
+2025/09/29 19:02:12.474562 BGP: [WTJQB-H1EZQ] default (0): Installing EVPN
+[1]:[4294967295]:[03:44:38:39:ff:ff:01:00:00:01]:[128]:[2001:c001:ff:f00d::4]:[   <<<<
+route in VNI 1000 IP/MAC table
+
+After:
+2025/09/29 19:26:13.025185 BGP: [WTJQB-H1EZQ] default (0): Installing EVPN
+[1]:[4294967295]:[03:44:38:39:ff:ff:01:00:00:01]:[128]:[2001:c001:ff:f00d::4]:[0]
+route in VNI 1000 IP/MAC table
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ lib/prefix.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/prefix.h b/lib/prefix.h
+index cf6c488af5..4f876c7580 100644
+--- a/lib/prefix.h
++++ b/lib/prefix.h
+@@ -320,7 +320,7 @@ union prefixconstptr {
+ #endif /* INET6_BUFSIZ */
+ 
+ /* Maximum string length of the result of prefix2str */
+-#define PREFIX_STRLEN 80
++#define PREFIX_STRLEN 84
+ 
+ /*
+  * Longest possible length of a (S,G) string is 82 bytes
+-- 
+2.35.6
+

@@ -1,0 +1,83 @@
+From ae6482c91e82b947a8281ae7f1636f89ace8c29d Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Thu, 27 Nov 2025 18:07:27 -0800
+Subject: [PATCH 19/29] tests: EVPNv6 MH v6 vtep aware tenant vrf ips
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ .../bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md     | 18 ++++++++++++++++++
+ .../test_evpn_mh_v4_v6_num.py                  | 18 +++++++++++++++++-
+ 2 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
+index 6e2a4593d5..9c914265fd 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
+@@ -181,6 +181,24 @@ All routers have both IPv4 and IPv6 loopback addresses for proper BGP router-id
+ | torm22 | 10.0.0.18/32 | **2001:db8:100::18/128** | 10.0.0.18 | 65005 |
+ 
+ **Note**: TOR routers use IPv6 addresses (2001:db8:100::15-18) as VTEP source addresses for VXLAN tunnels. IPv4 loopbacks are configured for BGP router-id compatibility.
++### VRF IPv4 Addresses (10.1.x.x)
++
++Each TOR has unique IPv4 addresses assigned directly to its VRF devices. These
++act as loopback-style addresses within each VRF and are associated to L3VNIs:
++
++- `vrf1` → L3VNI 400
++- `vrf2` → L3VNI 4001
++
++| Device | VRF  | VRF IPv4 Address | L3VNI |
++|--------|------|------------------|-------|
++| torm11 | vrf1 | 10.1.11.1/32     | 4000  |
++| torm11 | vrf2 | 10.1.11.2/32     | 4001  |
++| torm12 | vrf1 | 10.1.12.1/32     | 4000  |
++| torm12 | vrf2 | 10.1.12.2/32     | 4001  |
++| torm21 | vrf1 | 10.1.21.1/32     | 4000  |
++| torm21 | vrf2 | 10.1.21.2/32     | 4001  |
++| torm22 | vrf1 | 10.1.22.1/32     | 4000  |
++| torm22 | vrf2 | 10.1.22.2/32     | 4001  |
+ 
+ ### Point-to-Point Link Addresses (/127 Networks)
+ 
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+index dc6c4c4358..c480ecb4db 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+@@ -258,6 +258,16 @@ L3VNI_VRF = {
+     4001: "vrf2",
+ }
+ 
++# Per-TOR IPv4 addresses for VRF devices. These are assigned directly to the
++# VRF interfaces (vrf1 and vrf2) as /32 loopback-style addresses in the
++# 10.1.x.x range, unique per TOR.
++VRF_IPV4 = {
++    "torm11": {"vrf1": "10.1.11.1/32", "vrf2": "10.1.11.2/32"},
++    "torm12": {"vrf1": "10.1.12.1/32", "vrf2": "10.1.12.2/32"},
++    "torm21": {"vrf1": "10.1.21.1/32", "vrf2": "10.1.21.2/32"},
++    "torm22": {"vrf1": "10.1.22.1/32", "vrf2": "10.1.22.2/32"},
++}
++
+ 
+ def _normalize_prefix_for_ip_show(prefix):
+     """
+@@ -503,11 +513,17 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
+     for ifname, prefix in uplinks.items():
+         tor.run("ip -6 addr add %s dev %s" % (prefix, ifname))
+ 
+-    # create VRFs and L3VNI VLAN 4001
++    # create VRFs and L3VNI VLANs based on L3VNI_VRF
+     config_bridge(tor)
+     config_vxlan(tor, tor_ip)
+     config_vrf_l3vni(tor)
+ 
++    # Assign per-VRF IPv4 addresses (10.1.x.x/32) on vrf1 and vrf2 devices so
++    # each TOR has unique loopback-style addresses in each VRF.
++    vrf_ips = VRF_IPV4.get(tor_name, {})
++    for vrf, addr in vrf_ips.items():
++        tor.run(f"ip addr add {addr} dev {vrf}")
++
+     # create hostbonds; we will attach them to the bridge explicitly
+     if "torm1" in tor_name:
+         sys_mac = "44:38:39:ff:ff:01"
+-- 
+2.35.6
+

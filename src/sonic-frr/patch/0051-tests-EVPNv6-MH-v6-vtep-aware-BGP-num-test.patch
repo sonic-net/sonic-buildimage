@@ -1,0 +1,2572 @@
+From a7b980bf00343299649aa2df0fd0f277e1e96baa Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Wed, 19 Nov 2025 21:11:11 -0800
+Subject: [PATCH 13/29] tests: EVPNv6 MH v6 vtep aware BGP num test
+
+This test is converted to from bgp_evpn_mh
+to use `service integrated-vtysh-config` along
+with BGP numbered underlay fabric with IPv6 VTEP.
+
+IPv6 VTEP address, BGP GUA address
+IPv4: 10.0.0.x/32 and related underlay prefixes are from 10.0.0.0/8,
+which is RFC 1918 private space and appropriate for internal tests.
+IPv6: all the 2001:db8:... prefixes are from 2001:db8::/32, the RFC 3849
+documentation block, explicitly reserved for examples and non-production
+use.
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ .../bgp_evpn_mh_v4_v6_num/ipv6/README.md      | 273 +++++
+ .../bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md    | 496 +++++++++
+ .../ipv6/hostd11/frr.conf                     |   6 +
+ .../ipv6/hostd12/frr.conf                     |   6 +
+ .../ipv6/hostd21/frr.conf                     |   6 +
+ .../ipv6/hostd22/frr.conf                     |   6 +
+ .../bgp_evpn_mh_v4_v6_num/ipv6/leaf1/frr.conf |  74 ++
+ .../bgp_evpn_mh_v4_v6_num/ipv6/leaf2/frr.conf |  74 ++
+ .../ipv6/spine1/frr.conf                      |  47 +
+ .../ipv6/spine2/frr.conf                      |  47 +
+ .../ipv6/torm11/frr.conf                      | 107 ++
+ .../ipv6/torm12/frr.conf                      | 107 ++
+ .../ipv6/torm21/frr.conf                      | 107 ++
+ .../ipv6/torm22/frr.conf                      | 107 ++
+ .../test_evpn_mh_v4_v6_num.py                 | 966 ++++++++++++++++++
+ 15 files changed, 2429 insertions(+)
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/README.md
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd11/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd12/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd21/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd22/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf1/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf2/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine1/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine2/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
+ create mode 100644 tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/README.md b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/README.md
+new file mode 100644
+index 0000000000..ae64aa85bf
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/README.md
+@@ -0,0 +1,273 @@
++# BGP EVPN Multihoming with IPv4/IPv6 VTEPs and EBGP Numbered Peering
++
++## Overview
++
++This test validates BGP EVPN Multi-Homing functionality using:
++- **IPv6 VTEP addresses** for VXLAN tunnel endpoints (IPv4 support planned)
++- **EBGP numbered peering** with explicit IPv6 neighbor addresses
++- **Unified FRR configuration** using `service integrated-vtysh-config`
++- **PIM6** for IPv6 multicast BUM traffic handling
++
++## Topology
++
++```
++                    +--------+  +--------+
++                    | spine1 |  | spine2 |
++                    | AS6500 |  | AS6500 |
++                    +---+----+  +----+---+
++                        |  \/        |
++                        |  /\        |
++                    +---+----+  +----+---+
++                    | leaf1  |  | leaf2  |
++                    | AS6510 |  | AS6510 |
++                    +---+----+  +----+---+
++                        |  \/        |
++                        |  /\        |
++         +--------------+--++--------+---+--------------+
++         |              |              |                |
++      +--+---+     +----+---+     +----+---+       +----+---+
++      |torm11|     |torm12  |     |torm21  |       |torm22  |
++      |AS6500|     |AS6500  |     |AS6500  |       |AS6500  |
++      |  2   |     |    3   |     |    4   |       |    5   |
++      +--+---+     +----+---+     +----+---+       +----+---+
++         |  \          /  |           |  \            /  |
++         |   \        /   |           |   \          /   |
++         |    \      /    |           |    \        /    |
++      +--+---+ +----+---+ |        +--+---+ +------+---+ |
++      |hostd11 |hostd12  |         |hostd21| |hostd22   |
++      +--------+----------+         +--------+-----------+
++         (Rack 1)                       (Rack 2)
++```
++
++## Key Features
++
++### 1. IPv6 VTEP Addressing
++
++All VXLAN tunnel endpoints currently use IPv6 addresses:
++- **torm11**: `2001:db8:100::15/128`
++- **torm12**: `2001:db8:100::16/128`
++- **torm21**: `2001:db8:100::17/128`
++- **torm22**: `2001:db8:100::18/128`
++
++### 2. IPv6 Point-to-Point Links (/127)
++
++All inter-router links use `/127` addressing for efficient IPv6 P2P:
++- **spine1 ↔ leaf1**: `2001:db8:50::0/127` and `::1/127`
++- **spine1 ↔ leaf2**: `2001:db8:51::0/127` and `::1/127`
++- **spine2 ↔ leaf1**: `2001:db8:60::0/127` and `::1/127`
++- **spine2 ↔ leaf2**: `2001:db8:61::0/127` and `::1/127`
++- **leaf1 ↔ torm11**: `2001:db8:1::0/127` and `::1/127`
++- **leaf1 ↔ torm12**: `2001:db8:2::0/127` and `::1/127`
++- And so on...
++
++### 3. AS Number Scheme (EBGP Numbered)
++
++- **Spine layer**: AS 65001
++- **Leaf layer**: AS 65101
++- **TOR Rack 1**: AS 65002 (torm11), AS 65003 (torm12)
++- **TOR Rack 2**: AS 65004 (torm21), AS 65005 (torm22)
++
++### 4. BGP Configuration
++
++All BGP sessions use:
++- IPv6 neighbor addresses (EBGP numbered)
++- `capability extended-nexthop` for IPv4 over IPv6 BGP sessions
++- `no bgp default ipv4-unicast` (IPv6-only underlay for now)
++- L2VPN EVPN address family for EVPN routes
++
++### 5. PIM6 for IPv6 Multicast
++
++TOR routers use PIM6 for handling BUM (Broadcast, Unknown Unicast, Multicast) traffic:
++- IPv6 multicast group: `ff0e::100`
++- PIM6 enabled on uplink interfaces
++- Multicast termination device: `ipmr-lo`
++
++### 6. EVPN Multihoming
++
++Each rack has:
++- Two TORs acting as PEs (Provider Edge)
++- Dual-attached hosts with LACP bonds
++- ES-ID (Ethernet Segment Identifier) per host
++- ES system MAC for MH coordination
++
++**Rack 1 ES Configuration:**
++- ES system MAC: `44:38:39:ff:ff:01`
++- hostd11 ES-ID: 1
++- hostd12 ES-ID: 2
++
++**Rack 2 ES Configuration:**
++- ES system MAC: `44:38:39:ff:ff:02`
++- hostd21 ES-ID: 1
++- hostd22 ES-ID: 2
++
++## Configuration Structure
++
++### Unified FRR Configuration
++
++Each router uses a single `frr.conf` file with:
++```
++frr defaults datacenter
++service integrated-vtysh-config
++hostname <router-name>
++!
++# Interface configurations
++# Routing protocol configurations
++!
++end
++```
++
++This approach:
++- Simplifies configuration management
++- Matches production deployments
++- Uses modern FRR best practices
++
++## IPv6 Addressing Plan
++
++### Loopback Addresses (VTEP)
++- `2001:db8:100::/64` - VTEP loopback addresses
++  - ::13 - spine1
++  - ::14 - spine2
++  - ::15 - torm11 (VTEP)
++  - ::16 - torm12 (VTEP)
++  - ::17 - torm21 (VTEP)
++  - ::18 - torm22 (VTEP)
++
++### Spine Loopbacks
++- `2001:db8:200::/64` - Leaf/spine additional loopbacks
++  - ::13 - leaf1
++  - ::14 - leaf2
++
++### Point-to-Point Links
++- `2001:db8:1::/127` through `2001:db8:8::/127` - TOR to Leaf links
++- `2001:db8:50::/127`, `2001:db8:51::/127` - Spine1 to Leaf links
++- `2001:db8:60::/127`, `2001:db8:61::/127` - Spine2 to Leaf links
++
++### SVI (Switched Virtual Interface)
++- `2001:db8:45::/64` - VLAN 1000 SVI subnet
++  - ::1 - Anycast gateway
++  - ::2-::5 - TOR SVI addresses
++  - ::11, ::12, ::21, ::22 - Host addresses
++
++## Test Coverage
++
++The test suite validates:
++
++1. **ES Peering** (`test_evpn_es`)
++   - Local ES peer discovery via Type-1 EAD routes
++   - Remote ES PE list correctness
++
++2. **EAD Route Updates** (`test_evpn_ead_update`)
++   - Link flap handling
++   - EAD route withdrawal and re-advertisement
++
++3. **MAC Learning** (`test_evpn_mac`)
++   - Local MAC sync between PEs
++   - Remote MAC installation
++
++4. **DF Election** (`test_evpn_df`)
++   - Designated Forwarder role assignment
++   - DF preference changes
++
++5. **Uplink Tracking** (`test_evpn_uplink_tracking`)
++   - Access port protodown on uplink failure
++   - Recovery on uplink restoration
++
++## Running the Tests
++
++```bash
++cd /work/penta-01/chirag/docker-home/tree/up/fr/frr/tests/topotests/bgp_evpn_mh_v4_v6_num
++
++# Run all tests (fixture will run IPv6; IPv4 is currently skipped)
++pytest test_evpn_mh_v4_v6_numbered.py -v
++
++# Run specific test
++pytest test_evpn_mh_v4_v6_numbered.py::test_evpn_es -v
++
++# Run with debug output
++pytest test_evpn_mh_v4_v6_numbered.py -v -s
++```
++
++## Requirements
++
++- **FRR**: 8.1 or later (with mgmtd support)
++- **Kernel**: 4.19 or later (for MH support)
++- **IPv6**: Fully enabled with forwarding
++- **Modules**: VXLAN, bridge, bonding, PIM6
++
++## Key Differences from Original test_evpn_mh
++
++1. **IPv6 VTEP first**: Uses IPv6 for VXLAN tunnel endpoints (IPv4 VTEPs can be added later)
++2. **EBGP Numbered**: Explicit IPv6 neighbor addresses instead of unnumbered
++3. **Unified Config**: Single `frr.conf` per router instead of separate daemon configs
++4. **PIM6**: Uses IPv6 PIM instead of IPv4 PIM
++5. **IPv6 Multicast**: Uses `ff0e::100` instead of `239.1.1.100`
++6. **Pytest Fixture**: `tgen_and_ip_version` parametrizes the test for `"ipv4"` / `"ipv6"` underlay (IPv4 currently skipped)
++7. **Critical Fixes**: Includes IPv6 forwarding and DAD configuration before daemon startup
++
++## Known Issues and Workarounds
++
++### IPv6 DAD (Duplicate Address Detection)
++
++DAD is disabled globally and per-interface to prevent address configuration delays:
++```python
++router.run("sysctl -w net.ipv6.conf.all.accept_dad=0")
++router.run("sysctl -w net.ipv6.conf.all.dad_transmits=0")
++```
++
++### mgmtd Requirement
++
++Modern FRR requires mgmtd to be loaded before other daemons:
++```python
++router.load_config(TopoRouter.RD_MGMTD, "")
++```
++
++### IPv6 Forwarding
++
++Must be enabled BEFORE starting FRR daemons:
++```python
++router.run("sysctl -w net.ipv6.conf.all.forwarding=1")
++```
++
++## Debugging
++
++### View BGP EVPN ES Information
++```bash
++vtysh -c "show bgp l2vpn evpn es"
++vtysh -c "show bgp l2vpn evpn es detail"
++```
++
++### View MAC Addresses
++```bash
++vtysh -c "show evpn mac vni 1000"
++```
++
++### View BGP IPv6 Neighbors
++```bash
++vtysh -c "show bgp ipv6 unicast summary"
++```
++
++### View EVPN Routes
++```bash
++vtysh -c "show bgp l2vpn evpn route"
++```
++
++### View PIM6 Status
++```bash
++vtysh -c "show ipv6 pim interface"
++vtysh -c "show ipv6 mroute"
++```
++
++## References
++
++- Original test: `tests/topotests/bgp_evpn_mh/`
++- IPv6 VTEP reference: `tests/topotests/bgp_evpn_three_tier_clos_topo1/`
++- FRR EVPN MH documentation: https://docs.frrouting.org/en/latest/evpn.html
++
++## Authors
++
++- Original test: Anuradha Karuppiah (Cumulus Networks)
++- IPv4/IPv6 VTEP and EBGP numbered adaptation: Chirag Shah (Nvidia), 2025
++
++## License
++
++SPDX-License-Identifier: ISC
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
+new file mode 100644
+index 0000000000..6e2a4593d5
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/TOPOLOGY.md
+@@ -0,0 +1,496 @@
++# BGP EVPN MH IPv4/IPv6 Numbered - Network Topology
++
++## Topology Diagram
++
++```
++                                 SPINE LAYER (AS 65001)
++                            ┌─────────────────────────────┐
++                            │                             │
++                    ┌───────┴────────┐          ┌────────┴────────┐
++                    │    spine1      │          │    spine2       │
++                    │  AS 65001      │          │  AS 65001       │
++                    │  lo: 2001:db8: │          │  lo: 2001:db8:  │
++                    │      100::13   │          │      100::14    │
++                    └────┬──────┬────┘          └────┬──────┬─────┘
++                         │      │                    │      │
++                    eth0 │      │ eth1          eth0 │      │ eth1
++              ::50::1/127│      │::51::1/127 ::60::1/127   │::61::1/127
++                         │      │                    │      │
++                         │      └─────────┐    ┏─────┘      │
++                         │                │    │            │
++                    ┌────┴──────┐    ┌────┴────┴──┐    ┌────┴────────┐
++                    │   leaf1   │    │   leaf2    │    │             │
++                    │  AS 65101 │    │  AS 65101  │    │             │
++                    │  lo: 2001:│    │  lo: 2001: │    │             │
++                    │  db8:200::│    │  db8:200:: │    │             │
++                    │      13   │    │      14    │    │             │
++                    └─┬──┬──┬──┬┘    └─┬──┬──┬───┬┘    │             │
++                 eth2 │  │  │  │       │  │  │   │     │             │
++                      │  │  │  └───────┘  │  │   └─────┘             │
++                      │  │  │             │  │                        │
++                      │  │  └─────────────┼──┼────────────────────────┘
++                      │  │                │  │
++                      │  └────────────────┼──┼──────────────┐
++                      │                   │  │              │
++                      │ eth3          eth4│  │eth5      eth2│ eth3
++                      │                   │  │              │
++                      │                   │  │              │
++                    ┌─┴─────────┐  ┌──────┴──┴────┐  ┌─────┴───────┐  ┌──────────────┐
++                    │  torm11   │  │   torm12     │  │  torm21     │  │   torm22     │
++                    │ AS 65002  │  │  AS 65003    │  │ AS 65004    │  │  AS 65005    │
++                    │ VTEP:     │  │  VTEP:       │  │ VTEP:       │  │  VTEP:       │
++                    │ 2001:db8: │  │  2001:db8:   │  │ 2001:db8:   │  │  2001:db8:   │
++                    │ 100::15   │  │  100::16     │  │ 100::17     │  │  100::18     │
++                    └─┬───────┬─┘  └─┬────────┬───┘  └─┬───────┬───┘  └─┬────────┬───┘
++                 eth2 │       │eth3  │eth2    │eth3    │eth2   │eth3    │eth2    │eth3
++                      │       │      │        │        │       │        │        │
++                      │       └──────┼────┐   │   ┌────┼───────┘        │   ┌────┘
++                      │              │    │   │   │    │                │   │
++                    ┌─┴─────┐  ┌─────┴──┐ │   │   │ ┌──┴──────┐  ┌──────┴───┴──┐
++                    │hostd11│  │hostd12 │ │   │   │ │hostd21  │  │  hostd22    │
++                    │(bond) │  │(bond)  │ │   │   │ │(bond)   │  │  (bond)     │
++                    └───┬───┘  └────┬───┘ │   │   │ └────┬────┘  └─────┬───────┘
++                        │           │     │   │   │      │             │
++                        └───────────┴─────┴───┴───┴──────┴─────────────┘
++                              Rack 1                  Rack 2
++                         ES sys-mac:             ES sys-mac:
++                      44:38:39:ff:ff:01       44:38:39:ff:ff:02
++```
++
++## Layer Architecture
++
++```
++┌──────────────────────────────────────────────────────────────────┐
++│                        SPINE LAYER                                │
++│                                                                   │
++│  spine1 (AS 65001)              spine2 (AS 65001)                │
++│  - BGP Route Reflector          - BGP Route Reflector            │
++│  - L2VPN EVPN                   - L2VPN EVPN                     │
++└──────────────────────────────────────────────────────────────────┘
++                              ▲  │
++                              │  ▼
++┌──────────────────────────────────────────────────────────────────┐
++│                         LEAF LAYER                                │
++│                                                                   │
++│  leaf1 (AS 65101)               leaf2 (AS 65101)                 │
++│  - BGP Route Reflector          - BGP Route Reflector            │
++│  - Aggregation                  - Aggregation                    │
++└──────────────────────────────────────────────────────────────────┘
++                              ▲  │
++                              │  ▼
++┌──────────────────────────────────────────────────────────────────┐
++│                          TOR LAYER (VTEP)                         │
++│                                                                   │
++│  Rack 1:                        Rack 2:                          │
++│  ├─ torm11 (AS 65002)          ├─ torm21 (AS 65004)             │
++│  │  VTEP: 2001:db8:100::15    │  VTEP: 2001:db8:100::17        │
++│  └─ torm12 (AS 65003)          └─ torm22 (AS 65005)             │
++│     VTEP: 2001:db8:100::16        VTEP: 2001:db8:100::18        │
++│                                                                   │
++│  Features:                                                        │
++│  - EVPN Multihoming (ES-ID, ES sys-mac)                         │
++│  - VXLAN (VNI 1000)                                              │
++│  - PIM6 for BUM traffic                                          │
++│  - SVI: VLAN 1000                                                │
++└──────────────────────────────────────────────────────────────────┘
++                              ▲  │
++                              │  ▼
++┌──────────────────────────────────────────────────────────────────┐
++│                         HOST LAYER                                │
++│                                                                   │
++│  Rack 1:                        Rack 2:                          │
++│  ├─ hostd11 (dual-attached)   ├─ hostd21 (dual-attached)        │
++│  └─ hostd12 (dual-attached)   └─ hostd22 (dual-attached)        │
++│                                                                   │
++│  - LACP bonds to both TORs                                       │
++│  - IPv6 addressing in VLAN 1000                                  │
++└──────────────────────────────────────────────────────────────────┘
++```
++
++## Detailed Connection Table
++
++### Spine to Leaf Connections
++
++| Source Device | Source Interface | Source IPv6 Address | Destination Device | Destination Interface | Destination IPv6 Address | AS Pair |
++|--------------|------------------|---------------------|-------------------|----------------------|--------------------------|---------|
++| spine1 | spine1-eth0 | 2001:db8:50::1/127 | leaf1 | leaf1-eth0 | 2001:db8:50::0/127 | 65001 ↔ 65101 |
++| spine1 | spine1-eth1 | 2001:db8:51::1/127 | leaf2 | leaf2-eth0 | 2001:db8:51::0/127 | 65001 ↔ 65101 |
++| spine2 | spine2-eth0 | 2001:db8:60::1/127 | leaf1 | leaf1-eth1 | 2001:db8:60::0/127 | 65001 ↔ 65101 |
++| spine2 | spine2-eth1 | 2001:db8:61::1/127 | leaf2 | leaf2-eth1 | 2001:db8:61::0/127 | 65001 ↔ 65101 |
++
++### Leaf to TOR Connections (Rack 1)
++
++| Source Device | Source Interface | Source IPv6 Address | Destination Device | Destination Interface | Destination IPv6 Address | AS Pair |
++|--------------|------------------|---------------------|-------------------|----------------------|--------------------------|---------|
++| leaf1 | leaf1-eth2 | 2001:db8:1::1/127 | torm11 | torm11-eth0 | 2001:db8:1::0/127 | 65101 ↔ 65002 |
++| leaf1 | leaf1-eth3 | 2001:db8:2::1/127 | torm12 | torm12-eth0 | 2001:db8:2::0/127 | 65101 ↔ 65003 |
++| leaf2 | leaf2-eth2 | 2001:db8:5::1/127 | torm11 | torm11-eth1 | 2001:db8:5::0/127 | 65101 ↔ 65002 |
++| leaf2 | leaf2-eth3 | 2001:db8:6::1/127 | torm12 | torm12-eth1 | 2001:db8:6::0/127 | 65101 ↔ 65003 |
++
++### Leaf to TOR Connections (Rack 2)
++
++| Source Device | Source Interface | Source IPv6 Address | Destination Device | Destination Interface | Destination IPv6 Address | AS Pair |
++|--------------|------------------|---------------------|-------------------|----------------------|--------------------------|---------|
++| leaf1 | leaf1-eth4 | 2001:db8:3::1/127 | torm21 | torm21-eth0 | 2001:db8:3::0/127 | 65101 ↔ 65004 |
++| leaf1 | leaf1-eth5 | 2001:db8:4::1/127 | torm22 | torm22-eth0 | 2001:db8:4::0/127 | 65101 ↔ 65005 |
++| leaf2 | leaf2-eth4 | 2001:db8:7::1/127 | torm21 | torm21-eth1 | 2001:db8:7::0/127 | 65101 ↔ 65004 |
++| leaf2 | leaf2-eth5 | 2001:db8:8::1/127 | torm22 | torm22-eth1 | 2001:db8:8::0/127 | 65101 ↔ 65005 |
++
++### TOR to Host Connections (Rack 1)
++
++| Source Device | Source Interface | Destination Device | Destination Interface | Bond Interface | ES-ID | ES System MAC |
++|--------------|------------------|-------------------|----------------------|----------------|-------|---------------|
++| torm11 | torm11-eth2 | hostd11 | hostd11-eth0 | hostbond1 | 1 | 44:38:39:ff:ff:01 |
++| torm11 | torm11-eth3 | hostd12 | hostd12-eth0 | hostbond2 | 2 | 44:38:39:ff:ff:01 |
++| torm12 | torm12-eth2 | hostd11 | hostd11-eth1 | hostbond1 | 1 | 44:38:39:ff:ff:01 |
++| torm12 | torm12-eth3 | hostd12 | hostd12-eth1 | hostbond2 | 2 | 44:38:39:ff:ff:01 |
++
++### TOR to Host Connections (Rack 2)
++
++| Source Device | Source Interface | Destination Device | Destination Interface | Bond Interface | ES-ID | ES System MAC |
++|--------------|------------------|-------------------|----------------------|----------------|-------|---------------|
++| torm21 | torm21-eth2 | hostd21 | hostd21-eth0 | hostbond1 | 1 | 44:38:39:ff:ff:02 |
++| torm21 | torm21-eth3 | hostd22 | hostd22-eth0 | hostbond2 | 2 | 44:38:39:ff:ff:02 |
++| torm22 | torm22-eth2 | hostd21 | hostd21-eth1 | hostbond1 | 1 | 44:38:39:ff:ff:02 |
++| torm22 | torm22-eth3 | hostd22 | hostd22-eth1 | hostbond2 | 2 | 44:38:39:ff:ff:02 |
++
++## IPv6 Addressing Scheme
++
++### Loopback Addresses (Dual-Stack)
++
++All routers have both IPv4 and IPv6 loopback addresses for proper BGP router-id and IPv6 VTEP functionality.
++
++#### Spine Routers
++| Device | IPv4 Loopback | IPv6 Loopback | BGP Router-ID | AS Number |
++|--------|--------------|---------------|---------------|-----------|
++| spine1 | 10.0.0.13/32 | 2001:db8:100::13/128 | 10.0.0.13 | 65001 |
++| spine2 | 10.0.0.14/32 | 2001:db8:100::14/128 | 10.0.0.14 | 65001 |
++
++#### Leaf Routers
++| Device | IPv4 Loopback | IPv6 Loopback | BGP Router-ID | AS Number |
++|--------|--------------|---------------|---------------|-----------|
++| leaf1 | 10.0.0.13/32 | 2001:db8:200::13/128 | 10.0.0.13 | 65101 |
++| leaf2 | 10.0.0.14/32 | 2001:db8:200::14/128 | 10.0.0.14 | 65101 |
++
++#### TOR Routers (VTEP)
++| Device | IPv4 Loopback | IPv6 Loopback (VTEP) | BGP Router-ID | AS Number |
++|--------|--------------|---------------------|---------------|-----------|
++| torm11 | 10.0.0.15/32 | **2001:db8:100::15/128** | 10.0.0.15 | 65002 |
++| torm12 | 10.0.0.16/32 | **2001:db8:100::16/128** | 10.0.0.16 | 65003 |
++| torm21 | 10.0.0.17/32 | **2001:db8:100::17/128** | 10.0.0.17 | 65004 |
++| torm22 | 10.0.0.18/32 | **2001:db8:100::18/128** | 10.0.0.18 | 65005 |
++
++**Note**: TOR routers use IPv6 addresses (2001:db8:100::15-18) as VTEP source addresses for VXLAN tunnels. IPv4 loopbacks are configured for BGP router-id compatibility.
++
++### Point-to-Point Link Addresses (/127 Networks)
++
++#### Spine to Leaf Links
++| Network | Device 1 | Address 1 | Device 2 | Address 2 |
++|---------|----------|-----------|----------|-----------|
++| 2001:db8:50::/127 | spine1-eth0 | ::1 | leaf1-eth0 | ::0 |
++| 2001:db8:51::/127 | spine1-eth1 | ::1 | leaf2-eth0 | ::0 |
++| 2001:db8:60::/127 | spine2-eth0 | ::1 | leaf1-eth1 | ::0 |
++| 2001:db8:61::/127 | spine2-eth1 | ::1 | leaf2-eth1 | ::0 |
++
++#### Leaf to TOR Links (Rack 1)
++| Network | Device 1 | Address 1 | Device 2 | Address 2 |
++|---------|----------|-----------|----------|-----------|
++| 2001:db8:1::/127 | leaf1-eth2 | ::1 | torm11-eth0 | ::0 |
++| 2001:db8:2::/127 | leaf1-eth3 | ::1 | torm12-eth0 | ::0 |
++| 2001:db8:5::/127 | leaf2-eth2 | ::1 | torm11-eth1 | ::0 |
++| 2001:db8:6::/127 | leaf2-eth3 | ::1 | torm12-eth1 | ::0 |
++
++#### Leaf to TOR Links (Rack 2)
++| Network | Device 1 | Address 1 | Device 2 | Address 2 |
++|---------|----------|-----------|----------|-----------|
++| 2001:db8:3::/127 | leaf1-eth4 | ::1 | torm21-eth0 | ::0 |
++| 2001:db8:4::/127 | leaf1-eth5 | ::1 | torm22-eth0 | ::0 |
++| 2001:db8:7::/127 | leaf2-eth4 | ::1 | torm21-eth1 | ::0 |
++| 2001:db8:8::/127 | leaf2-eth5 | ::1 | torm22-eth1 | ::0 |
++
++### SVI and Host Addresses (2001:db8:45::/64)
++
++#### VLAN 1000 SVI Addresses
++| Device | SVI Address | Interface | Purpose |
++|--------|-------------|-----------|---------|
++| torm11 | 2001:db8:45::2/64 | vlan1000 | TOR SVI |
++| torm12 | 2001:db8:45::3/64 | vlan1000 | TOR SVI |
++| torm21 | 2001:db8:45::4/64 | vlan1000 | TOR SVI |
++| torm22 | 2001:db8:45::5/64 | vlan1000 | TOR SVI |
++| All TORs | 2001:db8:45::1/64 | vlan1000-v0 | **Anycast Gateway** |
++
++#### Host Addresses
++| Device | Host Address | Interface | MAC Address |
++|--------|--------------|-----------|-------------|
++| hostd11 | 2001:db8:45::11/64 | torbond | 00:00:00:00:00:11 |
++| hostd12 | 2001:db8:45::12/64 | torbond | 00:00:00:00:00:12 |
++| hostd21 | 2001:db8:45::21/64 | torbond | 00:00:00:00:00:21 |
++| hostd22 | 2001:db8:45::22/64 | torbond | 00:00:00:00:00:22 |
++
++## BGP AS Number Scheme
++
++### AS Number Allocation
++| Layer | Device(s) | AS Number | Role |
++|-------|-----------|-----------|------|
++| Spine | spine1, spine2 | 65001 | Route Reflectors for Leaf layer |
++| Leaf | leaf1, leaf2 | 65101 | Aggregation, Route Reflectors for TOR layer |
++| TOR Rack1 | torm11 | 65002 | VTEP, EVPN PE |
++| TOR Rack1 | torm12 | 65003 | VTEP, EVPN PE |
++| TOR Rack2 | torm21 | 65004 | VTEP, EVPN PE |
++| TOR Rack2 | torm22 | 65005 | VTEP, EVPN PE |
++
++### BGP Session Summary
++
++**Total BGP Sessions**: 20
++
++#### Spine Layer (4 sessions)
++- spine1 ↔ leaf1 (AS 65001 ↔ 65101)
++- spine1 ↔ leaf2 (AS 65001 ↔ 65101)
++- spine2 ↔ leaf1 (AS 65001 ↔ 65101)
++- spine2 ↔ leaf2 (AS 65001 ↔ 65101)
++
++#### Leaf to Rack 1 (8 sessions)
++- leaf1 ↔ torm11 (AS 65101 ↔ 65002)
++- leaf1 ↔ torm12 (AS 65101 ↔ 65003)
++- leaf2 ↔ torm11 (AS 65101 ↔ 65002)
++- leaf2 ↔ torm12 (AS 65101 ↔ 65003)
++
++#### Leaf to Rack 2 (8 sessions)
++- leaf1 ↔ torm21 (AS 65101 ↔ 65004)
++- leaf1 ↔ torm22 (AS 65101 ↔ 65005)
++- leaf2 ↔ torm21 (AS 65101 ↔ 65004)
++- leaf2 ↔ torm22 (AS 65101 ↔ 65005)
++
++## EVPN Multihoming Configuration
++
++### Ethernet Segment Configuration
++
++#### Rack 1 (ES System MAC: 44:38:39:ff:ff:01)
++| Host | TOR Interfaces | Bond Name | ES-ID | ES Type |
++|------|---------------|-----------|-------|---------|
++| hostd11 | torm11-eth2, torm12-eth2 | hostbond1 | 1 | All-Active |
++| hostd12 | torm11-eth3, torm12-eth3 | hostbond2 | 2 | All-Active |
++
++**ESI Format**: 03:44:38:39:ff:ff:01:00:00:0X (where X = ES-ID)
++
++#### Rack 2 (ES System MAC: 44:38:39:ff:ff:02)
++| Host | TOR Interfaces | Bond Name | ES-ID | ES Type |
++|------|---------------|-----------|-------|---------|
++| hostd21 | torm21-eth2, torm22-eth2 | hostbond1 | 1 | All-Active |
++| hostd22 | torm21-eth3, torm22-eth3 | hostbond2 | 2 | All-Active |
++
++**ESI Format**: 03:44:38:39:ff:ff:02:00:00:0X (where X = ES-ID)
++
++### VXLAN Configuration
++
++| Parameter | Value |
++|-----------|-------|
++| VNI | 1000 |
++| VLAN | 1000 |
++| Multicast Group | ff0e::100 (IPv6) |
++| UDP Port | 4789 (standard VXLAN) |
++| MTU | 9152 |
++| TTL | 64 |
++| Learning | Disabled (EVPN control plane) |
++
++## Interface Summary by Device
++
++### spine1
++```
++lo              : 10.0.0.13/32 (IPv4) + 2001:db8:100::13/128 (IPv6)
++spine1-eth0     : 2001:db8:50::1/127    → leaf1-eth0
++spine1-eth1     : 2001:db8:51::1/127    → leaf2-eth0
++```
++
++### spine2
++```
++lo              : 10.0.0.14/32 (IPv4) + 2001:db8:100::14/128 (IPv6)
++spine2-eth0     : 2001:db8:60::1/127    → leaf1-eth1
++spine2-eth1     : 2001:db8:61::1/127    → leaf2-eth1
++```
++
++### leaf1
++```
++lo              : 10.0.0.13/32 (IPv4) + 2001:db8:200::13/128 (IPv6)
++leaf1-eth0      : 2001:db8:50::0/127    → spine1-eth0
++leaf1-eth1      : 2001:db8:60::0/127    → spine2-eth0
++leaf1-eth2      : 2001:db8:1::1/127     → torm11-eth0
++leaf1-eth3      : 2001:db8:2::1/127     → torm12-eth0
++leaf1-eth4      : 2001:db8:3::1/127     → torm21-eth0
++leaf1-eth5      : 2001:db8:4::1/127     → torm22-eth0
++```
++
++### leaf2
++```
++lo              : 10.0.0.14/32 (IPv4) + 2001:db8:200::14/128 (IPv6)
++leaf2-eth0      : 2001:db8:51::0/127    → spine1-eth1
++leaf2-eth1      : 2001:db8:61::0/127    → spine2-eth1
++leaf2-eth2      : 2001:db8:5::1/127     → torm11-eth1
++leaf2-eth3      : 2001:db8:6::1/127     → torm12-eth1
++leaf2-eth4      : 2001:db8:7::1/127     → torm21-eth1
++leaf2-eth5      : 2001:db8:8::1/127     → torm22-eth1
++```
++
++### torm11 (IPv6 VTEP: 2001:db8:100::15/128)
++```
++lo              : 10.0.0.15/32 (IPv4 router-id) + 2001:db8:100::15/128 (IPv6 VTEP)
++torm11-eth0     : 2001:db8:1::0/127     → leaf1-eth2 (PIM6, MH uplink)
++torm11-eth1     : 2001:db8:5::0/127     → leaf2-eth2 (PIM6, MH uplink)
++torm11-eth2     : L2 only               → hostd11-eth0 (in hostbond1)
++torm11-eth3     : L2 only               → hostd12-eth0 (in hostbond2)
++vlan1000        : 2001:db8:45::2/64     (SVI)
++vlan1000-v0     : 2001:db8:45::1/64     (Anycast GW)
++vx-1000         : VNI 1000, local 2001:db8:100::15, group ff0e::100
++bridge          : VLAN aware bridge
++ipmr-lo         : Multicast termination device
++hostbond1       : ES-ID 1, sys-mac 44:38:39:ff:ff:01
++hostbond2       : ES-ID 2, sys-mac 44:38:39:ff:ff:01
++```
++
++### torm12 (IPv6 VTEP: 2001:db8:100::16/128)
++```
++lo              : 10.0.0.16/32 (IPv4 router-id) + 2001:db8:100::16/128 (IPv6 VTEP)
++torm12-eth0     : 2001:db8:2::0/127     → leaf1-eth3 (PIM6, MH uplink)
++torm12-eth1     : 2001:db8:6::0/127     → leaf2-eth3 (PIM6, MH uplink)
++torm12-eth2     : L2 only               → hostd11-eth1 (in hostbond1)
++torm12-eth3     : L2 only               → hostd12-eth1 (in hostbond2)
++vlan1000        : 2001:db8:45::3/64     (SVI)
++vlan1000-v0     : 2001:db8:45::1/64     (Anycast GW)
++vx-1000         : VNI 1000, local 2001:db8:100::16, group ff0e::100
++bridge          : VLAN aware bridge
++ipmr-lo         : Multicast termination device
++hostbond1       : ES-ID 1, sys-mac 44:38:39:ff:ff:01
++hostbond2       : ES-ID 2, sys-mac 44:38:39:ff:ff:01
++```
++
++### torm21 (IPv6 VTEP: 2001:db8:100::17/128)
++```
++lo              : 10.0.0.17/32 (IPv4 router-id) + 2001:db8:100::17/128 (IPv6 VTEP)
++torm21-eth0     : 2001:db8:3::0/127     → leaf1-eth4 (PIM6, MH uplink)
++torm21-eth1     : 2001:db8:7::0/127     → leaf2-eth4 (PIM6, MH uplink)
++torm21-eth2     : L2 only               → hostd21-eth0 (in hostbond1)
++torm21-eth3     : L2 only               → hostd22-eth0 (in hostbond2)
++vlan1000        : 2001:db8:45::4/64     (SVI)
++vlan1000-v0     : 2001:db8:45::1/64     (Anycast GW)
++vx-1000         : VNI 1000, local 2001:db8:100::17, group ff0e::100
++bridge          : VLAN aware bridge
++ipmr-lo         : Multicast termination device
++hostbond1       : ES-ID 1, sys-mac 44:38:39:ff:ff:02
++hostbond2       : ES-ID 2, sys-mac 44:38:39:ff:ff:02
++```
++
++### torm22 (IPv6 VTEP: 2001:db8:100::18/128)
++```
++lo              : 10.0.0.18/32 (IPv4 router-id) + 2001:db8:100::18/128 (IPv6 VTEP)
++torm22-eth0     : 2001:db8:4::0/127     → leaf1-eth5 (PIM6, MH uplink)
++torm22-eth1     : 2001:db8:8::0/127     → leaf2-eth5 (PIM6, MH uplink)
++torm22-eth2     : L2 only               → hostd21-eth1 (in hostbond1)
++torm22-eth3     : L2 only               → hostd22-eth1 (in hostbond2)
++vlan1000        : 2001:db8:45::5/64     (SVI)
++vlan1000-v0     : 2001:db8:45::1/64     (Anycast GW)
++vx-1000         : VNI 1000, local 2001:db8:100::18, group ff0e::100
++bridge          : VLAN aware bridge
++ipmr-lo         : Multicast termination device
++hostbond1       : ES-ID 1, sys-mac 44:38:39:ff:ff:02
++hostbond2       : ES-ID 2, sys-mac 44:38:39:ff:ff:02
++```
++
++### hostd11
++```
++hostd11-eth0    : In bond torbond       → torm11-eth2
++hostd11-eth1    : In bond torbond       → torm12-eth2
++torbond         : 2001:db8:45::11/64, MAC: 00:00:00:00:00:11
++```
++
++### hostd12
++```
++hostd12-eth0    : In bond torbond       → torm11-eth3
++hostd12-eth1    : In bond torbond       → torm12-eth3
++torbond         : 2001:db8:45::12/64, MAC: 00:00:00:00:00:12
++```
++
++### hostd21
++```
++hostd21-eth0    : In bond torbond       → torm21-eth2
++hostd21-eth1    : In bond torbond       → torm22-eth2
++torbond         : 2001:db8:45::21/64, MAC: 00:00:00:00:00:21
++```
++
++### hostd22
++```
++hostd22-eth0    : In bond torbond       → torm21-eth3
++hostd22-eth1    : In bond torbond       → torm22-eth3
++torbond         : 2001:db8:45::22/64, MAC: 00:00:00:00:00:22
++```
++
++## Routing Protocol Summary
++
++### BGP Configuration
++
++| Device | BGP Features |
++|--------|-------------|
++| spine1, spine2 | IPv6 unicast, L2VPN EVPN, Route Reflector role |
++| leaf1, leaf2 | IPv6 unicast, L2VPN EVPN, Route Reflector role, Peer groups |
++| torm11-22 | IPv6 unicast, L2VPN EVPN, advertise-all-vni, advertise-svi-ip |
++
++### PIM6 Configuration
++
++Only on TOR routers:
++- Protocol: PIM6 (IPv6 PIM)
++- Interfaces: All uplink interfaces (eth0, eth1) and ipmr-lo
++- Join-Prune Interval: 5 seconds
++- Multicast Group: ff0e::100 (for VXLAN BUM traffic)
++
++## Traffic Flow Examples
++
++### East-West Traffic (hostd11 → hostd21)
++
++```
++hostd11 (2001:db8:45::11)
++    ↓ (torbond - LACP to torm11/torm12)
++torm11 or torm12 (DF election determines forwarder)
++    ↓ (VXLAN encapsulation with VTEP 2001:db8:100::15 or ::16)
++    ↓ (IPv6 underlay: through leaf1/leaf2 and spine1/spine2)
++    ↓ (Destination VTEP: 2001:db8:100::17 or ::18)
++torm21 or torm22 (ES load balancing)
++    ↓ (VXLAN decapsulation)
++    ↓ (hostbond1 - LACP)
++hostd21 (2001:db8:45::21)
++```
++
++### BUM Traffic (Broadcast/Unknown Unicast/Multicast)
++
++```
++Source TOR (e.g., torm11)
++    ↓ (Encapsulate in IPv6 multicast: ff0e::100)
++    ↓ (PIM6 distributes to all VTEPs)
++All other TORs (torm12, torm21, torm22)
++    ↓ (Receive via multicast, decapsulate)
++    ↓ (Forward to local hosts)
++```
++
++## Notes
++
++1. **Dual-Stack Loopbacks**: All routers have both IPv4 and IPv6 loopback addresses
++   - IPv4: Used for BGP router-id (10.0.0.13-18)
++   - IPv6: Used for VTEP addresses and routing (2001:db8:100::x, 2001:db8:200::x)
++
++2. **All P2P links use /127**: More efficient than /64 for IPv6 point-to-point
++
++3. **EBGP Numbered**: Explicit neighbor IPv6 addresses configured
++
++4. **Extended Nexthop**: Capability enabled for IPv4 over IPv6 BGP sessions
++
++5. **IPv6-Only Links**: `no bgp default ipv4-unicast` - pure IPv6 underlay for BGP
++
++6. **IPv6 VTEP Source**: TOR routers use IPv6 loopback (2001:db8:100::15-18) as VXLAN local address
++
++7. **EVPN Type-1 Routes**: Used for ES discovery and EAD - advertise IPv6 VTEP
++
++8. **EVPN Type-2 Routes**: Used for MAC/IP advertisement
++
++9. **DF Election**: Based on ES-ID and modulo algorithm
++
++10. **Anycast Gateway**: Same IPv6/MAC (2001:db8:45::1) on all TORs for first-hop redundancy
++
++11. **PIM6**: IPv6 multicast (ff0e::100) for BUM traffic in VXLAN
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd11/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd11/frr.conf
+new file mode 100644
+index 0000000000..501fce159f
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd11/frr.conf
+@@ -0,0 +1,6 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname hostd11
++log syslog informational
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd12/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd12/frr.conf
+new file mode 100644
+index 0000000000..2d7cf0cd25
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd12/frr.conf
+@@ -0,0 +1,6 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname hostd12
++log syslog informational
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd21/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd21/frr.conf
+new file mode 100644
+index 0000000000..3851c18981
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd21/frr.conf
+@@ -0,0 +1,6 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname hostd21
++log syslog informational
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd22/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd22/frr.conf
+new file mode 100644
+index 0000000000..c4e90312de
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/hostd22/frr.conf
+@@ -0,0 +1,6 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname hostd22
++log syslog informational
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf1/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf1/frr.conf
+new file mode 100644
+index 0000000000..e3befec25f
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf1/frr.conf
+@@ -0,0 +1,74 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname leaf1
++log syslog informational
++!
++interface lo
++ description Loopback
++ ip address 10.0.0.13/32
++ ipv6 address 2001:db8:200::13/128
++!
++interface leaf1-eth0
++ description leaf1-eth0 -> spine1-eth0
++ ipv6 address 2001:db8:50::0/127
++!
++interface leaf1-eth1
++ description leaf1-eth1 -> spine2-eth0
++ ipv6 address 2001:db8:60::0/127
++!
++interface leaf1-eth2
++ description leaf1-eth2 -> torm11-eth0
++ ipv6 address 2001:db8:1::1/127
++!
++interface leaf1-eth3
++ description leaf1-eth3 -> torm12-eth0
++ ipv6 address 2001:db8:2::1/127
++!
++interface leaf1-eth4
++ description leaf1-eth4 -> torm21-eth0
++ ipv6 address 2001:db8:3::1/127
++!
++interface leaf1-eth5
++ description leaf1-eth5 -> torm22-eth0
++ ipv6 address 2001:db8:4::1/127
++!
++router bgp 65101
++ bgp router-id 10.0.0.13
++ bgp bestpath as-path multipath-relax
++ no bgp default ipv4-unicast
++ neighbor SPINE peer-group
++ neighbor SPINE remote-as 65001
++ neighbor SPINE capability extended-nexthop
++ neighbor SPINE timers 3 10
++ neighbor TOR peer-group
++ neighbor TOR capability extended-nexthop
++ neighbor TOR timers 3 10
++ neighbor 2001:db8:50::1 peer-group SPINE
++ neighbor 2001:db8:60::1 peer-group SPINE
++ neighbor 2001:db8:1::0 remote-as 65002
++ neighbor 2001:db8:1::0 peer-group TOR
++ neighbor 2001:db8:2::0 remote-as 65003
++ neighbor 2001:db8:2::0 peer-group TOR
++ neighbor 2001:db8:3::0 remote-as 65004
++ neighbor 2001:db8:3::0 peer-group TOR
++ neighbor 2001:db8:4::0 remote-as 65005
++ neighbor 2001:db8:4::0 peer-group TOR
++ !
++ address-family ipv4 unicast
++  neighbor SPINE activate
++  neighbor TOR activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor SPINE activate
++  neighbor TOR activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor SPINE activate
++  neighbor TOR activate
++ exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf2/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf2/frr.conf
+new file mode 100644
+index 0000000000..edbf97a385
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/leaf2/frr.conf
+@@ -0,0 +1,74 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname leaf2
++log syslog informational
++!
++interface lo
++ description Loopback
++ ip address 10.0.0.14/32
++ ipv6 address 2001:db8:200::14/128
++!
++interface leaf2-eth0
++ description leaf2-eth0 -> spine1-eth1
++ ipv6 address 2001:db8:51::0/127
++!
++interface leaf2-eth1
++ description leaf2-eth1 -> spine2-eth1
++ ipv6 address 2001:db8:61::0/127
++!
++interface leaf2-eth2
++ description leaf2-eth2 -> torm11-eth1
++ ipv6 address 2001:db8:5::1/127
++!
++interface leaf2-eth3
++ description leaf2-eth3 -> torm12-eth1
++ ipv6 address 2001:db8:6::1/127
++!
++interface leaf2-eth4
++ description leaf2-eth4 -> torm21-eth1
++ ipv6 address 2001:db8:7::1/127
++!
++interface leaf2-eth5
++ description leaf2-eth5 -> torm22-eth1
++ ipv6 address 2001:db8:8::1/127
++!
++router bgp 65101
++ bgp router-id 10.0.0.14
++ bgp bestpath as-path multipath-relax
++ no bgp default ipv4-unicast
++ neighbor SPINE peer-group
++ neighbor SPINE remote-as 65001
++ neighbor SPINE capability extended-nexthop
++ neighbor SPINE timers 3 10
++ neighbor TOR peer-group
++ neighbor TOR capability extended-nexthop
++ neighbor TOR timers 3 10
++ neighbor 2001:db8:51::1 peer-group SPINE
++ neighbor 2001:db8:61::1 peer-group SPINE
++ neighbor 2001:db8:5::0 remote-as 65002
++ neighbor 2001:db8:5::0 peer-group TOR
++ neighbor 2001:db8:6::0 remote-as 65003
++ neighbor 2001:db8:6::0 peer-group TOR
++ neighbor 2001:db8:7::0 remote-as 65004
++ neighbor 2001:db8:7::0 peer-group TOR
++ neighbor 2001:db8:8::0 remote-as 65005
++ neighbor 2001:db8:8::0 peer-group TOR
++ !
++ address-family ipv4 unicast
++  neighbor SPINE activate
++  neighbor TOR activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor SPINE activate
++  neighbor TOR activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor SPINE activate
++  neighbor TOR activate
++ exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine1/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine1/frr.conf
+new file mode 100644
+index 0000000000..0e72b82dd2
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine1/frr.conf
+@@ -0,0 +1,47 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname spine1
++log syslog informational
++!
++interface lo
++ description Loopback
++ ip address 10.0.0.13/32
++ ipv6 address 2001:db8:100::13/128
++!
++interface spine1-eth0
++ description spine1-eth0 -> leaf1-eth0
++ ipv6 address 2001:db8:50::1/127
++!
++interface spine1-eth1
++ description spine1-eth1 -> leaf2-eth0
++ ipv6 address 2001:db8:51::1/127
++!
++router bgp 65001
++ bgp router-id 10.0.0.13
++ bgp bestpath as-path multipath-relax
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:50::0 remote-as 65101
++ neighbor 2001:db8:50::0 capability extended-nexthop
++ neighbor 2001:db8:50::0 timers 3 10
++ neighbor 2001:db8:51::0 remote-as 65101
++ neighbor 2001:db8:51::0 capability extended-nexthop
++ neighbor 2001:db8:51::0 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:50::0 activate
++  neighbor 2001:db8:51::0 activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:50::0 activate
++  neighbor 2001:db8:51::0 activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:50::0 activate
++  neighbor 2001:db8:51::0 activate
++ exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine2/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine2/frr.conf
+new file mode 100644
+index 0000000000..92125024e8
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/spine2/frr.conf
+@@ -0,0 +1,47 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname spine2
++log syslog informational
++!
++interface lo
++ description Loopback
++ ip address 10.0.0.14/32
++ ipv6 address 2001:db8:100::14/128
++!
++interface spine2-eth0
++ description spine2-eth0 -> leaf1-eth1
++ ipv6 address 2001:db8:60::1/127
++!
++interface spine2-eth1
++ description spine2-eth1 -> leaf2-eth1
++ ipv6 address 2001:db8:61::1/127
++!
++router bgp 65001
++ bgp router-id 10.0.0.14
++ bgp bestpath as-path multipath-relax
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:60::0 remote-as 65101
++ neighbor 2001:db8:60::0 capability extended-nexthop
++ neighbor 2001:db8:60::0 timers 3 10
++ neighbor 2001:db8:61::0 remote-as 65101
++ neighbor 2001:db8:61::0 capability extended-nexthop
++ neighbor 2001:db8:61::0 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:60::0 activate
++  neighbor 2001:db8:61::0 activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:60::0 activate
++  neighbor 2001:db8:61::0 activate
++  redistribute connected
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:60::0 activate
++  neighbor 2001:db8:61::0 activate
++ exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
+new file mode 100644
+index 0000000000..d26e44a74b
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
+@@ -0,0 +1,107 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname torm11
++log syslog
++log timestamp precision 6
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++router pim6
++ join-prune-interval 5
++!
++interface lo
++ description Loopback VTEP
++ ip address 10.0.0.15/32
++ ipv6 address 2001:db8:100::15/128
++!
++interface torm11-eth0
++ description torm11-eth0 -> leaf1-eth2
++ ipv6 address 2001:db8:1::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface torm11-eth1
++ description torm11-eth1 -> leaf2-eth2
++ ipv6 address 2001:db8:5::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++!
++interface ipmr-lo
++ ipv6 pim
++!
++interface vlan4000
++ description L3VNI interface for VRF vrf1
++!
++vrf vrf1
++ vni 4000
++!
++route-map ALLOW_LO permit 10
++ match interface lo
++exit
++!
++router bgp 65002
++ bgp router-id 10.0.0.15
++ bgp bestpath as-path multipath-relax
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:1::1 remote-as 65101
++ neighbor 2001:db8:1::1 capability extended-nexthop
++ neighbor 2001:db8:1::1 timers 3 10
++ neighbor 2001:db8:5::1 remote-as 65101
++ neighbor 2001:db8:5::1 capability extended-nexthop
++ neighbor 2001:db8:5::1 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:1::1 activate
++  neighbor 2001:db8:5::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:1::1 activate
++  neighbor 2001:db8:5::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:1::1 activate
++  neighbor 2001:db8:5::1 activate
++  advertise-all-vni
++  advertise-svi-ip
++  advertise-default-gw
++ exit-address-family
++!
++!router bgp 65002 vrf vrf1
++! bgp router-id 10.0.0.15
++! !
++! address-family ipv4 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family ipv6 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family l2vpn evpn
++!  advertise ipv4 unicast
++!  advertise ipv6 unicast
++! exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
+new file mode 100644
+index 0000000000..a78f368695
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
+@@ -0,0 +1,107 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname torm12
++log syslog
++log timestamp precision 6
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++router pim6
++ join-prune-interval 5
++!
++interface lo
++ description Loopback VTEP
++ ip address 10.0.0.16/32
++ ipv6 address 2001:db8:100::16/128
++!
++interface torm12-eth0
++ description torm12-eth0 -> leaf1-eth3
++ ipv6 address 2001:db8:2::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface torm12-eth1
++ description torm12-eth1 -> leaf2-eth3
++ ipv6 address 2001:db8:6::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:01
++!
++interface ipmr-lo
++ ipv6 pim
++!
++interface vlan4000
++ description L3VNI interface for VRF vrf1
++!
++vrf vrf1
++ vni 4000
++!
++route-map ALLOW_LO permit 10
++ match interface lo
++exit
++!
++router bgp 65003
++ bgp router-id 10.0.0.16
++ bgp bestpath as-path multipath-relax
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:2::1 remote-as 65101
++ neighbor 2001:db8:2::1 capability extended-nexthop
++ neighbor 2001:db8:2::1 timers 3 10
++ neighbor 2001:db8:6::1 remote-as 65101
++ neighbor 2001:db8:6::1 capability extended-nexthop
++ neighbor 2001:db8:6::1 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:2::1 activate
++  neighbor 2001:db8:6::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:2::1 activate
++  neighbor 2001:db8:6::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:2::1 activate
++  neighbor 2001:db8:6::1 activate
++  advertise-all-vni
++  advertise-svi-ip
++  advertise-default-gw
++ exit-address-family
++!
++!router bgp 65003 vrf vrf1
++! bgp router-id 10.0.0.16
++! !
++! address-family ipv4 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family ipv6 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family l2vpn evpn
++!  advertise ipv4 unicast
++!  advertise ipv6 unicast
++! exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
+new file mode 100644
+index 0000000000..56c0743893
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
+@@ -0,0 +1,107 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname torm21
++log syslog
++log timestamp precision 6
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++router pim6
++ join-prune-interval 5
++!
++interface lo
++ description Loopback VTEP
++ ip address 10.0.0.17/32
++ ipv6 address 2001:db8:100::17/128
++!
++interface torm21-eth0
++ description torm21-eth0 -> leaf1-eth4
++ ipv6 address 2001:db8:3::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface torm21-eth1
++ description torm21-eth1 -> leaf2-eth4
++ ipv6 address 2001:db8:7::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface ipmr-lo
++ ipv6 pim
++!
++interface vlan4000
++ description L3VNI interface for VRF vrf1
++!
++vrf vrf1
++ vni 4000
++!
++route-map ALLOW_LO permit 10
++ match interface lo
++exit
++!
++router bgp 65004
++ bgp router-id 10.0.0.17
++ bgp bestpath as-path multipath-relax
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:3::1 remote-as 65101
++ neighbor 2001:db8:3::1 capability extended-nexthop
++ neighbor 2001:db8:3::1 timers 3 10
++ neighbor 2001:db8:7::1 remote-as 65101
++ neighbor 2001:db8:7::1 capability extended-nexthop
++ neighbor 2001:db8:7::1 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:3::1 activate
++  neighbor 2001:db8:7::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:3::1 activate
++  neighbor 2001:db8:7::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:3::1 activate
++  neighbor 2001:db8:7::1 activate
++  advertise-all-vni
++  advertise-svi-ip
++  advertise-default-gw
++ exit-address-family
++!
++!router bgp 65004 vrf vrf1
++! bgp router-id 10.0.0.17
++! !
++! address-family ipv4 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family ipv6 unicast
++!  redistribute connected
++! exit-address-family
++! !
++! address-family l2vpn evpn
++!  advertise ipv4 unicast
++!  advertise ipv6 unicast
++! exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
+new file mode 100644
+index 0000000000..e15f0c53ce
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
+@@ -0,0 +1,107 @@
++frr defaults datacenter
++service integrated-vtysh-config
++hostname torm22
++log syslog
++log timestamp precision 6
++!
++! debug bgp evpn mh es
++! debug bgp evpn mh route
++! debug bgp zebra
++! debug zebra evpn mh es
++! debug zebra evpn mh mac
++! debug zebra evpn mh neigh
++! debug zebra evpn mh nh
++! debug zebra vxlan
++!
++evpn mh startup-delay 1
++!
++router pim6
++ join-prune-interval 5
++!
++interface lo
++ description Loopback VTEP
++ ip address 10.0.0.18/32
++ ipv6 address 2001:db8:100::18/128
++!
++interface torm22-eth0
++ description torm22-eth0 -> leaf1-eth5
++ ipv6 address 2001:db8:4::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface torm22-eth1
++ description torm22-eth1 -> leaf2-eth5
++ ipv6 address 2001:db8:8::0/127
++ ipv6 pim
++ evpn mh uplink
++!
++interface hostbond1
++ evpn mh es-id 1
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface hostbond2
++ evpn mh es-id 2
++ evpn mh es-sys-mac 44:38:39:ff:ff:02
++!
++interface ipmr-lo
++ ipv6 pim
++!
++interface vlan4000
++ description L3VNI interface for VRF vrf1
++!
++vrf vrf1
++ vni 4000
++!
++route-map ALLOW_LO permit 10
++ match interface lo
++exit
++!
++router bgp 65005
++ bgp router-id 10.0.0.18
++ bgp bestpath as-path multipath-relax
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:4::1 remote-as 65101
++ neighbor 2001:db8:4::1 capability extended-nexthop
++ neighbor 2001:db8:4::1 timers 3 10
++ neighbor 2001:db8:8::1 remote-as 65101
++ neighbor 2001:db8:8::1 capability extended-nexthop
++ neighbor 2001:db8:8::1 timers 3 10
++ !
++ address-family ipv4 unicast
++  neighbor 2001:db8:4::1 activate
++  neighbor 2001:db8:8::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family ipv6 unicast
++  neighbor 2001:db8:4::1 activate
++  neighbor 2001:db8:8::1 activate
++  redistribute connected route-map ALLOW_LO
++ exit-address-family
++ !
++ address-family l2vpn evpn
++  neighbor 2001:db8:4::1 activate
++  neighbor 2001:db8:8::1 activate
++  advertise-all-vni
++  advertise-svi-ip
++  advertise-default-gw
++ exit-address-family
++!
++! router bgp 65005 vrf vrf1
++!  bgp router-id 10.0.0.18
++!  !
++!  address-family ipv4 unicast
++!   redistribute connected
++!  exit-address-family
++!  !
++!  address-family ipv6 unicast
++!   redistribute connected
++!  exit-address-family
++!  !
++!  address-family l2vpn evpn
++!   advertise ipv4 unicast
++!   advertise ipv6 unicast
++!  exit-address-family
++!
++end
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+new file mode 100644
+index 0000000000..54e71eee7f
+--- /dev/null
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+@@ -0,0 +1,966 @@
++#!/usr/bin/env python
++# SPDX-License-Identifier: ISC
++
++#
++# test_evpn_mh_v6_numbered.py
++#
++# Copyright (c) 2020 by
++# Nvidia Corporation
++# Chirag Shah
++# Copyright (c) 2025 by
++# IPv6 VTEP EBGP Numbered Extensions
++#
++
++"""
++test_evpn_mh_v6_numbered.py: Testing EVPN multihoming with IPv6 VTEP addresses
++and EBGP numbered peering
++
++This is an IPv6 VTEP variant with EBGP numbered peering and unified FRR config
++"""
++
++import os
++import sys
++import subprocess
++from functools import partial
++
++import pytest
++import json
++import platform
++import time
++
++pytestmark = [pytest.mark.bgpd, pytest.mark.pim6d, pytest.mark.evpn]
++
++# Save the Current Working Directory to find configuration files.
++CWD = os.path.dirname(os.path.realpath(__file__))
++sys.path.append(os.path.join(CWD, "../"))
++
++# pylint: disable=C0413
++# Import topogen and topotest helpers
++from lib import topotest
++
++# Required to instantiate the topology builder class.
++from lib.topogen import Topogen, TopoRouter, get_topogen
++from lib.topolog import logger
++
++#####################################################
++##
++##   Network Topology Definition
++##
++## Same topology as test_evpn_mh.py but with IPv6 VTEP addresses
++## and EBGP numbered peering
++#####################################################
++
++
++def build_topo(tgen):
++    """
++    EVPN Multihoming Topology -
++    1. Two level CLOS
++    2. Two spine switches - spine1, spine2
++    3. Two leaf switches - leaf1, leaf2
++    4. Two racks with Top-of-Rack switches per rack - tormx1, tormx2
++    5. Two dual attached hosts per-rack - hostdx1, hostdx2
++    """
++
++    tgen.add_router("spine1")
++    tgen.add_router("spine2")
++    tgen.add_router("leaf1")
++    tgen.add_router("leaf2")
++    tgen.add_router("torm11")
++    tgen.add_router("torm12")
++    tgen.add_router("torm21")
++    tgen.add_router("torm22")
++    tgen.add_router("hostd11")
++    tgen.add_router("hostd12")
++    tgen.add_router("hostd21")
++    tgen.add_router("hostd22")
++
++    ##################### spine1 ########################
++    # spine1-eth0 is connected to leaf1-eth0
++    switch = tgen.add_switch("sw1")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["leaf1"])
++
++    # spine1-eth1 is connected to leaf2-eth0
++    switch = tgen.add_switch("sw2")
++    switch.add_link(tgen.gears["spine1"])
++    switch.add_link(tgen.gears["leaf2"])
++
++    # spine2-eth0 is connected to leaf1-eth1
++    switch = tgen.add_switch("sw3")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["leaf1"])
++
++    # spine2-eth1 is connected to leaf2-eth1
++    switch = tgen.add_switch("sw4")
++    switch.add_link(tgen.gears["spine2"])
++    switch.add_link(tgen.gears["leaf2"])
++
++    ################## leaf1 ##########################
++    # leaf1-eth2 is connected to torm11-eth0
++    switch = tgen.add_switch("sw5")
++    switch.add_link(tgen.gears["leaf1"])
++    switch.add_link(tgen.gears["torm11"])
++
++    # leaf1-eth3 is connected to torm12-eth0
++    switch = tgen.add_switch("sw6")
++    switch.add_link(tgen.gears["leaf1"])
++    switch.add_link(tgen.gears["torm12"])
++
++    # leaf1-eth4 is connected to torm21-eth0
++    switch = tgen.add_switch("sw7")
++    switch.add_link(tgen.gears["leaf1"])
++    switch.add_link(tgen.gears["torm21"])
++
++    # leaf1-eth5 is connected to torm22-eth0
++    switch = tgen.add_switch("sw8")
++    switch.add_link(tgen.gears["leaf1"])
++    switch.add_link(tgen.gears["torm22"])
++
++    ##################### leaf2 ########################
++    # leaf2-eth2 is connected to torm11-eth1
++    switch = tgen.add_switch("sw9")
++    switch.add_link(tgen.gears["leaf2"])
++    switch.add_link(tgen.gears["torm11"])
++
++    # leaf2-eth3 is connected to torm12-eth1
++    switch = tgen.add_switch("sw10")
++    switch.add_link(tgen.gears["leaf2"])
++    switch.add_link(tgen.gears["torm12"])
++
++    # leaf2-eth4 is connected to torm21-eth1
++    switch = tgen.add_switch("sw11")
++    switch.add_link(tgen.gears["leaf2"])
++    switch.add_link(tgen.gears["torm21"])
++
++    # leaf2-eth5 is connected to torm22-eth1
++    switch = tgen.add_switch("sw12")
++    switch.add_link(tgen.gears["leaf2"])
++    switch.add_link(tgen.gears["torm22"])
++
++    ##################### torm11 ########################
++    # torm11-eth2 is connected to hostd11-eth0
++    switch = tgen.add_switch("sw13")
++    switch.add_link(tgen.gears["torm11"])
++    switch.add_link(tgen.gears["hostd11"])
++
++    # torm11-eth3 is connected to hostd12-eth0
++    switch = tgen.add_switch("sw14")
++    switch.add_link(tgen.gears["torm11"])
++    switch.add_link(tgen.gears["hostd12"])
++
++    ##################### torm12 ########################
++    # torm12-eth2 is connected to hostd11-eth1
++    switch = tgen.add_switch("sw15")
++    switch.add_link(tgen.gears["torm12"])
++    switch.add_link(tgen.gears["hostd11"])
++
++    # torm12-eth3 is connected to hostd12-eth1
++    switch = tgen.add_switch("sw16")
++    switch.add_link(tgen.gears["torm12"])
++    switch.add_link(tgen.gears["hostd12"])
++
++    ##################### torm21 ########################
++    # torm21-eth2 is connected to hostd21-eth0
++    switch = tgen.add_switch("sw17")
++    switch.add_link(tgen.gears["torm21"])
++    switch.add_link(tgen.gears["hostd21"])
++
++    # torm21-eth3 is connected to hostd22-eth0
++    switch = tgen.add_switch("sw18")
++    switch.add_link(tgen.gears["torm21"])
++    switch.add_link(tgen.gears["hostd22"])
++
++    ##################### torm22 ########################
++    # torm22-eth2 is connected to hostd21-eth1
++    switch = tgen.add_switch("sw19")
++    switch.add_link(tgen.gears["torm22"])
++    switch.add_link(tgen.gears["hostd21"])
++
++    # torm22-eth3 is connected to hostd22-eth1
++    switch = tgen.add_switch("sw20")
++    switch.add_link(tgen.gears["torm22"])
++    switch.add_link(tgen.gears["hostd22"])
++
++
++#####################################################
++##
++##   Tests starting
++##
++#####################################################
++
++# IPv6 VTEP addresses
++tor_ips = {
++    "torm11": "2001:db8:100::15",
++    "torm12": "2001:db8:100::16",
++    "torm21": "2001:db8:100::17",
++    "torm22": "2001:db8:100::18",
++}
++
++svi_ips = {
++    "torm11": "2001:db8:45::2",
++    "torm12": "2001:db8:45::3",
++    "torm21": "2001:db8:45::4",
++    "torm22": "2001:db8:45::5",
++}
++
++tor_ips_rack_1 = {"torm11": "2001:db8:100::15", "torm12": "2001:db8:100::16"}
++
++tor_ips_rack_2 = {"torm21": "2001:db8:100::17", "torm22": "2001:db8:100::18"}
++
++host_es_map = {
++    "hostd11": "03:44:38:39:ff:ff:01:00:00:01",
++    "hostd12": "03:44:38:39:ff:ff:01:00:00:02",
++    "hostd21": "03:44:38:39:ff:ff:02:00:00:01",
++    "hostd22": "03:44:38:39:ff:ff:02:00:00:02",
++}
++
++
++def config_bond(node, bond_name, bond_members, bond_ad_sys_mac, br):
++    """
++    Used to setup bonds on the TORs and hosts for MH
++    """
++    node.run("ip link add dev %s type bond mode 802.3ad" % bond_name)
++    node.run("ip link set dev %s type bond lacp_rate 1" % bond_name)
++    node.run("ip link set dev %s type bond miimon 100" % bond_name)
++    node.run("ip link set dev %s type bond xmit_hash_policy layer3+4" % bond_name)
++    node.run("ip link set dev %s type bond min_links 1" % bond_name)
++    node.run(
++        "ip link set dev %s type bond ad_actor_system %s" % (bond_name, bond_ad_sys_mac)
++    )
++
++    for bond_member in bond_members:
++        node.run("ip link set dev %s down" % bond_member)
++        node.run("ip link set dev %s master %s" % (bond_member, bond_name))
++        node.run("ip link set dev %s up" % bond_member)
++
++    node.run("ip link set dev %s up" % bond_name)
++
++    # if bridge is specified add the bond as a bridge member
++    if br:
++        node.run(" ip link set dev %s master bridge" % bond_name)
++        node.run("/sbin/bridge link set dev %s priority 8" % bond_name)
++        node.run("/sbin/bridge vlan del vid 1 dev %s" % bond_name)
++        node.run("/sbin/bridge vlan del vid 1 untagged pvid dev %s" % bond_name)
++        node.run("/sbin/bridge vlan add vid 1000 dev %s" % bond_name)
++        node.run("/sbin/bridge vlan add vid 1000 untagged pvid dev %s" % bond_name)
++
++
++def config_mcast_tunnel_termination_device(node):
++    """
++    The kernel requires a device to terminate VxLAN multicast tunnels
++    when EVPN-PIM is used for flooded traffic
++    """
++    node.run("ip link add dev ipmr-lo type dummy")
++    node.run("ip link set dev ipmr-lo mtu 16000")
++    node.run("ip link set dev ipmr-lo mode dormant")
++    node.run("ip link set dev ipmr-lo up")
++
++
++def config_bridge(node):
++    """
++    Create a VLAN aware bridge
++    """
++    node.run("ip link add dev bridge type bridge stp_state 0")
++    node.run("ip link set dev bridge type bridge vlan_filtering 1")
++    node.run("ip link set dev bridge mtu 9216")
++    node.run("ip link set dev bridge type bridge ageing_time 1800")
++    node.run("ip link set dev bridge type bridge mcast_snooping 0")
++    node.run("ip link set dev bridge type bridge vlan_stats_enabled 1")
++    node.run("ip link set dev bridge up")
++    node.run("/sbin/bridge vlan add vid 1000 dev bridge self")
++
++
++def config_vxlan(node, node_ip):
++    """
++    Create a VxLAN device for VNI 1000 and add it to the bridge.
++    VLAN-1000 is mapped to VNI-1000.
++    Uses IPv6 VTEP address and IPv6 multicast group.
++    """
++    # Create VXLAN with IPv6 local address and multicast group
++    node.run(
++        "ip link add dev vx-1000 type vxlan id 1000 dstport 4789 local %s dev ipmr-lo group ff0e::100 nolearning ttl 64"
++        % node_ip
++    )
++    node.run("ip link set dev vx-1000 mtu 9152")
++    node.run("ip link set dev vx-1000 up")
++
++    # bridge attrs
++    node.run("ip link set dev vx-1000 master bridge")
++    node.run("/sbin/bridge link set dev vx-1000 neigh_suppress on")
++    node.run("/sbin/bridge link set dev vx-1000 learning off")
++    node.run("/sbin/bridge link set dev vx-1000 priority 8")
++    node.run("/sbin/bridge vlan del vid 1 dev vx-1000")
++    node.run("/sbin/bridge vlan del vid 1 untagged pvid dev vx-1000")
++    node.run("/sbin/bridge vlan add vid 1000 dev vx-1000")
++    node.run("/sbin/bridge vlan add vid 1000 untagged pvid dev vx-1000")
++
++
++def config_l3vni(node, node_ip):
++    """
++    Create L3VNI infrastructure for VRF vrf1 with L3VNI 4000.
++    VLAN-4000 is mapped to VNI-4000.
++    Uses IPv6 VTEP address and IPv6 multicast group.
++    """
++    # Create L3VNI VXLAN device
++    node.run(
++        "ip link add dev vx-4000 type vxlan id 4000 dstport 4789 local %s dev ipmr-lo group ff0e::4000 nolearning ttl 64"
++        % node_ip
++    )
++    node.run("ip link set dev vx-4000 mtu 9152")
++    node.run("ip link set dev vx-4000 up")
++
++    # bridge attrs - Add L3VNI VXLAN to bridge
++    node.run("ip link set dev vx-4000 master bridge")
++    node.run("/sbin/bridge link set dev vx-4000 neigh_suppress on")
++    node.run("/sbin/bridge link set dev vx-4000 learning off")
++    node.run("/sbin/bridge link set dev vx-4000 priority 8")
++    node.run("/sbin/bridge vlan del vid 1 dev vx-4000")
++    node.run("/sbin/bridge vlan del vid 1 untagged pvid dev vx-4000")
++    node.run("/sbin/bridge vlan add vid 4000 dev vx-4000")
++    node.run("/sbin/bridge vlan add vid 4000 untagged pvid dev vx-4000")
++
++    # Add VLAN 4000 to bridge for L3VNI
++    node.run("/sbin/bridge vlan add vid 4000 dev bridge self")
++
++
++def config_svi(node, svi_pip):
++    """
++    Create an SVI for VLAN 1000 with IPv6 addressing
++    """
++    node.run("ip link add link bridge name vlan1000 type vlan id 1000 protocol 802.1q")
++    node.run("ip -6 addr add %s/64 dev vlan1000" % svi_pip)
++    node.run("ip link set dev vlan1000 up")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan1000.accept_dad=0")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan1000.dad_transmits=0")
++    node.run("ip link add link vlan1000 name vlan1000-v0 type macvlan mode private")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan1000-v0.accept_dad=0")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan1000-v0.dad_transmits=0")
++    node.run("ip link set dev vlan1000-v0 address 00:00:5e:00:01:01")
++    node.run("ip link set dev vlan1000-v0 up")
++    node.run("ip -6 addr add 2001:db8:45::1/64 dev vlan1000-v0")
++
++
++def config_vrf_l3vni(node):
++    """
++    Create VRF vrf1 and L3VNI VLAN interface for L3VNI 4000
++    """
++    # Create VRF vrf1 with table 1001
++    node.run("ip link add vrf1 type vrf table 1001")
++    node.run("ip link set dev vrf1 up")
++
++    # Create L3VNI VLAN interface (vlan4000) for VNI 4000
++    node.run("ip link add link bridge name vlan4000 type vlan id 4000 protocol 802.1q")
++    node.run("ip link set dev vlan4000 master vrf1")
++    node.run("ip link set dev vlan4000 up")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan4000.accept_dad=0")
++    node.run("/sbin/sysctl net.ipv6.conf.vlan4000.dad_transmits=0")
++
++
++def config_tor(tor_name, tor, tor_ip, svi_pip):
++    """
++    Create the bond/vxlan-bridge on the TOR which acts as VTEP and EPN-PE
++    """
++    # Add IPv4 and IPv6 addresses to loopback interface for VTEP
++    # These must be added before creating VXLAN device
++    # They match the addresses in frr.conf for consistency
++    tor_id = tor_name.replace("torm", "")  # Extract number: 11, 12, 21, 22
++    if tor_id == "11":
++        ipv4_lo = "10.0.0.15"
++    elif tor_id == "12":
++        ipv4_lo = "10.0.0.16"
++    elif tor_id == "21":
++        ipv4_lo = "10.0.0.17"
++    elif tor_id == "22":
++        ipv4_lo = "10.0.0.18"
++
++    tor.run("ip addr add %s/32 dev lo" % ipv4_lo)
++    tor.run("ip -6 addr add %s/128 dev lo" % tor_ip)
++
++    # create a device for terminating VxLAN multicast tunnels
++    config_mcast_tunnel_termination_device(tor)
++
++    # create a vlan aware bridge
++    config_bridge(tor)
++
++    # create vxlan device and add it to bridge
++    config_vxlan(tor, tor_ip)
++
++    # create L3VNI infrastructure (VRF vrf1 with L3VNI 4000)
++    config_l3vni(tor, tor_ip)
++    config_vrf_l3vni(tor)
++
++    # create hostbonds and add them to the bridge
++    if "torm1" in tor_name:
++        sys_mac = "44:38:39:ff:ff:01"
++    else:
++        sys_mac = "44:38:39:ff:ff:02"
++    bond_member = tor_name + "-eth2"
++    config_bond(tor, "hostbond1", [bond_member], sys_mac, "bridge")
++
++    bond_member = tor_name + "-eth3"
++    config_bond(tor, "hostbond2", [bond_member], sys_mac, "bridge")
++
++    # create SVI
++    config_svi(tor, svi_pip)
++
++
++def config_tors(tgen, tors):
++    for tor_name in tors:
++        tor = tgen.gears[tor_name]
++        config_tor(tor_name, tor, tor_ips.get(tor_name), svi_ips.get(tor_name))
++
++
++def compute_host_ip_mac(host_name):
++    host_id = host_name.split("hostd")[1]
++    host_ip = "2001:db8:45::" + host_id + "/64"
++    host_mac = "00:00:00:00:00:" + host_id
++
++    return host_ip, host_mac
++
++
++def config_host(host_name, host):
++    """
++    Create the dual-attached bond on host nodes for MH
++    """
++    bond_members = []
++    bond_members.append(host_name + "-eth0")
++    bond_members.append(host_name + "-eth1")
++    bond_name = "torbond"
++    config_bond(host, bond_name, bond_members, "00:00:00:00:00:00", None)
++
++    host_ip, host_mac = compute_host_ip_mac(host_name)
++    host.run("ip addr add %s dev %s" % (host_ip, bond_name))
++    host.run("ip link set dev %s address %s" % (bond_name, host_mac))
++
++
++def config_hosts(tgen, hosts):
++    for host_name in hosts:
++        host = tgen.gears[host_name]
++        config_host(host_name, host)
++
++
++def disable_dad_on_all_interfaces(tgen):
++    """
++    Disable DAD (Duplicate Address Detection) on all interfaces for all routers.
++    This is necessary to prevent IPv6 address installation failures in test environments.
++    """
++    router_list = tgen.routers()
++    for rname, router in router_list.items():
++        # Disable DAD globally for all interfaces
++        router.run("/sbin/sysctl -w net.ipv6.conf.all.accept_dad=0 2>/dev/null || true")
++        router.run(
++            "/sbin/sysctl -w net.ipv6.conf.all.dad_transmits=0 2>/dev/null || true"
++        )
++        router.run(
++            "/sbin/sysctl -w net.ipv6.conf.default.accept_dad=0 2>/dev/null || true"
++        )
++        router.run(
++            "/sbin/sysctl -w net.ipv6.conf.default.dad_transmits=0 2>/dev/null || true"
++        )
++
++        # Get list of all interfaces and disable DAD on each
++        try:
++            # Get all interfaces
++            output = router.run(
++                "ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | awk '{print $1}'"
++            )
++            interfaces = [line.strip() for line in output.split("\n") if line.strip()]
++
++            for intf in interfaces:
++                # Skip loopback and special interfaces
++                if intf in ["lo", "ipmr-lo"]:
++                    continue
++                # Disable DAD on this interface
++                router.run(
++                    "/sbin/sysctl -w net.ipv6.conf.{}.accept_dad=0 2>/dev/null || true".format(
++                        intf
++                    )
++                )
++                router.run(
++                    "/sbin/sysctl -w net.ipv6.conf.{}.dad_transmits=0 2>/dev/null || true".format(
++                        intf
++                    )
++                )
++        except Exception as e:
++            logger.warning(
++                "Failed to disable DAD on interfaces for {}: {}".format(rname, e)
++            )
++
++
++@pytest.fixture(scope="module", params=["ipv4", "ipv6"])
++def tgen_and_ip_version(request):
++    """
++    Parametrized fixture to run the multihoming topology with IPv4 or IPv6 underlay.
++
++    For now only the IPv6 underlay is implemented; the IPv4 variant is skipped
++    until dedicated configs and host plumbing are added.
++    """
++
++    ip_version = request.param
++
++    if ip_version == "ipv4":
++        pytest.skip("IPv4 underlay is not yet implemented for this topology")
++
++    # Build topology
++    tgen = Topogen(build_topo, request.module.__name__)
++    tgen.start_topology()
++
++    # Basic kernel requirement check (same as original test)
++    krel = platform.release()
++    if topotest.version_cmp(krel, "4.19") < 0:
++        tgen.errors = "kernel 4.19 needed for multihoming tests"
++        pytest.skip(tgen.errors)
++
++    # Configure TORs and hosts (IPv6-only for now)
++    tors = ["torm11", "torm12", "torm21", "torm22"]
++    config_tors(tgen, tors)
++
++    # CRITICAL: Enable IPv6 and disable DAD BEFORE starting daemons
++    # This must be done before zebra tries to configure IPv6 addresses
++    router_list = tgen.routers()
++    for rname, router in router_list.items():
++        # Enable IPv6 forwarding first
++        router.run("sysctl -w net.ipv6.conf.all.forwarding=1")
++        router.run("sysctl -w net.ipv6.conf.default.forwarding=1")
++        # Disable DAD globally to prevent address configuration delays/failures
++        router.run("sysctl -w net.ipv6.conf.all.accept_dad=0")
++        router.run("sysctl -w net.ipv6.conf.all.dad_transmits=0")
++        router.run("sysctl -w net.ipv6.conf.default.accept_dad=0")
++        router.run("sysctl -w net.ipv6.conf.default.dad_transmits=0")
++
++    # Load unified FRR configurations using integrated-vtysh-config
++    config_dir = os.path.join(CWD, ip_version)
++    for rname, router in router_list.items():
++        logger.info(
++            "Loading unified %s config for %s from %s", ip_version, rname, config_dir
++        )
++        # Enable mgmtd first (required for modern FRR)
++        router.load_config(TopoRouter.RD_MGMTD, "")
++        # Load unified frr.conf from the IP-version specific config directory
++        router.load_frr_config(os.path.join(config_dir, "{}/frr.conf".format(rname)))
++
++    logger.info("Starting all routers...")
++    tgen.start_router()
++
++    # Give daemons a moment to stabilize
++    time.sleep(2)
++
++    # Verify all routers started successfully
++    logger.info("Verifying router daemons started...")
++    for rname, router in router_list.items():
++        status = router.check_router_running()
++        if status:
++            logger.error("Router %s has issues: %s", rname, status)
++            pytest.fail("Router {} failed to start properly: {}".format(rname, status))
++
++    # Configure hosts
++    hosts = ["hostd11", "hostd12", "hostd21", "hostd22"]
++    config_hosts(tgen, hosts)
++
++    # Disable DAD on all interfaces (additional per-interface configuration)
++    disable_dad_on_all_interfaces(tgen)
++
++    # Yield to tests
++    yield tgen, ip_version
++
++    # Teardown
++    tgen.stop_topology()
++
++
++def check_local_es(esi, vtep_ips, dut_name, down_vteps):
++    """
++    Check if ES peers are setup correctly on local ESs
++    """
++    peer_ips = []
++    if "torm1" in dut_name:
++        tor_ips_rack = tor_ips_rack_1
++    else:
++        tor_ips_rack = tor_ips_rack_2
++
++    for tor_name, tor_ip in tor_ips_rack.items():
++        if dut_name not in tor_name:
++            peer_ips.append(tor_ip)
++
++    # remove down VTEPs from the peer check list
++    peer_set = set(peer_ips)
++    down_vtep_set = set(down_vteps)
++    peer_set = peer_set - down_vtep_set
++
++    vtep_set = set(vtep_ips)
++    diff = peer_set.symmetric_difference(vtep_set)
++
++    return (esi, diff) if diff else None
++
++
++def check_remote_es(esi, vtep_ips, dut_name, down_vteps):
++    """
++    Verify list of PEs associated with a remote ES
++    """
++    remote_ips = []
++
++    if "torm1" in dut_name:
++        tor_ips_rack = tor_ips_rack_2
++    else:
++        tor_ips_rack = tor_ips_rack_1
++
++    for _, tor_ip in tor_ips_rack.items():
++        remote_ips.append(tor_ip)
++
++    # remove down VTEPs from the remote check list
++    remote_set = set(remote_ips)
++    down_vtep_set = set(down_vteps)
++    remote_set = remote_set - down_vtep_set
++
++    vtep_set = set(vtep_ips)
++    diff = remote_set.symmetric_difference(vtep_set)
++
++    return (esi, diff) if diff else None
++
++
++def check_es(dut):
++    """
++    Verify list of PEs associated all ESs, local and remote
++    """
++    bgp_es = dut.vtysh_cmd("show bgp l2vpn evpn es json")
++    bgp_es_json = json.loads(bgp_es)
++
++    result = None
++
++    expected_es_set = set([v for k, v in host_es_map.items()])
++    curr_es_set = []
++
++    # check is ES content is correct
++    for es in bgp_es_json:
++        esi = es["esi"]
++        curr_es_set.append(esi)
++        if not es.get("type", False):
++            return None
++        types = es["type"]
++        vtep_ips = []
++        for vtep in es.get("vteps", []):
++            vtep_ips.append(vtep["vtep_ip"])
++
++        if "local" in types:
++            result = check_local_es(esi, vtep_ips, dut.name, [])
++        else:
++            result = check_remote_es(esi, vtep_ips, dut.name, [])
++
++        if result:
++            return result
++
++    # check if all ESs are present
++    curr_es_set = set(curr_es_set)
++    result = curr_es_set.symmetric_difference(expected_es_set)
++
++    return result if result else None
++
++
++def check_one_es(dut, esi, down_vteps):
++    """
++    Verify list of PEs associated all ESs, local and remote
++    """
++    bgp_es = dut.vtysh_cmd("show bgp l2vpn evpn es %s json" % esi)
++    es = json.loads(bgp_es)
++
++    if not es:
++        return "esi %s not found" % esi
++
++    esi = es["esi"]
++    if not es.get("type", False):
++        return None
++    types = es["type"]
++    vtep_ips = []
++    for vtep in es.get("vteps", []):
++        vtep_ips.append(vtep["vtep_ip"])
++
++    if "local" in types:
++        result = check_local_es(esi, vtep_ips, dut.name, down_vteps)
++    else:
++        result = check_remote_es(esi, vtep_ips, dut.name, down_vteps)
++
++    return result
++
++
++def test_evpn_es(tgen_and_ip_version):
++    """
++    Two ES are setup on each rack. This test checks if -
++    1. ES peer has been added to the local ES (via Type-1/EAD route)
++    2. The remote ESs are setup with the right list of PEs (via Type-1)
++    """
++
++    tgen, ip_version = tgen_and_ip_version
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++    test_fn = partial(check_es, dut)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++
++    assertmsg = '"{}" ES content incorrect. Result: {}'.format(dut_name, result)
++    assert result is None, assertmsg
++
++
++def test_evpn_ead_update(tgen_and_ip_version):
++    """
++    Flap a host link one the remote rack and check if the EAD updates
++    are sent/processed for the corresponding ESI
++    """
++    tgen, ip_version = tgen_and_ip_version
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # dut on rack1 and host link flap on rack2
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++
++    remote_tor_name = "torm21"
++    remote_tor = tgen.gears[remote_tor_name]
++
++    host_name = "hostd21"
++    host = tgen.gears[host_name]
++    esi = host_es_map.get(host_name)
++
++    # check if the VTEP list is right to start with
++    down_vteps = []
++    test_fn = partial(check_one_es, dut, esi, down_vteps)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" ES content incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++    # down a remote host link and check if the EAD withdraw is rxed
++    # Note: LACP is not working as expected so I am temporarily shutting
++    # down the link on the remote TOR instead of the remote host
++    remote_tor.run("ip link set dev %s-%s down" % (remote_tor_name, "eth2"))
++    down_vteps.append(tor_ips.get(remote_tor_name))
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" ES incorrect after remote link down'.format(dut_name)
++    assert result is None, assertmsg
++
++    # bring up remote host link and check if the EAD update is rxed
++    down_vteps.remove(tor_ips.get(remote_tor_name))
++    remote_tor.run("ip link set dev %s-%s up" % (remote_tor_name, "eth2"))
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" ES incorrect after remote link flap'.format(dut_name)
++    assert result is None, assertmsg
++
++
++def ping_anycast_gw(tgen):
++    # ping the anycast gw from the local and remote hosts to populate
++    # the mac address on the PEs
++    intf = "torbond"
++    ipaddr = "2001:db8:45::1"
++    for name in ("hostd11", "hostd21", "hostd12", "hostd22"):
++        host = tgen.net.hosts[name]
++        # Use ping6 to trigger neighbor discovery
++        ping_cmd = "ping6 -I {} -c 1 {}".format(intf, ipaddr)
++        _, stdout, _ = host.cmd_status(ping_cmd, warn=False, stderr=subprocess.STDOUT)
++        stdout = stdout.strip()
++        if stdout:
++            host.logger.debug(
++                "%s: ping6 on %s for %s returned: %s", name, intf, ipaddr, stdout
++            )
++
++
++def check_mac(dut, vni, mac, m_type, esi, intf, ping_gw=False, tgen=None):
++    """
++    checks if mac is present and if desination matches the one provided
++    """
++
++    if ping_gw:
++        ping_anycast_gw(tgen)
++
++    out = dut.vtysh_cmd("show evpn mac vni %d mac %s json" % (vni, mac))
++
++    tmp_esi = None
++    mac_js = json.loads(out)
++    for mac, info in mac_js.items():
++        tmp_esi = info.get("esi", "")
++        tmp_m_type = info.get("type", "")
++        tmp_intf = info.get("intf", "") if tmp_m_type == "local" else ""
++        if tmp_esi == esi and tmp_m_type == m_type and tmp_intf == intf:
++            return None
++
++    return "invalid vni %d mac %s expected esi %s, %s m_type %s and intf %s out %s" % (
++        vni,
++        mac,
++        tmp_esi,
++        esi,
++        m_type,
++        intf,
++        mac_js,
++    )
++
++
++def test_evpn_mac(tgen_and_ip_version):
++    """
++    1. Add a MAC on hostd11 and check if the MAC is synced between
++    torm11 and torm12. And installed as a local MAC.
++    2. Add a MAC on hostd21 and check if the MAC is installed as a
++    remote MAC on torm11 and torm12
++    """
++
++    tgen, ip_version = tgen_and_ip_version
++
++    local_host = tgen.gears["hostd11"]
++    remote_host = tgen.gears["hostd21"]
++    tors = []
++    tors.append(tgen.gears["torm11"])
++    tors.append(tgen.gears["torm12"])
++
++    vni = 1000
++
++    # check if the rack-1 host MAC is present on all rack-1 PEs
++    # and points to local access port
++    m_type = "local"
++    _, mac = compute_host_ip_mac(local_host.name)
++    esi = host_es_map.get(local_host.name)
++    intf = "hostbond1"
++
++    for tor in tors:
++        test_fn = partial(check_mac, tor, vni, mac, m_type, esi, intf, True, tgen)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" local MAC content incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++    # check if the rack-2 host MAC is present on all rack-1 PEs
++    # and points to the remote ES destination
++    m_type = "remote"
++    _, mac = compute_host_ip_mac(remote_host.name)
++    esi = host_es_map.get(remote_host.name)
++    intf = ""
++
++    for tor in tors:
++        test_fn = partial(check_mac, tor, vni, mac, m_type, esi, intf)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" remote MAC content incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++
++def check_df_role(dut, esi, role):
++    """
++    Return error string if the df role on the dut is different
++    """
++    es_json = dut.vtysh_cmd("show evpn es %s json" % esi)
++    es = json.loads(es_json)
++
++    if not es:
++        return "esi %s not found" % esi
++
++    flags = es.get("flags", [])
++    curr_role = "nonDF" if "nonDF" in flags else "DF"
++
++    if curr_role != role:
++        return "%s is %s for %s" % (dut.name, curr_role, esi)
++
++    return None
++
++
++def test_evpn_df(tgen_and_ip_version):
++    """
++    1. Check the DF role on all the PEs on rack-1.
++    2. Increase the DF preference on the non-DF and check if it becomes
++       the DF winner.
++    """
++
++    tgen, ip_version = tgen_and_ip_version
++
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++
++    # We will run the tests on just one ES
++    esi = host_es_map.get("hostd11")
++    intf = "hostbond1"
++
++    tors = []
++    tors.append(tgen.gears["torm11"])
++    tors.append(tgen.gears["torm12"])
++    df_node = "torm11"
++
++    # check roles on rack-1
++    for tor in tors:
++        role = "DF" if tor.name == df_node else "nonDF"
++        test_fn = partial(check_df_role, tor, esi, role)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" DF role incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++    # change df preference on the nonDF to make it the df
++    torm12 = tgen.gears["torm12"]
++    torm12.vtysh_cmd("conf\ninterface %s\nevpn mh es-df-pref %d" % (intf, 60000))
++    df_node = "torm12"
++
++    # re-check roles on rack-1; we should have a new winner
++    for tor in tors:
++        role = "DF" if tor.name == df_node else "nonDF"
++        test_fn = partial(check_df_role, tor, esi, role)
++        _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++        assertmsg = '"{}" DF role incorrect'.format(tor.name)
++        assert result is None, assertmsg
++
++
++def check_protodown_rc(dut, protodown_rc):
++    """
++    check if specified protodown reason code is set
++    """
++
++    out = dut.vtysh_cmd("show evpn json")
++
++    evpn_js = json.loads(out)
++    tmp_rc = evpn_js.get("protodownReasons", [])
++
++    if protodown_rc:
++        if protodown_rc not in tmp_rc:
++            return "protodown %s missing in %s" % (protodown_rc, tmp_rc)
++    else:
++        if tmp_rc:
++            return "unexpected protodown rc %s" % (tmp_rc)
++
++    return None
++
++
++def test_evpn_uplink_tracking(tgen_and_ip_version):
++    """
++    1. Wait for access ports to come out of startup-delay
++    2. disable uplinks and check if access ports have been protodowned
++    3. enable uplinks and check if access ports have been moved out
++       of protodown
++    """
++
++    tgen, ip_version = tgen_and_ip_version
++
++    dut_name = "torm11"
++    dut = tgen.gears[dut_name]
++
++    # wait for protodown rc to clear after startup
++    test_fn = partial(check_protodown_rc, dut, None)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" protodown rc incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++    # disable the uplinks
++    dut.run("ip link set %s-eth0 down" % dut_name)
++    dut.run("ip link set %s-eth1 down" % dut_name)
++
++    # check if the access ports have been protodowned
++    test_fn = partial(check_protodown_rc, dut, "uplinkDown")
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" protodown rc incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++    # enable the uplinks
++    dut.run("ip link set %s-eth0 up" % dut_name)
++    dut.run("ip link set %s-eth1 up" % dut_name)
++
++    # check if the access ports have been moved out of protodown
++    test_fn = partial(check_protodown_rc, dut, None)
++    _, result = topotest.run_and_expect(test_fn, None, count=20, wait=3)
++    assertmsg = '"{}" protodown rc incorrect'.format(dut_name)
++    assert result is None, assertmsg
++
++
++if __name__ == "__main__":
++    args = ["-s"] + sys.argv[1:]
++    sys.exit(pytest.main(args))
+-- 
+2.35.6
+

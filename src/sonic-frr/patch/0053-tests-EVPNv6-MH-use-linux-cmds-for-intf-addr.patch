@@ -1,0 +1,180 @@
+From d3aa51bd9e87032592157ce3243a732aa40df274 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Tue, 25 Nov 2025 12:18:45 -0800
+Subject: [PATCH 15/29] tests: EVPNv6 MH use linux cmds for intf addr
+
+When configuring interface ip from frr.conf using
+frr-reload there is a timing involved bgp is not
+receiving fast enough either ipv4 or ipv6 address,
+which leads to an issue where ipv4 route over ipv6
+bgp peer, uses the v4 mapped v6 address and route
+becomes unreachable at the remote bgp peer end.
+
+To fix the timing configure ip address using
+linux iproute2 commands.
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ .../ipv6/torm11/frr.conf                      |  4 ---
+ .../ipv6/torm12/frr.conf                      |  4 ---
+ .../ipv6/torm21/frr.conf                      |  4 ---
+ .../ipv6/torm22/frr.conf                      |  4 ---
+ .../test_evpn_mh_v4_v6_num.py                 | 36 +++++++++++++++++--
+ 5 files changed, 34 insertions(+), 18 deletions(-)
+
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
+index d26e44a74b..d11fe495d7 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm11/frr.conf
+@@ -20,18 +20,14 @@ router pim6
+ !
+ interface lo
+  description Loopback VTEP
+- ip address 10.0.0.15/32
+- ipv6 address 2001:db8:100::15/128
+ !
+ interface torm11-eth0
+  description torm11-eth0 -> leaf1-eth2
+- ipv6 address 2001:db8:1::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+ interface torm11-eth1
+  description torm11-eth1 -> leaf2-eth2
+- ipv6 address 2001:db8:5::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
+index a78f368695..230f89bbd5 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm12/frr.conf
+@@ -20,18 +20,14 @@ router pim6
+ !
+ interface lo
+  description Loopback VTEP
+- ip address 10.0.0.16/32
+- ipv6 address 2001:db8:100::16/128
+ !
+ interface torm12-eth0
+  description torm12-eth0 -> leaf1-eth3
+- ipv6 address 2001:db8:2::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+ interface torm12-eth1
+  description torm12-eth1 -> leaf2-eth3
+- ipv6 address 2001:db8:6::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
+index 56c0743893..9f033311b7 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm21/frr.conf
+@@ -20,18 +20,14 @@ router pim6
+ !
+ interface lo
+  description Loopback VTEP
+- ip address 10.0.0.17/32
+- ipv6 address 2001:db8:100::17/128
+ !
+ interface torm21-eth0
+  description torm21-eth0 -> leaf1-eth4
+- ipv6 address 2001:db8:3::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+ interface torm21-eth1
+  description torm21-eth1 -> leaf2-eth4
+- ipv6 address 2001:db8:7::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
+index e15f0c53ce..acdb013a7a 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/ipv6/torm22/frr.conf
+@@ -20,18 +20,14 @@ router pim6
+ !
+ interface lo
+  description Loopback VTEP
+- ip address 10.0.0.18/32
+- ipv6 address 2001:db8:100::18/128
+ !
+ interface torm22-eth0
+  description torm22-eth0 -> leaf1-eth5
+- ipv6 address 2001:db8:4::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+ interface torm22-eth1
+  description torm22-eth1 -> leaf2-eth5
+- ipv6 address 2001:db8:8::0/127
+  ipv6 pim
+  evpn mh uplink
+ !
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+index 6f6cc283a8..3578de8e89 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+@@ -214,6 +214,29 @@ host_es_map = {
+     "hostd22": "03:44:38:39:ff:ff:02:00:00:02",
+ }
+ 
++# Underlay IPv6 addresses for TOR uplink interfaces. These mirror the interface
++# addresses configured in the per-router frr.conf files, but are applied early
++# using Linux iproute2 so that zebra/BGP always see stable interface addresses,
++# even when configuration is loaded via tools/frr-reload.py.
++tor_uplink_ipv6 = {
++    "torm11": {
++        "torm11-eth0": "2001:db8:1::0/127",
++        "torm11-eth1": "2001:db8:5::0/127",
++    },
++    "torm12": {
++        "torm12-eth0": "2001:db8:2::0/127",
++        "torm12-eth1": "2001:db8:6::0/127",
++    },
++    "torm21": {
++        "torm21-eth0": "2001:db8:3::0/127",
++        "torm21-eth1": "2001:db8:7::0/127",
++    },
++    "torm22": {
++        "torm22-eth0": "2001:db8:4::0/127",
++        "torm22-eth1": "2001:db8:8::0/127",
++    },
++}
++
+ 
+ def config_bond(node, bond_name, bond_members, bond_ad_sys_mac, br):
+     """
+@@ -361,8 +384,9 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
+     Create the bond/vxlan-bridge on the TOR which acts as VTEP and EPN-PE
+     """
+     # Add IPv4 and IPv6 addresses to loopback interface for VTEP
+-    # These must be added before creating VXLAN device
+-    # They match the addresses in frr.conf for consistency
++    # These must be added before creating VXLAN device.
++    # They match the addresses in frr.conf for consistency and are applied
++    # via Linux iproute2 so that zebra/BGP learn them from the kernel.
+     tor_id = tor_name.replace("torm", "")  # Extract number: 11, 12, 21, 22
+     if tor_id == "11":
+         ipv4_lo = "10.0.0.15"
+@@ -376,6 +400,14 @@ def config_tor(tor_name, tor, tor_ip, svi_pip):
+     tor.run("ip addr add %s/32 dev lo" % ipv4_lo)
+     tor.run("ip -6 addr add %s/128 dev lo" % tor_ip)
+ 
++    # Add IPv6 underlay addresses on uplink interfaces using iproute2 as well.
++    # This avoids timing/race issues where, when using frr-reload.py, BGP may
++    # come up before interface addresses have been fully programmed by zebra
++    # from the FRR config, leading to incorrect (e.g. IPv4-mapped IPv6) nexthops.
++    uplinks = tor_uplink_ipv6.get(tor_name, {})
++    for ifname, prefix in uplinks.items():
++        tor.run("ip -6 addr add %s dev %s" % (prefix, ifname))
++
+     # create a device for terminating VxLAN multicast tunnels
+     config_mcast_tunnel_termination_device(tor)
+ 
+-- 
+2.35.6
+

@@ -1,0 +1,197 @@
+From b8df137cbe9aae1dbf0e85cc5454c26417adae4f Mon Sep 17 00:00:00 2001
+From: Manpreet Kaur <manpreetk@nvidia.com>
+Date: Sun, 16 Nov 2025 19:30:48 -0800
+Subject: [PATCH 23/29] bgpd: EVPNv6 MH lttng traces IPv6 vtep aware
+
+UT:
+frr_bgp:evpn_mh_local_es_add_zrecv {'esi': '03:44:38:39:ff:ff:01:00:00:01', 'vtep': '2001:c001:ff:f00d::3', 'active': 0, 'bypass': 0, 'df_pref': 32767}
+frr_bgp:evpn_mh_local_ead_es_evi_route_upd {'esi': '03:44:38:39:ff:ff:01:00:00:01', 'vni': 1000, 'route_type': 1, 'vtep_v4': '0.0.0.0', 'vtep_v6': '2001:c001:ff:f00d::3'}
+frr_bgp:evpn_bum_vtep_zsend {'action': 'add', 'vni': 1009, 'vtep': '2001:c001:ff:f00d::4'}
+frr_bgp:evpn_mh_local_ead_es_evi_route_del {'esi': '03:44:38:39:ff:ff:01:00:00:03', 'vni': 1009, 'route_type': 1, 'vtep': '2001:c001:ff:f00d::3'}
+frr_bgp:evpn_mh_es_evi_vtep_add {'esi': '03:44:38:39:ff:ff:01:00:00:03', 'vni': 1009, 'vtep': '2001:c001:ff:f00d::4', 'ead_es': 0}
+frr_bgp:evpn_mh_vtep_zsend {'action': 'add', 'esi': '03:44:38:39:ff:ff:01:00:00:02', 'vtep': '2001:c001:ff:f00d::5'}
+frr_bgp:evpn_mh_nh_zsend {'nhg': 73529414, 'vtep': '2001:c001:ff:f00d::5', 'svi': 29}
+frr_bgp:evpn_mh_es_evi_vtep_del {'esi': '03:44:38:39:ff:ff:01:00:00:01', 'vni': 1005, 'vtep': '2001:c001:ff:f00d::4', 'ead_es': 0}
+
+Signed-off-by: Manpreet Kaur <manpreetk@nvidia.com>
+---
+ bgpd/bgp_evpn_mh.c | 26 +++++++++++++++++---------
+ bgpd/bgp_trace.h   | 27 +++++++++++++--------------
+ bgpd/bgp_zebra.c   |  4 ++--
+ 3 files changed, 32 insertions(+), 25 deletions(-)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index 4f7ba1a5ed..87f4cbfcc1 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -507,9 +507,19 @@ int bgp_evpn_mh_route_update(struct bgp *bgp, struct bgp_evpn_es *es,
+ 					: (vpn ? "ead-evi" : "ead-es"),
+ 				&attr->mp_nexthop_global_in);
+ 
+-		frrtrace(4, frr_bgp, evpn_mh_local_ead_es_evi_route_upd,
+-			 &es->esi, (vpn ? vpn->vni : 0), evp->prefix.route_type,
+-			 attr->mp_nexthop_global_in);
++		if (es) {
++			struct ipaddr vtep_ip = {};
++
++			if (IS_IPADDR_V4(&es->originator_ip)) {
++				SET_IPADDR_V4(&vtep_ip);
++				vtep_ip.ipaddr_v4 = attr->mp_nexthop_global_in;
++			} else if (IS_IPADDR_V6(&es->originator_ip)) {
++				SET_IPADDR_V6(&vtep_ip);
++				IPV6_ADDR_COPY(&vtep_ip.ipaddr_v6, &attr->mp_nexthop_global);
++			}
++			frrtrace(4, frr_bgp, evpn_mh_local_ead_es_evi_route_upd, &es->esi,
++				 (vpn ? vpn->vni : 0), evp->prefix.route_type, &vtep_ip);
++		}
+ 	}
+ 
+ 	/* Return back th*e route entry. */
+@@ -3587,9 +3597,8 @@ bgp_evpn_es_evi_vtep_add(struct bgp *bgp, struct bgp_evpn_es_evi *es_evi,
+ 			   evi_vtep->es_evi->vpn->vni, &evi_vtep->vtep_ip,
+ 			   ead_es ? "ead_es" : "ead_evi");
+ 
+-	frrtrace(4, frr_bgp, evpn_mh_es_evi_vtep_add,
+-		 &evi_vtep->es_evi->es->esi, evi_vtep->es_evi->vpn->vni,
+-		 evi_vtep->vtep_ip, ead_es);
++	frrtrace(4, frr_bgp, evpn_mh_es_evi_vtep_add, &evi_vtep->es_evi->es->esi,
++		 evi_vtep->es_evi->vpn->vni, &evi_vtep->vtep_ip, ead_es);
+ 
+ 	if (ead_es)
+ 		SET_FLAG(evi_vtep->flags, BGP_EVPN_EVI_VTEP_EAD_PER_ES);
+@@ -3615,9 +3624,8 @@ bgp_evpn_es_evi_vtep_del(struct bgp *bgp, struct bgp_evpn_es_evi *es_evi,
+ 			   evi_vtep->es_evi->vpn->vni, &evi_vtep->vtep_ip,
+ 			   ead_es ? "ead_es" : "ead_evi");
+ 
+-	frrtrace(4, frr_bgp, evpn_mh_es_evi_vtep_del,
+-		 &evi_vtep->es_evi->es->esi, evi_vtep->es_evi->vpn->vni,
+-		 evi_vtep->vtep_ip, ead_es);
++	frrtrace(4, frr_bgp, evpn_mh_es_evi_vtep_del, &evi_vtep->es_evi->es->esi,
++		 evi_vtep->es_evi->vpn->vni, &evi_vtep->vtep_ip, ead_es);
+ 
+ 	if (ead_es)
+ 		UNSET_FLAG(evi_vtep->flags, BGP_EVPN_EVI_VTEP_EAD_PER_ES);
+diff --git a/bgpd/bgp_trace.h b/bgpd/bgp_trace.h
+index fd72ad18ac..98518b5dc0 100644
+--- a/bgpd/bgp_trace.h
++++ b/bgpd/bgp_trace.h
+@@ -348,8 +348,7 @@ TRACEPOINT_EVENT(
+ 	TP_FIELDS(
+ 		ctf_string(action, add ? "add" : "del")
+ 		ctf_integer(vni_t, vni, (vpn ? vpn->vni : 0))
+-		ctf_integer_network_hex(unsigned int, vtep,
+-			pfx->prefix.imet_addr.ip.ipaddr_v4.s_addr)
++		ctf_array(unsigned char, vtep, &pfx->prefix.imet_addr.ip, sizeof(struct ipaddr))
+ 	)
+ )
+ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_bum_vtep_zsend, TRACE_INFO)
+@@ -362,7 +361,7 @@ TRACEPOINT_EVENT(
+ 	TP_FIELDS(
+ 		ctf_string(action, add ? "add" : "del")
+ 		ctf_string(esi, es->esi_str)
+-		ctf_string(vtep, es_vtep->vtep_str)
++		ctf_array(unsigned char, vtep, &es_vtep->vtep_ip, sizeof(struct ipaddr))
+ 	)
+ )
+ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_mh_vtep_zsend, TRACE_INFO)
+@@ -389,7 +388,7 @@ TRACEPOINT_EVENT(
+ 		struct bgp_evpn_es_vrf *, es_vrf),
+ 	TP_FIELDS(
+ 		ctf_integer(unsigned int, nhg, nhg_id)
+-		ctf_string(vtep, vtep->vtep_str)
++		ctf_array(unsigned char, vtep, &vtep->vtep_ip, sizeof(struct ipaddr))
+ 		ctf_integer(int, svi, es_vrf->bgp_vrf->l3vni_svi_ifindex)
+ 	)
+ )
+@@ -412,11 +411,11 @@ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_nh_rmac_zsend, TRACE_INFO)
+ TRACEPOINT_EVENT(
+ 	frr_bgp,
+ 	evpn_mh_local_es_add_zrecv,
+-	TP_ARGS(esi_t *, esi, struct in_addr, vtep,
++	TP_ARGS(esi_t *, esi, struct ipaddr *, vtep,
+ 		uint8_t, active, uint8_t, bypass, uint16_t, df_pref),
+ 	TP_FIELDS(
+ 		ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+-		ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
++		ctf_array(unsigned char, vtep, vtep, sizeof(struct ipaddr))
+ 		ctf_integer(uint8_t, active, active)
+ 		ctf_integer(uint8_t, bypass, bypass)
+ 		ctf_integer(uint16_t, df_pref, df_pref)
+@@ -459,12 +458,12 @@ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_mh_local_es_evi_del_zrecv, TRACE_INFO)
+ TRACEPOINT_EVENT(
+ 	frr_bgp,
+ 	evpn_mh_es_evi_vtep_add,
+-	TP_ARGS(esi_t *, esi, vni_t, vni, struct in_addr, vtep,
++	TP_ARGS(esi_t *, esi, vni_t, vni, struct ipaddr *, vtep,
+ 		uint8_t, ead_es),
+ 	TP_FIELDS(
+ 		ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+ 		ctf_integer(vni_t, vni, vni)
+-		ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
++		ctf_array(unsigned char, vtep, vtep, sizeof(struct ipaddr))
+ 		ctf_integer(uint8_t, ead_es, ead_es)
+ 	)
+ )
+@@ -473,12 +472,12 @@ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_mh_es_evi_vtep_add, TRACE_INFO)
+ TRACEPOINT_EVENT(
+ 	frr_bgp,
+ 	evpn_mh_es_evi_vtep_del,
+-	TP_ARGS(esi_t *, esi, vni_t, vni, struct in_addr, vtep,
++	TP_ARGS(esi_t *, esi, vni_t, vni, struct ipaddr *, vtep,
+ 		uint8_t, ead_es),
+ 	TP_FIELDS(
+ 		ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+ 		ctf_integer(vni_t, vni, vni)
+-		ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
++		ctf_array(unsigned char, vtep, vtep, sizeof(struct ipaddr))
+ 		ctf_integer(uint8_t, ead_es, ead_es)
+ 	)
+ )
+@@ -489,12 +488,12 @@ TRACEPOINT_EVENT(
+ 	evpn_mh_local_ead_es_evi_route_upd,
+ 	TP_ARGS(esi_t *, esi, vni_t, vni,
+ 		uint8_t, route_type,
+-		struct in_addr, vtep),
++		struct ipaddr *, vtep),
+ 	TP_FIELDS(
+ 		ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+ 		ctf_integer(vni_t, vni, vni)
+ 		ctf_integer(uint8_t, route_type, route_type)
+-		ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
++		ctf_array(unsigned char, vtep, vtep, sizeof(struct ipaddr))
+ 	)
+ )
+ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_mh_local_ead_es_evi_route_upd, TRACE_INFO)
+@@ -504,12 +503,12 @@ TRACEPOINT_EVENT(
+ 	evpn_mh_local_ead_es_evi_route_del,
+ 	TP_ARGS(esi_t *, esi, vni_t, vni,
+ 		uint8_t, route_type,
+-		struct in_addr, vtep),
++		struct ipaddr *, vtep),
+ 	TP_FIELDS(
+ 		ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+ 		ctf_integer(vni_t, vni, vni)
+ 		ctf_integer(uint8_t, route_type, route_type)
+-		ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
++		ctf_array(unsigned char, vtep, vtep, sizeof(struct ipaddr))
+ 	)
+ )
+ TRACEPOINT_LOGLEVEL(frr_bgp, evpn_mh_local_ead_es_evi_route_del, TRACE_INFO)
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 4674cb31c6..6038122c6e 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3187,8 +3187,8 @@ static int bgp_zebra_process_local_es_add(ZAPI_CALLBACK_ARGS)
+ 			   esi_to_str(&esi, buf, sizeof(buf)), &originator_ip, active, df_pref,
+ 			   bypass ? "bypass" : "");
+ 
+-	frrtrace(5, frr_bgp, evpn_mh_local_es_add_zrecv, &esi, originator_ip,
+-		 active, bypass, df_pref);
++	frrtrace(5, frr_bgp, evpn_mh_local_es_add_zrecv, &esi, &originator_ip, active, bypass,
++		 df_pref);
+ 
+ 	bgp_evpn_local_es_add(bgp, &esi, originator_ip, active, df_pref,
+ 			      !!bypass);
+-- 
+2.35.6
+

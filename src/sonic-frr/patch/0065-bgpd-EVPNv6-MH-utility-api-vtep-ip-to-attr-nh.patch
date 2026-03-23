@@ -1,0 +1,121 @@
+From a4fab1816b4f47574a21a15c16d81d72ea3d3465 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Thu, 18 Dec 2025 17:09:54 -0800
+Subject: [PATCH 27/29] bgpd: EVPNv6 MH utility api vtep ip to attr nh
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ bgpd/bgp_evpn.c    | 18 ++----------------
+ bgpd/bgp_evpn_mh.c | 34 ++++++++++++++++++----------------
+ bgpd/bgp_evpn_mh.h |  2 ++
+ 3 files changed, 22 insertions(+), 32 deletions(-)
+
+diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
+index 6d9800705f..64dda50d7b 100644
+--- a/bgpd/bgp_evpn.c
++++ b/bgpd/bgp_evpn.c
+@@ -2288,14 +2288,7 @@ static int update_evpn_route(struct bgp *bgp, struct bgpevpn *vpn,
+ 
+ 	/* Build path-attribute for this route. */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+-	if (IS_IPADDR_V4(&vpn->originator_ip)) {
+-		attr.nexthop = vpn->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_global_in = vpn->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+-	} else {
+-		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &vpn->originator_ip.ipaddr_v6);
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
+-	}
++	bgp_evpn_vtep_ip_to_attr_nh(&vpn->originator_ip, &attr);
+ 	if (CHECK_FLAG(flags, ZEBRA_MACIP_TYPE_STICKY))
+ 		SET_FLAG(attr.evpn_flags, ATTR_EVPN_FLAG_STICKY);
+ 	if (CHECK_FLAG(flags, ZEBRA_MACIP_TYPE_GW))
+@@ -2595,14 +2588,7 @@ void bgp_evpn_update_type2_route_entry(struct bgp *bgp, struct bgpevpn *vpn,
+ 	 * attributes will be shared in the hash table.
+ 	 */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+-	if (IS_IPADDR_V4(&vpn->originator_ip)) {
+-		attr.nexthop = vpn->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_global_in = vpn->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+-	} else {
+-		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &vpn->originator_ip.ipaddr_v6);
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
+-	}
++	bgp_evpn_vtep_ip_to_attr_nh(&vpn->originator_ip, &attr);
+ 	attr.evpn_flags = local_pi->attr->evpn_flags;
+ 	attr.es_flags = local_pi->attr->es_flags;
+ 	if (CHECK_FLAG(local_pi->attr->evpn_flags, ATTR_EVPN_FLAG_DEFAULT_GW)) {
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index 22e51237e9..485a5203d9 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -90,6 +90,22 @@ bgp_evpn_mh_fill_vtep_ip_from_pi(const struct bgp_path_info *pi,
+ 	}
+ }
+ 
++void bgp_evpn_vtep_ip_to_attr_nh(const struct ipaddr *vtep_ip, struct attr *attr)
++{
++	if (!vtep_ip || !attr)
++		return;
++
++	/* v4 vtep use v4 attr.nexthop, v6 vtep use mp_nexthop_global */
++	if (IS_IPADDR_V4(vtep_ip)) {
++		attr->nexthop = vtep_ip->ipaddr_v4;
++		attr->mp_nexthop_global_in = vtep_ip->ipaddr_v4;
++		attr->mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
++	} else if (IS_IPADDR_V6(vtep_ip)) {
++		IPV6_ADDR_COPY(&attr->mp_nexthop_global, &vtep_ip->ipaddr_v6);
++		attr->mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
++	}
++}
++
+ static void bgp_evpn_local_es_down(struct bgp *bgp,
+ 		struct bgp_evpn_es *es);
+ static void bgp_evpn_local_type1_evi_route_del(struct bgp *bgp,
+@@ -734,14 +750,7 @@ static int bgp_evpn_type4_route_update(struct bgp *bgp,
+ 	/* Build path-attribute for this route. */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+ 	/* v4 vtep use v4 attr.nexthop, v6 vtep use mp_nexthop_global */
+-	if (IS_IPADDR_V4(&es->originator_ip)) {
+-		attr.nexthop = es->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_global_in = es->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+-	} else if (IS_IPADDR_V6(&es->originator_ip)) {
+-		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &es->originator_ip.ipaddr_v6);
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
+-	}
++	bgp_evpn_vtep_ip_to_attr_nh(&es->originator_ip, &attr);
+ 
+ 	/* Set up extended community. */
+ 	bgp_evpn_type4_route_extcomm_build(es, &attr);
+@@ -1051,14 +1060,7 @@ static int bgp_evpn_type1_route_update(struct bgp *bgp, struct bgp_evpn_es *es,
+ 
+ 	/* Build path-attribute for this route. */
+ 	bgp_attr_default_set(&attr, bgp, BGP_ORIGIN_IGP);
+-	if (IS_IPADDR_V4(&es->originator_ip)) {
+-		attr.nexthop = es->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_global_in = es->originator_ip.ipaddr_v4;
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV4;
+-	} else if (IS_IPADDR_V6(&es->originator_ip)) {
+-		IPV6_ADDR_COPY(&attr.mp_nexthop_global, &es->originator_ip.ipaddr_v6);
+-		attr.mp_nexthop_len = BGP_ATTR_NHLEN_IPV6_GLOBAL;
+-	}
++	bgp_evpn_vtep_ip_to_attr_nh(&es->originator_ip, &attr);
+ 
+ 
+ 	if (vpn) {
+diff --git a/bgpd/bgp_evpn_mh.h b/bgpd/bgp_evpn_mh.h
+index 5c45797544..615299d16a 100644
+--- a/bgpd/bgp_evpn_mh.h
++++ b/bgpd/bgp_evpn_mh.h
+@@ -463,4 +463,6 @@ extern void bgp_evpn_mh_config_ead_export_rt(struct bgp *bgp,
+ extern void bgp_evpn_local_es_evi_unistall_local_routes_in_vrfs(struct bgp_evpn_es *es,
+ 								struct bgp_evpn_es_evi *es_evi);
+ 
++void bgp_evpn_vtep_ip_to_attr_nh(const struct ipaddr *vtep_ip, struct attr *attr);
++
+ #endif /* _FRR_BGP_EVPN_MH_H */
+-- 
+2.35.6
+

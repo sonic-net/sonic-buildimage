@@ -1,0 +1,87 @@
+From 6b32df231c8c3e56b7f92e4847c8d26f5373af00 Mon Sep 17 00:00:00 2001
+From: Jared Mauch <jared@puck.nether.net>
+Date: Sat, 29 Nov 2025 13:25:36 -0800
+Subject: [PATCH 22/29] doc: EVPNv6 MH capture v6 support
+
+Signed-off-by: Jared Mauch <jared@puck.nether.net>
+---
+ doc/user/evpn.rst       |  4 ++--
+ tools/frr_babeltrace.py | 12 ++++++------
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/doc/user/evpn.rst b/doc/user/evpn.rst
+index 2c68d091b1..06022a9b7e 100644
+--- a/doc/user/evpn.rst
++++ b/doc/user/evpn.rst
+@@ -162,8 +162,8 @@ The VTEP-IP (100.64.0.1) needs to be reachable by other VTEPs in the EVPN
+ environment in order for VXLAN decapsulation to function. In this example we
+ will advertise our local VTEP-IP using BGP (via the ``network`` statement), but
+ static routes or other routing protocols like IS-IS or OSPF can also be used.
+-The VTEP-IP can be either an IPv4 or IPv6 address for Singlehomed deployments.
+-Only IPv4 is presently supported for Multihomed deployments.
++The VTEP-IP can be either an IPv4 or IPv6 address for both Singlehomed and
++Multihomed deployments.
+ 
+ In order to enable EVPN for a BGP instance, we must use the command
+ ``advertise-all-vni``. In this example we will be using the default VRF to
+diff --git a/tools/frr_babeltrace.py b/tools/frr_babeltrace.py
+index 7ace5d64b6..9992f176f0 100755
+--- a/tools/frr_babeltrace.py
++++ b/tools/frr_babeltrace.py
+@@ -137,7 +137,7 @@ def parse_frr_bgp_evpn_bum_vtep_zsend(event):
+             pfx->prefix.imet_addr.ip.ipaddr_v4.s_addr)
+ 
+     """
+-    field_parsers = {"vtep": print_net_ipv4_addr}
++    field_parsers = {"vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+@@ -158,7 +158,7 @@ def parse_frr_bgp_evpn_mh_local_es_add_zrecv(event):
+     ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+     ctf_integer_network_hex(unsigned int, vtep, vtep.s_addr)
+     """
+-    field_parsers = {"esi": print_esi, "vtep": print_net_ipv4_addr}
++    field_parsers = {"esi": print_esi, "vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+@@ -199,7 +199,7 @@ def parse_frr_bgp_evpn_mh_es_evi_vtep_add(event):
+     ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+     """
+     field_parsers = {"esi": print_esi,
+-                     "vtep": print_net_ipv4_addr}
++                     "vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+@@ -210,7 +210,7 @@ def parse_frr_bgp_evpn_mh_es_evi_vtep_del(event):
+     ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+     """
+     field_parsers = {"esi": print_esi,
+-                     "vtep": print_net_ipv4_addr}
++                     "vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+@@ -221,7 +221,7 @@ def parse_frr_bgp_evpn_mh_local_ead_es_evi_route_upd(event):
+     ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+     """
+     field_parsers = {"esi": print_esi,
+-                     "vtep": print_net_ipv4_addr}
++                     "vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+@@ -232,7 +232,7 @@ def parse_frr_bgp_evpn_mh_local_ead_es_evi_route_del(event):
+     ctf_array(unsigned char, esi, esi, sizeof(esi_t))
+     """
+     field_parsers = {"esi": print_esi,
+-                     "vtep": print_net_ipv4_addr}
++                     "vtep": print_ip_addr}
+ 
+     parse_event(event, field_parsers)
+ 
+-- 
+2.35.6
+

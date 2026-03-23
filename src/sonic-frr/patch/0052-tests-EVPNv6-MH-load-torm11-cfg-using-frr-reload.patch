@@ -1,0 +1,102 @@
+From 8091f2924bc8ea824f02e752a12625e455137fc0 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Tue, 25 Nov 2025 10:06:22 -0800
+Subject: [PATCH 14/29] tests: EVPNv6 MH load torm11 cfg using frr-reload
+
+On torm-11 load the frr.conf using frr-reload script.
+For this pass to topogen a flag to skip loading
+vtysh -f frr.conf file for a given DUT based on the flag.
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ .../test_evpn_mh_v4_v6_num.py                 | 30 +++++++++++++++++++
+ tests/topotests/lib/topotest.py               | 18 ++++++++++-
+ 2 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+index 54e71eee7f..6f6cc283a8 100644
+--- a/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
++++ b/tests/topotests/bgp_evpn_mh_v4_v6_num/test_evpn_mh_v4_v6_num.py
+@@ -539,6 +539,12 @@ def tgen_and_ip_version(request):
+         # Load unified frr.conf from the IP-version specific config directory
+         router.load_frr_config(os.path.join(config_dir, "{}/frr.conf".format(rname)))
+ 
++    # For torm11 we want to exercise config application via frr-reload.py
++    # instead of the default "vtysh -f /etc/frr/frr.conf" path in Router.startRouter.
++    torm11 = router_list.get("torm11")
++    if torm11 is not None:
++        torm11.skip_unified_vtysh = True
++
+     logger.info("Starting all routers...")
+     tgen.start_router()
+ 
+@@ -553,6 +559,30 @@ def tgen_and_ip_version(request):
+             logger.error("Router %s has issues: %s", rname, status)
+             pytest.fail("Router {} failed to start properly: {}".format(rname, status))
+ 
++    # Explicitly exercise frr-reload on torm11 using the unified frr.conf.
++    # Run this inside the torm11 namespace so that vtysh talks to the correct daemons.
++    if torm11 is not None:
++        logger.info("Running frr-reload.py on torm11 unified config")
++        cmd = "/usr/lib/frr/frr-reload.py --reload /etc/frr/frr.conf"
++        # Run inside the torm11 namespace (TopoRouter.net is the underlying node)
++        rc, out, err = torm11.net.cmd_status(cmd, warn=False)
++        if rc:
++            logger.error(
++                "frr-reload failed on torm11 (rc=%s): stdout=%s stderr=%s",
++                rc,
++                out,
++                err,
++            )
++            pytest.fail("frr-reload failed on torm11 (rc={})".format(rc))
++
++        # Sanity check that all expected daemons on torm11 are still healthy
++        status = torm11.check_router_running()
++        if status:
++            logger.error("Router torm11 has issues after frr-reload: %s", status)
++            pytest.fail(
++                "Router torm11 failed health-check after frr-reload: {}".format(status)
++            )
++
+     # Configure hosts
+     hosts = ["hostd11", "hostd12", "hostd21", "hostd22"]
+     config_hosts(tgen, hosts)
+diff --git a/tests/topotests/lib/topotest.py b/tests/topotests/lib/topotest.py
+index 4205112951..f6872d0a60 100644
+--- a/tests/topotests/lib/topotest.py
++++ b/tests/topotests/lib/topotest.py
+@@ -1489,6 +1489,11 @@ class Router(Node):
+         self.hasmpls = False
+         self.routertype = "frr"
+         self.unified_config = False
++        # Control how unified configs are initially rendered. By default we
++        # render /etc/frr/frr.conf via "vtysh -f" after daemons are up.
++        # Individual tests can override this flag (e.g., to drive config via
++        # tools/frr-reload.py instead).
++        self.skip_unified_vtysh = False
+         self.daemons = {
+             "zebra": 0,
+             "ripd": 0,
+@@ -1902,7 +1907,18 @@ class Router(Node):
+                 )
+                 return "Datastores are locked, cannot proceed with config load"
+ 
+-            self.cmd("vtysh -f /etc/frr/frr.conf")
++            # By default, render frr.conf into the running config via vtysh.
++            # Tests that want to drive config via frr-reload.py (or other
++            # mechanisms) can set skip_unified_vtysh = True on the router
++            # instance before calling start_router().
++            if not self.skip_unified_vtysh:
++                self.cmd("vtysh -f /etc/frr/frr.conf")
++            else:
++                logger.info(
++                    "%s: skipping initial 'vtysh -f /etc/frr/frr.conf'; "
++                    "config will be applied externally (e.g., via frr-reload.py)",
++                    self.name,
++                )
+ 
+         return status
+ 
+-- 
+2.35.6
+
