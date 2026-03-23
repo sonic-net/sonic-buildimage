@@ -117,10 +117,16 @@ RUN GO_ARCH=amd64 \
 
 ENV PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
 
-# Build grpcurl from source with patched Go (GO-2026-4337)
-RUN go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.3 \
-    && mv "$(go env GOPATH)/bin/grpcurl" /usr/local/bin/grpcurl \
-    && chmod +x /usr/local/bin/grpcurl
+# Build grpcurl from source with patched Go and patched golang.org/x/net
+# to address GHSA-qxp5-gwg8-xv66.
+RUN GRPCURL_VERSION=v1.9.3 \
+    && X_NET_VERSION=v0.36.0 \
+    && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
+    && cd /tmp/grpcurl \
+    && go get golang.org/x/net@${X_NET_VERSION} \
+    && go build -o /usr/local/bin/grpcurl ./cmd/grpcurl \
+    && chmod +x /usr/local/bin/grpcurl \
+    && rm -rf /tmp/grpcurl
 # Security fixes: upgrade all vulnerable system packages (S360 scan remediation)
 RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
