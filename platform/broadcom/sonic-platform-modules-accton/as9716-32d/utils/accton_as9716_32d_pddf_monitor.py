@@ -24,6 +24,8 @@
 #                 powering off the DUT.
 #              2. Change the decision of FAN direction
 #              3. Enhance test data
+#   12/05/2025: Richard_KUO Add the flag to control the tolerance
+#   01/05/2026: Richard_KUO Use fan speed to check for state change
 # ------------------------------------------------------------------
 
 try:
@@ -42,6 +44,8 @@ except ImportError as e:
 # Deafults
 VERSION = '1.0'
 FUNCTION_NAME = '/usr/local/bin/accton_as9716_32d_pddf_monitor'
+
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 FAN_DUTY_CYCLE_MAX = 100
 STATE_DB = 'STATE_DB'
@@ -259,6 +263,10 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -280,6 +288,23 @@ class device_monitor(object):
         logging.getLogger('').addHandler(sys_handler)
 
         self.transceiver_dom_sensor_table = None
+
+        self.set_fans_tolerance_mode("off")
+        as9716_32d_set_fan_speed(FAN_DUTY_CYCLE_MAX)
+        self.fan_timer_start = time.time()
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def __get_transceiver_temperature(self, iface_name):
         if self.transceiver_dom_sensor_table is None:
@@ -397,6 +422,9 @@ class device_monitor(object):
         thermal_val = []
         max_to_mid = 0
         mid_to_min = 0
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
 
         # After booting, the database might not be ready for
         # connection. So, it should try to connect to the database
@@ -580,6 +608,7 @@ class device_monitor(object):
                     logging.debug("current_state=LEVEL_FAN_MIN")
 
         # Check Fan status
+        fan_fail = 0
         for i in range(FAN_TRAY_NUM * FAN_NUM):
             if not platform_chassis.get_fan(i).get_status() or not platform_chassis.get_fan(i).get_speed_rpm():
                 new_duty_cycle = FAN_DUTY_CYCLE_MAX
@@ -596,21 +625,25 @@ class device_monitor(object):
                         current_state = LEVEL_FAN_MAX
                         logging.debug('fan_%d fail, current_state=LEVEL_FAN_MAX', i+1)
 
+                    self.set_fans_tolerance_mode("off")
                     as9716_32d_set_fan_speed(new_duty_cycle)
+                    self.fan_timer_start = time.time()
 
                     break
-            else:
-                fan_fail = 0
 
-        if current_state != ori_state:
-            fan_policy_state = current_state
-            new_duty_cycle = fan_policy[current_state][0]
+        fan_policy_state = current_state
+        new_duty_cycle = fan_policy[current_state][0]
+        if new_duty_cycle != ori_duty_cycle:
             logging.debug("fan_policy_state=%d, new_duty_cycle=%d", fan_policy_state, new_duty_cycle)
             if new_duty_cycle != ori_duty_cycle and fan_fail == 0:
+                self.set_fans_tolerance_mode("off")
                 as9716_32d_set_fan_speed(new_duty_cycle)
+                self.fan_timer_start = time.time()
                 return True
             if new_duty_cycle == 0 and fan_fail == 0:
+                self.set_fans_tolerance_mode("off")
                 as9716_32d_set_fan_speed(FAN_DUTY_CYCLE_MAX)
+                self.fan_timer_start = time.time()
 
         return True
 
@@ -661,8 +694,6 @@ def main(argv):
     if status:
         print("Warning: Fan speed watchdog timer could not be disabled")
 
-
-    as9716_32d_set_fan_speed(FAN_DUTY_CYCLE_MAX)
     monitor = device_monitor(log_file, log_level)
     cmd_kick = ["i2cset", "-y", "-f", "17", "0x66", "0x31", "0xF0"] #kick WDT
     cmd_check_wdt = ["i2cget",  "-y", "-f", "17", "0x66", "0x33"]
