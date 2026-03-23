@@ -20,6 +20,7 @@
 #    mm/dd/yyyy (A.D.)
 #    05/29/2019: Brandon Chuang, changed for as5835-54x.
 #    08/03/2020: Jostar Yang, change to call PDDF API .
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -37,6 +38,8 @@ VERSION = '1.0'
 FUNCTION_NAME = 'accton_as5835_54x_monitor'
 DUTY_MAX = 100
 
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
+
 platform_chassis = None
 
 test_temp = 0
@@ -52,6 +55,10 @@ class accton_as5835_54x_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -70,6 +77,20 @@ class accton_as5835_54x_monitor(object):
             logging.getLogger('').addHandler(console)
 
         logging.debug('SET. logfile:%s / loglevel:%d', log_file, log_level)
+        self.set_fans_tolerance_mode("on")
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
 
     def manage_fans(self):
         global platform_chassis
@@ -94,6 +115,9 @@ class accton_as5835_54x_monitor(object):
 
         FAN_NUM=2
         FAN_TRAY_NUM=5
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
 
         if test_temp_revert==0:
             temp_test_data=temp_test_data+2000
@@ -168,14 +192,16 @@ class accton_as5835_54x_monitor(object):
                     self._new_perc = FAN_LEV1_SPEED_PERC
                 logging.debug('INFO. SET. FAN_SPEED as %d (new THERMAL temp:%d)', self._new_perc, new_temp)
 
-        cur_perc= platform_chassis.get_fan(0).get_speed()
+        cur_perc= platform_chassis.get_fan(0).get_target_speed()
         #cur_perc = fan.get_fan_duty_cycle()
         if cur_perc == self._new_perc:
             logging.debug('INFO. RETURN. FAN speed not changed. %d / %d (new_perc / ori_perc)', self._new_perc, cur_perc)
             return True
 
         #set_stat = fan.set_fan_duty_cycle(self._new_perc)
+        self.set_fans_tolerance_mode("off")
         set_stat = platform_chassis.get_fan(0).set_speed(self._new_perc)
+        self.fan_timer_start = time.time()
         if set_stat is True:
             logging.debug('INFO: PASS. set_fan_duty_cycle (%d)', self._new_perc)
         else:
