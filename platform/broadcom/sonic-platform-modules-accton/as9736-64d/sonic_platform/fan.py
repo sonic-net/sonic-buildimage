@@ -14,6 +14,9 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 SPEED_TOLERANCE = 30
+HOST_FAN_TOLERANCE_FILE = "/usr/share/sonic/device/{}/tolerance_flag"
+PMON_FAN_TOLERANCE_FILE = "/usr/share/sonic/platform/tolerance_flag"
+
 TARGET_SPEED_PATH = "/tmp/fan_target_speed"
 CPLD_FAN_I2C_PATH = "/sys/bus/i2c/devices/25-0033/fan"
 I2C_PATH ="/sys/bus/i2c/devices/{}-00{}/"
@@ -87,6 +90,11 @@ class Fan(FanBase):
             self.psu_i2c_addr = PSU_CPLD_I2C_MAPPING[self.psu_index]['addr']
             self.psu_cpld_path = I2C_PATH.format(
                 self.psu_i2c_num, self.psu_i2c_addr)
+
+        # tolerance path
+        self.tolerance_flag = PMON_FAN_TOLERANCE_FILE
+        if self.is_host:
+            self.tolerance_flag = HOST_FAN_TOLERANCE_FILE.format(self._api_helper.get_platform())
 
         FanBase.__init__(self)
 
@@ -189,6 +197,31 @@ class Fan(FanBase):
 
         return int(speed)
 
+    def set_tolerance_mode(self, mode):
+        """
+        Set the fan tolerance mode using a flag file.
+        Args:
+            mode:
+                - "off":  tolerance off      - create flag file
+                - "on": tolerance activate   - delete flag file
+        Returns:
+            bool: True if the operation succeeded, False otherwise.
+        """
+        try:
+            if mode == "off":
+                open(self.tolerance_flag, "a").close()
+            elif mode == "on":
+                try:
+                    os.remove(self.tolerance_flag)
+                except FileNotFoundError:
+                    pass  # File already removed, which is the desired state
+            else:
+                return False
+            return True
+
+        except OSError:
+            return False
+
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -196,6 +229,9 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed which is
                  considered tolerable
         """
+        if (not self.is_psu_fan) and (os.path.exists(self.tolerance_flag)):
+            raise NotImplementedError
+
         if os.path.isfile(TARGET_SPEED_PATH):
             target_speed  = self._api_helper.read_txt_file("{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_duty_cycle_percentage'))
             set_speed_val = self._api_helper.read_txt_file(TARGET_SPEED_PATH)
