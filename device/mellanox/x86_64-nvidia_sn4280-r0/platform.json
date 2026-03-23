@@ -647,6 +647,11 @@
             }
         }
     },
+    "mgmt_interfaces": {
+        "eth0": {
+            "pci_bus_info": "0000:0a:00.4"
+        }
+    },
     "DPUS": {
         "dpu0": {
             "midplane_interface": "dpu0",
