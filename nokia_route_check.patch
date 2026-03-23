@@ -1,0 +1,19 @@
+commit f12c7ff55ab06fccfcb7eb8e407100e5ddc2b660
+Author: mlok <marty.lok@nokia.com>
+Date:   Fri Oct 25 14:43:56 2024 -0400
+
+    Increate TIMEOUT for route_check
+
+diff --git a/scripts/route_check.py b/scripts/route_check.py
+index a1abd3c3..5db91c73 100755
+--- a/scripts/route_check.py
++++ b/scripts/route_check.py
+@@ -61,7 +61,7 @@ ASIC_KEY_PREFIX = 'SAI_OBJECT_TYPE_ROUTE_ENTRY:'
+ SUBSCRIBE_WAIT_SECS = 1
+ 
+ # Max of 2 minutes
+-TIMEOUT_SECONDS = 120
++TIMEOUT_SECONDS = 600
+ 
+ UNIT_TESTING = 0
+ 
