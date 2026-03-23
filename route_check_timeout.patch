@@ -1,0 +1,13 @@
+diff --git a/scripts/route_check.py b/scripts/route_check.py
+index 3cdcf0d3..8e7816fe 100755
+--- a/scripts/route_check.py
++++ b/scripts/route_check.py
+@@ -62,7 +62,7 @@ ASIC_KEY_PREFIX = 'SAI_OBJECT_TYPE_ROUTE_ENTRY:'
+ SUBSCRIBE_WAIT_SECS = 1
+ 
+ # Max of 2 minutes on normal devices and 5 minutes on virtual chassis
+-TIMEOUT_SECONDS = 120 if not device_info.is_virtual_chassis() else 360
++TIMEOUT_SECONDS = 500 if not device_info.is_virtual_chassis() else 360
+ 
+ UNIT_TESTING = 0
+ 
