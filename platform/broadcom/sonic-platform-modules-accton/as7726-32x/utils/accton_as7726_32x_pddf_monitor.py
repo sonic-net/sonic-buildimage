@@ -22,6 +22,7 @@
 #    12/03/2018:Jostar modify for as7726_32x thermal plan
 #    11/16/2020:Jostar modify for as7726_32x thermal plan based on PDDF
 #    11/19/2023:Jostar modify to add kick fan-wdt
+#    12/05/2025: Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -40,6 +41,9 @@ except ImportError as e:
 # Deafults
 VERSION = '1.0'
 FUNCTION_NAME = '/usr/local/bin/accton_as7726_32x_pddf_monitor'
+
+DUTY_MAX = 100
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
 
 platform_chassis = None
  
@@ -96,6 +100,11 @@ class device_monitor(object):
         
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+        self.fan_timer_start = time.time()
+
+        global platform_chassis
+        self.fan_list = platform_chassis.get_all_fans()
+
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -115,7 +124,24 @@ class device_monitor(object):
         sys_handler = logging.handlers.SysLogHandler(address = '/dev/log')
         sys_handler.setLevel(logging.WARNING)       
         logging.getLogger('').addHandler(sys_handler)
-          
+
+        self.set_fans_tolerance_mode("off")
+        platform_chassis.get_fan(0).set_speed(38)
+        self.fan_timer_start = time.time()
+
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
+
     def get_state_from_fan_policy(self, temp, policy):
         state=0
         
@@ -162,14 +188,17 @@ class device_monitor(object):
            LEVEL_TEMP_HIGH:     [100, 0xE, 59000, 67000],
            LEVEL_TEMP_CRITICAL: [100, 0xE, 59000, 200000],
         }
-        
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
+
         fan_dir= platform_chassis.get_fan(0).get_direction()
         if fan_dir == 'exhaust':
             fan_policy = fan_policy_f2b
         else:
             fan_policy = fan_policy_b2f
         
-        ori_perc=platform_chassis.get_fan(0).get_speed()
+        ori_perc=platform_chassis.get_fan(0).get_target_speed()
         #ori_perc=fan.get_fan_duty_cycle()
         logging.debug('fan_dir=%s, ori_perc=%d, test_temp=%d', fan_dir, ori_perc, test_temp)
         if test_temp==0:
@@ -203,25 +232,24 @@ class device_monitor(object):
         new_perc = fan_policy[fan_policy_state][0]
         if fan_fail==0:
             logging.debug('new_fan_cycle=%d', new_perc)
-        
-        if fan_fail==0:
             if new_perc!=ori_perc:
+                self.set_fans_tolerance_mode("off")
                 platform_chassis.get_fan(0).set_speed(new_perc)
+                self.fan_timer_start = time.time()
                 logging.info('Set fan speed from %d to %d', ori_perc, new_perc)
         
         #Check Fan status
+        fan_fail=0
         for i in range(FAN_NUM_MAX*FANS_PERTRAY):
             if not platform_chassis.get_fan(i).get_status() or not platform_chassis.get_fan(i).get_speed_rpm():
                 logging.debug('fan-%d status=%d, rpm=%d', i+1, platform_chassis.get_fan(i).get_status(), platform_chassis.get_fan(i).get_speed_rpm())
-                new_perc=100
                 logging.debug('fan_%d fail, set new_perc to 100',i+1)                
                 if test_temp==0:
                     fan_fail=1
-                    platform_chassis.get_fan(0).set_speed(new_perc)
+                    self.set_fans_tolerance_mode("off")
+                    platform_chassis.get_fan(0).set_speed(DUTY_MAX)
+                    self.fan_timer_start = time.time()
                     break
-            else:
-                fan_fail=0
-      
         new_state = fan_policy_state
         
         if ori_state==LEVEL_FAN_DEF:            
@@ -324,9 +352,6 @@ def main(argv):
     if status:
         print("Warning: Fan speed watchdog timer could not be disabled")
 
-    platform_chassis.get_fan(0).set_speed(38)
-  
-    print("set default fan speed to 37.5%")
     monitor = device_monitor(log_file, log_level)
 
     cmd_kick = ["i2cset", "-y", "-f", "54", "0x66", "0x31", "0xF0"] #kick WDT
