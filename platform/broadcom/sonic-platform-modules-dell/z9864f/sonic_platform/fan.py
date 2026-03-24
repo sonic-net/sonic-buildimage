@@ -63,7 +63,7 @@ class Fan(FanBase):
             self.speed_sensor = IpmiSensor(self.PSU_FAN_SENSOR_MAPPING[self.fanindex]["Speed"])
             self.fru = IpmiFru(self.PSU_FRU_MAPPING[self.fanindex])
             self.fan_direction_offset = PSU_FAN_DIRECTION_OFFSET
-            sellf.max_speed = 29500
+            self.max_speed = 29500
 
     def get_name(self):
         """
