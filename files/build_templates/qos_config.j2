@@ -52,17 +52,10 @@
         {%- for system_port_name in SYSTEM_PORT_ALL -%}
             {%- if system_port_name.startswith(hostname + '|' + asicname) -%}
                 {%- set port_name = system_port_name.split('|')[2] -%}
-                {%- if DEVICE_NEIGHBOR is defined and port_name in DEVICE_NEIGHBOR -%}
+                {%- if DEVICE_NEIGHBOR is defined and port_name in DEVICE_NEIGHBOR.keys() -%}
                     {%- if SYSTEM_PORT_ACTIVE.append(system_port_name) %}{%- endif -%}
                 {%- endif -%}
             {%- endif -%}
-        {%- endfor -%}
-    {%- endif -%}
-    {%- if SYSTEM_PORT_ACTIVE|length == 0 -%}
-        {#- Fallback: when local LC cannot be determined or no active ports found
-            (e.g. asic_name case mismatch on CI), all ports are considered active -#}
-        {%- for system_port_name in SYSTEM_PORT_ALL -%}
-            {%- if SYSTEM_PORT_ACTIVE.append(system_port_name) %}{%- endif -%}
         {%- endfor -%}
     {%- endif %}
 {%- endif %}

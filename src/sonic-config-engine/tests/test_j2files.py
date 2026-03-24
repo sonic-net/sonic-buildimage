@@ -580,11 +580,12 @@ class TestJ2Files(TestCase):
             'dut-lc3', 'Asic0',
             active_ports, inactive_local_ports, remote_lcs)
 
-    def test_voq_qos_fallback_all_ports_active_nokia(self):
+    def test_voq_qos_no_active_ports_nokia(self):
         """
-        Test that for Nokia IXR7250E (multi-asic, no asic_name in DEVICE_METADATA):
-        All system ports across all LCs are treated as active (fallback mode)
-        and receive full scheduler config.
+        Test that for Nokia IXR7250E (multi-asic VoQ, asic_name='Asic0' forced by
+        is_multi_asic()=False on CI while system ports use 'asic0' lowercase):
+        SYSTEM_PORT_ACTIVE is empty, so lossless queues (|3/|4) have only wred_profile
+        (no scheduler) and there are no queue|0/1/2/5/6 entries.
         """
         if utils.PYvX_DIR != 'py3':
             return
@@ -611,25 +612,21 @@ class TestJ2Files(TestCase):
 
         queue = output_json.get('QUEUE', {})
 
-        # In fallback mode (no asic_name), ALL ports across ALL LCs should have scheduler.
-        # Verify that no queue|3 or queue|4 entries are missing their scheduler.
+        # With SYSTEM_PORT_ACTIVE empty (asic_name case mismatch: 'Asic0' vs 'asic0'),
+        # lossless queue entries should have only wred_profile, no scheduler.
         for key, entry in queue.items():
             if key.endswith('|3') or key.endswith('|4'):
-                self.assertIn('scheduler', entry,
-                    msg="Nokia fallback: all lossless queue entries should have scheduler: {}".format(key))
+                self.assertNotIn('scheduler', entry,
+                    msg="Nokia: lossless queue entries should NOT have scheduler when no active ports: {}".format(key))
                 self.assertIn('wred_profile', entry,
-                    msg="Nokia fallback: all lossless queue entries should have wred_profile: {}".format(key))
+                    msg="Nokia: lossless queue entries should have wred_profile: {}".format(key))
 
-        # Verify that all ports have queue|0-6 entries (since all are active in fallback)
-        other_queues = ['0', '1', '2', '5', '6']
-        port_bases = set()
+        # Verify that no queue|0-6 entries exist (since SYSTEM_PORT_ACTIVE is empty)
+        other_queues = ['|0', '|1', '|2', '|5', '|6']
         for key in queue:
-            if key.endswith('|3'):
-                port_bases.add(key.rsplit('|', 1)[0])
-        for port_base in port_bases:
             for q in other_queues:
-                self.assertIn('{}|{}'.format(port_base, q), queue,
-                    msg="Nokia fallback: port {} should have queue|{} entry".format(port_base, q))
+                self.assertFalse(key.endswith(q),
+                    msg="Nokia: queue{} entry should not exist when no active ports: {}".format(q, key))
 
     def test_qos_dell9332_render_template(self):
         self._test_qos_render_template('dell', 'x86_64-dellemc_z9332f_d1508-r0', 'DellEMC-Z9332f-O32', 'sample-dell-9332-t1-minigraph.xml', 'qos-dell9332.json')
