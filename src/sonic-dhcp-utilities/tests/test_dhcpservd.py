@@ -7,6 +7,7 @@ import time
 from common_utils import MockProc, mock_get_config_db_table
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import DhcpServdDbMonitor
+from dhcp_utilities.dhcpservd.dhcp_lease import LeaseManager
 from dhcp_utilities.dhcpservd.dhcp_cfggen import DhcpServCfgGenerator
 from dhcp_utilities.dhcpservd.dhcpservd import DhcpServd
 from swsscommon import swsscommon
@@ -111,6 +112,8 @@ def test_update_dhcp_server_ip(mock_swsscommon_dbconnector_init, mock_parse_port
 def test_start(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock_get_render_template):
     with patch.object(DhcpServd, "dump_dhcp4_config") as mock_dump, \
          patch.object(DhcpServd, "_update_dhcp_server_ip") as mock_update_dhcp_server_ip, \
+         patch.object(LeaseManager, "start") as mock_lease_manager_start, \
+         patch.object(LeaseManager, "sync_existing_leases") as mock_sync_existing_leases, \
          patch.object(DhcpServdDbMonitor, "enable_checkers"), \
          patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         dhcp_db_connector = DhcpDbConnector()
@@ -119,6 +122,8 @@ def test_start(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock
         dhcpservd.start()
         mock_dump.assert_called_once_with()
         mock_update_dhcp_server_ip.assert_called_once_with()
+        mock_lease_manager_start.assert_called_once_with()
+        mock_sync_existing_leases.assert_called_once_with()
 
 
 class MockIntf(object):

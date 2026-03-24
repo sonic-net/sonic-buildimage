@@ -84,11 +84,18 @@ class DhcpServd(object):
         sys.exit(1)
 
     def start(self):
+        # Register the SIGUSR1 lease-update signal handler FIRST.
+        # kea-dhcp4 is started by supervisor shortly after dhcpservd,
+        # and sends SIGUSR1 (via lease_update.sh) on every lease change.
+        # If the handler is not registered, the default SIGUSR1 disposition
+        # terminates this process, and with autorestart=false it stays dead.
+        lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
+        lease_manager.start()
+
         self.dump_dhcp4_config()
         self._update_dhcp_server_ip()
         self.dhcp_servd_monitor.enable_checkers(self.enabled_checker)
-        lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
-        lease_manager.start()
+        lease_manager.sync_existing_leases()
 
     def wait(self):
         while True:

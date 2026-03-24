@@ -1,5 +1,5 @@
 from dhcp_utilities.common.utils import DhcpDbConnector
-from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanlder
+from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanlder, LeaseManager
 from freezegun import freeze_time
 from swsscommon import swsscommon
 from unittest.mock import patch, call, MagicMock
@@ -102,3 +102,50 @@ def test_no_implement(mock_swsscommon_dbconnector_init):
             lease_handler.register()
         except NotImplementedError:
             pass
+
+
+def test_sync_existing_leases(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        lease_manager = LeaseManager(db_connector)
+        handler = MagicMock()
+        lease_manager.lease_handlers = [handler]
+
+        lease_manager.sync_existing_leases()
+
+        handler.update_lease.assert_called_once_with()
+
+
+def test_sync_existing_leases_ignore_missing_lease_file(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog:
+        db_connector = DhcpDbConnector()
+        lease_manager = LeaseManager(db_connector)
+        handler = MagicMock()
+        handler.update_lease.side_effect = FileNotFoundError()
+        lease_manager.lease_handlers = [handler]
+
+        lease_manager.sync_existing_leases()
+
+        handler.update_lease.assert_called_once_with()
+        mock_syslog.assert_called_once_with(
+            6,
+            "Lease file not found during startup sync, skipping initial lease replay"
+        )
+
+
+def test_update_lease_ignore_missing_lease_file(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
+         patch.object(KeaDhcp4LeaseHandler, "_read", side_effect=FileNotFoundError), \
+         patch("dhcp_utilities.dhcpservd.dhcp_lease.syslog.syslog") as mock_syslog:
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector)
+
+        kea_lease_handler.update_lease()
+        kea_lease_handler.update_lease()
+
+        assert mock_syslog.call_count == 2
+        mock_syslog.assert_has_calls([
+            call(6, "Lease file not found, skipping lease update"),
+            call(6, "Lease file not found, skipping lease update")
+        ])
