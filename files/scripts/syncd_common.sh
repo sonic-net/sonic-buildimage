@@ -121,8 +121,8 @@ start() {
         debug "Flushing ASIC_DB before syncd start to prevent stale data on restart..."
         $SONIC_DB_CLI ASIC_DB FLUSHDB
         debug "ASIC_DB flushed successfully"
-    else
-        rm -f /host/warmboot$DEV/warm-starting
+
+	rm -f /host/warmboot$DEV/warm-starting
     fi
 
     startplatform
