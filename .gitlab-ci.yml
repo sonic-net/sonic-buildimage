@@ -16,7 +16,12 @@ variables:
   PLUTO_COMMIT_DIR: files/sonic/build/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}
   PLUTO_POSTED_LATEST: files/sonic/build/${PLUTO_PARENT_BRANCH}/latest
   DOCKER_EXTRA_OPTS: '--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
-  LEAN: "false" # set true to stub out most jobs, useful for debugging this file
+  LEAN: "false"      # set true to stub out most jobs, useful for debugging this file
+  # BLD_<product>: set to true to enable build for the product, multiple products can be set to true to build them in the same pipeline, but it will increase the pipeline runtime
+  BLD_BCM: "true"    # set true to build broadcom x86 images
+  BLD_A1: "true"     # set true to build marvell-prestera-arm64 images
+  BLD_M0: "true"     # set true to build marvell-prestera-armhf images
+  BLD_CO: "true"     # set true to build nokia-vs image
 
 .global_script:
   git_config: |
@@ -40,8 +45,9 @@ stages:
   # This is required to avoid conflicting docker image creation between
   # build:broadcom and build:docker-syncd-brcm-rpc
   stage: configure
-  only:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
   tags:
     - ${BUILD_ARCH}
   before_script:
@@ -59,21 +65,32 @@ configure:sonic:x86_64:
   extends: .configure:sonic
   variables:
     BUILD_ARCH: x86_64
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
 
 configure:sonic:armhf:
   extends: .configure:sonic
   variables:
     BUILD_ARCH: armhf
+  rules:
+    - if: $BLD_M0 == "true"
+    - when: never
 
 configure:sonic:aarch64:
   extends: .configure:sonic
   variables:
     BUILD_ARCH: aarch64
+  rules:
+    - if: $BLD_A1 == "true"
+    - if: $BLD_CO == "true"
+    - when: never
 
 .build:sonic:
   stage: build
-  only:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
   tags:
     - ${BUILD_ARCH}
   before_script:
@@ -81,7 +98,7 @@ configure:sonic:aarch64:
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
-    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+    case "$LEAN" in true) echo LEAN ; mkdir -p target ;  for f in ${TARGET_BIN}; do touch target/$f; done ; exit 0 ; esac
      # schedules can set NO_SKIP_BUILD to force a build to happen
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       # skip build and use the latest
@@ -100,6 +117,9 @@ configure:sonic:aarch64:
 
 build:sonic-gbsyncd:x86_64:
   extends: .build:sonic
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - configure:sonic:x86_64
   before_script:
@@ -114,6 +134,9 @@ build:sonic-gbsyncd:x86_64:
 
 build:sonic:x86_64:
   extends: .build:sonic
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - configure:sonic:x86_64
   variables:
@@ -122,6 +145,9 @@ build:sonic:x86_64:
 
 build:sonic:armhf:
   extends: .build:sonic
+  rules:
+    - if: $BLD_M0 == "true"
+    - when: never
   needs:
     - configure:sonic:armhf
   variables:
@@ -130,6 +156,9 @@ build:sonic:armhf:
 
 build:sonic:aarch64:
   extends: .build:sonic
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   needs:
     - configure:sonic:aarch64
   variables:
@@ -138,6 +167,9 @@ build:sonic:aarch64:
 
 build:sonic:aarch64:nokia-vs:
   extends: .build:sonic
+  rules:
+    - if: $BLD_CO == "true"
+    - when: never
   needs:
     - configure:sonic:aarch64
   variables:
@@ -147,6 +179,9 @@ build:sonic:aarch64:nokia-vs:
 
 build:sonic:features:x86_64:
   extends: .build:sonic
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   when: manual
   needs:
     - configure:sonic:x86_64
@@ -159,6 +194,9 @@ build:sonic:features:x86_64:
 
 build:sonic:features:aarch64:
   extends: .build:sonic
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   when: manual
   needs:
     - configure:sonic:aarch64
@@ -171,8 +209,9 @@ build:sonic:features:aarch64:
 
 .build:rpc:
   stage: build
-  only:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
   tags:
     - ${BUILD_ARCH}
   before_script:
@@ -196,6 +235,9 @@ build:sonic:features:aarch64:
 
 build:brcm-rpc:
   extends: .build:rpc
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - configure:sonic:x86_64
   variables:
@@ -205,6 +247,9 @@ build:brcm-rpc:
 
 build:brcm-dnx-rpc:
   extends: .build:rpc
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - configure:sonic:x86_64
   variables:
@@ -214,6 +259,9 @@ build:brcm-dnx-rpc:
 
 build:mrvl-rpc:
   extends: .build:rpc
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   needs:
     - configure:sonic:aarch64
   variables:
@@ -223,8 +271,11 @@ build:mrvl-rpc:
 
 express:chassis7:
   stage: test
-  only:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: $BLD_BCM == "true"
+    - when: never
   tags:
     - regress_chassis7
   needs:
@@ -250,6 +301,9 @@ express:chassis7:
 
 .regress:
   stage: test
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
   before_script:
     - !reference [.global_script, git_config]
   script: |
@@ -282,9 +336,8 @@ regress:t2:chassis8:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS8
+  rules:
+    - if: $REGRESS_T2_CHASSIS8
 
 regress:t2:chassis9:
   extends: .regress
@@ -296,9 +349,8 @@ regress:t2:chassis9:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 100
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS9
+  rules:
+    - if: $REGRESS_T2_CHASSIS9
 
 regress:t2:chassis10:
   extends: .regress
@@ -310,9 +362,8 @@ regress:t2:chassis10:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 200
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS10
+  rules:
+    - if: $REGRESS_T2_CHASSIS10
 
 regress:t2:chassis11:
   extends: .regress
@@ -324,9 +375,8 @@ regress:t2:chassis11:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS11
+  rules:
+    - if: $REGRESS_T2_CHASSIS11
 
 regress:t2:chassis12:
   extends: .regress
@@ -338,9 +388,8 @@ regress:t2:chassis12:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS12
+  rules:
+    - if: $REGRESS_T2_CHASSIS12
 
 regress:t2:chassis19:
   extends: .regress
@@ -352,9 +401,21 @@ regress:t2:chassis19:
     RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS19
+  rules:
+    - if: $REGRESS_T2_CHASSIS19
+
+regress:t2:chassis20:
+  extends: .regress
+  tags:
+    - regress_tb39
+  needs:
+    - build:sonic:x86_64
+  variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  rules:
+    - if: $REGRESS_T2_CHASSIS20
 
 regress:tb3:
   extends: .regress
@@ -367,9 +428,8 @@ regress:tb3:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB3
+  rules:
+    - if: $REGRESS_TB3
 
 regress:tb7:
   extends: .regress
@@ -382,9 +442,8 @@ regress:tb7:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB7
+  rules:
+    - if: $REGRESS_TB7
 
 regress:tb13:
   extends: .regress
@@ -397,9 +456,8 @@ regress:tb13:
     RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB13
+  rules:
+    - if: $REGRESS_TB13
 
 regress:tb20:
   extends: .regress
@@ -412,9 +470,8 @@ regress:tb20:
     RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB20
+  rules:
+    - if: $REGRESS_TB20
 
 regress:tb21:
   extends: .regress
@@ -427,9 +484,8 @@ regress:tb21:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB21
+  rules:
+    - if: $REGRESS_TB21
 
 regress:tb23:
   extends: .regress
@@ -442,9 +498,8 @@ regress:tb23:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB23
+  rules:
+    - if: $REGRESS_TB23
 
 regress:tb24:
   extends: .regress
@@ -457,9 +512,8 @@ regress:tb24:
     RUN_IMAGE: target/sonic-broadcom.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB24
+  rules:
+    - if: $REGRESS_TB24
 
 regress:tb25:
   extends: .regress
@@ -472,9 +526,8 @@ regress:tb25:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB25
+  rules:
+    - if: $REGRESS_TB25
 
 regress:tb26:
   extends: .regress
@@ -487,9 +540,8 @@ regress:tb26:
     RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB26
+  rules:
+    - if: $REGRESS_TB26
 
 regress:tb28:
   extends: .regress
@@ -502,9 +554,8 @@ regress:tb28:
     RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB28
+  rules:
+    - if: $REGRESS_TB28
 
 regress:tb44:
   extends: .regress
@@ -517,9 +568,8 @@ regress:tb44:
     RUN_IMAGE: target/sonic-broadcom.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB44
+  rules:
+    - if: $REGRESS_TB44
 
 regress:tb45:
   extends: .regress
@@ -532,35 +582,20 @@ regress:tb45:
     RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
-  only:
-    variables:
-      - $REGRESS_TB45
-
-regress:t2:chassis20:
-  extends: .regress
-  tags:
-    - regress_tb39
-  needs:
-    - build:sonic:x86_64
-  variables:
-    RUN_IMAGE: target/sonic-broadcom-dnx.bin
-    DELAY_START: 300
-    EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS20
+  rules:
+    - if: $REGRESS_TB45
 
 .post:
   stage: post
-  only:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
   tags:
     - post
   before_script:
     - !reference [.global_script, git_config]
   script: |
     . .ci-env
-    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       exit 0
     fi
@@ -578,50 +613,80 @@ regress:t2:chassis20:
 
 post:brcm-rpc:
   extends: .post
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - build:brcm-rpc
 
 post:brcm-dnx-rpc:
   extends: .post
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - build:brcm-dnx-rpc
 
 post:mrvl-rpc:
   extends: .post
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   needs:
     - build:mrvl-rpc
 
 post:sonic-gbsyncd:x86_64:
   extends: .post
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - build:sonic-gbsyncd:x86_64
 
 post:sonic:x86_64:
   extends: .post
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - build:sonic:x86_64
 
 post:sonic:armhf:
   extends: .post
+  rules:
+    - if: $BLD_M0 == "true"
+    - when: never
   needs:
     - build:sonic:armhf
 
 post:sonic:aarch64:
   extends: .post
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   needs:
     - build:sonic:aarch64
 
 post:sonic:aarch64:nokia-vs:
   extends: .post
+  rules:
+    - if: $BLD_CO == "true"
+    - when: never
   needs:
     - build:sonic:aarch64:nokia-vs
 
 post:sonic:features:x86_64:
   extends: .post
+  rules:
+    - if: $BLD_BCM == "true"
+    - when: never
   needs:
     - build:sonic:features:x86_64
 
 post:sonic:features:aarch64:
   extends: .post
+  rules:
+    - if: $BLD_A1 == "true"
+    - when: never
   needs:
     - build:sonic:features:aarch64
