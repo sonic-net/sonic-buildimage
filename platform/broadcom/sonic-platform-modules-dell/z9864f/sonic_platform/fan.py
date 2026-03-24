@@ -41,7 +41,6 @@ class Fan(FanBase):
     def __init__(self, fantray_index=1, fan_index=1, psu_fan=False,
                  dependency=None):
         self.is_psu_fan = psu_fan
-        self.max_speed = 14600
         if not self.is_psu_fan:
             # API index is starting from 0, DELL platform index is
             # starting from 1
@@ -55,6 +54,7 @@ class Fan(FanBase):
                                            is_discrete=True)
             self.speed_sensor = IpmiSensor(self.FAN_SENSOR_MAPPING[self.index]["Speed"])
             self.fru = IpmiFru(self.FAN_FRU_MAPPING[self.fantrayindex])
+            self.max_speed = 14600
         else:
             self.dependency = dependency
             self.fanindex = fan_index
@@ -63,6 +63,7 @@ class Fan(FanBase):
             self.speed_sensor = IpmiSensor(self.PSU_FAN_SENSOR_MAPPING[self.fanindex]["Speed"])
             self.fru = IpmiFru(self.PSU_FRU_MAPPING[self.fanindex])
             self.fan_direction_offset = PSU_FAN_DIRECTION_OFFSET
+            sellf.max_speed = 29500
 
     def get_name(self):
         """
