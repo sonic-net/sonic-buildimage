@@ -564,8 +564,8 @@ class TestSmartSwitch:
             ("dpu0-1", 'Unsatisfied pattern'),
             ("xyz", 'Unsatisfied pattern')]
         )
-    def test_dpus_name_underscore(self, yang_model, dpu_name, error_message):
-        """Test that DPUS dpu_name pattern allows underscores"""
+    def test_dpus_name_pattern(self, yang_model, dpu_name, error_message):
+        """Test that DPUS dpu_name pattern does not allow underscores or other invalid formats"""
         data = {
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DPUS": {
