@@ -23,6 +23,7 @@ import subprocess
 import sys
 from sonic_py_common import device_info
 import pddfparse
+from pddf_logging import configure_logging
 
 PLATFORM_ROOT_PATH = '/usr/share/sonic/device'
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
@@ -33,6 +34,7 @@ PROJECT_NAME = 'PDDF'
 version = '1.1'
 verbose = False
 DEBUG = False
+logger = logging.getLogger(__name__)
 args = []
 ALL_DEVICE = {}               
 FORCE = 0
@@ -59,7 +61,9 @@ def main():
     global args
     global FORCE
     global kos
-        
+
+    configure_logging()
+
     if len(sys.argv)<2:
         show_help()
          
@@ -87,14 +91,18 @@ def main():
             show_help()
         elif opt in ('-d', '--debug'):            
             DEBUG = True
-            logging.basicConfig(level=logging.INFO)
+            logging.getLogger().setLevel(logging.DEBUG)
         elif opt in ('-f', '--force'): 
             FORCE = 1
         else:
             logging.info('no option')                          
     for arg in args:            
         if arg == 'install':
-            do_install()
+            try:
+                do_install()
+            except Exception:
+                logger.exception("Driver initialization failed")
+                sys.exit(1)
         elif arg == 'clean':
            do_uninstall()
         elif arg == 'switch-pddf':
@@ -118,8 +126,8 @@ def my_log(txt):
 def log_os_system(cmd, show):
     logging.info('Run :'+cmd)  
     status, output = subprocess.getstatusoutput(cmd)
-    my_log (cmd +"with result:" + str(status))
-    my_log ("      output:"+output)    
+    logging.debug("%s with result: %s", cmd, status)
+    logging.debug("      output: "+ output)
     if status:
         logging.info('Failed :'+cmd)
         if show:
@@ -169,22 +177,22 @@ def config_pddf_utils():
             log_os_system('sync', 1)
             shutil.copy(SONIC_PLATFORM_PDDF_WHL_PKG, SONIC_PLATFORM_BSP_WHL_PKG)
             log_os_system('sync', 1)
-            print("Attemting to install the PDDF sonic_platform wheel package ...")
+            logger.info("Attempting to install the PDDF sonic_platform wheel package")
             if os.path.getsize(SONIC_PLATFORM_BSP_WHL_PKG) != 0:
                 status, output = log_os_system("pip3 install "+ SONIC_PLATFORM_BSP_WHL_PKG, 1)
                 if status:
-                    print("Error: Failed to install {}".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                    logger.error("Failed to install %s", SONIC_PLATFORM_BSP_WHL_PKG)
                     return status
                 else:
-                    print("Successfully installed {} package".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                    logger.info("Successfully installed %s package", SONIC_PLATFORM_BSP_WHL_PKG)
             else:
-                print("Error: Failed to copy {} properly. Exiting ...".format(SONIC_PLATFORM_PDDF_WHL_PKG))
+                logger.error("Failed to copy %s properly. Exiting", SONIC_PLATFORM_PDDF_WHL_PKG)
                 return -1
         else:
             # PDDF with platform APIs 1.5 must be supported
             device_plugin_path = "/".join([device_path, "plugins"])
             backup_path = "/".join([device_plugin_path, "orig"])
-            print("Loading PDDF generic plugins (1.0)")
+            logger.info("Loading PDDF generic plugins (1.0)")
             if os.path.exists(backup_path) is False:
                 os.mkdir(backup_path)
                 log_os_system("mv "+device_plugin_path+"/*.*"+" "+backup_path, 0)
@@ -207,25 +215,25 @@ def config_pddf_utils():
                 # uninstall the existing bsp whl pkg
                 status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null", 1)
                 if status:
-                    print("Error: Unable to uninstall BSP sonic-platform whl package")
+                    logger.error("Error: Unable to uninstall BSP sonic-platform whl package")
                     return status
-                print("Attempting to install the PDDF sonic_platform wheel package ...")
+                logger.info("Attempting to install the PDDF sonic_platform wheel package")
                 if os.path.getsize(SONIC_PLATFORM_BSP_WHL_PKG) != 0:
                     status, output = log_os_system("pip3 install "+ SONIC_PLATFORM_BSP_WHL_PKG, 1)
                     if status:
-                        print("Error: Failed to install {}".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                        logger.error("Error: Failed to install %s", SONIC_PLATFORM_BSP_WHL_PKG)
                         return status
                     else:
-                        print("Successfully installed {} package".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                        logger.info("Successfully installed %s package", SONIC_PLATFORM_BSP_WHL_PKG)
                 else:
-                    print("Error: Failed to copy {} properly. Exiting ...".format(SONIC_PLATFORM_PDDF_WHL_PKG))
+                    logger.error("Error: Failed to copy %s properly. Exiting", SONIC_PLATFORM_PDDF_WHL_PKG)
                     return -1
             else:
                 # system rebooted in pddf mode 
-                print("System rebooted in PDDF mode, hence keeping the PDDF 2.0 classes")
+                logger.info("System rebooted in PDDF mode, hence keeping the PDDF 2.0 classes")
         else:
             # pddf whl package doesnt exist
-            print("Error: PDDF 2.0 classes doesnt exist. PDDF mode can not be enabled")
+            logger.error("Error: PDDF 2.0 classes don't exist. PDDF mode can not be enabled")
             sys.exit(1)
 
     # ##########################################################################
@@ -268,7 +276,7 @@ def cleanup_pddf_utils():
             log_os_system("mv "+backup_path+"/*"+" "+device_plugin_path, 1)
             os.rmdir(backup_path)
         else:
-            print("\nERR: Unable to locate original device files...\n")
+            logger.error("\nERR: Unable to locate original device files....\n")
 
     else:
         # PDDF 2.0 apis are supported and PDDF whl package is installed
@@ -278,15 +286,15 @@ def cleanup_pddf_utils():
                 log_os_system('mv '+SONIC_PLATFORM_BSP_WHL_PKG_BK+' '+SONIC_PLATFORM_BSP_WHL_PKG, 1)
                 status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null", 1)
                 if status:
-                    print("Error: Unable to uninstall PDDF sonic-platform whl package")
+                    logger.error("Error: Unable to uninstall PDDF sonic-platform whl package")
                     return status
-                print("Attemting to install the BSP sonic_platform wheel package ...")
+                logger.info("Attempting to install the BSP sonic_platform wheel package")
                 status, output = log_os_system("pip3 install "+ SONIC_PLATFORM_BSP_WHL_PKG, 1)
                 if status:
-                    print("Error: Failed to install {}".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                    logger.error("Failed to install %s", SONIC_PLATFORM_BSP_WHL_PKG)
                     return status
                 else:
-                    print("Successfully installed {} package".format(SONIC_PLATFORM_BSP_WHL_PKG))
+                    logger.info("Successfully installed %s package", SONIC_PLATFORM_BSP_WHL_PKG)
             else:
                 # platform doesnt support 2.0 APIs but PDDF is 2.0 based
                 # remove and uninstall the PDDF whl package
@@ -294,11 +302,11 @@ def cleanup_pddf_utils():
                     os.remove(SONIC_PLATFORM_BSP_WHL_PKG)
                 status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null", 1)
                 if status:
-                    print("Error: Unable to uninstall PDDF sonic-platform whl package")
+                    logger.error("Error: Unable to uninstall PDDF sonic-platform whl package")
                     return status
         else:
             # something seriously wrong. System is in PDDF mode but pddf whl pkg is not present
-            print("Error: Fatal error as the system is in PDDF mode but the pddf .whl original is not present")
+            logger.error("Error: Fatal error as the system is in PDDF mode but the pddf .whl original is not present")
     # ################################################################################################################
 
     if os.path.exists(device_path+"/fancontrol"):
@@ -332,12 +340,14 @@ def create_pddf_log_files():
 
 def driver_install():
     global FORCE
+    logger.info("PDDF driver_install: starting")
 
     # check for pre_driver_install script
     if os.path.exists('/usr/local/bin/pddf_pre_driver_install.sh'):
+        logger.info("PDDF driver_install: running pre_driver_install script")
         status, output = log_os_system('/usr/local/bin/pddf_pre_driver_install.sh', 1)
         if status:
-            print("Error: pddf_pre_driver_install script failed with error %d"%status)
+            logger.error("Error: PDDF driver_install: pre_driver_install script failed (rc=%d)", status)
             return status
         # For debug
         print(output)
@@ -347,46 +357,51 @@ def driver_install():
         cmd = "modprobe -rq " + mod
         status, output = log_os_system(cmd, 1)
         if status:
-            print("driver_install: Unable to unload {}".format(mod))
+            logger.warning("PDDF driver_install: unable to unload module %s", mod)
             # Don't exit but continue
 
     log_os_system("depmod", 1)
 
     # Load "normal" kos first
+    logger.info("PDDF driver_install: loading %d standard kernel modules", len(perm_kos + std_kos))
     for mod in perm_kos + std_kos:
         status, output = log_os_system("modprobe " + mod, 1)
         if status:
-            print("driver_install() failed with error %d"%status)
+            logger.error("PDDF driver_install: failed to load module %s (rc=%d)", mod, status)
             if FORCE == 0:
                 return status
 
     # Load "custom" kos now.  On failure, retry with force flag.  Force flag is not
     # allowed to be used on signed modules so do not try that first.
+    if custom_kos:
+        logger.info("PDDF driver_install: loading %d custom kernel modules", len(custom_kos))
     for mod in custom_kos:
         status, output = log_os_system("modprobe " + mod, 1)
         if not status:
             continue
 
-        print("driver_install() failed with error %d retrying with force"%status)
+        logger.warning("PDDF driver_install: module %s failed, retrying with force", mod)
         status, output = log_os_system("modprobe -f " + mod, 1)
         if status:
-            print("driver_install(force) failed with error %d"%status)
+            logger.error("PDDF driver_install: module %s force load also failed (rc=%d)", mod, status)
             if FORCE == 0:
                 return status
 
+    logger.info("PDDF driver_install: configuring PDDF utilities")
     output = config_pddf_utils()
     if output:
-        print("config_pddf_utils() failed with error %d"%output)
+        logger.error("PDDF driver_install: config_pddf_utils failed (rc=%d)", output)
     # check for post_driver_install script
     if os.path.exists('/usr/local/bin/pddf_post_driver_install.sh'):
+        logger.info("PDDF driver_install: running post_driver_install script")
         status, output = log_os_system('/usr/local/bin/pddf_post_driver_install.sh', 1)
         if status:
-            print("Error: pddf_post_driver_install script failed with error %d"%status)
+            logger.error("PDDF driver_install: post_driver_install script failed (rc=%d)", status)
             return status
         # Useful for debugging
         print(output)
 
-
+    logger.info("PDDF driver_install: completed successfully")
     return 0
     
 def driver_uninstall():
@@ -394,7 +409,7 @@ def driver_uninstall():
 
     status = cleanup_pddf_utils()
     if status:
-        print("cleanup_pddf_utils() failed with error %d"%status)
+        logger.error("cleanup_pddf_utils failed (rc=%d)", status)
 
     for mod in std_kos + custom_kos:
         # do not remove i2c-i801 modules
@@ -403,37 +418,42 @@ def driver_uninstall():
 
         status, output = log_os_system("modprobe -rq " + mod, 1)
         if status:
-            print("driver_uninstall() failed with error %d"%status)
+            logger.error("module unload failed (rc=%d)", status)
             if FORCE == 0:        
                 return status              
     return 0
 
 def device_install():
     global FORCE
+    logger.info("PDDF device_install: starting device creation")
 
     # check for pre_device_creation script
     if os.path.exists('/usr/local/bin/pddf_pre_device_create.sh'):
+        logger.info("PDDF device_install: running pre_device_create script")
         status, output = log_os_system('/usr/local/bin/pddf_pre_device_create.sh', 1)
         if status:
-            print("Error: pddf_pre_device_create script failed with error %d"%status)
+            logger.error("PDDF device_install: pre_device_create script failed (rc=%d)", status)
             return status
 
     # trigger the pddf_obj script for FAN, PSU, CPLD, MUX, etc
+    logger.info("PDDF device_install: creating PDDF devices (FAN, PSU, CPLD, MUX, etc.)")
     status = pddf_obj.create_pddf_devices()
     if status:
-        print("Error: create_pddf_devices() failed with error %d"%status)
+        logger.error("PDDF device_install: create_pddf_devices failed (rc=%d)", status)
         if FORCE == 0:
             return status
 
     # check for post_device_create script
     if os.path.exists('/usr/local/bin/pddf_post_device_create.sh'):
+        logger.info("PDDF device_install: running post_device_create script")
         status, output = log_os_system('/usr/local/bin/pddf_post_device_create.sh', 1)
         if status:
-            print("Error: pddf_post_device_create script failed with error %d"%status)
+            logger.error("PDDF device_install: post_device_create script failed (rc=%d)", status)
             return status
         # Useful for debugging
         print(output)
 
+    logger.info("PDDF device_install: device creation completed successfully")
     return
 
 def device_uninstall():
@@ -441,42 +461,54 @@ def device_uninstall():
     # Trigger the paloparse script for deletion of FAN, PSU, OPTICS, CPLD clients
     status = pddf_obj.delete_pddf_devices()
     if status:
-        print("Error: delete_pddf_devices() failed with error %d"%status)
+        logger.error("delete_pddf_devices failed (rc=%d)", status)
         if FORCE == 0:
             return status
     return 
         
 def do_install():
+    logger.info("PDDF install: starting system check")
     print("Checking system....")
     if not os.path.exists('/usr/share/sonic/platform/pddf_support'):
+        logger.warning("PDDF install: pddf_support file not found, PDDF mode is not enabled")
         print(PROJECT_NAME.upper() +" mode is not enabled")
         return
 
     if driver_check()== False :
         print(PROJECT_NAME.upper() +" has no PDDF driver installed....")
         create_pddf_log_files()
+        logger.info("PDDF install: installing drivers")
         print("Installing ...")
         status = driver_install()
         if status:
+            logger.error("PDDF install: driver installation failed (rc=%d)", status)
             return  status
+        logger.info("PDDF install: driver installation completed successfully")
     else:
+        logger.info("PDDF install: drivers already loaded, skipping driver install")
         print(PROJECT_NAME.upper() +" drivers detected....")
 
+    logger.info("PDDF install: creating devices")
     print("Creating devices ...")
     status = device_install()
     if status:
+        logger.error("PDDF install: device creation failed (rc=%d)", status)
         return status
 
     # Check if S3IP support is enabled, if yes, start the service in no block mode
     if 'enable_s3ip' in pddf_obj.data['PLATFORM'].keys() and pddf_obj.data['PLATFORM']['enable_s3ip'] == 'yes':
+        logger.info("PDDF install: enabling S3IP service")
         log_os_system('systemctl enable pddf-s3ip-init.service', 1)
         log_os_system('systemctl start --no-block pddf-s3ip-init.service', 1)
 
+    logger.info("PDDF install: completed successfully")
     return
     
 def do_uninstall():
+    logger.info("PDDF uninstall: starting")
     print("Checking system....")
     if not os.path.exists('/usr/share/sonic/platform/pddf_support'):
+        logger.warning("PDDF uninstall: pddf_support file not found, PDDF mode is not enabled")
         print(PROJECT_NAME.upper() +" mode is not enabled")
         return
 
@@ -485,20 +517,25 @@ def do_uninstall():
         print("Remove pddf log files.....")
         log_os_system("sudo rm -rf /var/log/pddf", 1)
 
+    logger.info("PDDF uninstall: removing devices")
     print("Remove all the devices...")
     status = device_uninstall()
     if status:
+        logger.error("PDDF uninstall: device removal failed (rc=%d)", status)
         return status
 
 
     if driver_check()== False :
         print(PROJECT_NAME.upper() +" has no PDDF driver installed....")
     else:
+        logger.info("PDDF uninstall: removing drivers")
         print("Removing installed driver....")
         status = driver_uninstall()
         if status:
+            logger.error("PDDF uninstall: driver removal failed (rc=%d)", status)
             if FORCE == 0:        
                 return  status                          
+    logger.info("PDDF uninstall: completed")
     return       
 
 def do_switch_pddf():
