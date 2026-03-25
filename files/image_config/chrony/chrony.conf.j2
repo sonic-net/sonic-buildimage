@@ -103,10 +103,8 @@ vrf (default is not to listen on anything) -#}
     {%- endif %}
 {% endif %}
 
-{% if ns.source_intf_ip == 'true' -%}
+{% if not ((NTP) and NTP['global']['vrf'] == 'mgmt') and ns.source_intf_ip == 'true' -%}
 bindacqdevice {{ns.source_intf}}
-{% elif (NTP) and NTP['global']['vrf'] == 'mgmt' -%}
-bindacqdevice eth0
 {% endif %}
 
 # Use time sources from DHCP.

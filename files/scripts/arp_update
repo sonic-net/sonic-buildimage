@@ -11,7 +11,7 @@ ARP_UPDATE_VARS_FILE="/usr/share/sonic/templates/arp_update_vars.j2"
 
 # Overload `logger` command to include arp_update tag
 logger () {
-    command logger -i "$$" -t "arp_update" "$@"
+    command logger -t "arp_update" "$@"
 }
 
 # Function to run a command with retries on failure
@@ -97,9 +97,6 @@ while /bin/true; do
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")
                   if [[ -n "$intf_up" ]]; then
-                      if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
-                          logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
-                      fi
                       run_with_retry_cmd "static route ping to $nexthop on $interface" \
                           timeout 0.2 $ping_prefix -I "$interface" -n -q -i 0 -c 1 -W 1 "$nexthop" >/dev/null 2>&1
                   fi
