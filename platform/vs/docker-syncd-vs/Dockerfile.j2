@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -17,7 +17,7 @@ RUN apt-get install -f -y iproute2 libcap2-bin
 COPY debs/libnl-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/libnl-route-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/
 RUN dpkg -i debs/libnl-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb debs/libnl-route-3-dev_{{ LIBNL3_VERSION_SONIC }}_{{ CONFIGURED_ARCH }}.deb
 
-RUN apt-get install -f -y libabsl20220623 libc-ares2 python3-six libnanomsg5 libpcap0.8 libthrift-0.17.0 libgmp-dev libnanomsg-dev libpcap-dev libtool pkg-config libthrift-dev python3-thrift thrift-compiler libgc1 cpp libboost1.83-all-dev libfl-dev libgc-dev libgmp-dev libbpf-dev tcpdump libelf-dev llvm clang python3-pyroute2 python3-ply python3-scapy python3-setuptools python3-thrift libthrift-0.17.0 libgrpc++1.51 libgrpc29 libprotobuf32 libprotoc-dev protobuf-compiler python3-protobuf libgrpc++-dev libgrpc-dev protobuf-compiler-grpc python3-grpcio 
+RUN apt-get install -f -y libc-ares2 python3-six libnanomsg5 libpcap0.8 libgmp-dev libnanomsg-dev libpcap-dev libtool pkg-config libthrift-dev python3-thrift thrift-compiler libgc1 cpp libfl-dev libgc-dev libgmp-dev libbpf-dev tcpdump libelf-dev llvm clang python3-pyroute2 python3-ply python3-scapy python3-setuptools python3-thrift libgrpc++1.51 libgrpc29 libprotobuf32 libprotoc-dev protobuf-compiler python3-protobuf libgrpc++-dev libgrpc-dev protobuf-compiler-grpc python3-grpcio 
 
 {% if docker_syncd_vs_debs.strip() -%}
 # Copy built Debian packages
