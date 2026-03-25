@@ -338,6 +338,7 @@ if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
 for kernel_release in $(ls $FILESYSTEM_ROOT/lib/modules/); do
 	sudo LANG=C chroot $FILESYSTEM_ROOT /etc/kernel/postinst.d/kdump-tools $kernel_release > /dev/null 2>&1
 	sudo LANG=C chroot $FILESYSTEM_ROOT kdump-config symlinks $kernel_release
+	sudo LANG=C chroot $FILESYSTEM_ROOT cp /etc/kdump/sysctl.conf /var/lib/kdump/latest_sysctls-$kernel_release
 done
 fi
 
