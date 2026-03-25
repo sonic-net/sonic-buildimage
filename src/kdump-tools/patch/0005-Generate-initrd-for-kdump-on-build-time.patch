@@ -1,8 +1,25 @@
-From fb8a5829fba4b89cff85f43eb70e13161f427194 Mon Sep 17 00:00:00 2001
+From b625c34307f243c8ea0b61a84916574b268148a6 Mon Sep 17 00:00:00 2001
 From: Boyang Yu <byu@arista.com>
 Date: Wed, 11 Mar 2026 22:43:17 +0000
 Subject: [PATCH] Generate initrd for kdump on build time
 
+Before the change, kdump-tools generates initrd in the first time
+of booting, which affects the down time of warm upgrade. It takes
+23 seconds in the example below:
+systemctl status kdump-tools
+Mar 10 21:52:32 sonic kdump-tools[922]: kdump-tools: Generating
+/var/lib/kdump/initrd.img-6.12.41+deb13-sonic-amd64
+Mar 10 21:52:55 sonic kdump-tools[906]: Creating symlink
+/var/lib/kdump/initrd.img.
+
+MODULES=dep was the main cause for generating the initrd in
+booting, but MODULES=dep is not used by SONiC.
+
+Make changes for generating initrd at build time
+ - Remove the existing code for "Executing in a chroot, skipping
+   initramfs generation"
+ - Copy latest_sysctls-$kernel_release to the image; it is used to
+   determine if initrd needs to be re-generated at booting
 ---
  debian/kernel-postinst-generate-initrd | 7 -------
  1 file changed, 7 deletions(-)
@@ -26,5 +43,5 @@ index 809edb7..182cdc6 100755
  if [ -n "${DEB_MAINT_PARAMS-}" ]; then
  	eval set -- "$DEB_MAINT_PARAMS"
 -- 
-2.47.0
+2.51.0
 
