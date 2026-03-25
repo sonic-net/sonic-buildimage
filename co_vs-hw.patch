@@ -1,0 +1,14 @@
+diff --git a/syncd/scripts/syncd_init_common.sh b/syncd/scripts/syncd_init_common.sh
+index 5c6941c2..4e9d4b3b 100644
+--- a/syncd/scripts/syncd_init_common.sh
++++ b/syncd/scripts/syncd_init_common.sh
+@@ -601,6 +601,8 @@ config_syncd()
+         config_syncd_nephos
+     elif [ "$SONIC_ASIC_TYPE" == "vs" ]; then
+         config_syncd_vs
++    elif [ "$SONIC_ASIC_TYPE" == "vs-hw" ]; then
++        config_syncd_vs
+     elif [ "$SONIC_ASIC_TYPE" == "vpp" ]; then
+         config_syncd_vpp
+     elif [ "$SONIC_ASIC_TYPE" == "marvell-teralynx" ]; then
+
