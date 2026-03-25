@@ -136,14 +136,14 @@ build:sonic:aarch64:
     BUILD_ARCH: aarch64
     TARGET_BIN: sonic-marvell-prestera-arm64.bin
 
-build:sonic:aarch64:vs-hw:
+build:sonic:aarch64:nokia-vs:
   extends: .build:sonic
   needs:
     - configure:sonic:aarch64
   variables:
     BUILD_ARCH: aarch64
-    TARGET_BIN: sonic-vs-hw-arm64.bin
-    BUILD_SH_OPTIONS: " --platform vs-hw"
+    TARGET_BIN: sonic-nokia-vs-arm64.bin
+    BUILD_SH_OPTIONS: " --platform nokia-vs"
 
 build:sonic:features:x86_64:
   extends: .build:sonic
@@ -611,10 +611,10 @@ post:sonic:aarch64:
   needs:
     - build:sonic:aarch64
 
-post:sonic:aarch64:vs-hw:
+post:sonic:aarch64:nokia-vs:
   extends: .post
   needs:
-    - build:sonic:aarch64:vs-hw
+    - build:sonic:aarch64:nokia-vs
 
 post:sonic:features:x86_64:
   extends: .post
