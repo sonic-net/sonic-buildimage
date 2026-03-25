@@ -1,8 +1,8 @@
 diff --git a/debian/rules b/debian/rules
-index b23b335..d37413c 100755
+index 496be59..939e1a4 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -31,10 +31,6 @@ endif
+@@ -37,10 +37,6 @@ endif
  %:
  	dh $@
  
@@ -14,5 +14,5 @@ index b23b335..d37413c 100755
  	dh_auto_configure -- --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man \
  	  --with-persistent-directory=/var/lib/snmp \
 -- 
-2.34.1
+2.18.0
 

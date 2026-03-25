@@ -1,15 +1,11 @@
 # snmpd package
 
-# TODO(trixie): Update version to version in Trixie
 ifeq ($(BLDENV),trixie)
 SNMPD_VERSION = 5.9.4+dfsg
 SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb13u1
 else ifeq ($(BLDENV),bookworm)
 SNMPD_VERSION = 5.9.3+dfsg
 SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2+deb12u1
-else ifeq ($(BLDENV),bullseye)
-SNMPD_VERSION = 5.9+dfsg
-SNMPD_VERSION_FULL = $(SNMPD_VERSION)-4+deb11u1
 endif
 
 export SNMPD_VERSION SNMPD_VERSION_FULL
@@ -54,6 +50,9 @@ else
 LIBSNMP = libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 endif
 $(LIBSNMP)_RDEPENDS += $(LIBSNMP_BASE)
+ifeq ($(BLDENV),trixie)
+$(LIBSNMP)_DEPENDS += $(LIBPCRE3)
+endif
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP)))
 
 ifeq ($(BLDENV),trixie)

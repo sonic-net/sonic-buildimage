@@ -3,7 +3,23 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = libsnmp-base_$(SNMPD_VERSION_FULL)_all.deb
-ifneq (,$(findstring 5.9,$(SNMPD_VERSION)))
+ifneq (,$(findstring 5.9.4,$(SNMPD_VERSION)))
+DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  snmptrapd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  snmpd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  snmp-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libsnmp40t64_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libsnmp40t64-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libnetsnmptrapd40t64_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
+
+SNMPD_MAKE_JOBS_NUM = $(SONIC_CONFIG_MAKE_JOBS)
+else ifneq (,$(findstring 5.9,$(SNMPD_VERSION)))
 DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  snmptrapd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
@@ -19,20 +35,6 @@ DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
 
 SNMPD_MAKE_JOBS_NUM = $(SONIC_CONFIG_MAKE_JOBS)
-else
-DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmptrapd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmpd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmp-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp30_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp30-dbg_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
-SNMPD_MAKE_JOBS_NUM = 1
 endif
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
@@ -49,6 +51,15 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Apply patches
 	stg init
 	stg import -s ../patch-$(SNMPD_VERSION)/series
+
+ifneq (,$(findstring 5.9.4,$(SNMPD_VERSION)))
+	export DEB_HOST_MULTIARCH=$(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+	export DEB_BUILD_ARCH_OS=$(shell dpkg-architecture -qDEB_BUILD_ARCH_OS)
+	export DEB_BUILD_MULTIARCH=$(shell dpkg-architecture -qDEB_BUILD_MULTIARCH)
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+	export PERL5OPT=-I/usr/lib/$(shell dpkg-architecture -a$(CONFIGURED_ARCH) -qDEB_HOST_MULTIARCH)/perl/cross-config
+endif
+endif
 
 ifneq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -d -us -uc -j$(SNMPD_MAKE_JOBS_NUM) --admindir $(SONIC_DPKG_ADMINDIR)
