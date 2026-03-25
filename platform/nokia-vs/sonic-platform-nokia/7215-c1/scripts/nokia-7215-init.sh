@@ -303,6 +303,8 @@ ip link set tmpeth2 name eth1
 
 for i in 1 2 3; do
     ip link set eth$i down
+    ethtool -K eth$i rxhash on
+    ethtool -X eth$i weight 1 1 0 1
 done
 
 exit 0

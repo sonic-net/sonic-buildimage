@@ -214,9 +214,9 @@ grub2-common==2.06-13+deb12u1
 gsettings-desktop-schemas==43.0-1
 gsfonts==2:20200910-7
 gstreamer1.0-libav==1.22.0-2
-gstreamer1.0-plugins-base==1.22.0-3+deb12u5
+gstreamer1.0-plugins-base==1.22.0-3+deb12u6
 gstreamer1.0-plugins-good==1.22.0-5+deb12u3
-gstreamer1.0-x==1.22.0-3+deb12u5
+gstreamer1.0-x==1.22.0-3+deb12u6
 gtk-update-icon-cache==3.24.38-2~deb12u3
 guile-3.0-libs==3.0.8-2
 hicolor-icon-theme==0.17-2
@@ -750,7 +750,7 @@ libgspell-1-2==1.12.0-1+b2
 libgspell-1-common==1.12.0-1
 libgssapi-krb5-2==1.20.1-2+deb12u4
 libgssrpc4==1.20.1-2+deb12u4
-libgstreamer-plugins-base1.0-0==1.22.0-3+deb12u5
+libgstreamer-plugins-base1.0-0==1.22.0-3+deb12u6
 libgstreamer1.0-0==1.22.0-2+deb12u1
 libgtest-dev==1.12.1-0.2
 libgtk-3-0==3.24.38-2~deb12u3

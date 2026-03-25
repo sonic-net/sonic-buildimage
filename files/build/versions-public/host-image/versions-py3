@@ -10,7 +10,7 @@ build==1.4.0
 certifi==2026.2.25
 cffi==1.17.1
 chardet==5.2.0
-charset-normalizer==3.4.5
+charset-normalizer==3.4.6
 click==8.1.8
 click-log==0.4.0
 colorful==0.5.8
@@ -35,7 +35,7 @@ jaraco.text==4.0.0
 jinja2==3.1.6
 jsondiff==2.2.1
 jsonpatch==1.33
-jsonpointer==3.0.0
+jsonpointer==3.1.0
 jsonschema==2.6.0
 lazy-object-proxy==1.12.0
 lxml==5.4.0

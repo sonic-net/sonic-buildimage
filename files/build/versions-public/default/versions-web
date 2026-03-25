@@ -48,9 +48,6 @@ https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
 https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58fbc11625336846cea7420
-https://github.com/fullstorydev/grpcurl/releases/download/v1.9.3/grpcurl_1.9.3_linux_x86_64.tar.gz==d3be1623c525f281fc8e11bce5a09c8f
-https://github.com/karimra/gnoic/releases/download/v0.2.1/checksums.txt==5f45b829aafe0d1b926470240d405b97
-https://github.com/karimra/gnoic/releases/download/v0.2.1/gnoic_0.2.1_linux_x86_64.tar.gz==28412ba68a3bd44cef86566726876832
 https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh==2e8b2fb7d799d83acf895e20bd1966aa
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13868-bookworm/mlxbf-bootctl_2.1_arm64.deb==74254c1e2ff1adcd1f89f50bf17797cc
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13868-trixie/bfscripts_4.14.0-13868_all.deb==dc7f4beef8c471729fd8137b46016fbe
@@ -110,7 +107,9 @@ https://github.com/nanomsg/nanomsg/archive/1.2.2.tar.gz==22525d90e9e34099f8f25df
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_amd64.deb==eb434c72277d208d0f2218da6666dd45
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
+https://github.com/openconfig/gnmic/releases/download/v0.43.0/gnmic_0.43.0_Linux_x86_64.deb==4ee3725789e26e498f1b800ad5b660c2
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
+https://go.dev/dl/go1.25.8.linux-amd64.tar.gz==98fd3b2f40a98de85860c24fea48908c
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d
