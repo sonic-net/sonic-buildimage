@@ -17,6 +17,10 @@ module sonic-smart-switch {
 		prefix sonic-vnet;
 	}
 
+	import sonic-vlan {
+		prefix sonic-vlan;
+	}
+
 	organization
 		"SONiC";
 
@@ -47,6 +51,10 @@ module sonic-smart-switch {
 
 	revision 2025-08-18 {
 		description "Add midplane_ipv4 to DPU";
+	}
+	
+	revision 2026-03-25 {
+		description "Add dpu_vnet, dpu_vlan. Allow underscore in dpu name."
 	}
 
 	container sonic-smart-switch {
@@ -110,7 +118,7 @@ module sonic-smart-switch {
 				leaf dpu_name {
 					description "Name of the DPU";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]";
+						pattern "[a-zA-Z0-9-_]+[0-9]";
 						length 1..255;
 					}
 				}
@@ -191,7 +199,7 @@ module sonic-smart-switch {
 				leaf dpu_name {
 					description "Name of the dpu";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]+";
+						pattern "[a-zA-Z0-9-_]+[0-9]+";
 						length 1..255;
 					}
 				}
@@ -268,7 +276,7 @@ module sonic-smart-switch {
 				leaf-list main_dpu_ids {
 					description "Main DPUs involved in this VDPU";
 					type string {
-						pattern "[a-zA-Z0-9-]+[0-9]+";
+						pattern "[a-zA-Z0-9-_]+[0-9]+";
 						length 1..255;
 					}
 				}
@@ -283,12 +291,29 @@ module sonic-smart-switch {
 				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
 
 				leaf vnet_name {
+					description "Deprecating. Name of the vnet used for VNET tunnel route.";
+					type leafref {
+						path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
+					}
+					must "string-length(.) >= 1 and string-length(.) <= 255" {
+						error-message "vnet_name length must be between 1 and 255 characters";
+					}
+				}
+
+				leaf dpu_vnet {
 					description "Name of the vnet used for VNET tunnel route.";
 					type leafref {
 						path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
 					}
 					must "string-length(.) >= 1 and string-length(.) <= 255" {
 						error-message "vnet_name length must be between 1 and 255 characters";
+					}
+				}
+
+				leaf dpu_vlan {
+					description "DPU VLAN identifier, name of the VLAN";
+					type leafref {
+						path "/sonic-vlan:sonic-vlan/sonic-vlan:VLAN/sonic-vlan:VLAN_LIST/sonic-vlan:name";
 					}
 				}
 

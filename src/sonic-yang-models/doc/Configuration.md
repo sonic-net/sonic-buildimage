@@ -3480,11 +3480,15 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
+`vnet_name` will be deprecated with the intruction of `dpu_vnet`. 
+
 ```json
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
             "vnet_name": "Vnet55",
+            "dpu_vnet": "Vnet55",
+            "dpu_vlan": "Vlan55",
             "cp_data_channel_port": "11362",
             "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
