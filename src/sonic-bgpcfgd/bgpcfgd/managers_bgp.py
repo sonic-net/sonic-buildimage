@@ -243,6 +243,8 @@ class BGPPeerMgrBase(Manager):
         return True
 
     def post_dependencies_init(self):
+        self.post_dependencies_init_complete = True #Skip retrying template render failures to not impact existing workflow
+        orig_lo_list_len = len(self.loopbacks)
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][self.peer_type]["template_dir"] + "/"
         if (os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "additional_loopbacks.conf.j2")):
             kwargs = {
@@ -251,7 +253,7 @@ class BGPPeerMgrBase(Manager):
             try:
                 rendered_loopbacks = self.fabric.from_file(base_template + "additional_loopbacks.conf.j2").render(**kwargs)
             except jinja2.TemplateError as e:
-                msg = "Error in rendering the template additional_loopbnacks.conf.j2"
+                msg = "Error in rendering the template " + base_template + "additional_loopbacks.conf.j2"
                 log_err("%s: %s" % (msg, str(e)))
                 return
 
@@ -260,11 +262,11 @@ class BGPPeerMgrBase(Manager):
                 if loopback_name and loopback_name not in self.loopbacks:
                     self.loopbacks.append(loopback_name)
 
+        if len(self.loopbacks) > orig_lo_list_len:
             log_info("Additional loopbacks acquired for peer %s, loopback list %s" % (self.peer_type, self.loopbacks))
         else:
-            log_info("No additional loopbacks acquired for peer %s, loopback list %s" %(self.peer_type, self.loopbacks))
+            log_info("No additional loopbacks acquired for peer %s, loopback list %s" % (self.peer_type, self.loopbacks))
 
-        self.post_dependencies_init_complete = True
 
     def update_state_db(self, vrf, nbr, data, op):
         """
