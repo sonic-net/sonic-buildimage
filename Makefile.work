@@ -300,6 +300,7 @@ ifneq ($(SONIC_BUILD_MEMORY),none)
 endif
 endif
 
+# TODO: Maybe use subuid of user instead of random 16384 UID and GID?
 DOCKER_RUN := sudo podman run --rm=true --privileged --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
@@ -315,6 +316,8 @@ DOCKER_RUN := sudo podman run --rm=true --privileged --init \
 	--gidmap=0:0:65535 \
 	--uidmap=+2000:$(shell id -u):1 \
 	--gidmap=+2000:$(shell id -g):1 \
+	--uidmap=+$(shell id -u):16384:1 \
+	--gidmap=+$(shell id -g):16384:1 \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
 	--ulimit nofile=1048576:1048576 \
 	--ulimit nproc=-1:-1 \
