@@ -92,7 +92,8 @@ RUN apt-get -y purge   \
     exim4              \
     exim4-base         \
     exim4-config       \
-    exim4-daemon-light
+    exim4-daemon-light \
+    2>/dev/null; apt-get -y autoremove || true
 
 {% if docker_base_bookworm_debs.strip() -%}
 # Copy locally-built Debian package dependencies

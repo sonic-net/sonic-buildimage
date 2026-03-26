@@ -330,7 +330,7 @@ BUILD_REDUCE_IMAGE_SIZE = n
 
 # SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the 
 # image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
-SONIC_PTF_ENV_PY_VER = mixed
+SONIC_PTF_ENV_PY_VER = py3
 
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
