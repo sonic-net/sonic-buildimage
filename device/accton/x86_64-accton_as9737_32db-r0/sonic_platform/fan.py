@@ -13,6 +13,10 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+SPEED_TOLERANCE = 20
+HOST_FAN_TOLERANCE_FILE = "/usr/share/sonic/device/{}/tolerance_flag"
+PMON_FAN_TOLERANCE_FILE = "/usr/share/sonic/platform/tolerance_flag"
+
 TARGET_SPEED_PATH = "/tmp/fan_target_speed"
 PSU_FAN_MAX_RPM = 29952 # PMBus MFR_FAN_SPEED_MAX(0xC3)
 FAN_HWMON_PATH = "/sys/devices/platform/as9737_32db_fan/hwmon/hwmon*/fan"
@@ -49,11 +53,19 @@ class Fan(FanBase):
         self.fan_tray_index = fan_tray_index
         self.is_psu_fan = is_psu_fan
         self.psu_index = psu_index
+        self.is_host = self._api_helper.is_host()
 
+        # sysfs path
         if self.is_psu_fan:
             self.psu_hwmon_path = PSU_HWMON_PATH[psu_index]
         else:
             self.hwmon_path = FAN_HWMON_PATH + str(fan_list[fan_tray_index * 2 + fan_index]["ss_index"])
+
+        # tolerance path
+        self.tolerance_flag = PMON_FAN_TOLERANCE_FILE
+        if self.is_host:
+            self.tolerance_flag = HOST_FAN_TOLERANCE_FILE.format(self._api_helper.get_platform())
+
         FanBase.__init__(self)
 
     def get_direction(self):
@@ -149,6 +161,29 @@ class Fan(FanBase):
 
         return int(speed)
 
+    def set_tolerance_mode(self, mode):
+        """
+        Set the fan tolerance mode using a flag file.
+        Args:
+            mode:
+                - "off":  tolerance off      → create flag file
+                - "on": tolerance activate   → delete flag file
+        Returns:
+            bool: True if the operation succeeded, False otherwise.
+        """
+        try:
+            if mode == "off":
+                open(self.tolerance_flag, "a").close()
+            elif mode == "on":
+                if os.path.exists(self.tolerance_flag):
+                    os.remove(self.tolerance_flag)
+            else:
+                return False
+            return True
+
+        except OSError:
+            return False
+
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -156,15 +191,14 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed which is
                  considered tolerable
         """
-        return 20
+        speed_tolerance = SPEED_TOLERANCE
+        if self.is_psu_fan:
+            return speed_tolerance
 
-        speed = 0
-        if not self.is_psu_fan:
-            speed = self._api_helper.glob_read_txt_file(self.hwmon_path + '_tolerance')
-            if speed is None:
-                return 0
+        if os.path.exists(self.tolerance_flag):
+            raise NotImplementedError
 
-        return int(speed)
+        return speed_tolerance
 
     def set_speed(self, speed):
         """

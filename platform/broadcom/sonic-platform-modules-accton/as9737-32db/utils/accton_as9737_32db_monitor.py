@@ -17,6 +17,7 @@
 # HISTORY:
 #    mm/dd/yyyy (A.D.)#
 #    05/31/2024:Roger create for as9737_64 thermal monitor
+#    12/04/2025:Richard_KUO Add the flag to control the tolerance
 # ------------------------------------------------------------------
 
 try:
@@ -45,6 +46,9 @@ TEMPERATURE_FIELD_NAME = 'temperature'
 
 MONITOR_INTERVAL = 5
 
+DEFAULT_SPEED_TOLERANCE = 20
+FAN_SPEED_SETTLE_TIMEOUT_S = 40
+
 exit_by_sigterm = 0
 
 DEBUG = False
@@ -60,6 +64,10 @@ class device_monitor(object):
         """
         self.platform_chassis = platform.Platform().get_chassis()
         self.sfps = self.platform_chassis.get_all_sfps()
+        self.fan_list = self.platform_chassis.get_all_fans()
+
+        self.fan_timer_start = time.time()
+        self.pre_target_speed = [fan.get_target_speed() for fan in self.fan_list]
 
         """Needs a logger and a logger level."""
         # set up logging to file
@@ -89,6 +97,8 @@ class device_monitor(object):
         self.sfp_max_thermal_name = ""
         self.transceiver_dom_sensor_tbl = None
         self.transceiver_status_tbl = None
+
+        self.set_fans_tolerance_mode("off")
 
     #bcmcmd 'show  temp'|grep 'Average current temperature is'
     def get_mac_temperature(self):
@@ -212,6 +222,57 @@ class device_monitor(object):
 
         return True
 
+    def set_fans_tolerance_mode(self, mode):
+        """
+        Set the tolerance mode for all fans in this group.
+        Args:
+            mode: "on" or "off"
+        """
+        if mode in ["on", "off"]:
+            for fan in self.fan_list:
+                fan.set_tolerance_mode(mode)
+
+    def is_timer_expired(self):
+        return (time.time() - self.fan_timer_start) >= FAN_SPEED_SETTLE_TIMEOUT_S
+
+    def is_under_speed(self, fan):
+        speed = fan.get_speed()
+        target_speed = fan.get_target_speed()
+        tolerance = DEFAULT_SPEED_TOLERANCE
+        return speed * 100 < target_speed * (100 - tolerance)
+
+    def is_over_speed(self, fan):
+        speed = fan.get_speed()
+        target_speed = fan.get_target_speed()
+        tolerance = DEFAULT_SPEED_TOLERANCE
+        return speed * 100 > target_speed * (100 + tolerance)
+
+    def manage_fans(self):
+        """
+        Manages the fan control process.
+        Currently a placeholder for future fan management logic.
+        """
+        speed_normal = True
+        for i, fan in enumerate(self.fan_list):
+            curr_target_speed = fan.get_target_speed()
+            if curr_target_speed != self.pre_target_speed[i]:
+                self.set_fans_tolerance_mode("off")
+                self.fan_timer_start = time.time()
+
+            elif self.is_under_speed(fan) or self.is_over_speed(fan):
+                speed_normal = False
+
+            self.pre_target_speed[i] = curr_target_speed
+
+        if speed_normal:
+            self.set_fans_tolerance_mode("off")
+            self.fan_timer_start = time.time()
+
+        if self.is_timer_expired():
+            self.set_fans_tolerance_mode("on")
+
+        return True
+
 def signal_handler(sig, frame):
     """
     Handles signal interrupts (e.g., SIGTERM) to gracefully exit the monitoring loop.
@@ -261,7 +322,7 @@ def main(argv):
 
     if len(sys.argv) != 1:
         try:
-            opts, args = getopt.getopt(argv,'hdlt:',['lfile='])
+            opts, args = getopt.getopt(argv,'hdl:',['lfile='])
         except getopt.GetoptError:
             print('Usage: %s [-d] [-l <log_file>]' % sys.argv[0])
             return 0
@@ -277,6 +338,7 @@ def main(argv):
     monitor = device_monitor(log_file, log_level)
     while True:
         monitor.manage_thermal()
+        monitor.manage_fans()
         time.sleep(MONITOR_INTERVAL)
         if exit_by_sigterm == 1:
             break

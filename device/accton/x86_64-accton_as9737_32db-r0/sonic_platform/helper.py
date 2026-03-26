@@ -116,6 +116,17 @@ class APIHelper():
             status = False
         return status, result
 
+    def get_platform(self):
+        platform = None
+
+        with open(MACHINE_CONF_FILE, 'r') as file:
+            for line in file:
+                if 'onie_platform=' in line:
+                    platform = line.strip().split('=')[1]
+                    break
+
+        return platform
+
     def get_intf_name(self):
         """
         Fetches interface names indexed by port numbers from platform.json file.
