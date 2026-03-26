@@ -1,9 +1,8 @@
 #!/bin/bash
 # Shared Kubernetes pod control script for SONiC sidecar services
-# 1. Runs as root via systemd service, so direct access to kubelet.conf is available; sudo is not required
-# 2. Pod listing queries the local kubelet API (localhost:10250)
-# 3. start/restart complete quickly (kubectl --wait=false); stop is a no-op
-# 4. Only target pods matching POD_SELECTOR (default: raw_container_name=<SERVICE_NAME>)
+# 1. Discovers K8s-managed containers via 'docker ps' name filtering
+# 2. Uses 'docker restart' to restart the target container
+# 3. K8s container names follow the pattern k8s_<container>_<pod>_<ns>_<uid>
 #
 # Usage: SERVICE_NAME=telemetry k8s_pod_control.sh start
 #        Or source this script after setting SERVICE_NAME
@@ -23,166 +22,80 @@ if [[ -z "${SERVICE_NAME:-}" ]]; then
 fi
 
 NS="sonic"
-KUBECTL_BIN="/usr/bin/kubectl"
-KCF=(--kubeconfig=/etc/kubernetes/kubelet.conf)
-REQ_TIMEOUT="5s"
-MAX_ATTEMPTS=10
-BACKOFF_START=1
-BACKOFF_MAX=8
-
-# Kubelet local API – queries stay on-node; avoids API server load
-# Note: -k (skip server cert verification) is used because the kubelet's
-# serving cert is self-signed and not signed by the cluster CA.  This is
-# safe because the connection is to localhost only (loopback); there is no
-# network path for MITM.  Client authentication is still performed via certs.
-KUBELET_URL="https://localhost:10250"
-KUBELET_CERT="/var/lib/kubelet/pki/kubelet-client-current.pem"
-KUBELET_KEY="/var/lib/kubelet/pki/kubelet-client-current.pem"
-
-# Label selector for pods; can be overridden via env
-# Example override: POD_SELECTOR="app=telemetry" telemetry.sh start
-POD_SELECTOR="${POD_SELECTOR:-raw_container_name=${SERVICE_NAME}}"
 
 NODE_NAME="$(hostname | tr '[:upper:]' '[:lower:]')"
 log() { /usr/bin/logger -t "k8s-podctl#system" "$*"; }
 
-kubectl_retry() {
-  local attempt=1 backoff=${BACKOFF_START} out rc
-  while true; do
-    out="$("${KUBECTL_BIN}" "${KCF[@]}" --request-timeout="${REQ_TIMEOUT}" "$@" 2>&1)"; rc=$?
-    if (( rc == 0 )); then
-      printf '%s' "$out"
-      return 0
-    fi
-    if (( attempt >= MAX_ATTEMPTS )); then
-      echo "$out" >&2
-      return "$rc"
-    fi
-    log "kubectl retry ${attempt}/${MAX_ATTEMPTS} for: $*"
-    sleep "${backoff}"
-    (( backoff = backoff < BACKOFF_MAX ? backoff*2 : BACKOFF_MAX ))
-    (( attempt++ ))
-  done
-}
+# Docker filter for K8s-managed containers of this service.
+# K8s container names follow: k8s_<container>_<pod>_<ns>_<uid>
+DOCKER_FILTER="name=k8s_${SERVICE_NAME}_"
 
-kubelet_get_pods() {
-  local attempt=1 backoff=${BACKOFF_START} out rc http_code body err_msg
-  while true; do
-    # -w appends the 3-digit HTTP status code after the response body
-    out=$(curl -sk --cert "${KUBELET_CERT}" --key "${KUBELET_KEY}" \
-      --max-time 5 -w '%{http_code}' "${KUBELET_URL}/pods" 2>&1); rc=$?
-
-    http_code="" body="" err_msg="$out"
-    if (( rc == 0 )) && (( ${#out} >= 3 )); then
-      http_code="${out: -3}"
-      body="${out:0:${#out}-3}"
-      if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
-        printf '%s' "$body"
-        return 0
-      fi
-      # Non-2xx: build a descriptive message and fall through to retry
-      if [[ "$http_code" == "401" || "$http_code" == "403" ]]; then
-        err_msg="HTTP ${http_code} from kubelet (authn/authz failure)"
-      else
-        err_msg="HTTP ${http_code} from kubelet"
-      fi
-      rc=1
-    fi
-
-    if (( attempt >= MAX_ATTEMPTS )); then
-      echo "$err_msg" >&2
-      return "${rc:-1}"
-    fi
-    log "kubelet curl retry ${attempt}/${MAX_ATTEMPTS}: ${err_msg}"
-    sleep "${backoff}"
-    (( backoff = backoff < BACKOFF_MAX ? backoff*2 : BACKOFF_MAX ))
-    (( attempt++ ))
-  done
+container_ids_on_node() {
+  docker ps -q --filter "${DOCKER_FILTER}" 2>/dev/null || true
 }
 
 pods_on_node() {
-  local key="${POD_SELECTOR%%=*}"
-  local val="${POD_SELECTOR#*=}"
-  kubelet_get_pods | jq -r \
-    --arg ns "${NS}" --arg key "$key" --arg val "$val" \
-    '.items[] | select(.metadata.namespace == $ns) |
-     select(.metadata.labels[$key] == $val) |
-     "\(.metadata.name) \(.status.phase)"' || true
+  docker ps -a --filter "${DOCKER_FILTER}" \
+    --format '{{index .Labels "io.kubernetes.pod.name"}} {{.State}}' \
+    2>/dev/null || true
 }
 
 pod_names_on_node() {
-  local key="${POD_SELECTOR%%=*}"
-  local val="${POD_SELECTOR#*=}"
-  kubelet_get_pods | jq -r \
-    --arg ns "${NS}" --arg key "$key" --arg val "$val" \
-    '.items[] | select(.metadata.namespace == $ns) |
-     select(.metadata.labels[$key] == $val) |
-     .metadata.name' || true
+  docker ps -a --filter "${DOCKER_FILTER}" \
+    --format '{{index .Labels "io.kubernetes.pod.name"}}' \
+    2>/dev/null || true
 }
 
-delete_pod_with_retry() {
-  local name="$1"
-  local out rc
-  out=$(kubectl_retry -n "${NS}" delete pod "${name}" --force --grace-period=0 --wait=false 2>&1)
-  rc=$?
-  if (( rc != 0 )); then
-    log "ERROR delete pod '${name}' failed rc=${rc}: ${out}"
-  else
-    log "Deleted pod '${name}'"
-  fi
-  return "$rc"
-}
-
-kill_pods() {
-  mapfile -t names < <(pod_names_on_node)
-  if (( ${#names[@]} == 0 )); then
-    log "No pods found on ${NODE_NAME} (ns=${NS}, selector=${POD_SELECTOR})."
+restart_containers() {
+  mapfile -t cids < <(container_ids_on_node)
+  if (( ${#cids[@]} == 0 )); then
+    log "No containers found for '${SERVICE_NAME}' on ${NODE_NAME} (ns=${NS})."
     return 0
   fi
 
-  log "Deleting pods on ${NODE_NAME} (ns=${NS}, selector=${POD_SELECTOR}): ${names[*]}"
+  log "Restarting containers for '${SERVICE_NAME}' on ${NODE_NAME}: ${cids[*]}"
 
   local rc_any=0
-  for p in "${names[@]}"; do
-    [[ -z "$p" ]] && continue
-    if ! delete_pod_with_retry "$p"; then
+  for cid in "${cids[@]}"; do
+    [[ -z "$cid" ]] && continue
+    if docker restart "$cid" >/dev/null 2>&1; then
+      log "Restarted container ${cid} (${SERVICE_NAME})"
+    else
+      log "ERROR: failed to restart container ${cid} (${SERVICE_NAME})"
       rc_any=1
     fi
   done
 
   if (( rc_any != 0 )); then
-    log "ERROR one or more pod deletions failed on ${NODE_NAME} (selector=${POD_SELECTOR})"
+    log "ERROR one or more container restarts failed for '${SERVICE_NAME}' on ${NODE_NAME}"
   else
-    log "All targeted pods deleted on ${NODE_NAME} (selector=${POD_SELECTOR})"
+    log "All containers restarted for '${SERVICE_NAME}' on ${NODE_NAME}"
   fi
   return "$rc_any"
 }
 
 cmd_start() {
   # Re-invoke ourselves with the "restart" action under a hard 20s cap.
-  # On a healthy node this finishes in 1-2s (kubectl --wait=false).
-  # If the API server is unreachable, timeout(1) kills the child so we
-  # stay well within the service's TimeoutStartSec (30s).
+  # On a healthy node this finishes in 1-2s; the timeout guards against
+  # a hung 'docker restart' so we stay within TimeoutStartSec (30s).
   timeout 20 "${BASH_SOURCE[0]}" "${SERVICE_NAME}" restart 2>&1 \
     | logger -t "${SERVICE_NAME}-start" || true
 }
 
-# stop is a no-op: K8s controls the pod lifecycle; deleting the pod here
-# would just cause the controller to recreate it immediately.
-cmd_stop()    { kill_pods; }
-cmd_restart() { kill_pods; }
+cmd_stop()    { restart_containers; }
+cmd_restart() { restart_containers; }
 
 cmd_status() {
   local out=""; out="$(pods_on_node)"
   if [[ -z "$out" ]]; then
-    echo "NOT RUNNING (no pod on node ${NODE_NAME} with selector '${POD_SELECTOR}')"
+    echo "NOT RUNNING (no container on node ${NODE_NAME} for '${SERVICE_NAME}')"
     exit 3
   fi
-  while read -r name phase; do
+  while read -r name state; do
     [[ -z "$name" ]] && continue
-    echo "pod ${name}: ${phase}"
+    echo "pod ${name}: ${state}"
   done <<<"$out"
-  if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
+  if awk '$2=="running"{found=1} END{exit found?0:1}' <<<"$out"; then
     exit 0
   else
     exit 1
@@ -190,29 +103,9 @@ cmd_status() {
 }
 
 cmd_wait() {
-  local max_rounds="${WAIT_MAX_ROUNDS:-15}"
-  local round=0
-  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME} (max ${max_rounds} rounds)…"
-  while true; do
-    local out=""; out="$(pods_on_node)"
-    if [[ -z "$out" ]]; then
-      if (( ++round > max_rounds )); then
-        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
-        exit 1
-      fi
-      sleep 20; continue
-    fi
-    if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
-      round=0
-      sleep 20
-    else
-      if (( ++round > max_rounds )); then
-        log "ERROR: timed out after ${max_rounds} rounds waiting for pods (ns=${NS}, selector=${POD_SELECTOR}) on ${NODE_NAME}"
-        exit 1
-      fi
-      sleep 20
-    fi
-  done
+  # No-op: just sleep forever so the systemd unit stays "active".
+  log "cmd_wait: sleeping indefinitely for '${SERVICE_NAME}' on ${NODE_NAME}"
+  while true; do sleep 300; done
 }
 
 case "${1:-}" in

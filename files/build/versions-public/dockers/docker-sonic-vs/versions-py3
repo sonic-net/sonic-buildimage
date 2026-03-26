@@ -2,7 +2,7 @@ bcrypt==5.0.0
 blessed==1.33.0
 certifi==2026.2.25
 cffi==2.0.0
-charset-normalizer==3.4.5
+charset-normalizer==3.4.6
 click==8.1.8
 click-log==0.4.0
 colorful==0.5.8
@@ -24,7 +24,7 @@ paramiko==4.0.0
 pexpect==4.9.0
 prefixed==0.9.0
 prettyprinter==0.18.0
-protobuf==7.34.0
+protobuf==7.34.1
 psutil==7.2.2
 ptyprocess==0.7.0
 pyangbind==0.8.1

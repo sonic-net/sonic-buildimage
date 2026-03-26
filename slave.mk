@@ -503,6 +503,8 @@ $(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
 $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
 $(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
+$(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
+$(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
@@ -1474,6 +1476,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(LINUX_KBUILD) \
                 $(SONIC_DEVICE_DATA) \
                 $(IFUPDOWN2) \
+                $(MAKEDUMPFILE) \
                 $(KDUMP_TOOLS) \
                 $(LIBPAM_RADIUS) \
                 $(LIBNSS_RADIUS) \
@@ -1551,6 +1554,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
+	export include_snmp="$(INCLUDE_SNMP)"
+	export include_lldp="$(INCLUDE_LLDP)"
 	export include_sflow="$(INCLUDE_SFLOW)"
 	export enable_auto_tech_support="$(ENABLE_AUTO_TECH_SUPPORT)"
 	export enable_asan="$(ENABLE_ASAN)"
@@ -1722,9 +1727,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		MASTER_UI_METRIC_VERSION=$(MASTER_UI_METRIC_VERSION) \
 		MASTER_UI_DASH_VERSION=$(MASTER_UI_DASH_VERSION) \
-		MASTER_MDM_VERSION=$(MASTER_MDM_VERSION) \
-		MASTER_MDS_VERSION=$(MASTER_MDS_VERSION) \
-		MASTER_FLUENTD_VERSION=$(MASTER_FLUENTD_VERSION) \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
