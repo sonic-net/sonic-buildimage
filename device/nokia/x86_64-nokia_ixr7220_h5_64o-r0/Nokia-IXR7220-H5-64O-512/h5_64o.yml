@@ -1190,7 +1190,12 @@ device:
 device:
     0:
         TM_THD_CONFIG:
+            MIRROR_ON_DROP_RESERVATION: 0
+            SKIP_BUFFER_RESERVATION: 1
             THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_4
 ...
 ---
 device:
