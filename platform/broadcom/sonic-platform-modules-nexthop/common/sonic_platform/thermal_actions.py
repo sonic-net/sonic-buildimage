@@ -382,11 +382,13 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
             current_temp = thermal.get_temperature()
             if current_temp is None:
                 # We may have no temperature reading if thermal is not present
+                self.log_info(f"Thermal '{thermal.get_name()}' has no temperature reading, skipping")
                 continue
 
             setpoint = thermal.get_pid_setpoint()
             if setpoint is None:
                 # If the thermal was just unplugged, we may got the temperature, but not the setpoint
+                self.log_info(f"Thermal '{thermal.get_name()}' has no setpoint, skipping")
                 continue
 
             error = current_temp - setpoint - self._extra_setpoint_margin[domain]
