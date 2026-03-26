@@ -307,4 +307,6 @@ for i in 1 2 3; do
     ethtool -X eth$i weight 1 1 0 1
 done
 
+sudo usermod -aG dialout admin
+
 exit 0
