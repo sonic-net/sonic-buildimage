@@ -529,7 +529,7 @@ class TestSmartSwitch:
                 }
             }
         }
-        yang_model.load_data(data, "Leafref")
+        yang_model.load_data(data, "leafref")
 
     def test_dash_ha_global_config_dpu_vlan(self, yang_model):
         """Test dpu_vlan leafref to VLAN_LIST"""
@@ -577,7 +577,7 @@ class TestSmartSwitch:
                 }
             }
         }
-        yang_model.load_data(data, "Leafref")
+        yang_model.load_data(data, "leafref")
 
     @pytest.mark.parametrize(
         "dpu_name, error_message", [
