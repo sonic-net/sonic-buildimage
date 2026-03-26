@@ -508,6 +508,18 @@ class TestSmartSwitch:
     def test_dash_ha_global_config_dpu_vnet_invalid(self, yang_model):
         """Test dpu_vnet with non-existent VNET reference"""
         data = {
+            "sonic-vnet:sonic-vnet": {
+                "sonic-vnet:VNET": {
+                    "VNET_LIST": [
+                        {
+                            "name": "Vnet100",
+                            "scope": "default",
+                            "advertise_prefix": True,
+                            "overlay_dmac": "22:33:44:55:66:77"
+                        }
+                    ]
+                }
+            },
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
@@ -546,6 +558,16 @@ class TestSmartSwitch:
     def test_dash_ha_global_config_dpu_vlan_invalid(self, yang_model):
         """Test dpu_vlan with non-existent VLAN reference"""
         data = {
+            "sonic-vlan:sonic-vlan": {
+                "sonic-vlan:VLAN": {
+                    "VLAN_LIST": [
+                        {
+                            "name": "Vlan100",
+                            "vlanid": 100
+                        }
+                    ]
+                }
+            },
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
