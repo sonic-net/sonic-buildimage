@@ -1,0 +1,37 @@
+#ifndef NEXTHOPGROUP_CAPI_H
+#define NEXTHOPGROUP_CAPI_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct NextHopGroupFull NextHopGroupFull;
+
+// Generate C++ NextHopGroupFull from C_NextHopGroupFull
+char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);
+char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);
+
+// Free the object
+void nexthopgroup_free(NextHopGroupFull* obj);
+
+// JSON APIs ---
+char* nexthopgroup_to_json(NextHopGroupFull* obj);
+
+/* C callback signature matching FRR's needs */
+typedef void (*fib_frr_log_fn)(int level,
+                                const char *file,
+                                int line,
+                                const char *func,
+                                const char *fmt,
+                                va_list args);
+
+/* Register FRR-compatible callback from C code */
+void fib_frr_register_callback(fib_frr_log_fn cb);
+void fib_frr_set_log_level(int level);
+int fib_frr_get_log_level();
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // NEXTHOPGROUP_CAPI_H
