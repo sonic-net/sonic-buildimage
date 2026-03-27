@@ -21,6 +21,12 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 
+# Compile regex patterns once at module level to avoid repeated compilation
+_MASTER_PATTERN = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
+_INTERNAL_PATTERN = re.compile(r'^(?:SONiC\.)?internal\.\d+-[a-f0-9]+$', re.IGNORECASE)
+_DATE_PATTERN = re.compile(r'^(?:SONiC\.)?\d{8}\b', re.IGNORECASE)
+_DATE_EXTRACT_PATTERN = re.compile(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\b', re.IGNORECASE)
+
 
 def _get_branch_name() -> str:
     """
@@ -61,19 +67,18 @@ def _get_branch_name() -> str:
         return "private"
     
     # Pattern 1: Master - [SONiC.]master.XXXXXX-XXXXXXXX
-    master_pattern = re.compile(r'^(?:SONiC\.)?master\.\d+-[a-f0-9]+$', re.IGNORECASE)
-    if master_pattern.match(version):
+    if _MASTER_PATTERN.match(version):
         logger.log_notice(f"Detected master branch from version: {version}")
         return "master"
     
     # Pattern 2: Internal - [SONiC.]internal.XXXXXXXXX-XXXXXXXXXX
-    elif re.match(r'^(?:SONiC\.)?internal\.\d+-[a-f0-9]+$', version, re.IGNORECASE):
+    elif _INTERNAL_PATTERN.match(version):
         logger.log_notice(f"Detected internal branch from version: {version}")
         return "internal"
     
     # Pattern 3: Official feature branch - [SONiC.]YYYYMMDD.* (e.g., 20241110.kw.24)
-    elif re.match(r'^(?:SONiC\.)?\d{8}\b', version, re.IGNORECASE):
-        date_match = re.search(r'^(?:SONiC\.)?(\d{4})(\d{2})\d{2}\b', version, re.IGNORECASE)
+    elif _DATE_PATTERN.match(version):
+        date_match = _DATE_EXTRACT_PATTERN.search(version)
         if date_match:
             year, month = date_match.groups()
             branch = f"{year}{month}"
@@ -103,17 +108,53 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ],
+    "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "restapi"],
+    ],
 }
+
+
+SUPPORTED_BRANCHES = sorted(["202311", "202405", "202411", "202505", "202511"])
+
+
+def _resolve_branch(branch_name: str) -> str:
+    """Map detected branch to the nearest lower supported branch.
+
+    - Exact match in SUPPORTED_BRANCHES → use as-is.
+    - "master" / "internal" / "private" → latest supported branch (WARN).
+    - Numeric YYYYMM between two supported branches → highest supported <= it.
+    - Below 202311 → falls back to 202311 (ERROR).
+    """
+    if branch_name in SUPPORTED_BRANCHES:
+        return branch_name
+
+    if branch_name in ("master", "internal", "private"):
+        resolved = SUPPORTED_BRANCHES[-1]
+        logger.log_warning(f"Branch '{branch_name}' mapped to latest supported: {resolved}")
+        return resolved
+
+    if not branch_name.isdigit():
+        logger.log_error(f"Cannot resolve non-numeric branch: {branch_name}, falling back to {SUPPORTED_BRANCHES[0]}")
+        return SUPPORTED_BRANCHES[0]
+
+    # String comparison is safe: all YYYYMM values are fixed 6-digit format
+    candidates = [b for b in SUPPORTED_BRANCHES if b <= branch_name]
+    if not candidates:
+        logger.log_error(f"Branch '{branch_name}' is below minimum supported, falling back to {SUPPORTED_BRANCHES[0]}")
+        return SUPPORTED_BRANCHES[0]
+
+    resolved = candidates[-1]
+    if resolved != branch_name:
+        logger.log_notice(f"Branch '{branch_name}' mapped to nearest lower supported: {resolved}")
+    return resolved
 
 
 def ensure_sync() -> bool:
     # Evaluate branch and source paths each time to allow retry on runtime failures
-    branch_name = _get_branch_name()
-    
-    # Map to available branch-specific files: {202311,202405,202411,202505,202511}
-    if branch_name not in ["202311", "202405", "202411", "202505", "202511"]:
-        logger.log_error(f"Unsupported branch: {branch_name}. Only 202311, 202405, 202411, 202505, 202511 are supported.")
-        return False
+    detected_branch = _get_branch_name()
+
+    branch_name = _resolve_branch(detected_branch)
     
     # restapi.sh: per-branch when IS_V1_ENABLED, otherwise use common restapi.sh
     restapi_src = (
@@ -129,7 +170,7 @@ def ensure_sync() -> bool:
     sync_items_list: List[SyncItem] = [
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
-        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh", mode=0o755),
+        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
         SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
     ]
     return sync_items(sync_items_list, POST_COPY_ACTIONS)

@@ -1,0 +1,2 @@
+CMD = [/projects/csg_sonic2/sk411346/repos/SAI/6.5.29/ocp_sai/sdk-src/hsdk-6.5.29/xgs-sdk-6.5.29-gpl-modules/, gtags --single-update systems/linux/kernel/modules/bcm-knet/bcm-knet.c]
+CMD = [/projects/csg_sonic2/sk411346/repos/SAI/6.5.29/ocp_sai/sdk-src/hsdk-6.5.29/xgs-sdk-6.5.29-gpl-modules/, gtags --single-update systems/linux/kernel/modules/knet-cb/knet-cb.c]

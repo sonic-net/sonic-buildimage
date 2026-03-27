@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 PDDF_DEVICE_JSON_PATH = "/usr/share/sonic/platform/pddf/pddf-device.json"
+PD_PLUGIN_JSON_PATH = "/usr/share/sonic/platform/pddf/pd-plugin.json"
 
 
 class FpgaDeviceName(str, Enum):
@@ -28,6 +29,13 @@ class FpgaDevAttrs:
 def load_pddf_device_config():
     """Load and parse pddf-device.json configuration. Raises exception on error."""
     with open(PDDF_DEVICE_JSON_PATH, "r") as f:
+        config = json.load(f)
+    return config
+
+
+def load_pd_plugin_config() -> dict:
+    """Load and parse pd-plugin.json configuration. Raises exception on error."""
+    with open(PD_PLUGIN_JSON_PATH, "r") as f:
         config = json.load(f)
     return config
 
