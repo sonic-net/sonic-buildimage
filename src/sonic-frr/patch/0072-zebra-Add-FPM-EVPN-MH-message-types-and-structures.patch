@@ -1,0 +1,91 @@
+From 3ca5e5cd42dbe4157a6e89df3f8b631c0dfbc319 Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Fri, 27 Mar 2026 15:21:35 -0700
+Subject: [PATCH 72/73] zebra: Add FPM EVPN MH message types and structures
+
+Add RTM_FPM message types for EVPN Multihoming bridge port attributes
+(Split Horizon List, Designated Forwarder, ES Backup NHG) and their
+associated message structures to kernel_netlink.h.
+
+These message types are consumed by fpmsyncd in SONiC to populate
+EVPN_SPLIT_HORIZON_TABLE, EVPN_DF_TABLE, and EVPN_ES_BACKUP_NHG_TABLE
+in APPL_DB.
+
+Ported from cisco_202405_dev commits:
+  fe957c1c6a - MIGSOFTWAR-16647 - Pin RTM_FPM_FIRST to 140
+  f700452b73 - Send ES backup NHG via FPM
+  b1769ce226 - Add VLAN to FPM plugin for DF
+
+Signed-off-by: Ben Friedman <friedman@cisco.com>
+---
+ zebra/kernel_netlink.h | 52 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/zebra/kernel_netlink.h b/zebra/kernel_netlink.h
+index 723ea97dc3..e1f7f917a5 100644
+--- a/zebra/kernel_netlink.h
++++ b/zebra/kernel_netlink.h
+@@ -30,8 +30,60 @@ struct zebra_ns;
+ 
+ #define RTM_NHA(h)                                                             \
+ 	((struct rtattr *)(((char *)(h)) + NLMSG_ALIGN(sizeof(struct nhmsg))))
++/* FPM-specific extension values, for messages and attributes */
++
++typedef enum {
++	/*
++	 * Ideally, this should be set to (RTM_MAX + 1) but as
++	 * FRR and SWSS build with slightly different kernel headers
++	 * RTM_MAX differs between them...
++	 */
++	RTM_FPM_FIRST = 140,
++	/* Ask FPM server to send encap info */
++	RTM_FPM_GETENCAPS = RTM_FPM_FIRST,
++	/* Notification about new or updated encap */
++	RTM_FPM_ADDENCAP,
++	/* Notification about deleted encap */
++	RTM_FPM_DELENCAP,
++	/* Notify FPM about a new Split Horizon List for a given port */
++	RTM_FPM_ADD_EVPN_SHL,
++	/* Notify FPM about a Split Horizon List being deleted from a port */
++	RTM_FPM_DEL_EVPN_SHL,
++	/* Notify FPM about an add/update of DF role information for a port */
++	RTM_FPM_ADD_EVPN_DF,
++	/* Notify FPM about a delete of DF role information */
++	RTM_FPM_DEL_EVPN_DF,
++	/* Notify FPM about a backup NHG for a port */
++	RTM_FPM_ADD_EVPN_ES_BACKUP_NHG,
++	/* Notify FPM about a delete of a backup NHG */
++	RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
++	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
++	RTM_FPM_MAX = RTM_FPM_LAST
++} rtm_fpm_msg_types_et;
++
++struct evpn_shl_msg {
++	int esm_ifindex;
++	uint16_t esm_vid;
++};
++
++struct evpn_df_msg {
++	int edm_ifindex;
++	uint16_t edm_vid;
++	int edm_non_df;
++};
++
++struct evpn_backup_nhg_msg {
++	int ebnm_ifindex;
++	int ebnm_backup_nhg_id;
++};
+ 
++/* Attribute IDs for SHL Updates */
++#define FPM_SHL_IPV4_ADDR	1
++#define FPM_SHL_IPV6_ADDR	2
++#define FPM_SHL_LAST		FPM_SHL_IPV6_ADDR
++#define FPM_SHL_MAX		FPM_SHL_LAST
+ 
++/* End of FPM EVPN MH extensions */
+ #define NL_RCV_PKT_BUF_SIZE     (34 * 1024)
+ #define NL_PKT_BUF_SIZE         8192
+ 
+-- 
+2.34.1
+

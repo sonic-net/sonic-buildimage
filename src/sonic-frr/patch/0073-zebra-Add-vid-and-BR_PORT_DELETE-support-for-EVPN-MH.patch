@@ -1,0 +1,429 @@
+From 96b3423ab3288d3a426c1f2dee91f17f4ccfea02 Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Fri, 27 Mar 2026 15:27:01 -0700
+Subject: [PATCH] zebra: Add vid and BR_PORT_DELETE support for EVPN MH FPM
+
+Add per-VLAN bridge port attribute support for EVPN Multihoming:
+
+- Add vid field to dplane_br_port_info and dplane_ctx_get_br_port_vlan_id()
+  accessor
+- Add DPLANE_OP_BR_PORT_DELETE enum and dplane_br_port_delete() API
+- Update dplane_br_port_update() to accept vid parameter
+- Add zebra_evpn_es_br_port_dplane_update_all_vids() to send per-VID
+  updates for SHL/DF on VLAN member add/remove
+- Update zebra_evpn_es_br_port_dplane_clear() to send per-VID deletes
+- Update zebra_evpn_vl_mbr_ref() to send per-VID br_port update on
+  VLAN member addition
+- Update zebra_evpn_vl_mbr_deref() to send per-VID br_port delete on
+  VLAN member removal
+
+Ported from cisco_202405_dev commit:
+  991145f0f2 - Add DPLANE_OP_BR_PORT_DELETE for explicit VID delete
+
+Signed-off-by: Ben Friedman <friedman@cisco.com>
+---
+ zebra/kernel_netlink.c |  1 +
+ zebra/zebra_dplane.c   | 70 ++++++++++++++++++++++++++++++++++-
+ zebra/zebra_dplane.h   |  9 ++++-
+ zebra/zebra_evpn_mh.c  | 83 +++++++++++++++++++++++++++++++++---------
+ zebra/zebra_rib.c      |  1 +
+ 5 files changed, 144 insertions(+), 20 deletions(-)
+
+diff --git a/zebra/kernel_netlink.c b/zebra/kernel_netlink.c
+index 22c62aea5c..79b9d31321 100644
+--- a/zebra/kernel_netlink.c
++++ b/zebra/kernel_netlink.c
+@@ -1617,6 +1617,7 @@ static enum netlink_msg_status nl_put_msg(struct nl_batch *bth,
+ 	case DPLANE_OP_ROUTE_NOTIFY:
+ 	case DPLANE_OP_LSP_NOTIFY:
+ 	case DPLANE_OP_BR_PORT_UPDATE:
++	case DPLANE_OP_BR_PORT_DELETE:
+ 		return FRR_NETLINK_SUCCESS;
+ 
+ 	case DPLANE_OP_IPTABLE_ADD:
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index fe48f7cb7c..fcef52d2f3 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -191,6 +191,7 @@ struct dplane_br_port_info {
+ 	/* DPLANE_BR_PORT_XXX - see zebra_dplane.h*/
+ 	uint32_t flags;
+ 	uint32_t backup_nhg_id;
++	uint16_t vid;
+ };
+ 
+ /*
+@@ -877,6 +878,7 @@ static void dplane_ctx_free_internal(struct zebra_dplane_ctx *ctx)
+ 	case DPLANE_OP_RULE_UPDATE:
+ 	case DPLANE_OP_NEIGH_DISCOVER:
+ 	case DPLANE_OP_BR_PORT_UPDATE:
++	case DPLANE_OP_BR_PORT_DELETE:
+ 	case DPLANE_OP_NEIGH_IP_INSTALL:
+ 	case DPLANE_OP_NEIGH_IP_DELETE:
+ 	case DPLANE_OP_NONE:
+@@ -1110,6 +1112,9 @@ const char *dplane_op2str(enum dplane_op_e op)
+ 	case DPLANE_OP_BR_PORT_UPDATE:
+ 		return "BR_PORT_UPDATE";
+ 
++	case DPLANE_OP_BR_PORT_DELETE:
++		return "BR_PORT_DELETE";
++
+ 	case DPLANE_OP_ADDR_INSTALL:
+ 		return "ADDR_INSTALL";
+ 	case DPLANE_OP_ADDR_UNINSTALL:
+@@ -3433,6 +3438,14 @@ dplane_ctx_get_br_port_backup_nhg_id(const struct zebra_dplane_ctx *ctx)
+ 	return ctx->u.br_port.backup_nhg_id;
+ }
+ 
++uint16_t
++dplane_ctx_get_br_port_vlan_id(const struct zebra_dplane_ctx *ctx)
++{
++	DPLANE_CTX_VALID(ctx);
++
++	return ctx->u.br_port.vid;
++}
++
+ /* Accessors for PBR iptable information */
+ void dplane_ctx_get_pbr_iptable(const struct zebra_dplane_ctx *ctx,
+ 				struct zebra_pbr_iptable *table)
+@@ -5242,7 +5255,8 @@ done:
+ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool non_df,
+ 					       uint32_t sph_filter_cnt,
+ 					       const struct ipaddr *sph_filters,
+-					       uint32_t backup_nhg_id)
++					       uint32_t backup_nhg_id,
++					       uint16_t vid)
+ {
+ 	enum zebra_dplane_result result = ZEBRA_DPLANE_REQUEST_FAILURE;
+ 	uint32_t flags = 0;
+@@ -5287,6 +5301,7 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ 	ctx->u.br_port.flags = flags;
+ 	ctx->u.br_port.backup_nhg_id = backup_nhg_id;
+ 	ctx->u.br_port.sph_filter_cnt = sph_filter_cnt;
++	ctx->u.br_port.vid = vid;
+ 	memcpy(ctx->u.br_port.sph_filters, sph_filters,
+ 	       sizeof(ctx->u.br_port.sph_filters[0]) * sph_filter_cnt);
+ 
+@@ -5309,6 +5324,57 @@ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool
+ 	return result;
+ }
+ 
++enum zebra_dplane_result
++dplane_br_port_delete(const struct interface *ifp, uint16_t vid)
++{
++	enum zebra_dplane_result result = ZEBRA_DPLANE_REQUEST_FAILURE;
++	int ret;
++	struct zebra_dplane_ctx *ctx = NULL;
++	struct zebra_ns *zns;
++	enum dplane_op_e op = DPLANE_OP_BR_PORT_DELETE;
++
++	if (IS_ZEBRA_DEBUG_DPLANE_DETAIL || IS_ZEBRA_DEBUG_EVPN_MH_ES) {
++		zlog_debug(
++			"init br_port delete ctx %s: ifp %s, vid %u",
++			dplane_op2str(op), ifp->name, vid);
++	}
++
++	ctx = dplane_ctx_alloc();
++
++	ctx->zd_op = op;
++	ctx->zd_status = ZEBRA_DPLANE_REQUEST_SUCCESS;
++	ctx->zd_vrf_id = ifp->vrf->vrf_id;
++
++	zns = zebra_ns_lookup(ifp->vrf->vrf_id);
++	dplane_ctx_ns_init(ctx, zns, false);
++
++	ctx->zd_ifindex = ifp->ifindex;
++	strlcpy(ctx->zd_ifname, ifp->name, sizeof(ctx->zd_ifname));
++
++	/* Init the br-port-specific data area */
++	memset(&ctx->u.br_port, 0, sizeof(ctx->u.br_port));
++
++	ctx->u.br_port.vid = vid;
++
++	/* Enqueue for processing on the dplane pthread */
++	ret = dplane_update_enqueue(ctx);
++
++	/* Increment counter */
++	atomic_fetch_add_explicit(&zdplane_info.dg_br_port_in, 1,
++				  memory_order_relaxed);
++
++	if (ret == AOK) {
++		result = ZEBRA_DPLANE_REQUEST_QUEUED;
++	} else {
++		/* Error counter */
++		atomic_fetch_add_explicit(&zdplane_info.dg_br_port_errors, 1,
++					  memory_order_relaxed);
++		dplane_ctx_free(&ctx);
++	}
++
++	return result;
++}
++
+ enum zebra_dplane_result
+ dplane_intf_mpls_modify_state(const struct interface *ifp, bool set)
+ {
+@@ -6953,6 +7019,7 @@ static void kernel_dplane_log_detail(struct zebra_dplane_ctx *ctx)
+ 	case DPLANE_OP_ROUTE_NOTIFY:
+ 	case DPLANE_OP_LSP_NOTIFY:
+ 	case DPLANE_OP_BR_PORT_UPDATE:
++	case DPLANE_OP_BR_PORT_DELETE:
+ 
+ 	case DPLANE_OP_NONE:
+ 		break;
+@@ -7212,6 +7279,7 @@ static void kernel_dplane_handle_result(struct zebra_dplane_ctx *ctx)
+ 	case DPLANE_OP_ROUTE_NOTIFY:
+ 	case DPLANE_OP_LSP_NOTIFY:
+ 	case DPLANE_OP_BR_PORT_UPDATE:
++	case DPLANE_OP_BR_PORT_DELETE:
+ 		break;
+ 
+ 	/* TODO -- error counters for incoming events? */
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index e5adb2198c..8c635d2b87 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -176,6 +176,7 @@ enum dplane_op_e {
+ 
+ 	/* bridge port update */
+ 	DPLANE_OP_BR_PORT_UPDATE,
++	DPLANE_OP_BR_PORT_DELETE,
+ 
+ 	/* Policy based routing iptable update */
+ 	DPLANE_OP_IPTABLE_ADD,
+@@ -853,6 +854,8 @@ dplane_ctx_get_br_port_sph_filter_cnt(const struct zebra_dplane_ctx *ctx);
+ const struct ipaddr *dplane_ctx_get_br_port_sph_filters(const struct zebra_dplane_ctx *ctx);
+ uint32_t
+ dplane_ctx_get_br_port_backup_nhg_id(const struct zebra_dplane_ctx *ctx);
++uint16_t
++dplane_ctx_get_br_port_vlan_id(const struct zebra_dplane_ctx *ctx);
+ 
+ /* Accessors for neighbor table information */
+ uint8_t dplane_ctx_neightable_get_family(const struct zebra_dplane_ctx *ctx);
+@@ -928,7 +931,11 @@ enum zebra_dplane_result dplane_route_notif_update(
+ enum zebra_dplane_result dplane_br_port_update(const struct interface *ifp, bool non_df,
+ 					       uint32_t sph_filter_cnt,
+ 					       const struct ipaddr *sph_filters,
+-					       uint32_t backup_nhg_id);
++					       uint32_t backup_nhg_id,
++					       uint16_t vid);
++
++enum zebra_dplane_result dplane_br_port_delete(const struct interface *ifp,
++					       uint16_t vid);
+ 
+ /* Forward ref of nhg_hash_entry */
+ struct nhg_hash_entry;
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 0657c0070e..237e9c75d6 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -54,6 +54,10 @@ static int zebra_evpn_es_evi_send_to_client(struct zebra_evpn_es *es,
+ static void zebra_evpn_local_es_del(struct zebra_evpn_es **esp);
+ static void zebra_evpn_local_es_update(struct zebra_if *zif);
+ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
++						uint16_t vid,
++						const char *caller);
++static bool zebra_evpn_es_br_port_dplane_update_all_vids(
++						struct zebra_evpn_es *es,
+ 						const char *caller);
+ static void zebra_evpn_mh_update_protodown_es(struct zebra_evpn_es *es,
+ 					      bool resync_dplane);
+@@ -936,8 +940,11 @@ void zebra_evpn_vl_mbr_ref(uint16_t vid, struct zebra_if *zif)
+ 			   br_if->name, zif->ifp->name);
+ 
+ 	listnode_add(acc_bd->mbr_zifs, zif);
+-	if (acc_bd->zevpn && zif->es_info.es)
++	if (acc_bd->zevpn && zif->es_info.es) {
++		zebra_evpn_es_br_port_dplane_update(zif->es_info.es, vid,
++						    __func__);
+ 		zebra_evpn_local_es_evi_add(zif->es_info.es, acc_bd->zevpn);
++	}
+ }
+ 
+ /* handle deletion of VLAN members */
+@@ -968,8 +975,10 @@ void zebra_evpn_vl_mbr_deref(uint16_t vid, struct zebra_if *zif)
+ 
+ 	list_delete_node(acc_bd->mbr_zifs, node);
+ 
+-	if (acc_bd->zevpn && zif->es_info.es)
++	if (acc_bd->zevpn && zif->es_info.es) {
++		dplane_br_port_delete(zif->ifp, vid);
+ 		zebra_evpn_local_es_evi_del(zif->es_info.es, acc_bd->zevpn);
++	}
+ 
+ 	/* if there are no other references the access_bd can be freed */
+ 	zebra_evpn_acc_bd_free_on_deref(acc_bd);
+@@ -1399,8 +1408,10 @@ static void zebra_evpn_nhg_update(struct zebra_evpn_es *es)
+ 			es->flags |= ZEBRA_EVPNES_NHG_ACTIVE;
+ 			/* add backup NHG to the br-port */
+ 			if ((es->flags & ZEBRA_EVPNES_LOCAL))
+-				zebra_evpn_es_br_port_dplane_update(es,
+-								    __func__);
++				zebra_evpn_es_br_port_dplane_update(
++					es,
++					0 /* Backup NHG is only on the port */,
++					__func__);
+ 			zebra_evpn_nhg_mac_update(es);
+ 		}
+ 	} else {
+@@ -1411,8 +1422,10 @@ static void zebra_evpn_nhg_update(struct zebra_evpn_es *es)
+ 			es->flags &= ~ZEBRA_EVPNES_NHG_ACTIVE;
+ 			/* remove backup NHG from the br-port */
+ 			if ((es->flags & ZEBRA_EVPNES_LOCAL))
+-				zebra_evpn_es_br_port_dplane_update(es,
+-								    __func__);
++				zebra_evpn_es_br_port_dplane_update(
++					es,
++					0 /* Backup NHG is only on the port */,
++					__func__);
+ 			zebra_evpn_nhg_mac_update(es);
+ 			kernel_del_mac_nhg(es->nhg_id);
+ 		}
+@@ -1623,7 +1636,8 @@ static struct zebra_evpn_es_vtep *zebra_evpn_es_vtep_find(struct zebra_evpn_es *
+ /* flush all the dataplane br-port info associated with the ES */
+ static bool zebra_evpn_es_br_port_dplane_clear(struct zebra_evpn_es *es)
+ {
+-	struct ipaddr sph_filters[ES_VTEP_MAX_CNT];
++	struct zebra_if *zif = es->zif;
++	uint16_t vid;
+ 
+ 	if (!(es->flags & ZEBRA_EVPNES_BR_PORT))
+ 		return false;
+@@ -1631,9 +1645,15 @@ static bool zebra_evpn_es_br_port_dplane_clear(struct zebra_evpn_es *es)
+ 	if (IS_ZEBRA_DEBUG_EVPN_MH_ES)
+ 		zlog_debug("es %s br-port dplane clear", es->esi_str);
+ 
+-	memset(&sph_filters, 0, sizeof(sph_filters));
+-	dplane_br_port_update(es->zif->ifp, false /* non_df */, 0, sph_filters,
+-			      0 /* backup_nhg_id */);
++	if (bf_is_inited(zif->vlan_bitmap)) {
++		bf_for_each_set_bit(zif->vlan_bitmap, vid,
++				    IF_VLAN_BITMAP_MAX) {
++			dplane_br_port_delete(es->zif->ifp, vid);
++		}
++	}
++
++	dplane_br_port_delete(es->zif->ifp, 0);
++
+ 	return true;
+ }
+ 
+@@ -1647,6 +1667,7 @@ zebra_evpn_es_br_port_dplane_update_needed(struct zebra_evpn_es *es)
+ 
+ /* returns TRUE if dplane entry was updated */
+ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
++						uint16_t vid,
+ 						const char *caller)
+ {
+ 	uint32_t backup_nhg_id;
+@@ -1693,11 +1714,36 @@ static bool zebra_evpn_es_br_port_dplane_update(struct zebra_evpn_es *es,
+ 	}
+ 
+ 	dplane_br_port_update(es->zif->ifp, !!(es->flags & ZEBRA_EVPNES_NON_DF),
+-			      sph_filter_cnt, sph_filters, backup_nhg_id);
++			      sph_filter_cnt, sph_filters, backup_nhg_id, vid);
+ 
+ 	return true;
+ }
+ 
++static bool zebra_evpn_es_br_port_dplane_update_all_vids(
++					struct zebra_evpn_es *es,
++					const char *caller)
++{
++	struct zebra_if *zif = es->zif;
++	uint16_t vid;
++	bool dplane_updated = false;
++
++	/*
++	 * All calls to zebra_evpn_es_br_port_dplane_update will return the same
++	 * thing as they all use the same ES. It is currently safe to only
++	 * use the return value from the first one.
++	 */
++	dplane_updated = zebra_evpn_es_br_port_dplane_update(es, 0, caller);
++
++	if (bf_is_inited(zif->vlan_bitmap)) {
++		bf_for_each_set_bit(zif->vlan_bitmap, vid,
++				    IF_VLAN_BITMAP_MAX) {
++			zebra_evpn_es_br_port_dplane_update(es, vid, caller);
++		}
++	}
++
++	return dplane_updated;
++}
++
+ /* returns TRUE if dplane entry was updated */
+ static bool zebra_evpn_es_df_change(struct zebra_evpn_es *es, bool new_non_df,
+ 				    const char *caller, const char *reason)
+@@ -1720,7 +1766,7 @@ static bool zebra_evpn_es_df_change(struct zebra_evpn_es *es, bool new_non_df,
+ 		es->flags &= ~ZEBRA_EVPNES_NON_DF;
+ 
+ 	/* update non-DF block filter in the dataplane */
+-	return zebra_evpn_es_br_port_dplane_update(es, __func__);
++	return zebra_evpn_es_br_port_dplane_update_all_vids(es, __func__);
+ }
+ 
+ 
+@@ -1824,7 +1870,7 @@ static void zebra_evpn_es_vtep_add(struct zebra_evpn_es *es, struct ipaddr *vtep
+ 	}
+ 	/* add the vtep to the SPH list */
+ 	if (!dplane_updated && (es->flags & ZEBRA_EVPNES_LOCAL))
+-		zebra_evpn_es_br_port_dplane_update(es, __func__);
++		zebra_evpn_es_br_port_dplane_update_all_vids(es, __func__);
+ }
+ 
+ static void zebra_evpn_es_vtep_del(struct zebra_evpn_es *es, struct ipaddr *vtep_ip)
+@@ -1845,7 +1891,8 @@ static void zebra_evpn_es_vtep_del(struct zebra_evpn_es *es, struct ipaddr *vtep
+ 		}
+ 		/* remove the vtep from the SPH list */
+ 		if (!dplane_updated && (es->flags & ZEBRA_EVPNES_LOCAL))
+-			zebra_evpn_es_br_port_dplane_update(es, __func__);
++			zebra_evpn_es_br_port_dplane_update_all_vids(es,
++								     __func__);
+ 		zebra_evpn_es_vtep_free(es_vtep);
+ 	}
+ }
+@@ -2172,7 +2219,7 @@ void zebra_evpn_es_local_br_port_update(struct zebra_if *zif)
+ 
+ 	/* update the dataplane br_port attrs */
+ 	if (new_br_port && zebra_evpn_es_br_port_dplane_update_needed(es))
+-		zebra_evpn_es_br_port_dplane_update(es, __func__);
++		zebra_evpn_es_br_port_dplane_update_all_vids(es, __func__);
+ }
+ 
+ /* On config of first local-ES turn off DAD */
+@@ -2312,10 +2359,10 @@ static void zebra_evpn_es_local_info_set(struct zebra_evpn_es *es,
+ 		 * result of some thing other than DF status change
+ 		 */
+ 		if (zebra_evpn_es_br_port_dplane_update_needed(es))
+-			zebra_evpn_es_br_port_dplane_update(es, __func__);
++				zebra_evpn_es_br_port_dplane_update_all_vids(
++					es, __func__);
+ 	}
+ 
+-
+ 	/* Setup ES-EVIs for all VxLAN stretched VLANs associated with
+ 	 * the zif
+ 	 */
+@@ -2830,7 +2877,7 @@ void zebra_evpn_es_bypass_update(struct zebra_evpn_es *es,
+ 	/* disable SPH filter */
+ 	if (!dplane_updated && (es->flags & ZEBRA_EVPNES_LOCAL)
+ 	    && (listcount(es->es_vtep_list) > ES_VTEP_MAX_CNT))
+-		zebra_evpn_es_br_port_dplane_update(es, __func__);
++		zebra_evpn_es_br_port_dplane_update_all_vids(es, __func__);
+ }
+ 
+ void zebra_evpn_es_bypass_cfg_update(struct zebra_if *zif, bool bypass)
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index 7206df4ac5..d60c145551 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -5289,6 +5289,7 @@ static void rib_process_dplane_results(struct event *thread)
+ 			case DPLANE_OP_VTEP_ADD:
+ 			case DPLANE_OP_VTEP_DELETE:
+ 			case DPLANE_OP_BR_PORT_UPDATE:
++			case DPLANE_OP_BR_PORT_DELETE:
+ 			case DPLANE_OP_NEIGH_TABLE_UPDATE:
+ 			case DPLANE_OP_GRE_SET:
+ 			case DPLANE_OP_SRV6_ENCAP_SRCADDR_SET:
+-- 
+2.34.1
+
