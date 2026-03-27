@@ -8,8 +8,11 @@ Shared test helpers for sonic_platform tests.
 This file provides common helpers that can be used across all test modules.
 """
 
+import os
 import sys
+import tempfile
 
+from contextlib import contextmanager
 from unittest.mock import Mock
 from fixtures.fake_swsscommon import FakeDBConnector, FakeFieldValuePairs, FakeTable
 
@@ -51,3 +54,36 @@ def mock_data_in_swsscommon(
     for key, fvs in key_to_fvs.items():
         fvs = [(k, v) for k, v in fvs.items()]
         table.set(key, FakeFieldValuePairs(fvs))
+
+
+@contextmanager
+def temp_file(content: str | bytes, file_prefix: str = "", dir_prefix: str = "test."):
+    """
+    Creates a temporary file, under a temporary directory.
+
+    The temporary directory and file are deleted after the context manager exits.
+
+    Args:
+        dir_prefix: prefix for the temporary directory.
+        content: content to write to the temporary file.
+
+    Returns:
+        Path to the created file
+    """
+    root = tempfile.mkdtemp(prefix=dir_prefix)
+    fd, filepath = tempfile.mkstemp(prefix=file_prefix, dir=root)
+    try:
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        os.write(fd, content)
+        os.close(fd)
+
+        yield filepath
+    finally:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        try:
+            os.rmdir(root)
+        except OSError:
+            # Directory not empty; leave it
+            pass

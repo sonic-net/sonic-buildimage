@@ -423,7 +423,7 @@ check_dpkg_need_lock()
 # Print warning message if a debian package version not specified when debian version control enabled.
 check_apt_version()
 {
-    VERSION_FILE="${VERSION_PATH}/versions-deb"
+    local VERSION_FILE="${VERSION_PATH}/versions-deb"
     local install=$(check_apt_install "$@")
     if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ "$install" == "y" ]; then
         for para in "$@"
@@ -440,7 +440,7 @@ check_apt_version()
                 continue
             else
                 package=$para
-                if ! grep -q "^${package}=" $VERSION_FILE; then
+                if ! grep -q "^${package}==" "$VERSION_FILE"; then
                     echo "Warning: the version of the package ${package} is not specified." 1>&2
                 fi
             fi
@@ -487,6 +487,9 @@ update_preference_deb()
         for pacakge_version in $(cat "$version_file"); do
             package=$(echo $pacakge_version | awk -F"==" '{print $1}')
             version=$(echo $pacakge_version | awk -F"==" '{print $2}')
+            # Strip +fips suffix — FIPS packages are locally rebuilt
+            # and not available from Debian apt repos
+            version="${version%+fips}"
             echo -e "Package: $package\nPin: version $version\nPin-Priority: 999\n\n" >> $VERSION_DEB_PREFERENCE
         done
     fi
