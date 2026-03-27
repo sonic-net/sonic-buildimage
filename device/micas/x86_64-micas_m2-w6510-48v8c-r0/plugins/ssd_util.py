@@ -11,7 +11,7 @@ try:
     import re
     import os
     import subprocess
-    from sonic_platform_base.sonic_ssd.ssd_base import SsdBase
+    from sonic_platform_base.sonic_storage.storage_base import StorageBase
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -30,7 +30,7 @@ FAIL_PERCENT = 95
 INNODISK_HEALTH_ID = 169
 INNODISK_TEMPERATURE_ID = 194
 
-class SsdUtil(SsdBase):
+class SsdUtil(StorageBase):
     """
     Generic implementation of the SSD health API
     """
