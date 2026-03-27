@@ -1,0 +1,104 @@
+From b1736938b89bba14c62ff1e88d50ae9fa806014d Mon Sep 17 00:00:00 2001
+From: Mike RE Mallin <mremallin@gmail.com>
+Date: Wed, 4 Dec 2024 15:41:24 -0500
+Subject: [PATCH 1/4] Trigger neighbour probe when the hold timer starts
+
+---
+ zebra/zebra_dplane.c     |  9 ++++++---
+ zebra/zebra_dplane.h     |  2 +-
+ zebra/zebra_evpn_neigh.c | 17 ++++++++++++++++-
+ 3 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index c7b7117d7a..fe48f7cb7c 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -5745,7 +5745,7 @@ enum zebra_dplane_result dplane_local_neigh_add(const struct interface *ifp,
+ 					  const struct ipaddr *ip,
+ 					  const struct ethaddr *mac,
+ 					  bool set_router, bool set_static,
+-					  bool set_inactive)
++					  bool set_inactive, bool trigger_probe)
+ {
+ 	enum zebra_dplane_result result = ZEBRA_DPLANE_REQUEST_FAILURE;
+ 	uint32_t update_flags = 0;
+@@ -5754,9 +5754,12 @@ enum zebra_dplane_result dplane_local_neigh_add(const struct interface *ifp,
+ 
+ 	if (set_static)
+ 		update_flags |= DPLANE_NEIGH_SET_STATIC;
+-
+-	if (set_inactive) {
++	if (set_inactive)
+ 		update_flags |= DPLANE_NEIGH_SET_INACTIVE;
++
++	if (trigger_probe) {
++		state = DPLANE_NUD_PROBE;
++	} else if (set_inactive) {
+ 		state = DPLANE_NUD_STALE;
+ 	} else {
+ 		state = DPLANE_NUD_REACHABLE;
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index 854a0e862e..e5adb2198c 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -1046,7 +1046,7 @@ enum zebra_dplane_result dplane_local_neigh_add(const struct interface *ifp,
+ 					  const struct ipaddr *ip,
+ 					  const struct ethaddr *mac,
+ 					  bool set_router, bool set_static,
+-					  bool set_inactive);
++					  bool set_inactive, bool trigger_probe);
+ enum zebra_dplane_result dplane_rem_neigh_delete(const struct interface *ifp,
+ 					     const struct ipaddr *ip);
+ 
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index 961b1a5d98..7b8a703d92 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -245,6 +245,7 @@ static void zebra_evpn_sync_neigh_dp_install(struct zebra_neigh *n,
+ 	struct interface *ifp;
+ 	bool set_static;
+ 	bool set_router;
++	bool trigger_probe = false;
+ 
+ 	zns = zebra_ns_lookup(NS_DEFAULT);
+ 	ifp = if_lookup_by_index_per_ns(zns, n->ifindex);
+@@ -277,7 +278,7 @@ static void zebra_evpn_sync_neigh_dp_install(struct zebra_neigh *n,
+ 			set_static ? " static" : "",
+ 			set_inactive ? " inactive" : "");
+ 	dplane_local_neigh_add(ifp, &n->ip, &n->emac, set_router, set_static,
+-			       set_inactive);
++			       set_inactive, trigger_probe);
+ }
+ 
+ /*
+@@ -451,6 +452,14 @@ static void zebra_evpn_neigh_hold_exp_cb(struct event *t)
+ 
+ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
+ {
++	struct zebra_ns *zns;
++	struct interface *ifp;
++
++	bool set_router = !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_ROUTER_FLAG);
++	bool set_static = zebra_evpn_neigh_is_static(n);
++	bool set_inactive = !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
++	bool trigger_probe = true;
++
+ 	if (n->hold_timer)
+ 		return;
+ 
+@@ -459,6 +468,12 @@ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
+ 			   n->zevpn->vni, &n->ip, &n->emac, n->flags);
+ 	event_add_timer(zrouter.master, zebra_evpn_neigh_hold_exp_cb, n,
+ 			zmh_info->neigh_hold_time, &n->hold_timer);
++
++	zns = zebra_ns_lookup(NS_DEFAULT);
++	ifp = if_lookup_by_index_per_ns(zns, n->ifindex);
++
++	(void)dplane_local_neigh_add(ifp, &n->ip, &n->emac,
++	                             set_router, set_static, set_inactive, trigger_probe);
+ }
+ 
+ static void zebra_evpn_local_neigh_deref_mac(struct zebra_neigh *n,
+-- 
+2.34.1
+

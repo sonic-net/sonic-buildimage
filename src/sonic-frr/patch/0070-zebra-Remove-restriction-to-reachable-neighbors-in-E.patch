@@ -1,0 +1,45 @@
+From 6d93b38e00120de013bc7c0753f1f64117abfe9d Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Thu, 26 Mar 2026 11:49:37 -0700
+Subject: [PATCH 3/4] zebra: Remove restriction to reachable neighbors in EVPN
+ MH advertisement and unset local inactive flag on neighbor activation
+
+Signed-off-by: Barry Friedman (friedman) <friedman@cisco.com>
+---
+ zebra/zebra_evpn_mh.c    | 6 +++++-
+ zebra/zebra_evpn_neigh.c | 2 ++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 5462682293..0657c0070e 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -2250,7 +2250,11 @@ static void zebra_evpn_es_df_delay_exp_cb(struct event *t)
+ static void zebra_evpn_mh_on_first_local_es(void)
+ {
+ 	zebra_evpn_mh_dup_addr_detect_off();
+-	zebra_evpn_mh_advertise_reach_neigh_only();
++	/* Don't restrict to reachable neighbors only - in SONiC,
++	 * neighbor entries go stale because traffic goes via ASIC
++	 * not kernel.
++	 */
++	/* zebra_evpn_mh_advertise_reach_neigh_only(); */
+ 	zebra_evpn_mh_advertise_svi_mac();
+ }
+ 
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index 7eef25bf01..290789e179 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -1005,6 +1005,8 @@ void zebra_evpn_process_neigh_on_local_mac_change(struct zebra_evpn *zevpn,
+ 			if (IS_ZEBRA_NEIGH_INACTIVE(n) || seq_change
+ 			    || es_change) {
+ 				ZEBRA_NEIGH_SET_ACTIVE(n);
++				UNSET_FLAG(n->flags,
++					   ZEBRA_NEIGH_LOCAL_INACTIVE);
+ 				n->loc_seq = zmac->loc_seq;
+ 				if (!(zebra_evpn_do_dup_addr_detect(zvrf)
+ 				      && zvrf->dad_freeze
+-- 
+2.34.1
+

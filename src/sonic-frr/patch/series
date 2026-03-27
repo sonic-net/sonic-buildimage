@@ -66,3 +66,7 @@
 0065-bgpd-EVPNv6-MH-utility-api-vtep-ip-to-attr-nh.patch
 0066-bgpd-EVPNv6-MH-init-using-macro.patch
 0067-bgpd-EVPNv6-MH-init-type4-prefix.patch
+0068-Trigger-neighbour-probe-when-the-hold-timer-starts.patch
+0069-SVI-Deletion-handling-BGP-sync-message-145-159.patch
+0070-zebra-Remove-restriction-to-reachable-neighbors-in-E.patch
+0071-include-linux-Update-NTF_E_MH_PEER_SYNC-flag-value-i.patch

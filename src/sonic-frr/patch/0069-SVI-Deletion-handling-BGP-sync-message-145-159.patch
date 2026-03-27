@@ -1,0 +1,32 @@
+From eda2ae19e5a306ddc2517061928a341519386c11 Mon Sep 17 00:00:00 2001
+From: "Mrinmoy Ghosh (mrghosh)" <mrghosh@cisco.com>
+Date: Fri, 14 Mar 2025 23:09:49 -0400
+Subject: [PATCH 2/4] SVI Deletion handling, BGP sync message (#145) (#159)
+
+MIGSOFTWAR-21500: VLAN Interface Deletion handling, BGP sync message
+---
+ zebra/zebra_evpn_neigh.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/zebra/zebra_evpn_neigh.c b/zebra/zebra_evpn_neigh.c
+index 7b8a703d92..7eef25bf01 100644
+--- a/zebra/zebra_evpn_neigh.c
++++ b/zebra/zebra_evpn_neigh.c
+@@ -462,6 +462,14 @@ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
+ 
+ 	if (n->hold_timer)
+ 		return;
++	if (n->ifindex == IFINDEX_INTERNAL) {
++		if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
++			zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold Ignore as"
++			           " SVI/BVI is deleted", n->zevpn->vni, &n->ip, &n->emac,
++			           n->flags);
++		zebra_evpn_neigh_del(n->zevpn, n);
++		return;
++	}
+ 
+ 	if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH && n->zevpn)
+ 		zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold start",
+-- 
+2.34.1
+
