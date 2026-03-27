@@ -1,6 +1,6 @@
 #!/bin/bash
 # Unit tests for k8s_pod_control.sh
-# Validates jq filtering logic by mocking kubelet /pods JSON responses.
+# Uses a mock docker command to test container discovery and restart logic.
 #
 # Usage: bash files/scripts/tests/test_k8s_pod_control.sh
 
@@ -8,7 +8,8 @@ set -euo pipefail
 
 PASS=0
 FAIL=0
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT="${SCRIPT_DIR}/k8s_pod_control.sh"
 
 # ── helpers ──────────────────────────────────────────────────────────
 red()   { printf '\033[31m%s\033[0m' "$*"; }
@@ -27,218 +28,174 @@ assert_eq() {
   fi
 }
 
-# ── sample kubelet /pods JSON ─────────────────────────────────────────
-# Mimics the structure returned by https://localhost:10250/pods
-MOCK_PODS_JSON='{
-  "kind": "PodList",
-  "apiVersion": "v1",
-  "items": [
-    {
-      "metadata": {
-        "name": "ds-leafrouter-ussouth-az01-4vvnd",
-        "namespace": "sonic",
-        "labels": {
-          "controller-revision-hash": "5796d79c5f",
-          "name": "ds-leafrouter",
-          "pod-template-generation": "1743567"
-        }
-      },
-      "status": { "phase": "Running" }
-    },
-    {
-      "metadata": {
-        "name": "ds-leafrouter-telemetry-zgmsl",
-        "namespace": "sonic",
-        "labels": {
-          "controller-revision-hash": "fb47dd8b7",
-          "name": "ds-leafrouter-telemetry",
-          "pod-template-generation": "9",
-          "raw_container_name": "telemetry"
-        }
-      },
-      "status": { "phase": "Running" }
-    },
-    {
-      "metadata": {
-        "name": "ds-leafrouter-restapi-abc12",
-        "namespace": "sonic",
-        "labels": {
-          "raw_container_name": "restapi"
-        }
-      },
-      "status": { "phase": "Pending" }
-    },
-    {
-      "metadata": {
-        "name": "other-ns-pod",
-        "namespace": "kube-system",
-        "labels": {
-          "raw_container_name": "telemetry"
-        }
-      },
-      "status": { "phase": "Running" }
-    }
-  ]
-}'
+# ── Mock environment ──────────────────────────────────────────────────
+MOCK_DIR="$(mktemp -d)"
+trap 'rm -rf "${MOCK_DIR}"' EXIT
 
-# Empty pod list
-MOCK_EMPTY_JSON='{
-  "kind": "PodList",
-  "apiVersion": "v1",
-  "items": []
-}'
+# Mock docker: handles ps and restart subcommands
+cat > "${MOCK_DIR}/docker" <<'MOCK_DOCKER'
+#!/bin/bash
+subcmd="$1"; shift
+case "$subcmd" in
+  ps)
+    quiet=false; all=false; filter=""; format=""
+    while (( $# > 0 )); do
+      case "$1" in
+        -q) quiet=true; shift ;;
+        -a) all=true; shift ;;
+        --filter) filter="$2"; shift 2 ;;
+        --format) format="$2"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    case "$filter" in
+      "name=k8s_telemetry_")
+        if $quiet; then
+          echo "abc123def456"
+        elif [[ "$format" == *".State"* ]]; then
+          echo "ds-leafrouter-telemetry-zgmsl running"
+        else
+          echo "ds-leafrouter-telemetry-zgmsl"
+        fi
+        ;;
+      "name=k8s_multi_")
+        if $quiet; then
+          printf '%s\n' "aaa111" "bbb222"
+        elif [[ "$format" == *".State"* ]]; then
+          printf '%s\n' "pod-multi-1 running" "pod-multi-2 exited"
+        else
+          printf '%s\n' "pod-multi-1" "pod-multi-2"
+        fi
+        ;;
+      "name=k8s_nonexistent_")
+        ;;  # no output
+    esac
+    ;;
+  restart)
+    cid="$1"
+    case "$cid" in
+      "abc123def456"|"aaa111"|"bbb222") ;;
+      *) exit 1 ;;
+    esac
+    ;;
+esac
+MOCK_DOCKER
+chmod +x "${MOCK_DIR}/docker"
 
-# Pod with no labels
-MOCK_NO_LABELS_JSON='{
-  "kind": "PodList",
-  "apiVersion": "v1",
-  "items": [
-    {
-      "metadata": {
-        "name": "no-labels-pod",
-        "namespace": "sonic"
-      },
-      "status": { "phase": "Running" }
-    }
-  ]
-}'
+# Mock logger (absorb all log output)
+cat > "${MOCK_DIR}/logger" <<'MOCK_LOGGER'
+#!/bin/bash
+exit 0
+MOCK_LOGGER
+chmod +x "${MOCK_DIR}/logger"
 
-# ── extract jq filters from the script to test them directly ─────────
-# We test the exact same jq expressions used in pods_on_node / pod_names_on_node
+export PATH="${MOCK_DIR}:${PATH}"
 
-jq_pods_on_node() {
-  local ns="$1" key="$2" val="$3" json="$4"
-  printf '%s' "$json" | jq -r \
-    --arg ns "$ns" --arg key "$key" --arg val "$val" \
-    '.items[] | select(.metadata.namespace == $ns) |
-     select(.metadata.labels[$key] == $val) |
-     "\(.metadata.name) \(.status.phase)"' || true
-}
+# Create a sourceable version of the script:
+# - replace /usr/bin/logger with plain logger (so our PATH mock is used)
+# - strip the case dispatch block at the bottom
+SOURCE_SCRIPT="${MOCK_DIR}/k8s_pod_control_funcs.sh"
+sed -e 's|/usr/bin/logger|logger|g' \
+    -e '/^case "\${1:-}" in$/,/^esac$/d' \
+    "$SCRIPT" > "$SOURCE_SCRIPT"
 
-jq_pod_names_on_node() {
-  local ns="$1" key="$2" val="$3" json="$4"
-  printf '%s' "$json" | jq -r \
-    --arg ns "$ns" --arg key "$key" --arg val "$val" \
-    '.items[] | select(.metadata.namespace == $ns) |
-     select(.metadata.labels[$key] == $val) |
-     .metadata.name' || true
-}
+# Source functions with SERVICE_NAME pre-set
+export SERVICE_NAME="telemetry"
+source "$SOURCE_SCRIPT"
 
 # ── Test suite ────────────────────────────────────────────────────────
-echo "=== pods_on_node jq filter ==="
+echo "=== DOCKER_FILTER ==="
 
-# Test 1: Match telemetry pod in sonic namespace
-result="$(jq_pods_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_PODS_JSON")"
-assert_eq "match telemetry pod" \
-  "ds-leafrouter-telemetry-zgmsl Running" \
-  "$result"
-
-# Test 2: Match restapi pod (Pending phase)
-result="$(jq_pods_on_node "sonic" "raw_container_name" "restapi" "$MOCK_PODS_JSON")"
-assert_eq "match restapi pod (Pending)" \
-  "ds-leafrouter-restapi-abc12 Pending" \
-  "$result"
-
-# Test 3: Should NOT match pods in other namespaces
-result="$(jq_pods_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_PODS_JSON")"
-# Should only return the sonic-namespace pod, not the kube-system one
-line_count=$(echo "$result" | wc -l)
-assert_eq "excludes other namespaces (single result)" "1" "$line_count"
-
-# Test 4: No match when label value differs
-result="$(jq_pods_on_node "sonic" "raw_container_name" "nonexistent" "$MOCK_PODS_JSON")"
-assert_eq "no match for unknown service" "" "$result"
-
-# Test 5: No match when label key differs
-result="$(jq_pods_on_node "sonic" "app" "telemetry" "$MOCK_PODS_JSON")"
-assert_eq "no match for wrong label key" "" "$result"
-
-# Test 6: Empty pod list
-result="$(jq_pods_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_EMPTY_JSON")"
-assert_eq "empty pod list returns empty" "" "$result"
-
-# Test 7: Pod with no labels (should not error, just no match)
-result="$(jq_pods_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_NO_LABELS_JSON")"
-assert_eq "pod with no labels returns empty" "" "$result"
+assert_eq "DOCKER_FILTER for telemetry" \
+  "name=k8s_telemetry_" "$DOCKER_FILTER"
 
 echo ""
-echo "=== pod_names_on_node jq filter ==="
+echo "=== container_ids_on_node ==="
 
-# Test 8: Match telemetry pod name only
-result="$(jq_pod_names_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_PODS_JSON")"
-assert_eq "match telemetry pod name" \
-  "ds-leafrouter-telemetry-zgmsl" \
-  "$result"
+result="$(container_ids_on_node)"
+assert_eq "returns container ID for telemetry" "abc123def456" "$result"
 
-# Test 9: Match restapi pod name
-result="$(jq_pod_names_on_node "sonic" "raw_container_name" "restapi" "$MOCK_PODS_JSON")"
-assert_eq "match restapi pod name" \
-  "ds-leafrouter-restapi-abc12" \
-  "$result"
+# Switch to multi-container service
+DOCKER_FILTER="name=k8s_multi_"
+result="$(container_ids_on_node)"
+line_count=$(printf '%s\n' "$result" | grep -c .)
+assert_eq "returns multiple container IDs" "2" "$line_count"
 
-# Test 10: No match
-result="$(jq_pod_names_on_node "sonic" "raw_container_name" "nonexistent" "$MOCK_PODS_JSON")"
+# No match
+DOCKER_FILTER="name=k8s_nonexistent_"
+result="$(container_ids_on_node)"
 assert_eq "no match returns empty" "" "$result"
 
-# Test 11: Empty list
-result="$(jq_pod_names_on_node "sonic" "raw_container_name" "telemetry" "$MOCK_EMPTY_JSON")"
-assert_eq "empty list returns empty" "" "$result"
+echo ""
+echo "=== pods_on_node ==="
+
+DOCKER_FILTER="name=k8s_telemetry_"
+result="$(pods_on_node)"
+assert_eq "returns pod name and state" \
+  "ds-leafrouter-telemetry-zgmsl running" "$result"
+
+DOCKER_FILTER="name=k8s_multi_"
+result="$(pods_on_node)"
+line_count=$(printf '%s\n' "$result" | grep -c .)
+assert_eq "returns multiple pods" "2" "$line_count"
+
+DOCKER_FILTER="name=k8s_nonexistent_"
+result="$(pods_on_node)"
+assert_eq "no match returns empty" "" "$result"
 
 echo ""
-echo "=== POD_SELECTOR parsing ==="
+echo "=== pod_names_on_node ==="
 
-# Test 12-13: Verify the bash parameter expansion used to split key=value
-selector="raw_container_name=telemetry"
-key="${selector%%=*}"
-val="${selector#*=}"
-assert_eq "selector key parsing" "raw_container_name" "$key"
-assert_eq "selector val parsing" "telemetry" "$val"
+DOCKER_FILTER="name=k8s_telemetry_"
+result="$(pod_names_on_node)"
+assert_eq "returns pod name only" \
+  "ds-leafrouter-telemetry-zgmsl" "$result"
 
-# Test 14-15: Custom selector
-selector="app=my-service"
-key="${selector%%=*}"
-val="${selector#*=}"
-assert_eq "custom selector key" "app" "$key"
-assert_eq "custom selector val" "my-service" "$val"
+DOCKER_FILTER="name=k8s_multi_"
+result="$(pod_names_on_node)"
+line_count=$(printf '%s\n' "$result" | grep -c .)
+assert_eq "returns multiple pod names" "2" "$line_count"
+
+DOCKER_FILTER="name=k8s_nonexistent_"
+result="$(pod_names_on_node)"
+assert_eq "no match returns empty" "" "$result"
 
 echo ""
-echo "=== HTTP status code parsing ==="
+echo "=== restart_containers ==="
 
-# Test 16-19: Simulate the -w '%{http_code}' output parsing from kubelet_get_pods
-parse_http_response() {
-  local out="$1" http_code="" body=""
-  if (( ${#out} >= 3 )); then
-    http_code="${out: -3}"
-    body="${out:0:${#out}-3}"
-  fi
-  echo "${http_code}|${body}"
-}
+DOCKER_FILTER="name=k8s_telemetry_"
+SERVICE_NAME="telemetry"
+restart_containers; rc=$?
+assert_eq "restart single container succeeds" "0" "$rc"
 
-result="$(parse_http_response '{"items":[]}200')"
-assert_eq "parse 200 response code" '200|{"items":[]}' "$result"
+DOCKER_FILTER="name=k8s_multi_"
+SERVICE_NAME="multi"
+restart_containers; rc=$?
+assert_eq "restart multiple containers succeeds" "0" "$rc"
 
-result="$(parse_http_response '401')"
-assert_eq "parse 401 with empty body" '401|' "$result"
-
-result="$(parse_http_response 'Unauthorized403')"
-assert_eq "parse 403 with error body" '403|Unauthorized' "$result"
-
-result="$(parse_http_response '{"items":[{"metadata":{"name":"pod1"}}]}200')"
-assert_eq "parse 200 with pod data" '200|{"items":[{"metadata":{"name":"pod1"}}]}' "$result"
+DOCKER_FILTER="name=k8s_nonexistent_"
+SERVICE_NAME="nonexistent"
+restart_containers; rc=$?
+assert_eq "restart with no containers is no-op" "0" "$rc"
 
 echo ""
 echo "=== cmd_status awk filter ==="
 
-# Test 20-21: Verify the awk expression used in cmd_status/cmd_wait
 has_running() {
-  awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$1" && echo "yes" || echo "no"
+  awk '$2=="running"{found=1} END{exit found?0:1}' <<<"$1" && echo "yes" || echo "no"
 }
 
-result="$(has_running "ds-leafrouter-telemetry-zgmsl Running")"
-assert_eq "awk detects Running" "yes" "$result"
+result="$(has_running "ds-leafrouter-telemetry-zgmsl running")"
+assert_eq "awk detects running" "yes" "$result"
 
-result="$(has_running "ds-leafrouter-restapi-abc12 Pending")"
-assert_eq "awk detects non-Running" "no" "$result"
+result="$(has_running "ds-leafrouter-restapi-abc12 exited")"
+assert_eq "awk detects exited" "no" "$result"
+
+result="$(has_running $'pod1 running\npod2 exited')"
+assert_eq "awk mixed (has running)" "yes" "$result"
+
+result="$(has_running $'pod1 exited\npod2 exited')"
+assert_eq "awk all exited" "no" "$result"
 
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
