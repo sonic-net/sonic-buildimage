@@ -2440,6 +2440,168 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+static ssize_t
+dplane_fpm_nl_send_br_port_shl_entries(const struct zebra_dplane_ctx *ctx,
+				       uint8_t *nl_buf, size_t nl_buf_len)
+{
+	size_t i;
+
+	/*
+	 * The BR port update to FPM uses the private message extensions
+	 * defined in kernel_netlink.h
+	 */
+	struct {
+		struct nlmsghdr n;
+		struct evpn_shl_msg e;
+		char buf[0];
+	} *req = (void *)nl_buf;
+	enum dplane_op_e op = dplane_ctx_get_op(ctx);
+
+	if (nl_buf_len < sizeof(*req))
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_shl_msg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	if (DPLANE_OP_BR_PORT_UPDATE == op) {
+		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_SHL;
+	} else {
+		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_SHL;
+	}
+
+	req->e.esm_ifindex = dplane_ctx_get_ifindex(ctx);
+	req->e.esm_vid = dplane_ctx_get_br_port_vlan_id(ctx);
+
+	if (dplane_ctx_get_br_port_sph_filter_cnt(ctx) > 0) {
+		const struct ipaddr *sph_filters =
+			dplane_ctx_get_br_port_sph_filters(ctx);
+		for (i = 0; i < dplane_ctx_get_br_port_sph_filter_cnt(ctx);
+		     i++) {
+			if (IS_IPADDR_V4(&sph_filters[i])) {
+				nl_attr_put(&req->n, nl_buf_len,
+					    FPM_SHL_IPV4_ADDR,
+					    &sph_filters[i].ipaddr_v4,
+					    sizeof(sph_filters[i].ipaddr_v4));
+			} else {
+				nl_attr_put(&req->n, nl_buf_len,
+					    FPM_SHL_IPV6_ADDR,
+					    &sph_filters[i].ipaddr_v6,
+					    sizeof(sph_filters[i].ipaddr_v6));
+			}
+		}
+	}
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
+
+static ssize_t
+dplane_fpm_nl_send_br_port_df_entries(const struct zebra_dplane_ctx *ctx,
+				      uint8_t *nl_buf, size_t nl_buf_len)
+{
+	struct {
+		struct nlmsghdr n;
+		struct evpn_df_msg e;
+		char buf[0];
+	} *req = (void *)nl_buf;
+	enum dplane_op_e op = dplane_ctx_get_op(ctx);
+
+	if (nl_buf_len < sizeof(*req))
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_df_msg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	req->e.edm_ifindex = dplane_ctx_get_ifindex(ctx);
+	req->e.edm_vid = dplane_ctx_get_br_port_vlan_id(ctx);
+
+	if (DPLANE_OP_BR_PORT_UPDATE == op) {
+		const uint32_t flags = dplane_ctx_get_br_port_flags(ctx);
+
+		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_DF;
+		req->e.edm_non_df = ((flags & DPLANE_BR_PORT_NON_DF) != 0);
+	} else {
+		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_DF;
+	}
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
+
+static ssize_t
+dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
+				      uint8_t *nl_buf, size_t nl_buf_len)
+{
+	struct {
+		struct nlmsghdr n;
+		struct evpn_backup_nhg_msg e;
+		char buf[0];
+	} *req = (void *)nl_buf;
+
+	if (nl_buf_len < sizeof(*req))
+		return 0;
+
+	/*
+	 * There is currently only a backup NHG per-port, so
+	 * only send it on VLAN 0, which represents the entire port.
+	 */
+	if (dplane_ctx_get_br_port_vlan_id(ctx) != 0)
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct evpn_backup_nhg_msg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	req->e.ebnm_ifindex = dplane_ctx_get_ifindex(ctx);
+	req->e.ebnm_backup_nhg_id = dplane_ctx_get_br_port_backup_nhg_id(ctx);
+
+	if (req->e.ebnm_backup_nhg_id > 0) {
+		req->n.nlmsg_type = RTM_FPM_ADD_EVPN_ES_BACKUP_NHG;
+	} else {
+		req->n.nlmsg_type = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG;
+	}
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
+
+static ssize_t
+dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
+				    uint8_t *nl_buf, size_t nl_buf_len)
+{
+	ssize_t buf_used = 0;
+	ssize_t rv = 0;
+
+	/*
+	 * DPLANE_OP_BR_PORT_UPDATE/DELETE is used in the context of
+	 * EVPN updates. Encode SHL, DF, and backup NHG messages.
+	 */
+	rv = dplane_fpm_nl_send_br_port_shl_entries(ctx, nl_buf, nl_buf_len);
+	if (rv > 0) {
+		buf_used += rv;
+		nl_buf += rv;
+		nl_buf_len -= rv;
+	}
+
+	rv = dplane_fpm_nl_send_br_port_df_entries(ctx, nl_buf, nl_buf_len);
+	if (rv > 0) {
+		buf_used += rv;
+		nl_buf += rv;
+		nl_buf_len -= rv;
+	}
+
+	rv = dplane_fpm_nl_send_br_port_backup_nhg(ctx, nl_buf, nl_buf_len);
+	if (rv > 0) {
+		buf_used += rv;
+		nl_buf += rv;
+		nl_buf_len -= rv;
+	}
+
+	return buf_used;
+}
+
 #define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
@@ -2668,6 +2830,22 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 				 fnc, 0, &fnc->t_ribreset);
 		break;
 
+	case DPLANE_OP_BR_PORT_UPDATE:
+	case DPLANE_OP_BR_PORT_DELETE:
+		rv = dplane_fpm_nl_handle_br_port_update(ctx, nl_buf,
+							  sizeof(nl_buf));
+		if (rv <= 0) {
+			if (IS_ZEBRA_DEBUG_FPM)
+				zlog_debug("%s: br_port encode returned %zd",
+					   __func__, rv);
+			dplane_ctx_set_status(ctx,
+					     ZEBRA_DPLANE_REQUEST_FAILURE);
+			return 0;
+		}
+
+		nl_buf_len += (size_t)rv;
+		break;
+
 	/* Un-handled by FPM at this time. */
 	case DPLANE_OP_PW_INSTALL:
 	case DPLANE_OP_PW_UNINSTALL:
@@ -2684,7 +2862,6 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	case DPLANE_OP_RULE_DELETE:
 	case DPLANE_OP_RULE_UPDATE:
 	case DPLANE_OP_NEIGH_DISCOVER:
-	case DPLANE_OP_BR_PORT_UPDATE:
 	case DPLANE_OP_IPTABLE_ADD:
 	case DPLANE_OP_IPTABLE_DELETE:
 	case DPLANE_OP_IPSET_ADD:
