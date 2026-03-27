@@ -111,6 +111,11 @@ stages:
         pool: sonicso1ES-arm64
         variables:
           PLATFORM_ARCH: arm64
+      - name: aspeed-arm64
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_NAME: aspeed
+          PLATFORM_ARCH: arm64
 
 - stage: Test
   dependsOn: BuildVS
@@ -208,5 +213,4 @@ stages:
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      GLOBAL_PARAMS:
-        PTF_MODIFIED: $(PTF_MODIFIED)
+      PTF_MODIFIED: $(PTF_MODIFIED)

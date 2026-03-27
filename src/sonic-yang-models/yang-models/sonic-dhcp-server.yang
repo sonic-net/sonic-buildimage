@@ -10,10 +10,6 @@ module sonic-dhcp-server {
         prefix inet;
     }
 
-    import sonic-port {
-        prefix port;
-    }
-
     organization
         "SONiC";
 
