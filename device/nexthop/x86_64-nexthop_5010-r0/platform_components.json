@@ -8,7 +8,20 @@
                 "BIOS": {},
                 "ONIE": {},
                 "TPM": {},
-                "NVMe": {}
+                "NVMe": {},
+                "DPM1": {},
+                "DPM2": {},
+                "DPM3": {},
+                "DPM4": {},
+                "DCDC2": {},
+                "DCDC3": {},
+                "DCDC4": {},
+                "DCDC5": {},
+                "DCDC6": {},
+                "DCDC7": {},
+                "DCDC8": {},
+                "DCDC9": {},
+                "DCDC10": {}
             }
         }
     }
