@@ -33,7 +33,7 @@ python-arptable==0.0.2
 responses==0.25.8
 scp==0.14.5
 semantic-version==2.10.0
-supervisor==4.3.0
+supervisor==4.2.5
 systemd-python==235
 tabulate==0.9.0
 toposort==1.6
