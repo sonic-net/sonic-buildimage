@@ -30,6 +30,8 @@ CONFIG_DB_JSON=/etc/sonic/config_db.json
 CONFIG_DB_PATH=/etc/sonic/
 CONFIG_DB_PREFIX=config_db
 CONFIG_DB_SUFFIX=.json
+CONFIG_DB_VOQ_JSON=${CONFIG_DB_PATH}${CONFIG_DB_PREFIX}_voq${CONFIG_DB_SUFFIX}
+VOQ_FACTORY_CONFIG_TABLES='["SYSTEM_PORT","VOQ_INBAND_INTERFACE","BGP_VOQ_CHASSIS_NEIGHBOR"]'
 MINGRAPH_FILE=/etc/sonic/minigraph.xml
 TMP_ZTP_CONFIG_DB_JSON=/tmp/ztp_config_db.json
 FACTORY_DEFAULT_HOOKS=/etc/config-setup/factory-default-hooks.d
@@ -274,6 +276,78 @@ generate_config()
             fi
         fi
     fi
+    return 0
+}
+
+merge_voq_factory_config()
+{
+    DEST_FILE=$1
+    FACTORY_VOQ_CONFIG=${ENABLE_FACTORY_VOQ_CONFIG:-n}
+    case "${FACTORY_VOQ_CONFIG}" in
+        y|Y|yes|YES|true|TRUE|1)
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    TMP_CFGGEN_VOQ_JSON=$(mktemp /tmp/tmp_cfggen_voq.XXXXXX.json)
+    TMP_VOQ_CFG_JSON=$(mktemp /tmp/tmp_voq.XXXXXX.json)
+    TMP_MERGED_CFG_JSON=$(mktemp /tmp/tmp_voq_merge.XXXXXX.json)
+    if [ -z "${TMP_CFGGEN_VOQ_JSON}" ] || [ -z "${TMP_VOQ_CFG_JSON}" ] || [ -z "${TMP_MERGED_CFG_JSON}" ]; then
+        rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+        return 1
+    fi
+
+    if [ -r "${MINGRAPH_FILE}" ]; then
+        sonic-cfggen -m "${MINGRAPH_FILE}" --print-data > "${TMP_CFGGEN_VOQ_JSON}"
+        rv=$?
+        if [ $rv -ne 0 ]; then
+            rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+            return $rv
+        fi
+        jq 'with_entries(select([.key] | inside($tables)))' --argjson tables "$VOQ_FACTORY_CONFIG_TABLES" "${TMP_CFGGEN_VOQ_JSON}" > "${CONFIG_DB_VOQ_JSON}"
+        rv=$?
+        if [ $rv -ne 0 ]; then
+            rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+            return $rv
+        fi
+    fi
+
+    if [ ! -r "${CONFIG_DB_VOQ_JSON}" ]; then
+        rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+        return 0
+    fi
+
+    jq 'with_entries(select([.key] | inside($tables)))' --argjson tables "$VOQ_FACTORY_CONFIG_TABLES" "${CONFIG_DB_VOQ_JSON}" > "${TMP_VOQ_CFG_JSON}"
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+        return $rv
+    fi
+
+    voq_table_count=$(jq 'length' "${TMP_VOQ_CFG_JSON}")
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+        return $rv
+    fi
+
+    if [ "${voq_table_count}" -gt 0 ]; then
+        if [ ! -r "${DEST_FILE}" ]; then
+            rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+            return 1
+        fi
+
+        jq --indent 4 -s '.[0] * .[1]' "${DEST_FILE}" "${TMP_VOQ_CFG_JSON}" > "${TMP_MERGED_CFG_JSON}" && mv "${TMP_MERGED_CFG_JSON}" "${DEST_FILE}"
+        rv=$?
+        if [ $rv -ne 0 ]; then
+            rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
+            return $rv
+        fi
+    fi
+
+    rm -f "${TMP_CFGGEN_VOQ_JSON}" "${TMP_VOQ_CFG_JSON}" "${TMP_MERGED_CFG_JSON}"
     return 0
 }
 
@@ -532,6 +606,15 @@ if [ "$CMD" = "factory" ]; then
         exit 1
     fi
     generate_config factory ${CONFIG_DB_JSON} ${FACTORY_TYPE}
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        exit $rv
+    fi
+    merge_voq_factory_config ${CONFIG_DB_JSON}
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        exit $rv
+    fi
 fi
 
 # Take a backup of current configuration
