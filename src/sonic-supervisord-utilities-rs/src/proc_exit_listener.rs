@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
+use std::thread;
 use std::process;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -259,9 +260,19 @@ pub fn get_current_time() -> f64 {
 
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
-        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
+    // It is possible to get here before the syslog daemon has started
+    // Keep retrying if connection fails
+    loop {
+        match syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info) {
+            Ok(_) => {
+                break;
+            }
+            Err(e) => {
+                println!("Failed to initialize syslog: {}", e);
+                thread::sleep(Duration::from_secs(1));
+            }
+        }
+    }
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
