@@ -13,8 +13,8 @@ entrypoints==0.3
 enum34==1.1.6
 exabgp==4.2.25
 flask==3.0.3
-grpcio==1.41.1
-grpcio-tools==1.41.1
+grpcio==1.74.0
+grpcio-tools==1.74.0
 importlib_metadata==8.7.0
 ipaddress==1.0.23
 ipython==5.4.1
@@ -37,10 +37,10 @@ parso==0.8.1
 pexpect==4.8.0
 pickleshare==0.7.5
 pillow==5.4.1
-pip==25.3
+pip==26.0.1
 plumbum==1.9.0
 prompt-toolkit==1.0.18
-protobuf==3.6.1
+protobuf==6.33.5
 ptyprocess==0.7.0
 pyaml==25.5.0
 pybrctl==0.1.4
@@ -63,7 +63,7 @@ rpyc==6.0.2
 scapy==2.5.0
 secretstorage==2.3.1
 serpent==1.41
-setuptools==40.8.0
+setuptools==77.0.3
 simplegeneric==0.8.1
 six==1.12.0
 supervisor==4.2.5
