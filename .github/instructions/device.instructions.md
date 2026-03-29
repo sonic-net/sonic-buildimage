@@ -82,7 +82,7 @@ Ethernet0     17,18,19,20,21,22,23,24          etp1         1      800000   rs
 Ethernet8     1,2,3,4,5,6,7,8                  etp2         2      800000   rs
 ```
 - Lanes must match physical ASIC layout
-- Speed is in bps (e.g., 800000 = 800Gbps, 100000 = 100Gbps)
+- Speed is specified in Mbps (e.g., 800000 = 800Gbps, 100000 = 100Gbps)
 - FEC column (rs/fc/none) is optional but recommended for high-speed ports
 
 ### buffers.json.j2 (Jinja2 Template)
