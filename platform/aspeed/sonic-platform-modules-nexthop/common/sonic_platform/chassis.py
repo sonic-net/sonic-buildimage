@@ -9,6 +9,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog
+    from sonic_platform.eeprom import Eeprom
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -56,6 +57,9 @@ class Chassis(ChassisBase):
         # Initialize watchdog (same as base class)
         self._watchdog = Watchdog()
 
+        # Initialize eeprom
+        self._eeprom = Eeprom()
+
         # NextHop has NO fans - create empty lists
         self._fan_list = []
         self._fan_drawer_list = []
@@ -69,13 +73,10 @@ class Chassis(ChassisBase):
             if thermal.get_presence():
                 self._thermal_list.append(thermal)
 
-        # NextHop-specific initialization
-        self.card_revision = self._detect_card_revision()
-
     def _read_watchdog_bootstatus(self, path):
         """
         Read watchdog bootstatus value from sysfs
-        
+
         Args:
             path: Path to the bootstatus file
             
@@ -92,11 +93,11 @@ class Chassis(ChassisBase):
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
-        
+
         This method reads the watchdog bootstatus register to determine
         the hardware reboot cause. The AST2700 based B27 has two watchdog timers,
         and we check watchdog0 for the reboot cause.
-        
+
         Returns:
             A tuple (string, string) where the first element is a string
             containing the cause of the previous reboot. This string must be
@@ -115,22 +116,22 @@ class Chassis(ChassisBase):
         """
         # Read watchdog0 bootstatus
         bootstatus = self._read_watchdog_bootstatus(WATCHDOG0_BOOTSTATUS_PATH)
-        
+
         # Map bootstatus bits to reboot causes
         # Check in order of priority (most specific first)
-        
+
         if bootstatus & WDIOF_OVERHEAT:
             return (self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU, "CPU Overheat")
-        
+
         if bootstatus & WDIOF_FANFAULT:
             return (self.REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED, "Fan Fault")
-        
+
         if bootstatus & WDIOF_POWERUNDER:
             return (self.REBOOT_CAUSE_POWER_LOSS, "Power Under Voltage")
-        
+
         if bootstatus & WDIOF_POWEROVER:
             return (self.REBOOT_CAUSE_POWER_LOSS, "Power Over Voltage")
-        
+
         if bootstatus & WDIOF_CARDRESET:
             # CARDRESET can indicate either:
             # 1. Watchdog timeout reset (no software reboot cause file)
@@ -147,10 +148,10 @@ class Chassis(ChassisBase):
 
             # No software reboot cause found - assume watchdog timeout
             return (self.REBOOT_CAUSE_WATCHDOG, "Watchdog timeout reset")
-        
+
         if bootstatus & (WDIOF_EXTERN1 | WDIOF_EXTERN2):
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"External Reset (bootstatus=0x{bootstatus:x})")
-        
+
         # If no specific bits are set, or only unknown bits are set
         if bootstatus == 0:
             # No hardware reboot cause detected
@@ -162,20 +163,44 @@ class Chassis(ChassisBase):
     def get_name(self):
         """
         Retrieves the name of the chassis
-        
+
         Returns:
             String containing the name of the chassis
         """
-        return "Nexthop B27"
+        return "Nexthop BMC Card"
     
     def get_model(self):
         """
         Retrieves the model number (or part number) of the chassis
-        
+
         Returns:
             String containing the model number of the chassis
         """
-        return "Nexthop B27"
+        return self._eeprom.modelstr()
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+        Returns:
+            string: Label Revision value of device
+        """
+        return self._eeprom.label_revision_str()
+
+    def get_serial_number(self):
+        """
+        Returns the BMC card's serial number from BMC EEPROM
+
+        Returns:
+            string: BMC serial number from BMC EEPROM (i2c-4)
+        """
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                bmc_sn = self._eeprom.serial_number_str(e)
+                return bmc_sn if bmc_sn else "N/A"
+            except Exception:
+                pass
+        return "N/A"
     
     def get_serial(self):
         """
@@ -184,7 +209,18 @@ class Chassis(ChassisBase):
         Returns:
             String containing the serial number of the chassis
         """
-        return "N/A"
+        return self.get_serial_number()
+
+    def get_switch_host_serial_number(self):
+        """
+        Returns the switch/host system serial number (from switch card EEPROM).
+        This is the primary system/chassis identifier.
+
+        Returns:
+            string: System serial number from switch card EEPROM (i2c-10)
+        """
+        system_sn = self._eeprom.get_system_serial_number()
+        return system_sn if system_sn else "N/A"
 
     def get_watchdog(self):
         """
@@ -263,15 +299,4 @@ class Chassis(ChassisBase):
         if index < 0 or index >= len(self._fan_list):
             return None
         return self._fan_list[index]
-
-    def _detect_card_revision(self):
-        """
-        Detect the NextHop BMC card revision from hardware
-
-        Returns:
-            str: Card revision identifier (e.g., 'r0', 'r1')
-        """
-        # TODO: Implement revision detection from EEPROM or device tree
-        # For now, default to 'r0'
-        return 'r0'
 

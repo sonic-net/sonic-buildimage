@@ -7,7 +7,7 @@ set -e
 # Configuration
 GADGET_NAME="g1"
 FUNCTION_TYPE="ncm"
-INTERFACE_NAME="usb0"
+INTERFACE_NAME="bmc0"
 VENDOR_ID="0x1d6b"    # Linux Foundation
 PRODUCT_ID="0x0104"   # Multifunction Composite Gadget
 SERIAL_NUMBER="0123456789"

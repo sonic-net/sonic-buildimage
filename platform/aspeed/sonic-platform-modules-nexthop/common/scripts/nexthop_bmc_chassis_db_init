@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""
+Nexthop BMC-specific chassis_db_init
+Populates both BMC Serial (from BMC EEPROM) and Switch-Host Serial (from switch card EEPROM)
+"""
+
+import sys
+from sonic_py_common import daemon_base
+from swsscommon import swsscommon
+
+CHASSIS_INFO_TABLE = 'CHASSIS_INFO'
+CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
+CHASSIS_INFO_SERIAL_FIELD = 'serial'
+CHASSIS_INFO_MODEL_FIELD = 'model'
+CHASSIS_INFO_REV_FIELD = 'revision'
+CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD = 'switch_host_serial'  # NEW
+
+def try_get(callback, default='N/A'):
+    try:
+        ret = callback()
+        if ret is None:
+            ret = default
+    except NotImplementedError:
+        ret = default
+    except Exception:
+        ret = default
+    return ret
+
+def main():
+    state_db = daemon_base.db_connect("STATE_DB")
+    chassis_tbl = swsscommon.Table(state_db, CHASSIS_INFO_TABLE)
+
+    try:
+        import sonic_platform
+        chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        print(f"Failed to load chassis: {e}", file=sys.stderr)
+        return 1
+
+    # Populate with BMC serial (standard) and switch-host serial (custom)
+    fvs = swsscommon.FieldValuePairs([
+        (CHASSIS_INFO_SERIAL_FIELD, try_get(chassis.get_serial_number)),              # BMC serial from i2c-4
+        (CHASSIS_INFO_MODEL_FIELD, try_get(chassis.get_model)),
+        (CHASSIS_INFO_REV_FIELD, try_get(chassis.get_revision)),
+        (CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD, try_get(chassis.get_switch_host_serial_number))  # System serial from i2c-10
+    ])
+
+    chassis_tbl.set(CHASSIS_INFO_KEY_TEMPLATE.format(1), fvs)
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -138,16 +138,6 @@ class Watchdog(WatchdogBase):
         """
         return self._read_sysfs_int("timeout")
 
-    def _gettimeleft(self):
-        """
-        Get time left before watchdog timer expires
-        @return time left in seconds
-        """
-        req = array.array('I', [0])
-        fcntl.ioctl(self.watchdog_fd, WDIOC_GETTIMELEFT, req, True)
-
-        return int(req[0])
-
     def is_armed(self):
         """
         Retrieves the armed state of the hardware watchdog
@@ -217,15 +207,5 @@ class Watchdog(WatchdogBase):
             An integer specifying the number of seconds remaining on the
             watchdog timer. If the watchdog is not armed, returns -1.
         """
-        if not self.is_armed():
-            return -1
-
-        # Use ioctl to get time left
-        if not self._open_watchdog():
-            return -1
-
-        try:
-            return self._gettimeleft()
-        except (IOError, OSError):
-            return -1
+        return -1
 

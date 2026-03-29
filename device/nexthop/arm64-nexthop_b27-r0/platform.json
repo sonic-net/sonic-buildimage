@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "NH-B27-BMC",
+        "name": "Nexthop BMC Card",
         "thermal_manager": false,
         "status_led": {
             "controllable": true,
