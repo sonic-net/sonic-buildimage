@@ -65,14 +65,23 @@
             if [ -f "$ASIC_CONF" ]; then
                 . $ASIC_CONF
             fi
-            if [ $NUM_ASIC -gt 1 ]; then
+            if [ ! -z $NUM_ASIC ] && [ $NUM_ASIC -gt 1 ]; then
                 log_file=$1
                 log_file_name=${log_file#/var/log/swss/}
-                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $log_file_name"
-                pgrep -xa orchagent | grep $log_file_name | awk '{ print $1; }' | xargs /bin/kill -HUP 2>/dev/null || true
+                OA_PID=$(pgrep -xa orchagent | grep $log_file_name | awk '{ print $1; }')
             else
-                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $1"
-                pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
+                log_file_name=$1
+                OA_PID=$(pgrep -x orchagent)
+            fi
+            if [ ! -z $OA_PID ]; then
+                # To avoid the condition that SIGHUP is sent before the registration of SIGHUP
+                # handler, send SIGHUP handler when the process has been up for more than 10 seconds
+                etimes=$(ps -p $OA_PID -o etimes | sed -n 2p)
+                if [ ! -z $etimes ] && [ $((etimes)) -lt 10 ]; then
+                   sleep $((10 - etimes))
+                fi
+                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $log_file_name"
+                /bin/kill -HUP $OA_PID 2>/dev/null || true
             fi
         else
             if [ -f /var/run/rsyslogd.pid ]; then
