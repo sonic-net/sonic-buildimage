@@ -15,13 +15,13 @@ http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.dsc==346672dc8c2fc303a133051205deedc7
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz==3bb7e265e14eb5cb817e9608bb7a6baf
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.debian.tar.xz==f4d249b77d4f8d120b229834aac02df5
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==38011efbe33e6a461d36ca2c683e2019
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==a57d0145fc829c3e2ca96fb024907909
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==cbbb4a0d5b1e17dca0532c3ca761e05c
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==dfbdeaac367213500bfe65111a955d0f
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==052c052d86fd586c98cc16be943c0afa
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.debian.tar.xz==b9d8e4ce4cb66385250cf6dded0ef57a
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==ee4f5c84d621a5dbfbe368baad031af4
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==cd7bf9a55f61578b7ec69adabb584200
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==551d3780d615557674e93fa11210499d
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-aarch64-deb.tgz==8cbab51bd161b2f2f1cccc7a610c4aa8
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-x86_64-deb.tgz==c6d68339ee34d84f94438c79d4ce9f52
@@ -105,6 +105,7 @@ https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz==6f56ef28c93cee644e8c4aa
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_amd64.deb==eb434c72277d208d0f2218da6666dd45
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
+https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
 https://go.dev/dl/go1.25.8.linux-amd64.tar.gz==98fd3b2f40a98de85860c24fea48908c
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7

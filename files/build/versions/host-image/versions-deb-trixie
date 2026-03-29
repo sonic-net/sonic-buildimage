@@ -80,7 +80,7 @@ grub2-common==2.06-13+deb13u1
 haveged==1.9.19-12
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
-hw-management==1.mlnx.7.0050.3002
+hw-management==1.mlnx.7.0050.3004
 i2c-tools==4.4-2
 ifmetric==0.3-5+b1
 ifupdown2==3.0.0-1
