@@ -1,420 +1,824 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-from ragilecommon import *
-PCA9548START  = -1
-PCA9548BUSEND = -2
+from platform_common import *
 
-RAGILE_CARDID      = 0x0000404c
-RAGILE_PRODUCTNAME = "RA-B6910-64C"
-
-fanlevel = {
-    "tips": ["LOW", "MEDIUM", "HIGH"],
-    "level": [75, 150, 255],
-    "low_speed": [750, 4250, 6750],
-    "high_speed": [4500, 7500, 10000],
+STARTMODULE = {
+    "fancontrol": 0,
+    "hal_fanctrl": 1,
+    "hal_ledctrl": 1,
+    "avscontrol": 1,
+    "dev_monitor": 1,
+    "pmon_syslog": 1,
+    "sff_temp_polling": 1,
+    "reboot_cause": 1,
 }
 
-# fit with pddf
-fanloc = [
-    {
-        "name": "FAN1/FAN2/FAN3/FAN4",
-        "location": "2-0066/fan1_pwm",
-        "childfans": [
-            {"name": "FAN1", "location": "2-0066/fan1_input"},
-            {"name": "FAN2", "location": "2-0066/fan2_input"},
-            {"name": "FAN3", "location": "2-0066/fan3_input"},
-            {"name": "FAN4", "location": "2-0066/fan4_input"},
-        ],
-    },
-]
-
-CPLDVERSIONS = [
-    {"bus": 2, "devno": 0x33, "name": "MAC BOARD CPLD-A"},
-    {"bus": 2, "devno": 0x35, "name": "MAC BOARD CPLD-B"},
-    {"bus": 2, "devno": 0x37, "name": "CONNECT BOARD CPLD-A"},
-    {"bus": 0, "devno": 0x0d, "name": "CPU BOARD CPLD"},
-]
-
-
-MONITOR_TEMP_MIN           = 34
-MONITOR_K                  = 14
-MONITOR_MAC_IN             = 35
-MONITOR_DEFAULT_SPEED      = 0x80
-MONITOR_MAX_SPEED          = 0xFF
-MONITOR_MIN_SPEED          = 0x33
-MONITOR_MAC_ERROR_SPEED    = 0XBB
-MONITOR_FAN_TOTAL_NUM      = 3
-MONITOR_MAC_UP_TEMP        = 40
-MONITOR_MAC_LOWER_TEMP     = -40
-MONITOR_MAC_MAX_TEMP       = 100
-
-MONITOR_FALL_TEMP = 2
-MONITOR_MAC_WARNING_THRESHOLD        = 100
-MONITOR_OUTTEMP_WARNING_THRESHOLD    = 85
-MONITOR_BOARDTEMP_WARNING_THRESHOLD  = 85
-MONITOR_CPUTEMP_WARNING_THRESHOLD    = 85
-MONITOR_INTEMP_WARNING_THRESHOLD     = 70
-
-MONITOR_MAC_CRITICAL_THRESHOLD       = 105
-MONITOR_OUTTEMP_CRITICAL_THRESHOLD   = 90
-MONITOR_BOARDTEMP_CRITICAL_THRESHOLD = 90
-MONITOR_CPUTEMP_CRITICAL_THRESHOLD   = 100
-MONITOR_INTEMP_CRITICAL_THRESHOLD    = 80
-MONITOR_CRITICAL_NUM                 = 2
-MONITOR_SHAKE_TIME                   = 10
-MONITOR_INTERVAL                     = 60
-
-
-MONITOR_SYS_LED = [{"bus": 2, "devno": 0x35, "addr": 0xb2, "yellow": 0x03, "red": 0x02, "green": 0x01}]
-
-MONITOR_SYS_FAN_LED =[
-    {"bus": 2, "devno": 0x35, "addr": 0xb4, "yellow": 0x06, "red": 0x02, "green": 0x04},
-]
-
-MONITOR_FANS_LED = [
-    {"bus": 2, "devno": 0x32, "addr": 0x23, "green": 0x09, "red": 0x0a},
-    {"bus": 2, "devno": 0x32, "addr": 0x24, "green": 0x09, "red": 0x0a},
-    {"bus": 2, "devno": 0x32, "addr": 0x25, "green": 0x09, "red": 0x0a}
-]
-
-MONITOR_SYS_PSU_LED = [
-    {"bus": 2, "devno": 0x35, "addr": 0xb3, "yellow": 0x06, "red": 0x02, "green": 0x04},
-]
-
-MONITOR_FAN_STATUS = [
-    {'status': 'green' , 'minOkNum': 3, 'maxOkNum': 3},
-    {'status': 'yellow', 'minOkNum': 2, 'maxOkNum': 2},
-    {'status': 'red'   , 'minOkNum': 0, 'maxOkNum': 1},
-]
-
-MONITOR_PSU_STATUS = [
-    {'status': 'green' , 'minOkNum': 2, 'maxOkNum': 2},
-    {'status': 'yellow', 'minOkNum': 1, 'maxOkNum': 1},
-    {'status': 'red'   , 'minOkNum': 0, 'maxOkNum': 0},
-]
-
-MONITOR_DEV_STATUS = {
-    "temperature": [
-        {"name": "lm75in",       "location": "/sys/bus/i2c/devices/2-0048/hwmon/*/temp1_input"},
-        {"name": "lm75out",      "location": "/sys/bus/i2c/devices/2-0049/hwmon/*/temp1_input"},
-        {"name": "lm75hot",      "location": "/sys/bus/i2c/devices/2-004a/hwmon/*/temp1_input"},
-        {"name": "cpu",          "location": "/sys/class/hwmon/hwmon0"},
+DEV_MONITOR_PARAM = {
+    "polling_time": 10,
+    "psus": [
+        {
+            "name": "psu1",
+            "present": {"gettype": "i2c", "bus": 2, "loc": 0x37, "offset": 0x51, "presentbit": 0, "okval": 0},
+            "device": [
+                {"id": "psu1pmbus", "name": "wb_dps550", "bus": 7, "loc": 0x58, "attr": "hwmon"},
+                {"id": "psu1frue2", "name": "wb_24c02", "bus": 7, "loc": 0x50, "attr": "eeprom"},
+            ],
+        },
+        {
+            "name": "psu2",
+            "present": {"gettype": "i2c", "bus": 2, "loc": 0x37, "offset": 0x51, "presentbit": 4, "okval": 0},
+            "device": [
+                {"id": "psu2pmbus", "name": "wb_dps550", "bus": 8, "loc": 0x5b, "attr": "hwmon"},
+                {"id": "psu2frue2", "name": "wb_24c02", "bus": 8, "loc": 0x53, "attr": "eeprom"},
+            ],
+        },
     ],
     "fans": [
         {
             "name": "fan1",
-            "presentstatus": {"bus": 2, "loc": 0x37, "offset": 0x30, 'bit': 0},
-            "rollstatus": [
-                {"name": "motor1", "bus": 2, "loc": 0x37, "offset": 0x31, 'bit': 0},
-            ]
+            "present": {"gettype": "i2c", "bus": 2, "loc": 0x37, "offset": 0x30, "presentbit": 0, "okval": 0},
+            "device": [
+                {"id": "fan1frue2", "name": "wb_24c02", "bus": 3, "loc": 0x53, "attr": "eeprom"},
+            ],
         },
         {
             "name": "fan2",
-            "presentstatus": {"bus": 2, "loc": 0x37, "offset": 0x30, 'bit': 1},
-            "rollstatus": [
-                {"name": "motor1", "bus": 2, "loc": 0x37, "offset": 0x31, 'bit': 1},
-            ]
+            "present": {"gettype": "i2c", "bus": 2, "loc": 0x37, "offset": 0x30, "presentbit": 1, "okval": 0},
+            "device": [
+                {"id": "fan2frue2", "name": "wb_24c02", "bus": 4, "loc": 0x53, "attr": "eeprom"},
+            ],
         },
         {
             "name": "fan3",
-            "presentstatus": {"bus": 2, "loc": 0x37, "offset": 0x30, 'bit': 2},
-            "rollstatus": [
-                {"name": "motor1", "bus": 2, "loc": 0x37, "offset": 0x31, 'bit': 2},
+            "present": {"gettype": "i2c", "bus": 2, "loc": 0x37, "offset": 0x30, "presentbit": 2, "okval": 0},
+            "device": [
+                {"id": "fan2frue2", "name": "wb_24c02", "bus": 5, "loc": 0x53, "attr": "eeprom"},
+            ],
+        },
+    ],
+    "others": [
+        {
+            "name": "eeprom",
+            "device": [
+                {"id": "eeprom_1", "name": "wb_24c02", "bus": 2, "loc": 0x57, "attr": "eeprom"},
+            ],
+        },
+        {
+            "name": "lm75",
+            "device": [
+                {"id": "lm75_1", "name": "wb_lm75", "bus": 2, "loc": 0x48, "attr": "hwmon"},
+                {"id": "lm75_2", "name": "wb_lm75", "bus": 2, "loc": 0x49, "attr": "hwmon"},
+                {"id": "lm75_3", "name": "wb_lm75", "bus": 2, "loc": 0x4a, "attr": "hwmon"},
+            ],
+        },
+    ],
+}
+
+MANUINFO_CONF = {
+    "bios": {
+        "key": "BIOS",
+        "head": True,
+        "next": "onie"
+    },
+    "bios_vendor": {
+        "parent": "bios",
+        "key": "Vendor",
+        "cmd": "dmidecode -t 0 |grep Vendor",
+        "pattern": r".*Vendor",
+        "separator": ":",
+        "arrt_index": 1,
+    },
+    "bios_version": {
+        "parent": "bios",
+        "key": "Version",
+        "cmd": "dmidecode -t 0 |grep Version",
+        "pattern": r".*Version",
+        "separator": ":",
+        "arrt_index": 2,
+    },
+    "bios_date": {
+        "parent": "bios",
+        "key": "Release Date",
+        "cmd": "dmidecode -t 0 |grep Release",
+        "pattern": r".*Release Date",
+        "separator": ":",
+        "arrt_index": 3,
+    },
+    "onie": {
+        "key": "ONIE",
+        "next": "cpu"
+    },
+    "onie_date": {
+        "parent": "onie",
+        "key": "Build Date",
+        "file": "/host/machine.conf",
+        "pattern": r"^onie_build_date",
+        "separator": "=",
+        "arrt_index": 1,
+    },
+    "onie_version": {
+        "parent": "onie",
+        "key": "Version",
+        "file": "/host/machine.conf",
+        "pattern": r"^onie_version",
+        "separator": "=",
+        "arrt_index": 2,
+    },
+
+    "cpu": {
+        "key": "CPU",
+        "next": "ssd"
+    },
+    "cpu_vendor": {
+        "parent": "cpu",
+        "key": "Vendor",
+        "cmd": "dmidecode --type processor |grep Manufacturer",
+        "pattern": r".*Manufacturer",
+        "separator": ":",
+        "arrt_index": 1,
+    },
+    "cpu_model": {
+        "parent": "cpu",
+        "key": "Device Model",
+        "cmd": "dmidecode --type processor | grep Version",
+        "pattern": r".*Version",
+        "separator": ":",
+        "arrt_index": 2,
+    },
+    "cpu_core": {
+        "parent": "cpu",
+        "key": "Core Count",
+        "cmd": "dmidecode --type processor | grep \"Core Count\"",
+        "pattern": r".*Core Count",
+        "separator": ":",
+        "arrt_index": 3,
+    },
+    "cpu_thread": {
+        "parent": "cpu",
+        "key": "Thread Count",
+        "cmd": "dmidecode --type processor | grep \"Thread Count\"",
+        "pattern": r".*Thread Count",
+        "separator": ":",
+        "arrt_index": 4,
+    },
+    "ssd": {
+        "key": "SSD",
+        "next": "cpld"
+    },
+    "ssd_model": {
+        "parent": "ssd",
+        "key": "Device Model",
+        "cmd": "smartctl -i /dev/sda |grep \"Device Model\"",
+        "pattern": r".*Device Model",
+        "separator": ":",
+        "arrt_index": 1,
+    },
+    "ssd_fw": {
+        "parent": "ssd",
+        "key": "Firmware Version",
+        "cmd": "smartctl -i /dev/sda |grep \"Firmware Version\"",
+        "pattern": r".*Firmware Version",
+        "separator": ":",
+        "arrt_index": 2,
+    },
+    "ssd_user_cap": {
+        "parent": "ssd",
+        "key": "User Capacity",
+        "cmd": "smartctl -i /dev/sda |grep \"User Capacity\"",
+        "pattern": r".*User Capacity",
+        "separator": ":",
+        "arrt_index": 3,
+    },
+
+    "cpld": {
+        "key": "CPLD",
+        "next": "psu"
+    },
+
+    "cpld1": {
+        "key": "CPLD1",
+        "parent": "cpld",
+        "arrt_index": 1,
+    },
+    "cpld1_model": {
+        "key": "Device Model",
+        "parent": "cpld1",
+        "config": "LCMXO3LF-2100C-5BG256C",
+        "arrt_index": 1,
+    },
+    "cpld1_vender": {
+        "key": "Vendor",
+        "parent": "cpld1",
+        "config": "LATTICE",
+        "arrt_index": 2,
+    },
+    "cpld1_desc": {
+        "key": "Description",
+        "parent": "cpld1",
+        "config": "MAC_CPLDA",
+        "arrt_index": 3,
+    },
+    "cpld1_version": {
+        "key": "Firmware Version",
+        "parent": "cpld1",
+        "i2c": {
+            "bus": "2",
+            "loc": "0x33",
+            "offset": 0,
+            "size": 4
+        },
+        "callback": "cpld_format",
+        "arrt_index": 4,
+    },
+
+    "cpld2": {
+        "key": "CPLD2",
+        "parent": "cpld",
+        "arrt_index": 2,
+    },
+    "cpld2_model": {
+        "key": "Device Model",
+        "parent": "cpld2",
+        "config": "LCMXO3LF-2100C-5BG256C",
+        "arrt_index": 1,
+    },
+    "cpld2_vender": {
+        "key": "Vendor",
+        "parent": "cpld2",
+        "config": "LATTICE",
+        "arrt_index": 2,
+    },
+    "cpld2_desc": {
+        "key": "Description",
+        "parent": "cpld2",
+        "config": "MAC_CPLDB",
+        "arrt_index": 3,
+    },
+    "cpld2_version": {
+        "key": "Firmware Version",
+        "parent": "cpld2",
+        "i2c": {
+            "bus": "2",
+            "loc": "0x35",
+            "offset": 0,
+            "size": 4
+        },
+        "callback": "cpld_format",
+        "arrt_index": 4,
+    },
+
+    "cpld3": {
+        "key": "CPLD3",
+        "parent": "cpld",
+        "arrt_index": 3,
+    },
+    "cpld3_model": {
+        "key": "Device Model",
+        "parent": "cpld3",
+        "config": "LCMXO2-2000HC-4TG144C",
+        "arrt_index": 1,
+    },
+    "cpld3_vender": {
+        "key": "Vendor",
+        "parent": "cpld3",
+        "config": "LATTICE",
+        "arrt_index": 2,
+    },
+    "cpld3_desc": {
+        "key": "Description",
+        "parent": "cpld3",
+        "config": "CONNECT_CPLDA",
+        "arrt_index": 3,
+    },
+    "cpld3_version": {
+        "key": "Firmware Version",
+        "parent": "cpld3",
+        "i2c": {
+            "bus": "2",
+            "loc": "0x37",
+            "offset": 0,
+            "size": 4
+        },
+        "callback": "cpld_format",
+        "arrt_index": 4,
+    },
+
+    "cpld4": {
+        "key": "CPLD4",
+        "parent": "cpld",
+        "arrt_index": 4,
+    },
+    "cpld4_model": {
+        "key": "Device Model",
+        "parent": "cpld4",
+        "config": "EPM1270F256C5N",
+        "arrt_index": 1,
+    },
+    "cpld4_vender": {
+        "key": "Vendor",
+        "parent": "cpld4",
+        "config": "ALTERA",
+        "arrt_index": 2,
+    },
+    "cpld4_desc": {
+        "key": "Description",
+        "parent": "cpld4",
+        "config": "CPU_CPLD",
+        "arrt_index": 3,
+    },
+    "cpld4_version": {
+        "key": "Firmware Version",
+        "parent": "cpld4",
+        "i2c": {
+            "bus": "0",
+            "loc": "0x0d",
+            "offset": 0,
+            "size": 4
+        },
+        "callback": "cpld_format",
+        "arrt_index": 4,
+    },
+
+    "psu": {
+        "key": "PSU",
+        "next": "fan"
+    },
+
+    "psu1": {
+        "parent": "psu",
+        "key": "PSU1",
+        "arrt_index": 1,
+    },
+    "psu1_hw_version": {
+        "key": "Hardware Version",
+        "parent": "psu1",
+        "extra": {
+            "funcname": "getPsu",
+            "id": "psu1",
+            "key": "hw_version"
+        },
+        "arrt_index": 1,
+    },
+    "psu1_fw_version": {
+        "key": "Firmware Version",
+        "parent": "psu1",
+        "config": "NA",
+        "arrt_index": 2,
+    },
+
+    "psu2": {
+        "parent": "psu",
+        "key": "PSU2",
+        "arrt_index": 2,
+    },
+    "psu2_hw_version": {
+        "key": "Hardware Version",
+        "parent": "psu2",
+        "extra": {
+            "funcname": "getPsu",
+            "id": "psu2",
+            "key": "hw_version"
+        },
+        "arrt_index": 1,
+    },
+    "psu2_fw_version": {
+        "key": "Firmware Version",
+        "parent": "psu2",
+        "config": "NA",
+        "arrt_index": 2,
+    },
+
+    "fan": {
+        "key": "FAN",
+        "next": "i210"
+    },
+
+    "fan1": {
+        "key": "FAN1",
+        "parent": "fan",
+        "arrt_index": 1,
+    },
+    "fan1_hw_version": {
+        "key": "Hardware Version",
+        "parent": "fan1",
+        "extra": {
+            "funcname": "checkFan",
+            "id": "fan1",
+            "key": "hw_version"
+        },
+        "arrt_index": 1,
+    },
+    "fan1_fw_version": {
+        "key": "Firmware Version",
+        "parent": "fan1",
+        "config": "NA",
+        "arrt_index": 2,
+    },
+
+    "fan2": {
+        "key": "FAN2",
+        "parent": "fan",
+        "arrt_index": 2,
+    },
+    "fan2_hw_version": {
+        "key": "Hardware Version",
+        "parent": "fan2",
+        "extra": {
+            "funcname": "checkFan",
+            "id": "fan2",
+            "key": "hw_version"
+        },
+        "arrt_index": 1,
+    },
+    "fan2_fw_version": {
+        "key": "Firmware Version",
+        "parent": "fan2",
+        "config": "NA",
+        "arrt_index": 2,
+    },
+
+    "fan3": {
+        "key": "FAN3",
+        "parent": "fan",
+        "arrt_index": 3,
+    },
+    "fan3_hw_version": {
+        "key": "Hardware Version",
+        "parent": "fan3",
+        "extra": {
+            "funcname": "checkFan",
+            "id": "fan3",
+            "key": "hw_version"
+        },
+        "arrt_index": 1,
+    },
+    "fan3_fw_version": {
+        "key": "Firmware Version",
+        "parent": "fan3",
+        "config": "NA",
+        "arrt_index": 2,
+    },
+
+
+    "i210": {
+        "key": "NIC",
+    },
+    "i210_model": {
+        "parent": "i210",
+        "config": "NA",
+        "key": "Device Model",
+        "arrt_index": 1,
+    },
+    "i210_vendor": {
+        "parent": "i210",
+        "config": "INTEL",
+        "key": "Vendor",
+        "arrt_index": 2,
+    },
+    "i210_version": {
+        "parent": "i210",
+        "cmd": "ethtool -i eth0",
+        "pattern": r"firmware-version",
+        "separator": ":",
+        "key": "Firmware Version",
+        "arrt_index": 3,
+    },
+}
+
+PMON_SYSLOG_STATUS = {
+    "polling_time": 3,
+    "sffs": {
+        "present": {"path": ["/sys/wb_plat/sff/*/present"], "ABSENT": 0},
+        "nochangedmsgflag": 0,
+        "nochangedmsgtime": 60,
+        "noprintfirsttimeflag": 1,
+        "alias": {
+            "sff1": "Ethernet1",
+            "sff2": "Ethernet2",
+            "sff3": "Ethernet3",
+            "sff4": "Ethernet4",
+            "sff5": "Ethernet5",
+            "sff6": "Ethernet6",
+            "sff7": "Ethernet7",
+            "sff8": "Ethernet8",
+            "sff9": "Ethernet9",
+            "sff10": "Ethernet10",
+            "sff11": "Ethernet11",
+            "sff12": "Ethernet12",
+            "sff13": "Ethernet13",
+            "sff14": "Ethernet14",
+            "sff15": "Ethernet15",
+            "sff16": "Ethernet16",
+            "sff17": "Ethernet17",
+            "sff18": "Ethernet18",
+            "sff19": "Ethernet19",
+            "sff20": "Ethernet20",
+            "sff21": "Ethernet21",
+            "sff22": "Ethernet22",
+            "sff23": "Ethernet23",
+            "sff24": "Ethernet24",
+            "sff25": "Ethernet25",
+            "sff26": "Ethernet26",
+            "sff27": "Ethernet27",
+            "sff28": "Ethernet28",
+            "sff29": "Ethernet29",
+            "sff30": "Ethernet30",
+            "sff31": "Ethernet31",
+            "sff32": "Ethernet32",
+            "sff33": "Ethernet33",
+            "sff34": "Ethernet34",
+            "sff35": "Ethernet35",
+            "sff36": "Ethernet36",
+            "sff37": "Ethernet37",
+            "sff38": "Ethernet38",
+            "sff39": "Ethernet39",
+            "sff40": "Ethernet40",
+            "sff41": "Ethernet41",
+            "sff42": "Ethernet42",
+            "sff43": "Ethernet43",
+            "sff44": "Ethernet44",
+            "sff45": "Ethernet45",
+            "sff46": "Ethernet46",
+            "sff47": "Ethernet47",
+            "sff48": "Ethernet48",
+            "sff49": "Ethernet49",
+            "sff50": "Ethernet50",
+            "sff51": "Ethernet51",
+            "sff52": "Ethernet52",
+            "sff53": "Ethernet53",
+            "sff54": "Ethernet54",
+            "sff55": "Ethernet55",
+            "sff56": "Ethernet56",
+            "sff57": "Ethernet57",
+            "sff58": "Ethernet58",
+            "sff59": "Ethernet59",
+            "sff60": "Ethernet60",
+            "sff61": "Ethernet61",
+            "sff62": "Ethernet62",
+            "sff63": "Ethernet63",
+            "sff64": "Ethernet64",
+        }
+    },
+    "fans": {
+        "present": {"path": ["/sys/wb_plat/fan/*/present"], "ABSENT": 0},
+        "status": [
+            {"path": "/sys/wb_plat/fan/%s/motor0/status", 'okval': 1},
+        ],
+        "nochangedmsgflag": 1,
+        "nochangedmsgtime": 60,
+        "noprintfirsttimeflag": 0,
+        "alias": {
+            "fan1": "FAN1",
+            "fan2": "FAN2",
+            "fan3": "FAN3"
+        }
+    },
+    "psus": {
+        "present": {"path": ["/sys/wb_plat/psu/*/present"], "ABSENT": 0},
+        "status": [
+            {"path": "/sys/wb_plat/psu/%s/output", "okval": 1},
+            {"path": "/sys/wb_plat/psu/%s/alert", "okval": 0},
+        ],
+        "nochangedmsgflag": 1,
+        "nochangedmsgtime": 60,
+        "noprintfirsttimeflag": 0,
+        "alias": {
+            "psu1": "PSU1",
+            "psu2": "PSU2"
+        }
+    }
+}
+
+REBOOT_CAUSE_PARA = {
+    "reboot_cause_list": [
+        {
+            "name": "cold_reboot",
+            "monitor_point": {"gettype": "i2c", "bus": 1, "loc": 0x36, "offset": 0xa1, "okval": 0},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Power Loss, ",
+                    "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Power Loss, ",
+                    "path": "/etc/sonic/.reboot/.history-reboot-cause.txt", "file_max_size": 1 * 1024 * 1024}
+            ]
+        },
+        {
+            "name": "otp_switch_reboot",
+            "monitor_point": {"gettype": "file_exist", "judge_file": "/etc/.otp_switch_reboot_flag", "okval": True},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Thermal Overload: ASIC, ",
+                    "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Thermal Overload: ASIC, ",
+                    "path": "/etc/sonic/.reboot/.history-reboot-cause.txt", "file_max_size": 1 * 1024 * 1024}
+            ],
+            "finish_operation": [
+                {"gettype": "cmd", "cmd": "rm -rf /etc/.otp_switch_reboot_flag"},
+            ]
+        },
+        {
+            "name": "otp_other_reboot",
+            "monitor_point": {"gettype": "file_exist", "judge_file": "/etc/.otp_other_reboot_flag", "okval": True},
+            "record": [
+                {"record_type": "file", "mode": "cover", "log": "Thermal Overload: Other, ",
+                    "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+                {"record_type": "file", "mode": "add", "log": "Thermal Overload: Other, ",
+                    "path": "/etc/sonic/.reboot/.history-reboot-cause.txt", "file_max_size": 1 * 1024 * 1024}
+            ],
+            "finish_operation": [
+                {"gettype": "cmd", "cmd": "rm -rf /etc/.otp_other_reboot_flag"},
             ]
         },
     ],
-    "psus": [
-        {"name": "psu1", "bus": 2, "loc": 0x37, "offset": 0x51, "gettype": "i2c", 'presentbit': 0, 'statusbit': 1, 'alertbit': 2},
-        {"name": "psu2", "bus": 2, "loc": 0x37, "offset": 0x51, "gettype": "i2c", 'presentbit': 4, 'statusbit': 5, 'alertbit': 6},
+    "other_reboot_cause_record": [
+        {"record_type": "file", "mode": "cover", "log": "Other, ", "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
+        {"record_type": "file", "mode": "add", "log": "Other, ", "path": "/etc/sonic/.reboot/.history-reboot-cause.txt"}
     ],
 }
+##################### MAC Voltage adjust####################################
+MAC_DEFAULT_PARAM = [
+    {
+        "name": "mac_core",              # AVS name
+        "type": 0,                       # 1: used default value, if rov value not in range. 0: do nothing, if rov value not in range
+        "rov_source": 0,                  # 0: get rov value from cpld, 1: get rov value from SDK
+        "cpld_avs": {"bus": 2, "loc": 0x35, "offset": 0x72, "gettype": "i2c"},
+        "set_avs": {
+            "loc": "/sys/bus/i2c/devices/2-0060/hwmon/hwmon*/avs0_vout",
+            "gettype": "sysfs", "formula": "int((%f)*1000000)"
+        },
+        "mac_avs_param": {
+            0x68: 0.960,
+            0x69: 0.956,
+            0x6a: 0.950,
+            0x6b: 0.944,
+            0x6c: 0.938,
+            0x6d: 0.931,
+            0x6e: 0.925,
+            0x6f: 0.919,
+            0x70: 0.913,
+            0x71: 0.906,
+            0x72: 0.900,
+            0x73: 0.894,
+            0x74: 0.888,
+            0x75: 0.882,
+            0x76: 0.875,
+            0x77: 0.869,
+            0x78: 0.863,
+            0x79: 0.857,
+            0x7a: 0.850,
+            0x7b: 0.844,
+            0x7c: 0.838
+        }
+    }
+]
 
-MONITOR_DEV_STATUS_DECODE = {
-    'fanpresent': {0: 'PRESENT', 1: 'ABSENT', 'okval': 0},
-    'fanroll'   : {0: 'STALL'  , 1: 'ROLL',   'okval': 1},
-    'psupresent': {0: 'PRESENT', 1: 'ABSENT', 'okval': 0},
-    'psuoutput' : {0: 'FAULT'  , 1: 'NORMAL', 'okval': 1},
-    'psualert'  : {0: 'FAULT'  , 1: 'NORMAL', 'okval': 1},
-}
-###################################################################
+BLACKLIST_DRIVERS = [
+    {"name": "i2c_i801", "delay": 0},
+]
 
-
-MAC_AVS_PARAM = {
-    0x68: 0x03c0,
-    0x69: 0x03bc,
-    0x6a: 0x03b6,
-    0x6b: 0x03b0,
-    0x6c: 0x03aa,
-    0x6d: 0x03a3,
-    0x6e: 0x039d,
-    0x6f: 0x0397,
-    0x70: 0x0391,
-    0x71: 0x038a,
-    0x72: 0x0384,
-    0x73: 0x037e,
-    0x74: 0x0379,
-    0x75: 0x0371,
-    0x76: 0x036b,
-    0x77: 0x0365,
-    0x78: 0x035f,
-    0x79: 0x0358,
-    0x7a: 0x0352,
-    0x7b: 0x034c,
-    0x7c: 0x0348
-}
-
-MAC_DEFAULT_PARAM = {
-    "type":  1,
-    "default": 0x74,
-    "loopaddr": 0x00,
-    "loop": 0x00,
-    "open": 0x00,
-    "close": 0x40,
-    "bus": 2,
-    "devno": 0x60,
-    "addr": 0x21,
-    "protectaddr": 0x10,
-    "sdkreg": "DMU_PCU_OTP_CONFIG_8",
-    "sdkcmd":  "scdcmd",
-    "sdkcmdargs":  ["-t", 5],
-    "sdktype":  1,
-    "macregloc": 24,
-    "mask":  0xff
-}
-
-
-DEVICE = []
-DRIVERLISTS = []
-
-"""
 DRIVERLISTS = [
-        {"name": "i2c_dev", "delay": 0},
-        {"name": "i2c_algo_bit", "delay": 0},
-        {"name": "i2c_gpio", "delay": 0},
-        {"name": "i2c_mux", "delay": 0},
-        {"name": "i2c_mux_pca9641", "delay": 0},
-        {"name": "i2c_mux_pca954x force_create_bus=1", "delay": 0},  # force_deselect_on_exit=1
-        {"name": "lm75", "delay": 0},
-        {"name": "optoe", "delay": 0},
-        {"name": "at24", "delay": 0},
-        {"name": "rg_sff", "delay": 0},
-        {"name": "ragile_b6510_platform", "delay": 0},
-        {"name": "ragile_platform", "delay": 0},
-        {"name": "rg_avs", "delay": 0},
-        {"name": "rg_cpld", "delay": 0},
-        {"name": "rg_fan", "delay": 0},
-        {"name": "rg_psu", "delay": 0},
-        {"name": "pmbus_core", "delay": 0},
-        {"name": "csu550", "delay": 0},
-        {"name": "rg_gpio_xeon", "delay": 0},
-        {"name": "firmware_driver", "delay": 0},
-        {"name": "firmware_bin", "delay": 0},
-        {"name": "ragile_common dfd_my_type=0x404c", "delay": 0},
-        {"name": "lpc_dbg", "delay": 0},
+    {"name": "wb_i2c_i801", "delay": 1},
+    {"name": "wb_gpio_d1500", "delay": 0},
+    {"name": "i2c_dev", "delay": 0},
+    {"name": "wb_i2c_algo_bit", "delay": 0},
+    {"name": "wb_i2c_gpio", "delay": 0},
+    {"name": "i2c_mux", "delay": 0},
+    {"name": "wb_gpio_device", "delay": 0},
+    {"name": "wb_i2c_gpio_device gpio_sda=17 gpio_scl=1 gpio_udelay=2", "delay": 0},
+    {"name": "wb_i2c_mux_pca9641", "delay": 0},
+    {"name": "wb_i2c_mux_pca9641_device", "delay": 0},
+    {"name": "wb_i2c_mux_pca954x", "delay": 0},
+    {"name": "wb_i2c_mux_pca954x_device", "delay": 0},
+    {"name": "wb_lm75", "delay": 0},
+    {"name": "wb_optoe", "delay": 0},
+    {"name": "wb_at24", "delay": 0},
+    {"name": "wb_lpc_drv", "delay": 0},
+    {"name": "wb_lpc_drv_device", "delay": 0},
+    {"name": "wb_io_dev", "delay": 0},
+    {"name": "wb_io_dev_device", "delay": 0},
+    {"name": "wb_platform_i2c_dev", "delay": 0},
+    {"name": "wb_platform_i2c_dev_device", "delay": 0},
+    {"name": "wb_i2c_dev", "delay": 0},
+    {"name": "wb_pmbus_core", "delay": 0},
+    {"name": "wb_csu550", "delay": 0},
+    {"name": "wb_isl68137", "delay": 0},
+    {"name": "firmware_driver_cpld", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
+    {"name": "platform_common dfd_my_type=0x404c", "delay": 0},
+    {"name": "plat_dfd", "delay": 0},
+    {"name": "plat_switch", "delay": 0},
+    {"name": "plat_fan", "delay": 0},
+    {"name": "plat_psu", "delay": 0},
+    {"name": "plat_sff", "delay": 0},
+    {"name": "plat_sensor", "delay": 0},
 ]
 
 DEVICE = [
-        {"name": "pca9641", "bus": 0, "loc": 0x10},
-        {"name": "pca9548", "bus": 2, "loc": 0x70},
-        {"name": "lm75",    "bus": 2, "loc": 0x48},
-        {"name": "lm75",    "bus": 2, "loc": 0x49},
-        {"name": "lm75",    "bus": 2, "loc": 0x4a},
-        {"name": "24c02",   "bus": 2, "loc": 0x57},
-        {"name": "rg_cpld", "bus": 0, "loc": 0x32},
-        {"name": "rg_cpld", "bus": 1, "loc": 0x34},
-        {"name": "rg_cpld", "bus": 1, "loc": 0x36},
-        {"name": "rg_cpld", "bus": 2, "loc": 0x33},
-        {"name": "rg_cpld", "bus": 2, "loc": 0x35},
-        {"name": "rg_cpld", "bus": 2, "loc": 0x37},
-        {"name": "rg_avs",  "bus": 2, "loc": 0x60},
-        {"name": "pca9548", "bus": 1, "loc": 0x70},
-        {"name": "pca9548", "bus": 1, "loc": 0x71},
-        {"name": "pca9548", "bus": 1, "loc": 0x72},
-        {"name": "pca9548", "bus": 1, "loc": 0x73},
-        {"name": "pca9548", "bus": 1, "loc": 0x74},
-        {"name": "pca9548", "bus": 1, "loc": 0x75},
-        {"name": "pca9548", "bus": 1, "loc": 0x76},
-        {"name": "pca9548", "bus": 1, "loc": 0x77},
-        {"name": "rg_fan",  "bus": 3, "loc": 0x53},
-        {"name": "rg_fan",  "bus": 4, "loc": 0x53},
-        {"name": "rg_fan",  "bus": 5, "loc": 0x53},
-
-        {"name": "rg_psu",  "bus": 7, "loc": 0x50},
-        {"name": "dps550",  "bus": 7, "loc": 0x58},
-        {"name": "rg_psu",  "bus": 8, "loc": 0x53},
-        {"name": "dps550",  "bus": 8, "loc": 0x5b},
-
-        {"name": "optoe1", "bus": 11, "loc": 0x50},
-        {"name": "optoe1", "bus": 12, "loc": 0x50},
-        {"name": "optoe1", "bus": 13, "loc": 0x50},
-        {"name": "optoe1", "bus": 14, "loc": 0x50},
-        {"name": "optoe1", "bus": 15, "loc": 0x50},
-        {"name": "optoe1", "bus": 16, "loc": 0x50},
-        {"name": "optoe1", "bus": 17, "loc": 0x50},
-        {"name": "optoe1", "bus": 18, "loc": 0x50},
-        {"name": "optoe1", "bus": 19, "loc": 0x50},
-        {"name": "optoe1", "bus": 20, "loc": 0x50},
-        {"name": "optoe1", "bus": 21, "loc": 0x50},
-        {"name": "optoe1", "bus": 22, "loc": 0x50},
-        {"name": "optoe1", "bus": 23, "loc": 0x50},
-        {"name": "optoe1", "bus": 24, "loc": 0x50},
-        {"name": "optoe1", "bus": 25, "loc": 0x50},
-        {"name": "optoe1", "bus": 26, "loc": 0x50},
-        {"name": "optoe1", "bus": 27, "loc": 0x50},
-        {"name": "optoe1", "bus": 28, "loc": 0x50},
-        {"name": "optoe1", "bus": 29, "loc": 0x50},
-        {"name": "optoe1", "bus": 30, "loc": 0x50},
-        {"name": "optoe1", "bus": 31, "loc": 0x50},
-        {"name": "optoe1", "bus": 32, "loc": 0x50},
-        {"name": "optoe1", "bus": 33, "loc": 0x50},
-        {"name": "optoe1", "bus": 34, "loc": 0x50},
-        {"name": "optoe1", "bus": 35, "loc": 0x50},
-        {"name": "optoe1", "bus": 36, "loc": 0x50},
-        {"name": "optoe1", "bus": 37, "loc": 0x50},
-        {"name": "optoe1", "bus": 38, "loc": 0x50},
-        {"name": "optoe1", "bus": 39, "loc": 0x50},
-        {"name": "optoe1", "bus": 40, "loc": 0x50},
-        {"name": "optoe1", "bus": 41, "loc": 0x50},
-        {"name": "optoe1", "bus": 42, "loc": 0x50},
-        {"name": "optoe1", "bus": 43, "loc": 0x50},
-        {"name": "optoe1", "bus": 44, "loc": 0x50},
-        {"name": "optoe1", "bus": 45, "loc": 0x50},
-        {"name": "optoe1", "bus": 46, "loc": 0x50},
-        {"name": "optoe1", "bus": 47, "loc": 0x50},
-        {"name": "optoe1", "bus": 48, "loc": 0x50},
-        {"name": "optoe1", "bus": 49, "loc": 0x50},
-        {"name": "optoe1", "bus": 50, "loc": 0x50},
-        {"name": "optoe1", "bus": 51, "loc": 0x50},
-        {"name": "optoe1", "bus": 52, "loc": 0x50},
-        {"name": "optoe1", "bus": 53, "loc": 0x50},
-        {"name": "optoe1", "bus": 54, "loc": 0x50},
-        {"name": "optoe1", "bus": 55, "loc": 0x50},
-        {"name": "optoe1", "bus": 56, "loc": 0x50},
-        {"name": "optoe1", "bus": 57, "loc": 0x50},
-        {"name": "optoe1", "bus": 58, "loc": 0x50},
-        {"name": "optoe1", "bus": 59, "loc": 0x50},
-        {"name": "optoe1", "bus": 60, "loc": 0x50},
-        {"name": "optoe1", "bus": 61, "loc": 0x50},
-        {"name": "optoe1", "bus": 62, "loc": 0x50},
-        {"name": "optoe1", "bus": 63, "loc": 0x50},
-        {"name": "optoe1", "bus": 64, "loc": 0x50},
-        {"name": "optoe1", "bus": 65, "loc": 0x50},
-        {"name": "optoe1", "bus": 66, "loc": 0x50},
-        {"name": "optoe1", "bus": 67, "loc": 0x50},
-        {"name": "optoe1", "bus": 68, "loc": 0x50},
-        {"name": "optoe1", "bus": 69, "loc": 0x50},
-        {"name": "optoe1", "bus": 70, "loc": 0x50},
-        {"name": "optoe1", "bus": 71, "loc": 0x50},
-        {"name": "optoe1", "bus": 72, "loc": 0x50},
-        {"name": "optoe1", "bus": 73, "loc": 0x50},
-        {"name": "optoe1", "bus": 74, "loc": 0x50},
+    {"name": "wb_lm75", "bus": 2, "loc": 0x48},
+    {"name": "wb_lm75", "bus": 2, "loc": 0x49},
+    {"name": "wb_lm75", "bus": 2, "loc": 0x4a},
+    {"name": "wb_24c02", "bus": 2, "loc": 0x57},
+    {"name": "wb_24c02", "bus": 3, "loc": 0x53},
+    {"name": "wb_24c02", "bus": 4, "loc": 0x53},
+    {"name": "wb_24c02", "bus": 5, "loc": 0x53},
+    {"name": "wb_24c02", "bus": 6, "loc": 0x53},
+    {"name": "wb_24c02", "bus": 7, "loc": 0x50},
+    {"name": "wb_dps550", "bus": 7, "loc": 0x58},
+    {"name": "wb_24c02", "bus": 8, "loc": 0x53},
+    {"name": "wb_dps550", "bus": 8, "loc": 0x5b},
+    {"name": "wb_isl68127", "bus": 2, "loc": 0x60},
 ]
 
-INIT_PARAM = [
-            {"loc": "1-0034/sfp_enable", "value": "01"},
-            {"loc": "2-0035/sfp_enable2", "value": "ff"},
-            {"loc": "2-0033/mac_led", "value": "ff"},
-            {"loc": "1-0034/sfp_txdis1", "value": "00"},
-            {"loc": "1-0034/sfp_txdis2", "value": "00"},
-            {"loc": "1-0034/sfp_txdis3", "value": "00"},
-            {"loc": "1-0036/sfp_txdis4", "value": "00"},
-            {"loc": "1-0036/sfp_txdis5", "value": "00"},
-            {"loc": "1-0036/sfp_txdis6", "value": "00"},
-
-            {"loc": "1-0034/sfp_led1_yellow", "value": "00"},
-            {"loc": "1-0034/sfp_led3_yellow", "value": "00"},
-            {"loc": "1-0036/sfp_led4_yellow", "value": "00"},
-            {"loc": "1-0036/sfp_led6_yellow", "value": "00"},
-            {"loc": "1-0034/sfp_led2_yellow", "value": "00"},
-            {"loc": "1-0034/sfp_led8_yellow", "value": "00"},
-            {"loc": "1-0036/sfp_led5_yellow", "value": "00"},
-            {"loc": "1-0036/sfp_led7_yellow", "value": "00"},
+OPTOE = [
+    {"name": "wb_optoe1", "startbus": 11, "endbus": 74},
 ]
-"""
 
-INIT_PARAM = [
-    {
-        "name": "sfp_enable",
-        "bus": 1,
-        "devaddr": 0x34,
-        "offset": 0xa1,
-        "val": 0x01,
-    },
-    {
-        "name": "sfp_eanble2",
-        "bus": 2,
-        "devaddr": 0x35,
-        "offset": 0xa0,
-        "val": 0xff,
-    },
-    {
-        "name": "mac_led",
-        "bus": 2,
-        "devaddr": 0x33,
-        "offset": 0xa0,
-        "val": 0xff,
-    },
-    {
-        "name": "sfp_led1_yellow",
-        "bus": 1,
-        "devaddr": 0x34,
-        "offset": 0xa6,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led2_yellow",
-        "bus": 1,
-        "devaddr": 0x34,
-        "offset": 0xa7,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led3_yellow",
-        "bus": 1,
-        "devaddr": 0x34,
-        "offset": 0xa8,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led4_yellow",
-        "bus": 1,
-        "devaddr": 0x36,
-        "offset": 0xa6,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led5_yellow",
-        "bus": 1,
-        "devaddr": 0x36,
-        "offset": 0xa7,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led6_yellow",
-        "bus": 1,
-        "devaddr": 0x36,
-        "offset": 0xa8,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led7_yellow",
-        "bus": 1,
-        "devaddr": 0x36,
-        "offset": 0xa9,
-        "val": 0x00,
-    },
-    {
-        "name": "sfp_led8_yellow",
-        "bus": 1,
-        "devaddr": 0x34,
-        "offset": 0xa8,
-        "val": 0x00,
-    },
-    {
-        "name": "fan_speed_set",
-        "bus": 0,
-        "devaddr": 0x32,
-        "offset": 0x15,
-        "val": 0x80,
-    },
+INIT_PARAM_PRE = [
+    {"loc": "2-0060/hwmon/hwmon*/avs0_vout_max", "value": "960000"},
+    {"loc": "2-0060/hwmon/hwmon*/avs0_vout_min", "value": "838000"},
 ]
+INIT_COMMAND_PRE = [
+    "i2cset -y -f 1 0x34 0xa1 0x01",  # sfp_enable
+]
+
+INIT_PARAM = []
+
+INIT_COMMAND = [
+    "i2cset -y -f 2 0x35 0xa0 0xff",  # sfp_enable2
+    "i2cset -y -f 2 0x33 0xa0 0xff",  # mac_led
+    "i2cset -y -f 1 0x34 0xa6 0x0",
+    "i2cset -y -f 1 0x34 0xa7 0x0",
+    "i2cset -y -f 1 0x34 0xa8 0x0",
+    "i2cset -y -f 1 0x34 0xa9 0x0",
+    "i2cset -y -f 1 0x36 0xa6 0x0",
+    "i2cset -y -f 1 0x36 0xa7 0x0",
+    "i2cset -y -f 1 0x36 0xa8 0x0",
+    "i2cset -y -f 1 0x36 0xa9 0x0",
+]
+
+WARM_UPGRADE_PARAM = {}
+
+UPGRADE_SUMMARY = {
+    "devtype": 0x404c,
+
+    "slot0": {
+        "subtype": 0,
+        "VME": {
+            "chain1": {
+                "name": "VME_CPLD",
+                "is_support_warm_upg": 0,
+            },
+        },
+        "ISC": {
+            "chain1": {
+                "name": "ISC_CPLD",
+                "is_support_warm_upg": 0,
+            },
+        },
+
+        "MTD": {
+            "chain1": {
+                "name": "BIOS",
+                "is_support_warm_upg": 0,
+                "filesizecheck": 10240,  # bios check file size, Unit: K
+                "init_cmd": [
+                    {"io_addr": 0x722, "value": 0x02, "gettype": "io"},
+                    {"cmd": "modprobe mtd", "gettype": "cmd"},
+                    {"cmd": "modprobe spi_nor", "gettype": "cmd"},
+                    {"cmd": "modprobe ofpart", "gettype": "cmd"},
+                    {"cmd": "modprobe intel_spi writeable=1", "gettype": "cmd"},
+                    {"cmd": "modprobe intel_spi_platform writeable=1", "gettype": "cmd"},
+                ],
+                "finish_cmd": [
+                    {"io_addr": 0x722, "value": 0x02, "gettype": "io"},
+                    {"cmd": "rmmod intel_spi_platform", "gettype": "cmd"},
+                    {"cmd": "rmmod intel_spi", "gettype": "cmd"},
+                    {"cmd": "rmmod ofpart", "gettype": "cmd"},
+                    {"cmd": "rmmod spi_nor", "gettype": "cmd"},
+                    {"cmd": "rmmod mtd", "gettype": "cmd"},
+                ],
+            },
+        },
+
+        "TEST": {
+            "cpld": [
+                {"chain": 1, "file": "/etc/.upgrade_test/cpld_test_header.vme", "display_name": "CPLD"},
+            ],
+        },
+    },
+}
+
+PLATFORM_E2_CONF = {
+    "fan": [
+        {"name": "fan1", "e2_type": "fantlv", "e2_path": "/sys/bus/i2c/devices/3-0053/eeprom"},
+        {"name": "fan2", "e2_type": "fantlv", "e2_path": "/sys/bus/i2c/devices/4-0053/eeprom"},
+        {"name": "fan3", "e2_type": "fantlv", "e2_path": "/sys/bus/i2c/devices/5-0053/eeprom"},
+    ],
+    "psu": [
+        {"name": "psu1", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/7-0050/eeprom"},
+        {"name": "psu2", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/8-0053/eeprom"},
+    ],
+    "syseeprom": [
+        {"name": "syseeprom", "e2_type": "onie_tlv", "e2_path": "/sys/bus/i2c/devices/2-0057/eeprom"},
+    ],
+}
