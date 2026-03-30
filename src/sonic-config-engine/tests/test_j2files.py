@@ -979,7 +979,7 @@ class TestJ2Files(TestCase):
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
-        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_with_docker0.conf')
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
         self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
     def tearDown(self):
