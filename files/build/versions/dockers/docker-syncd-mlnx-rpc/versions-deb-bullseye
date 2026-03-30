@@ -68,5 +68,5 @@ python2.7-minimal==2.7.18-8+deb11u1
 python3-scapy==2.4.0-2
 shared-mime-info==2.0-1
 syncd-rpc==1.0.0
-wget==1.21-1+deb11u1
+wget==1.21-1+deb11u2
 xz-utils==5.2.5-2.1~deb11u1

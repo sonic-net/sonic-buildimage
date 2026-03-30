@@ -38,7 +38,6 @@ libyang-cpp==1.0.73
 libyang-dev==1.0.73
 linux-headers-5.10.0-30-2-amd64==5.10.218-1
 linux-headers-5.10.0-30-2-common==5.10.218-1
-mlnx-sai==1.mlnx.SAIBuild2311.28.0.13
 net-tools==1.60+git20181103.0eebece-1+deb11u1
 protobuf-compiler==3.21.12-3
 python-thrift==0.11.0-4
