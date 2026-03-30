@@ -82,7 +82,7 @@ ENABLE_PY2_MODULES = y
 endif
 
 # Python version for PTF image
-PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),mixed)
+PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),py3)
 
 export BUILD_NUMBER
 export BUILD_TIMESTAMP
