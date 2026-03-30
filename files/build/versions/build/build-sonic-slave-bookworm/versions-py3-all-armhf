@@ -1,0 +1,16 @@
+bitarray==2.8.1
+blessed==1.20.0
+cffi==1.17.1
+click==7.0
+enlighten==1.13.0
+filelock==3.16.1
+jsonpointer==3.0.0
+lxml==4.9.1
+pexpect==4.9.0
+ptyprocess==0.7.0
+pynacl==1.5.0
+pyroute2==0.7.12
+pyyaml==6.0.1
+urllib3==2.2.2
+wcwidth==0.2.13
+zipp==1.2.0
