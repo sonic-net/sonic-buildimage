@@ -130,6 +130,9 @@
 [submodule "platform/vpp"]
 	path = platform/vpp
 	url = https://github.com/sonic-net/sonic-platform-vpp.git
+[submodule "src/sonic-netconf-server"]
+	path = src/sonic-netconf-server
+	url = https://github.com/sonic-net/sonic-netconf-server
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
