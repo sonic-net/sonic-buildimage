@@ -13,15 +13,15 @@
     }
   ],
   "ports": [
-    {
-      "index": 51,
+{% for port_config in phy_port_config %}    {
+      "index": {{ port_config.index }},
       "mdio_addr": "",
-      "system_speed": 100000,
+      "system_speed": {{ port_config.system_speed }},
       "system_fec": "rs",
       "system_auto_neg": false,
       "system_loopback": "none",
       "system_training": false,
-      "line_speed": 50000,
+      "line_speed": {{ port_config.line_speed }},
       "line_fec": "rs",
       "line_auto_neg": false,
       "line_loopback": "none",
@@ -33,27 +33,8 @@
       "line_adver_auto_neg": false,
       "line_adver_asym_pause": false,
       "line_adver_media_type": "fiber"
-    },
-    {
-      "index": 52,
-      "mdio_addr": "",
-      "system_speed": 100000,
-      "system_fec": "rs",
-      "system_auto_neg": false,
-      "system_loopback": "none",
-      "system_training": false,
-      "line_speed": 50000,
-      "line_fec": "rs",
-      "line_auto_neg": false,
-      "line_loopback": "none",
-      "line_training": false,
-      "line_media_type": "fiber",
-      "line_intf_type": "none",
-      "line_adver_speed": [],
-      "line_adver_fec": [],
-      "line_adver_auto_neg": false,
-      "line_adver_asym_pause": false,
-      "line_adver_media_type": "fiber"
-    }
-  ]
+{% if loop.last %}    }
+{% else %}    },
+{% endif -%}    
+{% endfor %}  ]
 }
