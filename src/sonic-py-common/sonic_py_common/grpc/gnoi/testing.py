@@ -1,65 +1,98 @@
 """
-Fake gNOI client for testing.
+Fake gNOI gRPC server for testing.
 
-Provides a test double that behaves like GnoiClient but with
-controllable responses and no real gRPC connections.
+Spins up a real gRPC server on localhost with controllable service
+implementations. Tests use the real GnoiClient against this server —
+no mocking of gRPC internals.
 
 Usage:
-    from sonic_py_common.grpc.gnoi.testing import FakeGnoiClient
-    from sonic_py_common.grpc.gnoi import system_pb2
+    from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
+    from sonic_py_common.grpc.gnoi import GnoiClient, system_pb2
 
-    fake = FakeGnoiClient()
-    fake.system.set_reboot_status(active=False, status=system_pb2.RebootStatus.Status.STATUS_SUCCESS)
+    server = FakeGnoiServer()
+    server.start()
 
-    with fake as client:
-        resp = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=10)
+    # Configure responses
+    server.system.set_reboot_response()  # default success
+    server.system.set_reboot_status(active=False, status=STATUS_SUCCESS)
+
+    # Test with real client
+    with GnoiClient(server.target) as client:
+        client.system.Reboot(system_pb2.RebootRequest(method=system_pb2.HALT), timeout=5)
+        resp = client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
         assert not resp.active
+
+    server.stop()
 """
 
-from unittest.mock import MagicMock
+from concurrent import futures
+import grpc
+
 from sonic_py_common.grpc.gnoi import system_pb2
+from sonic_py_common.grpc.gnoi import system_pb2_grpc
 
 
-class FakeSystemStub:
-    """Fake gNOI System service stub with controllable RPC responses.
+class FakeSystemServicer(system_pb2_grpc.SystemServicer):
+    """Fake gNOI System servicer with configurable responses.
 
-    Each RPC can be configured with:
-      - A return value (response proto)
-      - A side_effect (exception or callable)
-      - A call history for assertions
+    Each RPC returns a configured response or raises a configured error.
+    Supports response sequences for polling tests.
+    Call history is recorded for assertions.
     """
 
     def __init__(self):
-        self._reboot_response = system_pb2.RebootResponse()
-        self._reboot_status_response = self._default_reboot_status()
-        self._cancel_reboot_response = system_pb2.CancelRebootResponse()
+        self.reset()
 
-        self._reboot_side_effect = None
-        self._reboot_status_side_effect = None
-        self._cancel_reboot_side_effect = None
+    def reset(self):
+        """Reset all configured responses and call history."""
+        self._reboot_response = system_pb2.RebootResponse()
+        self._reboot_error = None
+
+        self._reboot_status_responses = None  # None = use single response
+        self._reboot_status_response = self._default_status_response()
+        self._reboot_status_error = None
+
+        self._cancel_reboot_response = system_pb2.CancelRebootResponse()
+        self._cancel_reboot_error = None
 
         self.reboot_calls = []
         self.reboot_status_calls = []
         self.cancel_reboot_calls = []
 
     @staticmethod
-    def _default_reboot_status():
+    def _default_status_response():
         resp = system_pb2.RebootStatusResponse()
         resp.active = False
         resp.status.status = system_pb2.RebootStatus.Status.STATUS_SUCCESS
         return resp
 
-    # ---- Configuration methods ----
+    # ---- Configuration ----
 
-    def set_reboot_response(self, response=None, side_effect=None):
-        """Configure Reboot RPC response or side_effect (exception/callable)."""
+    def set_reboot_response(self, response=None, error_code=None, error_message=""):
+        """Set Reboot RPC response or error.
+
+        Args:
+            response: RebootResponse proto (default: empty success).
+            error_code: grpc.StatusCode to return as error (e.g. grpc.StatusCode.UNAVAILABLE).
+            error_message: Error detail string.
+        """
         if response is not None:
             self._reboot_response = response
-        self._reboot_side_effect = side_effect
+        self._reboot_error = (error_code, error_message) if error_code else None
 
     def set_reboot_status(self, active=None, status=None, message="",
-                          response=None, side_effect=None):
-        """Configure RebootStatus response fields or provide full response."""
+                          response=None, error_code=None, error_message=""):
+        """Set RebootStatus single response.
+
+        Args:
+            active: Whether reboot is in progress.
+            status: RebootStatus.Status enum value.
+            message: Status message.
+            response: Full RebootStatusResponse (overrides field args).
+            error_code: grpc.StatusCode for error response.
+            error_message: Error detail string.
+        """
+        self._reboot_status_responses = None
         if response is not None:
             self._reboot_status_response = response
         else:
@@ -69,86 +102,108 @@ class FakeSystemStub:
                 self._reboot_status_response.status.status = status
             if message:
                 self._reboot_status_response.status.message = message
-        self._reboot_status_side_effect = side_effect
+        self._reboot_status_error = (error_code, error_message) if error_code else None
 
-    def set_cancel_reboot_response(self, response=None, side_effect=None):
-        """Configure CancelReboot RPC response or side_effect."""
+    def set_reboot_status_sequence(self, responses):
+        """Set a sequence of RebootStatus responses for polling tests.
+
+        Each call pops the next item. Items can be:
+          - RebootStatusResponse proto → returned as success
+          - (grpc.StatusCode, message) tuple → returned as error
+
+        After exhaustion, falls back to the single response.
+
+        Args:
+            responses: List of RebootStatusResponse or (StatusCode, msg) tuples.
+        """
+        self._reboot_status_responses = list(responses)
+
+    def set_cancel_reboot_response(self, response=None, error_code=None, error_message=""):
+        """Set CancelReboot RPC response or error."""
         if response is not None:
             self._cancel_reboot_response = response
-        self._cancel_reboot_side_effect = side_effect
+        self._cancel_reboot_error = (error_code, error_message) if error_code else None
 
-    # ---- RPC methods (match real SystemStub interface) ----
+    # ---- RPC implementations ----
 
-    def Reboot(self, request, timeout=None, metadata=None, credentials=None):
-        self.reboot_calls.append({
-            'request': request,
-            'timeout': timeout,
-        })
-        if self._reboot_side_effect:
-            if callable(self._reboot_side_effect) and not isinstance(self._reboot_side_effect, type):
-                return self._reboot_side_effect(request, timeout=timeout)
-            raise self._reboot_side_effect
+    def Reboot(self, request, context):
+        self.reboot_calls.append(request)
+        if self._reboot_error:
+            context.abort(self._reboot_error[0], self._reboot_error[1])
         return self._reboot_response
 
-    def RebootStatus(self, request, timeout=None, metadata=None, credentials=None):
-        self.reboot_status_calls.append({
-            'request': request,
-            'timeout': timeout,
-        })
-        if self._reboot_status_side_effect:
-            if isinstance(self._reboot_status_side_effect, list):
-                effect = self._reboot_status_side_effect.pop(0)
-                if isinstance(effect, Exception):
-                    raise effect
-                return effect
-            if callable(self._reboot_status_side_effect) and not isinstance(self._reboot_status_side_effect, type):
-                return self._reboot_status_side_effect(request, timeout=timeout)
-            raise self._reboot_status_side_effect
+    def RebootStatus(self, request, context):
+        self.reboot_status_calls.append(request)
+        if self._reboot_status_responses:
+            item = self._reboot_status_responses.pop(0)
+            if isinstance(item, tuple):
+                context.abort(item[0], item[1])
+            return item
+        if self._reboot_status_error:
+            context.abort(self._reboot_status_error[0], self._reboot_status_error[1])
         return self._reboot_status_response
 
-    def CancelReboot(self, request, timeout=None, metadata=None, credentials=None):
-        self.cancel_reboot_calls.append({
-            'request': request,
-            'timeout': timeout,
-        })
-        if self._cancel_reboot_side_effect:
-            if callable(self._cancel_reboot_side_effect) and not isinstance(self._cancel_reboot_side_effect, type):
-                return self._cancel_reboot_side_effect(request, timeout=timeout)
-            raise self._cancel_reboot_side_effect
+    def CancelReboot(self, request, context):
+        self.cancel_reboot_calls.append(request)
+        if self._cancel_reboot_error:
+            context.abort(self._cancel_reboot_error[0], self._cancel_reboot_error[1])
         return self._cancel_reboot_response
 
 
-class FakeGnoiClient:
-    """Fake GnoiClient for testing — drop-in replacement with no real gRPC.
+class FakeGnoiServer:
+    """Fake gNOI gRPC server for integration-style tests.
 
-    Supports context manager protocol and exposes configurable service stubs.
+    Starts a real gRPC server on a random localhost port.
+    Tests use GnoiClient(server.target) for real channel communication.
 
     Example:
-        fake = FakeGnoiClient()
-        fake.system.set_reboot_status(active=False)
+        server = FakeGnoiServer()
+        server.start()
+        try:
+            with GnoiClient(server.target) as client:
+                client.system.Reboot(req, timeout=5)
+            assert len(server.system.reboot_calls) == 1
+        finally:
+            server.stop()
 
-        # Patch GnoiClient to return fake
-        with patch('my_module.GnoiClient', return_value=fake):
-            result = my_function_that_uses_gnoi()
+    Or as context manager:
+        with FakeGnoiServer() as server:
+            with GnoiClient(server.target) as client:
+                ...
     """
 
-    def __init__(self, target="fake:0"):
-        self._target = target
-        self._system = FakeSystemStub()
+    def __init__(self, max_workers=2):
+        self._max_workers = max_workers
+        self._server = None
+        self._port = None
+        self.system = FakeSystemServicer()
 
-    def __enter__(self):
+    @property
+    def target(self):
+        """gRPC target string, e.g. 'localhost:50051'."""
+        return f"localhost:{self._port}"
+
+    def start(self):
+        """Start the fake gRPC server on a random port."""
+        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
+        system_pb2_grpc.add_SystemServicer_to_server(self.system, self._server)
+        self._port = self._server.add_insecure_port("localhost:0")
+        self._server.start()
         return self
 
+    def stop(self, grace=0):
+        """Stop the server."""
+        if self._server:
+            self._server.stop(grace)
+            self._server = None
+
+    def reset(self):
+        """Reset all service state (responses + call history)."""
+        self.system.reset()
+
+    def __enter__(self):
+        return self.start()
+
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
         return False
-
-    def close(self):
-        pass
-
-    @property
-    def channel(self):
-        return MagicMock()
-
-    @property
-    def system(self):
-        return self._system

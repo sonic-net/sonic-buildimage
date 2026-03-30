@@ -1,92 +1,89 @@
-"""Tests for sonic_py_common.grpc.gnoi.client.GnoiClient."""
+"""Tests for sonic_py_common.grpc.gnoi.client.GnoiClient.
 
-import sys
+Uses FakeGnoiServer for real gRPC — no mocking.
+"""
+
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+import grpc
 
-# Mock grpc
-mock_grpc = MagicMock()
-mock_grpc.RpcError = type('RpcError', (Exception,), {})
-sys.modules['grpc'] = mock_grpc
-
-# Mock proto stubs
-sys.modules['sonic_py_common.grpc.gnoi.system_pb2'] = MagicMock()
-sys.modules['sonic_py_common.grpc.gnoi.system_pb2_grpc'] = MagicMock()
-sys.modules['sonic_py_common.grpc.gnoi.types_pb2'] = MagicMock()
-sys.modules['sonic_py_common.grpc.gnoi.common_pb2'] = MagicMock()
-
+from sonic_py_common.grpc.gnoi.testing import FakeGnoiServer
 from sonic_py_common.grpc.gnoi.client import GnoiClient
-from sonic_py_common.grpc.gnoi import system_pb2_grpc
+from sonic_py_common.grpc.gnoi import system_pb2
 
 
 class TestGnoiClient(unittest.TestCase):
 
-    def test_context_manager_creates_channel(self):
-        """Test that entering context creates an insecure channel."""
-        with GnoiClient("10.0.0.1:8080") as client:
-            mock_grpc.insecure_channel.assert_called_with("10.0.0.1:8080", options=None)
-            self.assertIsNotNone(client.channel)
+    @classmethod
+    def setUpClass(cls):
+        cls.server = FakeGnoiServer()
+        cls.server.start()
 
-    def test_context_manager_closes_channel(self):
-        """Test that exiting context closes the channel."""
-        with GnoiClient("10.0.0.1:8080") as client:
-            channel = client.channel
-        channel.close.assert_called()
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+
+    def setUp(self):
+        self.server.reset()
+
+    def test_context_manager_creates_and_closes_channel(self):
+        with GnoiClient(self.server.target) as client:
+            self.assertIsNotNone(client.channel)
+        # After exit, channel is None
+        self.assertIsNone(client.channel)
 
     def test_close_idempotent(self):
-        """Test that close() can be called multiple times safely."""
-        client = GnoiClient("10.0.0.1:8080")
+        client = GnoiClient(self.server.target)
         client.__enter__()
         client.close()
         client.close()  # Should not raise
 
-    def test_system_property_returns_stub(self):
-        """Test that .system returns a SystemStub."""
-        with GnoiClient("10.0.0.1:8080") as client:
-            stub = client.system
-            system_pb2_grpc.SystemStub.assert_called_with(client.channel)
-
-    def test_channel_options_passed(self):
-        """Test that gRPC channel options are forwarded."""
-        opts = [('grpc.keepalive_time_ms', 10000)]
-        with GnoiClient("10.0.0.1:8080", options=opts) as client:
-            mock_grpc.insecure_channel.assert_called_with("10.0.0.1:8080", options=opts)
+    def test_channel_not_available_before_enter(self):
+        client = GnoiClient(self.server.target)
+        self.assertIsNone(client.channel)
 
     def test_system_reboot_rpc(self):
-        """Test calling Reboot through the system stub."""
-        mock_system_stub = MagicMock()
-        system_pb2_grpc.SystemStub.return_value = mock_system_stub
-
-        with GnoiClient("10.0.0.1:8080") as client:
-            request = MagicMock()
-            client.system.Reboot(request, timeout=60)
-            mock_system_stub.Reboot.assert_called_once_with(request, timeout=60)
+        with GnoiClient(self.server.target) as client:
+            resp = client.system.Reboot(
+                system_pb2.RebootRequest(method=system_pb2.HALT),
+                timeout=5,
+            )
+        self.assertIsNotNone(resp)
+        self.assertEqual(len(self.server.system.reboot_calls), 1)
 
     def test_system_reboot_status_rpc(self):
-        """Test calling RebootStatus through the system stub."""
-        mock_system_stub = MagicMock()
-        system_pb2_grpc.SystemStub.return_value = mock_system_stub
-
-        with GnoiClient("10.0.0.1:8080") as client:
-            request = MagicMock()
-            client.system.RebootStatus(request, timeout=10)
-            mock_system_stub.RebootStatus.assert_called_once_with(request, timeout=10)
+        with GnoiClient(self.server.target) as client:
+            resp = client.system.RebootStatus(
+                system_pb2.RebootStatusRequest(), timeout=5
+            )
+        self.assertFalse(resp.active)
 
     def test_grpc_error_propagation(self):
-        """Test that gRPC errors propagate to callers."""
-        mock_system_stub = MagicMock()
-        rpc_error = mock_grpc.RpcError()
-        mock_system_stub.Reboot.side_effect = rpc_error
-        system_pb2_grpc.SystemStub.return_value = mock_system_stub
+        self.server.system.set_reboot_response(
+            error_code=grpc.StatusCode.UNAVAILABLE,
+            error_message="connection refused",
+        )
+        with GnoiClient(self.server.target) as client:
+            with self.assertRaises(grpc.RpcError) as ctx:
+                client.system.Reboot(system_pb2.RebootRequest(), timeout=5)
+            self.assertEqual(ctx.exception.code(), grpc.StatusCode.UNAVAILABLE)
 
-        with GnoiClient("10.0.0.1:8080") as client:
-            with self.assertRaises(mock_grpc.RpcError):
-                client.system.Reboot(MagicMock(), timeout=60)
+    def test_channel_options_accepted(self):
+        """GnoiClient accepts gRPC channel options."""
+        opts = [('grpc.keepalive_time_ms', 10000)]
+        with GnoiClient(self.server.target, options=opts) as client:
+            resp = client.system.RebootStatus(
+                system_pb2.RebootStatusRequest(), timeout=5
+            )
+        self.assertIsNotNone(resp)
 
-    def test_channel_not_available_before_enter(self):
-        """Test that channel is None before entering context."""
-        client = GnoiClient("10.0.0.1:8080")
-        self.assertIsNone(client.channel)
+    def test_multiple_rpcs_on_same_channel(self):
+        with GnoiClient(self.server.target) as client:
+            client.system.Reboot(system_pb2.RebootRequest(), timeout=5)
+            client.system.RebootStatus(system_pb2.RebootStatusRequest(), timeout=5)
+            client.system.CancelReboot(system_pb2.CancelRebootRequest(), timeout=5)
+        self.assertEqual(len(self.server.system.reboot_calls), 1)
+        self.assertEqual(len(self.server.system.reboot_status_calls), 1)
+        self.assertEqual(len(self.server.system.cancel_reboot_calls), 1)
 
 
 if __name__ == '__main__':
