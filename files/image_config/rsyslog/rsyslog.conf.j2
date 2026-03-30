@@ -27,7 +27,7 @@ module(load="omprog")
 # provides UDP syslog reception
 module(load="imudp")
 input(type="imudp" address="{{udp_server_ip}}" port="514")
-{% if docker0_ip and docker0_ip != "" %}
+{% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
 input(type="imudp" address="{{docker0_ip}}" port="514")
 {% endif%}
 
@@ -38,7 +38,7 @@ input(type="imudp" address="{{docker0_ip}}" port="514")
 # provides RELP syslog reception
 module(load="imrelp")
 input(type="imrelp" address="{{udp_server_ip}}" port="2514")
-{% if docker0_ip and docker0_ip != "" %}
+{% if docker0_ip and docker0_ip != "" and docker0_ip != udp_server_ip %}
 input(type="imrelp" address="{{docker0_ip}}" port="2514")
 {% endif%}
 
