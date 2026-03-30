@@ -36,9 +36,14 @@ setup(
     url='https://github.com/Azure/SONiC',
     maintainer='Joe LeVeque',
     maintainer_email='jolevequ@microsoft.com',
-    install_requires=dependencies,
+    install_requires=dependencies + [
+        'grpcio',
+        'protobuf',
+    ],
     packages=[
         'sonic_py_common',
+        'sonic_py_common.grpc',
+        'sonic_py_common.grpc.gnoi',
     ],
     setup_requires= [
         'pytest-runner',
