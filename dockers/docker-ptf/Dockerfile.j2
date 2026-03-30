@@ -402,10 +402,10 @@ ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # ptf is under /root/env-python3/bin. 
 # TODO - cleanup when the supported PTF image is py3only across all branches
 RUN mkdir -p /root/env-python3/bin \
-    && ln -s /usr/local/bin/ptf /usr/bin/ptf \
-    && ln -s /usr/bin/python /root/env-python3/bin/python3 \
-    && ln -s /usr/bin/python /root/env-python3/bin/python \
-    && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
+    && ln -sf /usr/local/bin/ptf /usr/bin/ptf \
+    && ln -sf /usr/bin/python /root/env-python3/bin/python3 \
+    && ln -sf /usr/bin/python /root/env-python3/bin/python \
+    && ln -sf /usr/local/bin/ptf /root/env-python3/bin/ptf
 {% endif %}
 
 COPY ["*.ini", "/etc/ptf/"]
