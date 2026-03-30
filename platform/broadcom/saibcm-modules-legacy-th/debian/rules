@@ -93,10 +93,14 @@ build-arch-stamp:
 	cd /; sudo rm /lib/modules/$(KVER_ARCH)/source
 	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_COMMON)/ /lib/modules/$(KVER_ARCH)/source
 	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/ /lib/modules/$(KVER_ARCH)/build
-	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/include/generated
-	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/include/generated
-	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/module.lds /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/module.lds
-	cd /; sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/config/ /usr/src/linux-headers-$(KVER_COMMON)/include/config
+	sudo rm -f /usr/src/linux-headers-$(KVER_COMMON)/include/generated
+	sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/include/generated
+	sudo rm -f /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/include/generated
+	sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/include/generated/ /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/include/generated
+	sudo rm -f /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/module.lds
+	sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/arch/x86/module.lds /usr/src/linux-headers-$(KVER_COMMON)/arch/x86/module.lds
+	sudo rm -f /usr/src/linux-headers-$(KVER_COMMON)/include/config
+	sudo ln -s /usr/src/linux-headers-$(KVER_ARCH)/include/config/ /usr/src/linux-headers-$(KVER_COMMON)/include/config
 	cd /; sudo cp /usr/src/linux-headers-$(KVER_ARCH)/Module.symvers /usr/src/linux-headers-$(KVER_COMMON)/Module.symvers
 
 	# Add here command to compile/build the package.
