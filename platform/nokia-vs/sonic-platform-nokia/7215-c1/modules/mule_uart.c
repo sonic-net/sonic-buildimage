@@ -122,6 +122,7 @@ struct mule_dev
         u8 mcr;
         u8 msr;
         u8 x_char;
+        u8 flip;
     } p[MULE_MAXPORTS];
     atomic_t mule_intr_status;
     atomic_t c2h_xdma_status;
@@ -133,6 +134,7 @@ struct mule_dev
     u32 h2c_frc1;
     struct hrtimer c2h_timer;
     spinlock_t     lock_timer;
+    struct timer_list flip_timer;
     u32 version;
     struct counters counters;
     struct sliding_avg h2c_dma_savg;
@@ -459,6 +461,21 @@ static void mule_uart_mode_set(struct mule_dev *mdev, struct uart_port *port, in
 
 }
 
+static void fpga_flip_timer_fn(struct timer_list *t)
+{
+    struct mule_dev *mdev = from_timer(mdev, t, flip_timer);
+
+    for (int i = 0; i < MULE_MAXPORTS; i++) {
+        struct uart_port *port = &mdev->p[i].port;
+        if (mdev->p[i].enabled && !mdev->p[i].stop_rx) {
+            if (mdev->p[i].flip) {
+                mdev->p[i].flip = 0;
+                tty_flip_buffer_push(&port->state->port);
+            }
+        }
+    }
+}
+
 static void mule_uart_rx_chars(struct uart_port *port)
 {
     u8 ch;
@@ -502,7 +519,7 @@ static void mule_uart_rx_chars(struct uart_port *port)
             }
         }
 
-        tty_flip_buffer_push(&port->state->port);
+        mdev->p[port->line].flip = 1;
     }
 }
 
@@ -870,6 +887,8 @@ static void c2h_xdma_task(struct work_struct *work)
                 mule_uart_rx_chars(&mdev->p[i].port);
             }
         }
+        if (!timer_pending(&mdev->flip_timer))
+            mod_timer(&mdev->flip_timer, jiffies + msecs_to_jiffies(11));
     }
     else if (status & XDMA_STAT_COMMON_ERR_MASK) {
         dev_err(mdev->dev,"%s c2h desc error 0x%08x\n",__FUNCTION__,status);
@@ -1209,6 +1228,8 @@ static int mule_fpga_probe(struct platform_device *pdev)
         }
     }
 
+    timer_setup(&mdev->flip_timer, fpga_flip_timer_fn, 0);
+
     platform_set_drvdata(pdev, mdev);
     pci_set_drvdata(mdev->xdma, mdev);
 
@@ -1230,6 +1251,8 @@ static void mule_fpga_remove(struct platform_device *pdev)
     mule_reg_write(mdev->membase, MULE_XDMA_CONTROL, 0);
     mule_reg_write(mdev->membase_xdma, H2C_CHAN + 0x04, 0x0);
     mule_reg_write(mdev->membase_xdma, C2H_CHAN + 0x04, 0x0);
+
+    del_timer_sync(&mdev->flip_timer);
 
     for (i = 0; i < MULE_MAXPORTS; i++)
     {
