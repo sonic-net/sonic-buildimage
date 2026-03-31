@@ -21,9 +21,9 @@ config_chassis_db() {
     fi
 
     # Read the various device attributes
-    read -r is_supervisor is_disagg < <(python3 -c \
+    read -r is_supervisor is_disagg is_smartswitch is_dpu < <(python3 -c \
 	    'import sonic_py_common.device_info as d; print(*[getattr(d,n,lambda:False)() \
-	    for n in ("is_supervisor","is_disaggregated_chassis")])')
+	    for n in ("is_supervisor","is_disaggregated_chassis","is_smartswitch","is_dpu")])')
 
     # Check if this is a chassis
     read -r is_chassis < <(python3 -c 'import sonic_platform.platform as platform;\
@@ -34,23 +34,27 @@ config_chassis_db() {
     if [[ "$is_chassis" == True ]]; then
         # With chassis handle supervisor and linecard
         if [[ "$is_supervisor" == True ]]; then
-            midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" 2>/dev/null | \
+            midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" | \
                                   awk '{print $4}' | cut -d/ -f1 | head -n1)
         else
            midplane_interface_ip=$(python3 -c 'import sonic_platform.platform; \
                                  platform_chassis = sonic_platform.platform.Platform().get_chassis(); \
                                  sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() \
-                                 for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])' 2>/dev/null)
+                                 for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])')
         fi
     elif [[ "$is_disagg" == True ]]; then
         # With disagg T2 pizza box it is docker0 bridge which is midplane
-        midplane_interface_ip=$(ip -4 -o addr show "docker0" 2>/dev/null | \
+        midplane_interface_ip=$(ip -4 -o addr show "docker0" | \
                               awk '{print $4}' | cut -d/ -f1 | head -n1)
+    elif [[ "$is_smartswitch" == True ]] || [[ "$is_dpu" == True ]]; then
+        # On smartswitch (NPU or DPU side) get the NPU bridge-midplane IP from the network config file
+        midplane_interface_ip=$(python3 -c \
+            'import sonic_py_common.device_info as d; print(d.get_smartswitch_midplane_ip() or "")')
     fi
 
     # Generate the chassisdb_address_file from the midplane interface ip address
     if [[ -n "$midplane_interface_ip" ]]; then
-        chassis_db_address="$midplane_interface_ip" j2 /usr/share/sonic/templates/chassisdb_address.j2 > "$chassisdb_address_file"
+        echo "chassis_db_address=$midplane_interface_ip" > "$chassisdb_address_file"
     else
         echo "Error: No IP address configured on midplane_interface"
         exit 0
