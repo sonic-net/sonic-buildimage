@@ -26,40 +26,76 @@ LOG_MSG "Pre-reboot flush and cache clear complete."
 
 sleep 2
 LOG_MSG "Writing pre-shutdown success to CPLD reg"
-docker exec "$(cat /host/dpu-docker-info/name)" /nic/bin/cpldapp -w 0xd 200
+
+DPU_NAME_FILE="/host/dpu-docker-info/name"
+if [ ! -s "$DPU_NAME_FILE" ]; then
+    LOG_MSG "DPU container name file '$DPU_NAME_FILE' is missing or empty; skipping CPLD operations"
+    exit 1
+else
+    DPU_CONTAINER_NAME=$(cat "$DPU_NAME_FILE")
+    docker exec "$DPU_CONTAINER_NAME" /nic/bin/cpldapp -w 0xd 200
+fi
+
+# Fetch NTP server IP from CONFIG_DB (typically the host/midplane IP)
+NTP_SERVER_KEY=$(sonic-db-cli CONFIG_DB keys 'NTP_SERVER*' | head -1)
+if [ -z "$NTP_SERVER_KEY" ]; then
+    LOG_MSG "ERROR: NTP_SERVER not found in CONFIG_DB, aborting pre-reboot hook"
+    exit 1
+fi
+
+HOST_IP=$(echo "$NTP_SERVER_KEY" | cut -d'|' -f2)
+if [ -z "$HOST_IP" ]; then
+    LOG_MSG "ERROR: Failed to extract host IP from NTP_SERVER key '$NTP_SERVER_KEY', aborting pre-reboot hook"
+    exit 1
+fi
+LOG_MSG "Using host IP from CONFIG_DB: $HOST_IP"
+
+# Extract midplane interface name from systemd network configuration
+MIDPLANE_NETWORK_FILE="/usr/lib/systemd/network/midplane-network-dpu.network"
+if [ ! -f "$MIDPLANE_NETWORK_FILE" ]; then
+    LOG_MSG "ERROR: Midplane network config file '$MIDPLANE_NETWORK_FILE' not found, aborting pre-reboot hook"
+    exit 1
+fi
+
+MIDPLANE_IFACE=$(awk -F= '/^\[Match\]/,/^\[Network\]/ { if ($1 == "Name") {print $2; exit} }' "$MIDPLANE_NETWORK_FILE")
+if [ -z "$MIDPLANE_IFACE" ]; then
+    LOG_MSG "ERROR: Failed to extract interface name from '$MIDPLANE_NETWORK_FILE', aborting pre-reboot hook"
+    exit 1
+fi
+LOG_MSG "Using midplane interface: $MIDPLANE_IFACE"
 
 # Spawn fully independent background process to ping host and trigger power cycle if unreachable
 # Algorithm: If ping fails, wait 10 seconds and retry. After 3 consecutive failures, trigger power cycle.
 # Using setsid + nohup to completely detach from parent process (daemonize)
-DPU_CONTAINER_NAME=$(cat /host/dpu-docker-info/name)
+
 setsid nohup bash -c "
     DPU_CONTAINER='$DPU_CONTAINER_NAME'
-    HOST_IP='169.254.200.254'
+    HOST_IP='$HOST_IP'
+    MIDPLANE_IFACE='$MIDPLANE_IFACE'
     TIMEOUT=120
     POLL_INTERVAL=5
     ELAPSED=0
     MAX_FAILURES=3
     RETRY_WAIT=10
+    FAIL_COUNT=0
 
+    LAST_STATE=\"unknown\"
     while [ \$ELAPSED -lt \$TIMEOUT ]; do
-        if ping -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
-            echo \"Ping to \$HOST_IP successful, host is still reachable\" | tee /dev/kmsg /dev/console
+        if ping -I \"\$MIDPLANE_IFACE\" -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
+            # Ping succeeded - reset failure counter
+            if [ \$FAIL_COUNT -gt 0 ]; then
+                echo \"Ping to \$HOST_IP recovered after \$FAIL_COUNT failures\" | tee /dev/kmsg /dev/console
+                FAIL_COUNT=0
+            fi
+            # Log success only when transitioning to reachable state
+            if [ \"\$LAST_STATE\" != \"up\" ]; then
+                echo \"Ping to \$HOST_IP successful, host is still reachable\" | tee /dev/kmsg /dev/console
+                LAST_STATE=\"up\"
+            fi
         else
-            echo \"Ping to \$HOST_IP failed, starting failure retry sequence\" | tee /dev/kmsg /dev/console
-            FAIL_COUNT=1
-
-            # Retry loop: wait 10 seconds between each retry, up to MAX_FAILURES total attempts
-            while [ \$FAIL_COUNT -lt \$MAX_FAILURES ]; do
-                echo \"Ping failure \$FAIL_COUNT/\$MAX_FAILURES, waiting \$RETRY_WAIT seconds before retry...\" | tee /dev/kmsg /dev/console
-                sleep \$RETRY_WAIT
-
-                if ping -c 1 -W 1 \"\$HOST_IP\" > /dev/null 2>&1; then
-                    echo \"Ping to \$HOST_IP recovered after \$FAIL_COUNT failures\" | tee /dev/kmsg /dev/console
-                    FAIL_COUNT=0
-                    break
-                fi
-                FAIL_COUNT=\$((FAIL_COUNT + 1))
-            done
+            # Ping failed - increment failure counter
+            FAIL_COUNT=\$((FAIL_COUNT + 1))
+            echo \"Ping to \$HOST_IP failed (\$FAIL_COUNT/\$MAX_FAILURES)\" | tee /dev/kmsg /dev/console
 
             # If we exhausted all retries (3 consecutive failures), trigger power cycle
             if [ \$FAIL_COUNT -ge \$MAX_FAILURES ]; then
@@ -68,6 +104,12 @@ setsid nohup bash -c "
                 docker exec \"\$DPU_CONTAINER\" /nic/bin/cpldapp -pwrcycle
                 exit 0
             fi
+
+            # Wait before next retry
+            echo \"Waiting \$RETRY_WAIT seconds before retry...\" | tee /dev/kmsg /dev/console
+            sleep \$RETRY_WAIT
+            ELAPSED=\$((ELAPSED + RETRY_WAIT))
+            continue
         fi
         sleep \$POLL_INTERVAL
         ELAPSED=\$((ELAPSED + POLL_INTERVAL))
