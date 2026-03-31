@@ -1,9 +1,25 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import subprocess
 import time
 import click
-from platform_config import GLOBALCONFIG, WARM_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG
+from platform_config import GLOBALCONFIG, WARM_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG, FW_UPGRADE_STARTED_FLAG
 
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
@@ -39,6 +55,10 @@ def platform_process_file_check():
     # WARM_UPG_FLAG is used as port related service judgment flag
     if os.path.exists(WARM_UPG_FLAG):
         os.remove(WARM_UPG_FLAG)
+
+    # FW_UPGRADE_STARTED_FLAG is used as upgrade.py process start flag
+    if os.path.exists(FW_UPGRADE_STARTED_FLAG):
+        os.remove(FW_UPGRADE_STARTED_FLAG)
 
 
 def startCommon_operation():

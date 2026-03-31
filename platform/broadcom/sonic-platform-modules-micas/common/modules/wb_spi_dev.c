@@ -1,6 +1,21 @@
 /*
- * wb_spi_dev.c
- * ko to read/write spi device through /dev/XXX device
+ * An wb_spi_dev driver for spi device function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/module.h>
@@ -32,8 +47,8 @@
 #define OP_READ             (0x3)
 #define OP_WRITE            (0x2)
 
-#define KERNEL_SPASE         (0)
-#define USER_SPASE           (1)
+#define KERNEL_SPACE         (0)
+#define USER_SPACE           (1)
 
 static int g_spi_dev_debug = 0;
 static int g_spi_dev_error = 0;
@@ -346,7 +361,7 @@ static ssize_t spi_dev_read(struct file *file, char __user *buf, size_t count, l
     }
 
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         SPI_DEV_DEBUG("user space read, buf: %p, offset: %lld, read count %lu.\n",
             buf, *offset, count);
         if (copy_to_user(buf, val, read_len)) {
@@ -370,7 +385,7 @@ static ssize_t spi_dev_read_user(struct file *file, char __user *buf, size_t cou
 
     SPI_DEV_DEBUG("spi_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = spi_dev_read(file, buf, count, offset, USER_SPASE);
+    ret = spi_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -380,7 +395,7 @@ static ssize_t spi_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 
     SPI_DEV_DEBUG("spi_dev_read_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = spi_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = spi_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 
@@ -409,7 +424,7 @@ static ssize_t spi_dev_write(struct file *file, const char __user *buf,
 
     mem_clear(val, sizeof(val));
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         SPI_DEV_DEBUG("user space write, buf: %p, offset: %lld, write count %lu.\n",
             buf, *offset, count);
         if (copy_from_user(val, buf, count)) {
@@ -439,7 +454,7 @@ static ssize_t spi_dev_write_user(struct file *file, const char __user *buf, siz
 
     SPI_DEV_DEBUG("spi_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = spi_dev_write(file, buf, count, offset, USER_SPASE);
+    ret = spi_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -449,7 +464,7 @@ static ssize_t spi_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 
     SPI_DEV_DEBUG("spi_dev_write_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = spi_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = spi_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 
