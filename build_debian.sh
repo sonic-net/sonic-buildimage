@@ -31,8 +31,8 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:28.2.2-1~debian.13~$IMAGE_DISTRO
-CONTAINERD_IO_VERSION=1.7.27-1
+DOCKER_VERSION=5:28.5.2-1~debian.13~$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=1.7.28-2~debian.13~$IMAGE_DISTRO
 LINUX_KERNEL_VERSION=6.12.41+deb13
 
 ## Working directory to prepare the file system
@@ -202,6 +202,8 @@ sudo cp files/initramfs-tools/union-mount $FILESYSTEM_ROOT/etc/initramfs-tools/s
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/union-mount
 sudo cp files/initramfs-tools/varlog $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/varlog
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/varlog
+sudo cp files/initramfs-tools/swi2bin $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/swi2bin
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/swi2bin
 # Management interface (eth0) dhcp can be optionally turned off (during a migration from another NOS to SONiC)
 #sudo cp files/initramfs-tools/mgmt-intf-dhcp $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/mgmt-intf-dhcp
 #sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/mgmt-intf-dhcp
@@ -324,6 +326,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     isc-dhcp-client         \
     sudo                    \
     vim                     \
+    bash-completion         \
     tcpdump                 \
     dbus                    \
     openssh-server          \
@@ -361,7 +364,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     cgroup-tools            \
     ipmitool                \
     ndisc6                  \
-    makedumpfile            \
     conntrack               \
     python3                 \
     python3-pip             \
@@ -376,6 +378,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     jq                      \
     auditd                  \
     linux-perf              \
+    util-linux-extra        \
     resolvconf              \
     lsof                    \
     sysstat                 \
@@ -452,12 +455,14 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
 	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
-        GRUB_PKG=grub-pc-bin
+        GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
-        GRUB_PKG=grub-efi-arm64-bin
+        GRUB_PKGS=grub-efi-arm64-bin
     fi
 
-    sudo cp $debs_path/${GRUB_PKG}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    for grub_pkg in $GRUB_PKGS; do
+       sudo cp $debs_path/${grub_pkg}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    done
 fi
 
 ## Disable kexec supported reboot which was installed by default
@@ -749,7 +754,7 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
-    elif [[ $CONFIGURED_ARCH == arm64 ]]; then
+    elif [[ $CONFIGURED_ARCH == arm64 && $CONFIGURED_PLATFORM != nokia-vs ]]; then
         if [[ $CONFIGURED_PLATFORM == pensando ]]; then
             ## copy device tree file into boot (XXX: need to compile dtb from dts)
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
@@ -764,8 +769,71 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             ## Overwriting the initrd image with uInitrd
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
         else
-            sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            # Check if sonic_fit.its uses placeholders (template-based)
+            if grep -q "__KERNEL_VERSION__\|__KERNEL_PATH__" $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its 2>/dev/null; then
+                # Generate sonic_fit.its with actual kernel version
+                # Detect the actual installed kernel version from the filesystem
+                # The kernel package may have a different version suffix than LINUX_KERNEL_VERSION
+                KERNEL_FILE=$(ls $FILESYSTEM_ROOT/boot/vmlinuz-* 2>/dev/null | head -1)
+                if [ -z "$KERNEL_FILE" ]; then
+                    echo "Error: No kernel found in $FILESYSTEM_ROOT/boot/"
+                    exit 1
+                fi
+                KERNEL_VERSION_FULL=$(basename "$KERNEL_FILE" | sed 's/^vmlinuz-//')
+
+                # Replace placeholders with actual paths
+                KERNEL_PATH="/boot/vmlinuz-${KERNEL_VERSION_FULL}"
+                INITRD_PATH="/boot/initrd.img-${KERNEL_VERSION_FULL}"
+
+                # For aspeed platform, construct DTB directory path
+                # The FIT image template contains multiple DTBs, we only substitute the directory path
+                if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/aspeed"
+                else
+                    DTB_DIR_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/${CONFIGURED_PLATFORM}"
+                fi
+
+                # Substitute placeholders in sonic_fit.its template
+                sed -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
+                    -e "s|__INITRD_PATH__|${INITRD_PATH}|g" \
+                    -e "s|__DTB_PATH_ASPEED__|${DTB_DIR_PATH}|g" \
+                    $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its > /tmp/sonic_fit.its.tmp
+
+                sudo cp -v /tmp/sonic_fit.its.tmp $FILESYSTEM_ROOT/boot/sonic_fit.its
+                rm -f /tmp/sonic_fit.its.tmp
+            else
+                # Platform uses hardcoded paths - copy as-is
+                sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            fi
+
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
+        fi
+    fi
+
+    # Install platform-level scripts and services for aspeed platform
+    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+        echo "Installing platform scripts and services for aspeed..."
+
+        # Copy all scripts from platform/aspeed/scripts/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
+            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
+                if [ -f "$script" ]; then
+                    echo "Installing $(basename $script)..."
+                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
+                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
+                fi
+            done
+        fi
+
+        # Copy all systemd services from platform/aspeed/systemd/
+        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
+            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
+                if [ -f "$service" ]; then
+                    echo "Installing and enabling $(basename $service)..."
+                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
+                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
+                fi
+            done
         fi
     fi
 fi
