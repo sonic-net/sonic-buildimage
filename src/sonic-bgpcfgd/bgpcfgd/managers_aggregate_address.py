@@ -131,7 +131,9 @@ class AggregateAddressMgr(Manager):
             asn=bgp_asn,
             prefix=prefix,
             is_v4=is_v4,
-            is_remove=True
+            is_remove=True,
+            summary_only=data.get(SUMMARY_ONLY_KEY, COMMON_FALSE_STRING),
+            as_set=data.get(AS_SET_KEY, COMMON_FALSE_STRING)
         )
         cmd_list.extend(aggregates_cmds)
 
@@ -206,9 +208,9 @@ def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_o
     ret_cmds.append("address-family ipv4" if is_v4 else "address-family ipv6")
     agg_cmd = "no " if is_remove else ""
     agg_cmd += "aggregate-address %s" % prefix
-    if not is_remove and summary_only == COMMON_TRUE_STRING:
+    if summary_only == COMMON_TRUE_STRING:
         agg_cmd += " %s" % SUMMARY_ONLY_KEY
-    if not is_remove and as_set == COMMON_TRUE_STRING:
+    if as_set == COMMON_TRUE_STRING:
         agg_cmd += " %s" % AS_SET_KEY
     ret_cmds.append(agg_cmd)
     ret_cmds.append("exit-address-family")

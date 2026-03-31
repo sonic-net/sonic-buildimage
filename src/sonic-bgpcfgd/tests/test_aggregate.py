@@ -1,6 +1,7 @@
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
+from bgpcfgd.managers_aggregate_address import generate_aggregate_address_commands, COMMON_TRUE_STRING, COMMON_FALSE_STRING
 import pytest
 from swsscommon import swsscommon
 from unittest.mock import MagicMock, patch
@@ -210,7 +211,7 @@ def __del_handler_validate(
     except_cmds = [
         'router bgp 65001',
         'address-family ' + ('ipv4' if '.' in aggregate_prefix else 'ipv6'),
-        'no aggregate-address ' + aggregate_prefix,
+        'no aggregate-address ' + aggregate_prefix + (' summary-only' if summary_only == 'true' else '') + (' as-set' if as_set == 'true' else ''),
         'exit-address-family',
         'exit'
     ]
@@ -261,7 +262,7 @@ def __switch_bbr_state(
     del_cmds = [
         'router bgp 65001',
         'address-family ' + ('ipv4' if '.' in aggregate_prefix else 'ipv6'),
-        'no aggregate-address ' + aggregate_prefix,
+        'no aggregate-address ' + aggregate_prefix + (' summary-only' if summary_only == 'true' else '') + (' as-set' if as_set == 'true' else ''),
         'exit-address-family',
         'exit'
     ]
@@ -279,3 +280,128 @@ def __switch_bbr_state(
     assert [aggregate_prefix] == mgr.address_table.getKeys()
     _, data = mgr.address_table.get(aggregate_prefix)
     assert data == expected_state
+
+
+class TestGenerateAggregateAddressRemovalCommands:
+    """Tests that verify the removal command includes summary-only/as-set flags.
+
+    This is the regression test for the bug where 'no aggregate-address <prefix>'
+    was generated without the flags, causing FRR to silently ignore the removal
+    when the running config had 'aggregate-address <prefix> summary-only'.
+    """
+
+    def test_remove_with_summary_only(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="10.100.0.0/16", is_v4=True,
+            is_remove=True, summary_only=COMMON_TRUE_STRING, as_set=COMMON_FALSE_STRING
+        )
+        assert "no aggregate-address 10.100.0.0/16 summary-only" in cmds
+
+    def test_remove_with_as_set(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="10.100.0.0/16", is_v4=True,
+            is_remove=True, summary_only=COMMON_FALSE_STRING, as_set=COMMON_TRUE_STRING
+        )
+        assert "no aggregate-address 10.100.0.0/16 as-set" in cmds
+
+    def test_remove_with_summary_only_and_as_set(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="10.100.0.0/16", is_v4=True,
+            is_remove=True, summary_only=COMMON_TRUE_STRING, as_set=COMMON_TRUE_STRING
+        )
+        assert "no aggregate-address 10.100.0.0/16 summary-only as-set" in cmds
+
+    def test_remove_without_flags(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="10.100.0.0/16", is_v4=True,
+            is_remove=True, summary_only=COMMON_FALSE_STRING, as_set=COMMON_FALSE_STRING
+        )
+        assert "no aggregate-address 10.100.0.0/16" in cmds
+
+    def test_remove_ipv6_with_summary_only(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="2001:db8::/32", is_v4=False,
+            is_remove=True, summary_only=COMMON_TRUE_STRING, as_set=COMMON_FALSE_STRING
+        )
+        assert "no aggregate-address 2001:db8::/32 summary-only" in cmds
+        assert "address-family ipv6" in cmds
+
+    def test_add_with_summary_only_still_works(self):
+        cmds = generate_aggregate_address_commands(
+            asn="65001", prefix="10.100.0.0/16", is_v4=True,
+            is_remove=False, summary_only=COMMON_TRUE_STRING, as_set=COMMON_FALSE_STRING
+        )
+        assert "aggregate-address 10.100.0.0/16 summary-only" in cmds
+
+
+class TestAddressDelHandlerPassesFlags:
+    """Tests that address_del_handler passes summary-only/as-set from state DB."""
+
+    def test_del_handler_with_summary_only_in_state(self):
+        """Reproduce the exact bug: add with summary-only=true, then delete.
+        The removal command must include 'summary-only'."""
+        mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+
+        # Set address with summary-only=true
+        attr = (
+            ('bbr-required', 'false'),
+            ('summary-only', 'true'),
+            ('as-set', 'false'),
+            ('aggregate-address-prefix-list', ''),
+            ('contributing-address-prefix-list', '')
+        )
+        mgr.set_handler("10.100.0.0/16", attr)
+
+        # Verify state DB has the flags
+        _, state_data = mgr.address_table.get("10.100.0.0/16")
+        assert state_data['summary-only'] == 'true'
+
+        # Now delete — the removal cmd must include summary-only
+        push_list_calls = []
+        mgr.cfg_mgr.push_list = lambda cmds: push_list_calls.append(cmds) or True
+        mgr.del_handler("10.100.0.0/16")
+
+        assert len(push_list_calls) == 1
+        assert "no aggregate-address 10.100.0.0/16 summary-only" in push_list_calls[0]
+
+    def test_bbr_disable_removes_with_summary_only(self):
+        """When BBR is disabled, on_bbr_change must generate removal with summary-only."""
+        mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+
+        # Set address with bbr-required=true and summary-only=true
+        attr = (
+            ('bbr-required', 'true'),
+            ('summary-only', 'true'),
+            ('as-set', 'false'),
+            ('aggregate-address-prefix-list', ''),
+            ('contributing-address-prefix-list', '')
+        )
+        mgr.set_handler("10.100.0.0/16", attr)
+
+        # Now switch BBR to disabled
+        push_list_calls = []
+        mgr.cfg_mgr.push_list = lambda cmds: push_list_calls.append(cmds) or True
+        mgr.directory.put(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY, BGP_BBR_STATUS_DISABLED)
+
+        assert len(push_list_calls) == 1
+        assert "no aggregate-address 10.100.0.0/16 summary-only" in push_list_calls[0]
+
+    def test_bbr_disable_removes_with_as_set(self):
+        """When BBR is disabled, on_bbr_change must generate removal with as-set."""
+        mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+
+        attr = (
+            ('bbr-required', 'true'),
+            ('summary-only', 'false'),
+            ('as-set', 'true'),
+            ('aggregate-address-prefix-list', ''),
+            ('contributing-address-prefix-list', '')
+        )
+        mgr.set_handler("10.100.0.0/16", attr)
+
+        push_list_calls = []
+        mgr.cfg_mgr.push_list = lambda cmds: push_list_calls.append(cmds) or True
+        mgr.directory.put(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY, BGP_BBR_STATUS_DISABLED)
+
+        assert len(push_list_calls) == 1
+        assert "no aggregate-address 10.100.0.0/16 as-set" in push_list_calls[0]
