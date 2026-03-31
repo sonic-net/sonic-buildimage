@@ -16,7 +16,7 @@ dpkg-dev==1.21.22
 ethtool==1:6.1-1
 fontconfig-config==2.14.1-4
 fonts-dejavu-core==2.37-6
-frr==10.4.1-sonic-0
+frr==10.5.1-sonic-0
 gir1.2-glib-2.0==1.74.0-3
 gnupg==2.2.40-1.1+deb12u2
 gnupg-l10n==2.2.40-1.1+deb12u2

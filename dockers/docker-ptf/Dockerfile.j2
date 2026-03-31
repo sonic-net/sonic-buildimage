@@ -117,13 +117,14 @@ RUN GO_ARCH=amd64 \
 
 ENV PATH="/usr/local/go/bin:$HOME/go/bin:$PATH"
 
-# Build grpcurl from source with patched Go and patched golang.org/x/net
-# to address GHSA-qxp5-gwg8-xv66.
+# Build grpcurl from source with patched Go and golang.org/x/* deps
+# upgraded to latest to address current and future golang.org/x/* CVEs.
 RUN GRPCURL_VERSION=v1.9.3 \
-    && X_NET_VERSION=v0.36.0 \
     && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
     && cd /tmp/grpcurl \
-    && go get golang.org/x/net@${X_NET_VERSION} \
+    && go get google.golang.org/grpc@v1.79.3 \
+    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go mod tidy \
     && go build -o /usr/local/bin/grpcurl ./cmd/grpcurl \
     && chmod +x /usr/local/bin/grpcurl \
     && rm -rf /tmp/grpcurl
@@ -378,27 +379,35 @@ RUN cd gnxi \
 # Deactivating a virtualenv.
 # ENV PATH="$BACKUP_OF_PATH"
 
-# Build gnoic from source with patched Go (GO-2026-4337)
+# Build gnoic from source with patched Go and golang.org/x/* deps
+# upgraded to latest to address current and future golang.org/x/* CVEs.
 RUN git clone https://github.com/karimra/gnoic.git \
     && cd gnoic \
     && git checkout 27bc5a6 \
+    && go get google.golang.org/grpc@v1.79.3 \
+    && go get github.com/go-viper/mapstructure/v2@v2.4.0 \
+    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go mod tidy \
     && go build -o /usr/local/bin/gnoic . \
     && cd .. \
     && rm -rf gnoic
 
-# Install gnmic tool
-{% if CONFIGURED_ARCH == "armhf" %}
-RUN GNMIC_ARCH=armv7 \
-{% elif CONFIGURED_ARCH == "arm64" %}
-RUN GNMIC_ARCH=aarch64 \
-{% else %}
-RUN GNMIC_ARCH=x86_64 \
-{% endif %}
-    && GNMIC_VERSION=0.43.0 \
-    && curl -sL "https://github.com/openconfig/gnmic/releases/download/v${GNMIC_VERSION}/gnmic_${GNMIC_VERSION}_Linux_${GNMIC_ARCH}.deb" \
-      -o /tmp/gnmic.deb \
-    && dpkg -i /tmp/gnmic.deb \
-    && rm -f /tmp/gnmic.deb
+# Build gnmic from source with patched Go and upgraded deps
+# to address CVE-2026-33186 (grpc), CVE-2025-8556/CVE-2026-1229 (circl),
+# CVE-2026-25934 (go-git), CVE-2026-27571 (nats-server), CVE-2026-24051 (otel)
+RUN GNMIC_VERSION=v0.43.0 \
+    && git clone --depth 1 --branch "${GNMIC_VERSION}" https://github.com/openconfig/gnmic.git /tmp/gnmic \
+    && cd /tmp/gnmic \
+    && go get google.golang.org/grpc@v1.79.3 \
+    && go get github.com/cloudflare/circl@v1.6.3 \
+    && go get github.com/go-git/go-git/v5@v5.16.5 \
+    && go get github.com/nats-io/nats-server/v2@v2.11.12 \
+    && go get go.opentelemetry.io/otel/sdk@v1.40.0 \
+    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go mod tidy \
+    && go build -o /usr/local/bin/gnmic . \
+    && chmod +x /usr/local/bin/gnmic \
+    && rm -rf /tmp/gnmic
 
 # Remove Go toolchain to reduce image size
 RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
