@@ -5,6 +5,8 @@
  *
  * This FIT image contains multiple DTBs for different hardware variants:
  * - ast2700-evb: Aspeed AST2700 EVB reference platform
+ * - sonic-ast2700-nvidia-spc6-a1-bmc: NVIDIA SPC6 Switch BMC (AST2700-A1)
+ * - sonic-ast2700-nvidia-spc6-bmc: NVIDIA SPC6 Switch BMC
  * - nexthop-b27-r0: NextHop AST2700 platform
  *
  * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
@@ -63,6 +65,28 @@
 				algo = "sha256";
 			};
 		};
+		fdt-sonic-ast2700-nvidia-spc6-a1-bmc {
+			description = "Flattened Device Tree blob for NVIDIA SPC6 Switch BMC (AST2700-A1)";
+			data = /incbin/("__DTB_PATH_ASPEED__/aspeed-nvidia-spc6-a1-bmc.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-sonic-ast2700-nvidia-spc6-bmc {
+			description = "Flattened Device Tree blob for NVIDIA SPC6 Switch BMC";
+			data = /incbin/("__DTB_PATH_ASPEED__/aspeed-nvidia-spc6-bmc.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
 		fdt-nexthop-b27-r0 {
 			description = "Flattened Device Tree blob for NextHop AST2700";
 			data = /incbin/("__DTB_PATH_ASPEED__/nexthop-b27-r0.dtb");
@@ -94,6 +118,24 @@
 			description = "SONiC for Aspeed AST2700 EVB";
 			kernel = "kernel-1";
 			fdt = "fdt-ast2700-evb";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-sonic-ast2700-nvidia-spc6-a1-bmc {
+			description = "SONiC for NVIDIA SPC6 Switch BMC (AST2700-A1)";
+			kernel = "kernel-1";
+			fdt = "fdt-sonic-ast2700-nvidia-spc6-a1-bmc";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-sonic-ast2700-nvidia-spc6-bmc {
+			description = "SONiC for NVIDIA SPC6 Switch BMC";
+			kernel = "kernel-1";
+			fdt = "fdt-sonic-ast2700-nvidia-spc6-bmc";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";
