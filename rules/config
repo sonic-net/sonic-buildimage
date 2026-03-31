@@ -130,7 +130,7 @@ ENABLE_ORGANIZATION_EXTENSIONS = y
 # DEFAULT_KERNEL_PROCURE_METHOD - default method for obtaining kernel
 #   build:    build kernel from source
 #   download: download pre-built kernel from Azure storage.
-DEFAULT_KERNEL_PROCURE_METHOD = download
+DEFAULT_KERNEL_PROCURE_METHOD = build
 
 # FRR user and group id values. These only take effect when SONIC_ROUTING_STACK is frr.
 # Note: these values match the admin uid/gid of the host's admin account. If these values
