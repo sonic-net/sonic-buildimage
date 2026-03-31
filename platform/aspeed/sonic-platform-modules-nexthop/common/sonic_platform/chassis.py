@@ -10,6 +10,7 @@ try:
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.eeprom import Eeprom
+    from sonic_platform.switch_host_module import SwitchHostModule
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
@@ -59,6 +60,11 @@ class Chassis(ChassisBase):
 
         # Initialize eeprom
         self._eeprom = Eeprom()
+
+        # Initialize Switch Host Module (x86 CPU managed by BMC)
+        self._module_list = []
+        switch_host = SwitchHostModule(module_index=0)
+        self._module_list.append(switch_host)
 
         # NextHop has NO fans - create empty lists
         self._fan_list = []
@@ -159,6 +165,15 @@ class Chassis(ChassisBase):
         else:
             # Unknown bootstatus bits
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"Unknown (bootstatus=0x{bootstatus:x})")
+
+    def get_all_modules(self):
+        """
+        Retrieves all modules available on this chassis
+
+        Returns:
+            A list of Module objects representing all modules on the chassis
+        """
+        return self._module_list
     
     def get_name(self):
         """
