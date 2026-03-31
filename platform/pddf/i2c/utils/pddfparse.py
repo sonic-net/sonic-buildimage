@@ -8,10 +8,16 @@ import subprocess
 import sys
 import time
 import unicodedata
-import logging
 from sonic_py_common import device_info
 
-logger = logging.getLogger(__name__)
+import logging
+
+logger = logging.getLogger("pddf.parse")
+_handler = logging.StreamHandler()
+_handler.setFormatter(logging.Formatter("%(levelname)s: [%(funcName)s:%(lineno)d] %(message)s"))
+logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
+logger.propagate = False
 bmc_cache = {}
 cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
@@ -35,7 +41,7 @@ class PddfParse():
                 self.data = json.load(f)
             logger.info("device JSON loaded successfully")
         except IOError:
-            logger.exception("PDDF: Driver initialization failed")
+            logger.exception("Driver initialization failed")
             if os.path.exists('/usr/share/sonic/platform'):
                 os.unlink("/usr/share/sonic/platform")
             raise Exception('PDDF JSON file not found. PDDF is not supported on this platform')
@@ -1406,12 +1412,12 @@ class PddfParse():
             with open(node, 'r') as f:
                 status = f.read()
         except IOError:
-            logger.exception("PDDF_VERIFY_ERR: IOError: node:%s key:%s", node, key)
+            logger.exception("IOError: node:%s key:%s", node, key)
             return
 
         status = status.rstrip("\n\r")
         if attr[key] != status:
-            logger.error("PDDF_VERIFY_ERR: node: %s switch:%s", node, status)
+            logger.error("verify mismatch: node: %s switch:%s", node, status)
 
     def verify_device(self, attr, path, ops):
         for key in attr.keys():
@@ -1428,21 +1434,21 @@ class PddfParse():
         if (os.path.exists(dir) or validate_type == 'client'):
             for sysfs in obj[validate_type]:
                 if(not os.path.exists(sysfs)):
-                    logger.error("[SYSFS FILE] %s: does not exist", sysfs)
+                    logger.error("sysfs file %s: does not exist", sysfs)
         else:
-            logger.error("[SYSFS DIR] %s: does not exist", dir)
+            logger.error("sysfs dir %s: does not exist", dir)
 
     def validate_dsysfs_creation(self, obj, validate_type):
         if validate_type in obj.keys():
             # There is a possibility that some components dont have any device-self.data attr
             if not obj[validate_type]:
-                logger.warning("[SYSFS ATTR] for %s: empty", validate_type)
+                logger.warning("sysfs attr for %s: empty", validate_type)
             else:
                 for sysfs in obj[validate_type]:
                     if(not os.path.exists(sysfs)):
-                        logger.error("[SYSFS FILE] %s: does not exist", sysfs)
+                        logger.error("sysfs file %s: does not exist", sysfs)
         else:
-            logger.warning("[SYSFS KEY] for %s: not configured", validate_type)
+            logger.warning("sysfs key for %s: not configured", validate_type)
 
     def verify_sysfs_data(self, verify_type):
         if (verify_type == 'LED'):
