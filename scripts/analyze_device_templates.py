@@ -85,8 +85,10 @@ def collect_records(device_root: str) -> List[FileRecord]:
     records: List[FileRecord] = []
     target_set = set(TARGET_FILENAMES)
 
-    for root, _, filenames in os.walk(device_root):
-        for filename in filenames:
+    for root, dirnames, filenames in os.walk(device_root):
+        # Sort traversal state to keep output deterministic across filesystems.
+        dirnames.sort()
+        for filename in sorted(filenames):
             if filename not in target_set:
                 continue
 
@@ -154,7 +156,7 @@ def build_type_report(records: List[FileRecord], top_groups: int, top_hotspots: 
             }
         )
 
-    hotspots.sort(key=lambda item: (item["variants"], item["files"], item["platform"]), reverse=True)
+    hotspots.sort(key=lambda item: (-item["variants"], -item["files"], item["platform"]))
     hotspots = hotspots[:top_hotspots]
 
     return {
@@ -281,6 +283,9 @@ def main() -> int:
 
     if args.top_groups < 1 or args.top_hotspots < 1:
         print("error: --top-groups and --top-hotspots must be >= 1", file=sys.stderr)
+        return 2
+    if args.json_indent < 0:
+        print("error: --json-indent must be >= 0", file=sys.stderr)
         return 2
 
     device_root = os.path.join(os.getcwd(), "device")
