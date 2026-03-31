@@ -22,6 +22,7 @@ variables:
   BLD_A1: "true"     # set true to build marvell-prestera-arm64 images
   BLD_M0: "true"     # set true to build marvell-prestera-armhf images
   BLD_CO: "true"     # set true to build nokia-vs image
+  BLD_ASPEED: "true" # set true to build aspeed arm64 images
 
 .global_script:
   git_config: |
@@ -84,6 +85,7 @@ configure:sonic:aarch64:
   rules:
     - if: $BLD_A1 == "true"
     - if: $BLD_CO == "true"
+    - if: $BLD_ASPEED == "true"
     - when: never
 
 .build:sonic:
@@ -176,6 +178,18 @@ build:sonic:aarch64:nokia-vs:
     BUILD_ARCH: aarch64
     TARGET_BIN: sonic-nokia-vs-arm64.bin
     BUILD_SH_OPTIONS: " --platform nokia-vs"
+
+build:sonic:aarch64:aspeed:
+  extends: .build:sonic
+  rules:
+    - if: $BLD_ASPEED == "true"
+    - when: never
+  needs:
+    - configure:sonic:aarch64
+  variables:
+    BUILD_ARCH: aarch64
+    TARGET_BIN: sonic-aspeed-arm64.bin
+    BUILD_SH_OPTIONS: " --platform aspeed"
 
 build:sonic:features:x86_64:
   extends: .build:sonic
@@ -674,6 +688,14 @@ post:sonic:aarch64:nokia-vs:
     - when: never
   needs:
     - build:sonic:aarch64:nokia-vs
+
+post:sonic:aarch64:aspeed:
+  extends: .post
+  rules:
+    - if: $BLD_ASPEED == "true"
+    - when: never
+  needs:
+    - build:sonic:aarch64:aspeed
 
 post:sonic:features:x86_64:
   extends: .post
