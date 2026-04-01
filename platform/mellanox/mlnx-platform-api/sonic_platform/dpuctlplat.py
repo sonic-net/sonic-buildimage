@@ -279,8 +279,10 @@ class DpuCtlPlat():
     def dpu_pci_scan(self):
         """PCI Scan API"""
         try:
-            pci_scan_path = "/sys/bus/pci/rescan"
-            self.write_file(pci_scan_path, OperationType.SET.value)
+            for pci_dev_path in self.get_pci_dev_path():
+                if not os.path.exists(pci_dev_path):
+                    #Only log error if the device is not found, don't perform explicit ``
+                    self.log_warning(f"PCI device {pci_dev_path} not found")
             return True
         except Exception as e:
             self.log_error(f"Failed to rescan with error {e}")
