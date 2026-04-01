@@ -6,7 +6,7 @@
     "skip_syseepromd": false,
     "skip_pcied": true,
     "skip_chassisd": true,
-    "skip_chassis_db_init": true,
+    "skip_chassis_db_init": false,
     "skip_fancontrol": true,
     "include_sensormond": false,
     "thermalctld": {

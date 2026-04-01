@@ -79,6 +79,9 @@ class Chassis(ChassisBase):
             if thermal.get_presence():
                 self._thermal_list.append(thermal)
 
+    def is_bmc(self):
+        return True
+
     def _read_watchdog_bootstatus(self, path):
         """
         Read watchdog bootstatus value from sysfs
@@ -226,16 +229,17 @@ class Chassis(ChassisBase):
         """
         return self.get_serial_number()
 
-    def get_switch_host_serial_number(self):
+    def get_switch_host_serial(self):
         """
         Returns the switch/host system serial number (from switch card EEPROM).
         This is the primary system/chassis identifier.
 
         Returns:
             string: System serial number from switch card EEPROM (i2c-10)
+                    On a failure return "N/A"
         """
-        system_sn = self._eeprom.get_system_serial_number()
-        return system_sn if system_sn else "N/A"
+        switch_host = self._module_list[0]
+        return switch_host.get_serial()
 
     def get_watchdog(self):
         """

@@ -13,9 +13,6 @@ setup(
     package_dir={
         "sonic_platform": "common/sonic_platform",
     },
-    scripts=[
-        "common/scripts/nexthop_bmc_chassis_db_init",
-    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Plugins",
