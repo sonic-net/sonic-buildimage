@@ -62,7 +62,7 @@ fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
 if [ -z "$GNMI" ]; then
-    PORT=8080
+    PORT=8082
 else
     PORT=$(extract_field "$GNMI" '.port')
     if ! [[ $PORT =~ ^[0-9]+$ ]]; then
