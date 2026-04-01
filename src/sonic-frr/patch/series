@@ -19,13 +19,6 @@
 0026-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch
 0027-Dont-skip-kernel-routes-uninstall.patch
 0064-bgpd-Prevent-unnecessary-re-install-of-routes.patch
-0102-explicit-SRv6-address-configurable-per-address-family.patch
-0103-bgpd-add-output-support-for-srv6-l3vpn-attribute-option.patch
-0104-BGP-SRv6-locator-per-vrf.patch
-0105-bgpd-various-fixes-related-to-VPN-SRv6-entries-updates.patch
-0106-SRv6-MPLS-L3-Services-Co-existence.patch
-0107-bgpd-Fix-incorrect-flag-checks-for-SRv6-SID-allocation.patch
-0108-SRv6-MPLS-Coexistence-in-L3VPN-formatting-fixes.patch
 0109-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
 0110-bgpd-improve-clarify-bgp-static-tables.patch
 0111-bgpd-add-SRv6-unicast-at-default-VRF.patch
