@@ -118,7 +118,7 @@ endef
 .PHONY: $(PLATFORM_PATH)
 
 $(PLATFORM_PATH):
-	@echo "+++ Cheking $@ +++"
+	@echo "+++ Checking $@ +++"
 	$(PLATFORM_CHECKOUT_CMD)
 
 configure : $(PLATFORM_PATH)
