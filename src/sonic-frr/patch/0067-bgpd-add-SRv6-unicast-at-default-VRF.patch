@@ -1769,7 +1769,7 @@ index c95b4eaaf16d..ce777e04468d 100644
 @@ -79,6 +79,7 @@
  #include "bgpd/bgp_evpn_mh.h"
  #include "bgpd/bgp_mac.h"
- #include "bgp_trace.h"
+ #include "bgpd/bgp_trace.h"
 +#include "bgpd/bgp_srv6.h"
  
  DEFINE_MTYPE_STATIC(BGPD, PEER_TX_SHUTDOWN_MSG, "Peer shutdown message (TX)");

@@ -22,3 +22,11 @@
 0065-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
 0066-bgpd-improve-clarify-bgp-static-tables.patch
 0067-bgpd-add-SRv6-unicast-at-default-VRF.patch
+0068-bgpd-add-remoteTransposedSid-value-in-json-output-of-vpn-paths.patch
+0069-SID-extension-to-32bits.patch
+0070-various-srv6-fixes.patch
+0071-bgpd-Fix-SRv6-SID-locator-memory-leak-in-SID-notify-handler.patch
+0072-bgpd-Track-route-map-references-for-srv6-when-rmap-is-used.patch
+0073-bgpd-Fix-route-map-cleanup-ordering-in-SRv6-unicast-SID-export.patch
+0074-bgpd-Fix-SRv6-SID-export-route-map-update-not-taking-effect.patch
+0075-bgpd-Add-SRv6-uDT46-SID-support-for-GRT.patch
