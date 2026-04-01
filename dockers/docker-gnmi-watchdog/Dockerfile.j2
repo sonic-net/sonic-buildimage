@@ -41,4 +41,7 @@ FROM $BASE
 
 {{ rsync_from_builder_stage() }}
 
+ARG image_version
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IMAGE_VERSION=$image_version
 ENTRYPOINT ["/usr/local/bin/supervisord"]
