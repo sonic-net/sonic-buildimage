@@ -19,6 +19,6 @@
 0026-SONiC-ONLY-Translate-tableid-for-dplane-route-notify.patch
 0027-Dont-skip-kernel-routes-uninstall.patch
 0064-bgpd-Prevent-unnecessary-re-install-of-routes.patch
-0109-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
-0110-bgpd-improve-clarify-bgp-static-tables.patch
-0111-bgpd-add-SRv6-unicast-at-default-VRF.patch
+0065-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
+0066-bgpd-improve-clarify-bgp-static-tables.patch
+0067-bgpd-add-SRv6-unicast-at-default-VRF.patch
