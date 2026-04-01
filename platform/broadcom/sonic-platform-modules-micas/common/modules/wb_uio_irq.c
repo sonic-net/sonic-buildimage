@@ -258,10 +258,10 @@ static void dfd_irq_remove(struct platform_device *pdev)
     dfd_irq = platform_get_drvdata(pdev);
     dfd_irq_info = &dfd_irq->dfd_irq_info;
 
-    uio_unregister_device(dfd_irq_info);
-    kfree(dfd_irq);
-
     sysfs_remove_group(&pdev->dev.kobj, &dfd_irq->attr_group);
+    uio_unregister_device(dfd_irq_info);
+    platform_set_drvdata(pdev, NULL);
+    kfree(dfd_irq);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
 #endif

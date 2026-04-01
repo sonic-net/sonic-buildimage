@@ -62,6 +62,7 @@ static wb_wdt_device_t wb_wdt_device_data_0 = {
         .flags = 1
     },
     .timer_accuracy = 1600,          /* 1.6s */
+    .sysfs_index = SYSFS_NO_CFG,
 };
 
 /* sys led */
