@@ -38,10 +38,9 @@ COPY --from=builder /watchdog/target/release/watchdog /usr/bin/gnmi_watchdog
 RUN chmod +x /usr/bin/gnmi_watchdog
 
 FROM $BASE
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
-
-ARG image_version
 ENV DEBIAN_FRONTEND=noninteractive
 ENV IMAGE_VERSION=$image_version
 ENTRYPOINT ["/usr/local/bin/supervisord"]
