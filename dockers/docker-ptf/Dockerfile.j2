@@ -130,19 +130,18 @@ RUN apt-get update && apt-get upgrade -y \
 RUN set -eux \
 {% if CONFIGURED_ARCH == "arm64" %}
     && INFLUXDB_ARCH=linux_arm64 \
-    && INFLUXDB_SHA256=263196a8970ceea2d8ff4b90c85555b7573a86c9d83f797a8dfc136e554edd70 \
 {% else %}
     && INFLUXDB_ARCH=linux_amd64 \
-    && INFLUXDB_SHA256=df28cb9d3cb47732908604d963b20271a3fb0e83f418976cc482f991e328957d \
 {% endif %}
     && INFLUXDB_VERSION=2.8.0 \
     && cd /tmp \
     && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
-    && echo "${INFLUXDB_SHA256}  influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" | sha256sum -c - \
+    && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
+    && sha256sum -c "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
     && tar xzf "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && mv "influxdb2-${INFLUXDB_VERSION}/influxd" /usr/local/bin/influxd \
     && chmod +x /usr/local/bin/influxd \
-    && rm -f "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
+    && rm -f "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
     && rm -rf "/tmp/influxdb2-${INFLUXDB_VERSION}"
 {% endif %}
 
