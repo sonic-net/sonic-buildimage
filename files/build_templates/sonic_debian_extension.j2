@@ -380,6 +380,12 @@ sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/conf.d/*
+# Remove inapplicable monit checks on DPU platforms
+if [[ $CONFIGURED_PLATFORM == pensando ]] || [[ $CONFIGURED_PLATFORM == nvidia-bluefield ]]; then
+    sudo sed -i '/^# route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# dualtor_neighbor_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# vnet_route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+fi
 sudo cp $IMAGE_CONFIGS/monit/container_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/memory_checker $FILESYSTEM_ROOT/usr/bin/

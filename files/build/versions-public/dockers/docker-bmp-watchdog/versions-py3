@@ -2,7 +2,7 @@ async-timeout==5.0.1
 bitarray==2.8.1
 ijson==3.2.3
 jsondiff==2.2.1
-jsonpointer==3.1.0
+jsonpointer==3.1.1
 lxml==6.0.2
 natsort==8.4.0
 netaddr==0.8.0
@@ -11,7 +11,7 @@ pyangbind==0.8.2
 pyyaml==6.0.3
 redis==5.0.1
 redis-dump-load==1.1
-regex==2026.2.28
+regex==2026.3.32
 six==1.17.0
 tabulate==0.9.0
 xmltodict==0.12.0

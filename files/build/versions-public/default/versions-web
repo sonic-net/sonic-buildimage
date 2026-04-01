@@ -15,13 +15,13 @@ http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.dsc==346672dc8c2fc303a133051205deedc7
 http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz==3bb7e265e14eb5cb817e9608bb7a6baf
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.debian.tar.xz==f4d249b77d4f8d120b229834aac02df5
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==38011efbe33e6a461d36ca2c683e2019
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==a57d0145fc829c3e2ca96fb024907909
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==cbbb4a0d5b1e17dca0532c3ca761e05c
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==dfbdeaac367213500bfe65111a955d0f
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==052c052d86fd586c98cc16be943c0afa
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.debian.tar.xz==b9d8e4ce4cb66385250cf6dded0ef57a
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==ee4f5c84d621a5dbfbe368baad031af4
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==cd7bf9a55f61578b7ec69adabb584200
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==551d3780d615557674e93fa11210499d
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-aarch64-deb.tgz==8cbab51bd161b2f2f1cccc7a610c4aa8
 http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-x86_64-deb.tgz==c6d68339ee34d84f94438c79d4ce9f52
@@ -37,6 +37,9 @@ https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz.asc
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31-1.debian.tar.xz==26fef506b62eb28e3356781a707c2440
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31-1.dsc==f27b8eee722b8595ab45344e4bd3cbe7
 https://deb.debian.org/debian/pool/main/libt/libteam/libteam_1.31.orig.tar.xz==eec2e9c38e9a4c2cdb7e4954d110a118
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1.debian.tar.xz==ce468d153936c0b200d3c514b98247fc
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7-1.dsc==74b61898edb1a1fae67a540a8959f657
+https://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_1.7.7.orig.tar.gz==30c6153878878bc8f692127f4d090b36
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.debian.tar.xz==a6135296076789766d5037281fd6e277
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1-7.dsc==ce345ed4c63d1ec10849bd1d4f497b18
 https://deb.debian.org/debian/pool/main/o/openssh/openssh_10.0p1.orig.tar.gz==689148621a2eaa734497b12bed1c5202
@@ -107,7 +110,6 @@ https://github.com/nanomsg/nanomsg/archive/1.2.2.tar.gz==22525d90e9e34099f8f25df
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_amd64.deb==eb434c72277d208d0f2218da6666dd45
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
-https://github.com/openconfig/gnmic/releases/download/v0.43.0/gnmic_0.43.0_Linux_x86_64.deb==4ee3725789e26e498f1b800ad5b660c2
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
 https://go.dev/dl/go1.25.8.linux-amd64.tar.gz==98fd3b2f40a98de85860c24fea48908c
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
