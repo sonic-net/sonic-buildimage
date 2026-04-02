@@ -315,6 +315,9 @@ def main():
     c_special_structs = {"C_nexthop_srv6", "C_seg6_seg_stack", c_root_struct_name}
 
     # Jinja setup
+    # Note: This script generates C/C++ code, not HTML.
+    # XSS is not applicable in this context.
+    # nosem: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     env = Environment(loader=FileSystemLoader(template_dir))
     template_name = None
 
@@ -351,7 +354,9 @@ def main():
         }
 
     # Render
+    # nosem: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     template = env.get_template(template_name)
+    # nosem: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     output = template.render(**context)
 
     # Write
