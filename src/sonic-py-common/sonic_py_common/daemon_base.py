@@ -29,6 +29,23 @@ def db_connect(db_name, namespace=EMPTY_NAMESPACE):
     return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace)
 
 
+def db_connect_remote(db_id, host, port=6379):
+    """
+    Connect to a Redis instance on a remote host by IP and port,
+    bypassing database_config.json lookup entirely.
+
+    Args:
+        db_id: Redis database index (e.g. 6 for STATE_DB, 4 for CONFIG_DB)
+        host : IP address of the remote Redis
+        port : TCP port of the remote Redis (default 6379)
+
+    Returns:
+        A swsscommon.DBConnector connected to the remote instance.
+    """
+    from swsscommon import swsscommon
+    return swsscommon.DBConnector(db_id, host, port, REDIS_TIMEOUT_MSECS)
+
+
 #
 # DaemonBase ===================================================================
 #

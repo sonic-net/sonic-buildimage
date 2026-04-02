@@ -31,6 +31,23 @@ stderr_syslog=true
 dependent_startup=true
 
 
+{% if IS_SWITCH_BMC %}
+[program:bmcctld]
+command=/usr/local/bin/bmcctld
+priority=2
+autostart=false
+autorestart=unexpected
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+startsecs=10
+startretries=50
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+
 {% if delay_non_critical_daemon %}
 [program:delay]
 command=python3 /usr/bin/delay.py
@@ -40,7 +57,7 @@ startsecs=0
 dependent_startup=true
 {% endif %}
 
-{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) and not IS_SWITCH_BMC %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3

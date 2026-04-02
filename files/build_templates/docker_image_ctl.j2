@@ -111,9 +111,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
-                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
-            fi
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -431,6 +429,17 @@ start() {
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
+    fi
+
+    # switch_host=1 / switch_bmc=1 may be set by platform_env.conf above.
+    # Normalise to 0 when absent so downstream env vars are always defined.
+    IS_SWITCH_HOST=${switch_host:-0}
+    IS_SWITCH_BMC=${switch_bmc:-0}
+
+    # Derive IS_BMC_DEVICE from switch_bmc so docker-database-init.sh can use
+    # the existing IS_BMC_DEVICE mechanism without extra env vars.
+    if [[ "$IS_SWITCH_BMC" == "1" ]]; then
+        IS_BMC_DEVICE=true
     fi
 
 
@@ -887,10 +896,6 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
-fi
-
-if [[ "$IS_BMC_DEVICE" == "true" ]]; then
-    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}
