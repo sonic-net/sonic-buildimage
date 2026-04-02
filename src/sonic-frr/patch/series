@@ -20,3 +20,4 @@
 0027-Dont-skip-kernel-routes-uninstall.patch
 0064-bgpd-Prevent-unnecessary-re-install-of-routes.patch
 0065-SONiC-ONLY-bgpd-reduce-suppress-fib-advertisement-delay-to-50ms.patch
+0066-SONiC-ONLY-zebra-skip-if-add-update-in-speed-timer-for-unready-ifp.patch
