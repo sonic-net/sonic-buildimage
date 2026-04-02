@@ -123,12 +123,12 @@
         "egress_lossless_profile": {
             "pool": "egress_lossless_pool",
             "size": "0",
-            "static_th": "82447638"
+            "static_th": "82434938"
         },
         "ingress_lossy_profile": {
             "pool": "ingress_lossless_pool",
             "size": "0",
-            "static_th": "82447638"
+            "static_th": "82434938"
         }
     },
 
