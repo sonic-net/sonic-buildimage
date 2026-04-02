@@ -88,7 +88,7 @@ endif
 
 bullseye:
 	@echo "+++ Making $@ +++"
-ifeq ($(NOBUSTER), 0)
+ifeq ($(NOBULLSEYE), 0)
 	$(MAKE) -f Makefile.work bullseye
 endif
 
