@@ -524,7 +524,7 @@ class TestSmartSwitch:
                         {
                             "name": "Vnet100",
                             "vxlan_tunnel": "vtep1",
-                            "vni": 9000,
+                            "vni": 8000,
                             "scope": "default",
                             "advertise_prefix": True,
                             "overlay_dmac": "22:33:44:55:66:77"
