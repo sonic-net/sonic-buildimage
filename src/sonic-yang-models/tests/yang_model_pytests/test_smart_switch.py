@@ -508,11 +508,23 @@ class TestSmartSwitch:
     def test_dash_ha_global_config_dpu_vnet_invalid(self, yang_model):
         """Test dpu_vnet with non-existent VNET reference"""
         data = {
+            "sonic-vxlan:sonic-vxlan": {
+                "sonic-vxlan:VXLAN_TUNNEL": {
+                    "VXLAN_TUNNEL_LIST": [
+                        {
+                            "name": "vtep1",
+                            "src_ip": "1.2.3.4"
+                        }
+                    ]
+                }
+            },
             "sonic-vnet:sonic-vnet": {
                 "sonic-vnet:VNET": {
                     "VNET_LIST": [
                         {
                             "name": "Vnet100",
+                            "vxlan_tunnel": "vtep1",
+                            "vni": 8000,
                             "scope": "default",
                             "advertise_prefix": True,
                             "overlay_dmac": "22:33:44:55:66:77"
