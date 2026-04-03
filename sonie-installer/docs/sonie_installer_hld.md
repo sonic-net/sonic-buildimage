@@ -11,12 +11,12 @@
 - [8. SAI API](#8-sai-api)
 - [9. Configuration and management](#9-configuration-and-management)
 - [10. Warmboot and Fastboot Design Impact](#10-warmboot-and-fastboot-design-impact)
-- [11. Memory Consumption](#11-memory-consumption)
+- [11. Memory Consumption](#11-memory-consumption)F
 - [13. Testing Requirements/Design](#13-testing-requirementsdesign)
 - [14. Open/Action items](#14-openaction-items)
 
-| 0.8 | 2026-01-23 | Google | Finalized diagram syntax (flowchart TD, <br/> labels) for broad compatibility. |
-| 0.7 | 2026-01-23 | Google | Finalized Mermaid syntax and synchronized with codebase flowchart/labels. |
+| 0.8 | 2026-01-23 | Google | Finalized diagram syntax (flowchart TD, <br/> labels) for broad compatibility. |  
+| 0.7 | 2026-01-23 | Google | Finalized Mermaid syntax and synchronized with codebase flowchart/labels. |  
 | 0.6 | 2026-01-23 | Google | Finalized diagram labels for CheckWarmboot flow consistency. |
 
 ## 2. Scope
@@ -208,6 +208,8 @@ The SONiC SONIE installer is designed to be robust and portable across different
 - **Cleanup Traps**: The `install_esp_bootloader` function uses a `_trap_push` mechanism to ensure that temporary mount points and directories (like the ESP mount) are safely unmounted and removed even if the script execution is interrupted or fails.
 - **Bootloader Backups**: Before overwriting the existing GRUB configuration on the target device, the installer creates a backup (`grub.cfg.bak`). This provides a recovery path if the new configuration is invalid or the installation fails midway.
 
+<!--
+
 ### 7.10 Documentation and Diagrams
 The SONIE documentation uses **Mermaid** for technical diagrams.
 - **Flowcharts (`graph TD` / `flowchart TD`)**: Used for sequential logic (e.g., installer flow).
@@ -221,6 +223,8 @@ Diagrams are verified for syntax compatibility with standard GitHub and VS Code 
 - **Line Breaks**: The `\n` sequence is used for multiline labels within brackets (e.g., `LoadConfigs[\"Load Configs\\n(machine.conf, platform.conf)\"]`).
 - **Nesting**: Logical grouping is achieved via `subgraph` blocks rather than complex CSS overrides to ensure consistent rendering across different themes.
 - **State Logic**: Uses `stateDiagram-v2` with `direction LR` to maintain readability on both mobile and desktop views.
+
+-->
 
 ## 8. SAI API
 N/A - This feature is a build system and installer enhancement, not a switch functionality change affecting SAI.
