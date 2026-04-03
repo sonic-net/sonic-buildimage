@@ -276,7 +276,7 @@ module sonic-smart-switch {
 				leaf main_dpu_ids {
 					description "Main DPUs involved in this VDPU";
 					type string {
-						pattern "[a-zA-Z0-9_-]+[0-9]+";
+						pattern "[a-zA-Z0-9_-]+[0-9]+(,[a-zA-Z0-9_-]+[0-9]+)*";
 						length 1..255;
 					}
 				}
