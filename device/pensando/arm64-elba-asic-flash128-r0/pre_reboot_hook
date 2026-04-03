@@ -29,29 +29,15 @@ LOG_MSG "Writing pre-shutdown success to CPLD reg"
 
 DPU_NAME_FILE="/host/dpu-docker-info/name"
 if [ ! -s "$DPU_NAME_FILE" ]; then
-    LOG_MSG "DPU container name file '$DPU_NAME_FILE' is missing or empty; skipping CPLD operations"
+    LOG_MSG "Error: DPU container name file '$DPU_NAME_FILE' is missing or empty; aborting pre-reboot hook"
     exit 1
 else
     DPU_CONTAINER_NAME=$(cat "$DPU_NAME_FILE")
     docker exec "$DPU_CONTAINER_NAME" /nic/bin/cpldapp -w 0xd 200
 fi
 
-# Fetch NTP server IP from CONFIG_DB (typically the host/midplane IP)
-NTP_SERVER_KEY=$(sonic-db-cli CONFIG_DB keys 'NTP_SERVER*' | head -1)
-if [ -z "$NTP_SERVER_KEY" ]; then
-    LOG_MSG "ERROR: NTP_SERVER not found in CONFIG_DB, aborting pre-reboot hook"
-    exit 1
-fi
-
-HOST_IP=$(echo "$NTP_SERVER_KEY" | cut -d'|' -f2)
-if [ -z "$HOST_IP" ]; then
-    LOG_MSG "ERROR: Failed to extract host IP from NTP_SERVER key '$NTP_SERVER_KEY', aborting pre-reboot hook"
-    exit 1
-fi
-LOG_MSG "Using host IP from CONFIG_DB: $HOST_IP"
-
-# Extract midplane interface name from systemd network configuration
-MIDPLANE_NETWORK_FILE="/usr/lib/systemd/network/midplane-network-dpu.network"
+# Extract midplane interface name and host IP from systemd network configuration
+MIDPLANE_NETWORK_FILE="/usr/lib/systemd/network/bridge-midplane.network"
 if [ ! -f "$MIDPLANE_NETWORK_FILE" ]; then
     LOG_MSG "ERROR: Midplane network config file '$MIDPLANE_NETWORK_FILE' not found, aborting pre-reboot hook"
     exit 1
@@ -63,6 +49,14 @@ if [ -z "$MIDPLANE_IFACE" ]; then
     exit 1
 fi
 LOG_MSG "Using midplane interface: $MIDPLANE_IFACE"
+
+# Extract host IP from Address field (strip subnet mask)
+HOST_IP=$(grep '^Address=' "$MIDPLANE_NETWORK_FILE" | cut -d'=' -f2 | cut -d'/' -f1)
+if [ -z "$HOST_IP" ]; then
+    LOG_MSG "ERROR: Failed to extract host IP from '$MIDPLANE_NETWORK_FILE', aborting pre-reboot hook"
+    exit 1
+fi
+LOG_MSG "Using host IP from bridge-midplane config: $HOST_IP"
 
 # Spawn fully independent background process to ping host and trigger power cycle if unreachable
 # Algorithm: If ping fails, wait 10 seconds and retry. After 3 consecutive failures, trigger power cycle.
