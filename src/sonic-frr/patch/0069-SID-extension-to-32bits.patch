@@ -1,0 +1,2389 @@
+From 5fb5ce6af3ee2bd3f6f459ce1ca629883fb647a6 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 09:29:37 +0200
+Subject: [PATCH 01/18] Revert "zebra: Do not allow SRv6 func_bit_len > 20"
+
+This reverts commit 537b8b13f9a56c15e34f226365805b9cbbea8f2a.
+---
+ zebra/zebra_srv6_vty.c | 13 -------------
+ 1 file changed, 13 deletions(-)
+
+diff --git a/zebra/zebra_srv6_vty.c b/zebra/zebra_srv6_vty.c
+index 81510748679b..ba87928f78a2 100644
+--- a/zebra/zebra_srv6_vty.c
++++ b/zebra/zebra_srv6_vty.c
+@@ -949,19 +949,6 @@ DEFPY (locator_prefix,
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+-	/*
+-	 * Currently, the SID transposition algorithm implemented in bgpd
+-	 * handles incorrectly the SRv6 locators with function length greater
+-	 * than 20 bits. To prevent issues, we currently limit the function
+-	 * length to 20 bits.
+-	 * This limit will be removed when the bgpd SID transposition is fixed.
+-	 */
+-	if (func_bit_len > 20) {
+-		vty_out(vty,
+-			"%% currently func_bit_len > 20 is not supported\n");
+-		return CMD_WARNING_CONFIG_FAILED;
+-	}
+-
+ 	locator->block_bits_length = block_bit_len;
+ 	locator->node_bits_length = node_bit_len;
+ 	locator->function_bits_length = func_bit_len;
+
+From aa25b97278e9ffbdd381803b752170c3c08e9533 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 17:01:59 +0200
+Subject: [PATCH 02/18] bgpd: fix explicit-sid with func_bits over 20 bits
+
+When using the 'sid vpn per-vrf export explicit' command, there is no
+control to know if the sid func part is corretly encoded in the BGP
+update. If the func part is over the 20 bit value, then there is missing
+information, and summing up the label and the sid info is not enough.
+
+For instance, the value cece:2222 has to be encoded in the 32 bit func
+part.
+
+> segment-routing
+>  srv6
+>   locators
+>    locator loc1
+>     prefix fc00:0:5::/48 block-len 32 node-len 16 func-bits 32
+>    !
+>   !
+>  !
+> !
+> router bgp 5 vrf vrf10
+>  address-family ipv6 unicast
+>   sid vpn export explicit fc00:0:5:cece:2222::
+> [..]
+
+But BGP does not know how to encode the whole SID information.
+
+> rt5# show bgp ipv6 vpn 2001:db9:10::/64
+> BGP routing table entry for 5:10:2001:db9:10::/64, version 1
+> not allocated
+> Paths: (1 available, best #1)
+>   Advertised to peers:
+>   fc00:0:1::1
+>   Local
+>     :: from :: (5.5.5.5) vrf vrf10(7) announce-nh-self
+>       Origin incomplete, metric 0, weight 32768, valid, sourced, local, best (First path received)
+>       Extended Community: RT:99:99
+>       Originator: 5.5.5.5
+>       Remote label: 0
+>       Remote SID: fc00:0:5::
+>       Last update: Mon Jun 30 17:15:50 2025
+
+In the case, the function bit length of the locator is over 20 bits,
+consider encoding the SID in the prefix SID TLV, and do not use the
+label value.
+
+> rt1# show bgp ipv6 vpn 2001:db9:10::/64
+> BGP routing table entry for 5:10:2001:db9:10::/64, version 1
+> not allocated
+> Paths: (1 available, best #1)
+>   Advertised to peers:
+>   fc00:0:5::1 fc00:0:6::1
+>   5
+>     fc00:0:5::1 (metric 20) from fc00:0:5::1 (5.5.5.5)
+>       Origin incomplete, metric 0, valid, external, best (First path received)
+>       Extended Community: RT:99:99
+>       Remote label: 3
+>       Remote SID: fc00:0:5:cece:2222::
+>       Last update: Mon Jun 30 17:00:05 2025
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 45 +++++++++++++++++++++++++++++----------------
+ bgpd/bgp_zebra.c   |  6 +++---
+ 2 files changed, 32 insertions(+), 19 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 8faf1711124b..10bf13fc4239 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -1738,15 +1738,21 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+ 		attr->srv6_l3service->arg_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->argument_bits_length;
+-		attr->srv6_l3service->transposition_len =
+-			from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3service->transposition_offset =
+-			from_bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length +
+-			from_bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+-		;
+-		memcpy(&attr->srv6_l3service->sid,
+-		       &from_bgp->vpn_policy[afi].tovpn_sid_locator->prefix.prefix,
+-		       sizeof(struct in6_addr));
++		if (from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length >
++		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH) {
++			attr->srv6_l3service->transposition_len = 0;
++			attr->srv6_l3service->transposition_offset = 0;
++			IPV6_ADDR_COPY(&attr->srv6_l3service->sid,
++				       from_bgp->vpn_policy[afi].tovpn_sid);
++		} else {
++			attr->srv6_l3service->transposition_len =
++				from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
++			attr->srv6_l3service->transposition_offset =
++				from_bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length +
++				from_bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
++			IPV6_ADDR_COPY(&attr->srv6_l3service->sid,
++				       &from_bgp->vpn_policy[afi].tovpn_sid_locator->prefix.prefix);
++		}
+ 		return true;
+ 	}
+ 	if (from_bgp->tovpn_sid_locator) {
+@@ -1765,13 +1771,20 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		attr->srv6_l3service->loc_node_len = from_bgp->tovpn_sid_locator->node_bits_length;
+ 		attr->srv6_l3service->func_len = from_bgp->tovpn_sid_locator->function_bits_length;
+ 		attr->srv6_l3service->arg_len = from_bgp->tovpn_sid_locator->argument_bits_length;
+-		attr->srv6_l3service->transposition_len =
+-			from_bgp->tovpn_sid_locator->function_bits_length;
+-		attr->srv6_l3service->transposition_offset =
+-			from_bgp->tovpn_sid_locator->block_bits_length +
+-			from_bgp->tovpn_sid_locator->node_bits_length;
+-		memcpy(&attr->srv6_l3service->sid, &from_bgp->tovpn_sid_locator->prefix.prefix,
+-		       sizeof(struct in6_addr));
++		if (from_bgp->tovpn_sid_locator->function_bits_length >
++		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH) {
++			attr->srv6_l3service->transposition_len = 0;
++			attr->srv6_l3service->transposition_offset = 0;
++			IPV6_ADDR_COPY(&attr->srv6_l3service->sid, from_bgp->tovpn_sid);
++		} else {
++			attr->srv6_l3service->transposition_len =
++				from_bgp->tovpn_sid_locator->function_bits_length;
++			attr->srv6_l3service->transposition_offset =
++				from_bgp->tovpn_sid_locator->block_bits_length +
++				from_bgp->tovpn_sid_locator->node_bits_length;
++			IPV6_ADDR_COPY(&attr->srv6_l3service->sid,
++				       &from_bgp->tovpn_sid_locator->prefix.prefix);
++		}
+ 		return true;
+ 	}
+ 	return false;
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 3d48427a915d..e1ff25481ea3 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3759,10 +3759,10 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 
+ 		/* Get label */
+ 		uint8_t func_len = locator_bgp->function_bits_length;
+-		uint8_t shift_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH -
+-				    func_len;
++		mpls_label_t label = MPLS_LABEL_IMPLICIT_NULL;
+ 
+-		int label = sid_func << shift_len;
++		if (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH >= func_len)
++			label = sid_func << (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH - func_len);
+ 
+ 		/* Un-export VPN to VRF routes */
+ 		if (is_srv6_vpn_enabled(bgp_vrf)) {
+
+From e907725136797e1eb36a7d0239cda1ba2cdf3f93 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 17:17:31 +0200
+Subject: [PATCH 03/18] topotests: srv6_sid_manager, add test with func part
+ values > 20 bits
+
+Add a test that shows that using explicit sid command can provide a func
+part value greater than 20 bits, and that the SID manager correctly
+returns the SID value, and that BGP can advertise correctly the SID
+value.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../srv6_sid_manager/dst2/zebra.conf          | 22 ++++++++
+ .../topotests/srv6_sid_manager/rt1/bgpd.conf  |  5 ++
+ .../srv6_sid_manager/rt1/vrf10_rib.ref        | 47 ++++++++++++++++
+ .../topotests/srv6_sid_manager/rt5/bgpd.conf  | 53 +++++++++++++++++++
+ .../topotests/srv6_sid_manager/rt5/zebra.conf |  9 +++-
+ .../srv6_sid_manager/test_srv6_sid_manager.py | 21 +++++---
+ 6 files changed, 150 insertions(+), 7 deletions(-)
+ create mode 100644 tests/topotests/srv6_sid_manager/dst2/zebra.conf
+ create mode 100644 tests/topotests/srv6_sid_manager/rt5/bgpd.conf
+
+diff --git a/tests/topotests/srv6_sid_manager/dst2/zebra.conf b/tests/topotests/srv6_sid_manager/dst2/zebra.conf
+new file mode 100644
+index 000000000000..c60a2945fe0a
+--- /dev/null
++++ b/tests/topotests/srv6_sid_manager/dst2/zebra.conf
+@@ -0,0 +1,22 @@
++log file zebra.log
++!
++hostname dst2
++!
++! debug zebra kernel
++! debug zebra packet
++! debug zebra mpls
++!
++interface lo
++ ip address 9.9.9.5/32
++ ipv6 address fc00:0:9::5/128
++!
++interface eth-rt5
++ ip address 10.0.11.2/24
++ ipv6 address 2001:db9:10::2/64
++!
++ip forwarding
++!
++ipv6 route 2001:db8:1::/64 2001:db9:10::1
++!
++line vty
++!
+diff --git a/tests/topotests/srv6_sid_manager/rt1/bgpd.conf b/tests/topotests/srv6_sid_manager/rt1/bgpd.conf
+index 20c396afde92..5a9ec87f0c8d 100644
+--- a/tests/topotests/srv6_sid_manager/rt1/bgpd.conf
++++ b/tests/topotests/srv6_sid_manager/rt1/bgpd.conf
+@@ -27,9 +27,14 @@ router bgp 1
+  neighbor fc00:0:6::1 timers 3 10
+  neighbor fc00:0:6::1 timers connect 1
+  neighbor fc00:0:6::1 ttl-security hops 20
++ neighbor fc00:0:5::1 remote-as 5
++ neighbor fc00:0:5::1 timers 3 10
++ neighbor fc00:0:5::1 timers connect 1
++ neighbor fc00:0:5::1 ttl-security hops 20
+  !
+  address-family ipv6 vpn
+   neighbor fc00:0:6::1 activate
++  neighbor fc00:0:5::1 activate
+  exit-address-family
+  !
+  segment-routing srv6
+diff --git a/tests/topotests/srv6_sid_manager/rt1/vrf10_rib.ref b/tests/topotests/srv6_sid_manager/rt1/vrf10_rib.ref
+index 2aae3497f479..2bbae99465b4 100644
+--- a/tests/topotests/srv6_sid_manager/rt1/vrf10_rib.ref
++++ b/tests/topotests/srv6_sid_manager/rt1/vrf10_rib.ref
+@@ -82,5 +82,52 @@
+         }
+       ]
+     }
++  ],
++  "2001:db9:10::/64": [
++    {
++      "prefix": "2001:db9:10::/64",
++      "protocol": "bgp",
++      "vrfName": "vrf10",
++      "selected": true,
++      "destSelected": true,
++      "distance": 20,
++      "metric": 0,
++      "installed": true,
++      "table": 10,
++      "internalStatus": 16,
++      "internalFlags": 9,
++      "internalNextHopNum": 2,
++      "internalNextHopActiveNum": 2,
++      "nexthops": [
++        {
++          "flags": 5,
++          "ip": "fc00:0:5::1",
++          "afi": "ipv6",
++          "vrf": "default",
++          "active": true,
++          "recursive": true,
++          "labels": [3],
++          "weight": 1,
++          "seg6": {
++            "segs": "fc05:0:5:cece:2345::"
++          },
++          "srv6EncapBehavior": "H.Encaps"
++        },
++        {
++          "flags": 3,
++          "fib": true,
++          "afi": "ipv6",
++          "interfaceName": "eth-sw1",
++          "vrf": "default",
++          "active": true,
++          "labels": [3],
++          "weight": 1,
++          "seg6": {
++            "segs": "fc05:0:5:cece:2345::"
++          },
++          "srv6EncapBehavior": "H.Encaps"
++        }
++      ]
++    }
+   ]
+ }
+diff --git a/tests/topotests/srv6_sid_manager/rt5/bgpd.conf b/tests/topotests/srv6_sid_manager/rt5/bgpd.conf
+new file mode 100644
+index 000000000000..a2703de01897
+--- /dev/null
++++ b/tests/topotests/srv6_sid_manager/rt5/bgpd.conf
+@@ -0,0 +1,53 @@
++frr defaults traditional
++!
++bgp send-extra-data zebra
++!
++hostname rt5
++password zebra
++!
++log stdout notifications
++log commands
++!
++!debug bgp neighbor-events
++!debug bgp zebra
++!debug bgp vnc verbose
++!debug bgp update-groups
++!debug bgp updates in
++!debug bgp updates out
++!debug bgp updates
++!debug bgp vpn label
++!debug bgp vpn leak-from-vrf
++!debug bgp vpn leak-to-vrf
++!!debug bgp vpn rmap-event
++!
++router bgp 5
++ bgp router-id 5.5.5.5
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor fc00:0:1::1 remote-as 1
++ neighbor fc00:0:1::1 timers 3 10
++ neighbor fc00:0:1::1 timers connect 1
++ neighbor fc00:0:1::1 ttl-security hops 20
++ !
++ address-family ipv6 vpn
++  neighbor fc00:0:1::1 activate
++ exit-address-family
++ !
++ segment-routing srv6
++  locator loc2
++ !
++!
++router bgp 5 vrf vrf10
++ bgp router-id 5.5.5.5
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ !
++ address-family ipv6 unicast
++  sid vpn export explicit fc05:0:5:cece:2345::
++  rd vpn export 5:10
++  rt vpn both 99:99
++  import vpn
++  export vpn
++  redistribute connected
++ exit-address-family
++!
+diff --git a/tests/topotests/srv6_sid_manager/rt5/zebra.conf b/tests/topotests/srv6_sid_manager/rt5/zebra.conf
+index 901103554bad..d5f789e30daf 100644
+--- a/tests/topotests/srv6_sid_manager/rt5/zebra.conf
++++ b/tests/topotests/srv6_sid_manager/rt5/zebra.conf
+@@ -8,6 +8,7 @@ hostname rt5
+ interface lo
+  ip address 5.5.5.5/32
+  ipv6 address fc00:0:5::1/128
++ ipv6 address fc05:0:5::/48
+ !
+ interface eth-rt3-1
+  ip address 10.0.4.5/24
+@@ -21,12 +22,18 @@ interface eth-rt4
+ interface eth-rt6
+  ip address 10.0.8.5/24
+ !
++interface eth-dst2 vrf vrf10
++ ip address 10.0.11.1/24
++ ip address 2001:db9:10::1/64
++!
+ segment-routing
+  srv6
+   locators
+    locator loc1
+-    prefix fc00:0:5::/48
++    prefix fc00:0:5::/48 block-len 32 node-len 16 func-bits 16
+     format usid-f3216
++   locator loc2
++    prefix fc05:0:5::/48 block-len 32 node-len 16 func-bits 32
+   !
+  !
+ !
+diff --git a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+index edf282de2742..bf73979a6c02 100644
+--- a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
++++ b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+@@ -29,12 +29,12 @@
+   10.0.2.0/24|  |10.0.3.0/24      10.0.4.0/24|  |10.0.5.0/24
+              |  |                            |  |
+     eth-rt2-1|  |eth-rt2-2          eth-rt3-1|  |eth-rt3-2
+-         +---------+                     +---------+
+-         |         |                     |         |
+-         |   RT4   |     10.0.6.0/24     |   RT5   |
+-         | 4.4.4.4 +---------------------+ 5.5.5.5 |
+-         |         |eth-rt5       eth-rt4|         |
+-         +---------+                     +---------+
++         +---------+                     +---------+             +---------+
++         |         |                     |         |             |         |
++         |   RT4   |     10.0.6.0/24     |   RT5   |eth-dst2     |   DST2  |
++         | 4.4.4.4 +---------------------+ 5.5.5.5 |-------------+ 9.9.9.5 |
++         |         |eth-rt5       eth-rt4|         |      eth-rt5|         |
++         +---------+                     +---------+             +---------+
+        eth-rt6|                                |eth-rt6
+               |                                |
+    10.0.7.0/24|                                |10.0.8.0/24
+@@ -99,6 +99,7 @@ def build_topo(tgen):
+     tgen.add_router("ce4")
+     tgen.add_router("ce5")
+     tgen.add_router("ce6")
++    tgen.add_router("dst2")
+ 
+     # Define connections
+     switch = tgen.add_switch("s1")
+@@ -138,6 +139,10 @@ def build_topo(tgen):
+     switch.add_link(tgen.gears["rt6"], nodeif="eth-dst")
+     switch.add_link(tgen.gears["dst"], nodeif="eth-rt6")
+ 
++    switch = tgen.add_switch("s10")
++    switch.add_link(tgen.gears["rt5"], nodeif="eth-dst2")
++    switch.add_link(tgen.gears["dst2"], nodeif="eth-rt5")
++
+     tgen.add_link(tgen.gears["ce1"], tgen.gears["rt1"], "eth-rt1", "eth-ce1")
+     tgen.add_link(tgen.gears["ce2"], tgen.gears["rt6"], "eth-rt6", "eth-ce2")
+     tgen.add_link(tgen.gears["ce3"], tgen.gears["rt1"], "eth-rt1", "eth-ce3")
+@@ -153,6 +158,10 @@ def build_topo(tgen):
+     tgen.gears["rt1"].run("ip link set eth-ce3 master vrf10")
+     tgen.gears["rt1"].run("ip link set eth-ce5 master vrf20")
+ 
++    tgen.gears["rt5"].run("ip link add vrf10 type vrf table 10")
++    tgen.gears["rt5"].run("ip link set vrf10 up")
++    tgen.gears["rt5"].run("ip link set eth-dst2 master vrf10")
++
+     tgen.gears["rt6"].run("ip link add vrf10 type vrf table 10")
+     tgen.gears["rt6"].run("ip link set vrf10 up")
+     tgen.gears["rt6"].run("ip link add vrf20 type vrf table 20")
+
+From 14b8792fd88481cb5fba1d881f0a85402dad3c67 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 15:57:18 +0200
+Subject: [PATCH 04/18] topotests: srv6_sid_manager, add pyblack style.
+
+Add pyblack style.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../srv6_sid_manager/test_srv6_sid_manager.py | 40 +++++++++++--------
+ 1 file changed, 24 insertions(+), 16 deletions(-)
+
+diff --git a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+index bf73979a6c02..3c0ff356ef84 100644
+--- a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
++++ b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+@@ -235,15 +235,19 @@ def setup_module(mod):
+ 
+     # For all registered routers, load the zebra and isis configuration files
+     for rname, router in tgen.routers().items():
+-        router.load_config(TopoRouter.RD_ZEBRA,
+-                           os.path.join(CWD, '{}/zebra.conf'.format(rname)))
+-        router.load_config(TopoRouter.RD_ISIS,
+-                           os.path.join(CWD, '{}/isisd.conf'.format(rname)))
+-        router.load_config(TopoRouter.RD_BGP,
+-                           os.path.join(CWD, '{}/bgpd.conf'.format(rname)))
+-        if (os.path.exists('{}/sharpd.conf'.format(rname))):
+-            router.load_config(TopoRouter.RD_SHARP,
+-                            os.path.join(CWD, '{}/sharpd.conf'.format(rname)))
++        router.load_config(
++            TopoRouter.RD_ZEBRA, os.path.join(CWD, "{}/zebra.conf".format(rname))
++        )
++        router.load_config(
++            TopoRouter.RD_ISIS, os.path.join(CWD, "{}/isisd.conf".format(rname))
++        )
++        router.load_config(
++            TopoRouter.RD_BGP, os.path.join(CWD, "{}/bgpd.conf".format(rname))
++        )
++        if os.path.exists("{}/sharpd.conf".format(rname)):
++            router.load_config(
++                TopoRouter.RD_SHARP, os.path.join(CWD, "{}/sharpd.conf".format(rname))
++            )
+ 
+     # Start routers
+     tgen.start_router()
+@@ -267,7 +271,9 @@ def router_compare_json_output(rname, command, reference):
+     expected = json.loads(open(filename).read())
+ 
+     # Run test function until we get an result. Wait at most 60 seconds.
+-    test_func = functools.partial(topotest.router_json_cmp, tgen.gears[rname], command, expected)
++    test_func = functools.partial(
++        topotest.router_json_cmp, tgen.gears[rname], command, expected
++    )
+     _, diff = topotest.run_and_expect(test_func, None, count=120, wait=0.5)
+     assertmsg = '"{}" JSON output mismatches the expected result'.format(rname)
+     assert diff is None, assertmsg
+@@ -341,9 +347,7 @@ def test_rib_ipv6():
+         pytest.skip(tgen.errors)
+ 
+     for rname in ["rt1", "rt2", "rt3", "rt4", "rt5", "rt6"]:
+-        router_compare_json_output(
+-            rname, "show ipv6 route json", "show_ipv6_route.ref"
+-        )
++        router_compare_json_output(rname, "show ipv6 route json", "show_ipv6_route.ref")
+ 
+ 
+ def test_srv6_locator():
+@@ -356,8 +360,10 @@ def test_srv6_locator():
+ 
+     for rname in ["rt1", "rt2", "rt3", "rt4", "rt5", "rt6"]:
+         router_compare_json_output(
+-            rname, "show segment-routing srv6 locator json", "show_srv6_locator_table.ref"
+-         )
++            rname,
++            "show segment-routing srv6 locator json",
++            "show_srv6_locator_table.ref",
++        )
+ 
+ 
+ def test_vpn_rib():
+@@ -390,7 +396,9 @@ def test_ping():
+ 
+     # Setup encap route on rt1, decap route on rt2
+     # tgen.gears["rt1"].vtysh_cmd("sharp install seg6-routes fc00:0:9::1 nexthop-seg6 2001:db8:1::2 encap fc00:0:2:6:fe00:: 1")
+-    tgen.gears["rt1"].cmd("ip -6 r a fc00:0:9::1/128 encap seg6 mode encap segs fc00:0:2:6:fe00:: via 2001:db8:1::2")
++    tgen.gears["rt1"].cmd(
++        "ip -6 r a fc00:0:9::1/128 encap seg6 mode encap segs fc00:0:2:6:fe00:: via 2001:db8:1::2"
++    )
+     # tgen.gears["rt6"].vtysh_cmd("sharp install seg6local-routes fc00:0:f00d:: nexthop-seg6local eth-dst End_DT6 254 1")
+     tgen.gears["rt6"].cmd("ip -6 r a fc00:0:9::1/128 via 2001:db8:10::2 vrf vrf10")
+     tgen.gears["dst"].cmd("ip -6 r a 2001:db8:1::1/128 via 2001:db8:10::1")
+
+From 9ec15aed8acbb48c62f6835ab759b3acfc79870b Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 17:36:57 +0200
+Subject: [PATCH 05/18] bgpd: Add FOR_LABEL suffix to
+ BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH
+
+That value indicates how many bits at maximum the label attribute can
+store. This is to prevent from index values in SID that may go over the
+1048575 value. Precise this limit deals with label value.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 11 +++++------
+ bgpd/bgp_mplsvpn.h |  2 +-
+ bgpd/bgp_zebra.c   |  5 +++--
+ 3 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 10bf13fc4239..7aa3d3c4b554 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -708,12 +708,11 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	if (!locator || !sid_value)
+ 		return false;
+ 
+-	if (locator->function_bits_length >
+-	    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH) {
++	if (locator->function_bits_length > BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 		if (debug)
+ 			zlog_debug("%s: invalid SRv6 Locator (%pFX): Function Length must be less or equal to %d",
+ 				   __func__, &locator->prefix,
+-				   BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH);
++				   BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL);
+ 		return false;
+ 	}
+ 
+@@ -748,7 +747,7 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	 * 20-bit label.
+ 	 */
+ 	func_len = locator->function_bits_length;
+-	shift_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH - func_len;
++	shift_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL - func_len;
+ 
+ 	label = sid_func << shift_len;
+ 	if (label < MPLS_LABEL_UNRESERVED_MIN) {
+@@ -1739,7 +1738,7 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		attr->srv6_l3service->arg_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->argument_bits_length;
+ 		if (from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length >
+-		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH) {
++		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 			attr->srv6_l3service->transposition_len = 0;
+ 			attr->srv6_l3service->transposition_offset = 0;
+ 			IPV6_ADDR_COPY(&attr->srv6_l3service->sid,
+@@ -1772,7 +1771,7 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		attr->srv6_l3service->func_len = from_bgp->tovpn_sid_locator->function_bits_length;
+ 		attr->srv6_l3service->arg_len = from_bgp->tovpn_sid_locator->argument_bits_length;
+ 		if (from_bgp->tovpn_sid_locator->function_bits_length >
+-		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH) {
++		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 			attr->srv6_l3service->transposition_len = 0;
+ 			attr->srv6_l3service->transposition_offset = 0;
+ 			IPV6_ADDR_COPY(&attr->srv6_l3service->sid, from_bgp->tovpn_sid);
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index 76ee65c31cf8..d29c75fdb13e 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -29,7 +29,7 @@
+ #define V4_HEADER_OVERLAY                                                      \
+ 	"   Network          Next Hop      EthTag    Overlay Index   RouterMac\n"
+ 
+-#define BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH 20
++#define BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL 20
+ 
+ extern void bgp_mplsvpn_init(void);
+ extern void bgp_mplsvpn_path_nh_label_unlink(struct bgp_path_info *pi);
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index e1ff25481ea3..ff0e9290506b 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3761,8 +3761,9 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		uint8_t func_len = locator_bgp->function_bits_length;
+ 		mpls_label_t label = MPLS_LABEL_IMPLICIT_NULL;
+ 
+-		if (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH >= func_len)
+-			label = sid_func << (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH - func_len);
++		if (func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL)
++			label = sid_func
++				<< (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL - func_len);
+ 
+ 		/* Un-export VPN to VRF routes */
+ 		if (is_srv6_vpn_enabled(bgp_vrf)) {
+
+From 0585b05ab12b89cb124309505f6c1ed0826f326e Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 18:42:22 +0200
+Subject: [PATCH 06/18] bgpd: increase sid index range from 24 to 32 bit
+
+Update the sid index range so that the user can pass a value bigger than
+24 bits. Encode the value in BGP outside of the label attribute.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 69 ++++++++++++++++++++++++++--------------------
+ bgpd/bgp_mplsvpn.h |  5 ++--
+ bgpd/bgp_nht.c     |  3 +-
+ bgpd/bgp_route.c   |  3 +-
+ bgpd/bgp_vty.c     |  4 +--
+ bgpd/bgp_zebra.c   |  3 +-
+ 6 files changed, 50 insertions(+), 37 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index 7aa3d3c4b554..a673bc972e9d 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -708,7 +708,7 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	if (!locator || !sid_value)
+ 		return false;
+ 
+-	if (locator->function_bits_length > BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
++	if (locator->function_bits_length > BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP) {
+ 		if (debug)
+ 			zlog_debug("%s: invalid SRv6 Locator (%pFX): Function Length must be less or equal to %d",
+ 				   __func__, &locator->prefix,
+@@ -717,12 +717,16 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	}
+ 
+ 	/* Max value that can be encoded in the Function part of the SID */
+-	sid_func_max = (1 << locator->function_bits_length) - 1;
++	if (locator->function_bits_length == BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP)
++		/* shifting 32 bits over a 32 bit is not possible. directly encode func_max */
++		sid_func_max = 0xffffffff;
++	else
++		sid_func_max = (1 << locator->function_bits_length) - 1;
+ 
+ 	if (sid_func > sid_func_max) {
+ 		if (debug)
+-			zlog_debug("%s: invalid SRv6 Locator (%pFX): Function Length is too short to support specified function (%u)",
+-				   __func__, &locator->prefix, sid_func);
++			zlog_debug("%s: invalid SRv6 Locator (%pFX): Function Length is too short (%u) to support specified function (%u)",
++				   __func__, &locator->prefix, sid_func_max, sid_func);
+ 		return false;
+ 	}
+ 
+@@ -734,38 +738,43 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	/* First, we put the locator (LOC) in the most significant bits of sid_value */
+ 	*sid_value = locator->prefix.prefix;
+ 
++	if (sid_exist(bgp_get_default(), sid_value)) {
++		zlog_warn("%s: skipped to allocate SRv6 SID (%pFX): SID %pI6 already in use",
++			  __func__, &locator->prefix, sid_value);
++		return false;
++	}
++
+ 	/*
+ 	 * Then, we compute the offset at which we have to place the function (FUNC).
+ 	 * FUNC will be placed immediately after LOC, i.e. at block_bits_length + node_bits_length
+ 	 */
+ 	offset = locator->block_bits_length + locator->node_bits_length;
+ 
+-	/*
+-	 * The FUNC part of the SID is advertised in the label field of SRv6 Service TLV.
+-	 * (see SID Transposition Scheme, RFC 9252 section #4).
+-	 * Therefore, we need to encode the FUNC in the most significant bits of the
+-	 * 20-bit label.
+-	 */
+ 	func_len = locator->function_bits_length;
+-	shift_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL - func_len;
+-
+-	label = sid_func << shift_len;
+-	if (label < MPLS_LABEL_UNRESERVED_MIN) {
+-		if (debug)
+-			zlog_debug("%s: skipped to allocate SRv6 SID (%pFX): Label (%u) is too small to use",
+-				   __func__, &locator->prefix, label);
+-		return false;
+-	}
+-
+-	if (sid_exist(bgp_get_default(), sid_value)) {
+-		zlog_warn("%s: skipped to allocate SRv6 SID (%pFX): SID %pI6 already in use",
+-			  __func__, &locator->prefix, sid_value);
+-		return false;
++	if (func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
++		/*
++		 * The FUNC part of the SID is advertised in the label field of SRv6 Service TLV.
++		 * (see SID Transposition Scheme, RFC 9252 section #4).
++		 * Therefore, we need to encode the FUNC in the most significant bits of the
++		 * 20-bit label.
++		 */
++		shift_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL - func_len;
++		label = sid_func << shift_len;
++		if (label < MPLS_LABEL_UNRESERVED_MIN) {
++			if (debug)
++				zlog_debug("%s: skipped to allocate SRv6 SID (%pFX): Label (%u) is too small to use",
++					   __func__, &locator->prefix, label);
++			return false;
++		}
++		/* Finally, we put the FUNC in sid_value at the computed offset */
++		transpose_sid(sid_value, label, offset, func_len,
++			      BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL);
++	} else {
++		label = sid_func;
++		transpose_sid(sid_value, label, offset, func_len,
++			      BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP);
+ 	}
+ 
+-	/* Finally, we put the FUNC in sid_value at the computed offset */
+-	transpose_sid(sid_value, label, offset, func_len);
+-
+ 	return true;
+ }
+ 
+@@ -1085,13 +1094,13 @@ void delete_vrf_tovpn_sid(struct bgp *bgp_vpn, struct bgp *bgp_vrf, afi_t afi)
+  *                    |
+  *                 offset from MSB
+  */
+-void transpose_sid(struct in6_addr *sid, uint32_t label, uint8_t offset,
+-		   uint8_t len)
++void transpose_sid(struct in6_addr *sid, uint32_t label, uint8_t offset, uint8_t len,
++		   uint8_t len_max)
+ {
+ 	for (uint8_t idx = 0; idx < len; idx++) {
+ 		uint8_t tidx = offset + idx;
+ 		sid->s6_addr[tidx / 8] &= ~(0x1 << (7 - tidx % 8));
+-		if (label >> (19 - idx) & 0x1)
++		if (label >> (len_max - 1 - idx) & 0x1)
+ 			sid->s6_addr[tidx / 8] |= 0x1 << (7 - tidx % 8);
+ 	}
+ }
+diff --git a/bgpd/bgp_mplsvpn.h b/bgpd/bgp_mplsvpn.h
+index d29c75fdb13e..14df8c037031 100644
+--- a/bgpd/bgp_mplsvpn.h
++++ b/bgpd/bgp_mplsvpn.h
+@@ -30,6 +30,7 @@
+ 	"   Network          Next Hop      EthTag    Overlay Index   RouterMac\n"
+ 
+ #define BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL 20
++#define BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP	  32
+ 
+ extern void bgp_mplsvpn_init(void);
+ extern void bgp_mplsvpn_path_nh_label_unlink(struct bgp_path_info *pi);
+@@ -87,8 +88,8 @@ extern void delete_vrf_tovpn_sid_per_vrf(struct bgp *vpn, struct bgp *vrf);
+ extern void ensure_vrf_tovpn_sid_per_af(struct bgp *vpn, struct bgp *vrf,
+ 					afi_t afi);
+ extern void ensure_vrf_tovpn_sid_per_vrf(struct bgp *vpn, struct bgp *vrf);
+-extern void transpose_sid(struct in6_addr *sid, uint32_t label, uint8_t offset,
+-			  uint8_t size);
++extern void transpose_sid(struct in6_addr *sid, uint32_t label, uint8_t offset, uint8_t size,
++			  uint8_t size_max);
+ extern void vrf_import_from_vrf(struct bgp *to_bgp, struct bgp *from_bgp,
+ 				afi_t afi, safi_t safi);
+ void vrf_unimport_from_vrf(struct bgp *to_bgp, struct bgp *from_bgp,
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index 2965054daefb..3f2cbf4691a2 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -1111,7 +1111,8 @@ static bool make_prefix(int afi, struct bgp_path_info *pi, struct prefix *p,
+ 				transpose_sid(&p->u.prefix6,
+ 					      decode_label(&pi->extra->labels->label[0]),
+ 					      pi->attr->srv6_l3service->transposition_offset,
+-					      pi->attr->srv6_l3service->transposition_len);
++					      pi->attr->srv6_l3service->transposition_len,
++					      BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL);
+ 			} else
+ 				IPV6_ADDR_COPY(&(p->u.prefix6), &(pi->attr->srv6_l3service->sid));
+ 		} else if (is_bgp_static) {
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 78ddec342908..7e71a4062552 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -12936,7 +12936,8 @@ void route_vty_out_detail(struct vty *vty, struct bgp *bgp, struct bgp_dest *bn,
+ 			IPV6_ADDR_COPY(&sid_transposed, sid_tmp);
+ 			transpose_sid(&sid_transposed, label_sid,
+ 				      path->attr->srv6_l3service->transposition_offset,
+-				      path->attr->srv6_l3service->transposition_len);
++				      path->attr->srv6_l3service->transposition_len,
++				      BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL);
+ 			json_object_string_addf(json_path, "remoteTransposedSid", "%pI6",
+ 						&sid_transposed);
+ 			json_object_string_addf(json_path, "remoteSid", "%pI6",
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 1fbc62db9cd0..241c0542b8f2 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10546,7 +10546,7 @@ DEFPY (af_label_vpn_export,
+ 
+ DEFPY (af_sid_vpn_export,
+        af_sid_vpn_export_cmd,
+-       "[no] sid vpn export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value>",
++       "[no] sid vpn export <(1-4294967295)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value>",
+        NO_STR
+        "sid value for VRF\n"
+        "Between current address-family and vpn\n"
+@@ -10667,7 +10667,7 @@ DEFPY (af_sid_vpn_export,
+ 
+ DEFPY (bgp_sid_vpn_export,
+        bgp_sid_vpn_export_cmd,
+-       "[no] sid vpn per-vrf export <(1-1048575)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value>",
++       "[no] sid vpn per-vrf export <(1-4294967295)$sid_idx|auto$sid_auto|explicit$sid_explicit X:X::X:X$sid_value>",
+        NO_STR
+        "sid value for VRF\n"
+        "Between current vrf and vpn\n"
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index ff0e9290506b..2685b1dd8fcd 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -1490,7 +1490,8 @@ static void bgp_zebra_announce_parse_nexthop(struct bgp_path_info *info, const s
+ 
+ 				transpose_sid(&api_nh->seg6_segs[0], nh_label,
+ 					      mpinfo->attr->srv6_l3service->transposition_offset,
+-					      mpinfo->attr->srv6_l3service->transposition_len);
++					      mpinfo->attr->srv6_l3service->transposition_len,
++					      BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL);
+ 			}
+ 
+ 			api_nh->seg_num = 1;
+
+From daf1f7a53835c4c1653207f9160d68f9d4ccfee5 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 30 Jun 2025 18:44:17 +0200
+Subject: [PATCH 07/18] topotests: add test with sid index value greater than
+ 20 bits
+
+Add a test that ensures that sid index values greater than 20 bits can
+be configured and filled in, in BGP.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../srv6_sid_manager/rt1/vrf20_rib.ref        | 47 +++++++++++++++++++
+ .../topotests/srv6_sid_manager/rt5/bgpd.conf  | 14 ++++++
+ .../topotests/srv6_sid_manager/rt5/zebra.conf |  3 ++
+ .../srv6_sid_manager/test_srv6_sid_manager.py |  5 ++
+ 4 files changed, 69 insertions(+)
+
+diff --git a/tests/topotests/srv6_sid_manager/rt1/vrf20_rib.ref b/tests/topotests/srv6_sid_manager/rt1/vrf20_rib.ref
+index de9e450cf628..9c85cb95d348 100644
+--- a/tests/topotests/srv6_sid_manager/rt1/vrf20_rib.ref
++++ b/tests/topotests/srv6_sid_manager/rt1/vrf20_rib.ref
+@@ -88,5 +88,52 @@
+       ],
+       "asPath": "6"
+     }
++  ],
++  "2001:7::/64": [
++    {
++      "prefix": "2001:7::/64",
++      "protocol": "bgp",
++      "vrfName": "vrf20",
++      "selected": true,
++      "destSelected": true,
++      "distance": 20,
++      "metric": 0,
++      "installed": true,
++      "table": 20,
++      "internalStatus": 16,
++      "internalFlags": 9,
++      "internalNextHopNum": 2,
++      "internalNextHopActiveNum": 2,
++      "nexthops": [
++        {
++          "flags": 5,
++          "ip": "fc00:0:5::1",
++          "afi": "ipv6",
++          "vrf": "default",
++          "active": true,
++          "recursive": true,
++          "labels": [3],
++          "weight": 1,
++          "seg6": {
++            "segs": "fc05:0:5:1:4dfc::"
++          },
++          "srv6EncapBehavior": "H.Encaps"
++        },
++        {
++          "flags": 3,
++          "fib": true,
++          "afi": "ipv6",
++          "interfaceName": "eth-sw1",
++          "vrf": "default",
++          "active": true,
++          "labels": [3],
++          "weight": 1,
++          "seg6": {
++            "segs": "fc05:0:5:1:4dfc::"
++          },
++          "srv6EncapBehavior": "H.Encaps"
++        }
++      ]
++    }
+   ]
+ }
+diff --git a/tests/topotests/srv6_sid_manager/rt5/bgpd.conf b/tests/topotests/srv6_sid_manager/rt5/bgpd.conf
+index a2703de01897..855110af57b6 100644
+--- a/tests/topotests/srv6_sid_manager/rt5/bgpd.conf
++++ b/tests/topotests/srv6_sid_manager/rt5/bgpd.conf
+@@ -51,3 +51,17 @@ router bgp 5 vrf vrf10
+   redistribute connected
+  exit-address-family
+ !
++router bgp 5 vrf vrf20
++ bgp router-id 5.5.5.5
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ !
++ address-family ipv6 unicast
++  sid vpn export 85500
++  rd vpn export 5:10
++  rt vpn both 88:88
++  import vpn
++  export vpn
++  redistribute connected
++ exit-address-family
++!
+diff --git a/tests/topotests/srv6_sid_manager/rt5/zebra.conf b/tests/topotests/srv6_sid_manager/rt5/zebra.conf
+index d5f789e30daf..b1cb4e51937d 100644
+--- a/tests/topotests/srv6_sid_manager/rt5/zebra.conf
++++ b/tests/topotests/srv6_sid_manager/rt5/zebra.conf
+@@ -26,6 +26,9 @@ interface eth-dst2 vrf vrf10
+  ip address 10.0.11.1/24
+  ip address 2001:db9:10::1/64
+ !
++interface eth-ce7 vrf vrf20
++ ipv6 address 2001:7::1/64
++!
+ segment-routing
+  srv6
+   locators
+diff --git a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+index 3c0ff356ef84..f1c403b0dfd3 100644
+--- a/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
++++ b/tests/topotests/srv6_sid_manager/test_srv6_sid_manager.py
+@@ -99,6 +99,7 @@ def build_topo(tgen):
+     tgen.add_router("ce4")
+     tgen.add_router("ce5")
+     tgen.add_router("ce6")
++    tgen.add_router("ce7")
+     tgen.add_router("dst2")
+ 
+     # Define connections
+@@ -149,6 +150,7 @@ def build_topo(tgen):
+     tgen.add_link(tgen.gears["ce4"], tgen.gears["rt6"], "eth-rt6", "eth-ce4")
+     tgen.add_link(tgen.gears["ce5"], tgen.gears["rt1"], "eth-rt1", "eth-ce5")
+     tgen.add_link(tgen.gears["ce6"], tgen.gears["rt6"], "eth-rt6", "eth-ce6")
++    tgen.add_link(tgen.gears["ce7"], tgen.gears["rt5"], "eth-rt5", "eth-ce7")
+ 
+     tgen.gears["rt1"].run("ip link add vrf10 type vrf table 10")
+     tgen.gears["rt1"].run("ip link set vrf10 up")
+@@ -161,6 +163,9 @@ def build_topo(tgen):
+     tgen.gears["rt5"].run("ip link add vrf10 type vrf table 10")
+     tgen.gears["rt5"].run("ip link set vrf10 up")
+     tgen.gears["rt5"].run("ip link set eth-dst2 master vrf10")
++    tgen.gears["rt5"].run("ip link add vrf20 type vrf table 20")
++    tgen.gears["rt5"].run("ip link set vrf20 up")
++    tgen.gears["rt5"].run("ip link set eth-ce7 master vrf20")
+ 
+     tgen.gears["rt6"].run("ip link add vrf10 type vrf table 10")
+     tgen.gears["rt6"].run("ip link set vrf10 up")
+
+From e873ec55014d4e9052e1a6a1407bffd6d2a10d8b Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 2 Jul 2025 09:05:41 +0200
+Subject: [PATCH 08/18] bgpd: externalise srv6_l3vpn structure API
+
+In order to change the func_len attribute, the srv6_l3vpn API must be
+accessed.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_attr.c | 18 +++++++++---------
+ bgpd/bgp_attr.h |  3 +++
+ 2 files changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/bgpd/bgp_attr.c b/bgpd/bgp_attr.c
+index 8ee51216fffd..96c037bb4d12 100644
+--- a/bgpd/bgp_attr.c
++++ b/bgpd/bgp_attr.c
+@@ -798,19 +798,19 @@ static void *srv6_l3service_hash_alloc(void *p)
+ 	return p;
+ }
+ 
+-static void srv6_l3service_free(struct bgp_attr_srv6_l3service *l3service)
++void bgp_attr_srv6_l3service_free(struct bgp_attr_srv6_l3service *l3service)
+ {
+ 	XFREE(MTYPE_BGP_SRV6_L3SERVICE, l3service);
+ }
+ 
+-static struct bgp_attr_srv6_l3service *
+-srv6_l3service_intern(struct bgp_attr_srv6_l3service *l3service)
++struct bgp_attr_srv6_l3service *
++bgp_attr_srv6_l3service_intern(struct bgp_attr_srv6_l3service *l3service)
+ {
+ 	struct bgp_attr_srv6_l3service *find;
+ 
+ 	find = hash_get(srv6_l3service_hash, l3service, srv6_l3service_hash_alloc);
+ 	if (find != l3service)
+-		srv6_l3service_free(l3service);
++		bgp_attr_srv6_l3service_free(l3service);
+ 	find->refcnt++;
+ 	return find;
+ }
+@@ -827,7 +827,7 @@ static void srv6_l3service_unintern(struct bgp_attr_srv6_l3service **l3servicep)
+ 
+ 	if (l3service->refcnt == 0) {
+ 		hash_release(srv6_l3service_hash, l3service);
+-		srv6_l3service_free(l3service);
++		bgp_attr_srv6_l3service_free(l3service);
+ 		*l3servicep = NULL;
+ 	}
+ }
+@@ -950,7 +950,7 @@ static void srv6_init(void)
+ 
+ static void srv6_finish(void)
+ {
+-	hash_clean_and_free(&srv6_l3service_hash, (void (*)(void *))srv6_l3service_free);
++	hash_clean_and_free(&srv6_l3service_hash, (void (*)(void *))bgp_attr_srv6_l3service_free);
+ 	hash_clean_and_free(&srv6_vpn_hash, (void (*)(void *))srv6_vpn_free);
+ }
+ 
+@@ -1314,7 +1314,7 @@ struct attr *bgp_attr_intern(struct attr *attr)
+ 
+ 	if (attr->srv6_l3service) {
+ 		if (!attr->srv6_l3service->refcnt)
+-			attr->srv6_l3service = srv6_l3service_intern(attr->srv6_l3service);
++			attr->srv6_l3service = bgp_attr_srv6_l3service_intern(attr->srv6_l3service);
+ 		else
+ 			attr->srv6_l3service->refcnt++;
+ 	}
+@@ -1668,7 +1668,7 @@ void bgp_attr_flush(struct attr *attr)
+ 		attr->encap_subtlvs = NULL;
+ 	}
+ 	if (attr->srv6_l3service && !attr->srv6_l3service->refcnt) {
+-		srv6_l3service_free(attr->srv6_l3service);
++		bgp_attr_srv6_l3service_free(attr->srv6_l3service);
+ 		attr->srv6_l3service = NULL;
+ 	}
+ 	if (attr->srv6_vpn && !attr->srv6_vpn->refcnt) {
+@@ -3395,7 +3395,7 @@ bgp_attr_srv6_service(struct bgp_attr_parser_args *args)
+ 				return err;
+ 		}
+ 
+-		attr->srv6_l3service = srv6_l3service_intern(attr->srv6_l3service);
++		attr->srv6_l3service = bgp_attr_srv6_l3service_intern(attr->srv6_l3service);
+ 	}
+ 
+ 	/* Placeholder code for unsupported type */
+diff --git a/bgpd/bgp_attr.h b/bgpd/bgp_attr.h
+index 8ed1d4f60aca..9a148865e24c 100644
+--- a/bgpd/bgp_attr.h
++++ b/bgpd/bgp_attr.h
+@@ -383,6 +383,9 @@ extern enum bgp_attr_parse_ret
+ bgp_attr_parse(struct peer *peer, struct attr *attr, bgp_size_t size,
+ 	       struct bgp_nlri *mp_update, struct bgp_nlri *mp_withdraw);
+ extern struct attr *bgp_attr_intern(struct attr *attr);
++extern struct bgp_attr_srv6_l3service *
++bgp_attr_srv6_l3service_intern(struct bgp_attr_srv6_l3service *vpn);
++extern void bgp_attr_srv6_l3service_free(struct bgp_attr_srv6_l3service *vpn);
+ extern void bgp_attr_unintern_sub(struct attr *attr);
+ extern void bgp_attr_unintern(struct attr **pattr);
+ extern void bgp_attr_flush(struct attr *attr);
+
+From 083ac728adb94a80e3cb745c2a63697d42f63ef9 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 11:52:46 +0200
+Subject: [PATCH 09/18] zebra: add log trace about wide function value
+
+There is no trace to visualise the wide function allocated.
+
+> 2025/07/07 11:43:16 ZEBRA: [YDQ67-AANCF] alloc_srv6_sid_func_explicit: allocated explicit SID function 65527 from block fcbb:bb01::/32
+
+Add more information when available:
+
+> 2025/07/07 11:57:31 ZEBRA: [KSDH1-4N7S4] get_srv6_sid_explicit: allocated explicit SRv6 SID function 65527 (wide SID 65104) for context End.DT46 vrf_id 7
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ zebra/zebra_srv6.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index a2068c5226b1..c0e99b76808b 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -1910,9 +1910,15 @@ static int get_srv6_sid_explicit(struct zebra_srv6_sid **sid, struct srv6_sid_ct
+ 
+ 	zebra_srv6_sid_entry_add(*sid, locator->name, sid_value, is_localonly);
+ 
+-	if (IS_ZEBRA_DEBUG_SRV6)
+-		zlog_debug("%s: allocated explicit SRv6 SID function %u for context %s", __func__,
+-			   (*sid)->func, srv6_sid_ctx2str(buf, sizeof(buf), ctx));
++	if (IS_ZEBRA_DEBUG_SRV6) {
++		if ((*sid)->wide_func == 0)
++			zlog_debug("%s: allocated explicit SRv6 SID function %u for context %s",
++				   __func__, (*sid)->func, srv6_sid_ctx2str(buf, sizeof(buf), ctx));
++		else
++			zlog_debug("%s: allocated explicit SRv6 SID function %u (wide SID %u) for context %s",
++				   __func__, (*sid)->func, (*sid)->wide_func,
++				   srv6_sid_ctx2str(buf, sizeof(buf), ctx));
++	}
+
+ 	return 1;
+ }
+
+From fd3d4377b6a294f0c5c13b04f89c31ee1be4ff13 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 12:23:52 +0200
+Subject: [PATCH 10/18] bgpd: fix show running-config dumps appropriate index
+ sid value
+
+The below configuration is not visible on the show running-config:
+
+> r3(config-router-af)# sid vpn export 4294442576
+> r3(config-router-af)# do show running-config
+> [..]
+>  address-family ipv4 unicast
+>   sid vpn export -524720
+> [..]
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_vty.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 241c0542b8f2..8256940e12d0 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -19123,8 +19123,7 @@ static void bgp_vpn_policy_config_write_afi(struct vty *vty, struct bgp *bgp,
+ 		vty_out(vty, "%*ssid vpn export explicit %pI6\n", indent, "",
+ 			bgp->vpn_policy[afi].tovpn_sid_explicit);
+ 	} else if (tovpn_sid_index != 0) {
+-		vty_out(vty, "%*ssid vpn export %d\n", indent, "",
+-			tovpn_sid_index);
++		vty_out(vty, "%*ssid vpn export %u\n", indent, "", tovpn_sid_index);
+ 	}
+ 
+ 	if (CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_RD_SET))
+@@ -20663,8 +20662,7 @@ int bgp_config_write(struct vty *vty)
+ 			vty_out(vty, " sid vpn per-vrf export explicit %pI6\n",
+ 				bgp->tovpn_sid_explicit);
+ 		} else if (tovpn_sid_index != 0) {
+-			vty_out(vty, " sid vpn per-vrf export %d\n",
+-				tovpn_sid_index);
++			vty_out(vty, " sid vpn per-vrf export %u\n", tovpn_sid_index);
+ 		}
+ 
+ 		/* IPv4 unicast configuration.  */
+
+From fc9de6b3b60083b625f4bb464fd7a2549a0ca20f Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 13:33:47 +0200
+Subject: [PATCH 11/18] topotests: bgp_srv6_sid_explicit, add test with wide
+ sid allocation
+
+Add a test that demonstrates that a SID with wide allocation could be
+allocated.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../bgp_srv6_sid_explicit/c31/frr.conf        | 11 ++++
+ ...cted_explicit_srv6_sid_wide_allocated.json | 18 ++++++
+ .../bgp_srv6_sid_explicit/r1/frr.conf         | 12 +++-
+ .../bgp_srv6_sid_explicit/r3/frr.conf         | 64 +++++++++++++++++++
+ .../bgp_srv6_sid_explicit/r3/setup.sh         |  9 +++
+ .../test_bgp_srv6_sid_explicit.py             | 32 ++++++++++
+ 6 files changed, 144 insertions(+), 2 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/c31/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated.json
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/c31/frr.conf b/tests/topotests/bgp_srv6_sid_explicit/c31/frr.conf
+new file mode 100644
+index 000000000000..9cd8706a42bd
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/c31/frr.conf
+@@ -0,0 +1,11 @@
++frr version 10.3-dev-my-manual-build
++frr defaults traditional
++hostname c31
++!
++ip route 0.0.0.0/0 192.168.3.254
++ip route 192.168.0.0/16 192.168.3.254
++!
++interface eth10
++ ip address 192.168.3.1/24
++exit
++!
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated.json b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated.json
+new file mode 100644
+index 000000000000..2c493104cb4e
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated.json
+@@ -0,0 +1,18 @@
++{
++    "2001:db8:3:fff7:fe50::":{
++      "sid":"2001:db8:3:fff7:fe50::",
++      "behavior":"uDT46",
++      "context":{
++        "vrfName":"Vrf10",
++        "table":10
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    }
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/r1/frr.conf b/tests/topotests/bgp_srv6_sid_explicit/r1/frr.conf
+index a07250e9e59e..92245cbefa28 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/r1/frr.conf
++++ b/tests/topotests/bgp_srv6_sid_explicit/r1/frr.conf
+@@ -7,6 +7,7 @@ log commands
+ password zebra
+ !
+ ipv6 route 2001:db8:2:2::/64 2001:db8:12::2
++ipv6 route 2001:db8:3::/64 2001:db8:13::2
+ !
+ interface eth2
+  ip address 192.168.1.254/24
+@@ -18,7 +19,9 @@ exit
+ !
+ interface eth10
+  ipv6 address 2001:db8:12::1/64
+- mpls bgp forwarding
++exit
++interface eth20
++ ipv6 address 2001:db8:13::1/64
+ exit
+ !
+ interface lo
+@@ -36,6 +39,10 @@ router bgp 65001
+  neighbor 2001:db8:12::2 timers 3 10
+  neighbor 2001:db8:12::2 timers connect 1
+  neighbor 2001:db8:12::2 capability extended-nexthop
++ neighbor 2001:db8:13::3 remote-as 65003
++ neighbor 2001:db8:13::3 timers 3 10
++ neighbor 2001:db8:13::3 timers connect 1
++ neighbor 2001:db8:13::3 capability extended-nexthop
+  !
+  segment-routing srv6
+   locator MAIN
+@@ -43,6 +50,7 @@ router bgp 65001
+  !
+  address-family ipv4 vpn
+   neighbor 2001:db8:12::2 activate
++  neighbor 2001:db8:13::3 activate
+  exit-address-family
+ exit
+ !
+@@ -86,4 +94,4 @@ segment-routing
+  exit
+ exit
+ !
+-end
+\ No newline at end of file
++end
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf b/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
+new file mode 100644
+index 000000000000..a7e0b18b530d
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
+@@ -0,0 +1,64 @@
++frr version 10.4-dev-my-manual-build
++frr defaults traditional
++hostname r2
++log file zebra.log
++log commands
++!
++password zebra
++!
++ipv6 route 2001:db8:1:1::/64 2001:db8:13::1
++!
++interface eth1
++ ip address 192.168.3.254/24
++exit
++!
++interface eth10
++ ipv6 address 2001:db8:13::3/64
++exit
++!
++interface lo
++ ipv6 address 2001:db8:3::/128
++exit
++!
++router bgp 65003
++ bgp router-id 192.0.2.3
++ no bgp ebgp-requires-policy
++ no bgp default ipv4-unicast
++ neighbor 2001:db8:13::1 remote-as 65001
++ neighbor 2001:db8:13::1 timers 3 10
++ neighbor 2001:db8:13::1 timers connect 1
++ neighbor 2001:db8:13::1 capability extended-nexthop
++ !
++ segment-routing srv6
++  locator MAIN
++ exit
++ !
++ address-family ipv4 vpn
++  neighbor 2001:db8:13::1 activate
++ exit-address-family
++exit
++!
++router bgp 65003 vrf Vrf10
++ bgp router-id 192.0.2.3
++ !
++ address-family ipv4 unicast
++  redistribute connected
++  rd vpn export 65003:10
++  rt vpn both 0:10
++  export vpn
++  import vpn
++ exit-address-family
++exit
++!
++segment-routing
++ srv6
++  locators
++   locator MAIN
++    prefix 2001:db8:3::/48
++    format usid-f3216
++   exit
++  exit
++ exit
++exit
++!
++end
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh b/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
+new file mode 100644
+index 000000000000..edd86e90f527
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
+@@ -0,0 +1,9 @@
++ip link add sr0 type dummy
++ip link set sr0 up
++
++sysctl -w net.vrf.strict_mode=1
++
++ip link add Vrf10 type vrf table 10
++ip link set Vrf10 up
++
++ip link set eth1 master Vrf10
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 7292a4c84914..1868c4243c89 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -43,17 +43,21 @@ def open_json_file(filename):
+ def build_topo(tgen):
+     tgen.add_router("r1")
+     tgen.add_router("r2")
++    tgen.add_router("r3")
+ 
+     tgen.add_router("c11")
+     tgen.add_router("c12")
+     tgen.add_router("c21")
+     tgen.add_router("c22")
++    tgen.add_router("c31")
+ 
+     tgen.add_link(tgen.gears["r1"], tgen.gears["r2"], "eth10", "eth10")
+     tgen.add_link(tgen.gears["r1"], tgen.gears["c11"], "eth2", "eth10")
+     tgen.add_link(tgen.gears["r1"], tgen.gears["c12"], "eth3", "eth10")
+     tgen.add_link(tgen.gears["r2"], tgen.gears["c21"], "eth1", "eth10")
+     tgen.add_link(tgen.gears["r2"], tgen.gears["c22"], "eth2", "eth10")
++    tgen.add_link(tgen.gears["r1"], tgen.gears["r3"], "eth20", "eth10")
++    tgen.add_link(tgen.gears["r3"], tgen.gears["c31"], "eth1", "eth10")
+ 
+ 
+ def setup_module(mod):
+@@ -397,6 +401,34 @@ def test_explicit_srv6_sid_per_af_disabled():
+     )
+ 
+ 
++# Configure 'sid vpn per-vrf export explicit X:X::X:X'
++# using wide func specifics
++# By command 'show segment-routing srv6 sid json'
++def test_explicit_srv6_sid_explicit_wide():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r3"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65003 vrf Vrf10
++           sid vpn per-vrf export explicit 2001:db8:3:fff7:fe50::
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info(
++        "--13--Test for bgp explicit srv6 sid with wide func allocated in zebra"
++    )
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_wide_allocated.json"
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+
+From 4a796ea6d7380d2302fcd234686230017223b16a Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 14:11:42 +0200
+Subject: [PATCH 12/18] bgpd: fix crash when reconfiguring func-bits value in
+ locator
+
+The following crash happens on a BGP setup with SRv6 used, when locator
+is updated with the func-bits value moving from 32 bits to 16 bits.
+
+> #6  0x000061582b486b5c in memcpy (__len=<optimized out>, __src=<optimized out>, __dest=<optimized out>)
+>     at /usr/include/x86_64-linux-gnu/bits/string_fortified.h:29
+> #7  vpn_leak_from_vrf_update (to_bgp=to_bgp@entry=0x6158364a0340, from_bgp=from_bgp@entry=0x6158364c1040,
+>     path_vrf=path_vrf@entry=0x6158364ef110) at bgpd/bgp_mplsvpn.c:2010
+> #8  0x000061582b48758b in vpn_leak_from_vrf_update_all (to_bgp=to_bgp@entry=0x6158364a0340, from_bgp=from_bgp@entry=0x6158364c1040,
+>     afi=<optimized out>) at bgpd/bgp_mplsvpn.c:2215
+> #9  0x000061582b48774d in vpn_leak_postchange (afi=afi@entry=AFI_IP, bgp_vpn=bgp_vpn@entry=0x6158364a0340,
+>     bgp_vrf=bgp_vrf@entry=0x6158364c1040, direction=BGP_VPN_POLICY_DIR_TOVPN) at ./bgpd/bgp_mplsvpn.h:313
+> #10 0x000061582b489b4b in vpn_leak_postchange (bgp_vrf=0x6158364c1040, bgp_vpn=0x6158364a0340, afi=AFI_IP, direction=BGP_VPN_POLICY_DIR_TOVPN)
+>     at ./bgpd/bgp_mplsvpn.h:273
+> #11 vpn_leak_postchange_all () at bgpd/bgp_mplsvpn.c:3978
+> #12 0x000061582b5219d5 in bgp_zebra_process_srv6_locator_delete (cmd=<optimized out>, zclient=<optimized out>, length=<optimized out>,
+>     vrf_id=<optimized out>) at bgpd/bgp_zebra.c:3874
+> #13 0x0000766887b391ee in zclient_read (thread=<optimized out>) at lib/zclient.c:4804
+> #14 0x0000766887b2245e in event_call (thread=thread@entry=0x7ffc86531a30) at lib/event.c:2005
+> #15 0x0000766887ac2ed8 in frr_run (loop=0x615835c46fd0) at lib/libfrr.c:1252
+> #16 0x000061582b428163 in main (argc=<optimized out>, argv=0x7ffc86531cf8) at bgpd/bgp_main.c:565
+> (gdb)
+>
+
+Actually, the SID allocated has been freed after the locator deleted
+event. Protect this part of code by checking the availability of the
+sid pointer.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index a673bc972e9d..f7dbca0a2d6e 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -1724,7 +1724,7 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 					mpls_label_t *label)
+ {
+ 	/* Set SID for SRv6 VPN */
+-	if (from_bgp->vpn_policy[afi].tovpn_sid_locator) {
++	if (from_bgp->vpn_policy[afi].tovpn_sid_locator && from_bgp->vpn_policy[afi].tovpn_sid) {
+ 		struct srv6_locator *locator = from_bgp->vpn_policy[afi].tovpn_sid_locator;
+ 
+ 		encode_label(from_bgp->vpn_policy[afi].tovpn_sid_transpose_label, label);
+@@ -1763,7 +1763,7 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		}
+ 		return true;
+ 	}
+-	if (from_bgp->tovpn_sid_locator) {
++	if (from_bgp->tovpn_sid_locator && from_bgp->tovpn_sid) {
+ 		struct srv6_locator *locator = from_bgp->tovpn_sid_locator;
+ 
+ 		encode_label(from_bgp->tovpn_sid_transpose_label, label);
+
+From 0139ba2d259778111de7ebe817c87a5f2b36db45 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Mon, 7 Jul 2025 15:25:12 +0200
+Subject: [PATCH 13/18] topotests: bgp_srv6_sid_explicit, get wide func idx
+ from 32 bit func-bits
+
+Add a test that demonstrates that using a 32 bit func-bits locator, and
+using the index allocation mechanism, the obtained SID value is ok.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../bgp_srv6_sid_explicit/c32/frr.conf        | 11 +++++
+ ...ed_explicit_srv6_sid_wide_allocated_2.json | 34 ++++++++++++++++
+ .../bgp_srv6_sid_explicit/r3/frr.conf         | 16 ++++++++
+ .../bgp_srv6_sid_explicit/r3/setup.sh         |  3 ++
+ .../test_bgp_srv6_sid_explicit.py             | 40 +++++++++++++++++++
+ 5 files changed, 104 insertions(+)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/c32/frr.conf
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_2.json
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/c32/frr.conf b/tests/topotests/bgp_srv6_sid_explicit/c32/frr.conf
+new file mode 100644
+index 000000000000..2282db85cae4
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/c32/frr.conf
+@@ -0,0 +1,11 @@
++frr version 10.3-dev-my-manual-build
++frr defaults traditional
++hostname c32
++!
++ip route 0.0.0.0/0 192.168.4.254
++ip route 192.168.0.0/16 192.168.4.254
++!
++interface eth10
++ ip address 192.168.4.1/24
++exit
++!
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_2.json b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_2.json
+new file mode 100644
+index 000000000000..3ee31b506150
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_2.json
+@@ -0,0 +1,34 @@
++{
++    "2001:db8:3:fff7:fe50::":{
++      "sid":"2001:db8:3:fff7:fe50::",
++      "behavior":"uDT46",
++      "context":{
++        "vrfName":"Vrf10",
++        "table":10
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    },
++    "2001:db8:3:fff7:fe52::":{
++      "sid":"2001:db8:3:fff7:fe52::",
++      "behavior":"uDT46",
++      "context":{
++        "vrfName":"Vrf20",
++        "table":20
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    }
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf b/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
+index a7e0b18b530d..a5f349a7f602 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
++++ b/tests/topotests/bgp_srv6_sid_explicit/r3/frr.conf
+@@ -12,6 +12,10 @@ interface eth1
+  ip address 192.168.3.254/24
+ exit
+ !
++interface eth2
++ ip address 192.168.4.254/24
++exit
++!
+ interface eth10
+  ipv6 address 2001:db8:13::3/64
+ exit
+@@ -50,6 +54,18 @@ router bgp 65003 vrf Vrf10
+  exit-address-family
+ exit
+ !
++router bgp 65003 vrf Vrf20
++ bgp router-id 192.0.2.3
++ !
++ address-family ipv4 unicast
++  redistribute connected
++  rd vpn export 65002:30
++  rt vpn both 0:20
++  export vpn
++  import vpn
++ exit-address-family
++exit
++!
+ segment-routing
+  srv6
+   locators
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh b/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
+index edd86e90f527..f2b70bdf4e58 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
++++ b/tests/topotests/bgp_srv6_sid_explicit/r3/setup.sh
+@@ -5,5 +5,8 @@ sysctl -w net.vrf.strict_mode=1
+ 
+ ip link add Vrf10 type vrf table 10
+ ip link set Vrf10 up
++ip link add Vrf20 type vrf table 20
++ip link set Vrf20 up
+ 
+ ip link set eth1 master Vrf10
++ip link set eth2 master Vrf20
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 1868c4243c89..7ffa74a34c38 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -50,6 +50,7 @@ def build_topo(tgen):
+     tgen.add_router("c21")
+     tgen.add_router("c22")
+     tgen.add_router("c31")
++    tgen.add_router("c32")
+ 
+     tgen.add_link(tgen.gears["r1"], tgen.gears["r2"], "eth10", "eth10")
+     tgen.add_link(tgen.gears["r1"], tgen.gears["c11"], "eth2", "eth10")
+@@ -58,6 +59,7 @@ def build_topo(tgen):
+     tgen.add_link(tgen.gears["r2"], tgen.gears["c22"], "eth2", "eth10")
+     tgen.add_link(tgen.gears["r1"], tgen.gears["r3"], "eth20", "eth10")
+     tgen.add_link(tgen.gears["r3"], tgen.gears["c31"], "eth1", "eth10")
++    tgen.add_link(tgen.gears["r3"], tgen.gears["c32"], "eth2", "eth10")
+ 
+ 
+ def setup_module(mod):
+@@ -429,6 +431,44 @@ def test_explicit_srv6_sid_explicit_wide():
+     )
+ 
+ 
++# Configure 'sid vpn per-vrf export 4294442578'
++# this value stands for FFF7FE52
++# Demonstrate that when using a func-bits of 32 bits, then
++# By command 'show segment-routing srv6 sid json' dumps 2 SIDs
++def test_explicit_srv6_sid_explicit_wide_index():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r3"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         segment-routing
++          srv6
++           locators
++            locator MAIN
++              no format usid-f3216
++              behavior usid
++              prefix 2001:db8:3:2::/48 block-len 32 node-len 16 func-bits 32
++              end
++        configure terminal
++         router bgp 65003 vrf Vrf20
++           sid vpn per-vrf export 4294442578
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info(
++        "--14--Test for bgp explicit srv6 sid with wide func allocated twice in zebra"
++    )
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_wide_allocated_2.json"
++    )
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+
+From c934bd39336f53911fcd8a786ee3e87a67637e09 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 9 Sep 2025 13:38:07 +0200
+Subject: [PATCH 14/18] zebra, lib: expose microsid format to upper layer
+
+BGP needs to know whether a specific microsid is in use; actually some
+formats allow to allocate SIDs whose bits are outside of the standard
+function space. Export two new flags for microsid formats in each
+locator transmitted to upper daemons.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ lib/srv6.h         |  2 ++
+ zebra/zebra_srv6.c | 16 +++++++++++++++-
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/lib/srv6.h b/lib/srv6.h
+index d085a5ef6e73..5931d3c18319 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -149,6 +149,8 @@ struct srv6_locator {
+ 	uint8_t flags;
+ #define SRV6_LOCATOR_USID (1 << 0) /* The SRv6 Locator is a uSID Locator */
+ #define SRV6_LOCATOR_PSP  (1 << 1) /* The SRv6 Locator has the PSP flavor */
++#define SRV6_LOCATOR_F3216 (1 << 2) /* The SRv6 Locator has F3216 format */
++#define SRV6_LOCATOR_F4816 (1 << 3) /* The SRv6 Locator has F4816 format */
+ 
+ 	/* Pointer to the SID format. */
+ 	struct srv6_sid_format *sid_format;
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index c0e99b76808b..842a3b5b39e8 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -287,7 +287,21 @@ void zebra_srv6_locator_format_set(struct srv6_locator *locator,
+ 
+ 	/* Change format */
+ 	locator->sid_format = format;
+-
++	if (format) {
++		if (strmatch(format->name, SRV6_SID_FORMAT_USID_F3216_NAME)) {
++			SET_FLAG(locator->flags, SRV6_LOCATOR_F3216);
++			UNSET_FLAG(locator->flags, SRV6_LOCATOR_F4816);
++		} else if (strmatch(format->name, SRV6_SID_FORMAT_USID_F4816_NAME)) {
++			SET_FLAG(locator->flags, SRV6_LOCATOR_F4816);
++			UNSET_FLAG(locator->flags, SRV6_LOCATOR_F3216);
++		} else {
++			UNSET_FLAG(locator->flags, SRV6_LOCATOR_F3216);
++			UNSET_FLAG(locator->flags, SRV6_LOCATOR_F4816);
++		}
++	} else {
++		UNSET_FLAG(locator->flags, SRV6_LOCATOR_F3216);
++		UNSET_FLAG(locator->flags, SRV6_LOCATOR_F4816);
++	}
+ 	/* Allocate the new parent block */
+ 	zebra_srv6_sid_locator_block_alloc(locator);
+ 
+
+From 46a988c76d211d4112b622b164b0a884e4fbe351 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 9 Sep 2025 13:40:15 +0200
+Subject: [PATCH 15/18] bgpd: fix allow passing 32 bit sid index to usid-f3216
+ locator
+
+When allocating a SID from BGP using a 32 bit integer value, from a
+locator with a 16 bit function length, the allocation fails, whereas it
+is accepted when using the explicit-sid value.
+
+> (config)# show running-config
+> [..]
+> segment-routing
+>  srv6
+>   locators
+>    locator srv6-locator1
+>     prefix 2001:db8:1::/48 block-len 32 node-len 16 func-bits 16
+> [..]
+> (config-bgp)# sid vpn export 4278299597
+> 2025/09/09 08:22:56 BGP: [XDKRA-5RV60] ensure_vrf_tovpn_sid_per_af: try to allocate new SID for vrf VRF green: afi IPv4
+> 2025/09/09 08:22:56 BGP: [VRXTH-X6T6K] srv6_sid_compose: invalid SRv6 Locator (2001:db8:1::/48): Function Length is too short (65535) to support specified function (4278299597)
+
+Fix this by checking at composition time that the index value is not
+attempted to be applied to f3216 locator.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index f7dbca0a2d6e..e5051515cd88 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -704,6 +704,7 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	uint8_t offset = 0;
+ 	uint8_t func_len = 0, shift_len = 0;
+ 	uint32_t sid_func_max = 0;
++	bool store_in_label = true;
+ 
+ 	if (!locator || !sid_value)
+ 		return false;
+@@ -717,12 +718,19 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	}
+ 
+ 	/* Max value that can be encoded in the Function part of the SID */
+-	if (locator->function_bits_length == BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP)
++	if ((CHECK_FLAG(locator->flags, SRV6_LOCATOR_F3216) ||
++	     CHECK_FLAG(locator->flags, SRV6_LOCATOR_F4816)) &&
++	    sid_func > 0xFFFF) {
++		/* f3216 and f4816 supports ewlib. increase sid_func_max */
++		sid_func_max = 0xffffffff;
++		store_in_label = false;
++	} else if (locator->function_bits_length == BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP)
+ 		/* shifting 32 bits over a 32 bit is not possible. directly encode func_max */
+ 		sid_func_max = 0xffffffff;
+ 	else
+ 		sid_func_max = (1 << locator->function_bits_length) - 1;
+ 
++
+ 	if (sid_func > sid_func_max) {
+ 		if (debug)
+ 			zlog_debug("%s: invalid SRv6 Locator (%pFX): Function Length is too short (%u) to support specified function (%u)",
+@@ -750,8 +758,11 @@ bool srv6_sid_compose(struct in6_addr *sid_value, struct srv6_locator *locator,
+ 	 */
+ 	offset = locator->block_bits_length + locator->node_bits_length;
+ 
+-	func_len = locator->function_bits_length;
+-	if (func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
++	if (store_in_label)
++		func_len = locator->function_bits_length;
++	else
++		func_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++	if (store_in_label && func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 		/*
+ 		 * The FUNC part of the SID is advertised in the label field of SRv6 Service TLV.
+ 		 * (see SID Transposition Scheme, RFC 9252 section #4).
+
+From 895eaf3038b0e6ac074c6b8b93e7e96c6e9f76c5 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Tue, 9 Sep 2025 13:41:30 +0200
+Subject: [PATCH 16/18] topotests: bgp_srv6_sid_explicit, check 32 bit indexes
+ work with f3216
+
+Add a test that checks allocation of SID is ok when allocating a 32 bit
+value applied to a microsid f3216 locator.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ ...ed_explicit_srv6_sid_wide_allocated_1.json | 18 ++++++++++
+ .../test_bgp_srv6_sid_explicit.py             | 34 +++++++++++++++++--
+ 2 files changed, 50 insertions(+), 2 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_1.json
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_1.json b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_1.json
+new file mode 100644
+index 000000000000..eece3965940a
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_explicit_srv6_sid_wide_allocated_1.json
+@@ -0,0 +1,18 @@
++{
++    "2001:db8:3:fff7:fe4b::":{
++      "sid":"2001:db8:3:fff7:fe4b::",
++      "behavior":"uDT46",
++      "context":{
++        "vrfName":"Vrf10",
++        "table":10
++      },
++      "locator":"MAIN",
++      "allocationMode":"explicit",
++      "clients":[
++        {
++          "protocol":"bgp",
++          "instance":0
++        }
++      ]
++    }
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 7ffa74a34c38..8e5c8c063e3e 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -403,6 +403,35 @@ def test_explicit_srv6_sid_per_af_disabled():
+     )
+ 
+ 
++# Configure 'sid vpn per-vrf export 4294442571'
++# this value stands for FFF7FE4B
++# Demonstrate that when using the index value, the allocation
++# is possible on f3216 locator format
++def test_explicit_srv6_sid_explicit_wide_index_1():
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r3"]
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         router bgp 65003 vrf Vrf10
++           sid vpn per-vrf export 4294442571
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++    logger.info(
++        "--13--Test for bgp explicit srv6 sid with wide func allocated in zebra"
++    )
++    check_explicit_srv6_sid_allocated(
++        router, "expected_explicit_srv6_sid_wide_allocated_1.json"
++    )
++
++
+ # Configure 'sid vpn per-vrf export explicit X:X::X:X'
+ # using wide func specifics
+ # By command 'show segment-routing srv6 sid json'
+@@ -416,6 +445,7 @@ def test_explicit_srv6_sid_explicit_wide():
+         """
+         configure terminal
+          router bgp 65003 vrf Vrf10
++           no sid vpn per-vrf export 4294442571
+            sid vpn per-vrf export explicit 2001:db8:3:fff7:fe50::
+         """
+     )
+@@ -424,7 +454,7 @@ def test_explicit_srv6_sid_explicit_wide():
+     # If you want to stop some specific line and start interactive shell,
+     # please use tgen.mininet_cli() to start it.
+     logger.info(
+-        "--13--Test for bgp explicit srv6 sid with wide func allocated in zebra"
++        "--14--Test for bgp explicit srv6 sid with wide func allocated in zebra"
+     )
+     check_explicit_srv6_sid_allocated(
+         router, "expected_explicit_srv6_sid_wide_allocated.json"
+@@ -462,7 +492,7 @@ def test_explicit_srv6_sid_explicit_wide_index():
+     # If you want to stop some specific line and start interactive shell,
+     # please use tgen.mininet_cli() to start it.
+     logger.info(
+-        "--14--Test for bgp explicit srv6 sid with wide func allocated twice in zebra"
++        "--15--Test for bgp explicit srv6 sid with 32 bit function space allocated in zebra"
+     )
+     check_explicit_srv6_sid_allocated(
+         router, "expected_explicit_srv6_sid_wide_allocated_2.json"
+
+From 5a10caf7c12f6a21c46f52beac0efc3efc07123a Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 7 Jan 2026 15:34:21 +0100
+Subject: [PATCH 17/18] bgpd: change function length to 32 bits when wide_func
+ is used
+
+When allocating a SID in the wide range of the locator, the storage of
+the SID in BGP update is not displaying the extra-wide part. The below
+command shows that the transposed sid value does not reflect what SID
+manager allocated:
+
+> r3# show segment-routing srv6 sid
+>  SID                     Behavior    Context        Daemon/Instance    Locator    AllocationType
+>  ----------------------------------  -------------  -----------------  ---------  ----------------
+>  2001:db8:3:fff7:fe4b::  uDT46       VRF 'Vrf10'    bgp(0)             MAIN       explicit
+>
+> r3# show bgp ipv4 vpn 192.168.3.0/24 json
+> [..]
+>        "remoteLabel":1048432,
+>        "remoteLabels":[
+>          1048432
+>        ],
+>        "remoteTransposedSid":"2001:db8:3:fff7::",
+>        "remoteSid":"2001:db8:3::",
+>        "remoteSidStructure":{
+>          "locatorBlockLen":32,
+>          "locatorNodeLen":16,
+>          "functionLen":16,
+>          "argumentLen":0,
+>          "transpositionLen":16,
+>          "transpositionOffset":48
+>        },
+>
+
+In BGP, detect that wide range is used, and change to the real SID value
+in the BGP update accordingly. Also, update the Zebra route seg6local
+context by changing the functionLen to 32 bits too.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ bgpd/bgp_mplsvpn.c | 50 +++++++++++++++++++++++++++++++++-------------
+ bgpd/bgp_zebra.c   | 18 +++++++++++++----
+ bgpd/bgpd.h        |  2 ++
+ 3 files changed, 52 insertions(+), 18 deletions(-)
+
+diff --git a/bgpd/bgp_mplsvpn.c b/bgpd/bgp_mplsvpn.c
+index e5051515cd88..eeec174018da 100644
+--- a/bgpd/bgp_mplsvpn.c
++++ b/bgpd/bgp_mplsvpn.c
+@@ -371,9 +371,11 @@ void vpn_leak_zebra_vrf_sid_update_per_af(struct bgp *bgp, afi_t afi)
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+ 		ctx.node_len =
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+-		ctx.function_len =
+-			bgp->vpn_policy[afi]
+-				.tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE))
++			ctx.function_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			ctx.function_len =
++				bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+ 		ctx.argument_len =
+ 			bgp->vpn_policy[afi]
+ 				.tovpn_sid_locator->argument_bits_length;
+@@ -440,7 +442,10 @@ void vpn_leak_zebra_vrf_sid_update_per_vrf(struct bgp *bgp)
+ 	if (bgp->tovpn_sid_locator) {
+ 		ctx.block_len = bgp->tovpn_sid_locator->block_bits_length;
+ 		ctx.node_len = bgp->tovpn_sid_locator->node_bits_length;
+-		ctx.function_len = bgp->tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE))
++			ctx.function_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			ctx.function_len = bgp->tovpn_sid_locator->function_bits_length;
+ 		ctx.argument_len = bgp->tovpn_sid_locator->argument_bits_length;
+ 		if (CHECK_FLAG(bgp->tovpn_sid_locator->flags, SRV6_LOCATOR_USID))
+ 			SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+@@ -508,9 +513,11 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_af(struct bgp *bgp, afi_t afi)
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+ 		seg6localctx.node_len =
+ 			bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+-		seg6localctx.function_len =
+-			bgp->vpn_policy[afi]
+-				.tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE))
++			seg6localctx.function_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			seg6localctx.function_len =
++				bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+ 		seg6localctx.argument_len =
+ 			bgp->vpn_policy[afi]
+ 				.tovpn_sid_locator->argument_bits_length;
+@@ -526,6 +533,7 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_af(struct bgp *bgp, afi_t afi)
+ 	ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+ 				     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
+ 	bgp_zebra_release_srv6_sid(&ctx, bgp->vpn_policy[afi].tovpn_sid_locator->name);
++	UNSET_FLAG(bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE);
+ }
+ 
+ /*
+@@ -559,8 +567,10 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_vrf(struct bgp *bgp)
+ 		seg6localctx.block_len =
+ 			bgp->tovpn_sid_locator->block_bits_length;
+ 		seg6localctx.node_len = bgp->tovpn_sid_locator->node_bits_length;
+-		seg6localctx.function_len =
+-			bgp->tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE))
++			seg6localctx.function_len = BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			seg6localctx.function_len = bgp->tovpn_sid_locator->function_bits_length;
+ 		seg6localctx.argument_len =
+ 			bgp->tovpn_sid_locator->argument_bits_length;
+ 	}
+@@ -573,6 +583,7 @@ void vpn_leak_zebra_vrf_sid_withdraw_per_vrf(struct bgp *bgp)
+ 	ctx.vrf_id = bgp->vrf_id;
+ 	ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
+ 	bgp_zebra_release_srv6_sid(&ctx, bgp->tovpn_sid_locator->name);
++	UNSET_FLAG(bgp->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE);
+ }
+ 
+ /*
+@@ -1014,6 +1025,7 @@ void delete_vrf_tovpn_sid_per_af(struct bgp *bgp_vpn, struct bgp *bgp_vrf,
+ 		ctx.behavior = afi == AFI_IP ? ZEBRA_SEG6_LOCAL_ACTION_END_DT4
+ 					     : ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
+ 		bgp_zebra_release_srv6_sid(&ctx, bgp_vrf->vpn_policy[afi].tovpn_sid_locator->name);
++		UNSET_FLAG(bgp_vrf->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE);
+ 
+ 		sid_unregister(bgp_vpn, bgp_vrf->vpn_policy[afi].tovpn_sid);
+ 		XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->vpn_policy[afi].tovpn_sid);
+@@ -1060,6 +1072,7 @@ void delete_vrf_tovpn_sid_per_vrf(struct bgp *bgp_vpn, struct bgp *bgp_vrf)
+ 		ctx.vrf_id = bgp_vrf->vrf_id;
+ 		ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
+ 		bgp_zebra_release_srv6_sid(&ctx, bgp_vrf->tovpn_sid_locator->name);
++		UNSET_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE);
+ 
+ 		sid_unregister(bgp_vpn, bgp_vrf->tovpn_sid);
+ 		XFREE(MTYPE_BGP_SRV6_SID, bgp_vrf->tovpn_sid);
+@@ -1753,11 +1766,15 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->block_bits_length;
+ 		attr->srv6_l3service->loc_node_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->node_bits_length;
+-		attr->srv6_l3service->func_len =
+-			from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(from_bgp->vpn_policy[afi].flags, BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE))
++			attr->srv6_l3service->func_len =
++				BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			attr->srv6_l3service->func_len =
++				from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length;
+ 		attr->srv6_l3service->arg_len =
+ 			from_bgp->vpn_policy[afi].tovpn_sid_locator->argument_bits_length;
+-		if (from_bgp->vpn_policy[afi].tovpn_sid_locator->function_bits_length >
++		if (attr->srv6_l3service->func_len >
+ 		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 			attr->srv6_l3service->transposition_len = 0;
+ 			attr->srv6_l3service->transposition_offset = 0;
+@@ -1788,9 +1805,14 @@ static bool vpn_leak_from_vrf_fill_srv6(struct attr *attr, struct bgp *from_bgp,
+ 		attr->srv6_l3service->loc_block_len =
+ 			from_bgp->tovpn_sid_locator->block_bits_length;
+ 		attr->srv6_l3service->loc_node_len = from_bgp->tovpn_sid_locator->node_bits_length;
+-		attr->srv6_l3service->func_len = from_bgp->tovpn_sid_locator->function_bits_length;
++		if (CHECK_FLAG(from_bgp->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE))
++			attr->srv6_l3service->func_len =
++				BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_BGP;
++		else
++			attr->srv6_l3service->func_len =
++				from_bgp->tovpn_sid_locator->function_bits_length;
+ 		attr->srv6_l3service->arg_len = from_bgp->tovpn_sid_locator->argument_bits_length;
+-		if (from_bgp->tovpn_sid_locator->function_bits_length >
++		if (attr->srv6_l3service->func_len >
+ 		    BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL) {
+ 			attr->srv6_l3service->transposition_len = 0;
+ 			attr->srv6_l3service->transposition_offset = 0;
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index 2685b1dd8fcd..33c1e3bd585d 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -3663,7 +3663,7 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 	char buf[256];
+ 	struct in6_addr *tovpn_sid;
+ 	struct prefix_ipv6 tmp_prefix;
+-	uint32_t sid_func;
++	uint32_t sid_func, sid_wide_func = 0;
+ 	bool found = false;
+ 	char *loc_name;
+ 
+@@ -3685,8 +3685,8 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 	}
+ 
+ 	/* Decode the received notification message */
+-	if (!zapi_srv6_sid_notify_decode(zclient->ibuf, &ctx, &sid_addr, &sid_func, NULL, &note,
+-					 &loc_name)) {
++	if (!zapi_srv6_sid_notify_decode(zclient->ibuf, &ctx, &sid_addr, &sid_func, &sid_wide_func,
++					 &note, &loc_name)) {
+ 		zlog_err("%s : error in msg decode", __func__);
+ 		return -1;
+ 	}
+@@ -3762,7 +3762,17 @@ static int bgp_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 		uint8_t func_len = locator_bgp->function_bits_length;
+ 		mpls_label_t label = MPLS_LABEL_IMPLICIT_NULL;
+ 
+-		if (func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL)
++		if (sid_wide_func && (CHECK_FLAG(locator_bgp->flags, SRV6_LOCATOR_F3216) ||
++				      CHECK_FLAG(locator_bgp->flags, SRV6_LOCATOR_F4816))) {
++			if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT6)
++				SET_FLAG(bgp_vrf->vpn_policy[AFI_IP6].flags,
++					 BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE);
++			else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT4)
++				SET_FLAG(bgp_vrf->vpn_policy[AFI_IP].flags,
++					 BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE);
++			else if (ctx.behavior == ZEBRA_SEG6_LOCAL_ACTION_END_DT46)
++				SET_FLAG(bgp_vrf->vrf_flags, BGP_VRF_TOVPN_SID_FUNC_WIDE);
++		} else if (func_len <= BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL)
+ 			label = sid_func
+ 				<< (BGP_PREFIX_SID_SRV6_MAX_FUNCTION_LENGTH_FOR_LABEL - func_len);
+ 
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 12c6a15f33fa..b7c18ff44f1a 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -294,6 +294,7 @@ struct vpn_policy {
+ #define BGP_VPN_POLICY_TOVPN_SID_EXPLICIT     (1 << 6)
+ /* Is this value set by the cli? */
+ #define BGP_VPN_POLICY_TOVPN_RD_CLI_SET       (1 << 7)
++#define BGP_VPN_POLICY_TOVPN_SID_FUNC_WIDE    (1 << 8)
+ 
+ 	/*
+ 	 * If we are importing another vrf into us keep a list of
+@@ -982,6 +983,7 @@ struct bgp {
+ /* per-VRF toVPN SID */
+ #define BGP_VRF_TOVPN_SID_AUTO              (1 << 7)
+ #define BGP_VRF_TOVPN_SID_EXPLICIT	    (1 << 8)
++#define BGP_VRF_TOVPN_SID_FUNC_WIDE	    (1 << 9)
+ 
+ 	/* unique ID for auto derivation of RD for this vrf */
+ 	uint16_t vrf_rd_id;
+
+From 373be27119b9410ee52e7748f607053c5cd85633 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 7 Jan 2026 15:36:18 +0100
+Subject: [PATCH 18/18] topotests: add test to check for correct wide srv6 func
+ used
+
+Add a test that checks that if a sid manager uses the wide func range,
+then BGP detects it and changes the BGP update and ZEBRA route function
+length settings accordingly.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ ...d_allocated_srv6_sid_seg6local_wide_1.json | 34 ++++++++++
+ ...expected_sent_bgp_vpn_srv6_sid_wide_1.json | 62 +++++++++++++++++++
+ .../test_bgp_srv6_sid_explicit.py             | 38 +++++++++---
+ 3 files changed, 124 insertions(+), 10 deletions(-)
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_allocated_srv6_sid_seg6local_wide_1.json
+ create mode 100644 tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid_wide_1.json
+
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_allocated_srv6_sid_seg6local_wide_1.json b/tests/topotests/bgp_srv6_sid_explicit/expected_allocated_srv6_sid_seg6local_wide_1.json
+new file mode 100644
+index 000000000000..ac2a9d2f3e3f
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_allocated_srv6_sid_seg6local_wide_1.json
+@@ -0,0 +1,34 @@
++{
++    "2001:db8:3:fff7:fe4b::/128":[
++      {
++        "prefix":"2001:db8:3:fff7:fe4b::/128",
++        "prefixLen":128,
++        "protocol":"bgp",
++        "selected":true,
++        "destSelected":true,
++        "distance":20,
++        "metric":0,
++        "installed":true,
++        "table":254,
++        "nexthops":[
++          {
++            "flags":3,
++            "fib":true,
++            "directlyConnected":true,
++            "interfaceName":"Vrf10",
++            "active":true,
++            "weight":1,
++            "seg6local":{
++              "action":"uDT46",
++              "sidStructure":{
++                "blockLen":32,
++                "nodeLen":16,
++                "funcLen":32,
++                "argLen":0
++              }
++            }
++          }
++        ]
++      }
++    ]
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid_wide_1.json b/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid_wide_1.json
+new file mode 100644
+index 000000000000..dcb02dad5e3e
+--- /dev/null
++++ b/tests/topotests/bgp_srv6_sid_explicit/expected_sent_bgp_vpn_srv6_sid_wide_1.json
+@@ -0,0 +1,62 @@
++{
++    "65003:10":{
++      "prefix":"192.168.3.0/24",
++      "advertisedTo":{
++        "2001:db8:13::1":{
++          "hostname":"r1"
++        }
++      },
++      "pathCount":1,
++      "paths":[
++        {
++          "aspath":{
++            "string":"Local",
++            "segments":[
++            ],
++            "length":0
++          },
++          "nhVrfName":"Vrf10",
++          "announceNexthopSelf":true,
++          "origin":"incomplete",
++          "metric":0,
++          "weight":32768,
++          "valid":true,
++          "sourced":true,
++          "local":true,
++          "bestpath":{
++            "overall":true,
++            "selectionReason":"First path received"
++          },
++          "extendedCommunity":{
++            "string":"RT:0:10"
++          },
++          "originatorId":"192.0.2.3",
++          "remoteLabel":3,
++          "remoteTransposedSid":"2001:db8:3:fff7:fe4b::",
++          "remoteSid":"2001:db8:3:fff7:fe4b::",
++          "remoteSidStructure":{
++            "locatorBlockLen": 32,
++            "locatorNodeLen":16,
++            "functionLen":32,
++            "argumentLen":0,
++            "transpositionLen":0,
++            "transpositionOffset":0
++          },
++          "nexthops":[
++            {
++              "ip":"0.0.0.0",
++              "hostname":"r3",
++              "afi":"ipv4",
++              "metric":0,
++              "accessible":true,
++              "used":true
++            }
++          ],
++          "peer":{
++            "peerId":"0.0.0.0",
++            "routerId":"192.0.2.3"
++          }
++        }
++      ]
++    }
++}
+diff --git a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+index 8e5c8c063e3e..45d8e5967386 100644
+--- a/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
++++ b/tests/topotests/bgp_srv6_sid_explicit/test_bgp_srv6_sid_explicit.py
+@@ -97,15 +97,17 @@ def check_explicit_srv6_sid_allocated(router, expected_file, exact=False):
+     assert result is None, "Failed"
+ 
+ 
+-def _check_sent_bgp_vpn_srv6_sid(router, expected_route_file):
++def _check_sent_bgp_vpn_srv6_sid(router, expected_route_file, prefix):
+     logger.info("checking bgp vpn route with SRv6 SIDs in sending end")
+-    output = json.loads(router.vtysh_cmd("show bgp ipv4 vpn 192.168.1.0/24 json"))
++    output = json.loads(router.vtysh_cmd(f"show bgp ipv4 vpn {prefix} json"))
+     expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+     return topotest.json_cmp(output, expected)
+ 
+ 
+-def check_sent_bgp_vpn_srv6_sid(router, expected_file):
+-    func = functools.partial(_check_sent_bgp_vpn_srv6_sid, router, expected_file)
++def check_sent_bgp_vpn_srv6_sid(router, expected_file, prefix="192.168.1.0/24"):
++    func = functools.partial(
++        _check_sent_bgp_vpn_srv6_sid, router, expected_file, prefix
++    )
+     _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+     assert result is None, "Failed"
+ 
+@@ -144,22 +146,28 @@ def check_rcvd_bgp_vrf_srv6_sid(router, vrf_name, expected_file):
+     assert result is None, "Failed"
+ 
+ 
+-def _check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_route_file):
++def _check_rcvd_zebra_vrf_srv6_sid(
++    router, vrf_name, expected_route_file, prefix, family
++):
+     logger.info(
+-        "checking zebra vrf {} ipv4 route with SRv6 SIDs in receiving end".format(
+-            vrf_name
++        "checking zebra vrf {} {} route with SRv6 SIDs in receiving end".format(
++            vrf_name, family
+         )
+     )
+     output = json.loads(
+-        router.vtysh_cmd("show ip route vrf {} 192.168.1.0/24 json".format(vrf_name))
++        router.vtysh_cmd(
++            "show {} route vrf {} {} json".format(family, vrf_name, prefix)
++        )
+     )
+     expected = open_json_file("{}/{}".format(CWD, expected_route_file))
+     return topotest.json_cmp(output, expected)
+ 
+ 
+-def check_rcvd_zebra_vrf_srv6_sid(router, vrf_name, expected_file):
++def check_rcvd_zebra_vrf_srv6_sid(
++    router, vrf_name, expected_file, prefix="192.168.1.0/24", family="ip"
++):
+     func = functools.partial(
+-        _check_rcvd_zebra_vrf_srv6_sid, router, vrf_name, expected_file
++        _check_rcvd_zebra_vrf_srv6_sid, router, vrf_name, expected_file, prefix, family
+     )
+     _, result = topotest.run_and_expect(func, None, count=15, wait=1)
+     assert result is None, "Failed"
+@@ -430,6 +438,16 @@ def test_explicit_srv6_sid_explicit_wide_index_1():
+     check_explicit_srv6_sid_allocated(
+         router, "expected_explicit_srv6_sid_wide_allocated_1.json"
+     )
++    check_rcvd_zebra_vrf_srv6_sid(
++        router,
++        "default",
++        "expected_allocated_srv6_sid_seg6local_wide_1.json",
++        "2001:db8:3:fff7:fe4b::/128",
++        "ipv6",
++    )
++    check_sent_bgp_vpn_srv6_sid(
++        router, "expected_sent_bgp_vpn_srv6_sid_wide_1.json", "192.168.3.0/24"
++    )
+ 
+ 
+ # Configure 'sid vpn per-vrf export explicit X:X::X:X'

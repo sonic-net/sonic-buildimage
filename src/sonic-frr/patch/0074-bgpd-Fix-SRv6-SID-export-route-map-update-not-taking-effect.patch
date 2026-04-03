@@ -1,0 +1,142 @@
+From e1f501728689da45e35a7e9b7f47adf4dabd4e70 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 18 Mar 2026 01:25:35 +0100
+Subject: [PATCH 1/2] bgpd: Fix sid export route-map update not taking effect
+
+When `sid export ... route-map <name>` is reconfigured with a
+different route-map on an already-configured SID export, the new
+route-map is silently ignored. The code skips the early-return
+(rmap_str != rmap_name), but then calls
+bgp_srv6_unicast_announce() without updating rmap_name, so the
+old route-map remains in effect.
+
+Fix this by replacing rmap_name before triggering the re-announce:
+decrement the reference count on the old route-map, free its name
+string, assign the new name, and increment the reference count on
+the new route-map.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ bgpd/bgp_vty.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index e7c4393bf913..a96cc7b40297 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -10259,6 +10259,16 @@ DEFPY(sid_export,
+ 				  !strcmp(rmap_str, bgp->srv6_unicast[afi].rmap_name)))
+ 			return CMD_SUCCESS;
+ 
++		if (bgp->srv6_unicast[afi].rmap_name) {
++			route_map_counter_decrement(
++				route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++			XFREE(MTYPE_ROUTE_MAP_NAME, bgp->srv6_unicast[afi].rmap_name);
++		}
++
++		bgp->srv6_unicast[afi].rmap_name = XSTRDUP(MTYPE_ROUTE_MAP_NAME, rmap_str);
++		route_map_counter_increment(
++			route_map_lookup_by_name(bgp->srv6_unicast[afi].rmap_name));
++
+ 		/* apply route-map change */
+ 		bgp_srv6_unicast_announce(bgp, afi);
+ 
+
+From 141ca524899fd2e68e89cb19e9c3a5afd6ec68e2 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 18 Mar 2026 01:25:44 +0100
+Subject: [PATCH 2/2] tests: Add test for sid export route-map update in
+ bgp_srv6_unicast
+
+Add test_bgp_srv6_sid_rmap_update() to verify that replacing an
+already-configured sid export route-map with a different one
+correctly applies the new policy.
+
+The test reconfigures R1 with a new route-map (filter2) that
+excludes 10.0.0.1/32 from SID assignment, confirms the prefix
+loses its SRv6 encapsulation on R2 and becomes uninstalled on
+R3, then restores the original route-map (filter) and verifies
+that SRv6 encapsulation is re-established on both peers.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../bgp_srv6_unicast/test_bgp_srv6_unicast.py | 66 +++++++++++++++++++
+ 1 file changed, 66 insertions(+)
+
+diff --git a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+index be30329105c0..388360aebac1 100644
+--- a/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
++++ b/tests/topotests/bgp_srv6_unicast/test_bgp_srv6_unicast.py
+@@ -247,6 +247,72 @@ def test_bgp_srv6_sid_rmap():
+     assert res is True, res
+ 
+ 
++def test_bgp_srv6_sid_rmap_update():
++    """
++    Update sid export route-map on an already configured sid export and verify
++    policy really changes.
++    """
++    tgen = get_topogen()
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        ip prefix-list BLOCK2 seq 1 deny 10.0.0.1/32
++        ip prefix-list BLOCK2 seq 255 permit any
++        route-map filter2 permit 20
++         match ip address prefix-list BLOCK2
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export auto route-map filter2
++        """
++    )
++
++    logger.info("Check prefix 10.0.0.1/32 no SRv6 encap on R2 after route-map update")
++    res = check_route(
++        tgen.gears["r2"], "show ip route 10.0.0.1/32 json", "10.0.0.1/32", ""
++    )
++    assert res is True, res
++
++    logger.info(
++        "Check prefix 10.0.0.1/32 is not installed on R3 after route-map update"
++    )
++    res = check_route(
++        tgen.gears["r3"],
++        "show ip route 10.0.0.1/32 json",
++        "10.0.0.1/32",
++        "",
++        expect_installed=False,
++    )
++    assert res is True, res
++
++    tgen.gears["r1"].vtysh_multicmd(
++        """
++        configure
++        router bgp 65001
++        address-family ipv4 unicast
++        sid export auto route-map filter
++        """
++    )
++
++    logger.info("Check prefix 10.0.0.1/32 SRv6 encap restored on R2")
++    res = check_route(
++        tgen.gears["r2"],
++        "show ip route 10.0.0.1/32 json",
++        "10.0.0.1/32",
++        r1_unicast_sid,
++    )
++    assert res is True, res
++
++    logger.info("Check prefix 10.0.0.1/32 SRv6 encap restored on R3")
++    res = check_route(
++        tgen.gears["r3"],
++        "show ip route 10.0.0.1/32 json",
++        "10.0.0.1/32",
++        r1_unicast_sid,
++    )
++    assert res is True, res
++
++
+ def test_bgp_srv6_sid_unexport():
+     """
+     Unconfigure sid export on R1, then check prefixes 10.0.0.1-3/32
