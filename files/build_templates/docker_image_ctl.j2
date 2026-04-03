@@ -511,6 +511,13 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
             CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
+        elif [ -n "$DEV" ]; then
+            # Multi-ASIC: check per-ASIC directory, then common/
+            if [ -f "$HWSKU_FOLDER/$DEV/create_only_config_db_buffers.json" ]; then
+                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
+            elif [ -f "$HWSKU_FOLDER/common/create_only_config_db_buffers.json" ]; then
+                CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
+            fi
         fi
 
         SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
