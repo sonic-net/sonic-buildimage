@@ -273,7 +273,7 @@ module sonic-smart-switch {
 					}
 				}
 
-				leaf-list main_dpu_ids {
+				leaf main_dpu_ids {
 					description "Main DPUs involved in this VDPU";
 					type string {
 						pattern "[a-zA-Z0-9_-]+[0-9]+";
