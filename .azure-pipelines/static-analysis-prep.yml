@@ -1,0 +1,46 @@
+# Static Analysis Preparation Pipeline
+#
+# Prepares a clean sonic-buildimage workspace with all submodules fully
+# initialized and ready for static code analysis tools (bandit, semgrep, etc.).
+# No build is performed — this stage is a prerequisite for analysis jobs.
+
+trigger:
+  branches:
+    include:
+      - master
+      - 202*
+
+pr:
+  branches:
+    include:
+      - master
+      - 202*
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+steps:
+  - checkout: self
+    clean: true
+    submodules: recursive
+    fetchDepth: 0
+
+  - script: |
+      git submodule sync --recursive
+      git submodule foreach --recursive 'git clean -xfdf || true'
+      git submodule foreach --recursive 'git reset --hard || true'
+      git submodule update --init --recursive
+    displayName: 'Reset and sync submodules'
+
+  - script: |
+      echo "=== Workspace summary ==="
+      echo "Repo root: $(pwd)"
+      echo "Submodule count: $(git submodule status --recursive | wc -l)"
+      echo "Python files: $(find . -name '*.py' -not -path './.git/*' -not -path './target/*' -not -path './fsroot*' | wc -l)"
+      echo "Go files:     $(find . -name '*.go' -not -path './.git/*' -not -path './target/*' | wc -l)"
+      echo "C/C++ files:  $(find . -name '*.[ch]' -o -name '*.cpp' -o -name '*.hpp' | grep -v '.git' | grep -v 'target/' | wc -l)"
+    displayName: 'Workspace summary'
+
+  - publish: $(Build.SourcesDirectory)
+    artifact: sonic-buildimage-source
+    displayName: 'Publish source tree for analysis jobs'
