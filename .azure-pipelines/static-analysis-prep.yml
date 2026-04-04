@@ -24,15 +24,14 @@ steps:
   - checkout: self
     clean: true
     submodules: recursive
-    fetchDepth: 0
+    fetchDepth: 1
 
   - script: |
       set -e
+      # Sync submodule remote URLs (catches cases where .gitmodules URLs changed)
       git submodule sync --recursive
-      git submodule foreach --recursive 'git clean -xfdf || true'
-      git submodule foreach --recursive 'git reset --hard || true'
       git submodule update --init --recursive
-    displayName: 'Reset and sync submodules'
+    displayName: 'Sync submodules'
 
   # External source trees fetched via git clone at build time.
   # Clone them here so static analysis tools can see the full codebase.
