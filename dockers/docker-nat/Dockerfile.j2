@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -10,10 +10,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ## Install redis-tools dependencies
 ## TODO: implicitly install dependencies
+## On trixie, iptables comes from Debian repos instead of local builds
 RUN apt-get update        \
 && apt-get install -f -y \
        bridge-utils      \
-       conntrack
+       conntrack          \
+       iptables
 
 {% if docker_nat_debs.strip() -%}
 # Copy locally-built Debian package dependencies
