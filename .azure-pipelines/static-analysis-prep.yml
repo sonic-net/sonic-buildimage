@@ -164,6 +164,29 @@ steps:
         -not -path './.git/*' -not -path './target/*' 2>/dev/null | wc -l)"
     displayName: 'Workspace summary'
 
-  - publish: $(Build.SourcesDirectory)
+  # Publish source tree for downstream analysis jobs.
+  # Excludes large non-Python/non-SONiC dirs that are not analysis targets:
+  #   p4lang             - 23 GB C++ compiler infrastructure, platform-specific
+  #   sonic-linux-kernel - kernel source, not SONiC code
+  #   grub2              - bootloader, pure C, Debian CVE patches only
+  #   sonic-device-data  - platform JSON/config data, no code
+  - script: |
+      set -e
+      DEST=$(Agent.TempDirectory)/sonic-buildimage-source
+      mkdir -p $DEST
+      rsync -a --delete \
+        --exclude='.git' \
+        --exclude='target/' \
+        --exclude='fsroot*' \
+        --exclude='dpkg/' \
+        --exclude='src/p4lang/' \
+        --exclude='src/sonic-linux-kernel/' \
+        --exclude='src/grub2/' \
+        --exclude='src/sonic-device-data/' \
+        ./ $DEST/
+      echo "Artifact size: $(du -sh $DEST | cut -f1)"
+    displayName: 'Stage source tree for publish'
+
+  - publish: $(Agent.TempDirectory)/sonic-buildimage-source
     artifact: sonic-buildimage-source
     displayName: 'Publish source tree for analysis jobs'
