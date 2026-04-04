@@ -108,6 +108,10 @@ POST_COPY_ACTIONS = {
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "monit"],
     ],
+    "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "restapi"],
+    ],
 }
 
 
@@ -166,7 +170,7 @@ def ensure_sync() -> bool:
     sync_items_list: List[SyncItem] = [
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
-        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh", mode=0o755),
+        SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
         SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
     ]
     return sync_items(sync_items_list, POST_COPY_ACTIONS)

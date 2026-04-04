@@ -202,6 +202,8 @@ sudo cp files/initramfs-tools/union-mount $FILESYSTEM_ROOT/etc/initramfs-tools/s
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/union-mount
 sudo cp files/initramfs-tools/varlog $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/varlog
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/varlog
+sudo cp files/initramfs-tools/swi2bin $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/swi2bin
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/swi2bin
 # Management interface (eth0) dhcp can be optionally turned off (during a migration from another NOS to SONiC)
 #sudo cp files/initramfs-tools/mgmt-intf-dhcp $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/mgmt-intf-dhcp
 #sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-bottom/mgmt-intf-dhcp
@@ -362,7 +364,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     cgroup-tools            \
     ipmitool                \
     ndisc6                  \
-    makedumpfile            \
     conntrack               \
     python3                 \
     python3-pip             \
@@ -421,7 +422,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/in
 sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
 sudo mkdir -p /etc/initramfs-tools/hooks
 
-# Copy the network setup scriptgit
+# Copy the network setup script
 sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
 
 # Copy the hook file
@@ -454,12 +455,14 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
 	( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
-        GRUB_PKG=grub-pc-bin
+        GRUB_PKGS='grub-efi-amd64-bin grub-pc-bin'
     elif [[ $CONFIGURED_ARCH == arm64 ]]; then
-        GRUB_PKG=grub-efi-arm64-bin
+        GRUB_PKGS=grub-efi-arm64-bin
     fi
 
-    sudo cp $debs_path/${GRUB_PKG}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    for grub_pkg in $GRUB_PKGS; do
+       sudo cp $debs_path/${grub_pkg}*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    done
 fi
 
 ## Disable kexec supported reboot which was installed by default
@@ -476,7 +479,7 @@ sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
-# 2. Configure sshd to close all SSH connetions after 15 minutes of inactivity
+# 2. Configure sshd to close all SSH connections after 15 minutes of inactivity
 sudo augtool -r $FILESYSTEM_ROOT <<'EOF'
 touch /files/etc/ssh/sshd_config/EmptyLineHack
 rename /files/etc/ssh/sshd_config/EmptyLineHack ""
@@ -532,7 +535,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docke
 # Install scapy
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
 
-## Note: keep pip installed for maintainance purpose
+## Note: keep pip installed for maintenance purpose
 
 # Install GCC, needed for building/installing some Python packages
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install gcc
@@ -691,7 +694,7 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
 	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
 
-    # debian secure boot dependecies
+    # debian secure boot dependencies
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
         shim-unsigned
 
@@ -751,7 +754,7 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
-    elif [[ $CONFIGURED_ARCH == arm64 ]]; then
+    elif [[ $CONFIGURED_ARCH == arm64 && $CONFIGURED_PLATFORM != nokia-vs ]]; then
         if [[ $CONFIGURED_PLATFORM == pensando ]]; then
             ## copy device tree file into boot (XXX: need to compile dtb from dts)
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
@@ -873,7 +876,7 @@ sudo mkdir $FILESYSTEM_ROOT/host
 
 
 if [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]]; then
-    ## Expire default password for exitsing users that can do login
+    ## Expire default password for existing users that can do login
     default_users=$(cat $FILESYSTEM_ROOT/etc/passwd | grep "/home"|  grep ":/bin/bash\|:/bin/sh" | awk -F ":" '{print $1}' 2> /dev/null)
     for user in $default_users
     do
@@ -891,8 +894,6 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
-sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
-sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
