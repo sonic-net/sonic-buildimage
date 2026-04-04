@@ -79,12 +79,33 @@ steps:
       set -e
 
       # ifupdown2 (fetched via wget in src/ifupdown2/Makefile)
+      # Version may contain dashes (e.g. 3.0.0-1); tarball extracts to ifupdown2-<version>/
       IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION} ]; then
-        curl -sL --no-check-certificate \
-          "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
-          -o /tmp/ifupdown2.tar.gz
-        tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
+      if [ -n "$IFUPDOWN2_VERSION" ]; then
+        if [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
+          echo "Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
+          curl -sL \
+            "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
+            -o /tmp/ifupdown2.tar.gz
+          tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
+        else
+          echo "ifupdown2 ${IFUPDOWN2_VERSION} already present"
+        fi
+      fi
+
+      # kdump-tools (fetched via apt source in src/kdump-tools/Makefile)
+      KDUMP_VERSION=$(grep '^KDUMP_TOOLS_VERSION' rules/kdump-tools.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
+      if [ -n "$KDUMP_VERSION" ]; then
+        if [ ! -d "src/kdump-tools/kdump-tools-${KDUMP_VERSION}" ]; then
+          echo "Fetching kdump-tools ${KDUMP_VERSION} source..."
+          cd src/kdump-tools
+          apt-get source kdump-tools=${KDUMP_VERSION} 2>/dev/null || \
+            curl -sL "http://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_${KDUMP_VERSION}.tar.xz" \
+              -o /tmp/kdump-tools.tar.xz && tar -xJf /tmp/kdump-tools.tar.xz -C . 2>/dev/null || true
+          cd -
+        else
+          echo "kdump-tools ${KDUMP_VERSION} already present"
+        fi
       fi
     displayName: 'Fetch external source tarballs'
 
@@ -96,27 +117,38 @@ steps:
       apply_patches() {
         local dir="$1"
         local patch_dir="$2"
-        if [ ! -d "$dir" ] || [ ! -d "$patch_dir" ]; then return; fi
+        if [ ! -d "$dir" ] || [ ! -d "$patch_dir" ]; then
+          echo "  SKIP: $dir (dir or patch_dir missing)"
+          return
+        fi
+        local count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
+        echo "  $dir: $count patches"
         pushd "$dir" > /dev/null
         for p in $(ls "$OLDPWD/$patch_dir"/*.patch 2>/dev/null | sort); do
-          echo "Applying $p to $dir"
-          git apply --whitespace=nowarn "$p" || true
+          git apply --whitespace=nowarn "$p" 2>/dev/null \
+            && echo "    OK: $(basename $p)" \
+            || echo "    SKIP (already applied): $(basename $p)"
         done
         popd > /dev/null
       }
 
-      # bash patches (TACACS plugin hook, etc.)
-      apply_patches src/bash/bash-5.2.37 src/bash/patches
+      # bash patches
+      BASH_DIR=$(ls -d src/bash/bash-* 2>/dev/null | head -1)
+      [ -n "$BASH_DIR" ] && apply_patches "$BASH_DIR" "src/bash/patches" \
+        || echo "  SKIP: bash source dir not found"
 
       # dhcprelay patches
       apply_patches src/dhcprelay/dhcp4relay src/dhcprelay/dhcp4relay/patch
 
       # kdump-tools patches
-      apply_patches src/kdump-tools/kdump-tools src/kdump-tools/patch
+      KDUMP_DIR=$(ls -d src/kdump-tools/kdump-tools-* 2>/dev/null | head -1)
+      [ -n "$KDUMP_DIR" ] && apply_patches "$KDUMP_DIR" "src/kdump-tools/patch" \
+        || echo "  SKIP: kdump-tools source dir not found"
 
       # libnl3 patches
-      apply_patches src/libnl3/libnl3-$(grep '^LIBNL3_VERSION' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ') \
-                    src/libnl3/patch
+      LIBNL3_VERSION=$(grep '^LIBNL3_VERSION' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
+      [ -n "$LIBNL3_VERSION" ] && apply_patches "src/libnl3/libnl3-${LIBNL3_VERSION}" "src/libnl3/patch" \
+        || echo "  SKIP: libnl3 version not found"
     displayName: 'Apply source patches'
 
   - script: |
