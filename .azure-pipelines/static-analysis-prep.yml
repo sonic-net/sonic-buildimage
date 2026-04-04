@@ -33,135 +33,170 @@ steps:
       git submodule update --init --recursive
     displayName: 'Sync submodules'
 
-  # External source trees fetched via git clone at build time.
+  # Fetch all external source trees that are obtained via git clone at build time.
+  # Auto-discovers packages by scanning Makefiles for git clone commands.
+  # Only fetches packages that have in-tree SONiC patches (patch/ or patches/ dirs).
+  # Version tags and URLs are resolved dynamically from rules/*.mk — no hardcoded values.
   - script: |
       set -e
 
-      # flashrom
-      FLASHROM_VERSION=$(make -f - --no-print-directory 2>/dev/null \
-        include\ rules/flashrom.mk$'\nprint-%: ; @echo $($*)' print-FLASHROM_VERSION_FULL \
-        <<< 'include rules/flashrom.mk
-print-%: ; @echo $($*)' || grep '^FLASHROM_VERSION_FULL\b' rules/flashrom.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      if [ ! -d "src/flashrom/flashrom-${FLASHROM_VERSION}" ]; then
-        git clone --depth 1 --branch "v${FLASHROM_VERSION}" \
-          https://github.com/flashrom/flashrom.git \
-          "src/flashrom/flashrom-${FLASHROM_VERSION}"
+      # resolve_make_var RULES_MK VAR [EXTRA_VAR_DEFS]
+      # Resolves a Make variable by including the given .mk file.
+      resolve_make_var() {
+        local rules_mk="$1" var="$2" extra="${3:-}"
+        make -f - --no-print-directory 2>/dev/null <<MAKEFILE | tr -d ' \n'
+include $rules_mk
+BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
+$extra
+resolve: ; @echo \$($var)
+MAKEFILE
+      }
+
+      # fetch_git_clone PARENT_DIR URL DEST_SUBDIR [BRANCH_OR_TAG]
+      fetch_git_clone() {
+        local parent="$1" url="$2" dest="$3" ref="${4:-}"
+        if [ -d "$parent/$dest" ]; then
+          echo "  EXISTS: $parent/$dest"; return
+        fi
+        echo "  Cloning $(basename $dest) from $url${ref:+ @ $ref}"
+        git clone --depth 1 ${ref:+--branch "$ref"} "$url" "$parent/$dest" 2>&1 | tail -2
+      }
+
+      # --- Packages with in-tree SONiC patches ---
+
+      # flashrom: rules/flashrom.mk defines FLASHROM_VERSION_FULL
+      VER=$(resolve_make_var rules/flashrom.mk FLASHROM_VERSION_FULL)
+      fetch_git_clone src/flashrom https://github.com/flashrom/flashrom.git \
+        "flashrom-${VER}" "v${VER}"
+
+      # grub2: rules/grub2.mk defines GRUB2_VERSION; tag is debian/<version>
+      VER=$(resolve_make_var rules/grub2.mk GRUB2_VERSION)
+      fetch_git_clone src/grub2 https://salsa.debian.org/grub-team/grub.git \
+        "grub2" "debian/${VER}"
+
+      # libyang v1: rules/libyang.mk defines LIBYANG_VERSION; Makefile hardcodes tag v1.0-r4
+      VER=$(resolve_make_var rules/libyang.mk LIBYANG_VERSION)
+      fetch_git_clone src/libyang https://github.com/CESNET/libyang.git \
+        "libyang-${VER}" "v1.0-r4"
+
+      # libyang3-py3: tag hardcoded in Makefile as v3.1.0
+      fetch_git_clone src/libyang3-py3 https://github.com/CESNET/libyang-python.git \
+        "libyang-python" "v3.1.0"
+
+      # monit: rules/monit.mk defines MONIT_VERSION; tag is debian/1%<version>
+      VER=$(resolve_make_var rules/monit.mk MONIT_VERSION)
+      if [ ! -d src/monit/monit ]; then
+        echo "  Cloning monit @ debian/1%${VER}"
+        git clone --depth 50 https://salsa.debian.org/debian/monit.git src/monit/monit 2>&1 | tail -2
+        cd src/monit/monit
+        git reset --hard "debian/1%${VER}" 2>/dev/null || true
+        cd -
       fi
 
-      # libpsample (Mellanox sflow)
-      [ ! -d src/sflow/libpsample ] && \
-        git clone --depth 1 https://github.com/Mellanox/libpsample.git src/sflow/libpsample
+      # --- No-patch git clones (no SONiC patches, needed for analysis coverage) ---
 
-      # librdb (redis rdb-cli)
-      [ ! -d src/rdb-cli/librdb ] && \
-        git clone --depth 1 https://github.com/redis/librdb.git src/rdb-cli/librdb
-
-      # oc-pyang (openconfig YANG tools, used by sonic-mgmt-common)
-      [ ! -d src/sonic-mgmt-common/models/yang/oc-pyang ] && \
-        git clone --depth 1 https://github.com/openconfig/oc-pyang.git \
-          src/sonic-mgmt-common/models/yang/oc-pyang
-
-      # libyang v1 — Makefile uses git clone + tag, not dget
-      LIBYANG_VERSION=1.0.73
-      if [ ! -d "src/libyang/libyang-${LIBYANG_VERSION}" ]; then
-        git clone --depth 1 --branch v1.0-r4 \
-          https://github.com/CESNET/libyang.git \
-          "src/libyang/libyang-${LIBYANG_VERSION}"
-      fi
+      fetch_git_clone src/sflow      https://github.com/Mellanox/libpsample.git libpsample
+      fetch_git_clone src/rdb-cli    https://github.com/redis/librdb.git         librdb
+      fetch_git_clone src/sonic-mgmt-common/models/yang \
+                                     https://github.com/openconfig/oc-pyang.git  oc-pyang
     displayName: 'Clone external source trees'
 
-  # Packages fetched via dget or wget at build time, with in-tree SONiC patches.
-  # Auto-discovers all src/ and platform/ Makefiles that use dget and have patches.
-  # Rules .mk files are found by convention: rules/<pkg>.mk or <parent>/<pkg>.mk.
+  # Fetch all external source trees obtained via dget or wget at build time.
+  # Auto-discovers packages by scanning Makefiles for dget/wget-dsc commands
+  # where in-tree SONiC patches exist. URLs resolved from rules/*.mk dynamically.
   - script: |
       set -e
       sudo apt-get install -y -q devscripts
 
-      # resolve_dget_url DIR [EXTRA_MK]
-      # Reads the dget URL template from DIR/Makefile, expands Make variables
-      # by including the corresponding rules .mk, and prints the resolved .dsc URL.
-      resolve_dget_url() {
-        local dir="$1" extra_mk="${2:-}"
-        local pkg_mk="$dir/Makefile"
-        local basename
-        basename=$(basename "$dir")
-        # Find corresponding rules .mk: rules/<pkg>.mk or <parent>/<pkg>.mk
-        local rules_mk
-        if [ -f "rules/${basename}.mk" ]; then
-          rules_mk="rules/${basename}.mk"
-        else
-          rules_mk="$(dirname $dir)/${basename}.mk"
-        fi
-        local raw
-        raw=$(grep '\bdget\b' "$pkg_mk" | head -1 \
-          | sed 's/.*dget[[:space:]]*//' | sed 's/^-u[[:space:]]*//' | tr -d '\t')
-        local includes="include $rules_mk"
-        [ -n "$extra_mk" ] && includes="$includes
-include $extra_mk"
+      # resolve_url_from_mk RULES_MK URL_TEMPLATE [EXTRA_VAR_DEFS]
+      # Expands Make variables in URL_TEMPLATE using the given .mk file.
+      resolve_url() {
+        local rules_mk="$1" template="$2" extra="${3:-}"
         make -f - --no-print-directory 2>/dev/null <<MAKEFILE | grep -oE 'https?://[^ ]+\.dsc' | head -1
-$includes
+include $rules_mk
 BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
-_x := $raw
+$extra
+_x := $template
 resolve: ; @echo \$(_x)
 MAKEFILE
       }
 
-      # fetch_dget DIR
-      # Fetches source via dget if not already present.
-      # If URL resolution fails with rules .mk alone, retries with the package
-      # Makefile also included (handles cases like lldpd/libyang3 where URL vars
-      # are defined in the package Makefile, not the rules .mk).
-      fetch_dget() {
-        local dir="$1"
-        local url
-        url=$(resolve_dget_url "$dir")
-        # Retry with package Makefile included if variables unresolved
-        if [ -z "$url" ]; then
-          url=$(resolve_dget_url "$dir" "$dir/Makefile")
-        fi
-        if [ -z "$url" ]; then
-          echo "  SKIP $dir: could not resolve dget URL"
-          return
-        fi
-        # Check if any source dir already exists under $dir
+      # fetch_dsc DIR URL
+      # Fetches a Debian source package via dget if no source dir exists yet.
+      fetch_dsc() {
+        local dir="$1" url="$2"
         local existing
         existing=$(find "$dir" -mindepth 1 -maxdepth 1 -type d \
           ! -name patch ! -name patches ! -name debian ! -name '.git' \
           2>/dev/null | head -1)
         if [ -n "$existing" ]; then
-          echo "  EXISTS: $dir ($(basename $existing))"
-          return
+          echo "  EXISTS: $dir ($(basename $existing))"; return
         fi
-        echo "  Fetching $dir from $url"
-        cd "$dir"
-        dget -u "$url"
-        cd -
+        echo "  Fetching $(basename $dir) from $url"
+        cd "$dir"; dget -u "$url"; cd -
       }
 
-      # ifupdown2 (wget tarball, not dget — no rules .mk pattern applies)
-      IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
-        echo "  Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
-        curl -sL "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
+      # ifupdown2: wget tarball from GitHub (no .dsc)
+      VER=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      if [ -n "$VER" ] && [ ! -d "src/ifupdown2/ifupdown2-${VER}" ]; then
+        echo "  Fetching ifupdown2 ${VER}..."
+        curl -sL "https://github.com/CumulusNetworks/ifupdown2/archive/${VER}.tar.gz" \
           -o /tmp/ifupdown2.tar.gz
         tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
       fi
 
-      # Auto-discover all Makefiles with dget + in-tree patches
+      # Auto-discover dget packages: Makefiles with \bdget\b + in-tree patches
       find src platform/mellanox -name Makefile 2>/dev/null | sort | while read mk; do
         dir=$(dirname "$mk")
-        # Skip if this is a nested Makefile inside an already-unpacked source tree
-        # (identified by having a parent dir that is itself under src/<pkg>/)
+        # Skip nested Makefiles inside already-unpacked source trees (depth > src/<pkg>)
         depth=$(echo "$dir" | tr -cd '/' | wc -c)
         [ "$depth" -gt 2 ] && continue
         grep -q '\bdget\b' "$mk" || continue
-        patch_count=$(find "$dir/patch" "$dir/patches" 2>/dev/null -name "*.patch" 2>/dev/null | wc -l)
+        patch_count=$(find "$dir/patch" "$dir/patches" 2>/dev/null -name "*.patch" | wc -l)
         [ "$patch_count" -eq 0 ] && continue
-        fetch_dget "$dir"
+
+        # Derive rules .mk by convention: rules/<pkg>.mk or <parent>/<pkg>.mk
+        pkg=$(basename "$dir")
+        rules_mk="rules/${pkg}.mk"
+        [ ! -f "$rules_mk" ] && rules_mk="$(dirname $dir)/${pkg}.mk"
+
+        # Extract URL template from dget line
+        tmpl=$(grep '\bdget\b' "$mk" | head -1 \
+          | sed 's/.*dget[[:space:]]*//' | sed 's/^-u[[:space:]]*//' | tr -d '\t')
+
+        url=$(resolve_url "$rules_mk" "$tmpl")
+        # Retry including the package Makefile (for packages like lldpd/libyang3
+        # where the URL uses variables defined in the package Makefile itself)
+        if [ -z "$url" ]; then
+          url=$(resolve_url "$rules_mk" "$tmpl" "include $mk")
+        fi
+        [ -z "$url" ] && echo "  SKIP $dir: could not resolve URL" && continue
+        fetch_dsc "$dir" "$url"
       done
+
+      # wget-dsc packages (use wget instead of dget, but .dsc URL is available)
+      # iptables
+      IPTABLES_URL=$(grep '^IPTABLES_URL' src/iptables/Makefile | cut -d= -f2 | tr -d ' \t')
+      IPTABLES_VER=$(grep '^IPTABLES_VERSION ' rules/iptables.mk | cut -d= -f2 | tr -d ' ')
+      IPTABLES_SUFFIX=$(grep '^IPTABLES_VERSION_SUFFIX' rules/iptables.mk | cut -d= -f2 | tr -d ' ')
+      fetch_dsc src/iptables "${IPTABLES_URL}/iptables_${IPTABLES_VER}-${IPTABLES_SUFFIX}.dsc"
+
+      # socat: URL in wget line with $(BUILD_PUBLIC_URL) — resolve via rules mk
+      SOCAT_TMPL=$(grep '\bwget\b' src/socat/Makefile | grep '\.dsc' | head -1 \
+        | grep -oP '"[^"]+\.dsc"' | tail -1 | tr -d '"')
+      SOCAT_URL=$(resolve_url rules/socat.mk "$SOCAT_TMPL")
+      [ -n "$SOCAT_URL" ] && fetch_dsc src/socat "$SOCAT_URL"
+
+      # thrift: URL uses $(THRIFT_LINK_PRE) = $(BUILD_PUBLIC_URL)/debian
+      THRIFT_VER=$(grep '^THRIFT_VERSION\s*=' src/thrift/Makefile | head -1 | cut -d= -f2 | tr -d ' ')
+      THRIFT_FULL=$(grep '^THRIFT_VERSION_FULL\s*=' src/thrift/Makefile | head -1 | \
+        cut -d= -f2 | tr -d ' ' | sed "s/\$(THRIFT_VERSION)/${THRIFT_VER}/")
+      fetch_dsc src/thrift \
+        "https://packages.trafficmanager.net/public/debian/thrift_${THRIFT_FULL}.dsc"
     displayName: 'Fetch external source trees (dget/tarball)'
 
   # Apply in-tree SONiC patches to all fetched source trees.
+  # Auto-discovers patch dirs — no hardcoded paths.
   - script: |
       set -e
 
@@ -181,14 +216,12 @@ MAKEFILE
         popd > /dev/null
       }
 
-      # Auto-discover all dirs with in-tree patches and apply them to the
-      # corresponding unpacked source subdirectory.
+      # For each patch dir, find the corresponding unpacked source subdir and apply.
       find src platform/mellanox -mindepth 1 -maxdepth 2 \
           \( -name patch -o -name patches \) -type d 2>/dev/null | sort | while read patch_dir; do
-        patch_count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
-        [ "$patch_count" -eq 0 ] && continue
+        count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
+        [ "$count" -eq 0 ] && continue
         parent=$(dirname "$patch_dir")
-        # Find the unpacked source subdir (not patch/patches/debian/.git)
         src_dir=$(find "$parent" -mindepth 1 -maxdepth 1 -type d \
           ! -name patch ! -name patches ! -name debian ! -name '.git' \
           2>/dev/null | sort | head -1)
@@ -214,7 +247,7 @@ MAKEFILE
   # Excludes large dirs with no SONiC code (no patches, pure upstream C):
   #   p4lang             - 23 GB C++ compiler infrastructure
   #   sonic-linux-kernel - kernel source
-  #   grub2              - bootloader, pure C, no SONiC patches
+  #   grub2              - bootloader (excluded: Debian CVE patches only, no SONiC patches)
   #   sonic-device-data  - platform JSON/config data, no code
   - script: |
       set -e
