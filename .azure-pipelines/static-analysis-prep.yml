@@ -34,18 +34,8 @@ steps:
     displayName: 'Sync submodules'
 
   # External source trees fetched via git clone at build time.
-  # Clone them here so static analysis tools can see the full codebase.
   - script: |
       set -e
-
-      # libyang C library
-      # Note: Debian package version is 1.0.73 but git tag is v1.0-r4 (checked out in Makefile)
-      LIBYANG_VERSION=1.0.73
-      if [ ! -d src/libyang/libyang-${LIBYANG_VERSION} ]; then
-        git clone --depth 1 --branch v1.0-r4 \
-          https://github.com/CESNET/libyang.git \
-          src/libyang/libyang-${LIBYANG_VERSION}
-      fi
 
       # flashrom (version pinned in rules/flashrom.mk)
       FLASHROM_VERSION=1.4.0
@@ -75,67 +65,132 @@ steps:
     displayName: 'Clone external source trees'
 
   # External source trees fetched via wget/tarball/dget at build time.
+  # Only packages that have in-tree SONiC patches are fetched here.
   - script: |
       set -e
-      sudo apt-get install -y -q devscripts 2>/dev/null
+      sudo apt-get install -y -q devscripts
 
-      # ifupdown2 (fetched via wget in src/ifupdown2/Makefile)
-      # Version may contain dashes (e.g. 3.0.0-1); tarball extracts to ifupdown2-<version>/
-      IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      if [ -n "$IFUPDOWN2_VERSION" ]; then
-        if [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
-          echo "Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
-          curl -sL \
-            "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
-            -o /tmp/ifupdown2.tar.gz
-          tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
+      dget_pkg() {
+        local dir="$1" url="$2"
+        if [ ! -d "$dir" ]; then
+          echo "Fetching $(basename $dir)..."
+          dget -u "$url"
         else
-          echo "ifupdown2 ${IFUPDOWN2_VERSION} already present"
+          echo "$(basename $dir) already present"
         fi
+      }
+
+      # ifupdown2 (wget tarball)
+      IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
+        echo "Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
+        curl -sL "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
+          -o /tmp/ifupdown2.tar.gz
+        tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
       fi
 
-      # bash (fetched via dget from Debian in src/bash/Makefile)
-      BASH_VERSION_MAJOR=$(grep '^BASH_VERSION_MAJOR' rules/bash.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      BASH_VERSION_FULL=$(grep '^BASH_VERSION_FULL\b' rules/bash.mk 2>/dev/null | head -1 | sed 's/.*= *//' | tr -d ' ')
-      if [ -z "$BASH_VERSION_FULL" ]; then
-        BASH_VERSION_FULL="${BASH_VERSION_MAJOR}-2"
-      fi
-      if [ -n "$BASH_VERSION_MAJOR" ] && [ ! -d "src/bash/bash-${BASH_VERSION_MAJOR}" ]; then
-        echo "Fetching bash ${BASH_VERSION_FULL} source..."
-        cd src/bash
-        dget -u "https://deb.debian.org/debian/pool/main/b/bash/bash_${BASH_VERSION_FULL}.dsc"
-        cd -
-      else
-        echo "bash ${BASH_VERSION_MAJOR} already present"
+      # bash
+      BASH_MAJOR=$(grep '^BASH_VERSION_MAJOR' rules/bash.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      BASH_FULL=$(grep '^BASH_VERSION_FULL' rules/bash.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\$(BASH_VERSION_MAJOR)/${BASH_MAJOR}/")
+      cd src/bash
+      dget_pkg "bash-${BASH_MAJOR}" \
+        "https://deb.debian.org/debian/pool/main/b/bash/bash_${BASH_FULL}.dsc"
+      cd -
+
+      # isc-dhcp
+      ISC_VER=$(grep '^ISC_DHCP_VERSION ' rules/isc-dhcp.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      ISC_FULL=$(grep '^ISC_DHCP_VERSION_FULL' rules/isc-dhcp.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\${ISC_DHCP_VERSION}/${ISC_VER}/")
+      cd src/isc-dhcp
+      dget_pkg "isc-dhcp-${ISC_VER}" \
+        "http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_${ISC_FULL}.dsc"
+      cd -
+
+      # kdump-tools
+      KDUMP_VER=$(grep '^KDUMP_TOOLS_VERSION' rules/kdump-tools.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      cd src/kdump-tools
+      dget_pkg "kdump-tools-${KDUMP_VER}" \
+        "https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_${KDUMP_VER}.dsc"
+      cd -
+
+      # libteam
+      LIBTEAM_VER=$(grep '^LIBTEAM_VERSION :=' rules/libteam.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LIBTEAM_FULL=$(grep '^LIBTEAM_VERSION_FULL' rules/libteam.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\$(LIBTEAM_VERSION)/${LIBTEAM_VER}/")
+      cd src/libteam
+      dget_pkg "libteam-${LIBTEAM_VER}" \
+        "https://deb.debian.org/debian/pool/main/libt/libteam/libteam_${LIBTEAM_FULL}.dsc"
+      cd -
+
+      # libyang (v1 — used by older packages)
+      LIBYANG_VER=1.0.73
+      if [ ! -d src/libyang/libnl3-${LIBYANG_VER} ] && [ ! -d src/libyang/libyang-${LIBYANG_VER} ]; then
+        git clone --depth 1 --branch v1.0-r4 \
+          https://github.com/CESNET/libyang.git \
+          src/libyang/libyang-${LIBYANG_VER}
       fi
 
-      # libnl3 (fetched via dget from Debian in src/libnl3/Makefile)
-      LIBNL3_VERSION_BASE=$(grep '^LIBNL3_VERSION_BASE' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      LIBNL3_VERSION=$(grep '^LIBNL3_VERSION ' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ' | sed "s/\$(LIBNL3_VERSION_BASE)/${LIBNL3_VERSION_BASE}/")
-      if [ -n "$LIBNL3_VERSION_BASE" ] && [ ! -d "src/libnl3/libnl3-${LIBNL3_VERSION_BASE}" ]; then
-        echo "Fetching libnl3 ${LIBNL3_VERSION} source..."
-        cd src/libnl3
-        dget "https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_${LIBNL3_VERSION}.dsc"
-        cd -
-      else
-        echo "libnl3 ${LIBNL3_VERSION_BASE} already present"
-      fi
+      # libyang3
+      LIBYANG3_VER=$(grep '^LIBYANG3_VERSION ' rules/libyang3.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LIBYANG3_SUB=$(grep '^LIBYANG3_SUBVERSION' rules/libyang3.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LIBYANG3_FULL="${LIBYANG3_VER}-${LIBYANG3_SUB}"
+      LIBYANG_URL=$(grep '^LIBYANG_URL' src/libyang3/Makefile | head -1 | cut -d= -f2 | tr -d ' ')
+      cd src/libyang3
+      dget_pkg "libyang-${LIBYANG3_VER}" \
+        "${LIBYANG_URL}/libyang_${LIBYANG3_FULL}.dsc"
+      cd -
 
-      # kdump-tools (fetched via apt source in src/kdump-tools/Makefile)
-      KDUMP_VERSION=$(grep '^KDUMP_TOOLS_VERSION' rules/kdump-tools.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      if [ -n "$KDUMP_VERSION" ]; then
-        if [ ! -d "src/kdump-tools/kdump-tools-${KDUMP_VERSION}" ]; then
-          echo "Fetching kdump-tools ${KDUMP_VERSION} source..."
-          cd src/kdump-tools
-          apt-get source kdump-tools=${KDUMP_VERSION} 2>/dev/null || \
-            curl -sL "http://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_${KDUMP_VERSION}.tar.xz" \
-              -o /tmp/kdump-tools.tar.xz && tar -xJf /tmp/kdump-tools.tar.xz -C . 2>/dev/null || true
-          cd -
-        else
-          echo "kdump-tools ${KDUMP_VERSION} already present"
-        fi
-      fi
-    displayName: 'Fetch external source tarballs'
+      # libnl3
+      LIBNL3_BASE=$(grep '^LIBNL3_VERSION_BASE' rules/libnl3.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LIBNL3_FULL=$(grep '^LIBNL3_VERSION ' rules/libnl3.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\$(LIBNL3_VERSION_BASE)/${LIBNL3_BASE}/")
+      cd src/libnl3
+      dget_pkg "libnl3-${LIBNL3_BASE}" \
+        "https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_${LIBNL3_FULL}.dsc"
+      cd -
+
+      # lldpd
+      LLDPD_VER=$(grep '^LLDPD_VERSION ' rules/lldpd.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LLDPD_SUFFIX=$(grep '^LLDPD_VERSION_SUFFIX' rules/lldpd.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LLDPD_FULL="${LLDPD_VER}-${LLDPD_SUFFIX}"
+      BUILD_PUBLIC_URL=$(grep '^BUILD_PUBLIC_URL' rules/config | head -1 | cut -d= -f2- | tr -d ' ' | sed 's/?=//')
+      BUILD_PUBLIC_URL=${BUILD_PUBLIC_URL:-https://packages.trafficmanager.net/public}
+      cd src/lldpd
+      dget_pkg "lldpd-${LLDPD_VER}" \
+        "${BUILD_PUBLIC_URL}/debian/pool/main/l/lldpd/lldpd_${LLDPD_FULL}.dsc"
+      cd -
+
+      # lm-sensors (Debian epoch version: 1:3.6.0-7.1, DSC file uses 3.6.0-7.1)
+      LM_MAJOR=$(grep '^LM_SENSORS_MAJOR_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LM_MINOR=$(grep '^LM_SENSORS_MINOR_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LM_PATCH=$(grep '^LM_SENSORS_PATCH_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      LM_SUFFIX=$(grep '^LM_SENSORS_VERSION_FULL' rules/lm-sensors.mk | head -1 | sed 's/.*-//' | tr -d ' ')
+      LM_VER="${LM_MAJOR}.${LM_MINOR}.${LM_PATCH}"
+      LM_FULL="${LM_VER}-${LM_SUFFIX}"
+      cd src/lm-sensors
+      dget_pkg "lm-sensors-${LM_VER}" \
+        "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_${LM_FULL}.dsc"
+      cd -
+
+      # openssh
+      OPENSSH_VER=$(grep '^OPENSSH_VERSION :=' rules/openssh.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      OPENSSH_FULL=$(grep '^OPENSSH_VERSION_FULL' rules/openssh.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\$(OPENSSH_VERSION)/${OPENSSH_VER}/")
+      cd src/openssh
+      dget_pkg "openssh-${OPENSSH_VER}" \
+        "https://deb.debian.org/debian/pool/main/o/openssh/openssh_${OPENSSH_FULL}.dsc"
+      cd -
+
+      # mellanox iproute2
+      IPROUTE2_MLNX_VER=$(grep '^IPROUTE2_MLNX_VERSION\b' platform/mellanox/iproute2.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      IPROUTE2_MLNX_FULL=$(grep '^IPROUTE2_MLNX_VERSION_FULL' platform/mellanox/iproute2.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
+        sed "s/\$(IPROUTE2_MLNX_VERSION)/${IPROUTE2_MLNX_VER}/")
+      cd platform/mellanox/iproute2
+      dget_pkg "iproute2-${IPROUTE2_MLNX_VER}" \
+        "http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_${IPROUTE2_MLNX_FULL}.dsc"
+      cd -
+    displayName: 'Fetch external source trees (dget/tarball)'
 
   # Apply patches that are tracked in the repo but not yet applied
   # (these are applied during the build; apply them here for analysis).
@@ -160,23 +215,26 @@ steps:
         popd > /dev/null
       }
 
-      # bash patches
-      BASH_DIR=$(ls -d src/bash/bash-* 2>/dev/null | head -1)
-      [ -n "$BASH_DIR" ] && apply_patches "$BASH_DIR" "src/bash/patches" \
-        || echo "  SKIP: bash source dir not found"
+      apply_dir_patches() {
+        # Find the unpacked source dir dynamically and apply patches
+        local src_parent="$1"
+        local patch_dir="$2"
+        local src_dir=$(ls -d ${src_parent}/*/ 2>/dev/null | grep -v '\.git' | head -1)
+        [ -n "$src_dir" ] && apply_patches "$src_dir" "$patch_dir" \
+          || echo "  SKIP: no source dir found under $src_parent"
+      }
 
-      # dhcprelay patches
-      apply_patches src/dhcprelay/dhcp4relay src/dhcprelay/dhcp4relay/patch
-
-      # kdump-tools patches
-      KDUMP_DIR=$(ls -d src/kdump-tools/kdump-tools-* 2>/dev/null | head -1)
-      [ -n "$KDUMP_DIR" ] && apply_patches "$KDUMP_DIR" "src/kdump-tools/patch" \
-        || echo "  SKIP: kdump-tools source dir not found"
-
-      # libnl3 patches
-      LIBNL3_VERSION=$(grep '^LIBNL3_VERSION' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
-      [ -n "$LIBNL3_VERSION" ] && apply_patches "src/libnl3/libnl3-${LIBNL3_VERSION}" "src/libnl3/patch" \
-        || echo "  SKIP: libnl3 version not found"
+      apply_dir_patches src/bash             src/bash/patches
+      apply_dir_patches src/dhcprelay/dhcp4relay src/dhcprelay/dhcp4relay/patch
+      apply_dir_patches src/isc-dhcp         src/isc-dhcp/patch
+      apply_dir_patches src/kdump-tools      src/kdump-tools/patch
+      apply_dir_patches src/libteam          src/libteam/patch
+      apply_dir_patches src/libyang3         src/libyang3/patch
+      apply_dir_patches src/libnl3           src/libnl3/patch
+      apply_dir_patches src/lldpd            src/lldpd/patch
+      apply_dir_patches src/lm-sensors       src/lm-sensors/patch
+      apply_dir_patches src/openssh          src/openssh/patch
+      apply_dir_patches platform/mellanox/iproute2 platform/mellanox/iproute2/patch
     displayName: 'Apply source patches'
 
   - script: |
