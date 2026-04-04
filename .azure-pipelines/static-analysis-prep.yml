@@ -1,8 +1,9 @@
 # Static Analysis Preparation Pipeline
 #
-# Prepares a clean sonic-buildimage workspace with all submodules fully
-# initialized and ready for static code analysis tools (bandit, semgrep, etc.).
-# No build is performed — this stage is a prerequisite for analysis jobs.
+# Prepares a clean sonic-buildimage workspace with all submodules and
+# externally-fetched source trees fully initialized, ready for static
+# code analysis tools (bandit, semgrep, pylint, etc.).
+# No build is performed.
 
 trigger:
   branches:
@@ -26,19 +27,109 @@ steps:
     fetchDepth: 0
 
   - script: |
+      set -e
       git submodule sync --recursive
       git submodule foreach --recursive 'git clean -xfdf || true'
       git submodule foreach --recursive 'git reset --hard || true'
       git submodule update --init --recursive
     displayName: 'Reset and sync submodules'
 
+  # External source trees fetched via git clone at build time.
+  # Clone them here so static analysis tools can see the full codebase.
+  - script: |
+      set -e
+
+      # libyang C library (version pinned in rules/libyang.mk)
+      LIBYANG_VERSION=1.0.73
+      if [ ! -d src/libyang/libyang-${LIBYANG_VERSION} ]; then
+        git clone --depth 1 --branch v${LIBYANG_VERSION} \
+          https://github.com/CESNET/libyang.git \
+          src/libyang/libyang-${LIBYANG_VERSION}
+      fi
+
+      # flashrom (version pinned in rules/flashrom.mk)
+      FLASHROM_VERSION=1.4.0
+      if [ ! -d src/flashrom/flashrom-${FLASHROM_VERSION} ]; then
+        git clone --depth 1 --branch v${FLASHROM_VERSION} \
+          https://github.com/flashrom/flashrom.git \
+          src/flashrom/flashrom-${FLASHROM_VERSION}
+      fi
+
+      # libpsample (Mellanox sflow)
+      if [ ! -d src/sflow/libpsample ]; then
+        git clone --depth 1 https://github.com/Mellanox/libpsample.git \
+          src/sflow/libpsample
+      fi
+
+      # librdb (redis rdb-cli)
+      if [ ! -d src/rdb-cli/librdb ]; then
+        git clone --depth 1 https://github.com/redis/librdb.git \
+          src/rdb-cli/librdb
+      fi
+
+      # oc-pyang (openconfig YANG tools, used by sonic-mgmt-common)
+      if [ ! -d src/sonic-mgmt-common/models/yang/oc-pyang ]; then
+        git clone --depth 1 https://github.com/openconfig/oc-pyang.git \
+          src/sonic-mgmt-common/models/yang/oc-pyang
+      fi
+    displayName: 'Clone external source trees'
+
+  # External source trees fetched via wget/tarball at build time.
+  - script: |
+      set -e
+
+      # ifupdown2 (fetched via wget in src/ifupdown2/Makefile)
+      IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ')
+      if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION} ]; then
+        curl -sL --no-check-certificate \
+          "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
+          -o /tmp/ifupdown2.tar.gz
+        tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
+      fi
+    displayName: 'Fetch external source tarballs'
+
+  # Apply patches that are tracked in the repo but not yet applied
+  # (these are applied during the build; apply them here for analysis).
+  - script: |
+      set -e
+
+      apply_patches() {
+        local dir="$1"
+        local patch_dir="$2"
+        if [ ! -d "$dir" ] || [ ! -d "$patch_dir" ]; then return; fi
+        pushd "$dir" > /dev/null
+        for p in $(ls "$OLDPWD/$patch_dir"/*.patch 2>/dev/null | sort); do
+          echo "Applying $p to $dir"
+          git apply --whitespace=nowarn "$p" || true
+        done
+        popd > /dev/null
+      }
+
+      # bash patches (TACACS plugin hook, etc.)
+      apply_patches src/bash/bash-5.2.37 src/bash/patches
+
+      # dhcprelay patches
+      apply_patches src/dhcprelay/dhcp4relay src/dhcprelay/dhcp4relay/patch
+
+      # kdump-tools patches
+      apply_patches src/kdump-tools/kdump-tools src/kdump-tools/patch
+
+      # libnl3 patches
+      apply_patches src/libnl3/libnl3-$(grep '^LIBNL3_VERSION' rules/libnl3.mk 2>/dev/null | head -1 | cut -d= -f2 | tr -d ' ') \
+                    src/libnl3/patch
+    displayName: 'Apply source patches'
+
   - script: |
       echo "=== Workspace summary ==="
-      echo "Repo root: $(pwd)"
       echo "Submodule count: $(git submodule status --recursive | wc -l)"
-      echo "Python files: $(find . -name '*.py' -not -path './.git/*' -not -path './target/*' -not -path './fsroot*' | wc -l)"
-      echo "Go files:     $(find . -name '*.go' -not -path './.git/*' -not -path './target/*' | wc -l)"
-      echo "C/C++ files:  $(find . -name '*.[ch]' -o -name '*.cpp' -o -name '*.hpp' | grep -v '.git' | grep -v 'target/' | wc -l)"
+      echo "Python files:    $(find . -name '*.py' \
+        -not -path './.git/*' -not -path './target/*' -not -path './fsroot*' \
+        -not -path './dpkg/*' 2>/dev/null | wc -l)"
+      echo "C/C++ files:     $(find . \( -name '*.[ch]' -o -name '*.cpp' -o -name '*.hpp' \) \
+        -not -path './.git/*' -not -path './target/*' -not -path './fsroot*' \
+        -not -path './dpkg/*' 2>/dev/null | wc -l)"
+      echo "Go files:        $(find . -name '*.go' \
+        -not -path './.git/*' -not -path './target/*' 2>/dev/null | wc -l)"
     displayName: 'Workspace summary'
 
   - publish: $(Build.SourcesDirectory)
