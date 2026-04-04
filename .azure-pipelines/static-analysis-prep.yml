@@ -37,174 +37,119 @@ steps:
   - script: |
       set -e
 
-      # flashrom (version pinned in rules/flashrom.mk)
-      FLASHROM_VERSION=1.4.0
-      if [ ! -d src/flashrom/flashrom-${FLASHROM_VERSION} ]; then
-        git clone --depth 1 --branch v${FLASHROM_VERSION} \
+      # flashrom
+      FLASHROM_VERSION=$(make -f - --no-print-directory 2>/dev/null \
+        include\ rules/flashrom.mk$'\nprint-%: ; @echo $($*)' print-FLASHROM_VERSION_FULL \
+        <<< 'include rules/flashrom.mk
+print-%: ; @echo $($*)' || grep '^FLASHROM_VERSION_FULL\b' rules/flashrom.mk | head -1 | cut -d= -f2 | tr -d ' ')
+      if [ ! -d "src/flashrom/flashrom-${FLASHROM_VERSION}" ]; then
+        git clone --depth 1 --branch "v${FLASHROM_VERSION}" \
           https://github.com/flashrom/flashrom.git \
-          src/flashrom/flashrom-${FLASHROM_VERSION}
+          "src/flashrom/flashrom-${FLASHROM_VERSION}"
       fi
 
       # libpsample (Mellanox sflow)
-      if [ ! -d src/sflow/libpsample ]; then
-        git clone --depth 1 https://github.com/Mellanox/libpsample.git \
-          src/sflow/libpsample
-      fi
+      [ ! -d src/sflow/libpsample ] && \
+        git clone --depth 1 https://github.com/Mellanox/libpsample.git src/sflow/libpsample
 
       # librdb (redis rdb-cli)
-      if [ ! -d src/rdb-cli/librdb ]; then
-        git clone --depth 1 https://github.com/redis/librdb.git \
-          src/rdb-cli/librdb
-      fi
+      [ ! -d src/rdb-cli/librdb ] && \
+        git clone --depth 1 https://github.com/redis/librdb.git src/rdb-cli/librdb
 
       # oc-pyang (openconfig YANG tools, used by sonic-mgmt-common)
-      if [ ! -d src/sonic-mgmt-common/models/yang/oc-pyang ]; then
+      [ ! -d src/sonic-mgmt-common/models/yang/oc-pyang ] && \
         git clone --depth 1 https://github.com/openconfig/oc-pyang.git \
           src/sonic-mgmt-common/models/yang/oc-pyang
+
+      # libyang v1 — Makefile uses git clone + tag, not dget
+      LIBYANG_VERSION=1.0.73
+      if [ ! -d "src/libyang/libyang-${LIBYANG_VERSION}" ]; then
+        git clone --depth 1 --branch v1.0-r4 \
+          https://github.com/CESNET/libyang.git \
+          "src/libyang/libyang-${LIBYANG_VERSION}"
       fi
     displayName: 'Clone external source trees'
 
-  # External source trees fetched via wget/tarball/dget at build time.
-  # Only packages that have in-tree SONiC patches are fetched here.
+  # Packages fetched via dget or wget at build time, with in-tree SONiC patches.
+  # Versions are resolved dynamically from rules/*.mk — no hardcoded values.
   - script: |
       set -e
       sudo apt-get install -y -q devscripts
 
-      dget_pkg() {
-        local dir="$1" url="$2"
-        if [ ! -d "$dir" ]; then
-          echo "Fetching $(basename $dir)..."
-          dget -u "$url"
-        else
-          echo "$(basename $dir) already present"
-        fi
+      # resolve_dget_url DIR RULES_MK [EXTRA_MK]
+      # Reads the dget URL from DIR/Makefile, expands Make variables using
+      # RULES_MK (and optionally EXTRA_MK), and prints the resolved .dsc URL.
+      resolve_dget_url() {
+        local dir="$1" rules_mk="$2" extra_mk="${3:-}"
+        local pkg_mk="$dir/Makefile"
+        local raw
+        raw=$(grep '\bdget\b' "$pkg_mk" | head -1 \
+          | sed 's/.*dget[[:space:]]*//' | sed 's/^-u[[:space:]]*//' | tr -d '\t')
+        local includes="include $rules_mk"
+        [ -n "$extra_mk" ] && includes="$includes
+include $extra_mk"
+        make -f - --no-print-directory 2>/dev/null <<MAKEFILE | grep -oE 'https?://[^ ]+\.dsc' | head -1
+$includes
+BUILD_PUBLIC_URL ?= https://packages.trafficmanager.net/public
+_x := $raw
+resolve: ; @echo \$(_x)
+MAKEFILE
       }
 
-      # ifupdown2 (wget tarball)
+      # fetch_dget DIR RULES_MK [EXTRA_MK]
+      # Fetches source via dget if not already present.
+      fetch_dget() {
+        local dir="$1" rules_mk="$2" extra_mk="${3:-}"
+        local url
+        url=$(resolve_dget_url "$dir" "$rules_mk" "$extra_mk")
+        if [ -z "$url" ]; then
+          echo "  SKIP $dir: could not resolve dget URL"
+          return
+        fi
+        # Check if any source dir already exists under $dir
+        local existing
+        existing=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name patch ! -name patches ! -name debian 2>/dev/null | head -1)
+        if [ -n "$existing" ]; then
+          echo "  EXISTS: $dir ($(basename $existing))"
+          return
+        fi
+        echo "  Fetching $dir from $url"
+        cd "$dir"
+        dget -u "$url"
+        cd -
+      }
+
+      # ifupdown2 (wget tarball, not dget)
       IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk | head -1 | cut -d= -f2 | tr -d ' ')
       if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
-        echo "Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
+        echo "  Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
         curl -sL "https://github.com/CumulusNetworks/ifupdown2/archive/${IFUPDOWN2_VERSION}.tar.gz" \
           -o /tmp/ifupdown2.tar.gz
         tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
       fi
 
-      # bash
-      BASH_MAJOR=$(grep '^BASH_VERSION_MAJOR' rules/bash.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      BASH_FULL=$(grep '^BASH_VERSION_FULL' rules/bash.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\$(BASH_VERSION_MAJOR)/${BASH_MAJOR}/")
-      cd src/bash
-      dget_pkg "bash-${BASH_MAJOR}" \
-        "https://deb.debian.org/debian/pool/main/b/bash/bash_${BASH_FULL}.dsc"
-      cd -
-
-      # isc-dhcp
-      ISC_VER=$(grep '^ISC_DHCP_VERSION ' rules/isc-dhcp.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      ISC_FULL=$(grep '^ISC_DHCP_VERSION_FULL' rules/isc-dhcp.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\${ISC_DHCP_VERSION}/${ISC_VER}/")
-      cd src/isc-dhcp
-      dget_pkg "isc-dhcp-${ISC_VER}" \
-        "http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_${ISC_FULL}.dsc"
-      cd -
-
-      # kdump-tools
-      KDUMP_VER=$(grep '^KDUMP_TOOLS_VERSION' rules/kdump-tools.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      cd src/kdump-tools
-      dget_pkg "kdump-tools-${KDUMP_VER}" \
-        "https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_${KDUMP_VER}.dsc"
-      cd -
-
-      # libteam
-      LIBTEAM_VER=$(grep '^LIBTEAM_VERSION :=' rules/libteam.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LIBTEAM_FULL=$(grep '^LIBTEAM_VERSION_FULL' rules/libteam.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\$(LIBTEAM_VERSION)/${LIBTEAM_VER}/")
-      cd src/libteam
-      dget_pkg "libteam-${LIBTEAM_VER}" \
-        "https://deb.debian.org/debian/pool/main/libt/libteam/libteam_${LIBTEAM_FULL}.dsc"
-      cd -
-
-      # libyang (v1 — used by older packages)
-      LIBYANG_VER=1.0.73
-      if [ ! -d src/libyang/libnl3-${LIBYANG_VER} ] && [ ! -d src/libyang/libyang-${LIBYANG_VER} ]; then
-        git clone --depth 1 --branch v1.0-r4 \
-          https://github.com/CESNET/libyang.git \
-          src/libyang/libyang-${LIBYANG_VER}
-      fi
-
-      # libyang3
-      LIBYANG3_VER=$(grep '^LIBYANG3_VERSION ' rules/libyang3.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LIBYANG3_SUB=$(grep '^LIBYANG3_SUBVERSION' rules/libyang3.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LIBYANG3_FULL="${LIBYANG3_VER}-${LIBYANG3_SUB}"
-      LIBYANG_URL=$(grep '^LIBYANG_URL' src/libyang3/Makefile | head -1 | cut -d= -f2 | tr -d ' ')
-      cd src/libyang3
-      dget_pkg "libyang-${LIBYANG3_VER}" \
-        "${LIBYANG_URL}/libyang_${LIBYANG3_FULL}.dsc"
-      cd -
-
-      # libnl3
-      LIBNL3_BASE=$(grep '^LIBNL3_VERSION_BASE' rules/libnl3.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LIBNL3_FULL=$(grep '^LIBNL3_VERSION ' rules/libnl3.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\$(LIBNL3_VERSION_BASE)/${LIBNL3_BASE}/")
-      cd src/libnl3
-      dget_pkg "libnl3-${LIBNL3_BASE}" \
-        "https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_${LIBNL3_FULL}.dsc"
-      cd -
-
-      # lldpd
-      LLDPD_VER=$(grep '^LLDPD_VERSION ' rules/lldpd.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LLDPD_SUFFIX=$(grep '^LLDPD_VERSION_SUFFIX' rules/lldpd.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LLDPD_FULL="${LLDPD_VER}-${LLDPD_SUFFIX}"
-      BUILD_PUBLIC_URL=$(grep '^BUILD_PUBLIC_URL' rules/config | head -1 | cut -d= -f2- | tr -d ' ' | sed 's/?=//')
-      BUILD_PUBLIC_URL=${BUILD_PUBLIC_URL:-https://packages.trafficmanager.net/public}
-      cd src/lldpd
-      dget_pkg "lldpd-${LLDPD_VER}" \
-        "${BUILD_PUBLIC_URL}/debian/pool/main/l/lldpd/lldpd_${LLDPD_FULL}.dsc"
-      cd -
-
-      # lm-sensors (Debian epoch version: 1:3.6.0-7.1, DSC file uses 3.6.0-7.1)
-      LM_MAJOR=$(grep '^LM_SENSORS_MAJOR_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LM_MINOR=$(grep '^LM_SENSORS_MINOR_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LM_PATCH=$(grep '^LM_SENSORS_PATCH_VERSION' rules/lm-sensors.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      LM_SUFFIX=$(grep '^LM_SENSORS_VERSION_FULL' rules/lm-sensors.mk | head -1 | sed 's/.*-//' | tr -d ' ')
-      LM_VER="${LM_MAJOR}.${LM_MINOR}.${LM_PATCH}"
-      LM_FULL="${LM_VER}-${LM_SUFFIX}"
-      cd src/lm-sensors
-      dget_pkg "lm-sensors-${LM_VER}" \
-        "http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_${LM_FULL}.dsc"
-      cd -
-
-      # openssh
-      OPENSSH_VER=$(grep '^OPENSSH_VERSION :=' rules/openssh.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      OPENSSH_FULL=$(grep '^OPENSSH_VERSION_FULL' rules/openssh.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\$(OPENSSH_VERSION)/${OPENSSH_VER}/")
-      cd src/openssh
-      dget_pkg "openssh-${OPENSSH_VER}" \
-        "https://deb.debian.org/debian/pool/main/o/openssh/openssh_${OPENSSH_FULL}.dsc"
-      cd -
-
-      # mellanox iproute2
-      IPROUTE2_MLNX_VER=$(grep '^IPROUTE2_MLNX_VERSION\b' platform/mellanox/iproute2.mk | head -1 | cut -d= -f2 | tr -d ' ')
-      IPROUTE2_MLNX_FULL=$(grep '^IPROUTE2_MLNX_VERSION_FULL' platform/mellanox/iproute2.mk | head -1 | cut -d= -f2 | tr -d ' ' | \
-        sed "s/\$(IPROUTE2_MLNX_VERSION)/${IPROUTE2_MLNX_VER}/")
-      cd platform/mellanox/iproute2
-      dget_pkg "iproute2-${IPROUTE2_MLNX_VER}" \
-        "http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_${IPROUTE2_MLNX_FULL}.dsc"
-      cd -
+      fetch_dget src/bash          rules/bash.mk
+      fetch_dget src/isc-dhcp      rules/isc-dhcp.mk
+      fetch_dget src/kdump-tools   rules/kdump-tools.mk
+      fetch_dget src/libteam       rules/libteam.mk
+      fetch_dget src/libyang3      rules/libyang3.mk  src/libyang3/Makefile
+      fetch_dget src/libnl3        rules/libnl3.mk
+      fetch_dget src/lldpd         rules/lldpd.mk     src/lldpd/Makefile
+      fetch_dget src/lm-sensors    rules/lm-sensors.mk
+      fetch_dget src/openssh       rules/openssh.mk
+      fetch_dget platform/mellanox/iproute2  platform/mellanox/iproute2.mk
     displayName: 'Fetch external source trees (dget/tarball)'
 
-  # Apply patches that are tracked in the repo but not yet applied
-  # (these are applied during the build; apply them here for analysis).
+  # Apply in-tree SONiC patches to all fetched source trees.
   - script: |
       set -e
 
       apply_patches() {
-        local dir="$1"
-        local patch_dir="$2"
-        if [ ! -d "$dir" ] || [ ! -d "$patch_dir" ]; then
-          echo "  SKIP: $dir (dir or patch_dir missing)"
-          return
-        fi
-        local count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
+        local dir="$1" patch_dir="$2"
+        [ ! -d "$dir" ] || [ ! -d "$patch_dir" ] && return
+        local count
+        count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
+        [ "$count" -eq 0 ] && return
         echo "  $dir: $count patches"
         pushd "$dir" > /dev/null
         for p in $(ls "$OLDPWD/$patch_dir"/*.patch 2>/dev/null | sort); do
@@ -215,25 +160,30 @@ steps:
         popd > /dev/null
       }
 
+      # For each src dir, find the unpacked source subdir and apply patches
       apply_dir_patches() {
-        # Find the unpacked source dir dynamically and apply patches
-        local src_parent="$1"
-        local patch_dir="$2"
-        local src_dir=$(ls -d ${src_parent}/*/ 2>/dev/null | grep -v '\.git' | head -1)
-        [ -n "$src_dir" ] && apply_patches "$src_dir" "$patch_dir" \
-          || echo "  SKIP: no source dir found under $src_parent"
+        local src_parent="$1" patch_dir="$2"
+        local src_dir
+        src_dir=$(find "$src_parent" -mindepth 1 -maxdepth 1 -type d \
+          ! -name patch ! -name patches ! -name debian ! -name '.git' \
+          2>/dev/null | sort | head -1)
+        if [ -z "$src_dir" ]; then
+          echo "  SKIP: no source dir found under $src_parent"
+          return
+        fi
+        apply_patches "$src_dir" "$patch_dir"
       }
 
-      apply_dir_patches src/bash             src/bash/patches
-      apply_dir_patches src/dhcprelay/dhcp4relay src/dhcprelay/dhcp4relay/patch
-      apply_dir_patches src/isc-dhcp         src/isc-dhcp/patch
-      apply_dir_patches src/kdump-tools      src/kdump-tools/patch
-      apply_dir_patches src/libteam          src/libteam/patch
-      apply_dir_patches src/libyang3         src/libyang3/patch
-      apply_dir_patches src/libnl3           src/libnl3/patch
-      apply_dir_patches src/lldpd            src/lldpd/patch
-      apply_dir_patches src/lm-sensors       src/lm-sensors/patch
-      apply_dir_patches src/openssh          src/openssh/patch
+      apply_dir_patches src/bash                   src/bash/patches
+      apply_dir_patches src/dhcprelay/dhcp4relay   src/dhcprelay/dhcp4relay/patch
+      apply_dir_patches src/isc-dhcp               src/isc-dhcp/patch
+      apply_dir_patches src/kdump-tools            src/kdump-tools/patch
+      apply_dir_patches src/libteam                src/libteam/patch
+      apply_dir_patches src/libyang3               src/libyang3/patch
+      apply_dir_patches src/libnl3                 src/libnl3/patch
+      apply_dir_patches src/lldpd                  src/lldpd/patch
+      apply_dir_patches src/lm-sensors             src/lm-sensors/patch
+      apply_dir_patches src/openssh                src/openssh/patch
       apply_dir_patches platform/mellanox/iproute2 platform/mellanox/iproute2/patch
     displayName: 'Apply source patches'
 
@@ -251,15 +201,15 @@ steps:
     displayName: 'Workspace summary'
 
   # Publish source tree for downstream analysis jobs.
-  # Excludes large non-Python/non-SONiC dirs that are not analysis targets:
-  #   p4lang             - 23 GB C++ compiler infrastructure, platform-specific
-  #   sonic-linux-kernel - kernel source, not SONiC code
-  #   grub2              - bootloader, pure C, Debian CVE patches only
+  # Excludes large dirs with no SONiC code (no patches, pure upstream C):
+  #   p4lang             - 23 GB C++ compiler infrastructure
+  #   sonic-linux-kernel - kernel source
+  #   grub2              - bootloader, pure C, no SONiC patches
   #   sonic-device-data  - platform JSON/config data, no code
   - script: |
       set -e
       DEST=$(Agent.TempDirectory)/sonic-buildimage-source
-      mkdir -p $DEST
+      mkdir -p "$DEST"
       rsync -a --delete \
         --exclude='.git' \
         --exclude='target/' \
@@ -269,8 +219,8 @@ steps:
         --exclude='src/sonic-linux-kernel/' \
         --exclude='src/grub2/' \
         --exclude='src/sonic-device-data/' \
-        ./ $DEST/
-      echo "Artifact size: $(du -sh $DEST | cut -f1)"
+        ./ "$DEST"/
+      echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
     displayName: 'Stage source tree for publish'
 
   - publish: $(Agent.TempDirectory)/sonic-buildimage-source
