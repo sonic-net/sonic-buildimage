@@ -71,17 +71,27 @@ print-%: ; @echo $($*)' || grep '^FLASHROM_VERSION_FULL\b' rules/flashrom.mk | h
     displayName: 'Clone external source trees'
 
   # Packages fetched via dget or wget at build time, with in-tree SONiC patches.
-  # Versions are resolved dynamically from rules/*.mk — no hardcoded values.
+  # Auto-discovers all src/ and platform/ Makefiles that use dget and have patches.
+  # Rules .mk files are found by convention: rules/<pkg>.mk or <parent>/<pkg>.mk.
   - script: |
       set -e
       sudo apt-get install -y -q devscripts
 
-      # resolve_dget_url DIR RULES_MK [EXTRA_MK]
-      # Reads the dget URL from DIR/Makefile, expands Make variables using
-      # RULES_MK (and optionally EXTRA_MK), and prints the resolved .dsc URL.
+      # resolve_dget_url DIR [EXTRA_MK]
+      # Reads the dget URL template from DIR/Makefile, expands Make variables
+      # by including the corresponding rules .mk, and prints the resolved .dsc URL.
       resolve_dget_url() {
-        local dir="$1" rules_mk="$2" extra_mk="${3:-}"
+        local dir="$1" extra_mk="${2:-}"
         local pkg_mk="$dir/Makefile"
+        local basename
+        basename=$(basename "$dir")
+        # Find corresponding rules .mk: rules/<pkg>.mk or <parent>/<pkg>.mk
+        local rules_mk
+        if [ -f "rules/${basename}.mk" ]; then
+          rules_mk="rules/${basename}.mk"
+        else
+          rules_mk="$(dirname $dir)/${basename}.mk"
+        fi
         local raw
         raw=$(grep '\bdget\b' "$pkg_mk" | head -1 \
           | sed 's/.*dget[[:space:]]*//' | sed 's/^-u[[:space:]]*//' | tr -d '\t')
@@ -96,19 +106,28 @@ resolve: ; @echo \$(_x)
 MAKEFILE
       }
 
-      # fetch_dget DIR RULES_MK [EXTRA_MK]
+      # fetch_dget DIR
       # Fetches source via dget if not already present.
+      # If URL resolution fails with rules .mk alone, retries with the package
+      # Makefile also included (handles cases like lldpd/libyang3 where URL vars
+      # are defined in the package Makefile, not the rules .mk).
       fetch_dget() {
-        local dir="$1" rules_mk="$2" extra_mk="${3:-}"
+        local dir="$1"
         local url
-        url=$(resolve_dget_url "$dir" "$rules_mk" "$extra_mk")
+        url=$(resolve_dget_url "$dir")
+        # Retry with package Makefile included if variables unresolved
+        if [ -z "$url" ]; then
+          url=$(resolve_dget_url "$dir" "$dir/Makefile")
+        fi
         if [ -z "$url" ]; then
           echo "  SKIP $dir: could not resolve dget URL"
           return
         fi
         # Check if any source dir already exists under $dir
         local existing
-        existing=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name patch ! -name patches ! -name debian 2>/dev/null | head -1)
+        existing=$(find "$dir" -mindepth 1 -maxdepth 1 -type d \
+          ! -name patch ! -name patches ! -name debian ! -name '.git' \
+          2>/dev/null | head -1)
         if [ -n "$existing" ]; then
           echo "  EXISTS: $dir ($(basename $existing))"
           return
@@ -119,7 +138,7 @@ MAKEFILE
         cd -
       }
 
-      # ifupdown2 (wget tarball, not dget)
+      # ifupdown2 (wget tarball, not dget — no rules .mk pattern applies)
       IFUPDOWN2_VERSION=$(grep '^IFUPDOWN2_VERSION' rules/ifupdown2.mk | head -1 | cut -d= -f2 | tr -d ' ')
       if [ -n "$IFUPDOWN2_VERSION" ] && [ ! -d "src/ifupdown2/ifupdown2-${IFUPDOWN2_VERSION}" ]; then
         echo "  Fetching ifupdown2 ${IFUPDOWN2_VERSION}..."
@@ -128,16 +147,18 @@ MAKEFILE
         tar -xzf /tmp/ifupdown2.tar.gz -C src/ifupdown2/
       fi
 
-      fetch_dget src/bash          rules/bash.mk
-      fetch_dget src/isc-dhcp      rules/isc-dhcp.mk
-      fetch_dget src/kdump-tools   rules/kdump-tools.mk
-      fetch_dget src/libteam       rules/libteam.mk
-      fetch_dget src/libyang3      rules/libyang3.mk  src/libyang3/Makefile
-      fetch_dget src/libnl3        rules/libnl3.mk
-      fetch_dget src/lldpd         rules/lldpd.mk     src/lldpd/Makefile
-      fetch_dget src/lm-sensors    rules/lm-sensors.mk
-      fetch_dget src/openssh       rules/openssh.mk
-      fetch_dget platform/mellanox/iproute2  platform/mellanox/iproute2.mk
+      # Auto-discover all Makefiles with dget + in-tree patches
+      find src platform/mellanox -name Makefile 2>/dev/null | sort | while read mk; do
+        dir=$(dirname "$mk")
+        # Skip if this is a nested Makefile inside an already-unpacked source tree
+        # (identified by having a parent dir that is itself under src/<pkg>/)
+        depth=$(echo "$dir" | tr -cd '/' | wc -c)
+        [ "$depth" -gt 2 ] && continue
+        grep -q '\bdget\b' "$mk" || continue
+        patch_count=$(find "$dir/patch" "$dir/patches" 2>/dev/null -name "*.patch" 2>/dev/null | wc -l)
+        [ "$patch_count" -eq 0 ] && continue
+        fetch_dget "$dir"
+      done
     displayName: 'Fetch external source trees (dget/tarball)'
 
   # Apply in-tree SONiC patches to all fetched source trees.
@@ -145,13 +166,13 @@ MAKEFILE
       set -e
 
       apply_patches() {
-        local dir="$1" patch_dir="$2"
-        [ ! -d "$dir" ] || [ ! -d "$patch_dir" ] && return
+        local src_dir="$1" patch_dir="$2"
+        [ ! -d "$src_dir" ] || [ ! -d "$patch_dir" ] && return
         local count
         count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
         [ "$count" -eq 0 ] && return
-        echo "  $dir: $count patches"
-        pushd "$dir" > /dev/null
+        echo "  $src_dir: $count patches"
+        pushd "$src_dir" > /dev/null
         for p in $(ls "$OLDPWD/$patch_dir"/*.patch 2>/dev/null | sort); do
           git apply --whitespace=nowarn "$p" 2>/dev/null \
             && echo "    OK: $(basename $p)" \
@@ -160,31 +181,20 @@ MAKEFILE
         popd > /dev/null
       }
 
-      # For each src dir, find the unpacked source subdir and apply patches
-      apply_dir_patches() {
-        local src_parent="$1" patch_dir="$2"
-        local src_dir
-        src_dir=$(find "$src_parent" -mindepth 1 -maxdepth 1 -type d \
+      # Auto-discover all dirs with in-tree patches and apply them to the
+      # corresponding unpacked source subdirectory.
+      find src platform/mellanox -mindepth 1 -maxdepth 2 \
+          \( -name patch -o -name patches \) -type d 2>/dev/null | sort | while read patch_dir; do
+        patch_count=$(ls "$patch_dir"/*.patch 2>/dev/null | wc -l)
+        [ "$patch_count" -eq 0 ] && continue
+        parent=$(dirname "$patch_dir")
+        # Find the unpacked source subdir (not patch/patches/debian/.git)
+        src_dir=$(find "$parent" -mindepth 1 -maxdepth 1 -type d \
           ! -name patch ! -name patches ! -name debian ! -name '.git' \
           2>/dev/null | sort | head -1)
-        if [ -z "$src_dir" ]; then
-          echo "  SKIP: no source dir found under $src_parent"
-          return
-        fi
+        [ -z "$src_dir" ] && echo "  SKIP $parent: no source dir" && continue
         apply_patches "$src_dir" "$patch_dir"
-      }
-
-      apply_dir_patches src/bash                   src/bash/patches
-      apply_dir_patches src/dhcprelay/dhcp4relay   src/dhcprelay/dhcp4relay/patch
-      apply_dir_patches src/isc-dhcp               src/isc-dhcp/patch
-      apply_dir_patches src/kdump-tools            src/kdump-tools/patch
-      apply_dir_patches src/libteam                src/libteam/patch
-      apply_dir_patches src/libyang3               src/libyang3/patch
-      apply_dir_patches src/libnl3                 src/libnl3/patch
-      apply_dir_patches src/lldpd                  src/lldpd/patch
-      apply_dir_patches src/lm-sensors             src/lm-sensors/patch
-      apply_dir_patches src/openssh                src/openssh/patch
-      apply_dir_patches platform/mellanox/iproute2 platform/mellanox/iproute2/patch
+      done
     displayName: 'Apply source patches'
 
   - script: |
