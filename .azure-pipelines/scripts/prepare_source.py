@@ -407,7 +407,11 @@ def fetch_dsc_packages(repo_root: Path):
                 with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as f:
                     subprocess.run(["curl", "-fsSL", "-o", f.name, url], check=True)
                     with tarfile.open(f.name) as tar:
-                        tar.extractall(repo_root / "src/ifupdown2")
+                        # Safe extraction: skip members with absolute paths or '..' traversal
+                        members = [m for m in tar.getmembers()
+                                   if not os.path.isabs(m.name)
+                                   and ".." not in m.name.split("/")]
+                        tar.extractall(repo_root / "src/ifupdown2", members=members)
                 os.unlink(f.name)
 
     # Auto-discover dget packages
