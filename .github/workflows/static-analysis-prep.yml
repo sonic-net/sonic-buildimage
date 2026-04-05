@@ -51,7 +51,11 @@ jobs:
             --exclude='src/sonic-linux-kernel/' \
             --exclude='src/grub2/' \
             --exclude='src/sonic-device-data/' \
+            --exclude='src/sonic-gnmi/testdata/' \
+            --exclude='src/snmpd/*/debian/' \
             ./ "$DEST"/
+          # Remove any remaining files with colons in name (not valid on NTFS/Windows)
+          find "$DEST" -name "*:*" -delete
           echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
           echo "ARTIFACT_PATH=$DEST" >> $GITHUB_ENV
 
