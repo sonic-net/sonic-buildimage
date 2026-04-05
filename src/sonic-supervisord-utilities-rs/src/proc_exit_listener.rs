@@ -3,7 +3,7 @@
 
 use crate::childutils;
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info, warn, Record, Level, Metadata, LevelFilter};
 use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
@@ -12,11 +12,11 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
 use std::process;
-use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
-use syslog::Severity;
 use thiserror::Error;
+use libc::syslog;
+use std::ffi::CString;
 
 // File paths
 const WATCH_PROCESSES_FILE: &str = "/etc/supervisor/watchdog_processes";
@@ -105,6 +105,43 @@ impl ConfigDBTrait for ConfigDBConnector {
     }
 }
 
+struct SimpleLogger {
+}
+
+impl SimpleLogger {
+    // The log crate only handles strings, thus we set the format specifier to %s for libc::syslog()
+    const SYSLOG_FMT: &core::ffi::CStr = cstr::cstr!(b"%s");
+}
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+
+    fn log(&self, record: &Record) {
+
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+
+        let level = match record.metadata().level() {
+            Level::Error => libc::LOG_ERR,
+            Level::Warn => libc::LOG_WARNING,
+            Level::Info => libc::LOG_INFO,
+            Level::Debug => libc::LOG_DEBUG,
+            Level::Trace => libc::LOG_DEBUG,
+        };
+
+        let msg = CString::new(record.args().to_string()).unwrap();
+
+        unsafe {
+            syslog(libc::LOG_USER | level, SimpleLogger::SYSLOG_FMT.as_ptr(), msg.as_ptr());
+        }
+    }
+
+    fn flush(&self) {}
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "supervisor-proc-exit-listener")]
 #[command(about = "SONiC supervisor process exit listener")]
@@ -156,7 +193,7 @@ pub fn get_group_and_process_list(process_file: &str) -> Result<(Vec<String>, Ve
 }
 
 /// Generate alerting message
-pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: Severity) {
+pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: libc::c_int) {
     let namespace_prefix = std::env::var("NAMESPACE_PREFIX").unwrap_or_default();
     let namespace_id = std::env::var("NAMESPACE_ID").unwrap_or_default();
 
@@ -173,9 +210,9 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
 
     // Log with appropriate severity (matching syslog levels)
     match priority {
-        Severity::LOG_ERR => error!("{}", message),
-        Severity::LOG_WARNING => warn!("{}", message),
-        Severity::LOG_INFO => info!("{}", message),
+        libc::LOG_ERR => error!("{}", message),
+        libc::LOG_WARNING => warn!("{}", message),
+        libc::LOG_INFO => info!("{}", message),
         _ => error!("{}", message),
     }
 }
@@ -257,11 +294,11 @@ pub fn get_current_time() -> f64 {
     start.elapsed().as_secs_f64()
 }
 
+
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
-        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
+    let _ = log::set_boxed_logger(Box::new(SimpleLogger{}))
+        .map(|()| log::set_max_level(LevelFilter::Info));
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
@@ -472,7 +509,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                     let new_dead_minutes = current_dead_minutes + elapsed_mins as f64;
                     process_info.insert("dead_minutes".to_string(), new_dead_minutes);
 
-                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Severity::LOG_ERR);
+                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, libc::LOG_ERR);
                 }
             }
         }
@@ -484,7 +521,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                 let threshold = get_heartbeat_alert_interval(process, &heartbeat_intervals);
                 if threshold > 0.0 && elapsed_secs >= threshold {
                     let elapsed_mins = (elapsed_secs / 60.0) as u64;
-                    generate_alerting_message(process, "stuck", elapsed_mins, Severity::LOG_WARNING);
+                    generate_alerting_message(process, "stuck", elapsed_mins, libc::LOG_WARNING);
                 }
             }
         }
