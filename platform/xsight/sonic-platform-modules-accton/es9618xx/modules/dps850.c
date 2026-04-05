@@ -51,7 +51,6 @@ struct dps850_data {
 	struct mutex		update_lock;
 	char				valid;		 /* !=0 if registers are valid */
 	unsigned long	   last_updated;   /* In jiffies */
-	u8	 chip;			/* chip id */
 	u8   vout_mode;	 	/* Register value */
 	u16  v_in;		  	/* Register value */
 	u16  v_out;		 	/* Register value */
@@ -222,8 +221,7 @@ static const struct attribute_group dps850_group = {
 	.attrs = dps850_attributes,
 };
 
-static int dps850_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int dps850_probe(struct i2c_client *client)
 {
 	struct dps850_data *data;
 	int status;
@@ -244,7 +242,6 @@ static int dps850_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->update_lock);
-	data->chip = dev_id->driver_data;
 	dev_info(&client->dev, "chip found\n");
 
 	/* Register sysfs hooks */

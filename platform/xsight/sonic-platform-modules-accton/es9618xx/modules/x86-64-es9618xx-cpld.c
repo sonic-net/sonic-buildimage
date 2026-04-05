@@ -513,10 +513,10 @@ static ssize_t show_board_id(struct device *dev, struct device_attribute *attr, 
 /*
  * I2C init/probing/exit functions
  */
-static int es9618xx_cpld_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int es9618xx_cpld_probe(struct i2c_client *client)
 {
 	struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct es9618xx_cpld_data *data;
 	int ret = -ENODEV;
 	const struct attribute_group *group = NULL;
