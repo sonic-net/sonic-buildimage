@@ -39,30 +39,46 @@ def run(cmd, *, cwd=None, check=True, capture=False):
     return subprocess.run(cmd, shell=isinstance(cmd, str), **kwargs)
 
 
-def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None) -> str:
+def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None,
+                     bldenv: str = None) -> str:
     """
     Expand Make variable references in `template` by including rules_mk
     (and optionally extra_mk) in a throwaway Makefile.
     Returns the resolved string, or the original template if resolution fails.
+    If bldenv is None, tries trixie/bookworm/bullseye and returns the first
+    non-empty result (needed for rules that gate on BLDENV).
     """
-    includes = f"include {rules_mk}\n"
-    if extra_mk and extra_mk.exists():
-        includes += f"include {extra_mk}\n"
-    makefile = (
-        f"{includes}"
-        f"BUILD_PUBLIC_URL ?= {BUILD_PUBLIC_URL}\n"
-        f"_x := {template}\n"
-        f"resolve: ; @echo $(_x)\n"
-    )
-    try:
-        result = subprocess.run(
-            ["make", "-f", "-", "--no-print-directory", "resolve"],
-            input=makefile, capture_output=True, text=True, check=False,
+    def _try(env):
+        bldenv_line = f"BLDENV := {env}\n" if env else ""
+        includes = f"include {rules_mk}\n"
+        if extra_mk and extra_mk.exists():
+            includes += f"include {extra_mk}\n"
+        makefile = (
+            f"{bldenv_line}"
+            f"{includes}"
+            f"BUILD_PUBLIC_URL ?= {BUILD_PUBLIC_URL}\n"
+            f"_x := {template}\n"
+            f"resolve: ; @echo $(_x)\n"
         )
-        resolved = result.stdout.strip()
+        try:
+            result = subprocess.run(
+                ["make", "-f", "-", "--no-print-directory", "resolve"],
+                input=makefile, capture_output=True, text=True, check=False,
+            )
+            return result.stdout.strip()
+        except Exception:
+            return ""
+
+    if bldenv is not None:
+        resolved = _try(bldenv)
         return resolved if resolved else template
-    except Exception:
-        return template
+
+    # Try each BLDENV in order of preference; return first non-empty result
+    for env in ("trixie", "bookworm", "bullseye"):
+        resolved = _try(env)
+        if resolved and resolved != template:
+            return resolved
+    return template
 
 
 def find_rules_mk(pkg_dir: Path) -> Path | None:
@@ -97,28 +113,43 @@ def source_subdir(pkg_dir: Path) -> Path | None:
     """
     Find the unpacked source subdirectory inside pkg_dir.
     Excludes patch/, patches/ (and versioned variants like patch-1.2.3+dfsg),
-    debian/, .git/, and shallow dirs that contain no source files (e.g. Files/).
+    debian/, .git/, and dirs that look like in-repo utility dirs rather than
+    upstream source trees (e.g. src/bash/Files/).
+
+    Heuristics (in order):
+    1. Skip known non-source dir names: patch*, patches*, debian, .git, Files
+    2. Prefer dirs whose name contains a digit (version number in unpacked source)
+    3. Fall back to any dir with actual source files if no versioned dir found
     """
-    candidates = []
+    skip_names = {"patch", "patches", "debian", ".git", "Files"}
+    versioned = []
+    fallback = []
+
     for d in sorted(pkg_dir.iterdir()):
         if not d.is_dir():
             continue
         name = d.name
-        # Skip patch dirs (exact or versioned: patch-*, patches-*)
-        if name in ("patch", "patches", "debian", ".git"):
+        if name in skip_names:
             continue
         if name.startswith("patch") and (len(name) == 5 or name[5] in ("-", "_")):
             continue
-        # Skip dirs that have no files at all (e.g. src/bash/Files/ only has unittest/)
-        # A real unpacked source tree will have files at depth 1
+        if name.startswith("patches") and (len(name) == 7 or name[7] in ("-", "_")):
+            continue
+        # Check has actual source files (not empty)
         has_files = any(True for _ in d.iterdir() if _.is_file())
         if not has_files:
-            # Check one level deeper
             has_files = any(True for sub in d.iterdir()
                             if sub.is_dir() and any(True for _ in sub.iterdir() if _.is_file()))
-        if has_files:
-            candidates.append(d)
-    return candidates[0] if candidates else None
+        if not has_files:
+            continue
+        if any(c.isdigit() for c in name):
+            versioned.append(d)
+        else:
+            fallback.append(d)
+
+    if versioned:
+        return versioned[0]
+    return fallback[0] if fallback else None
 
 
 # ---------------------------------------------------------------------------
