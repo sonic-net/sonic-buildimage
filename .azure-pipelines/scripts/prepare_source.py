@@ -18,7 +18,6 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import urllib.request
 from pathlib import Path
 
 
@@ -406,7 +405,7 @@ def fetch_dsc_packages(repo_root: Path):
                 print(f"  Fetching ifupdown2 {ver}...")
                 url = f"https://github.com/CumulusNetworks/ifupdown2/archive/{ver}.tar.gz"
                 with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as f:
-                    urllib.request.urlretrieve(url, f.name)
+                    subprocess.run(["curl", "-fsSL", "-o", f.name, url], check=True)
                     with tarfile.open(f.name) as tar:
                         tar.extractall(repo_root / "src/ifupdown2")
                 os.unlink(f.name)
