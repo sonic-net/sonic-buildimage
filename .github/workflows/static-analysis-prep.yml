@@ -38,18 +38,26 @@ jobs:
             --repo-root . \
             --summary
 
+      - name: Stage source tree
+        run: |
+          DEST=$RUNNER_TEMP/sonic-buildimage-source
+          mkdir -p "$DEST"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='target/' \
+            --exclude='fsroot*' \
+            --exclude='dpkg/' \
+            --exclude='src/p4lang/' \
+            --exclude='src/sonic-linux-kernel/' \
+            --exclude='src/grub2/' \
+            --exclude='src/sonic-device-data/' \
+            ./ "$DEST"/
+          echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+          echo "ARTIFACT_PATH=$DEST" >> $GITHUB_ENV
+
       - name: Upload source tree artifact
         uses: actions/upload-artifact@v4
         with:
           name: sonic-buildimage-source
-          path: |
-            .
-            !.git
-            !target/
-            !fsroot*
-            !dpkg/
-            !src/p4lang/
-            !src/sonic-linux-kernel/
-            !src/grub2/
-            !src/sonic-device-data/
+          path: ${{ env.ARTIFACT_PATH }}
           retention-days: 7
