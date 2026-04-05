@@ -363,11 +363,11 @@ def fetch_dsc_packages(repo_root: Path):
                 continue
             rules_mk = find_rules_mk(pkg_dir)
             if not rules_mk:
-                print(f"  SKIP {pkg_dir}: no rules .mk found")
+                print(f"  WARNING {pkg_dir}: no rules .mk found — skipping")
                 continue
             url = resolve_dsc_url(pkg_dir, rules_mk)
             if not url:
-                print(f"  SKIP {pkg_dir}: could not resolve dget URL")
+                print(f"  WARNING {pkg_dir}: could not resolve dget URL — skipping")
                 continue
             fetch_dsc(pkg_dir, url)
 
@@ -420,7 +420,9 @@ def _fetch_wget_dsc(repo_root: Path):
 # Step 4: Apply patches
 # ---------------------------------------------------------------------------
 
-def apply_patches(repo_root: Path):
+def apply_patches(repo_root: Path) -> list[str]:
+    """Apply patches. Returns list of error strings for any failures."""
+    errors = []
     print("\n=== Applying source patches ===")
     search_dirs = [repo_root / "src", repo_root / "platform" / "mellanox"]
     for search_dir in search_dirs:
@@ -442,7 +444,9 @@ def apply_patches(repo_root: Path):
             pkg_dir = patch_dir.parent
             src_dir = source_subdir(pkg_dir)
             if not src_dir:
-                print(f"  SKIP {pkg_dir}: no source dir")
+                msg = f"MISSING source dir for {pkg_dir} (has patches but no source)"
+                print(f"  ERROR: {msg}")
+                errors.append(msg)
                 continue
             print(f"  {src_dir}: {len(patches)} patches")
             for p in patches:
@@ -452,6 +456,42 @@ def apply_patches(repo_root: Path):
                 )
                 status = "OK" if result.returncode == 0 else "SKIP (already applied)"
                 print(f"    {status}: {p.name}")
+    return errors
+
+
+def validate_sources(repo_root: Path) -> list[str]:
+    """
+    Verify that every package that fetches external source (dget or git clone)
+    has an unpacked source dir after fetching.
+    Returns a list of error strings; empty list means all good.
+    """
+    errors = []
+    print("\n=== Validating source trees ===")
+    search_dirs = [repo_root / "src", repo_root / "platform" / "mellanox"]
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+        for mk_path in sorted(search_dir.rglob("Makefile")):
+            pkg_dir = mk_path.parent
+            rel = pkg_dir.relative_to(search_dir)
+            if len(rel.parts) > 1:
+                continue
+            if not has_patches(pkg_dir):
+                continue
+            content = mk_path.read_text(errors="replace")
+            # Only validate packages that fetch external source (dget or git clone)
+            # Submodule packages (sonic-frr, sonic-gnmi, etc.) manage their own source
+            fetches_external = re.search(r"\bdget\b", content) or re.search(r"\bgit clone\b", content)
+            if not fetches_external:
+                continue
+            src_dir = source_subdir(pkg_dir)
+            if src_dir:
+                print(f"  OK      {pkg_dir.name} -> {src_dir.name}")
+            else:
+                msg = f"MISSING source for {pkg_dir.name} (patches exist but no source dir fetched)"
+                print(f"  ERROR:  {msg}")
+                errors.append(msg)
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -506,10 +546,22 @@ def main():
         fetch_git_clones(repo_root)
     if not args.skip_dget:
         fetch_dsc_packages(repo_root)
+
+    # Validate all patched packages have source before applying patches
+    errors = validate_sources(repo_root)
+
     if not args.skip_patches:
-        apply_patches(repo_root)
+        errors += apply_patches(repo_root)
     if args.summary:
         print_summary(repo_root)
+
+    if errors:
+        print(f"\n{'='*60}")
+        print(f"FAILED: {len(errors)} error(s):")
+        for e in errors:
+            print(f"  - {e}")
+        print(f"{'='*60}")
+        sys.exit(1)
 
     print("\nDone.")
 
