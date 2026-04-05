@@ -415,7 +415,7 @@ class TestSmartSwitch:
                             "vdpu_id": "vdpu0",
                             "profile": "none",
                             "tier": "none",
-                            "main_dpu_ids": ["str-8102-t1-dpu0"]
+                            "main_dpu_ids": "str-8102-t1-dpu0"
                         }
                     ]
                 }
@@ -681,10 +681,12 @@ class TestSmartSwitch:
             ("str-8102-t1-dpu0", None),
             ("str_8102_t1_dpu0", None),
             ("dpu_0", None),
+            ("dpu0,dpu1", None),
+            ("str-8102-t1-dpu0,str_8102_t1_dpu1", None),
             ("!invalid", 'Unsatisfied pattern')]
         )
     def test_vdpu_main_dpu_ids_underscore(self, yang_model, main_dpu_id, error_message):
-        """Test that VDPU main_dpu_ids pattern allows underscores"""
+        """Test that VDPU main_dpu_ids pattern allows underscores and comma-separated values"""
         data = {
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:VDPU": {
@@ -693,7 +695,7 @@ class TestSmartSwitch:
                             "vdpu_id": "vdpu0",
                             "profile": "none",
                             "tier": "none",
-                            "main_dpu_ids": [main_dpu_id]
+                            "main_dpu_ids": main_dpu_id
                         }
                     ]
                 }
