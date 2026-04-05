@@ -1,0 +1,55 @@
+# Static Analysis Preparation — GitHub Actions
+#
+# Prepares a clean sonic-buildimage workspace with all submodules and
+# externally-fetched source trees fully initialized, ready for static
+# code analysis tools (bandit, semgrep, pylint, etc.).
+# No build is performed.
+#
+# All source acquisition logic lives in:
+#   .azure-pipelines/scripts/prepare_source.py
+
+name: Static Analysis Prep
+
+on:
+  push:
+    branches:
+      - master
+      - '202*'
+  pull_request:
+    branches:
+      - master
+      - '202*'
+
+jobs:
+  prepare-source:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: sudo apt-get install -y -q devscripts
+
+      - name: Prepare source tree
+        run: |
+          python3 .azure-pipelines/scripts/prepare_source.py \
+            --repo-root . \
+            --summary
+
+      - name: Upload source tree artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonic-buildimage-source
+          path: |
+            .
+            !.git
+            !target/
+            !fsroot*
+            !dpkg/
+            !src/p4lang/
+            !src/sonic-linux-kernel/
+            !src/grub2/
+            !src/sonic-device-data/
+          retention-days: 7
