@@ -73,10 +73,11 @@ def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None,
         resolved = _try(bldenv)
         return resolved if resolved else template
 
-    # Try each BLDENV in order of preference; return first non-empty result
+    # Try each BLDENV in order of preference; return first fully-resolved result
+    # "Fully resolved" means no remaining $(VAR) references and non-empty
     for env in ("trixie", "bookworm", "bullseye"):
         resolved = _try(env)
-        if resolved and resolved != template:
+        if resolved and "$(" not in resolved:
             return resolved
     return template
 
