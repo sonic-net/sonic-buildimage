@@ -50,9 +50,9 @@ def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None,
     """
     def _try(env):
         bldenv_line = f"BLDENV := {env}\n" if env else ""
-        includes = f"include {rules_mk}\n"
+        includes = f"include {rules_mk.resolve()}\n"
         if extra_mk and extra_mk.exists():
-            includes += f"include {extra_mk}\n"
+            includes += f"include {extra_mk.resolve()}\n"
         makefile = (
             f"{bldenv_line}"
             f"{includes}"
