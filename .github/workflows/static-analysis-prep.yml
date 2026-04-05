@@ -75,10 +75,10 @@ jobs:
 
           ARTIFACT=${{ env.ARTIFACT_PATH }}
 
-          # List dirs at max depth 3, relative to base, excluding .git
+          # List all dirs, relative to base, excluding .git
           list_dirs() {
             local base="$1"
-            find "$base" -mindepth 1 -maxdepth 3 -type d \
+            find "$base" -mindepth 1 -type d \
               | sed "s|$base/||" \
               | grep -v '/\.git\b' \
               | sort
