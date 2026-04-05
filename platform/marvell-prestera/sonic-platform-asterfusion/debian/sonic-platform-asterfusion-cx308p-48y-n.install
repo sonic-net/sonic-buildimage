@@ -1,0 +1,4 @@
+cx308p-48y-n/scripts/* usr/bin
+cx308p-48y-n/utils/* usr/local/bin
+cx308p-48y-n/service/* lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0

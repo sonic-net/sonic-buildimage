@@ -1,0 +1,21 @@
+{
+    "GE-GB-P1RC":{
+       "module_type":"SGMII",
+       "phy_i2c_addr":"0x56",
+       "need_linkscan":"true",
+       "state_reg":"0x1",
+       "state_bit":"2"
+    },
+    "LX1891CNF":{
+       "module_type":"SGMII",
+       "phy_i2c_addr":"0x56",
+       "need_linkscan":"true",
+       "state_reg":"0x1",
+       "state_bit":"2"
+    },
+    "TSST1000H1":{
+       "module_type":"1000BASE_X",
+       "phy_i2c_addr":"0x56",
+       "need_linkscan":"false"
+    }
+}

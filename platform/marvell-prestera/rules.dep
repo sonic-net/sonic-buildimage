@@ -9,3 +9,4 @@ include $(PLATFORM_PATH)/mrvl-prestera.dep
 include $(PLATFORM_PATH)/platform-nokia.dep
 endif
 include $(PLATFORM_PATH)/sai.dep
+include $(PLATFORM_PATH)/platform-asterfusion.dep

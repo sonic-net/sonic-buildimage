@@ -1,0 +1,24 @@
+#!/bin/sh
+
+mr_poweroff() {
+
+    #sudo rmmod x86-64-asterfusion-cx308p-48y-n
+	#/usr/bin/bmc_get 0x0a 0xaa 0xaa
+    sudo /sbin/reboot
+}
+
+mr_reboot() {
+
+    #sudo rmmod x86-64-asterfusion-cx308p-48y-n
+    #/usr/bin/bmc_get 0x0a 0xa1 0xaa
+    sudo /sbin/reboot
+}
+
+if [ $# -eq 0 ] || [ $@ = "-p" ] || [ $@ = "--poweroff" ] || [ $@ = "-f" ] || [ $@ = "--force" ];  then
+    mr_poweroff
+elif [ $@ = "--reboot" ] || [ $@ = "-r" ]; then
+    mr_reboot
+else
+    echo "unsupported option"
+fi
+

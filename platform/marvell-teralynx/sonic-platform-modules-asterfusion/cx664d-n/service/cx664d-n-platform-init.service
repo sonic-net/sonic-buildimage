@@ -1,0 +1,13 @@
+[Unit]
+Description=Asterfusion CX664D-N Platform initialization service
+After=local-fs.target innovium_platform_driver.service
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/asterfusion_cx664d-n_startup start
+ExecStop=/usr/local/bin/asterfusion_cx664d-n_startup stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
