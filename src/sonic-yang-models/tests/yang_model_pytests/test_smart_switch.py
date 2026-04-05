@@ -541,7 +541,7 @@ class TestSmartSwitch:
                 }
             }
         }
-        yang_model.load_data(data, "leafref")
+        yang_model.load_data(data, 'Invalid leafref value "NonExistentVnet"')
 
     def test_dash_ha_global_config_dpu_vlan(self, yang_model):
         """Test dpu_vlan leafref to VLAN_LIST"""
@@ -589,7 +589,7 @@ class TestSmartSwitch:
                 }
             }
         }
-        yang_model.load_data(data, "leafref")
+        yang_model.load_data(data, 'Invalid leafref value "Vlan999"')
 
     @pytest.mark.parametrize(
         "dpu_name, error_message", [

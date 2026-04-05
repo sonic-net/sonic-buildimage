@@ -3448,22 +3448,22 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
         "vdpu0": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu0"]
+            "main_dpu_ids": "dpu0"
         },
         "vdpu1": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu1"]
+            "main_dpu_ids": "dpu1"
         },
         "vdpu2": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu2"]
+            "main_dpu_ids": "dpu2"
         },
         "vdpu3": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu3"]
+            "main_dpu_ids": "dpu3"
         }
     }
 }
