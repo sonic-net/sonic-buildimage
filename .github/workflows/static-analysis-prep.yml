@@ -87,10 +87,24 @@ jobs:
           ARTIFACT_DIRS=$(list_dirs "$ARTIFACT")
           FRESH_DIRS=$(list_dirs "$FRESH")
 
+          # Filter a sorted list to only top-level unique entries:
+          # if a parent dir is already in the list, skip its children.
+          top_level_only() {
+            local prev=""
+            while IFS= read -r line; do
+              if [ -z "$prev" ] || [[ "$line" != "$prev"/* ]]; then
+                echo "$line"
+                prev="$line"
+              fi
+            done
+          }
+
           echo ""
           echo "=== In ARTIFACT but NOT in fresh clone (externally fetched source) ==="
-          comm -23 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") || echo "  (none)"
+          comm -23 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") \
+            | top_level_only || echo "  (none)"
 
           echo ""
           echo "=== In fresh clone but NOT in ARTIFACT (excluded or missing) ==="
-          comm -13 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") || echo "  (none)"
+          comm -13 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") \
+            | top_level_only || echo "  (none)"
