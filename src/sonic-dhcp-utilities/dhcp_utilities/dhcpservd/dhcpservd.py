@@ -96,10 +96,13 @@ class DhcpServd(object):
         self.dhcp_servd_monitor.enable_checkers(self.enabled_checker)
         lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
         lease_manager.start()
-        # Signal readiness to wait_for_dhcpservd.sh so kea-dhcp4 can start safely
+        self._signal_readiness()
+        syslog.syslog(syslog.LOG_INFO, "SIGUSR1 handler registered, ready flag written, total startup=%.3fs" % (time.time() - start_time))
+
+    def _signal_readiness(self):
+        """Write readiness flag so wait_for_dhcpservd.sh can gate kea-dhcp4 startup."""
         with open(DHCPSERVD_READY_FLAG, "w") as f:
             f.write(str(os.getpid()))
-        syslog.syslog(syslog.LOG_INFO, "SIGUSR1 handler registered, ready flag written, total startup=%.3fs" % (time.time() - start_time))
 
     def wait(self):
         while True:
