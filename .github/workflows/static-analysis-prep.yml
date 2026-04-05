@@ -64,3 +64,31 @@ jobs:
           name: sonic-buildimage-source
           path: ${{ env.ARTIFACT_PATH }}
           retention-days: 7
+
+      - name: Compare artifact vs fresh clone
+        run: |
+          # Shallow clone of upstream sonic-net/sonic-buildimage (no submodules, no extra fetches)
+          FRESH=$RUNNER_TEMP/sonic-buildimage-fresh
+          git clone --depth 1 --no-local \
+            https://github.com/sonic-net/sonic-buildimage.git "$FRESH"
+
+          ARTIFACT=${{ env.ARTIFACT_PATH }}
+
+          echo ""
+          echo "=== Files/dirs in ARTIFACT but not in fresh clone (externally fetched source) ==="
+          # Use comm on sorted relative path lists
+          comm -23 \
+            <(find "$ARTIFACT" -mindepth 1 -maxdepth 5 -type d \
+                | sed "s|$ARTIFACT/||" | sort) \
+            <(find "$FRESH"   -mindepth 1 -maxdepth 5 -type d \
+                | sed "s|$FRESH/||" | sort) \
+          | grep -v '^\.' || echo "  (none)"
+
+          echo ""
+          echo "=== Files/dirs in fresh clone but NOT in artifact (excluded or missing) ==="
+          comm -13 \
+            <(find "$ARTIFACT" -mindepth 1 -maxdepth 5 -type d \
+                | sed "s|$ARTIFACT/||" | sort) \
+            <(find "$FRESH"   -mindepth 1 -maxdepth 5 -type d \
+                | sed "s|$FRESH/||" | sort) \
+          | grep -v '^\.' || echo "  (none)"
