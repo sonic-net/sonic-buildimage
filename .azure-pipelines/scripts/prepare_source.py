@@ -269,17 +269,43 @@ def fetch_git_clone(pkg_dir: Path, rules_mk: Path | None):
         run(cmd, check=False)
 
 
+def _find_package_makefiles(directory: Path) -> list[Path]:
+    """
+    Walk directory returning Makefiles that belong to SONiC package dirs.
+    Does NOT descend into fetched upstream source trees (detected by presence
+    of configure / CMakeLists.txt / setup.py / configure.ac).
+    """
+    _source_tree_indicators = frozenset({
+        "configure", "CMakeLists.txt", "setup.py", "configure.ac",
+        "Kbuild", "Kconfig", "autogen.sh",
+    })
+    result = []
+    for entry in sorted(directory.iterdir()):
+        if not entry.is_dir() or entry.name.startswith("."):
+            continue
+        mk = entry / "Makefile"
+        if mk.exists():
+            result.append(mk)
+            # If it has source-tree indicators, don't descend further
+            if any((entry / f).exists() for f in _source_tree_indicators):
+                continue
+        if not any((entry / f).exists() for f in _source_tree_indicators):
+            result.extend(_find_package_makefiles(entry))
+    return result
+
+
 def fetch_git_clones(repo_root: Path):
     print("\n=== Cloning external source trees ===")
-    # Auto-discover: any src/ dir with git clone in Makefile + in-tree patches
-    # Scan recursively to catch nested packages (e.g. src/tacacs/audisp, src/sflow/hsflowd)
+    # Auto-discover: src/ dirs with git clone + in-tree patches.
+    # Use _find_package_makefiles to avoid descending into fetched source trees.
     src = repo_root / "src"
-    for mk_path in sorted(src.rglob("Makefile")):
+    for mk_path in _find_package_makefiles(src):
         pkg_dir = mk_path.parent
-        content = mk_path.read_text(errors="replace")
-        if "git clone" not in content:
+        try:
+            content = mk_path.read_text(errors="replace")
+        except OSError:
             continue
-        if not has_patches(pkg_dir):
+        if "git clone" not in content or not has_patches(pkg_dir):
             continue
         rules_mk = find_rules_mk(pkg_dir)
         fetch_git_clone(pkg_dir, rules_mk)
@@ -358,13 +384,12 @@ def fetch_dsc_packages(repo_root: Path):
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
-        for mk_path in sorted(search_dir.rglob("Makefile")):
+        for mk_path in _find_package_makefiles(search_dir):
             pkg_dir = mk_path.parent
-            # Skip nested Makefiles (depth > search_dir/<pkg>)
-            rel = pkg_dir.relative_to(search_dir)
-            if len(rel.parts) > 1:
+            try:
+                content = mk_path.read_text(errors="replace")
+            except OSError:
                 continue
-            content = mk_path.read_text(errors="replace")
             if not re.search(r"\bdget\b", content):
                 continue
             if not has_patches(pkg_dir):
@@ -437,6 +462,19 @@ def apply_patches(repo_root: Path) -> list[str]:
         if not search_dir.exists():
             continue
         for patch_dir in sorted(search_dir.rglob("*")):
+            # Skip patch dirs that are inside .git/ (stgit/quilt internal dirs)
+            if ".git" in patch_dir.parts:
+                continue
+            # Skip patch dirs inside submodule checkouts (any ancestor has .git)
+            is_in_submodule = False
+            for parent in patch_dir.parents:
+                if parent == search_dir:
+                    break
+                if (parent / ".git").exists():
+                    is_in_submodule = True
+                    break
+            if is_in_submodule:
+                continue
             name = patch_dir.name
             is_patch_dir = (
                 name in ("patch", "patches") or
@@ -471,7 +509,7 @@ def validate_sources(repo_root: Path) -> list[str]:
     """
     Verify that every package that fetches external source (dget or git clone)
     has an unpacked source dir after fetching.
-    Scans recursively to catch nested packages (e.g. src/tacacs/audisp).
+    Uses _find_package_makefiles to avoid descending into fetched source trees.
     Returns a list of error strings; empty list means all good.
     """
     errors = []
@@ -480,11 +518,14 @@ def validate_sources(repo_root: Path) -> list[str]:
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
-        for mk_path in sorted(search_dir.rglob("Makefile")):
+        for mk_path in _find_package_makefiles(search_dir):
             pkg_dir = mk_path.parent
             if not has_patches(pkg_dir):
                 continue
-            content = mk_path.read_text(errors="replace")
+            try:
+                content = mk_path.read_text(errors="replace")
+            except OSError:
+                continue
             # Only validate packages that fetch external source (dget or git clone)
             # Submodule packages (sonic-frr, sonic-gnmi, etc.) manage their own source
             fetches_external = re.search(r"\bdget\b", content) or re.search(r"\bgit clone\b", content)
