@@ -74,10 +74,23 @@ def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None,
         return resolved if resolved else template
 
     # Try each BLDENV in order of preference; return first fully-resolved result
-    # "Fully resolved" means no remaining $(VAR) references and non-empty
+    # "Fully resolved" means: no remaining $(VAR) references, non-empty,
+    # and no double-separator patterns like `__`, `_.`, `_/` which indicate
+    # an empty Make variable was expanded (e.g., net-snmp_.dsc).
+    def _looks_resolved(s: str) -> bool:
+        if not s or "$(" in s:
+            return False
+        # Detect adjacent separators that signal an empty variable expansion
+        if re.search(r"[_/.-]{2,}", s.replace("//", "")):
+            # Allow double slashes in URLs (https://), but flag others
+            cleaned = re.sub(r"https?://", "", s)
+            if re.search(r"[_.-]{2,}|_/|_\.", cleaned):
+                return False
+        return True
+
     for env in ("trixie", "bookworm", "bullseye"):
         resolved = _try(env)
-        if resolved and "$(" not in resolved:
+        if _looks_resolved(resolved):
             return resolved
     return template
 
@@ -105,8 +118,8 @@ def find_rules_mk(pkg_dir: Path) -> Path | None:
     return None
 
 
-def has_patches(pkg_dir: Path) -> bool:
-    """Return True if pkg_dir contains any in-tree .patch files."""
+def has_patches(pkg_dir: Path, _depth: int = 0) -> bool:
+    """Return True if pkg_dir contains any in-tree .patch files (recurse 1 level)."""
     for d in pkg_dir.iterdir():
         if not d.is_dir():
             continue
@@ -115,6 +128,10 @@ def has_patches(pkg_dir: Path) -> bool:
         if name in ("patch", "patches") or \
            (name.startswith("patch") and len(name) > 5 and name[5] in ("-", "_")):
             if list(d.glob("*.patch")):
+                return True
+        # Recurse one more level (e.g. src/radius/pam/freeradius/patches/)
+        elif _depth == 0 and d.is_dir() and not name.startswith("."):
+            if has_patches(d, _depth=1):
                 return True
     return False
 
@@ -193,11 +210,12 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
             lines.append(line)
     content = "\n".join(lines)
 
-    # git clone line
-    clone_match = re.search(r"git clone\b([^\n]+)", content)
+    # git clone line — find the first one with a URL
+    clone_match = re.search(r"(pushd\s+(\S+)\s*\n[^\n]*\n\s*)?git clone\b([^\n]+)", content)
     if not clone_match:
         return None
-    clone_line = clone_match.group(1).strip()
+    pushd_subdir = clone_match.group(2) or ""  # subdir from pushd, if any
+    clone_line = clone_match.group(3).strip()
 
     # URL
     url_match = re.search(r"https?://\S+", clone_line)
@@ -211,11 +229,15 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
     if not raw_dest or raw_dest.startswith("http"):
         raw_dest = Path(raw_url).stem  # strip .git
 
+    # Prepend pushd subdir to dest if cloning from inside a subdir
+    if pushd_subdir and not pushd_subdir.startswith("."):
+        raw_dest = pushd_subdir + "/" + raw_dest
+
     # Ref priority:
     # 1. inline -b <ref> appearing BEFORE the URL in clone line
     inline_b = re.search(r"-b\s+(\S+)(?=.*https?://)", clone_line)
-    # 2. plain git checkout <ref> (not -b, not stg)
-    plain_co = re.search(r"git checkout\b(?!\s+-b)(?!\s+.*stg)\s+(\S+)", content)
+    # 2. plain git checkout <ref> (not -b, not stg); skip leading flag tokens
+    plain_co = re.search(r"git checkout\b(?!\s+-b)(?!\s+.*stg)\s+((?:-\S+\s+)*)(\S+)", content)
     # 3. git checkout -b <branch> [-f] <tag> → last non-flag token
     co_b = re.search(r"git checkout -b\s+\S+\s+(?:-\S+\s+)*(\S+)", content)
     # 4. git reset --hard <ref>
@@ -225,7 +247,7 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
     if inline_b:
         raw_ref = inline_b.group(1)
     elif plain_co:
-        raw_ref = plain_co.group(1)
+        raw_ref = plain_co.group(2)  # group(1) is flags, group(2) is the ref
     elif co_b:
         raw_ref = co_b.group(1)
     elif reset:
@@ -258,9 +280,19 @@ def fetch_git_clone(pkg_dir: Path, rules_mk: Path | None):
         return
     ref_str = f" @ {ref}" if ref else ""
     print(f"  Cloning {pkg_dir.name} (dest={dest}{ref_str}) from {url}")
+
+    # Detect if ref is a commit SHA (hex string, 7-40 chars)
+    is_sha = ref and re.fullmatch(r"[0-9a-f]{7,40}", ref or "")
+
     if use_reset_hard:
         run(["git", "clone", "--depth", "50", url, str(dest_path)], check=False)
         run(["git", "reset", "--hard", ref], cwd=dest_path, check=False)
+    elif is_sha:
+        # Can't use --branch with a commit SHA; clone then fetch+checkout
+        run(["git", "clone", "--no-checkout", url, str(dest_path)], check=False)
+        run(["git", "fetch", "--depth", "1", "origin", ref],
+            cwd=dest_path, check=False)
+        run(["git", "checkout", ref], cwd=dest_path, check=False)
     else:
         cmd = ["git", "clone", "--depth", "1"]
         if ref:
