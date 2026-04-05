@@ -67,45 +67,25 @@ jobs:
 
       - name: Compare artifact vs fresh clone
         run: |
-          # Shallow clone of upstream sonic-net/sonic-buildimage (no submodules)
+          # Fresh recursive clone of upstream — mirrors what the main checkout did,
+          # but without the externally-fetched sources (dget/git-clone).
           FRESH=$RUNNER_TEMP/sonic-buildimage-fresh
-          git clone --depth 1 --no-local \
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
             https://github.com/sonic-net/sonic-buildimage.git "$FRESH"
 
           ARTIFACT=${{ env.ARTIFACT_PATH }}
 
-          # Build set of submodule paths (depth 1 and 2) to exclude from diff —
-          # submodule dirs differ structurally between a shallow clone (empty) and
-          # the artifact (fully populated), which would flood the output.
-          SUBMODULES=$(git -C "$FRESH" submodule status --recursive 2>/dev/null \
-            | awk '{print $2}' | sort)
-
-          # Helper: list dirs at max depth 3 under $1, relative to $1,
-          # excluding .git and known submodule paths
+          # List dirs at max depth 3, relative to base, excluding .git
           list_dirs() {
             local base="$1"
             find "$base" -mindepth 1 -maxdepth 3 -type d \
               | sed "s|$base/||" \
-              | grep -v '^\.' \
-              | grep -v '^\.git' \
+              | grep -v '/\.git\b' \
               | sort
           }
 
-          # Filter out any path that starts with a submodule root
-          filter_submodules() {
-            while IFS= read -r path; do
-              skip=0
-              while IFS= read -r sub; do
-                case "$path" in
-                  "$sub"|"$sub"/*) skip=1; break ;;
-                esac
-              done <<< "$SUBMODULES"
-              [ "$skip" -eq 0 ] && echo "$path"
-            done
-          }
-
-          ARTIFACT_DIRS=$(list_dirs "$ARTIFACT" | filter_submodules)
-          FRESH_DIRS=$(list_dirs "$FRESH" | filter_submodules)
+          ARTIFACT_DIRS=$(list_dirs "$ARTIFACT")
+          FRESH_DIRS=$(list_dirs "$FRESH")
 
           echo ""
           echo "=== In ARTIFACT but NOT in fresh clone (externally fetched source) ==="
