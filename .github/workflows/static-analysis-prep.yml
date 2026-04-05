@@ -67,28 +67,50 @@ jobs:
 
       - name: Compare artifact vs fresh clone
         run: |
-          # Shallow clone of upstream sonic-net/sonic-buildimage (no submodules, no extra fetches)
+          # Shallow clone of upstream sonic-net/sonic-buildimage (no submodules)
           FRESH=$RUNNER_TEMP/sonic-buildimage-fresh
           git clone --depth 1 --no-local \
             https://github.com/sonic-net/sonic-buildimage.git "$FRESH"
 
           ARTIFACT=${{ env.ARTIFACT_PATH }}
 
-          echo ""
-          echo "=== Files/dirs in ARTIFACT but not in fresh clone (externally fetched source) ==="
-          # Use comm on sorted relative path lists
-          comm -23 \
-            <(find "$ARTIFACT" -mindepth 1 -maxdepth 5 -type d \
-                | sed "s|$ARTIFACT/||" | sort) \
-            <(find "$FRESH"   -mindepth 1 -maxdepth 5 -type d \
-                | sed "s|$FRESH/||" | sort) \
-          | grep -v '^\.' || echo "  (none)"
+          # Build set of submodule paths (depth 1 and 2) to exclude from diff —
+          # submodule dirs differ structurally between a shallow clone (empty) and
+          # the artifact (fully populated), which would flood the output.
+          SUBMODULES=$(git -C "$FRESH" submodule status --recursive 2>/dev/null \
+            | awk '{print $2}' | sort)
+
+          # Helper: list dirs at max depth 3 under $1, relative to $1,
+          # excluding .git and known submodule paths
+          list_dirs() {
+            local base="$1"
+            find "$base" -mindepth 1 -maxdepth 3 -type d \
+              | sed "s|$base/||" \
+              | grep -v '^\.' \
+              | grep -v '^\.git' \
+              | sort
+          }
+
+          # Filter out any path that starts with a submodule root
+          filter_submodules() {
+            while IFS= read -r path; do
+              skip=0
+              while IFS= read -r sub; do
+                case "$path" in
+                  "$sub"|"$sub"/*) skip=1; break ;;
+                esac
+              done <<< "$SUBMODULES"
+              [ "$skip" -eq 0 ] && echo "$path"
+            done
+          }
+
+          ARTIFACT_DIRS=$(list_dirs "$ARTIFACT" | filter_submodules)
+          FRESH_DIRS=$(list_dirs "$FRESH" | filter_submodules)
 
           echo ""
-          echo "=== Files/dirs in fresh clone but NOT in artifact (excluded or missing) ==="
-          comm -13 \
-            <(find "$ARTIFACT" -mindepth 1 -maxdepth 5 -type d \
-                | sed "s|$ARTIFACT/||" | sort) \
-            <(find "$FRESH"   -mindepth 1 -maxdepth 5 -type d \
-                | sed "s|$FRESH/||" | sort) \
-          | grep -v '^\.' || echo "  (none)"
+          echo "=== In ARTIFACT but NOT in fresh clone (externally fetched source) ==="
+          comm -23 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") || echo "  (none)"
+
+          echo ""
+          echo "=== In fresh clone but NOT in ARTIFACT (excluded or missing) ==="
+          comm -13 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") || echo "  (none)"
