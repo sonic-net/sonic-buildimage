@@ -261,15 +261,13 @@ def fetch_git_clone(pkg_dir: Path, rules_mk: Path | None):
 
 def fetch_git_clones(repo_root: Path):
     print("\n=== Cloning external source trees ===")
-    # Auto-discover: src/ dirs with git clone in Makefile + in-tree patches
+    # Auto-discover: any src/ dir with git clone in Makefile + in-tree patches
+    # Scan recursively to catch nested packages (e.g. src/tacacs/audisp, src/sflow/hsflowd)
     src = repo_root / "src"
-    for pkg_dir in sorted(src.iterdir()):
-        if not pkg_dir.is_dir():
-            continue
-        mk = pkg_dir / "Makefile"
-        if not mk.exists():
-            continue
-        if "git clone" not in mk.read_text(errors="replace"):
+    for mk_path in sorted(src.rglob("Makefile")):
+        pkg_dir = mk_path.parent
+        content = mk_path.read_text(errors="replace")
+        if "git clone" not in content:
             continue
         if not has_patches(pkg_dir):
             continue
@@ -463,6 +461,7 @@ def validate_sources(repo_root: Path) -> list[str]:
     """
     Verify that every package that fetches external source (dget or git clone)
     has an unpacked source dir after fetching.
+    Scans recursively to catch nested packages (e.g. src/tacacs/audisp).
     Returns a list of error strings; empty list means all good.
     """
     errors = []
@@ -473,9 +472,6 @@ def validate_sources(repo_root: Path) -> list[str]:
             continue
         for mk_path in sorted(search_dir.rglob("Makefile")):
             pkg_dir = mk_path.parent
-            rel = pkg_dir.relative_to(search_dir)
-            if len(rel.parts) > 1:
-                continue
             if not has_patches(pkg_dir):
                 continue
             content = mk_path.read_text(errors="replace")
@@ -485,10 +481,11 @@ def validate_sources(repo_root: Path) -> list[str]:
             if not fetches_external:
                 continue
             src_dir = source_subdir(pkg_dir)
+            rel = pkg_dir.relative_to(repo_root)
             if src_dir:
-                print(f"  OK      {pkg_dir.name} -> {src_dir.name}")
+                print(f"  OK      {rel} -> {src_dir.name}")
             else:
-                msg = f"MISSING source for {pkg_dir.name} (patches exist but no source dir fetched)"
+                msg = f"MISSING source for {rel} (patches exist but no source dir fetched)"
                 print(f"  ERROR:  {msg}")
                 errors.append(msg)
     return errors
