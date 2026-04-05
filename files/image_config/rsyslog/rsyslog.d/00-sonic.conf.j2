@@ -5,12 +5,6 @@ template(name="prog_msg" type="list") {
     constant(value="\n")
 }
 
-{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
-
-$ModLoad omprog
-
-{% endif %}
-
 if re_match($programname, "bgp[0-9]*#(frr|zebra|staticd|watchfrr)") then {
     /var/log/frr/zebra.log
     stop
