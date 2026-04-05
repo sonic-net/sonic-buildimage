@@ -173,6 +173,10 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
     else:
         raw_ref = ""
 
+    # Strip "tags/" prefix — git clone --branch doesn't accept it
+    if raw_ref.startswith("tags/"):
+        raw_ref = raw_ref[len("tags/"):]
+
     # Resolve Make variables
     url = resolve_make_var(rules_mk, raw_url) if rules_mk else raw_url
     dest = resolve_make_var(rules_mk, raw_dest) if rules_mk else raw_dest
