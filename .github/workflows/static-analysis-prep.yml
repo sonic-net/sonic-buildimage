@@ -49,7 +49,6 @@ jobs:
             --exclude='dpkg/' \
             --exclude='src/p4lang/' \
             --exclude='src/sonic-linux-kernel/' \
-            --exclude='src/grub2/' \
             --exclude='src/sonic-device-data/' \
             --exclude='src/sonic-gnmi/testdata/' \
             --exclude='src/snmpd/*/debian/' \
