@@ -84,14 +84,23 @@ def resolve_make_var(rules_mk: Path, template: str, extra_mk: Path = None,
 def find_rules_mk(pkg_dir: Path) -> Path | None:
     """Find the rules .mk for a package by convention."""
     pkg = pkg_dir.name
-    # rules/<pkg>.mk
-    candidate = pkg_dir.parents[1] / "rules" / f"{pkg}.mk"
-    if candidate.exists():
-        return candidate
-    # <parent>/<pkg>.mk  (e.g. platform/mellanox/iproute2.mk)
-    candidate = pkg_dir.parent / f"{pkg}.mk"
-    if candidate.exists():
-        return candidate
+    # Walk up to find rules/ dir (handles both top-level and nested packages)
+    for parent in pkg_dir.parents:
+        candidate = parent / "rules" / f"{pkg}.mk"
+        if candidate.exists():
+            return candidate
+        # Also try <parent>/<pkg>.mk (e.g. platform/mellanox/iproute2.mk)
+        candidate = pkg_dir.parent / f"{pkg}.mk"
+        if candidate.exists():
+            return candidate
+        # Stop at repo root (has Makefile + rules/)
+        if (parent / "rules").is_dir():
+            # Also try parent-dir name as rules file (e.g. src/sflow/hsflowd -> rules/sflow.mk)
+            parent_name = pkg_dir.parent.name
+            candidate = parent / "rules" / f"{parent_name}.mk"
+            if candidate.exists():
+                return candidate
+            break
     return None
 
 
@@ -206,8 +215,8 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
     inline_b = re.search(r"-b\s+(\S+)(?=.*https?://)", clone_line)
     # 2. plain git checkout <ref> (not -b, not stg)
     plain_co = re.search(r"git checkout\b(?!\s+-b)(?!\s+.*stg)\s+(\S+)", content)
-    # 3. git checkout -b <branch> <tag> → last token
-    co_b = re.search(r"git checkout -b\s+\S+\s+(\S+)", content)
+    # 3. git checkout -b <branch> [-f] <tag> → last non-flag token
+    co_b = re.search(r"git checkout -b\s+\S+\s+(?:-\S+\s+)*(\S+)", content)
     # 4. git reset --hard <ref>
     reset = re.search(r"git reset --hard\s+(\S+)", content)
 
