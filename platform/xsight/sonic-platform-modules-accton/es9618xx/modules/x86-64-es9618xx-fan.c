@@ -600,8 +600,7 @@ static ssize_t show_version(struct device *dev, struct device_attribute *attr, c
     return sprintf(buf, "%d\n", val);
 }
 
-static int es9618xx_fan_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int es9618xx_fan_probe(struct i2c_client *client)
 {
     struct es9618xx_fan_data *data;
     int status;

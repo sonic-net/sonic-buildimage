@@ -149,9 +149,9 @@ static const struct attribute_group es9618xx_psu_group = {
 	.attrs = es9618xx_psu_attributes,
 };
 
-static int es9618xx_psu_probe(struct i2c_client *client,
-			const struct i2c_device_id *dev_id)
+static int es9618xx_psu_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 	struct es9618xx_psu_data *data;
 	int status;
 
