@@ -81,23 +81,43 @@ def find_rules_mk(pkg_dir: Path) -> Path | None:
 
 def has_patches(pkg_dir: Path) -> bool:
     """Return True if pkg_dir contains any in-tree .patch files."""
-    for subdir in ("patch", "patches"):
-        d = pkg_dir / subdir
-        if d.is_dir() and list(d.glob("*.patch")):
-            return True
+    for d in pkg_dir.iterdir():
+        if not d.is_dir():
+            continue
+        name = d.name
+        # Match patch/, patches/, patch-<ver>/, patches-<ver>/
+        if name in ("patch", "patches") or \
+           (name.startswith("patch") and len(name) > 5 and name[5] in ("-", "_")):
+            if list(d.glob("*.patch")):
+                return True
     return False
 
 
 def source_subdir(pkg_dir: Path) -> Path | None:
     """
     Find the unpacked source subdirectory inside pkg_dir.
-    Excludes patch/, patches/, debian/, .git/.
+    Excludes patch/, patches/ (and versioned variants like patch-1.2.3+dfsg),
+    debian/, .git/, and shallow dirs that contain no source files (e.g. Files/).
     """
-    skip = {"patch", "patches", "debian", ".git"}
-    candidates = sorted(
-        d for d in pkg_dir.iterdir()
-        if d.is_dir() and d.name not in skip
-    )
+    candidates = []
+    for d in sorted(pkg_dir.iterdir()):
+        if not d.is_dir():
+            continue
+        name = d.name
+        # Skip patch dirs (exact or versioned: patch-*, patches-*)
+        if name in ("patch", "patches", "debian", ".git"):
+            continue
+        if name.startswith("patch") and (len(name) == 5 or name[5] in ("-", "_")):
+            continue
+        # Skip dirs that have no files at all (e.g. src/bash/Files/ only has unittest/)
+        # A real unpacked source tree will have files at depth 1
+        has_files = any(True for _ in d.iterdir() if _.is_file())
+        if not has_files:
+            # Check one level deeper
+            has_files = any(True for sub in d.iterdir()
+                            if sub.is_dir() and any(True for _ in sub.iterdir() if _.is_file()))
+        if has_files:
+            candidates.append(d)
     return candidates[0] if candidates else None
 
 
@@ -376,7 +396,12 @@ def apply_patches(repo_root: Path):
         if not search_dir.exists():
             continue
         for patch_dir in sorted(search_dir.rglob("*")):
-            if patch_dir.name not in ("patch", "patches"):
+            name = patch_dir.name
+            is_patch_dir = (
+                name in ("patch", "patches") or
+                (name.startswith("patch") and len(name) > 5 and name[5] in ("-", "_"))
+            )
+            if not is_patch_dir:
                 continue
             if not patch_dir.is_dir():
                 continue
