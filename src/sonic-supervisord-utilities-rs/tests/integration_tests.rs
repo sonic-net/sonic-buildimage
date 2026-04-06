@@ -90,19 +90,17 @@ fn test_heartbeat_alert_interval_functions() {
     // Test loading heartbeat alert intervals (would normally load from ConfigDB)
     // This is a basic test since we can't easily mock ConfigDB
     let config_db = create_test_config_db();
-    let _result = load_heartbeat_alert_interval(&config_db);
-    // This might fail if ConfigDB is not available, which is expected in test environment
+    let heartbeat_intervals = load_heartbeat_alert_interval(&config_db);
+    // This might return empty map if ConfigDB is not available, which is expected in test environment
     
     // Test getting default interval for unknown process
-    let config_db = create_test_config_db();
-    let default_interval = get_heartbeat_alert_interval("unknown_process", &config_db);
+    let default_interval = get_heartbeat_alert_interval("unknown_process", &heartbeat_intervals);
     assert_eq!(default_interval, ALERTING_INTERVAL_SECS as f64);
     
     // Test that the function doesn't panic with various inputs
-    let config_db = create_test_config_db();
-    let _ = get_heartbeat_alert_interval("orchagent", &config_db);
-    let _ = get_heartbeat_alert_interval("", &config_db);
-    let _ = get_heartbeat_alert_interval("very_long_process_name_that_should_not_exist", &config_db);
+    let _ = get_heartbeat_alert_interval("orchagent", &heartbeat_intervals);
+    let _ = get_heartbeat_alert_interval("", &heartbeat_intervals);
+    let _ = get_heartbeat_alert_interval("very_long_process_name_that_should_not_exist", &heartbeat_intervals);
 }
 
 #[test]
@@ -238,10 +236,11 @@ fn test_time_functions() {
     
     // Test heartbeat interval retrieval
     let config_db = create_test_config_db();
-    let interval1 = get_heartbeat_alert_interval("test_process", &config_db);
+    let heartbeat_intervals = load_heartbeat_alert_interval(&config_db);
+    let interval1 = get_heartbeat_alert_interval("test_process", &heartbeat_intervals);
     assert!(interval1 > 0.0);
     
-    let interval2 = get_heartbeat_alert_interval("another_process", &config_db);
+    let interval2 = get_heartbeat_alert_interval("another_process", &heartbeat_intervals);
     assert!(interval2 > 0.0);
     
     // Both should return the default since there's no ConfigDB in test
@@ -268,10 +267,11 @@ fn test_edge_cases_and_boundary_conditions() {
     
     // Test heartbeat interval edge cases
     let config_db = create_test_config_db();
-    let zero_interval = get_heartbeat_alert_interval("", &config_db);
+    let heartbeat_intervals = load_heartbeat_alert_interval(&config_db);
+    let zero_interval = get_heartbeat_alert_interval("", &heartbeat_intervals);
     assert_eq!(zero_interval, ALERTING_INTERVAL_SECS as f64);
     
-    let default_interval = get_heartbeat_alert_interval("nonexistent", &config_db);
+    let default_interval = get_heartbeat_alert_interval("nonexistent", &heartbeat_intervals);
     assert_eq!(default_interval, ALERTING_INTERVAL_SECS as f64);
 }
 
@@ -297,10 +297,11 @@ fn test_function_robustness() {
     
     // Test heartbeat interval function with various inputs
     let config_db = create_test_config_db();
-    let _ = get_heartbeat_alert_interval("test1", &config_db);
-    let _ = get_heartbeat_alert_interval("test2", &config_db);
-    let _ = get_heartbeat_alert_interval("", &config_db);
-    let _ = get_heartbeat_alert_interval("very_long_name", &config_db);
+    let heartbeat_intervals = load_heartbeat_alert_interval(&config_db);
+    let _ = get_heartbeat_alert_interval("test1", &heartbeat_intervals);
+    let _ = get_heartbeat_alert_interval("test2", &heartbeat_intervals);
+    let _ = get_heartbeat_alert_interval("", &heartbeat_intervals);
+    let _ = get_heartbeat_alert_interval("very_long_name", &heartbeat_intervals);
 }
 
 #[test]
