@@ -215,6 +215,23 @@ ztp_is_enabled()
     return $rv
 }
 
+set_config_db_initialized()
+{
+    local value="$1"
+    local asic_num=0
+
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+
+    if [[ ${NUM_ASIC:-1} -le 1 ]]; then
+        return 0
+    fi
+
+    while [[ $asic_num -lt $NUM_ASIC ]]; do
+        sonic-db-cli -n "asic$asic_num" CONFIG_DB SET "CONFIG_DB_INITIALIZED" "$value"
+        ((asic_num = asic_num + 1))
+    done
+}
+
 # Generate requested SONiC configuration and save it as destination file
 # Usage: generate_config < factory | ztp > <destination_file>
 #
@@ -367,7 +384,7 @@ do_db_migration()
         # Migrate the DB to the latest schema version if needed
         /usr/local/bin/db_migrator.py -o migrate
     fi
-    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+    set_config_db_initialized "1"
 
     #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
     if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
@@ -454,7 +471,7 @@ boot_config()
         echo "Warm boot detected, skipping config initialization and ZTP."
         # Mark config as initialized so subsequent boots don't re-trigger
         # initialization unnecessarily (warm-reboot to new image scenario).
-        sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+        set_config_db_initialized "1"
         rm -f /tmp/pending_config_initialization
         return 0
     fi
