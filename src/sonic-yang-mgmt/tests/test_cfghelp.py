@@ -6,7 +6,7 @@ from unittest import TestCase
 techsupport_table_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
@@ -44,7 +44,7 @@ key - GLOBAL
 techsupport_table_field_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +---------+--------------------------------------------------+-------------+-----------+-------------+
@@ -59,7 +59,7 @@ key - GLOBAL
 vlan_table_field_output="""\
 
 VLAN
-Description: VLAN part of config_db.json
+Description: IEEE 802.1Q VLAN definitions
 
 key - name
 +--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
@@ -73,39 +73,40 @@ key - name
 dscp_to_tc_table_field_output="""\
 
 DSCP_TO_TC_MAP
-Description: DSCP_TO_TC_MAP part of config_db.json
+Description: Maps DSCP values (0-63) to traffic class for ingress QoS classification.
 
 key - name
-+---------+------------------------------------------------------+-------------+-----------+-------------+
-| Field   | Description                                          | Mandatory   | Default   | Reference   |
-+=========+======================================================+=============+===========+=============+
-| name    |                                                      |             |           |             |
-+---------+------------------------------------------------------+-------------+-----------+-------------+
-| dscp    | This field is for storing mapping between two fields |             |           |             |
-+---------+------------------------------------------------------+-------------+-----------+-------------+
-| tc      | This field is for storing mapping between two fields |             |           |             |
-+---------+------------------------------------------------------+-------------+-----------+-------------+
++---------+---------------------------------------------------------------------------+-------------+-----------+-------------+
+| Field   | Description                                                               | Mandatory   | Default   | Reference   |
++=========+===========================================================================+=============+===========+=============+
+| name    | Name of the DSCP to TC map.                                               |             |           |             |
++---------+---------------------------------------------------------------------------+-------------+-----------+-------------+
+| dscp    | This field is for storing mapping between two fieldsDSCP value (0-63).    |             |           |             |
++---------+---------------------------------------------------------------------------+-------------+-----------+-------------+
+| tc      | This field is for storing mapping between two fieldsTarget traffic class. |             |           |             |
++---------+---------------------------------------------------------------------------+-------------+-----------+-------------+
 
 """
 
 acl_rule_table_field_output="""\
 
 ACL_RULE
-Description: ACL_RULE part of config_db.json
+Description: Defines packet matching criteria and actions for ACL filtering rules
 
 key - ACL_TABLE_NAME:RULE_NAME
-+-----------+-------------------------------------------------+-------------+-----------+-------------+
-| Field     | Description                                     | Mandatory   | Default   | Reference   |
-+===========+=================================================+=============+===========+=============+
-| ICMP_TYPE | Mutually exclusive in group icmp                |             |           |             |
-|           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,IPV4ANY,ARP |             |           |             |
-+-----------+-------------------------------------------------+-------------+-----------+-------------+
++-----------+---------------------------------------------------------------------------+-------------+-----------+-------------+
+| Field     | Description                                                               | Mandatory   | Default   | Reference   |
++===========+===========================================================================+=============+===========+=============+
+| ICMP_TYPE | Mutually exclusive in group icmp                                          |             |           |             |
+|           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,IPV4ANY,ARPICMPv4 type value to match |             |           |             |
++-----------+---------------------------------------------------------------------------+-------------+-----------+-------------+
 
 """
 
 snmp_table_output="""\
 
 SNMP
+Description: SNMP system information (contact and location).
 
 key - CONTACT
 +---------+----------------------+-------------+-----------+-------------+
@@ -181,6 +182,7 @@ class TestCfgHelp(TestCase):
     def test_when_condition(self):
         argument = ['-t', 'ACL_RULE', '-f', 'ICMP_TYPE']
         output = self.run_script(argument)
+        self.maxDiff = None
         self.assertEqual(output, acl_rule_table_field_output)
 
     def test_nested_container(self):

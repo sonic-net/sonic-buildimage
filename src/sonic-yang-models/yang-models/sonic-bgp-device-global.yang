@@ -24,7 +24,7 @@ module sonic-bgp-device-global {
 
         container BGP_DEVICE_GLOBAL {
 
-            description "BGP_DEVICE_GLOBAL part of config_db.json";
+            description "Device-level BGP global settings such as TSA, WCMP, and IDF isolation.";
 
             container STATE {
 
