@@ -94,5 +94,5 @@ ufolib2==0.14.0
 unittest-xml-reporting==4.0.0
 wcwidth==0.2.5
 webencodings==0.5.1
-werkzeug==3.1.6
+werkzeug==3.1.7
 wheel==0.38.4

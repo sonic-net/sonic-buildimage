@@ -332,7 +332,7 @@ locales==2.41-12+deb13u2
 logrotate==3.22.0-1+b2
 logsave==1.47.2-3+b10
 lsof==4.99.4+dfsg-2
-makedumpfile==1:1.7.6-1+b1
+makedumpfile==1:1.7.7-1
 media-types==13.0.0
 mft==4.34.0-145
 mft-fwtrace-cfg==1.0.0

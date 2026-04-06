@@ -1,4 +1,4 @@
-blessed==1.33.0
+blessed==1.37.0
 click-log==0.4.0
 colorful==0.5.8
 deepdiff==8.6.2
@@ -14,7 +14,7 @@ invoke==2.2.1
 ipaddress==1.0.23
 jsondiff==2.2.1
 jsonpatch==1.33
-jsonpointer==3.1.0
+jsonpointer==3.1.1
 jsonschema==2.6.0
 libyang==3.1.0
 natsort==8.4.0
