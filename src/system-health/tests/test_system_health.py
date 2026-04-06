@@ -10,6 +10,7 @@
         3. Config
 """
 import copy
+import multiprocessing
 import os
 import sys
 import docker
@@ -41,6 +42,7 @@ from health_checker.user_defined_checker import UserDefinedChecker
 from health_checker.sysmonitor import Sysmonitor
 from health_checker.sysmonitor import MonitorStateDbTask
 from health_checker.sysmonitor import MonitorSystemBusTask
+from health_checker import sysmonitor as sysmonitor_module
 
 def load_source(modname, filename):
     loader = importlib.machinery.SourceFileLoader(modname, filename)
@@ -1099,6 +1101,7 @@ def test_monitor_sysbus_task():
     assert sysmon._task_process is not None
     sysmon.task_stop()
 
+@patch('health_checker.sysmonitor.Sysmonitor._wait_for_monitor_subscriptions', MagicMock())
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
 @patch('health_checker.sysmonitor.MonitorStateDbTask.subscribe_statedb', MagicMock())
 def test_system_service():
@@ -1106,6 +1109,73 @@ def test_system_service():
     sysmon.task_run()
     assert sysmon._task_process is not None
     sysmon.task_stop()
+
+
+def test_wait_for_monitor_subscriptions_completes_when_both_events_signaled():
+    """_wait_for_monitor_subscriptions returns once dbus and STATE_DB listeners have signaled ready."""
+    sysmon = Sysmonitor()
+    dbus_ready = multiprocessing.Event()
+    statedb_ready = multiprocessing.Event()
+    dbus_ready.set()
+    statedb_ready.set()
+    sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+
+
+@patch.object(sysmonitor_module, 'SUBSCRIPTION_READY_TIMEOUT_SEC', 0.05)
+def test_wait_for_monitor_subscriptions_system_exit_when_dbus_not_ready():
+    sysmon = Sysmonitor()
+    dbus_ready = multiprocessing.Event()
+    statedb_ready = multiprocessing.Event()
+    statedb_ready.set()
+    try:
+        sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        assert False, 'expected SystemExit when dbus ready event is never set'
+
+
+@patch.object(sysmonitor_module, 'SUBSCRIPTION_READY_TIMEOUT_SEC', 0.05)
+def test_wait_for_monitor_subscriptions_system_exit_when_statedb_not_ready():
+    sysmon = Sysmonitor()
+    dbus_ready = multiprocessing.Event()
+    statedb_ready = multiprocessing.Event()
+    dbus_ready.set()
+    try:
+        sysmon._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        assert False, 'expected SystemExit when STATE_DB ready event is never set'
+
+
+def test_monitor_statedb_subscribe_sets_subscription_ready_event():
+    """FEATURE subscriber sets subscription_ready after SubscriberStateTable is registered."""
+    ready = multiprocessing.Event()
+    task = MonitorStateDbTask(myQ, subscription_ready=ready)
+    task.task_stopping_event.set()
+    with patch('health_checker.sysmonitor.swsscommon.DBConnector', MagicMock()), \
+            patch('health_checker.sysmonitor.swsscommon.SubscriberStateTable', MagicMock(return_value=MagicMock())), \
+            patch('health_checker.sysmonitor.swsscommon.Select', MagicMock(return_value=MagicMock())):
+        task.subscribe_statedb()
+    assert ready.is_set()
+
+
+def test_monitor_system_bus_subscribe_sets_subscription_ready_event():
+    """systemd Manager Subscribe + JobRemoved hook registers before MainLoop.run(); ready is set."""
+    ready = multiprocessing.Event()
+    task = MonitorSystemBusTask(myQ, subscription_ready=ready)
+    with patch('dbus.mainloop.glib.DBusGMainLoop', MagicMock()), \
+            patch('dbus.SystemBus', MagicMock()), \
+            patch('dbus.Interface') as mock_interface, \
+            patch('gi.repository.GLib.MainLoop') as mock_main_loop:
+        manager = MagicMock()
+        mock_interface.return_value = manager
+        mock_main_loop.return_value.run = MagicMock()
+        task.subscribe_sysbus()
+    manager.Subscribe.assert_called_once()
+    manager.connect_to_signal.assert_called_once_with('JobRemoved', task.on_job_removed)
+    assert ready.is_set()
 
 
 @patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))

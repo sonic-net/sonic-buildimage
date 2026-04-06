@@ -23,6 +23,8 @@ NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
+# Combined wall-clock budget for both monitor threads to signal readiness before initial service scan
+SUBSCRIPTION_READY_TIMEOUT_SEC = 60
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
@@ -30,15 +32,18 @@ exclude_srv_list = ['ztp.service']
 #and push service events to main process via queue
 class MonitorStateDbTask(ProcessTaskBase):
 
-    def __init__(self,myQ):
+    def __init__(self, myQ, subscription_ready=None):
         ProcessTaskBase.__init__(self)
         self.task_queue = myQ
+        self._subscription_ready = subscription_ready
 
     def subscribe_statedb(self):
         state_db = swsscommon.DBConnector("STATE_DB", REDIS_TIMEOUT_MS, False)
         sel = swsscommon.Select()
         cst = swsscommon.SubscriberStateTable(state_db, "FEATURE")
         sel.addSelectable(cst)
+        if self._subscription_ready is not None:
+            self._subscription_ready.set()
 
         while not self.task_stopping_event.is_set():
             (state, c) = sel.select(SELECT_TIMEOUT_MSECS)
@@ -72,9 +77,10 @@ class MonitorStateDbTask(ProcessTaskBase):
 #and push service events to main process via queue
 class MonitorSystemBusTask(ProcessTaskBase):
 
-    def __init__(self,myQ):
+    def __init__(self,myQ, subscription_ready=None):
         ProcessTaskBase.__init__(self)
         self.task_queue = myQ
+        self._subscription_ready = subscription_ready
 
     def on_job_removed(self, id, job, unit, result):
         if result == "done" or result == "failed":
@@ -95,6 +101,8 @@ class MonitorSystemBusTask(ProcessTaskBase):
         manager = dbus.Interface(systemd, 'org.freedesktop.systemd1.Manager')
         manager.Subscribe()
         manager.connect_to_signal('JobRemoved', self.on_job_removed)
+        if self._subscription_ready is not None:
+            self._subscription_ready.set()
 
         loop = GLib.MainLoop()
         loop.run()
@@ -468,23 +476,43 @@ class Sysmonitor(ProcessTaskBase):
 
         return 0
 
+    def _wait_for_monitor_subscriptions(self, dbus_ready, statedb_ready):
+        """Block until both monitor threads signal listener registration.
+
+        Single monotonic deadline: total wall time is at most SUBSCRIPTION_READY_TIMEOUT_SEC
+        (both threads already run in parallel).
+        """
+        deadline = time.monotonic() + SUBSCRIPTION_READY_TIMEOUT_SEC
+        monitors = (
+            (dbus_ready, "systemd dbus monitor did not finish Subscribe"),
+            (statedb_ready, "STATE_DB FEATURE monitor did not finish subscribing"),
+        )
+        for ev, detail in monitors:
+            remaining = deadline - time.monotonic()
+            if not ev.wait(timeout=max(0.0, remaining)):
+                logger.log_error(
+                    "Timeout: {} within {}s (combined budget)".format(detail, SUBSCRIPTION_READY_TIMEOUT_SEC))
+                sys.exit(1)
+
     def system_service(self):
         if not self.state_db:
             self.state_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
             self.state_db.connect(self.state_db.STATE_DB)
 
-        try:
-            monitor_system_bus = MonitorSystemBusTask(self.myQ)
-            monitor_system_bus.task_run()
+        dbus_ready = multiprocessing.Event()
+        statedb_ready = multiprocessing.Event()
 
-            monitor_statedb_table = MonitorStateDbTask(self.myQ)
+        try:
+            monitor_system_bus = MonitorSystemBusTask(self.myQ, subscription_ready=dbus_ready)
+            monitor_system_bus.task_run()
+            monitor_statedb_table = MonitorStateDbTask(self.myQ, subscription_ready=statedb_ready)
             monitor_statedb_table.task_run()
 
         except Exception as e:
             logger.log_error("SubProcess-{}".format(str(e)))
             sys.exit(1)
 
-
+        self._wait_for_monitor_subscriptions(dbus_ready, statedb_ready)
         self.update_system_status()
 
         from queue import Empty
