@@ -544,18 +544,8 @@ class TestSmartSwitch:
         yang_model.load_data(data, 'Invalid leafref value "NonExistentVnet"')
 
     def test_dash_ha_global_config_dpu_vlan(self, yang_model):
-        """Test dpu_vlan leafref to VLAN_LIST"""
+        """Test dpu_vlan string field"""
         data = {
-            "sonic-vlan:sonic-vlan": {
-                "sonic-vlan:VLAN": {
-                    "VLAN_LIST": [
-                        {
-                            "name": "Vlan100",
-                            "vlanid": 100
-                        }
-                    ]
-                }
-            },
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
@@ -566,30 +556,6 @@ class TestSmartSwitch:
             }
         }
         yang_model.load_data(data)
-
-    def test_dash_ha_global_config_dpu_vlan_invalid(self, yang_model):
-        """Test dpu_vlan with non-existent VLAN reference"""
-        data = {
-            "sonic-vlan:sonic-vlan": {
-                "sonic-vlan:VLAN": {
-                    "VLAN_LIST": [
-                        {
-                            "name": "Vlan100",
-                            "vlanid": 100
-                        }
-                    ]
-                }
-            },
-            "sonic-smart-switch:sonic-smart-switch": {
-                "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
-                    "global": {
-                        "dpu_vlan": "Vlan999",
-                        "cp_data_channel_port": 11234
-                    }
-                }
-            }
-        }
-        yang_model.load_data(data, 'Invalid leafref value "Vlan999"')
 
     @pytest.mark.parametrize(
         "dpu_name, error_message", [

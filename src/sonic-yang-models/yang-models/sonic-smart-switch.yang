@@ -17,10 +17,6 @@ module sonic-smart-switch {
 		prefix sonic-vnet;
 	}
 
-	import sonic-vlan {
-		prefix sonic-vlan;
-	}
-
 	organization
 		"SONiC";
 
@@ -54,7 +50,7 @@ module sonic-smart-switch {
 	}
 	
 	revision 2026-03-25 {
-		description "Add dpu_vnet, dpu_vlan. Allow underscore in dpu name.";
+		description "Add dpu_vnet, dpu_vlan (string). Allow underscore in dpu name.";
 	}
 
 	container sonic-smart-switch {
@@ -313,8 +309,8 @@ module sonic-smart-switch {
 
 				leaf dpu_vlan {
 					description "DPU VLAN identifier, name of the VLAN";
-					type leafref {
-						path "/sonic-vlan:sonic-vlan/sonic-vlan:VLAN/sonic-vlan:VLAN_LIST/sonic-vlan:name";
+					type string {
+						length "1..255";
 					}
 				}
 
