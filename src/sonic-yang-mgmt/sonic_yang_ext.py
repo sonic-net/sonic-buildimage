@@ -1,14 +1,19 @@
 # This script is used as extension of sonic_yang class. It has methods of
 # class sonic_yang. A separate file is used to avoid a single large file.
 
-from __future__ import print_function
+from __future__ import print_function, annotations
 import libyang as ly
 import syslog
 from json import dump, dumps, loads
 from xmltodict import parse
 from glob import glob
 import copy
+import traceback
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sonic_yang_path import SonicYangPathMixin
+
+if TYPE_CHECKING:
+    from sonic_yang import SonicYang
 
 Type_1_list_maps_model = [
     'DSCP_TO_TC_MAP_LIST',
@@ -45,6 +50,32 @@ class SonicYangException(Exception):
 
 # class sonic_yang methods, use mixin to extend sonic_yang
 class SonicYangExtMixin(SonicYangPathMixin):
+
+    # Mixin type stubs — these attributes are defined in SonicYang.__init__
+    if TYPE_CHECKING:
+        yang_dir: str
+        ctx: ly.Context
+        module: Optional[ly.Module]
+        root: Optional[ly.DNode]
+        DEBUG: bool
+        print_log_enabled: bool
+        yangFiles: List[str]
+        confDbYangMap: Dict[str, Any]
+        yJson: List[Any]
+        jIn: Dict[str, Any]
+        xlateJson: Dict[str, Any]
+        revXlateJson: Dict[str, Any]
+        tablesWithOutYang: Dict[str, Any]
+        preProcessedYang: Dict[str, Any]
+        elementPath: List[str]
+
+        def sysLog(self, debug: int = ..., msg: Optional[str] = ..., doPrint: bool = ...) -> None: ...
+        def fail(self, e: Exception) -> None: ...
+        def _load_schema_module(self, yang_file: str) -> Optional[ly.Module]: ...
+        def _find_data_node(self, data_xpath: str) -> Optional[ly.DNode]: ...
+        def _find_parent_data_node(self, data_xpath: str) -> Optional[ly.DNode]: ...
+        def _deleteNode(self, xpath: str) -> bool: ...
+        def _print_data_mem(self, option: str) -> str: ...
 
     """
     load all YANG models, create JSON of yang models. (Public function)
@@ -574,6 +605,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
         #This is done to improve performance of mapping from values of TABLEs in
         #config DB to leaf in YANG LIST.
         inner_clist = model.get('list')
+        inner_listKey = ""
+        inner_listVal = ""
         if inner_clist:
             inner_listKey = inner_clist['key']['@value']
             inner_leafDict = self._createLeafDict(inner_clist, table)
@@ -593,8 +626,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # Find and extracts key from each dict in config
                 keyDict = self._extractKey(pkey, listKeys)
 
+                inner_yang_list = list()
                 if inner_clist:
-                   inner_yang_list = list()
                    for vKey in config[pkey]:
                       inner_keyDict = dict()
                       self.sysLog(syslog.LOG_DEBUG, "xlateList Key {} vkey {} Val {} vval {}".\
@@ -680,19 +713,30 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 keyDict = self._extractKey(pkey, listKeys)
                 # fill rest of the values in keyDict
                 for vKey in config[pkey]:
-                    if ccontainer and vKey == ccontainer.get('@name'):
+                    if ccontainer and isinstance(ccontainer, dict) and vKey == ccontainer.get('@name'):
                         self.sysLog(syslog.LOG_DEBUG, "xlateList Handle container {} in list {}".\
                             format(vKey, table))
                         yangContainer = dict()
-                        if isinstance(ccontainer, dict) and bool(config):
+                        if bool(config):
                             self._xlateContainerInList(ccontainer, yangContainer, config[pkey], table)
-                        # If multi-list exists in container,
-                        elif ccontainer and isinstance(ccontainer, list) and bool(config):
-                            for modelContainer in ccontainer:
-                                self._xlateContainerInList(modelContainer, yangContainer, config[pkey], table)
                         if len(yangContainer):
                             keyDict[vKey] = yangContainer
                         continue
+                    elif ccontainer and isinstance(ccontainer, list):
+                        matched = False
+                        for modelContainer in ccontainer:
+                            if vKey == modelContainer.get('@name'):
+                                self.sysLog(syslog.LOG_DEBUG, "xlateList Handle container {} in list {}".\
+                                    format(vKey, table))
+                                yangContainer = dict()
+                                if bool(config):
+                                    self._xlateContainerInList(modelContainer, yangContainer, config[pkey], table)
+                                if len(yangContainer):
+                                    keyDict[vKey] = yangContainer
+                                matched = True
+                                break
+                        if matched:
+                            continue
                     self.elementPath.append(vKey)
                     self.sysLog(syslog.LOG_DEBUG, "xlateList vkey {}".format(vKey))
                     try:
@@ -964,6 +1008,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         # Gather inner list key and value from model
         inner_clist = model.get('list')
+        inner_listKey = ""
+        inner_listVal = ""
         if inner_clist:
             inner_listKey = inner_clist['key']['@value']
             inner_leafDict = self._createLeafDict(inner_clist, table)
@@ -1018,16 +1064,20 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # fill rest of the entries
                 for key in entry:
                     if key not in pkeydict:
-                        if ccontainer and key == ccontainer['@name']:
+                        if ccontainer and isinstance(ccontainer, dict) and key == ccontainer['@name']:
                             self.sysLog(syslog.LOG_DEBUG, "revXlateList handle container {} in list {}".format(pkey, table))
-                            # IF container has only one inner container
-                            if isinstance(ccontainer, dict):
-                                self._revXlateContainerInContainer(ccontainer, entry, config[pkey], table)
-                            # IF container has many inner container
-                            elif isinstance(ccontainer, list):
-                                for modelContainer in ccontainer:
-                                    self._revXlateContainerInContainer(modelContainer, entry, config[pkey], table)
+                            self._revXlateContainerInContainer(ccontainer, entry, config[pkey], table)
                             continue
+                        elif ccontainer and isinstance(ccontainer, list):
+                            matched = False
+                            for modelContainer in ccontainer:
+                                if key == modelContainer.get('@name'):
+                                    self.sysLog(syslog.LOG_DEBUG, "revXlateList handle container {} in list {}".format(pkey, table))
+                                    self._revXlateContainerInContainer(modelContainer, entry, config[pkey], table)
+                                    matched = True
+                                    break
+                            if matched:
+                                continue
 
                         self.elementPath.append(key)
                         config[pkey][key] = self._revFindYangTypedValue(key, \
@@ -1174,8 +1224,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
             table = "PORT"
             xpath = self.findXpathPort(portName)
             module, topc, container = self._getModuleTLCcontainer(table)
-            list = self._findYangList(container, table+"_LIST")
-            xpath = xpath + "/" + list['key']['@value'].split()[0]
+            ylist = self._findYangList(container, table+"_LIST")
+            if ylist is None:
+                raise SonicYangException("YANG list not found for {}".format(table+"_LIST"))
+            xpath = xpath + "/" + ylist['key']['@value'].split()[0]
         except Exception as e:
             self.sysLog(msg="find xpath of port Leaf failed", \
                 debug = syslog.LOG_ERR, doPrint=True)
@@ -1300,25 +1352,23 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     def deleteNode(self, xpath):
 
-        # These MACROS used only here, can we get it from Libyang Header ?
         try:
-            LYS_LEAF = 4
             node = self._find_data_node(xpath)
             if node is None:
-                raise('Node {} not found'.format(xpath))
+                raise Exception('Node {} not found'.format(xpath))
 
             snode = node.schema()
             # check for a leaf if it is a key. If yes delete the parent
-            if (snode.nodetype() == LYS_LEAF):
-                leaf = ly.Schema_Node_Leaf(snode)
-                if leaf.is_key():
-                    # try to delete parent
-                    nodeP = self._find_parent_data_node(xpath)
-                    xpathP = nodeP.path()
-                    if self._deleteNode(xpath=xpathP) == False:
-                        raise Exception('_deleteNode failed')
-                    else:
-                        return True
+            if isinstance(snode, ly.SLeaf) and snode.is_key():
+                # try to delete parent
+                nodeP = self._find_parent_data_node(xpath)
+                if nodeP is None:
+                    raise Exception('Parent node for {} not found'.format(xpath))
+                xpathP = nodeP.path()
+                if self._deleteNode(xpath=xpathP) == False:
+                    raise Exception('_deleteNode failed')
+                else:
+                    return True
 
             # delete non key element
             if self._deleteNode(xpath=xpath) == False:
