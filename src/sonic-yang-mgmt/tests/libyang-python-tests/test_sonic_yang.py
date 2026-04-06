@@ -131,8 +131,7 @@ class Test_SonicYang_Loading(object):
     #test merge data tree
     def test_merge_data_tree(self, data, yang_s):
         data_merge_file = data['data_merge_file']
-        yang_dir = str(data['yang_dir'])
-        yang_s._merge_data(data_merge_file, yang_dir)
+        yang_s._merge_data(data_merge_file)
 
 
 class Test_SonicYang_UsesCompilation(object):
@@ -339,7 +338,8 @@ class Test_SonicYang(object):
     def test_delete_node(self, data, yang_s):
         for node in data['delete_nodes']:
             xpath = str(node['xpath'])
-            yang_s._deleteNode(xpath)
+            rv = yang_s._deleteNode(xpath)
+            assert rv == node['valid']
 
     #test set node's value
     def test_set_datanode_value(self, data, yang_s):
@@ -404,23 +404,15 @@ class Test_SonicYang(object):
         for node in data['data_type']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_data_type(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_get_leafref_type(self, yang_s, data):
-        # Merging data triggers libyang1 to internally re-resolve leafrefs
-        # in the data tree, which is required for value_type() to return
-        # the resolved type instead of LY_TYPE_LEAFREF.
-        data_merge_file = data['data_merge_file']
-        yang_dir = str(data['yang_dir'])
-        yang_s._merge_data(data_merge_file, yang_dir)
         for node in data['leafref_type']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_leafref_type(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_get_leafref_path(self, yang_s, data):
         for node in data['leafref_path']:
@@ -433,9 +425,8 @@ class Test_SonicYang(object):
         for node in data['leafref_type_schema']:
             xpath = str(node['xpath'])
             expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_leafref_type_schema(xpath)
-            assert expected_type == data_type
+            assert expected == data_type
 
     def test_configdb_path_to_xpath(self, yang_s, data):
         yang_s.loadYangModel()
@@ -571,8 +562,7 @@ class Test_SonicYang(object):
             # print for better debugging, in case of failure.
             from jsondiff import diff
             print(diff(syc.jIn, syc.revXlateJson, syntax='symmetric'))
-            # make it fail
-            assert False == True
+            raise Exception("Xlate and Rev Xlate failed")
 
         return
 
