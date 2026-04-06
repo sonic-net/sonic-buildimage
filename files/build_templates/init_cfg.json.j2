@@ -69,6 +69,7 @@
                    ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
+{%- if include_system_bmp == "y" %}{% do features.append(("bmp", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_lldp == "y" %}{% do features.append(("lldp", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_snmp == "y" %}{% do features.append(("snmp", "enabled", true, "enabled")) %}{% endif %}
