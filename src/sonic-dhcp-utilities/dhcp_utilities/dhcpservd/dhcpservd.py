@@ -101,8 +101,15 @@ class DhcpServd(object):
 
     def _signal_readiness(self):
         """Write readiness flag so wait_for_dhcpservd.sh can gate kea-dhcp4 startup."""
-        with open(DHCPSERVD_READY_FLAG, "w") as f:
-            f.write(str(os.getpid()))
+        try:
+            with open(DHCPSERVD_READY_FLAG, "w") as f:
+                f.write(str(os.getpid()))
+        except OSError as err:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "Failed to write readiness flag {}: {}, exiting".format(DHCPSERVD_READY_FLAG, err)
+            )
+            sys.exit(1)
 
     def wait(self):
         while True:
