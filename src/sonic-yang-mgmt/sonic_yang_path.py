@@ -29,11 +29,11 @@ class SonicYangPathMixin:
         if not schema_xpath:
             return "/" + "/".join(xpath_tokens)
 
-        # Schema XPath in libyang v1 wants each token prefixed with the module name.
-        # The first token should have this, use that to prefix the rest.
-        module_name = xpath_tokens[0].split(":")[0]
-
-        return "/" + ("/" + module_name + ":").join(xpath_tokens)
+        # Schema XPath in libyang v3 uses RFC 7951 JSON-style prefixes:
+        # nodes inherit their module from their parent, so only the first
+        # token (which crosses from root into the module) gets a prefix.
+        # Subsequent tokens from the same module have no prefix.
+        return "/" + "/".join(xpath_tokens)
 
     @staticmethod
     def xpath_split(xpath: str) -> List[str]:
