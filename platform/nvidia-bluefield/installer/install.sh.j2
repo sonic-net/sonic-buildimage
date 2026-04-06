@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,6 +97,24 @@ fi
 
 if [ -e /etc/bf.cfg ]; then
 	. /etc/bf.cfg
+fi
+
+if [[ "$NPU_TIME" =~ ^[0-9]+$ ]]; then
+	log "Setting system time from NPU: $NPU_TIME"
+	if date -s "@$NPU_TIME" > /dev/null 2>&1; then
+		log "System time set to: $(date)"
+		if [ -e /dev/rtc0 ]; then
+			if hwclock --systohc --utc > /dev/null 2>&1; then
+				log "Hardware clock synced from system time"
+			else
+				log "WARNING: Failed to sync hardware clock from system time (rc=$?)"
+			fi
+		fi
+	else
+		log "WARNING: Failed to set system time from NPU_TIME=$NPU_TIME (rc=$?)"
+	fi
+else
+	log "Invalid NPU_TIME value '$NPU_TIME'; expected positive integer Unix timestamp. Skipping time update."
 fi
 
 # Flags that can be overwritten by the bf.cfg
@@ -229,40 +248,36 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 	ex mkdir -p $sonic_fs_mountpoint
 	ex mount -t squashfs $sonic_fs_path $sonic_fs_mountpoint
 
-	kernel_mft=$(chroot $sonic_fs_mountpoint dpkg -l | grep kernel-mft-dkms-modules | awk '/^ii/ {print $2}')
-	mft_files=$(chroot $sonic_fs_mountpoint dpkg -L $kernel_mft)
+	# Mount shared memory needed for FW manager
+	ex mkdir -m 1777 /dev/shm
+	ex mount -t tmpfs -o size=4G tmpfs /dev/shm
 
-	for f in $mft_files; do
-		if [[ $sonic_fs_mountpoint/$f != *.ko ]]; then
-			continue
-		fi
-
-		insmod "$sonic_fs_mountpoint/$f"
-	done
-
-	ex mkdir -p /etc/mlnx/
-
-	ex ln -s /mnt/$image_dir/platform/fw/asic/fw-BF3.mfa /etc/mlnx/fw-BF3.mfa
-
-	ex mst start
-
-        cp -R $sonic_fs_mountpoint/usr/bin/asic_detect/ /usr/bin/
+	# Mount other filesystems needed for FW manager
+	ex mount -t proc /proc $sonic_fs_mountpoint/proc
+	ex mount -t sysfs /sys $sonic_fs_mountpoint/sys
+	ex mount --bind /dev $sonic_fs_mountpoint/dev
+	ex mount -t tmpfs -o rw tmpfs $sonic_fs_mountpoint/tmp
+	ex mount --bind /mnt $sonic_fs_mountpoint/host
 
 	if function_exists bfb_pre_fw_install; then
 		log "Running bfb_pre_fw_install from bf.cfg"
 		bfb_pre_fw_install
 	fi
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v --no-mst
-	if [[ $? != 0 ]]; then
-		log "ERROR: FW update failed"
-	fi
+	ex chroot $sonic_fs_mountpoint mst start
+	ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --nosyslog --verbose
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r --no-mst
+		ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --reset --nosyslog --verbose
 	fi
 
+	ex umount $sonic_fs_mountpoint/host
+	ex umount $sonic_fs_mountpoint/tmp
+	ex umount $sonic_fs_mountpoint/proc
+	ex umount $sonic_fs_mountpoint/sys
+	ex umount $sonic_fs_mountpoint/dev
 	ex umount $sonic_fs_mountpoint
+	ex umount /dev/shm
 fi
 
 if function_exists bfb_post_sonic_install; then

@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@ from sonic_platform import utils
 from sonic_platform.chassis import ModularChassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 from sonic_platform.module import Module
+from sonic_platform.dpuctlplat import PCI_DEV_BASE
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase
 
@@ -253,7 +254,9 @@ class TestModule:
             mock_obj.assert_called_once_with(skip_pre_post=True)
             mock_obj.reset_mock()
             m.reboot(reboot_type=ModuleBase.MODULE_REBOOT_SMARTSWITCH)
-            mock_obj.assert_called_once_with(skip_pre_post=True)
+            mock_obj.assert_called_once_with(no_wait=True, skip_pre_post=True)
+            with pytest.raises(RuntimeError):
+                m.reboot("None")
         with patch('sonic_py_common.syslogger.SysLogger.log_error') as mock_method:
             m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=True)
             assert m.set_admin_state(True)
@@ -316,13 +319,23 @@ class TestModule:
                 return 0
         # Test watchdog reboot cause
         with patch("sonic_platform.device_data.DeviceDataManager.get_dpu_interface", return_value="0000:0a:00.0"), \
-             patch("subprocess.check_output") as mock_check_output:
+             patch("subprocess.check_output") as mock_check_output, \
+             patch("os.path.exists") as mock_path_exists:
+            # Mock PCI path exists for watchdog check
+            mock_path_exists.return_value = True
+
             # Test watchdog reboot (reset_reason = 0x2)
             mock_check_output.return_value = b"reset_reason | 0x00000002"
             assert m.get_reboot_cause() == (ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot')
             
             # Test non-watchdog case (reset_reason != 0x2)
+            mock_check_output.reset_mock()
+            mock_path_exists.reset_mock()
             mock_check_output.return_value = b"reset_reason | 0x00000001"
+            mock_path_exists.return_value = False
+            m.get_reboot_cause()
+            mock_check_output.assert_not_called()
+            mock_path_exists.assert_called_once_with(os.path.join(PCI_DEV_BASE, "0000:0a:00.0"))
             file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
             reboot_cause_list = [
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),

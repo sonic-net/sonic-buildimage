@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,6 +78,10 @@ PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
 declare -A rshim2dpu
 declare -r bfsoc_dev_id="15b3:c2d5"
 declare -r cx7_dev_id="15b3:a2dc"
+declare -r REBOOT_HELPER_SCRIPT="/usr/local/bin/reboot_smartswitch_helper"
+
+# Source reboot helper script at initialization if available
+[[ -f "$REBOOT_HELPER_SCRIPT" ]] && source "$REBOOT_HELPER_SCRIPT"
 
 EXTRACTED_BFB_PATH=""
 EXTRACTED_CHECKSUM_PATH=""
@@ -203,6 +207,47 @@ remove_cx_pci_device() {
     fi
 }
 
+# Function to check if CHASSIS_MODULE_TABLE entry exists for a specific DPU
+is_chassis_module_table_present() {
+    local dpu_name=$1
+    local output
+    output=$(sonic-db-cli STATE_DB KEYS "CHASSIS_MODULE_TABLE|${dpu_name}" 2>/dev/null)
+    if [[ -z "$output" ]]; then
+        return 1
+    fi
+    return 0
+}
+
+# Function to execute dpuctl dpu-reset command
+run_dpuctl_reset() {
+    local dpu=$1
+    local use_verbose=$2
+    local reset_cmd="dpuctl dpu-reset --force $dpu"
+    if [[ "$use_verbose" == true ]]; then
+        reset_cmd="$reset_cmd -v"
+    fi
+    eval $reset_cmd
+}
+
+# Function to reset DPU using reboot helper or fallback to dpuctl
+reset_dpu() {
+    local dpu=$1
+    local use_verbose=$2
+    local dpu_upper="${dpu^^}"  # Convert to uppercase (e.g., dpu0 -> DPU0)
+
+    # Check if reboot helper is available and CHASSIS_MODULE_TABLE entry exists for this DPU
+    if [[ -f "$REBOOT_HELPER_SCRIPT" ]] && is_chassis_module_table_present "$dpu_upper"; then
+        log_info "Using reboot helper pre/post shutdown methods while resetting $dpu_upper"
+        module_pre_shutdown "$dpu_upper"
+        run_dpuctl_reset "$dpu" "$use_verbose"
+        module_post_startup "$dpu_upper"
+    else
+        # Fallback to dpuctl
+        log_info "Using dpuctl to reset $dpu"
+        run_dpuctl_reset "$dpu" "$use_verbose"
+    fi
+}
+
 monitor_installation() {
     local -r rid=$1
     local -r pid=$2
@@ -283,11 +328,20 @@ bfb_install_call() {
     fi
     remove_cx_pci_device "$rshim" "$dpu"
 
-    # Construct bfb-install command
-    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim"
+    # Create config file with NPU time for DPU time synchronization
+    local config_file
+    config_file=$(mktemp "${WORK_DIR}/bf_cfg.XXXXX") || {
+        log_error "$rid: Failed to create temporary config file in ${WORK_DIR}"
+        return 1
+    }
+    trap "rm -f '$config_file'; stop_rshim_daemon $rid" EXIT
     if [ -n "$appendix" ]; then
-        cmd="$cmd -c $appendix"
+        cat "$appendix" > "$config_file"
     fi
+    echo "NPU_TIME=$(date +%s)" >> "$config_file"
+
+    # Construct bfb-install command
+    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim -c $config_file"
     log_info "Installing bfb image on DPU connected to $rshim using $cmd"
 
     # Run installation with progress monitoring
@@ -315,11 +369,7 @@ bfb_install_call() {
     stop_rshim_daemon "$rid"
     log_info "$rid: Resetting DPU $dpu"
 
-    local reset_cmd="dpuctl dpu-reset --force $dpu"
-    if [[ $verbose == true ]]; then
-        reset_cmd="$reset_cmd -v"
-    fi
-    eval $reset_cmd
+    reset_dpu "$dpu" "$verbose"
 }
 
 file_cleanup(){
@@ -359,7 +409,7 @@ extract_bfb() {
             exit 1
         fi
         
-        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | grep "$(basename "$bfb_file")" | head -n 1)
+        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | head -n 1)
         if [ -z "$extracted_bfb" ]; then
             log_error "No BFB file found in tar archive"
             exit 1

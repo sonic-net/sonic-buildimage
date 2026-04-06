@@ -1,2 +1,0 @@
--w /etc/localtime -p wa -F auid>=1000 -F auid!=4294967295 -k time_changes
--w /usr/share/zoneinfo/Etc/UTC -p wa -F auid>=1000 -F auid!=4294967295 -k time_changes

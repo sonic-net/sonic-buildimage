@@ -35,9 +35,6 @@ LEAF_LIST_WITH_STRING_VALUE_DICT = {
     ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'): ',',
     ('PORT', 'adv_speeds'): ',',
     ('PORT', 'adv_interface_types'): ',',
-    ('VNET_ROUTE_TUNNEL', 'endpoint'): ',',
-    ('VNET_ROUTE_TUNNEL', 'mac_address'): ',',
-    ('VNET_ROUTE_TUNNEL', 'vni'): ',',
 }
 
 """
@@ -1227,9 +1224,11 @@ class SonicYangExtMixin(SonicYangPathMixin):
     load_data: load Config DB, crop, xlate and create data tree from it. (Public)
     input:    configdbJson - will NOT be modified
               debug Flag
+              error_log_level - syslog level for data loading failures
+                                (default: syslog.LOG_WARNING)
     returns:  True - success   False - failed
     """
-    def loadData(self, configdbJson, debug=False):
+    def loadData(self, configdbJson, debug=False, error_log_level=syslog.LOG_WARNING):
 
        try:
           # write Translated config in file if debug enabled
@@ -1253,7 +1252,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
        except Exception as e:
            self.root = None
            self.sysLog(msg="Data Loading Failed:{}".format(str(e)), \
-            debug=syslog.LOG_ERR, doPrint=True)
+            debug=error_log_level, doPrint=True)
            raise SonicYangException("Data Loading Failed\n{}".format(str(e)))
 
        return True

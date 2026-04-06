@@ -387,11 +387,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp2_max"
+          "drv_attr_name": "temp2_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp2_crit"
+          "drv_attr_name": "temp2_max"
         }
       ]
     }
@@ -416,11 +416,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp3_max"
+          "drv_attr_name": "temp3_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp3_crit"
+          "drv_attr_name": "temp3_max"
         }
       ]
     }
@@ -445,11 +445,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp4_max"
+          "drv_attr_name": "temp4_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp4_crit"
+          "drv_attr_name": "temp4_max"
         }
       ]
     }
@@ -473,11 +473,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp5_max"
+          "drv_attr_name": "temp5_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp5_crit"
+          "drv_attr_name": "temp5_max"
         }
       ]
     }
@@ -525,11 +525,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
+          "drv_attr_name": "temp1_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
+          "drv_attr_name": "temp1_max"
         }
       ]
     }
@@ -1987,8 +1987,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_serial_num",
@@ -1996,8 +1995,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9e",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "14"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_mfr_id",
@@ -2005,8 +2003,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x99",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "11"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_fan_dir",
@@ -2014,8 +2011,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_p_out",
@@ -2034,6 +2030,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
@@ -2143,6 +2140,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
@@ -2153,6 +2151,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
@@ -2252,8 +2251,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_serial_num",
@@ -2261,8 +2259,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9e",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "14"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_mfr_id",
@@ -2270,8 +2267,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x99",
           "attr_mask": "0x0",
-          "attr_cmpval": "0x00",
-          "attr_len": "11"
+          "attr_cmpval": "0x00"
         },
         {
           "attr_name": "psu_fan_dir",
@@ -2279,8 +2275,7 @@
           "attr_devtype": "pmbus",
           "attr_offset": "0x9a",
           "attr_mask": "0x0",
-          "attr_cmpval": "0xff",
-          "attr_len": "23"
+          "attr_cmpval": "0xff"
         },
         {
           "attr_name": "psu_p_out",
@@ -2299,6 +2294,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
@@ -2408,6 +2404,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
@@ -2418,6 +2415,7 @@
           "attr_mask": "0x0",
           "attr_cmpval": "0xff",
           "attr_data_format": "linear16",
+          "attr_vout_mode": "0x17",
           "attr_len": "2"
         },
         {
