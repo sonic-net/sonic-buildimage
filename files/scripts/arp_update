@@ -59,8 +59,12 @@ while /bin/true; do
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")
                   if [[ -n "$intf_up" ]]; then
-                      run_with_retry_cmd "static route ping to $nexthop on $interface" \
-                          timeout 0.2 $ping_prefix -I "$interface" -n -q -i 0 -c 1 -W 1 "$nexthop" >/dev/null 2>&1
+                      pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
+                      eval $pingcmd
+                      # STALE entries may appear more often, not logging to prevent periodic syslogs
+                      if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
+                          logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
+                      fi
                   fi
               fi
           done
