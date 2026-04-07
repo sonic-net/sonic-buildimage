@@ -127,12 +127,11 @@ class TestDpuCtlPlatPCI:
             assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
             assert written_data[1]["data"] == "1"
 
-        # Test PCI scan - should scan devices
+        # Test PCI scan - only checks device paths exist, no write_file calls
         written_data.clear()
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file):
+        with patch('os.path.exists', return_value=True):
             assert dpuctl_obj.dpu_pci_scan()
-            assert written_data[0]["file"].endswith("rescan")
-            assert written_data[0]["data"] == "1"
+            assert len(written_data) == 0  # dpu_pci_scan no longer writes to rescan
 
 class TestDpuCtlPlatPower:
     """Tests for power management functionality"""
@@ -207,13 +206,11 @@ class TestDpuCtlPlatPower:
              patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.RST.value), \
              patch.object(dpuctl_obj, 'read_force_power_path', return_value=1):
             assert dpuctl_obj.dpu_power_on(True)
-            assert len(written_data) == 3  # pwr_force + rst + rescan
+            assert len(written_data) == 2  # pwr_force + rst (dpu_pci_scan no longer writes)
             assert written_data[0]["file"].endswith("_pwr_force")
             assert written_data[0]["data"] == "1"
             assert written_data[1]["file"].endswith("_rst")
             assert written_data[1]["data"] == "1"
-            assert written_data[2]["file"].endswith("rescan")
-            assert written_data[2]["data"] == "1"
 
         # Test normal power on
         written_data.clear()
@@ -221,10 +218,9 @@ class TestDpuCtlPlatPower:
              patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.RST.value), \
              patch.object(dpuctl_obj, 'read_force_power_path', return_value=1):
             assert dpuctl_obj.dpu_power_on(False)
-            assert len(written_data) == 3  # pwr + rst + rescan
+            assert len(written_data) == 2  # pwr + rst (dpu_pci_scan no longer writes)
             assert written_data[0]["file"].endswith("_pwr")
             assert written_data[1]["file"].endswith("_rst")
-            assert written_data[2]["file"].endswith("rescan")
 
         # Test power on with skip_pre_post=True
         written_data.clear()
@@ -257,26 +253,24 @@ class TestDpuCtlPlatReboot:
         with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
              patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
             assert dpuctl_obj.dpu_reboot(False)
-            assert len(written_data) == 5  # Both PCI removals + rst + rst + rescan
+            assert len(written_data) == 4  # Both PCI removals + rst + rst (dpu_pci_scan no longer writes)
             assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
             assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
             assert written_data[2]["file"].endswith("_rst")
             assert written_data[3]["file"].endswith("_rst")
-            assert written_data[4]["file"].endswith("rescan")
 
         # Test force reboot
         written_data.clear()
         with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
              patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
             assert dpuctl_obj.dpu_reboot(True)
-            assert len(written_data) == 7  # Both PCI removals + rst + pwr_force + pwr_force + rst + rescan
+            assert len(written_data) == 6  # Both PCI removals + rst + pwr_force + pwr_force + rst (dpu_pci_scan no longer writes)
             assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
             assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
             assert written_data[2]["file"].endswith("_rst")
             assert written_data[3]["file"].endswith("_pwr_force")
             assert written_data[4]["file"].endswith("_pwr_force")
             assert written_data[5]["file"].endswith("_rst")
-            assert written_data[6]["file"].endswith("rescan")
 
         # Test no-wait reboot
         written_data.clear()

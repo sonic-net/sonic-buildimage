@@ -5,6 +5,10 @@
 {% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
 {% if mgmt_if.update({'ipv4' : mgmt_prefix|ip}) %} {% endif %}
 {% endif %}
+{% if mgmt_prefix|ipv6 and (mgmt_if.ipv4 is not defined) %}
+{% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
+{% if mgmt_if.update({'ipv6' : mgmt_prefix|ip}) %} {% endif %}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if mgmt_if %}
@@ -16,8 +20,31 @@ configure ports eth0 lldp portidsubtype local {{ MGMT_PORT[mgmt_if.port_name].al
 configure ports eth0 lldp portidsubtype local {{ mgmt_if.port_name }}
 {% endif %}
 {% endif %}
+{% if mgmt_if.ipv4 %}
 configure system ip management pattern {{ mgmt_if.ipv4 }}
+{% elif mgmt_if.ipv6 %}
+configure system ip management pattern {{ mgmt_if.ipv6 }}
+{% endif %}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
+{# Configure port ID subtype for front-panel ports at startup.
+   Without this, lldpd uses MAC address as default Port ID. When lldpd
+   auto-resumes after config processing, the first LLDP frame would carry
+   MAC-based Port IDs. Peers see a transient MSAP change when lldpmgrd
+   later reconfigures portidsubtype, causing unnecessary neighbor flaps.
+   Special ports (inband/recirculation/backplane) are excluded to match
+   lldpmgrd behavior which skips these port types. #}
+{% if PORT %}
+{% for port_name in PORT|sort %}
+{% if not port_name.startswith('Ethernet-IB') and not port_name.startswith('Ethernet-Rec') and not port_name.startswith('Ethernet-BP') %}
+{% set port_alias = PORT[port_name].alias|default('') %}
+{% if port_alias %}
+configure ports {{ port_name }} lldp portidsubtype local {{ port_alias }}
+{% else %}
+configure ports {{ port_name }} lldp portidsubtype local {{ port_name }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
 {# pause lldpd operations until all interfaces are well configured, resume command will run in lldpmgrd #}
 pause

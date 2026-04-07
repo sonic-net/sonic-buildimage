@@ -50,6 +50,8 @@ COPY ["cli", "/cli/"]
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Pass the image_version to container

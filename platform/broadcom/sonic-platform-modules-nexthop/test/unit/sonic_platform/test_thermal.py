@@ -9,159 +9,26 @@ These tests run in isolation from the SONiC environment using pytest:
 python -m pytest test/unit/sonic_platform/test_thermal.py -v
 """
 
-import importlib.util
-import os
-import sys
 import types
 from unittest.mock import Mock, call, patch
+from fixtures.test_helpers_common import mock_data_in_swsscommon
 
 import pytest
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_external_mocks():
-    """Set up mocks for external SONiC dependencies only."""
-
-    # Mock the thermal_json_object decorator
-    def mock_thermal_json_object(name):
-        def decorator(cls):
-            return cls
-        return decorator
-
-    # Mock ThermalPolicyActionBase
-    class MockThermalPolicyActionBase:
-        def __init__(self):
-            pass
-
-    # Mock SysLogger
-    class MockSysLogger:
-        def __init__(self, *args, **kwargs):
-            # Methods as mocks so tests can assert calls
-            self.log_info = Mock()
-            self.log_error = Mock()
-            self.log_warning = Mock()
-            self.log_debug = Mock()
-            self.log = Mock()
-
-    # Create mock modules for external SONiC dependencies
-    mock_thermal_action_base = Mock()
-    mock_thermal_action_base.ThermalPolicyActionBase = MockThermalPolicyActionBase
-
-    mock_thermal_json_object_module = Mock()
-    mock_thermal_json_object_module.thermal_json_object = mock_thermal_json_object
-
-    mock_syslogger = Mock()
-    mock_syslogger.SysLogger = MockSysLogger
-
-    # Create mock modules for the local dependencies
-    mock_thermal_infos = Mock()
-    mock_thermal_infos.FanDrawerInfo = type('FanDrawerInfo', (), {'INFO_TYPE': 'fan_drawer_info'})
-    mock_thermal_infos.ThermalInfo = type('ThermalInfo', (), {'INFO_TYPE': 'thermal_info'})
-
-    mock_syslog = Mock()
-    mock_syslog.SYSLOG_IDENTIFIER_THERMAL = "nh_thermal"
-    mock_syslog.NhLoggerMixin = MockSysLogger
-    # Build mock for swsscommon package and submodule
-    mock_swsscommon_pkg = types.ModuleType('swsscommon')
-    mock_swsscommon_sub = types.ModuleType('swsscommon.swsscommon')
-
-    class MockSonicV2Connector:
-        CONFIG_DB = 4
-        STATE_DB = 6
-        RETURN_GET_ALL = {}
-        def __init__(self, *args, **kwargs):
-            pass
-        def connect(self, db):
-            pass
-        def get_redis_client(self, db):
-            return object()
-        def get_all(self, db, key):
-            return self.RETURN_GET_ALL
-        def close(self, db):
-            pass
-
-    class MockTable:
-        MOCK_PORT_KEYS = []
-        MOCK_PORT_DATA = {}
-        def __init__(self, db_connector, table_name):
-            self.table_name = table_name
-        def getKeys(self):
-            return list(self.MOCK_PORT_KEYS)
-        def get(self, intf_name):
-            data = self.MOCK_PORT_DATA.get(intf_name)
-            return (True, data) if data is not None else (False, [])
-
-    setattr(mock_swsscommon_sub, 'SonicV2Connector', MockSonicV2Connector)
-    setattr(mock_swsscommon_sub, 'Table', MockTable)
-    setattr(mock_swsscommon_sub, 'CFG_PORT_TABLE_NAME', 'PORT')
-    setattr(mock_swsscommon_pkg, 'swsscommon', mock_swsscommon_sub)
-
-    # Build other external dependency mocks
-    mock_fpga_lib = types.SimpleNamespace()
-    def _mock_read_32(addr, reg):
-        raise PermissionError("not root")
-    setattr(mock_fpga_lib, 'read_32', _mock_read_32)
-
-    mock_thermal_base_module = types.ModuleType('sonic_platform_base.thermal_base')
-    class _ThermalBase:
-        def __init__(self):
-            pass
-    setattr(mock_thermal_base_module, 'ThermalBase', _ThermalBase)
-
-    mock_pddf_thermal_module = types.ModuleType('sonic_platform_pddf_base.pddf_thermal')
-    class _PddfThermal:
-        def __init__(self, *args, **kwargs):
-            pass
-        def get_temperature(self):
-            return None
-    setattr(mock_pddf_thermal_module, 'PddfThermal', _PddfThermal)
-
-
-    # Mock all dependencies that aren't available in test environment
-    with patch.dict('sys.modules', {
-        # External SONiC dependencies for thermal_actions
-        'sonic_platform_base.sonic_thermal_control.thermal_action_base': mock_thermal_action_base,
-        'sonic_platform_base.sonic_thermal_control.thermal_json_object': mock_thermal_json_object_module,
-        'sonic_platform_base.sonic_thermal_control.thermal_info_base': Mock(),
-        'sonic_platform_base.fan_base': Mock(),
-        'sonic_py_common.syslogger': mock_syslogger,
-        # External SONiC dependencies for thermal.py
-        'swsscommon': mock_swsscommon_pkg,
-        'swsscommon.swsscommon': mock_swsscommon_sub,
-        'nexthop.fpga_lib': mock_fpga_lib,
-        'sonic_platform_base.thermal_base': mock_thermal_base_module,
-        'sonic_platform_pddf_base.pddf_thermal': mock_pddf_thermal_module,
-        # Local dependencies
-        'sonic_platform.thermal_infos': mock_thermal_infos,
-        'sonic_platform.syslog': mock_syslog,
-    }):
-        yield
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def thermal_actions_module():
-    """Import the actual thermal_actions module using normal Python imports."""
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    thermal_actions_path = os.path.join(test_dir, "../../../common/sonic_platform/thermal_actions.py")
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from sonic_platform import thermal_actions
 
-    spec = importlib.util.spec_from_file_location("thermal_actions", thermal_actions_path)
-    thermal_actions = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(thermal_actions)
+    yield thermal_actions
 
-    return thermal_actions
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def thermal_module():
-    """Import the actual thermal module (thermal.py) using normal Python imports."""
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    thermal_path = os.path.join(test_dir, "../../../common/sonic_platform/thermal.py")
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from sonic_platform import thermal
 
-    spec = importlib.util.spec_from_file_location("thermal", thermal_path)
-    thermal = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(thermal)
-
-    return thermal
-
+    yield thermal
 
 
 class TestPIDController:
@@ -613,11 +480,10 @@ class TestFanSetSpeedAction:
         return fans
 
     @pytest.fixture
-    def mock_thermal_info_dict(self, thermal_actions_module, mock_fans):
+    def thermal_info_dict(self, thermal_actions_module, mock_fans):
         """Fixture providing mock thermal info dictionary."""
         fan_drawer_info = Mock()
         fan_drawer_info.get_fans = Mock(return_value=mock_fans)
-
         return {
             thermal_actions_module.FanDrawerInfo.INFO_TYPE: fan_drawer_info
         }
@@ -637,13 +503,13 @@ class TestFanSetSpeedAction:
         with pytest.raises(KeyError):
             fan_set_speed_action.load_from_json({})  # Missing speed field
 
-    def test_fan_set_speed_action_execute(self, fan_set_speed_action, mock_thermal_info_dict, mock_fans):
+    def test_fan_set_speed_action_execute(self, fan_set_speed_action, thermal_info_dict, mock_fans):
         """Test FanSetSpeedAction execution."""
         # Configure action
         fan_set_speed_action.load_from_json({'speed': 75})
 
         # Execute action
-        fan_set_speed_action.execute(mock_thermal_info_dict)
+        fan_set_speed_action.execute(thermal_info_dict)
 
         # Verify all fans were set to correct speed
         for fan in mock_fans:
@@ -878,22 +744,17 @@ class TestSetAllFanSpeedsErrorCases:
         logger.log_warning = Mock()
         return logger
 
-    @pytest.fixture
-    def thermal_actions_module_for_function(self, thermal_actions_module):
-        """Fixture providing access to the thermal_actions module for function testing."""
-        return thermal_actions_module
-
-    def test_set_all_fan_speeds_no_fans_available(self, thermal_actions_module_for_function, mock_logger):
+    def test_set_all_fan_speeds_no_fans_available(self, thermal_actions_module, mock_logger):
         """Test set_all_fan_speeds with empty fan list."""
         empty_fans = []
 
-        with pytest.raises(thermal_actions_module_for_function.FanException, match="No fans available to set speed"):
-            thermal_actions_module_for_function.set_all_fan_speeds(mock_logger, empty_fans, 50.0)
+        with pytest.raises(thermal_actions_module.FanException, match="No fans available to set speed"):
+            thermal_actions_module.set_all_fan_speeds(mock_logger, empty_fans, 50.0)
 
         # Verify error was logged
         mock_logger.log_error.assert_called_once_with("No fans available to set speed")
 
-    def test_set_all_fan_speeds_fan_set_speed_returns_false(self, thermal_actions_module_for_function, mock_logger):
+    def test_set_all_fan_speeds_fan_set_speed_returns_false(self, thermal_actions_module, mock_logger):
         """Test set_all_fan_speeds when fan.set_speed returns False."""
         # Create mock fans that return False from set_speed
         mock_fans = []
@@ -905,7 +766,7 @@ class TestSetAllFanSpeedsErrorCases:
         speed = 75.0
 
         # Should not raise exception, but should log warnings
-        thermal_actions_module_for_function.set_all_fan_speeds(mock_logger, mock_fans, speed)
+        thermal_actions_module.set_all_fan_speeds(mock_logger, mock_fans, speed)
 
         # Verify all fans were called
         for i, fan in enumerate(mock_fans):
@@ -918,7 +779,7 @@ class TestSetAllFanSpeedsErrorCases:
         ]
         mock_logger.log_warning.assert_has_calls(expected_calls)
 
-    def test_set_all_fan_speeds_fan_set_speed_raises_exception(self, thermal_actions_module_for_function, mock_logger):
+    def test_set_all_fan_speeds_fan_set_speed_raises_exception(self, thermal_actions_module, mock_logger):
         """Test set_all_fan_speeds when fan.set_speed raises an exception."""
         # Create mock fan that raises exception
         mock_fan = Mock()
@@ -930,7 +791,7 @@ class TestSetAllFanSpeedsErrorCases:
 
         # Should re-raise the exception
         with pytest.raises(RuntimeError, match="Hardware failure"):
-            thermal_actions_module_for_function.set_all_fan_speeds(mock_logger, mock_fans, speed)
+            thermal_actions_module.set_all_fan_speeds(mock_logger, mock_fans, speed)
 
         # Verify fan was called
         mock_fan.set_speed.assert_called_once_with(speed)
@@ -940,7 +801,7 @@ class TestSetAllFanSpeedsErrorCases:
         # Also verify traceback was logged (we can't easily test the exact traceback content)
         assert any("Traceback:" in str(call) for call in mock_logger.log_error.call_args_list)
 
-    def test_set_all_fan_speeds_mixed_success_and_failure(self, thermal_actions_module_for_function, mock_logger):
+    def test_set_all_fan_speeds_mixed_success_and_failure(self, thermal_actions_module, mock_logger):
         """Test set_all_fan_speeds with mix of successful and failed fan operations."""
         # Create mix of fans: some succeed, some fail, some raise exceptions
         mock_fans = []
@@ -969,7 +830,7 @@ class TestSetAllFanSpeedsErrorCases:
 
         # Should raise exception from fan3
         with pytest.raises(IOError, match="I/O error"):
-            thermal_actions_module_for_function.set_all_fan_speeds(mock_logger, mock_fans, speed)
+            thermal_actions_module.set_all_fan_speeds(mock_logger, mock_fans, speed)
 
         # Verify all fans up to the failing one were called
         fan0.set_speed.assert_called_once_with(speed)
@@ -983,10 +844,10 @@ class TestSetAllFanSpeedsErrorCases:
         # Verify error was logged for fan3 (raised exception)
         mock_logger.log_error.assert_any_call(f"Exception setting speed {speed:.1f}% for fan 3: I/O error")
 
-    def test_set_all_fan_speeds_none_fans_list(self, thermal_actions_module_for_function, mock_logger):
+    def test_set_all_fan_speeds_none_fans_list(self, thermal_actions_module, mock_logger):
         """Test set_all_fan_speeds with None as fan list."""
-        with pytest.raises(thermal_actions_module_for_function.FanException, match="No fans available to set speed"):
-            thermal_actions_module_for_function.set_all_fan_speeds(mock_logger, None, 50.0)
+        with pytest.raises(thermal_actions_module.FanException, match="No fans available to set speed"):
+            thermal_actions_module.set_all_fan_speeds(mock_logger, None, 50.0)
 
         # Verify error was logged
         mock_logger.log_error.assert_called_once_with("No fans available to set speed")
@@ -1161,14 +1022,16 @@ class TestSfpThermalGetPidSetpoint:
 class TestPortIndexMapper:
     def test_get_interface_name_picks_lowest_and_ignores_invalid(self, thermal_module):
         """Verify PortIndexMapper builds mapping and picks lowest Ethernet name for same index."""
-        sw = sys.modules['swsscommon.swsscommon']
-        # Prepare mock PORT table data
-        sw.Table.MOCK_PORT_KEYS = ['Ethernet4', 'Ethernet0', 'NotAnEthernet']
-        sw.Table.MOCK_PORT_DATA = {
-            'Ethernet4': [('index', '1')],
-            'Ethernet0': [('index', '1')],
-            'NotAnEthernet': [('index', '1')],
-        }
+        mock_data_in_swsscommon(
+            "CONFIG_DB",
+            "PORT",
+            {
+                "Ethernet4": {"index": "1"},
+                "Ethernet0": {"index": "1"},
+                "NotAnEthernet": {"index": "1"},
+            },
+        )
+
         # Reset singleton to rebuild mapping
         thermal_module.PortIndexMapper._instance = None
         mapper = thermal_module.PortIndexMapper()
@@ -1188,9 +1051,6 @@ class TestSfpThermal:
 
     def test_default_setpoint_when_thresholds_unavailable(self, thermal_module, pddf_platform):
         """When thresholds are not yet available but SFP is present, default setpoint is used."""
-        sw = sys.modules['swsscommon.swsscommon']
-        sw.SonicV2Connector.RETURN_GET_ALL = {}
-
         sfp = Mock()
         sfp.get_name.return_value = 'sfp1'
         sfp.get_presence.return_value = True
@@ -1203,9 +1063,14 @@ class TestSfpThermal:
 
     def test_invalid_computed_setpoint_logs_once_and_uses_default(self, thermal_module, pddf_platform):
         """If computed setpoint < MIN_VALID_SETPOINT, fallback to default and log once."""
-        sw = sys.modules['swsscommon.swsscommon']
-        # temphighwarning - margin (10) => 25 < 30 -> invalid
-        sw.SonicV2Connector.RETURN_GET_ALL = {'temphighwarning': '35'}
+        mock_data_in_swsscommon(
+            "STATE_DB",
+            "TRANSCEIVER_DOM_THRESHOLD",
+            {
+                # temphighwarning - margin (10) => 25 < 30 -> invalid
+                "Ethernet4": {"temphighwarning": "35"},
+            },
+        )
 
         sfp = Mock()
         sfp.get_name.return_value = 'sfp2'
@@ -1228,14 +1093,19 @@ class TestSfpThermal:
 
     def test_thresholds_parsing_and_cache(self, thermal_module, pddf_platform):
         """State DB threshold values are parsed to float and cached for THRESHOLDS_CACHE_INTERVAL_SEC."""
-        sw = sys.modules['swsscommon.swsscommon']
-        sw.SonicV2Connector.RETURN_GET_ALL = {
-            'temphighwarning': '75.0',
-            'templowwarning': '10.5',
-            'temphighalarm': '90',
-            'templowalarm': '5',
-            'irrelevant': 'N/A',
-        }
+        mock_data_in_swsscommon(
+            "STATE_DB",
+            "TRANSCEIVER_DOM_THRESHOLD",
+            {
+                "Ethernet8": {
+                    "temphighwarning": "75.0",
+                    "templowwarning": "10.5",
+                    "temphighalarm": "90",
+                    "templowalarm": "5",
+                    "irrelevant": "N/A",
+                },
+            },
+        )
 
         sfp = Mock()
         sfp.get_name.return_value = 'sfp3'
@@ -1252,15 +1122,18 @@ class TestSfpThermal:
             assert sfp_th.get_low_critical_threshold() == 5.0
 
             # Change underlying DB data; cache should prevent update immediately
-            sw.SonicV2Connector.RETURN_GET_ALL = {
-                'temphighwarning': '10',
-                'templowwarning': '1',
-                'temphighalarm': '20',
-                'templowalarm': '0',
-            }
+            mock_data_in_swsscommon(
+                "STATE_DB",
+                "TRANSCEIVER_DOM_THRESHOLD",
+                {
+                    "Ethernet8": {
+                        "temphighwarning": "10",
+                        "templowwarning": "1",
+                        "temphighalarm": "20",
+                        "templowalarm": "0",
+                    },
+                },
+            )
             # Values should remain cached (unchanged)
             assert sfp_th.get_high_threshold() == 75.0
             assert sfp_th.get_low_threshold() == 10.5
-
-
-

@@ -18,6 +18,9 @@ COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+# Install certificates by disabling the peer verification
+RUN apt -o Acquire::https::Verify-Peer=false update && \
+    apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
 
 # Update apt cache and
 # pre-install fundamental packages
@@ -34,6 +37,7 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
+        rsyslog-relp         \
 # Install rsync for copying over only changes between layers
         rsync                \
 # Install redis-tools
@@ -64,7 +68,7 @@ COPY ["pip.conf", "/etc/pip.conf"]
 {% endif %}
 
 # For templating
-RUN pip3 install j2cli
+RUN pip3 install jinjanator
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0

@@ -230,12 +230,20 @@ class DhcpRelayd(object):
         """
         procs = {}
         for proc in psutil.process_iter():
-            try:
-                if proc.name() != "dhcrelay":
-                    continue
-                procs[proc.pid] = [proc.ppid(), proc.cmdline()]
-            except psutil.NoSuchProcess:
-                continue
+            err = None
+            for i in range(5):
+                err = None
+                try:
+                    if proc.name() == "dhcrelay":
+                        procs[proc.pid] = [proc.ppid(), proc.cmdline()]
+                except psutil.NoSuchProcess:
+                    pass
+                except Exception as e:
+                    err = e
+                if err is None:
+                    break
+            if err:
+                raise err
 
         # When there is network io, dhcrelay would create child process to proceed them, psutil has chance to get
         # duplicated cmdline. Hence ignore chlid process in here

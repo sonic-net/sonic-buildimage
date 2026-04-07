@@ -52,7 +52,8 @@ class PddfAsicThermal(ThermalBase):
         db = SonicV2Connector()
         db.connect(db.STATE_DB)
         data_dict = db.get_all(db.STATE_DB, self.ASIC_TEMP_INFO)
-        return float(data_dict["temperature_{}".format(self.sensor_db_index)])
+        temp_value = data_dict.get("temperature_{}".format(self.sensor_db_index))
+        return float(temp_value) if temp_value is not None else None
 
     def get_high_threshold(self):
         val = self.high_threshold
