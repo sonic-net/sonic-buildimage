@@ -1,5 +1,5 @@
 #DPKG FRK
-SPATH       := $($(XPCI)_SRC_PATH)
+SPATH       := $($(KERNEL_XPCI)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/xpci.mk $(PLATFORM_PATH)/xpci.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files -- $(SPATH))
