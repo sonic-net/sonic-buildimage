@@ -8,7 +8,6 @@ MOD_DEB = $(MOD_DEB_NAME)_$(XPCI_VERSION)_amd64.deb
 
 MAIN_TARGET = $(MOD_DEB)
 
-DKMS_BMDEB = /var/lib/dkms/xpci/$(XPCI_VERSION)/bmdeb
 DKMS_TMP := $(shell mktemp -u -d -t dkms.XXXXXXXXXX)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
@@ -23,6 +22,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	j2 templates/postinst.j2 > $(DKMS_TMP)/DEBIAN/postinst
 	chmod +x $(DKMS_TMP)/DEBIAN/postinst
 
+	sudo dkms install --force xpci/$(XPCI_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
 	cp /lib/modules/$(KVERSION)/updates/dkms/xpci.ko $(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms
 
 	mkdir -p $(XPCI_NAME)/DEBS
