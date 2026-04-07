@@ -135,13 +135,11 @@ RUN set -eux \
 {% endif %}
     && INFLUXDB_VERSION=2.8.0 \
     && cd /tmp \
-    && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
-    && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
-    && sha256sum -c "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
+    && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/v${INFLUXDB_VERSION}/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && tar xzf "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && mv "influxdb2-${INFLUXDB_VERSION}/influxd" /usr/local/bin/influxd \
     && chmod +x /usr/local/bin/influxd \
-    && rm -f "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz.sha256" \
+    && rm -f "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && rm -rf "/tmp/influxdb2-${INFLUXDB_VERSION}"
 {% endif %}
 
