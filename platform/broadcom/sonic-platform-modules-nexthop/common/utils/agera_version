@@ -41,18 +41,37 @@ def agera_version(phy_name: str):
         click.echo("unknown")
         return
 
-    cmd = f"""
-script -q -c "docker exec -ti gbsyncd agera2sh" /dev/null <<EOF | awk '/firmware ver/ {{print $NF}}'
-s {switch_obj}
-fw
-EOF
-"""
+    # Run agera2sh in a TTY-capable environment without using shell=True.
+    cmd = [
+        "script",
+        "-q",
+        "-c",
+        "docker exec -ti gbsyncd agera2sh",
+        "/dev/null",
+    ]
 
     try:
-        output = subprocess.check_output(cmd, shell=True, text=True)
-        fw_ver = output.strip()
-    except subprocess.CalledProcessError:
+        result = subprocess.run(
+            cmd,
+            input=f"s {switch_obj}\nfw\n",
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except OSError:
+        # script(1) or docker(1) not found, or other OS-level error
         fw_ver = "unknown"
+    else:
+        if result.returncode != 0:
+            fw_ver = "unknown"
+        else:
+            match = re.search(
+                r"firmware ver[^\r\n]*?(\S+)\s*$",
+                result.stdout,
+                flags=re.IGNORECASE | re.MULTILINE,
+            )
+            fw_ver = match.group(1) if match else "unknown"
 
     click.echo(fw_ver)
 
