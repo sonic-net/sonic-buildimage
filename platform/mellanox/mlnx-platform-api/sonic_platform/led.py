@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +25,7 @@ from . import device_data
 logger = Logger()
 
 
-class Led(object):
+class Led:
     STATUS_LED_COLOR_GREEN = 'green'
     STATUS_LED_COLOR_RED = 'red'
     STATUS_LED_COLOR_ORANGE = 'orange'
