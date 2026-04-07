@@ -338,6 +338,9 @@ install_deb_package $debs_path/libnss-radius_*.deb
 #sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove radius tacplus
 sudo sed -i -e '/^passwd/s/ radius//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
+# Install makedumpfile (built from source)
+install_deb_package $debs_path/makedumpfile_*.deb
+
 # Install a custom version of kdump-tools  (and its dependencies via 'apt-get -y install -f')
 if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
     install_deb_package $debs_path/kdump-tools_*.deb
@@ -346,6 +349,7 @@ if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
 for kernel_release in $(ls $FILESYSTEM_ROOT/lib/modules/); do
 	sudo LANG=C chroot $FILESYSTEM_ROOT /etc/kernel/postinst.d/kdump-tools $kernel_release > /dev/null 2>&1
 	sudo LANG=C chroot $FILESYSTEM_ROOT kdump-config symlinks $kernel_release
+	sudo LANG=C chroot $FILESYSTEM_ROOT cp /etc/kdump/sysctl.conf /var/lib/kdump/latest_sysctls-$kernel_release
 done
 fi
 
@@ -376,6 +380,12 @@ sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/conf.d/*
+# Remove inapplicable monit checks on DPU platforms
+if [[ $CONFIGURED_PLATFORM == pensando ]] || [[ $CONFIGURED_PLATFORM == nvidia-bluefield ]]; then
+    sudo sed -i '/^# route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# dualtor_neighbor_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# vnet_route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+fi
 sudo cp $IMAGE_CONFIGS/monit/container_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/memory_checker $FILESYSTEM_ROOT/usr/bin/
