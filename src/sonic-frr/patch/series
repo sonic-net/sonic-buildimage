@@ -62,3 +62,4 @@
 0100-bgpd-Allow-proper-shutdown-of-bgp-dynamic-peers.patch
 0102-staticd-Fix-SRv6-SID-use-after-free-on-locator-deletion.patch
 0103-SONiC-ONLY-bgpd-reduce-suppress-fib-advertisement-delay-to-50ms.patch
+0104-SONiC-ONLY-zebra-skip-if-add-update-in-speed-timer-for-unready-ifp.patch
