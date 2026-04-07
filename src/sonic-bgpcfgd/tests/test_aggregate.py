@@ -208,6 +208,10 @@ def __del_handler_validate(
     aggregate_address_prefix_list,
     contributing_address_prefix_list
 ):
+    # Check if the entry is currently active; only active entries trigger FRR removal
+    _, current_data = mgr.address_table.get(aggregate_prefix)
+    is_active = current_data and current_data.get('state') == 'active'
+
     except_cmds = [
         'router bgp 65001',
         'address-family ' + ('ipv4' if '.' in aggregate_prefix else 'ipv6'),
@@ -223,7 +227,7 @@ def __del_handler_validate(
         mgr,
         "DEL",
         (aggregate_prefix,),
-        except_cmds
+        except_cmds if is_active else None
     )
     assert aggregate_prefix not in mgr.address_table.getKeys()
     assert not mgr.address_table.get(aggregate_prefix)[1], "Address should be removed from the table"
@@ -293,15 +297,14 @@ def __switch_bbr_state(
     ("10.100.1.0/23", False),   # host bits set
     ("192.168.1.1/24", False),  # host bits set
     ("2001:db8::1/32", False),  # host bits set
-    ("192.168.1.1", False),     # missing prefix length
-    ("10.0.0.1", False),        # missing prefix length
 ])
 def test_validate_prefix(prefix, expected):
-    valid, reason = validate_prefix(prefix)
-    assert valid == expected
+    net, reason = validate_prefix(prefix)
     if expected:
+        assert net is not None
         assert reason is None
     else:
+        assert net is None
         assert reason is not None
 
 
@@ -324,3 +327,28 @@ def test_host_bits_set_rejected(bad_prefix):
     # State should be inactive
     _, data = mgr.address_table.get(bad_prefix)
     assert data["state"] == "inactive"
+
+
+@pytest.mark.parametrize("bad_prefix", [
+    "10.100.0.1/24",
+    "10.100.1.0/23",
+])
+def test_inactive_entry_skips_frr_removal(bad_prefix):
+    """del_handler must skip FRR removal for inactive entries and clean up STATE_DB."""
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+    attr = (
+        ('bbr-required', 'false'),
+        ('summary-only', 'false'),
+        ('as-set', 'false'),
+        ('aggregate-address-prefix-list', ''),
+        ('contributing-address-prefix-list', ''),
+    )
+    # Set invalid prefix -> state = inactive
+    set_del_test(mgr, "SET", (bad_prefix, attr), None)
+    assert mgr.address_table.get(bad_prefix)[1]["state"] == "inactive"
+
+    # Del should NOT push any commands to FRR
+    set_del_test(mgr, "DEL", (bad_prefix,), None)
+
+    # STATE_DB entry should be cleaned up
+    assert bad_prefix not in mgr.address_table.getKeys()

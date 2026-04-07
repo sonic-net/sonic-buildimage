@@ -52,7 +52,7 @@ class AggregateAddressMgr(Manager):
                 if self.address_set_handler(address[0], address[1]):
                     self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
                 else:
-                    log_err("AggregateAddressMgr::set address %s failed during BBR change" % key2prefix(address[0]))
+                    log_err("AggregateAddressMgr::set address %s failed during BBR change (validation or FRR push error)" % key2prefix(address[0]))
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
@@ -75,7 +75,7 @@ class AggregateAddressMgr(Manager):
             if self.address_set_handler(key, data):
                 self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
-                log_err("AggregateAddressMgr::set address %s failed" % key2prefix(key))
+                log_err("AggregateAddressMgr::set address %s failed (validation or FRR push error)" % key2prefix(key))
                 self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
@@ -83,12 +83,12 @@ class AggregateAddressMgr(Manager):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
 
-        valid, reason = validate_prefix(prefix)
-        if not valid:
+        net, reason = validate_prefix(prefix)
+        if net is None:
             log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
             return False
 
-        is_v4 = ipaddress.ip_network(prefix, strict=True).version == 4
+        is_v4 = net.version == 4
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
@@ -138,7 +138,8 @@ class AggregateAddressMgr(Manager):
     def address_del_handler(self, key, data):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
-        is_v4 = ipaddress.ip_network(prefix, strict=False).version == 4
+        net, _ = validate_prefix(prefix)
+        is_v4 = net.version == 4 if net else False
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
@@ -215,14 +216,14 @@ def key2prefix(key):
 
 
 def validate_prefix(prefix):
-    """Return (True, None) if prefix is a valid network address, or (False, reason) otherwise."""
+    """Return (network, None) if prefix is valid, or (None, reason) otherwise."""
     if '/' not in prefix:
-        return False, "missing prefix length"
+        return None, "missing prefix length"
     try:
-        ipaddress.ip_network(prefix, strict=True)
+        net = ipaddress.ip_network(prefix, strict=True)
     except ValueError as e:
-        return False, str(e)
-    return True, None
+        return None, str(e)
+    return net, None
 
 
 def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_only=COMMON_FALSE_STRING, as_set=COMMON_FALSE_STRING):
