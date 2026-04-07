@@ -127,11 +127,11 @@ class AggregateAddressMgr(Manager):
 
     def del_handler(self, key):
         address_state = self.get_address_from_state_db(key)
-        if address_state.get(ADDRESS_STATE_KEY) == ADDRESS_ACTIVE_STATE:
+        if address_state.get(ADDRESS_STATE_KEY) == ADDRESS_INACTIVE_STATE:
+            log_info("AggregateAddressMgr::address %s is inactive, skip FRR removal" % key2prefix(key))
+        else:
             if self.address_del_handler(key, address_state):
                 log_info("AggregateAddressMgr::delete address %s success" % key)
-        else:
-            log_info("AggregateAddressMgr::address %s is not active, skip FRR removal" % key2prefix(key))
         self.del_address_state(key)
         return True
 
