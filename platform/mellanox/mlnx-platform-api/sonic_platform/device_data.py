@@ -389,6 +389,8 @@ class DeviceDataManager:
     @classmethod
     def get_cpld_component_list(cls):
         from .component import ComponentCPLD, ComponentCPLDSN2201, ComponentCPLDSN4280, ComponenetFPGADPU
+        if cls.is_simx_platform():
+            return []
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
             # For SN2201, special chass is required for handle BIOS
             # Currently, only fetching BIOS version is supported
