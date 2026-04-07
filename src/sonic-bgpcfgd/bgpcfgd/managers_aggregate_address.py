@@ -216,6 +216,8 @@ def key2prefix(key):
 
 def validate_prefix(prefix):
     """Return (True, None) if prefix is a valid network address, or (False, reason) otherwise."""
+    if '/' not in prefix:
+        return False, "missing prefix length"
     try:
         ipaddress.ip_network(prefix, strict=True)
     except ValueError as e:

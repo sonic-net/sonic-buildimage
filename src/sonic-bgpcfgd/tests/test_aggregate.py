@@ -293,6 +293,8 @@ def __switch_bbr_state(
     ("10.100.1.0/23", False),   # host bits set
     ("192.168.1.1/24", False),  # host bits set
     ("2001:db8::1/32", False),  # host bits set
+    ("192.168.1.1", False),     # missing prefix length
+    ("10.0.0.1", False),        # missing prefix length
 ])
 def test_validate_prefix(prefix, expected):
     valid, reason = validate_prefix(prefix)
