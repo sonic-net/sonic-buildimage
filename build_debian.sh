@@ -502,6 +502,10 @@ rm /files/etc/ssh/sshd_config/Banner
 set /files/etc/ssh/sshd_config/Banner /etc/issue
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
+rm /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/AllowAgentForwarding no
+ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
 save
 quit
 EOF
