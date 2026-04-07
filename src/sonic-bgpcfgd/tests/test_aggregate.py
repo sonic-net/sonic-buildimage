@@ -80,7 +80,7 @@ def set_del_test(mgr, op, args, expected_cmds=None):
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
 
 
-@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.1", "2ff::/64"])
+@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.0/24", "2ff::/64"])
 @pytest.mark.parametrize("bbr_status", [BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED])
 @pytest.mark.parametrize("bbr_required", ["true", "false"])
 @pytest.mark.parametrize("switch_bbr_state", [False, True])
