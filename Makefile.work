@@ -733,9 +733,15 @@ ifeq ($(USE_PODMAN), n)
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
 endif
 
+ifeq ($(USE_PODMAN), y)
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		bash -c "sudo chown 0:0 /dev/null; $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+else
+	$(Q)$(DOCKER_RUN) \
+		$(SLAVE_IMAGE):$(SLAVE_TAG) \
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+endif
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
@@ -754,31 +760,30 @@ endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
-ifeq ($(USE_PODMAN), n)
+ifeq ($(USE_PODMAN), y)
+sonic-slave-bash : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash
+
+sonic-slave-run : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+
+showtag:
+	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
+else
 .PHONY: sonic-slave-build
 sonic-slave-build : sonic-slave-base-build
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
-endif
 
-sonic-slave-bash : sonic-slave-base-build
-ifeq ($(USE_PODMAN), y)
-	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash
-else
+sonic-slave-bash : sonic-slave-build
 	$(Q)$(DOCKER_RUN) -t $(SLAVE_IMAGE):$(SLAVE_TAG) bash
-endif
 
-sonic-slave-run : sonic-slave-base-build
-ifeq ($(USE_PODMAN), y)
-	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(SONIC_RUN_CMDS)"
-else
+sonic-slave-run : sonic-slave-build
 	$(Q)$(DOCKER_RUN) $(SLAVE_IMAGE):$(SLAVE_TAG) bash -c "$(SONIC_RUN_CMDS)"
-endif
 
 showtag:
-ifeq ($(USE_PODMAN), n)
 	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
-endif
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+endif
 
 init :
 	$(Q)git submodule update --init --recursive
