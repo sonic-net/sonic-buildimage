@@ -88,7 +88,7 @@ class AggregateAddressMgr(Manager):
             log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
             return False
 
-        is_v4 = '.' in prefix
+        is_v4 = ipaddress.ip_network(prefix, strict=True).version == 4
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
@@ -138,7 +138,7 @@ class AggregateAddressMgr(Manager):
     def address_del_handler(self, key, data):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
-        is_v4 = '.' in prefix
+        is_v4 = ipaddress.ip_network(prefix, strict=False).version == 4
         cmd_list = []
 
         aggregates_cmds = generate_aggregate_address_commands(
