@@ -52,7 +52,7 @@ class AggregateAddressMgr(Manager):
                 if self.address_set_handler(address[0], address[1]):
                     self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
                 else:
-                    log_info("AggregateAddressMgr::set address %s failed during BBR change" % key2prefix(address[0]))
+                    log_err("AggregateAddressMgr::set address %s failed during BBR change" % key2prefix(address[0]))
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
@@ -75,7 +75,7 @@ class AggregateAddressMgr(Manager):
             if self.address_set_handler(key, data):
                 self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
-                log_info("AggregateAddressMgr::set address %s failed" % key2prefix(key))
+                log_err("AggregateAddressMgr::set address %s failed" % key2prefix(key))
                 self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
