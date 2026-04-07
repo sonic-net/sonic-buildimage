@@ -51,6 +51,9 @@ class AggregateAddressMgr(Manager):
             for address in addresses:
                 if self.address_set_handler(address[0], address[1]):
                     self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
+                else:
+                    log_info("AggregateAddressMgr::set address %s failed during BBR change" % key2prefix(address[0]))
+                    self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
             for address in addresses:
