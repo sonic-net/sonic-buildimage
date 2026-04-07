@@ -412,10 +412,23 @@ class DpuCtlPlat():
             self.log_error(f"Could not obtain status of DPU")
             raise e
 
+    def _log_boot_progress_read_failure(self, msg, attempt):
+        """log_func for utils.read_int_from_file; logs via this DPU's SysLogger."""
+        # utils formats: "Failed to read from file <path> - repr(exc)"
+        enxio = f'({errno.ENXIO},' in msg
+        if enxio and attempt < 2:
+            self.log_warning(
+                f"ENXIO - read unavailable for boot_progress, attempt {attempt + 1} of 3")
+            return
+        self.log_error(msg)
+
     def read_boot_prog(self):
         for attempt in range(3):
             try:
-                return utils.read_int_from_file(self.boot_prog_path, raise_exception=True)
+                return utils.read_int_from_file(
+                    self.boot_prog_path,
+                    raise_exception=True,
+                    log_func=lambda m, a=attempt: self._log_boot_progress_read_failure(m, a))
             except OSError as e:
                 if e.errno != errno.ENXIO or attempt == 2:
                     raise
