@@ -1,3 +1,5 @@
+import ipaddress
+
 from swsscommon import swsscommon
 
 from .log import log_info, log_err
@@ -77,6 +79,12 @@ class AggregateAddressMgr(Manager):
     def address_set_handler(self, key, data):
         bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
+
+        valid, reason = validate_prefix(prefix)
+        if not valid:
+            log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
+            return False
+
         is_v4 = '.' in prefix
         cmd_list = []
 
@@ -198,6 +206,15 @@ class AggregateAddressMgr(Manager):
 def key2prefix(key):
     prefix = key.split("|")[-1]
     return prefix
+
+
+def validate_prefix(prefix):
+    """Return (True, None) if prefix is a valid network address, or (False, reason) otherwise."""
+    try:
+        ipaddress.ip_network(prefix, strict=True)
+    except ValueError as e:
+        return False, str(e)
+    return True, None
 
 
 def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_only=COMMON_FALSE_STRING, as_set=COMMON_FALSE_STRING):

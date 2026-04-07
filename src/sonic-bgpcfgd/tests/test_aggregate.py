@@ -1,6 +1,7 @@
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
+from bgpcfgd.managers_aggregate_address import validate_prefix
 import pytest
 from swsscommon import swsscommon
 from unittest.mock import MagicMock, patch
@@ -279,3 +280,45 @@ def __switch_bbr_state(
     assert [aggregate_prefix] == mgr.address_table.getKeys()
     _, data = mgr.address_table.get(aggregate_prefix)
     assert data == expected_state
+
+
+@pytest.mark.parametrize("prefix,expected", [
+    ("10.100.0.0/16", True),
+    ("10.100.1.0/24", True),
+    ("192.168.0.0/24", True),
+    ("2001:db8::/32", True),
+    ("0.0.0.0/0", True),
+    ("::/0", True),
+    ("10.100.0.1/24", False),   # host bits set
+    ("10.100.1.0/23", False),   # host bits set
+    ("192.168.1.1/24", False),  # host bits set
+    ("2001:db8::1/32", False),  # host bits set
+])
+def test_validate_prefix(prefix, expected):
+    valid, reason = validate_prefix(prefix)
+    assert valid == expected
+    if expected:
+        assert reason is None
+    else:
+        assert reason is not None
+
+
+@pytest.mark.parametrize("bad_prefix", [
+    "10.100.0.1/24",
+    "10.100.1.0/23",
+])
+def test_host_bits_set_rejected(bad_prefix):
+    """address_set_handler must return False for prefixes with host bits set."""
+    mgr = constructor(bbr_status=BGP_BBR_STATUS_ENABLED)
+    attr = (
+        ('bbr-required', 'false'),
+        ('summary-only', 'false'),
+        ('as-set', 'false'),
+        ('aggregate-address-prefix-list', ''),
+        ('contributing-address-prefix-list', ''),
+    )
+    # push_list must NOT be called
+    set_del_test(mgr, "SET", (bad_prefix, attr), None)
+    # State should be inactive
+    _, data = mgr.address_table.get(bad_prefix)
+    assert data["state"] == "inactive"
