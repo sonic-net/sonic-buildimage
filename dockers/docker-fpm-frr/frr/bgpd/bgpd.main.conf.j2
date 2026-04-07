@@ -16,7 +16,7 @@ ip prefix-list PL_LoopbackV4 permit {{ lo0_ipv4 }}/32
 !
 {# Check if the device is a disaggregated T2 device #}
 {% set disagg_t2 = "false" %}
-{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('type' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['type'].lower() != 'none') %}
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('type' in DEVICE_METADATA['localhost']) %}
 {% if DEVICE_METADATA['localhost']['type'].lower() in ['lowerspinerouter', 'upperspinerouter', 'fabricspinerouter']%}
 {% set disagg_t2 = "true" %}
 {% endif%}
