@@ -12,5 +12,6 @@
     {% endif -%}
     "dual_tor": {% if DEVICE_METADATA.localhost.type == "ToRRouter" and DEVICE_METADATA.localhost.subtype == "DualToR" %}"enable"{% else %}"disable"{% endif %},
     "dscp_remapping": {% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.tunnel_qos_remap is defined and SYSTEM_DEFAULTS.tunnel_qos_remap.status == "enabled" %}"enable"{% else %}"disable"{% endif %},
+    "orch_southbound_zmq_enabled": {% if DEVICE_METADATA.localhost.orch_southbound_zmq_enabled is defined and DEVICE_METADATA.localhost.orch_southbound_zmq_enabled == "true" %}"true"{% else %}"false"{% endif %},
     "switch_type": "{{ DEVICE_METADATA.localhost.switch_type }}"
 }
