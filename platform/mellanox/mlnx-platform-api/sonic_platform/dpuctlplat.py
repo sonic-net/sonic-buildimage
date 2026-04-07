@@ -432,7 +432,6 @@ class DpuCtlPlat():
             except OSError as e:
                 if e.errno != errno.ENXIO or attempt == 2:
                     raise
-                self.log_warning(f"ENXIO error on boot_progress read, attempt {attempt+1} of 3")
                 time.sleep(1)
 
     def read_force_power_path(self):
