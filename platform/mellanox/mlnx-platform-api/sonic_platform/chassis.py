@@ -1016,6 +1016,7 @@ class Chassis(ChassisBase):
     def initialize_reboot_cause(self):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,
