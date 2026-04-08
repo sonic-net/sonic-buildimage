@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@ import click
 import jinja2
 import json
 import os
+import sys
 import syslog
 
 from nexthop import pcie_lib
@@ -101,7 +102,11 @@ def pddf_device_json(template_filepath, vars_filepath, platform_json_filepath, o
     if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath) or not os.path.isfile(platform_json_filepath):
         syslog.syslog(syslog.LOG_INFO, f"Skipping {output_filepath} generation")
         return
-    vars = pcie_lib.get_pcie_variables(vars_filepath)
+    try:
+        vars = pcie_lib.get_pcie_variables(vars_filepath)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
+        sys.exit(1)
 
     model_name = get_model_name(platform_json_filepath)
     if model_name is None:
@@ -145,7 +150,11 @@ def pcie_yaml(template_filepath, vars_filepath, output_filepath):
     if not os.path.isfile(template_filepath) or not os.path.isfile(vars_filepath):
         syslog.syslog(syslog.LOG_INFO, f"Skipping {output_filepath} generation")
         return
-    vars = pcie_lib.get_pcie_variables(vars_filepath)
+    try:
+        vars = pcie_lib.get_pcie_variables(vars_filepath)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f"Failed to generate {output_filepath}: {e}")
+        sys.exit(1)
     generate_file_from_jinja2_template(template_filepath, vars, output_filepath)
 
 

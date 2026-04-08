@@ -111,7 +111,9 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
+                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            fi
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -188,8 +190,9 @@ function postStartAction()
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     if [[ -f $CHASSISDB_CONF && $DATABASE_TYPE != "dpudb" ]]; then
-        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())')
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())')
+        echo "${DOCKERNAME} slot_id=${slot_id} supervisor_slot_id=${supervisor_slot_id}"
     fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -304,7 +307,7 @@ function postStartAction()
             fi
         fi
 
-        if [ -e /tmp/pending_config_migration ] || [ -e /tmp/pending_config_initialization ]; then
+        if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
             # this is first boot to a new image, config-setup execution is pending.
             # for warmboot case, DB is loaded but migration is still pending
             # For firstbboot/fast/cold reboot case, DB contains nothing at this point
@@ -479,6 +482,12 @@ start() {
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
+        HWSKU_MOUNT_MODE="ro"
+        {%- if docker_container_name == "swss" %}
+        if [ -f "$MOUNTPATH/hwsku-init" ]; then
+            HWSKU_MOUNT_MODE="rw"
+        fi
+        {%- endif %}
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
@@ -613,12 +622,11 @@ start() {
     fi
     {%- elif docker_container_name == "dash-ha" %}
     REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
-    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
-    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
         NET="host"
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
@@ -629,7 +637,9 @@ start() {
         # The below logic extracts the base DIR's where database_config.json's for various namespaces exist.
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
-        {%- if docker_container_name != "database" %}
+        {%- if docker_container_name == "dash-ha" %}
+        REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+        {%- elif docker_container_name != "database" %}
 
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
@@ -647,6 +657,7 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
+            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -689,6 +700,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
+        mkdir -p /var/log/sdk_dbg/$DEV
         ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
@@ -721,7 +733,7 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v /var/log/sdk_dbg/$DEV:/var/log/sdk_dbg:rw \
         -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
@@ -772,7 +784,7 @@ start() {
         $DB_OPT \
 {%- else %}
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
-        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
+        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
@@ -876,6 +888,10 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
+fi
+
+if [[ "$IS_BMC_DEVICE" == "true" ]]; then
+    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}

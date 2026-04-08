@@ -1,0 +1,13 @@
+Index: audisp-tacplus/debian/control
+===================================================================
+--- audisp-tacplus.orig/debian/control
++++ audisp-tacplus/debian/control
+@@ -12,7 +12,7 @@ Homepage: https://github.com/daveolson53
+ Package: audisp-tacplus
+ Architecture: any
+ Depends: ${shlibs:Depends}, ${misc:Depends}, libpam-tacplus, libtac2 (>= 1.4.1~),
+-	libauparse0, libaudit1, auditd
++	libauparse0 | libauparse0t64, libaudit1, auditd
+ Description: audisp module for TACACS+ accounting
+ 	This audisp module is an audisp auditd plugin. It is designed to do TACACS+
+     accounting for commands run by TACACS+ authenticated sessions.

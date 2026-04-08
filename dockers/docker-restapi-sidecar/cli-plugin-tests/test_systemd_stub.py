@@ -212,7 +212,7 @@ def test_sync_no_change_fast_path(ss):
     # Put same files on host
     host_fs["/usr/bin/restapi.sh"] = b"same"
     host_fs["/bin/container_checker"] = b"same"
-    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"same"
     host_fs["/lib/systemd/system/restapi.service"] = b"same"
 
     ok = ss.ensure_sync()
@@ -237,7 +237,7 @@ def test_sync_updates_and_post_actions(ss):
     # Put old files on host
     host_fs["/usr/bin/restapi.sh"] = b"OLD"
     host_fs["/bin/container_checker"] = b"OLD"
-    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"OLD"
     host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
 
     ss.POST_COPY_ACTIONS["/bin/container_checker"] = [
@@ -414,7 +414,7 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
     expected_destinations = {
         "/usr/bin/restapi.sh",
         "/bin/container_checker",
-        "/usr/share/sonic/scripts/k8s_pod_control.sh",
+        "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh",
         "/lib/systemd/system/restapi.service",
     }
     
@@ -595,7 +595,7 @@ def test_restapi_service_uses_per_branch_file(ss):
     host_fs[systemd_stub.HOST_RESTAPI_SERVICE] = b"UNIT-OLD"
     host_fs["/usr/bin/restapi.sh"] = b"DUMMY"
     host_fs["/bin/container_checker"] = b"DUMMY"
-    host_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"DUMMY"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"DUMMY"
 
     # Add post actions for restapi.service
     systemd_stub.POST_COPY_ACTIONS[systemd_stub.HOST_RESTAPI_SERVICE] = [
