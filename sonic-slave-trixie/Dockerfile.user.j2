@@ -12,7 +12,7 @@ ARG guid
 ARG hostname
 
 ENV BUILD_HOSTNAME=$hostname
-ENV USER=$user
+ENV BUILD_USER=$user
 
 RUN groupadd -f -r -g $guid g$user
 
