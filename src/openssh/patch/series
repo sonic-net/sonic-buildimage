@@ -2,4 +2,3 @@
 0002-Revert-commit-69334996-make-sshd_config-ClientAliveC.patch
 0003-Export-remote-info-for-authorization.patch
 0004-Remove-second-pwnam-call.patch
-0005-Disable-SSH-agent-forwarding-by-default.patch
