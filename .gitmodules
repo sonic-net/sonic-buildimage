@@ -147,3 +147,6 @@
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
 	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic.git
