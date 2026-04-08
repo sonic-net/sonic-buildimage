@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -37,8 +38,10 @@
 /*!
  * \brief Allocate descriptor ring buffer.
  *
+ * This API is called to allocate DCB ring.
+ *
  * \param [in] dev Pointer to Packet DMA device.
- * \param [in] dma DMA address of ring buffer.
+ * \param [out] dma DMA address of ring buffer.
  *
  * \retval Pointer to DMA buffer or NULL if an error occurred.
  */
@@ -46,6 +49,8 @@ typedef void *(*ring_buf_alloc_f)(struct pdma_dev *dev, uint32_t, dma_addr_t *dm
 
 /*!
  * \brief Free descriptor ring buffer.
+ *
+ * This API is called to free DCB ring.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] size Size of DMA buffer.
@@ -57,6 +62,9 @@ typedef void (*ring_buf_free_f)(struct pdma_dev *dev, uint32_t size, void *mem,
 
 /*!
  * \brief Allocate Rx packet buffer.
+ *
+ * This API is called to allocate DMA buffer for Rx packet and update information
+ * in \ref pdma_rx_buf.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
@@ -71,16 +79,20 @@ typedef int (*rx_buf_alloc_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
 /*!
  * \brief Get Rx packet buffer DMA address.
  *
+ * This API is called to get DMA address for filling Rx DCB.
+ *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
  * \param [in] pbuf Pointer to packet buffer structure.
- * \param [in] dma DMA address of packet buffer.
+ * \param [out] dma DMA address of packet buffer.
  */
 typedef void (*rx_buf_dma_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
                              struct pdma_rx_buf *pbuf, dma_addr_t *dma);
 
 /*!
  * \brief Check Rx packet buffer validity.
+ *
+ * This API is called to validate the buffer.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
@@ -95,18 +107,25 @@ typedef bool (*rx_buf_avail_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
 /*!
  * \brief Get Rx packet buffer.
  *
+ * This API is called after a packet is received to DMA buffer.
+ * The buffer information in \ref pdma_rx_buf can be updated for further
+ * processing in pktio driver.
+ *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
  * \param [in] pbuf Pointer to packet buffer structure.
  * \param [in] len Packet length.
  *
- * \retval Pointer to packet header structure or NULL if failed.
+ * \retval SHR_E_NONE No errors.
+ * \retval SHR_E_MEMORY Allocation failed.
  */
-typedef struct pkt_hdr *(*rx_buf_get_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
-                                        struct pdma_rx_buf *pbuf, int len);
+typedef int (*rx_buf_get_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
+                            struct pdma_rx_buf *pbuf, int len);
 
 /*!
  * \brief Put Rx packet buffer.
+ *
+ * This API is called to put back a buffer for hardware if it can be reused.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
@@ -122,6 +141,9 @@ typedef int (*rx_buf_put_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
 /*!
  * \brief Free Rx packet buffer.
  *
+ * This API is called to free a buffer based on the buffer type described in
+ * \ref pdma_rx_buf.
+ *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
  * \param [in] pbuf Pointer to packet buffer structure.
@@ -131,6 +153,9 @@ typedef void (*rx_buf_free_f)(struct pdma_dev *dev, struct pdma_rx_queue *rxq,
 
 /*!
  * \brief Get Rx packet buffer mode.
+ *
+ * This API is called to get the buffer mode based on pktio working mode and
+ * update the information in \ref pdma_rx_queue.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] rxq Pointer to Rx queue struture.
@@ -142,29 +167,39 @@ typedef enum buf_mode (*rx_buf_mode_f)(struct pdma_dev *dev, struct pdma_rx_queu
 /*!
  * \brief Get Tx packet buffer.
  *
+ * This API is called before a packet is transmitted from DMA buffer.
+ * The buffer information in \ref pdma_tx_buf can be updated for further
+ * processing in pktio driver.
+ *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] txq Pointer to Rx queue struture.
  * \param [in] pbuf Pointer to packet buffer structure.
  * \param [in] buf Packet buffer.
  *
- * \retval Pointer to packet header structure or NULL if failed.
+ * \retval SHR_E_NONE No errors.
+ * \retval SHR_E_MEMORY Allocation failed.
  */
-typedef struct pkt_hdr *(*tx_buf_get_f)(struct pdma_dev *dev, struct pdma_tx_queue *txq,
-                                        struct pdma_tx_buf *pbuf, void *buf);
+typedef int (*tx_buf_get_f)(struct pdma_dev *dev, struct pdma_tx_queue *txq,
+                            struct pdma_tx_buf *pbuf, void *buf);
 
 /*!
  * \brief Get Tx packet buffer DMA address.
  *
+ * This API is called to get DMA address for filling Tx DCB.
+ *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] txq Pointer to Rx queue struture.
  * \param [in] pbuf Pointer to packet buffer structure.
- * \param [in] dma DMA address of packet buffer.
+ * \param [out] dma DMA address of packet buffer.
  */
 typedef void (*tx_buf_dma_f)(struct pdma_dev *dev, struct pdma_tx_queue *txq,
                              struct pdma_tx_buf *pbuf, dma_addr_t *dma);
 
 /*!
  * \brief Free Tx packet buffer.
+ *
+ * This API is called to free a buffer based on the buffer type described in
+ * \ref pdma_tx_buf.
  *
  * \param [in] dev Pointer to Packet DMA device.
  * \param [in] txq Pointer to Rx queue struture.

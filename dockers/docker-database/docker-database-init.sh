@@ -41,6 +41,11 @@ then
     fi
 fi
 
+if [[ $IS_BMC_DEVICE == "true" ]]
+then
+    export DATABASE_TYPE="bmcdb"
+fi
+
 export BMP_DB_PORT=6400
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
@@ -51,9 +56,9 @@ if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
     if [ -f /etc/sonic/enable_multidb ]; then
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT jinjanate /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     else
-        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT jinjanate /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     fi
 fi
 
@@ -82,8 +87,10 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     VAR_LIB_REDIS_CHASSIS_DIR="/var/lib/redis_chassis"
     mkdir -p $VAR_LIB_REDIS_CHASSIS_DIR   
     update_chassisdb_config -j $db_cfg_file_tmp -k -p $chassis_db_port
+    # Set protected mode based on the hostname
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
     # generate all redis server supervisord configuration file
-    sonic-cfggen -j $db_cfg_file_tmp \
+    sonic-cfggen -j $db_cfg_file_tmp -a "$additional_data_json" \
     -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
     rm $db_cfg_file_tmp
@@ -99,12 +106,18 @@ then
     if [ -f /etc/sonic/database_global.json ]; then
         cp /etc/sonic/database_global.json $REDIS_DIR/sonic-db/database_global.json
     else
-        j2 /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
+        jinjanate /usr/share/sonic/templates/database_global.json.j2 > $REDIS_DIR/sonic-db/database_global.json
     fi
 fi
 # delete chassisdb config to generate supervisord config
 update_chassisdb_config -j $db_cfg_file_tmp -d
-sonic-cfggen -j $db_cfg_file_tmp \
+# Set protected mode based on the hostname
+additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
+# For Linecard databases, disable Redis protected mode to expose them to the midplane.
+if [ -f "$chassisdb_config" ] && [[ "$start_chassis_db" != "1" ]]; then
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: false})}' "$db_cfg_file_tmp")
+fi
+sonic-cfggen -j "$db_cfg_file_tmp" -a "$additional_data_json" \
 -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
 -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
 
@@ -135,6 +148,8 @@ done
 
 chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
-chown -R redis:redis $REDIS_BMP_DIR
+if [[ -d $REDIS_BMP_DIR ]]; then
+    chown -R redis:redis $REDIS_BMP_DIR
+fi
 
 exec /usr/local/bin/supervisord

@@ -9,19 +9,30 @@ module sonic-console {
 
     description "SONiC CONSOLE";
 
+    revision 2026-02-12 {
+        description "Add escape_char config";
+    }
+
     revision 2022-08-22 {
         description "First Revision";
     }
 
     typedef console-mgmt-enabled {
-        description "configuration to set if console switch is enabled or not";
+        description "Configuration to set if console switch is enabled or not";
         type string {
             pattern "yes|no";
         }
     }
 
+    typedef console-mgmt-escape-char {
+        description "Configuration to set escape character when opening console line";
+        type string {
+            pattern '[a-z]';
+        }
+    }
+
     typedef console-flow-control {
-        description "configuration to set if enable flow control on a console port";
+        description "Configuration to set if enable flow control on a console port";
         type string {
             pattern "0|1";
         }
@@ -54,6 +65,11 @@ module sonic-console {
                     description "Configure the remote device name";
                     type stypes:hostname;
                 }
+
+                leaf escape_char {
+                    description "Override the global default_escape_char config";
+                    type console-mgmt-escape-char;
+                }
             }
 
         } /* end of container CONSOLE_PORT */
@@ -63,9 +79,14 @@ module sonic-console {
 
             container console_mgmt {
                 leaf enabled {
-                    description "This configuration indicate if enable console management feature on SONiC";
+                    description "This configuration indicates if enable console management feature on SONiC";
                     type console-mgmt-enabled;
                     default "no";
+                }
+
+                leaf default_escape_char {
+                    description "This configuration provides the escape character for picocom";
+                    type console-mgmt-escape-char;
                 }
             }
 

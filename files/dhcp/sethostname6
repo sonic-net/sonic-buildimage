@@ -1,14 +1,14 @@
 case $reason in
     BOUND6|RENEW6|REBIND6|REBOOT)
-        current_dhcp6_fqdn=`hostname`
-        if [ "$current_dhcp6_fqdn" != "$new_dhcp6_fqdn" ] && [ -n "$new_dhcp6_fqdn" ]
+        current_fqdn_fqdn=`hostname`
+        if [ "$current_fqdn_fqdn" != "$new_fqdn_fqdn" ] && [ -n "$new_fqdn_fqdn" ]
         then
-            echo $new_dhcp6_fqdn > /etc/hostname
+            echo $new_fqdn_fqdn > /etc/hostname
             hostname -F /etc/hostname
-            sed -i "/\s$current_dhcp6_fqdn$/d" /etc/hosts
-            sed -i "/\s$new_dhcp6_fqdn$/d" /etc/hosts
-            echo "127.0.0.1 $new_dhcp6_fqdn" >> /etc/hosts
-            echo ":: $new_dhcp6_fqdn" >> /etc/hosts
+            sed -i "/\s$current_fqdn_fqdn$/d" /etc/hosts
+            sed -i "/\s$new_fqdn_fqdn$/d" /etc/hosts
+            echo "127.0.0.1 $new_fqdn_fqdn" >> /etc/hosts
+            echo ":: $new_fqdn_fqdn" >> /etc/hosts
         fi
         ;;
 esac

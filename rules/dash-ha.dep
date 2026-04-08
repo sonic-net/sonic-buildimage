@@ -1,10 +1,12 @@
 SPATH       := $($(DASH_HA)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/dash-ha.mk rules/dash-ha.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+
+SMDEP_PATHS := $(SPATH) $(SPATH)/crates/sonic-dash-api-proto/sonic-dash-api
+$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path)  && git ls-files | grep -v " ")))))
 
 $(DASH_HA)_CACHE_MODE  := GIT_CONTENT_SHA
 $(DASH_HA)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(DASH_HA)_DEP_FILES   := $(DEP_FILES)
-$(DASH_HA)_SMDEP_FILES := $(SMDEP_FILES)
-$(DASH_HA)_SMDEP_PATHS := $(SPATH)
+$(DASH_HA)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
+$(DASH_HA)_SMDEP_PATHS := $(SMDEP_PATHS)

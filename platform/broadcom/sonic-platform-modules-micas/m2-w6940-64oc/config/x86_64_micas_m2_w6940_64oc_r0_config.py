@@ -850,7 +850,7 @@ PMON_SYSLOG_STATUS = {
         }
     },
     "fans": {
-        "present": {"path": ["/sys/s3ip/fan/*/status"], "ABSENT": 0},
+        "present": {"path": ["/sys/s3ip/fan/*/present"], "ABSENT": 0},
         "status": [
             {"path": "/sys/s3ip/fan/%s/status", 'okval': 1},
         ],
@@ -1641,4 +1641,3 @@ PLATFORM_E2_CONF = {
         {"name": "syseeprom", "e2_type": "onie_tlv", "e2_path": "/sys/bus/i2c/devices/1-0056/eeprom"},
     ],
 }
-

@@ -304,6 +304,7 @@ module sonic-bgp-global {
                     type uint32 {
                         range "1..4294967295";
                     }
+                    ordered-by user;
                     description
                         "Peer ASs in BGP confederation";
                 }

@@ -338,8 +338,19 @@ static void xiic_process(struct fpgalogic_i2c *i2c)
 		i2c->state =(msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
 		/* if it's the time sequence is 'start bit + address + read bit + stop bit' */
 		if (i2c->state == STATE_READ){
-			/* it's the last message so we include dynamic stop bit with length */
-			val = msg->len | XIIC_TX_DYN_STOP_MASK;
+			/*
+			 * Set RFD to 0 before starting read. This tells the controller
+			 * to signal ready after each byte received, which works with
+			 * our 1-byte-at-a-time read loop for any length transfer.
+			 */
+			xiic_setreg32(i2c, XIIC_RFD_REG_OFFSET, 0);
+
+			/* Only include dynamic stop bit if this is the last message */
+			if (i2c->nmsgs == 1) {
+				val = msg->len | XIIC_TX_DYN_STOP_MASK;
+			} else {
+				val = msg->len;
+			}
 			xiic_setreg32(i2c, XIIC_DTR_REG_OFFSET, val);
 			goto out;
 		}
@@ -540,32 +551,25 @@ static int fpgai2c_init(struct fpgalogic_i2c *i2c)
 
 static int adap_data_init(struct i2c_adapter *adap, int index)
 {
-    struct pddf_multifpgapci_drvdata *pci_privdata = 0;
-    pci_privdata = (struct pddf_multifpgapci_drvdata*) dev_get_drvdata(adap->dev.parent);
-
-    if (pci_privdata == 0) {
-        printk("[%s]: ERROR pci_privdata is 0\n", __FUNCTION__);
+    struct pci_dev *dev = to_pci_dev(adap->dev.parent);
+    struct i2c_adapter_data i2c_data;
+    int error = pddf_multifpgapci_i2c_get_adapter_data(dev, &i2c_data);
+    if (error) {
+        printk("[%s]: ERROR getting i2c adapter_data: %d\n", __FUNCTION__, error);
         return -1;
     }
 
-	if (pci_privdata->i2c_adapter_drvdata_initialized != 1) {
-		printk("[%s]: ERROR i2c_adapter_drvdata is not initialized\n", __FUNCTION__);
-		return -1;
-	}
-	struct i2c_adapter_drvdata *i2c_privdata = &pci_privdata->i2c_adapter_drvdata;
-	
-	int i2c_ch_index = index + i2c_privdata->virt_bus;
+    int i2c_ch_index = index + i2c_data.virt_bus;
 
-    pddf_dbg(FPGA, KERN_INFO "[%s] index: [%d] fpga_data__base_addr:0x%08lx"
-        " fpgapci_bar_len:0x%08lx fpga_i2c_ch_base_addr:0x%08lx ch_ssize=0x%x supported_i2c_ch=%d",
-             __FUNCTION__, i2c_ch_index, pci_privdata->fpga_data_base_addr,
-            pci_privdata->bar_length, i2c_privdata->ch_base_addr,
-            i2c_privdata->ch_size, i2c_privdata->num_virt_ch);
+    pddf_dbg(FPGA, KERN_INFO "[%s] index: [%d] pci_dev: [%s]"
+       " fpga_i2c_ch_base_addr:0x%08lx ch_ssize=0x%x supported_i2c_ch=%d",
+       __FUNCTION__, i2c_ch_index, pci_name(dev),
+       i2c_data.ch_base_addr, i2c_data.ch_size, i2c_data.num_virt_ch);
 
-    if (index >= i2c_privdata->num_virt_ch
-            || i2c_privdata->num_virt_ch > I2C_PCI_MAX_BUS){
+    if (index >= i2c_data.num_virt_ch
+            || i2c_data.num_virt_ch > I2C_PCI_MAX_BUS){
         printk("[%s]: ERROR i2c_ch_index=%d max_ch_index=%d out of range: %d\n",
-             __FUNCTION__, i2c_ch_index, i2c_privdata->num_virt_ch, I2C_PCI_MAX_BUS);
+             __FUNCTION__, i2c_ch_index, i2c_data.num_virt_ch, I2C_PCI_MAX_BUS);
         return -1;
     }
 
@@ -574,8 +578,8 @@ static int adap_data_init(struct i2c_adapter *adap, int index)
 #else
     memset(&fpgalogic_i2c[i2c_ch_index], 0, sizeof(fpgalogic_i2c[0]));
 #endif
-    fpgalogic_i2c[i2c_ch_index].base = i2c_privdata->ch_base_addr +
-                          index * i2c_privdata->ch_size;
+    fpgalogic_i2c[i2c_ch_index].base = i2c_data.ch_base_addr +
+                          index * i2c_data.ch_size;
     mutex_init(&fpgalogic_i2c[i2c_ch_index].lock);
     fpgai2c_init(&fpgalogic_i2c[i2c_ch_index]);
 
@@ -597,7 +601,7 @@ static int pddf_i2c_multifpgapci_add_numbered_bus_default (struct i2c_adapter *a
 /*
  * FPGAPCI APIs
  */
-static int board_i2c_fpgapci_read(const char *bdf, uint32_t offset)
+int board_i2c_fpgapci_read(const char *bdf, uint32_t offset)
 {
 	if (get_fpga_ctl_addr == NULL) {
 		printk(KERN_ERR "get_fpga_ctl_addr function not available\n");
@@ -615,7 +619,7 @@ static int board_i2c_fpgapci_read(const char *bdf, uint32_t offset)
 }
 
 
-static int board_i2c_fpgapci_write(const char *bdf, uint32_t offset, uint32_t value)
+int board_i2c_fpgapci_write(const char *bdf, uint32_t offset, uint32_t value)
 {
 	if (get_fpga_ctl_addr == NULL) {
 		printk(KERN_ERR "get_fpga_ctl_addr function not available\n");

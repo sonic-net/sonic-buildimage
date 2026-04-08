@@ -13,10 +13,6 @@ module sonic-smart-switch {
 		prefix stypes;
 	}
 
-	import sonic-port {
-		prefix port;
-	}
-
 	import sonic-vnet {
 		prefix sonic-vnet;
 	}
@@ -47,6 +43,10 @@ module sonic-smart-switch {
 
 	revision 2025-07-20 {
 		description "Add vnet_name to DASH_HA_GLOBAL_CONFIG";
+	}
+
+	revision 2025-08-18 {
+		description "Add midplane_ipv4 to DPU";
 	}
 
 	container sonic-smart-switch {
@@ -145,6 +145,11 @@ module sonic-smart-switch {
 					type inet:ipv6-address;
 				}
 				
+				leaf midplane_ipv4 {
+					description "IPv4 IP on midplane from minigraph";
+					type inet:ipv4-address;
+				}
+
 				leaf dpu_id {
 					description "ID of the DPU from minigraph";
 					type string {
@@ -292,7 +297,7 @@ module sonic-smart-switch {
 					type inet:port-number;
 				}
 
-				leaf dp_channel_port {
+				leaf dp_channel_dst_port {
 					description "Destination port when tunneling packets via DPU-to-DPU data plane channel";
 					type inet:port-number;
 				}

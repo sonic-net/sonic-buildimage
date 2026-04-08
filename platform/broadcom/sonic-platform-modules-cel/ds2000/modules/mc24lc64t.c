@@ -119,8 +119,7 @@ static struct bin_attribute mc24lc64t_bit_attr = {
         .write = mc24lc64t_write,
 };
 
-static int mc24lc64t_probe(struct i2c_client *client,
-                         const struct i2c_device_id *id)
+static int mc24lc64t_probe(struct i2c_client *client)
 {
         struct i2c_adapter *adapter = client->adapter;
         struct mc24lc64t_data *drvdata;

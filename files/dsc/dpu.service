@@ -6,7 +6,6 @@ Requires=local-fs.target
 After=local-fs.target
 Requires=ionic-modules.service
 After=ionic-modules.service
-Before=midplane-network-dpu.service
 
 [Service]
 Type=oneshot
@@ -16,3 +15,4 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
+

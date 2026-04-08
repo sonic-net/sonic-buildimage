@@ -1,6 +1,7 @@
 /*
  * $Id: $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -388,6 +389,16 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
 
     /* Look for matching sub-window */
     for (idx = 0; idx < SHBDE_NUM_IPROC_SUBWIN; idx++) {
+        if (idx == 7 && icfg->no_subwin_remap) {
+            /*
+             * If sub-window remapping is not permitted, issue a
+             * warning if none of the fixed sub-windows are
+             * matching. We still allow the remapping to take place in
+             * order to avoid breaking existing (unsafe) code.
+             */
+            LOG_WARN(shbde, "No matching PCI sub-window for", addr);
+            break;
+        }
         if (icfg->subwin_base[idx] == subwin_base) {
             reg = ROFFS(iproc_regs, idx * 0x1000 + (addr & 0xfff));
             break;
@@ -396,16 +407,14 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
 
     /* No matching sub-window, reuse the sub-window 7 */
     if (reg == 0) {
-        if (icfg->no_subwin_remap) {
-            LOG_WARN(shbde, "Attempt to remap PCI sub-window for", addr);
-            return 0;
-        }
         /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);
         iproc32_write(shbde, reg, subwin_base);
         /* Read it to make sure the write actually goes through */
         subwin_base = iproc32_read(shbde, reg);
+        /* Update cache */
+        icfg->subwin_base[7] = subwin_base;
 
         /* Read register through sub-window 7 */
         reg = ROFFS(iproc_regs, 0x7000 + (addr & 0xfff));
@@ -451,6 +460,16 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
 
     /* Look for matching sub-window */
     for (idx = 0; idx < SHBDE_NUM_IPROC_SUBWIN; idx++) {
+        if (idx == 7 && icfg->no_subwin_remap) {
+            /*
+             * If sub-window remapping is not permitted, issue a
+             * warning if none of the fixed sub-windows are
+             * matching. We still allow the remapping to take place in
+             * order to avoid breaking existing (unsafe) code.
+             */
+            LOG_WARN(shbde, "No matching PCI sub-window for", addr);
+            break;
+        }
         if (icfg->subwin_base[idx] == subwin_base) {
             reg = ROFFS(iproc_regs, idx * 0x1000 + (addr & 0xfff));
             break;
@@ -459,16 +478,14 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
 
     /* No matching sub-window, reuse the sub-window 7 */
     if (reg == 0) {
-        if (icfg->no_subwin_remap) {
-            LOG_WARN(shbde, "Attempt to remap PCI sub-window for", addr);
-            return;
-        }
         /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);
         iproc32_write(shbde, reg, subwin_base);
         /* Read it to make sure the write actually goes through */
         subwin_base = iproc32_read(shbde, reg);
+        /* Update cache */
+        icfg->subwin_base[7] = subwin_base;
 
         /* Read register through sub-window 7 */
         reg = ROFFS(iproc_regs, 0x7000 + (addr & 0xfff));

@@ -1,0 +1,17 @@
+Source: sonic-supermicro-platform-modules
+Section: main
+Priority: extra
+Maintainer: SuperMicro Team <support@supermicro.com>
+Build-Depends: debhelper-compat (= 13), python3
+Rules-Requires-Root: no
+Standards-Version: 3.9.3
+
+Package: platform-modules-sse-t8164
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned, ${python3:Depends}
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-sse-t8196
+Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned, ${python3:Depends}
+Description: kernel modules for platform devices such as fan, led, sfp

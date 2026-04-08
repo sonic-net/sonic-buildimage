@@ -14,7 +14,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/local/bin/supervisor-proc-exit-listener --container-name syncd
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name syncd
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
 autostart=true
 autorestart=unexpected
@@ -45,3 +45,13 @@ dependent_startup_wait_for=rsyslogd:running
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/syncd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+[program:phcsync]
+command=/usr/bin/phcsync.sh
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running

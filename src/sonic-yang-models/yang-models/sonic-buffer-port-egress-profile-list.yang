@@ -2,10 +2,6 @@ module sonic-buffer-port-egress-profile-list {
     namespace "http://github.com/sonic-net/sonic-buffer-port-egress-profile-list";
     prefix bpg;
 
-    import sonic-extension {
-        prefix sonic-ext;
-    }
-
     import sonic-port {
         prefix prt;
     }
@@ -28,7 +24,6 @@ module sonic-buffer-port-egress-profile-list {
             "Initial revision.";
     }
 
-
     container sonic-buffer-port-egress-profile-list {
 
         container BUFFER_PORT_EGRESS_PROFILE_LIST {
@@ -46,6 +41,7 @@ module sonic-buffer-port-egress-profile-list {
                     type leafref {
                         path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
                     }
+                    ordered-by user;
                     description "a list of references to BUFFER_PROFILE_TABLE object for a port";
                 }
 

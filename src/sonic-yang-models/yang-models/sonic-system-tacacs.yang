@@ -25,10 +25,6 @@ module sonic-system-tacacs {
         prefix loopback;
     }
 
-    import sonic-interface {
-        prefix interface;
-    }
-
     import sonic-mgmt_port {
         prefix mgmt-port;
     }
@@ -44,6 +40,12 @@ module sonic-system-tacacs {
             enum mschap;
             enum login;
         }
+    }
+
+    typedef key_encrypt_type {
+        type boolean;
+        default false;
+        description "Indicates if the passkey is encrypted.";
     }
 
     container sonic-system-tacacs {
@@ -91,6 +93,10 @@ module sonic-system-tacacs {
                     description "Authentication type";
                 }
 
+                leaf key_encrypt {
+                    type key_encrypt_type;
+                }
+
                 leaf passkey {
                     type string {
                         length "1..256";
@@ -112,7 +118,6 @@ module sonic-system-tacacs {
             }
         }
 
-
         container TACPLUS {
 
             container global {
@@ -131,10 +136,9 @@ module sonic-system-tacacs {
                     default 5;
                 }
 
-		leaf key_encrypt {
-		    type boolean;
-		    description "Indicates if the passkey is encrypted.";
-		}
+                leaf key_encrypt {
+                    type key_encrypt_type;
+                }
 
                 leaf passkey {
                     type string {

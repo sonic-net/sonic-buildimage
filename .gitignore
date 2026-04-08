@@ -9,6 +9,7 @@ rules/config.user
 
 # Build artifacts
 fsroot/
+fsroot-*/
 fs.*
 target/
 *.deb
@@ -22,6 +23,7 @@ target/
 *dbg.j2
 *.img
 *.pyc
+*.mod
 
 # Slave docker log files
 sonic-slave*/*.log
@@ -63,6 +65,9 @@ src/**/debian/autoreconf.*
 src/**/debian/build/
 src/**/debian/files
 src/**/debian/stamp-autotools-files
+
+# checksum file to detect sonic-frr patch-set changes
+src/sonic-frr/.sonic-frr-patch-*.sha1
 
 # .o files
 src/**/*.o

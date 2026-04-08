@@ -5,11 +5,10 @@ System LED control daemon
 """
 
 import sonic_platform
-import sys
-import time
+from nexthop.graceful_exitter import GracefulExitter
 from sonic_py_common import daemon_base
 
-SYSLOG_IDENTIFIER = "system_ledd"
+SYSLOG_IDENTIFIER = "system-ledd"
 UPDATE_INTERVAL_SEC = 5
 
 FANS_OK = "green"
@@ -33,11 +32,11 @@ class SystemLedd(daemon_base.DaemonBase):
             result = fan_drawer.set_status_led(color)
             if result:
                 self.log_info(
-                    f"Setting FANTRAY_LED_{fan_drawer.fantray_index} to {color}"
+                    f"Setting FANTRAY{fan_drawer.fantray_index}_LED to {color}"
                 )
             else:
                 self.log_error(
-                    f"Failed to set FANTRAY_LED_{fan_drawer.fantray_index} to {color}"
+                    f"Failed to set FANTRAY{fan_drawer.fantray_index}_LED to {color}"
                 )
 
     def _set_fan_led(self, color):
@@ -87,10 +86,12 @@ class SystemLedd(daemon_base.DaemonBase):
 
 
 def main():
+    exitter = GracefulExitter(SYSLOG_IDENTIFIER)
     system_ledd = SystemLedd()
-    while True:
+
+    while not exitter.should_exit():
         system_ledd.run()
-        time.sleep(UPDATE_INTERVAL_SEC)
+        exitter.sleep_respect_exit(UPDATE_INTERVAL_SEC)
 
 
 if __name__ == "__main__":

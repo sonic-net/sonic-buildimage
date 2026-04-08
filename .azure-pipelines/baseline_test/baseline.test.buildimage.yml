@@ -1,8 +1,15 @@
-pr: none
+name: BaselineTest_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
 trigger: none
+pr: none
 
-
-name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+schedules:
+  - cron: "0 8 * * *"
+    displayName: Baseline test Scheduler
+    branches:
+      include:
+        - master
+    always: true
 
 resources:
   repositories:
@@ -38,15 +45,15 @@ parameters:
     type: boolean
     default: true
 
+  - name: INCLUDE_JOBS
+    type: string
+    default: "all"
+
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml
 - template: ../template-variables.yml
 - group: SONiC-Elastictest
 - group: GIT_SECRETS
-- name: inventory
-  value: veos_vtb
-- name: testbed_file
-  value: vtestbed.yaml
 - name: CACHE_MODE
   value: rcache
 - name: ENABLE_FIPS
@@ -59,11 +66,11 @@ variables:
 
 stages:
   - stage: BuildVS
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     jobs:
     - template: ../azure-pipelines-build.yml
       parameters:
-        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
         jobGroups:
         - name: vs
 
@@ -74,10 +81,11 @@ stages:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
-        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-        TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_2
     dependsOn:
@@ -87,10 +95,11 @@ stages:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
-        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-        TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_3
     dependsOn:
@@ -100,10 +109,11 @@ stages:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
-        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-        TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_4
     dependsOn:
@@ -113,7 +123,8 @@ stages:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
-        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-        TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}

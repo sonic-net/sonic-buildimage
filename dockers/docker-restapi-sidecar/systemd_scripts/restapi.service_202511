@@ -1,0 +1,16 @@
+[Unit]
+Description=RestAPI container
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+User=root
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+ExecStop=/usr/bin/restapi.sh stop
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

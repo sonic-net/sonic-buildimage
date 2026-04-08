@@ -9,7 +9,7 @@
 include /usr/share/dpkg/pkg-info.mk
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 export INSTALL_MOD_DIR:=extra
 
@@ -27,20 +27,29 @@ CLASSES_DIR := classes
 CONF_DIR := conf
 
 %:
-	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
-clean:
-	dh_testdir
-	dh_testroot
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		make clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --clean -d $${mod}; \
+		fi; \
+	done)
 	dh_clean
 
-build:
-	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_configure:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-		cd $(MOD_SRC_DIR)/$${mod}; \
-		if [ -f setup.py ]; then \
-			$(PYTHON3) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --build -d $${mod}; \
 		fi; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
 			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
@@ -48,54 +57,22 @@ build:
 				$(PYTHON3) sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
 				echo "Finished makig pddf whl package for $$mod"; \
 			fi; \
+			cd $(MOD_SRC_DIR); \
 		fi; \
-		cd $(MOD_SRC_DIR); \
 	done)
 
-binary: binary-arch binary-indep
-	# Nothing to do
+override_dh_auto_test:
+	# No tests to run
 
-binary-arch: 
-	# Nothing to do
-
-#install: build
-	#dh_testdir
-	#dh_testroot
-	#dh_clean -k 
-	#dh_installdirs
-
-binary-indep:
-	dh_testdir
-	dh_installdirs
-
-	# Custom package commands
-	(for mod in $(MODULE_DIRS); do \
+override_dh_auto_install:
+	(set -e; for mod in $(MODULE_DIRS); do \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
-		cd $(MOD_SRC_DIR)/$${mod}; \
-		if [ -f setup.py ]; then \
-			$(PYTHON3) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			pybuild --install -d $${mod}; \
 		fi; \
-		cd $(MOD_SRC_DIR); \
 	done)
-	# Resuming debhelper scripts
-	dh_testroot
-	dh_install
-	dh_installchangelogs
-	dh_installdocs
-	dh_systemd_enable
-	dh_installinit
-	dh_systemd_start
-	dh_link
-	dh_fixperms
-	dh_compress
-	dh_strip
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-.PHONY: build binary binary-arch binary-indep clean

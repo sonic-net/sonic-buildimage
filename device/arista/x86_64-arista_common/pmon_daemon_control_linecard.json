@@ -1,6 +1,5 @@
 {
     "skip_fancontrol": true,
-    "skip_pcied": true,
     "enable_xcvrd_sff_mgr": true
 }
 

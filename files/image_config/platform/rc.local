@@ -198,15 +198,26 @@ program_console_speed()
     # Subsequent boots may have new baud rate without finding keep-baud argument
     grep agetty /lib/systemd/system/serial-getty@.service |grep keep-baud
     if [ $? = 0 ]; then
-        sed -i "s|\-\-keep\-baud .* %I| $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|\-\-keep\-baud .* -| $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
     else
-        sed -i "s|u' .* %I|u' $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|u' .* -|u' $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
     fi
 
     # Reload systemd config
     systemctl daemon-reload
 }
 
+request_dpu_midplane_ip()
+{
+    local INTERFACE="eth0-midplane"
+    if ip link show "$INTERFACE" 2> /dev/null; then
+        echo "dhclient -r $INTERFACE"
+        /usr/sbin/dhclient -r "$INTERFACE"
+        sleep 1
+        echo "timeout 5s dhclient $INTERFACE"
+        timeout 5s /usr/sbin/dhclient "$INTERFACE"
+    fi
+}
 
 #### Begin Main Body ####
 
@@ -240,16 +251,26 @@ fi
 
 program_console_speed
 
+platform=""
+if [ -n "$aboot_platform" ]; then
+    platform=$aboot_platform
+elif [ -n "$onie_platform" ]; then
+    platform=$onie_platform
+else
+    echo "Unknown SONiC platform"
+fi
+
+# W/A for https://github.com/sonic-net/sonic-buildimage/issues/24086
+if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2>/dev/null; then
+    echo "DPU type detected. Requesting IP ..."
+    request_dpu_midplane_ip
+fi
+
 if [ -f $FIRST_BOOT_FILE ]; then
 
     echo "First boot detected. Performing first boot tasks..."
 
-    if [ -n "$aboot_platform" ]; then
-        platform=$aboot_platform
-    elif [ -n "$onie_platform" ]; then
-        platform=$onie_platform
-    else
-        echo "Unknown SONiC platform"
+    if [ -z "$platform" ]; then
         firsttime_exit
     fi
 
@@ -258,7 +279,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
     if [ -d /host/old_config ]; then
         mv -f /host/old_config /etc/sonic/
         rm -rf /etc/sonic/old_config/old_config
-        touch /tmp/pending_config_migration
+        touch /etc/sonic/pending_config_migration
     elif [ -f /host/minigraph.xml ]; then
         mkdir -p /etc/sonic/old_config
         mv /host/minigraph.xml /etc/sonic/old_config/
@@ -266,7 +287,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/port_config.json ] && mv /host/port_config.json /etc/sonic/old_config/
         [ -f /host/snmp.yml ] && mv /host/snmp.yml /etc/sonic/old_config/
         [ -f /host/golden_config_db.json ] && mv /host/golden_config_db.json /etc/sonic/old_config/
-        touch /tmp/pending_config_migration
+        touch /etc/sonic/pending_config_migration
     elif [ -n "$migration" ] && [ -f /host/migration/minigraph.xml ];  then
         mkdir -p /etc/sonic/old_config
         mv /host/migration/minigraph.xml /etc/sonic/old_config/
@@ -274,9 +295,9 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/migration/port_config.json ] && mv /host/migration/port_config.json /etc/sonic/old_config/
         [ -f /host/migration/snmp.yml ] && mv /host/migration/snmp.yml /etc/sonic/old_config/
         [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
-        touch /tmp/pending_config_migration
+        touch /etc/sonic/pending_config_migration
     else
-        touch /tmp/pending_config_initialization
+        touch /etc/sonic/pending_config_initialization
     fi
 
     # Notify firstboot to Platform, to use it for reboot-cause

@@ -1,0 +1,138 @@
+module sonic-dhcpv4-relay {
+
+    namespace "http://github.com/sonic-net/sonic-dhcpv4-relay";
+    prefix dhcpv4relay;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
+    organization "SONiC";
+    contact "SONiC";
+    description "DHCPv4 Relay yang Module for SONiC OS";
+
+    revision 2024-12-30 {
+        description "First Revision";
+    }
+
+    container sonic-dhcpv4-relay {
+        container DHCPV4_RELAY {
+            description "DHCPV4_RELAY part of config_db.json";
+
+            list DHCPV4_RELAY_LIST {
+                key "name";
+
+                leaf name {
+                    description "VLAN ID";
+                    type union {
+                        // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                        // type leafref {
+                        //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        // }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                    }
+               }
+
+                leaf-list dhcpv4_servers {
+                    description "Server IPv4 address list";
+                    min-elements 1;
+                    type inet:ipv4-address;
+                }
+
+                leaf server_vrf {
+                    description "Server VRF";
+                    type leafref {
+                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                    must "(current()/../server_id_override = 'enable' and
+                           current()/../link_selection = 'enable')" {
+                        description "when server_vrf is set, link_selection and server_id_override must be enabled";
+                    }
+                    must "current()/../vrf_selection = 'enable'" {
+                        description "if vrf_selection is enabled, server-vrf must be set";
+                    }
+                }
+
+                leaf source_interface {
+                    description "Used to determine the source IP address of the relayed packet";
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                        type leafref {
+                            path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+                        }
+                    }
+                }
+
+                leaf link_selection {
+                    description "Enable link selection";
+                    type stypes:mode-status;
+                    default disable;
+                    must "current() = 'disable' or current()/../source_interface != ''" {
+                        description "if link_selection is enabled, source_interface must be set";
+                    }
+                }
+
+                leaf vrf_selection {
+                    description "Enable VRF selection";
+                    type stypes:mode-status;
+                    default disable;
+                }
+
+                leaf server_id_override {
+                    description "Enable server id override";
+                    type stypes:mode-status;
+                    default disable;
+                }
+
+                leaf agent_relay_mode {
+                    description "How to forward packets that already have a relay option";
+                    type stypes:relay-agent-mode;
+                    default forward_untouched;
+                }
+
+                leaf max_hop_count {
+                    description "Maximum hop count for relayed packets";
+                    type uint8 {
+                        range "1..16";
+                    }
+                    default 4;
+                }
+            }
+            /* end of DHCPV4_RELAY_LIST */
+        }
+        /* end of container DHCPV4_RELAY */
+    }
+    /* end of container sonic-dhcpv4-relay */
+}
+/* end of module sonic-dhcpv4-relay */

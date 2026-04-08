@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import sys
 
 from sonic_py_common import logger as log
 from swsscommon.swsscommon import ConfigDBConnector, DBConnector, FieldValuePairs, ProducerStateTable, SonicV2Connector, Table
@@ -160,8 +161,8 @@ class MuxStateWriter(object):
         Writes standby mux state to APP DB for all mux interfaces
         """
         if not self.is_dualtor:
-            # If not running on a dual ToR system, take no action
-            return
+            logger.log_warning("It is not a Dual-ToR system, do not start mux container")
+            sys.exit(1)
 
         if self.is_warmrestart and self.is_shutdwon:
             # If in warmrestart context, take no action

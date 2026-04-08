@@ -3,16 +3,8 @@ module sonic-vxlan {
     namespace "http://github.com/sonic-net/sonic-vxlan";
     prefix svxlan;
 
-    import ietf-yang-types {
-        prefix yang;
-    }
-
     import ietf-inet-types {
         prefix inet;
-    }
-
-    import sonic-extension {
-        prefix sonic-ext;
     }
     // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
     //import sonic-vlan {
@@ -21,7 +13,6 @@ module sonic-vxlan {
     import sonic-types {
         prefix stypes;
     }
-
 
     organization
         "SONiC";
@@ -46,10 +37,10 @@ module sonic-vxlan {
             list VXLAN_TUNNEL_LIST {
 
                 key "name";
-                max-elements 1;
+                max-elements 2;
 
                 leaf name {
-                    type stypes:interface_name;
+                    type string;
                 }
 
                 leaf src_ip {
@@ -58,6 +49,13 @@ module sonic-vxlan {
 
                 leaf dst_ip {
                     type inet:ip-address;
+                }
+
+                leaf ttl_mode {
+                    description "Decap TTL mode";
+                    type string {
+                        pattern "uniform|pipe";
+                    }
                 }
             }
         }

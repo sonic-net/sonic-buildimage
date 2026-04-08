@@ -1,6 +1,6 @@
 # This script is used to
 
-import yang as ly
+import libyang as ly
 import logging
 import argparse
 import sys
@@ -39,31 +39,29 @@ class Test_yang_models:
     def initTest(self):
         self.defaultYANGFailure = {
             'Must': ['Must condition', 'not satisfied'],
-            'InvalidValue': ['Invalid value'],  # libyang3: ['Invalid', 'value', 'Data path']
-            'LeafRef': ['Leafref', 'non-existing'], #libyang3: ['Invalid leafref', 'no target instance']
+            'InvalidValue': ['Invalid', 'value', 'Data path'],
+            'LeafRef': ['Invalid leafref', 'no target instance'],
             'When': ['When condition', 'not satisfied'],
-            'Pattern': ['pattern', 'does not satisfy'], #libyang3: ['pattern', 'Unsatisfied pattern']
-            'Mandatory': ['required element', 'Missing'], #libyang3: ['Mandatory node', 'does not exist']
+            'Pattern': ['pattern', 'Unsatisfied pattern'],
+            'Mandatory': ['Mandatory node', 'does not exist'],
             'Verify': ['verified'],
-            'Range': ['does not satisfy', 'range'], #libyang3: ['Unsatisfied range']
+            'Range': ['Unsatisfied range'],
             'MinElements': ['Too few'],
             'MaxElements': ['Too many'],
-            'UnknownElement': ['Unknown element'],
+            'UnknownElement': ['not found as a child'],
             'Missing': ['Missing required element'],
+            "InvalidJSON": ['Expecting JSON'],
             'None': [],
-# New keys are needed for libyang3's messages which are different.  Go
-# ahead and add them now with the libyang1 values (which are duplicates
-# of the above).  This will make migrating to libyang3 easier with less
-# code review.
-            'Length': ['does not satisfy', 'range'], # libyang3: ['Unsatisfied length']
-            'DecimalFractionExceed': ['Invalid value'], # libyang3: ['Value', 'exceeds defined number', 'fraction digits']
-            'Bounds': ['Invalid value'], #libyang3 ['Value', 'out of type', 'min/max bounds'],
-            'ListKey': ['Missing required element'], #libyang3 ['List instance is missing its key']
-            'DateTime': ['pattern', 'does not satisfy'], #libyang3: ['Invalid date-and-time']
-            'IPv4': ['pattern', 'does not satisfy'], #libyang3 ['Failed to convert IPv4 address'],
+            'Length': ['Unsatisfied length'],
+            'DecimalFractionExceed': ['Value', 'exceeds defined number', 'fraction digits'],
+            'Bounds': ['Value', 'out of type', 'min/max bounds'],
+            'ListKey': ['List instance is missing its key'],
+            'DateTime': ['Invalid date-and-time'],
+            'IPv4': ['Failed to convert IPv4 address'],
         }
 
         self.ExceptionTests = { }
+        self.FailedTests = []
 
         for test_file in glob("./tests/yang_model_tests/tests/*.json"):
             try:
@@ -123,11 +121,12 @@ class Test_yang_models:
             # load yang modules
             for file in yangFiles:
                 log.debug(file)
-                m = self.ctx.parse_module_path(file, ly.LYS_IN_YANG)
-                if m is not None:
-                    log.info("module: {} is loaded successfully".format(m.name()))
-                else:
-                    log.info("Could not load module: {}".format(file))
+                with open(file, 'r') as f:
+                    m = self.ctx.parse_module_file(f, "yang")
+                    if m is not None:
+                        log.info("module: {} is loaded successfully".format(m.name()))
+                    else:
+                        log.info("Could not load module: {}".format(file))
 
         except Exception as e:
             printExceptionDetails()
@@ -179,26 +178,40 @@ class Test_yang_models:
     """
     def loadConfigData(self, jInput, verify=None):
         s = ""
+        node = None
         try:
-            node = self.ctx.parse_data_mem(jInput, ly.LYD_JSON, \
-            ly.LYD_OPT_CONFIG | ly.LYD_OPT_STRICT)
+            node = self.ctx.parse_data_mem(jInput, "json", strict=True, no_state=True, json_string_datatypes=True)
+        except Exception as e:
+            printExceptionDetails()
+            s = str(e)
+            log.info(s)
+            return s
+
+        try:
             # verify the data tree if asked
             if verify is not None:
                 xpath = verify['xpath']
                 log.info("Verify xpath: {}".format(xpath))
-                set = node.find_path(xpath)
-                for dnode in set.data():
+                nodes = node.find_all(xpath)
+                for dnode in nodes:
                     if (xpath == dnode.path()):
                         log.info("Verify dnode: {}".format(dnode.path()))
-                        data = dnode.print_mem(ly.LYD_JSON, ly.LYP_WITHSIBLINGS \
-                            | ly.LYP_FORMAT | ly.LYP_WD_ALL)
+                        # When calling print_mem() with with_siblings=True, only siblings after the referenced node
+                        # will be printed.  But tests expect all siblings to be printed, so scan to the first node
+                        # under the parent.  Will return self if it is the only node.
+                        # libyang v1 implicitly did this, but v3 does not.
+                        dnode = dnode.first_sibling()
+                        data = dnode.print_mem("json", with_siblings=True, pretty=True, include_implicit_defaults=True)
                         data = json.loads(data)
-                        log.info("Verify data: {}".format(data))
+                        log.info("Verify path value {} is {} in {}".format(verify['key'], verify['value'], data))
+                        assert (verify['key'] in data)
                         assert (data[verify['key']] == verify['value'])
                         s = 'verified'
         except Exception as e:
-            s = str(e)
-            log.info(s)
+            printExceptionDetails()
+
+        node.free()
+
         return s
 
     """
@@ -222,9 +235,12 @@ class Test_yang_models:
                 log.info(desc + " Passed\n")
                 return PASS
             else:
-                raise Exception("Mismatch {} and {}".format(eStr, s))
+                errstr = "{}: Mismatch {} and {}".format(test, eStr, s)
+                self.FailedTests.append(errstr)
+                raise Exception(errstr)
         except Exception as e:
             printExceptionDetails()
+
         log.info(desc + " Failed\n")
         return FAIL
 
@@ -254,7 +270,9 @@ class Test_yang_models:
                 log.debug(jInput)
                 s = self.loadConfigData(json.dumps(jInput))
                 if s!="":
-                    raise Exception("{} in not empty".format(s))
+                    errstr="{}[{}]: {} in not empty".format(test,i,s)
+                    self.FailedTests.append(errstr)
+                    raise Exception(errstr)
             return PASS
         except Exception as e:
             printExceptionDetails()
@@ -282,6 +300,17 @@ class Test_yang_models:
         except Exception as e:
             ret = FAIL * len(self.tests)
             printExceptionDetails()
+
+        if len(self.FailedTests):
+            print("{} Failures:".format(len(self.FailedTests)))
+            log.error("{} Failures:".format(len(self.FailedTests)))
+            for x in self.FailedTests:
+                print(x)
+                log.error(x)
+
+        if self.ctx:
+            self.ctx.destroy()
+            self.ctx = None
 
         assert ret == 0
         return

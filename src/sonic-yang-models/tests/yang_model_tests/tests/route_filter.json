@@ -82,11 +82,17 @@
         "desc": "Out of range seqence number",
         "eStrKey": "Range"
     },
+    "ROUTE_PREFIX_DUPLICATE_SEQ_NO": {
+        "desc": "Duplicate Sequence Number",
+        "eStr": "sequence_number required to be unique for each prefix-list"
+    },
+    "ROUTE_PREFIX_REPEAT_SEQ_NO_DIFFLIST": {
+        "desc": "Duplicate Sequence Number, but in different lists is ok"
+    },
     "ROUTE_PREFIX_INVALID_IP_PREFIX": {
         "desc": "Invalid IP prefix",
         "eStrKey": "InvalidValue"
     },
-
     "BGP_COMMUNITY_VALID": {
         "desc": "Configure BGP community table."
     },

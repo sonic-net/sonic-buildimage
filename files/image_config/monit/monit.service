@@ -1,0 +1,21 @@
+[Unit]
+Description=Pro-active monitoring utility for unix systems
+After=network-online.target
+Documentation=man:monit(1) https://mmonit.com/wiki/Monit/HowTo
+
+[Service]
+Type=simple
+KillMode=process
+ExecStart=/usr/bin/monit -I
+ExecStop=/usr/bin/monit quit
+ExecReload=/usr/bin/monit reload
+Restart=on-abnormal
+StandardOutput=null
+
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

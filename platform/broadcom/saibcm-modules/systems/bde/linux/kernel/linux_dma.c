@@ -1,6 +1,7 @@
 /*
  * $Id: linux_dma.c,v 1.414 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -94,7 +95,7 @@
 #if _SIMPLE_MEMORY_ALLOCATION_
 #include <linux/dma-mapping.h>
 #ifndef CONFIG_CMA
-#define DMA_MAX_ALLOC_SIZE (1 << (MAX_ORDER - 1 + PAGE_SHIFT)) /* Maximum size the kernel can allocate in one allocation */
+#define DMA_MAX_ALLOC_SIZE (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT)) /* Maximum size the kernel can allocate in one allocation */
 #endif /* !CONFIG_CMA */
 #endif /* _SIMPLE_MEMORY_ALLOCATION_ */
 
@@ -139,7 +140,7 @@
 #endif
 
 #ifndef KMALLOC_MAX_SIZE
-#define KMALLOC_MAX_SIZE (1UL << (MAX_ORDER - 1 + PAGE_SHIFT))
+#define KMALLOC_MAX_SIZE (1UL << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))
 #endif
 
 /* Compatibility */
@@ -749,11 +750,11 @@ lkbde_edk_get_dma_info(int dev_id, phys_addr_t* cpu_pbase, phys_addr_t* dma_pbas
 }
 
 void *
-lkbde_edk_dmamem_map_p2v(dma_addr_t paddr)
+lkbde_edk_dmamem_map_p2v(int dev_no, dma_addr_t paddr)
 {
-    if ((paddr >= _edk_dma_pool[0].dma_pbase) &&
-            (paddr < (_edk_dma_pool[0].dma_pbase + _edk_dma_pool[0].size))) {
-        return (_edk_dma_pool[0].dma_vbase + (paddr - _edk_dma_pool[0].dma_pbase));
+    if ((paddr >= _edk_dma_pool[dev_no].dma_pbase) &&
+            (paddr < (_edk_dma_pool[dev_no].dma_pbase + _edk_dma_pool[dev_no].size))) {
+        return (_edk_dma_pool[dev_no].dma_vbase + (paddr - _edk_dma_pool[dev_no].dma_pbase));
     } else {
         return NULL;
     }
@@ -1245,29 +1246,6 @@ _p2l(int d, sal_paddr_t paddr)
     return bus_to_virt(paddr);
 }
 
-/*
- * Some of the driver malloc's are too large for
- * kmalloc(), so 'sal_alloc' and 'sal_free' in the
- * linux kernel sal cannot be implemented with kmalloc().
- *
- * Instead, they expect someone to provide an allocator
- * that can handle the gimongous size of some of the
- * allocations, and we provide it here, by allocating
- * this memory out of the boot-time dma pool.
- *
- * These are the functions in question:
- */
-
-void* kmalloc_giant(int sz)
-{
-    return mpool_alloc(_dma_pool, sz);
-}
-
-void kfree_giant(void* ptr)
-{
-    return mpool_free(_dma_pool, ptr);
-}
-
 uint32_t *
 _salloc(int d, int size, const char *name)
 {
@@ -1342,6 +1320,27 @@ _dma_pprint(struct seq_file *m)
             USE_LINUX_BDE_MMAP ? ", local mmap" : "");
 }
 
+int
+lkbde_get_phys_to_virt(int d, phys_addr_t paddr, sal_vaddr_t *vaddr)
+{
+    sal_vaddr_t vaddr_base = (sal_vaddr_t)_dma_vbase;
+    sal_vaddr_t vaddr_new;
+
+    if (_dma_mem_size) {
+        /* DMA memory is a contiguous block */
+        if (paddr == 0) {
+            return -1;
+        }
+
+        vaddr_new = (vaddr_base + (paddr - _dma_pbase));
+        *vaddr = vaddr_new;
+        return 0;
+    }
+
+    *vaddr = 0;
+    return -1;
+}
+
 /*
  * Export functions
  */
@@ -1350,6 +1349,5 @@ _dma_pprint(struct seq_file *m)
 LKM_EXPORT_SYM(lkbde_edk_get_dma_info);
 LKM_EXPORT_SYM(lkbde_edk_dmamem_map_p2v);
 #endif
-LKM_EXPORT_SYM(kmalloc_giant);
-LKM_EXPORT_SYM(kfree_giant);
 LKM_EXPORT_SYM(lkbde_get_dma_info);
+LKM_EXPORT_SYM(lkbde_get_phys_to_virt);

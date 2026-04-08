@@ -12,7 +12,11 @@
 import sys
 import time
 
+from sonic_platform.dpm_base import timestamp_as_string
+from sonic_platform.reboot_cause_manager import RebootCauseManager, RebootCause
 from sonic_platform.thermal import NexthopFpgaAsicThermal
+from sonic_platform.watchdog import Watchdog
+
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
 except ImportError as e:
@@ -25,6 +29,7 @@ XCVR_REMOVED = "0"
 # Sleep duration waiting for change events
 CHANGE_EVENT_SLEEP_SECONDS = 1
 
+
 class Chassis(PddfChassis):
     """
     PDDF Platform-specific Chassis class
@@ -35,11 +40,23 @@ class Chassis(PddfChassis):
 
         # {'port': 'presence'}
         self._xcvr_presence = {}
+        self._watchdog: Watchdog | None = None
+        self._pddf_data = pddf_data
 
-        num_asic_thermals = pddf_data.data['PLATFORM'].get('num_nexthop_fpga_asic_temp_sensors', 0)
+        # Calculate thermal position offset for FPGA sensors
+        position_offset = len(self._thermal_list)
+
+        if self._pddf_data:
+            num_asic_thermals = self._pddf_data.data.get("PLATFORM", {}).get("num_nexthop_fpga_asic_temp_sensors", 0)
+        else:
+            num_asic_thermals = 0
         for index in range(num_asic_thermals):
-            thermal = NexthopFpgaAsicThermal(index, pddf_data)
+            thermal = NexthopFpgaAsicThermal(index, position_offset, pddf_data)
             self._thermal_list.append(thermal)
+
+        self._reboot_cause_manager = (
+            RebootCauseManager(pddf_data.data, pddf_plugin_data) if (pddf_plugin_data and pddf_data) else None
+        )
 
     # Provide the functions/variables below for which implementation is to be overwritten
 
@@ -81,10 +98,9 @@ class Chassis(PddfChassis):
 
         try:
             # The index starts from 1
-            sfp = self._sfp_list[index-1]
+            sfp = self._sfp_list[index - 1]
         except IndexError:
-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list)))
+            sys.stderr.write("SFP index {} out of range (1-{})\n".format(index, len(self._sfp_list)))
         return sfp
 
     def _get_xcvr_change_event(self):
@@ -123,15 +139,15 @@ class Chassis(PddfChassis):
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
         """
-        end_time = time.monotonic() + timeout/1000 if timeout > 0 else None
+        end_time = time.monotonic() + timeout / 1000 if timeout > 0 else None
         change_events = {}
         while True:
-            change_events['sfp'] = self._get_xcvr_change_event()
-            if bool(change_events['sfp']):
+            change_events["sfp"] = self._get_xcvr_change_event()
+            if bool(change_events["sfp"]):
                 break
             if end_time is not None and time.monotonic() > end_time:
                 break
-            time.sleep(min(timeout/1000, CHANGE_EVENT_SLEEP_SECONDS))
+            time.sleep(min(timeout / 1000, CHANGE_EVENT_SLEEP_SECONDS))
         return True, change_events
 
     # sonic-utilities/show/system_health.py calls this
@@ -144,39 +160,90 @@ class Chassis(PddfChassis):
     def get_status_led(self):
         return self.get_system_led("SYS_LED")
 
+    def _attach_reboot_cause_comment(self, majors_and_minors: list[tuple[str, str]]):
+        if not majors_and_minors:
+            return
+
+        reboot_cause_path = self.plugin_data.get("REBOOT_CAUSE", {}).get("reboot_cause_file", None)
+        if not reboot_cause_path:
+            return
+
+        with open(reboot_cause_path, "w") as file:
+            if len(majors_and_minors) == 1:
+                file.write("System rebooted 1 more time: ")
+            else:
+                file.write(f"System rebooted {len(majors_and_minors)} more times: ")
+            causes_str = "; ".join([f"{m[0]} ({m[1]})" for m in majors_and_minors])
+            file.write(causes_str)
+
+    def _convert_to_majors_and_minors(self, reboot_causes: list[RebootCause]) -> list[tuple[str, str]]:
+        majors_and_minors: list[tuple[str, str]] = []
+        for cause in reboot_causes:
+            if cause.type == RebootCause.Type.SOFTWARE:
+                major_cause = cause.cause
+                minor_cause = f"time: {timestamp_as_string(cause.timestamp)}, src: {cause.source}"
+            else:
+                major_cause = getattr(
+                    self,
+                    cause.chassis_reboot_cause_category,
+                    cause.chassis_reboot_cause_category,
+                )
+                minor_cause = f"{cause.description}, time: {timestamp_as_string(cause.timestamp)}, src: {cause.source}"
+            majors_and_minors.append((major_cause, minor_cause))
+        return majors_and_minors
+
     def get_reboot_cause(self):
         """
-        Retrieves the cause of the previous reboot
+        Retrieves the cause of the previous reboot.
+
+        If there were multiple reboots, the initial (oldest) reboot cause is returned,
+        and the other causes are written to the reboot cause file, which
+        should be processed as a comment by determine-reboot-cause.service.
 
         Returns:
-            A tuple (string, string) where the first element is a string
-            containing the cause of the previous reboot. This string must be
-            one of the predefined strings in this class. If the first string
-            is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
-            to pass a description of the reboot cause.
+            (major reboot cause, minor reboot cause).
+                - determine-reboot-cause.service will display
+                  the cause as "<major_cause> (<minor_cause>)"
         """
+        if self._reboot_cause_manager is None:
+            return ("Unknown", "")
 
-        reboot_cause_path = self.plugin_data['REBOOT_CAUSE']['reboot_cause_file']
+        reboot_causes = self._reboot_cause_manager.summarize_reboot_causes()
+        if not reboot_causes:
+            return ("Unknown", "")
 
-        try:
-            with open(reboot_cause_path, 'r', errors='replace') as fd:
-                data = fd.read()
-                sw_reboot_cause = data.strip()
-        except IOError:
-            sw_reboot_cause = "Unknown"
+        if len(reboot_causes) == 1 and reboot_causes[0].type == RebootCause.Type.SOFTWARE:
+            return self.REBOOT_CAUSE_NON_HARDWARE, ""
 
-        return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
-    
-    def get_watchdog(self):
+        majors_and_minors: list[tuple[str, str]] = self._convert_to_majors_and_minors(reboot_causes)
+        self._attach_reboot_cause_comment(majors_and_minors[1:])
+        return majors_and_minors[0]
+
+    def get_watchdog(self) -> Watchdog | None:
         """
         Retrieves hardware watchdog device on this chassis
         Returns:
             An object derived from WatchdogBase representing the hardware
-            watchdog device
+            watchdog device. None if no watchdog is present as defined in pddf_data.
         """
         if self._watchdog is None:
-            from sonic_platform.watchdog import Watchdog
-            self._watchdog = Watchdog()
+            if not self._pddf_data:
+                return None
+            watchdog_pddf_obj_data = self._pddf_data.data.get("WATCHDOG")
+            if watchdog_pddf_obj_data is None:
+                return None
+            device_parent_name = watchdog_pddf_obj_data["dev_info"]["device_parent"]
+            fpga_pci_addr = self._pddf_data.data[device_parent_name]["dev_info"]["device_bdf"]
+            watchdog_dev_attr = watchdog_pddf_obj_data["dev_attr"]
+            event_driven_power_cycle_control_reg_offset = int(
+                watchdog_dev_attr["event_driven_power_cycle_control_reg_offset"], 16
+            )
+            watchdog_counter_reg_offset = int(watchdog_dev_attr["watchdog_counter_reg_offset"], 16)
+            self._watchdog = Watchdog(
+                fpga_pci_addr=fpga_pci_addr,
+                event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
+                watchdog_counter_reg_offset=watchdog_counter_reg_offset,
+            )
 
         return self._watchdog
 
@@ -186,4 +253,5 @@ class Chassis(PddfChassis):
 
     def get_thermal_manager(self):
         from .thermal_manager import ThermalManager
+
         return ThermalManager

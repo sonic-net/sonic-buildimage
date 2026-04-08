@@ -1,5 +1,5 @@
 /*
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  *
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -331,7 +331,6 @@ strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
     return 0;
 }
 
-#ifdef BCM_DNX_SUPPORT
 static int
 knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                      int chan, kcom_filter_t *kf)
@@ -366,7 +365,6 @@ knet_netif_destroy_cb(struct net_device *dev, int unit, kcom_netif_t *netif)
 #endif
     return retv;
 }
-#endif
 
 /*
  * Get statistics.

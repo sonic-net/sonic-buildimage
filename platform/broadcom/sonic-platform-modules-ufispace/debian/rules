@@ -13,11 +13,14 @@ include /usr/share/dpkg/pkg-info.mk
 
 export INSTALL_MOD_DIR:=extra
 
-PYTHON3     ?= python3
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKE_FLAGS += -j$(NUMJOBS)
+endif
 
 PACKAGE_PRE_NAME := sonic-platform-ufispace
 KVERSION   ?= $(shell uname -r)
-KERNEL_SRC :=  /lib/modules/$(KVERSION)
+export KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS := s9300-32d
 MODULE_DIRS += s9301-32d
@@ -28,69 +31,66 @@ MODULE_DIRS += s9110-32x
 MODULE_DIRS += s8901-54xc
 MODULE_DIRS += s7801-54xs
 MODULE_DIRS += s6301-56st
+MODULE_DIRS += s9311-64d
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
 CONF_DIR := conf
 
 %:
-	dh $@ --with systemd,python3 --buildsystem=pybuild
+	dh $@ --with python3 --buildsystem=pybuild
 
-clean:
-	dh_testdir
-	dh_testroot
-	dh_clean
-	(for mod in $(MODULE_DIRS); do \
-	    make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
-	done)
-
-
-
-build:
-	(for mod in $(MODULE_DIRS); do \
-		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-		cd -; \
-		cd $(MOD_SRC_DIR)/$${mod}; \
-		if [ -f sonic_platform_setup.py ]; then \
-			$(PYTHON3) sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
-			echo "Finished makig whl package for $$mod"; \
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
 		fi; \
-                cd -; \
+	done)
+	dh_clean
+
+override_dh_auto_configure:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
+		fi; \
 	done)
 
-binary: binary-arch binary-indep
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --build -d $${mod}; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+			if [ -f sonic_platform_setup.py ]; then \
+				python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+				echo "Finished making pddf whl package for $$mod"; \
+			fi; \
+			cd $(MOD_SRC_DIR); \
+		fi; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/sonic_platform_setup.py ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}; \
+			python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+			cd $(MOD_SRC_DIR); \
+		fi; \
+	done)
 
-binary-arch:
+override_dh_usrlocal:
+	# Ignore making directories
 
-binary-indep:
-	dh_testdir
-	dh_installdirs
-	(for mod in $(MODULE_DIRS); do \
-		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+override_dh_auto_test:
+	# No tests to run
+
+override_dh_auto_install:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} modules_install; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system; \
-		cd $(MOD_SRC_DIR)/$${mod}; \
-		cd -; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --install -d $${mod} --dest-dir debian/$(PACKAGE_PRE_NAME)-$${mod}; \
+		fi; \
 	done)
-
-	# Resuming debhelper scripts
-	dh_testroot
-	dh_install
-	dh_installchangelogs
-	dh_installdocs
-	dh_systemd_enable
-	dh_installinit
-	dh_systemd_start
-	dh_link
-	dh_fixperms
-	dh_compress
-	dh_strip
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-.PHONY: build binary binary-arch binary-indep clean

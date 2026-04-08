@@ -15,7 +15,7 @@
                 "name": "Ucd90120A(addr=8-004e)"
             },
             {
-                "name": "CrowSysCpld(addr=2-0023)"
+                "name": "KoiSysCpld(addr=2-0023)"
             }
         ],
         "fans": [],

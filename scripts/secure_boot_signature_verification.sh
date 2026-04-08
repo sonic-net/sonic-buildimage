@@ -68,8 +68,8 @@ if [ -f "$EFI_FILE" ]; then
     verify_efi $CERT_PEM $EFI_FILE
 fi
 
-if [ -d "$KERNEL_MODULES_DIR" ]; then
-    # Condition checking that all the kernel modules in the KERNEL_MODULES_DIR contain a signature.
+if [ ! -z "$KERNEL_MODULES_DIR" -a -d "$KERNEL_MODULES_DIR" ]; then
+    # Condition checking that all the kernel modules in the KERNEL_MODULES_DIR contain a signature if specified.
 
     # find all the kernel modules.
     modules_list=$(sudo find ${KERNEL_MODULES_DIR} -name "*.ko")

@@ -139,7 +139,8 @@ def test_add_frr_session_success(mocked_run_command, bfd_mgr):
         'vtysh', '-c', 'conf t', '-c', 'bfd', '-c',
         'peer 10.0.0.1 multihop local-address 127.0.0.1 vrf default',
         '-c', 'detect-multiplier 3', '-c', 'receive-interval 200',
-        '-c', 'transmit-interval 200', '-c', 'no passive-mode'
+        '-c', 'transmit-interval 200', '-c', 'minimum-ttl 1',
+        '-c', 'no passive-mode'
     ]
     assert bfd_mgr.add_frr_session(session_key, data) == True
     mocked_run_command.assert_called_once_with(add_cmd)
@@ -321,7 +322,8 @@ def test_update_frr_session_success(mocked_run_command, bfd_mgr):
         'no peer 10.0.0.1 multihop local-address 127.0.0.1 vrf default',
         '-c', 'peer 10.0.0.1 multihop local-address 127.0.0.2 vrf default',
         '-c', 'detect-multiplier 5', '-c', 'receive-interval 300',
-        '-c','transmit-interval 400', '-c', 'passive-mode'
+        '-c','transmit-interval 400', '-c', 'minimum-ttl 1',
+        '-c', 'passive-mode'
     ]
     assert bfd_mgr.update_frr_session(session_key, data) == True
     mocked_run_command.assert_called_with(update_cmd)
@@ -365,7 +367,7 @@ def test_set_handler_add(mocked_log_warn, mocked_run_command, bfd_mgr):
         'vtysh', '-c', 'conf t', '-c', 'bfd', '-c', 
         'peer 10.0.0.1 multihop local-address 127.0.0.1 vrf default', '-c',
         'detect-multiplier 3', '-c', 'receive-interval 200', '-c',
-        'transmit-interval 200', '-c', 'passive-mode'
+        'transmit-interval 200', '-c', 'minimum-ttl 1', '-c', 'passive-mode'
     ]
     assert bfd_mgr.set_handler(key, data) == True
     mocked_run_command.assert_called_once_with(add_cmd)
@@ -417,7 +419,7 @@ def test_set_handler_upd(mocked_log_warn, mocked_run_command, bfd_mgr):
         'vtysh', '-c', 'conf t', '-c', 'bfd', '-c', 
         'peer 10.0.0.1 multihop local-address 127.0.0.1 vrf default', '-c',
         'detect-multiplier 3', '-c', 'receive-interval 200', '-c',
-        'transmit-interval 200', '-c', 'passive-mode'
+        'transmit-interval 200', '-c', 'minimum-ttl 1', '-c', 'passive-mode'
     ]
     assert bfd_mgr.set_handler(key, data) == True
     mocked_run_command.assert_called_once_with(upd_cmd)

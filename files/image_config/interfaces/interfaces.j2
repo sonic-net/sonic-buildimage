@@ -9,7 +9,7 @@
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
 auto mgmt
 iface mgmt
-    vrf-table 5000
+    vrf-table 6000
 # The loopback network interface for mgmt VRF that is required for applications like NTP
     up ip link add lo-m type dummy
     up ip link set dev lo-m master mgmt
@@ -30,6 +30,14 @@ iface lo inet loopback
 {% endblock loopback %}
 {% block mgmt_interface %}
 
+{%- if DEVICE_METADATA and 'bmc' in DEVICE_METADATA.keys() and ('bmc_if_name' in DEVICE_METADATA['bmc']) and ('bmc_if_addr' in DEVICE_METADATA['bmc']) and ('bmc_net_mask' in DEVICE_METADATA['bmc']) %}
+# BMC interface
+auto {{ DEVICE_METADATA['bmc']['bmc_if_name'] }}
+iface {{ DEVICE_METADATA['bmc']['bmc_if_name'] }} inet static
+    address {{ DEVICE_METADATA['bmc']['bmc_if_addr'] }}
+    netmask {{ DEVICE_METADATA['bmc']['bmc_net_mask'] }}
+{%- endif %}
+
 # The management network interface
 {% if (ZTP_DHCP_DISABLED is not defined) and (ZTP is defined) and (ZTP['mode'] is defined and ZTP['mode']['profile'] == 'active') %}
 auto eth0
@@ -42,7 +50,7 @@ iface eth0 inet dhcp
 {% endif %}
 {% if ZTP['mode']['ipv6'] == 'true' %}
 iface eth0 inet6 dhcp
-    up sysctl net.ipv6.conf.eth0.accept_ra=1
+    up sysctl net.ipv6.conf.eth0.accept_ra=2
     down sysctl net.ipv6.conf.eth0.accept_ra=0
 {% endif %}
 
@@ -73,10 +81,12 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     address {{ prefix | ip }}
     netmask {{ prefix | netmask if prefix | ipv4 else prefix | prefixlen }}
     network {{ prefix | network }}
+{% if prefix | broadcast %}
     broadcast {{ prefix | broadcast }}
+{% endif %}
 {%     set vrf_table = 'default' %}
 {% if (MGMT_VRF_CONFIG) and (MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == "true") %}
-{%     set vrf_table = '5000' %}
+{%     set vrf_table = '6000' %}
     vrf mgmt
 {% endif %}
 {% set force_mgmt_route_priority = 32764 %}

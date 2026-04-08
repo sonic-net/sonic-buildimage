@@ -1,9 +1,14 @@
-sonic-ufispace-platform-modules (1.0.0) unstable; urgency=lows
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
+  * Add support for S9311-64D
+
+ -- Ufispace <leo.yt.lin@ufispace.com>  Mon, 22 Sep 2025 15:10:07 +0800
+
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
   * Add support for S9321-64EO
 
  -- Ufispace <nonodark.huang@ufispace.com>  Fri, 14 Feb 2025 16:02:23 +0800
 
-sonic-ufispace-platform-modules (1.0.0) unstable; urgency=lows
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
   * Add support for S9321-64E
 
  -- Ufispace <nonodark.huang@ufispace.com>  Fri, 14 Feb 2025 16:01:23 +0800

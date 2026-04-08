@@ -4,3 +4,5 @@ swig.patch
 large_file_support_arm32.patch
 debian-packaging-files.patch
 libyang-leaf-must.patch
+libyang-with-python-3.12.patch
+libyang-increase-lyht-min-size.patch
