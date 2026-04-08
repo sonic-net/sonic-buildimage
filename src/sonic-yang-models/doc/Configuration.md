@@ -84,6 +84,7 @@
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE](#vnet_route)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
@@ -873,6 +874,9 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 
 ### Console
 
+CONSOLE_PORT defines individual line configuration and CONSOLE_SWITCH defines global console config. The item default_escape_char and escape_char are optional. It can be
+set in CONSOLE_SWITCH or overridden in each CONSOLE_PORT config
+
 ```
 {
 "CONSOLE_PORT": {
@@ -883,12 +887,14 @@ It currently allows user to administratively bring down a line-card or fabric-ca
     },
     "2": {
         "baud_rate": "9600",
-        "flow_control": "1"
+        "flow_control": "1",
+        "escape_char": "c"
     }
   },
 "CONSOLE_SWITCH": {
     "console_mgmt": {
-        "enabled": "yes"
+        "enabled": "yes",
+        "default_escape_char": "b"
     }
   }
 }
@@ -1766,13 +1772,14 @@ instead of data network.
 ```
 ### MUX_CABLE
 
-The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type` and `soc_ipv4` objects are optional.
+The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_type`, `soc_ipv4` and `neighbor_mode` objects are optional.
 
 ```
 {
     "MUX_CABLE": {
         "Ethernet4": {
             "cable_type": "active-active",
+            "neighbor_mode": "prefix-route",
             "server_ipv4": "192.168.0.2/32",
             "server_ipv6": "fc02:1000::30/128",
             "soc_ipv4": "192.168.0.3/32",
@@ -2784,6 +2791,27 @@ monitoring sessions for the vnet routes and is optional.
 		"scope": "default",
 		"vni": "10011",
 	}
+  }
+}
+```
+
+### VNET_ROUTE
+
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+- IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
+
+```
+{
+  "VNET_ROUTE": {
+    "Vnet_2000|100.100.3.0/24": {
+        "nexthop": "100.100.3.1,100.100.3.2",
+        "ifname": "Ethernet1,Ethernet2"
+    },
+    "Vnet_3000|100.100.4.0/24": {
+        "nexthop": "100.100.4.1",
+        "ifname": "Ethernet2"
+    }
   }
 }
 ```

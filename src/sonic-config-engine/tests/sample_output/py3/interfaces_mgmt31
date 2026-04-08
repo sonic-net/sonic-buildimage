@@ -1,0 +1,52 @@
+#
+# =============== Managed by SONiC Config Engine DO NOT EDIT! ===============
+# generated from /usr/share/sonic/templates/interfaces.j2 using sonic-cfggen
+# file: /etc/network/interfaces
+#
+# The loopback network interface
+auto lo
+iface lo inet loopback
+   address 127.0.0.1
+   netmask 255.255.0.0
+   scope host
+   post-up ip addr del 127.0.0.1/8 dev lo
+   pre-down ip addr add 127.0.0.1/8 dev lo
+
+# The management network interface
+auto eth0
+iface eth0 inet static
+    address 10.10.4.13
+    netmask 255.255.255.254
+    network 10.10.4.12
+    ########## management network policy routing rules
+    # management port up rules
+    up ip -4 route add default via 10.10.4.12 dev eth0 table default metric 201
+    up ip -4 route add 10.10.4.12/31 dev eth0 table default
+    up ip -4 rule add pref 32765 from 10.10.4.13/32 table default
+    up ip rule add pref 32764 to 10.20.6.16/32 table default
+    # management port down rules
+    pre-down ip -4 route delete default via 10.10.4.12 dev eth0 table default
+    pre-down ip -4 route delete 10.10.4.12/31 dev eth0 table default
+    pre-down ip -4 rule delete pref 32765 from 10.10.4.13/32 table default
+    down ip rule delete pref 32764 to 10.20.6.16/32 table default
+iface eth0 inet6 static
+    address 2603:10e2:0:2902::8
+    netmask 64
+    network 2603:10e2:0:2902::
+    broadcast 2603:10e2:0:2902:ffff:ffff:ffff:ffff
+    ########## management network policy routing rules
+    # management port up rules
+    up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201
+    up ip -6 route add 2603:10e2:0:2902::/64 dev eth0 table default
+    up ip -6 rule add pref 32765 from 2603:10e2:0:2902::8/128 table default
+    # IPV6 default table not add to lookup by default, management server need this to access IPV6 address when BGP shutdown
+    up ip -6 rule add pref 32767 lookup default
+    # management port down rules
+    pre-down ip -6 route delete default via 2603:10e2:0:2902::1 dev eth0 table default
+    pre-down ip -6 route delete 2603:10e2:0:2902::/64 dev eth0 table default
+    pre-down ip -6 rule delete pref 32765 from 2603:10e2:0:2902::8/128 table default
+    pre-down ip -6 rule delete pref 32767 lookup default
+#
+source /etc/network/interfaces.d/*
+#
+

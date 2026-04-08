@@ -34,11 +34,17 @@ function remove_ethernet_interfaces() {
     debug "remove_ethernet_interfaces: Execution time: ${duration}s (NET_NS: $NET_NS)"
 }
 
-function reset_mellanox_drivers() {
+function get_mellanox_dev()
+{
     local mlx_dev="/proc/mlx_sx/sx_core"
     if [[ $DEV != "" ]]; then
         mlx_dev="/proc/mlx_sx/asic$DEV/sx_core"
     fi
+    echo $mlx_dev
+}
+
+function reset_mellanox_drivers() {
+    local mlx_dev=$(get_mellanox_dev)
 
     if [[ -f /var/run/mlx_sx_core_restart_required$DEV ]]; then
         debug "Restarting Mellanox drivers for ASIC $DEV"
@@ -138,7 +144,8 @@ function waitplatform() {
 
 function stopplatform1() {
     if [[ x$sonic_asic_platform == x"mellanox" ]]; then
-        echo "health_check_trigger del_dev 1" > /proc/mlx_sx/sx_core
+        local mlx_dev=$(get_mellanox_dev)
+        echo "health_check_trigger del_dev 1" > $mlx_dev
     fi
 
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then

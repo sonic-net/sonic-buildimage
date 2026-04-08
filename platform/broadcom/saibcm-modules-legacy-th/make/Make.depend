@@ -1,0 +1,126 @@
+# $Id: Make.depend,v 1.14 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+#
+# Default rule to build dependencies.  This builds a x.d file for each
+# x.c file that describes the dependencies.  We then conditionally include 
+# the generated .d files.
+#
+
+#
+# If making 'clean', do not include any .d files.  If they are included,
+# gmake intrinsically tries to remake them all.
+#
+ifeq (,$(findstring clean,$(MAKECMDGOALS)))
+
+ZFS      :=$(wildcard *.zf)
+ZFC := $(ZFS:.zf=.c)
+
+ifdef GENERATE_C_FILES
+ifndef GEN_INCS
+$(error "GEN_INCS was not defined")
+endif
+
+ZF_GEN   = ${SDK}/tools/zFrameCodeGen.pl
+
+# 1=.zf
+define ZFS_RULE
+$(1:.zf=Console.c) : $(1:.zf=.c)
+	@echo updated $$@ from $$?
+
+$(1:.zf=.c) : $(1) $(ZF_GEN)
+	@$(PERL) $(ZF_GEN) -s -z . -p . -g $1 -t c
+	@echo generated ${LOCALDIR}/$$@ from $(1)
+	@mv $$(*F).cx $$@
+	@if [ -e $$(*F)Console.cx ] ; then \
+	   mv $$(*F)Console.cx $$(*F)Console.c; \
+	    echo Created $$(*F)Console.c ;\
+	fi
+	@if [ -e $$(*F)Console.hx ] ; then \
+	   echo Created $(GEN_INCS)/$$(*F)Console.hx ;\
+	   mv $$(*F)Console.hx $(GEN_INCS)/ ; \
+	fi
+	@mv $$(*F).hx $(GEN_INCS)/
+endef
+
+$(foreach zf,$(ZFS),$(eval $(call ZFS_RULE,$(zf))))
+
+${BLDDIR}/%.P : ${BLDDIR}/.tree %.c
+
+.PHONY: GENFILES
+GENFILES: $(ZFC)
+
+$(BOBJS) : $(ZFC)
+
+else
+#
+# Attempt to build the depend files.  If it fails, the depend file is
+# removed so that it is not included in later builds.
+#
+${BLDDIR}/%.P : %.c ${BLDDIR}/.tree
+	@$(ECHO) Dependencies for ${LOCALDIR}/$<
+
+${BLDDIR}/%.P : %.cc ${BLDDIR}/.tree
+	@$(ECHO) Dependencies for ${LOCALDIR}/$<
+
+endif
+
+#
+# If there are C or C++ files in this directory, include the 
+# depend files for them.
+#
+
+ifeq ($(findstring _COMPILER,$(MAKECMDGOALS))$(findstring variable,$(MAKECMDGOALS)),)
+ifneq ($(strip ${LSRCS}),)
+ifneq (,$(findstring .o,$(MAKECMDGOALS)))
+-include $(addprefix ${BLDDIR}/,$(MAKECMDGOALS:.o=.P)) $(addprefix ${BLDDIR}/,$(MAKECMDGOALS:.o=.sig))
+else
+-include $(addprefix ${BLDDIR}/,$(addsuffix .P,$(basename $(LSRCS)))) $(addprefix ${BLDDIR}/,$(addsuffix .sig,$(basename $(LSRCS))))
+endif
+endif
+endif
+
+endif	# !CLEANING
+
+ifeq ($(ARCH),arm64)
+# SAI: SONIC-76388 and SDK: SDK-367718
+# This macro removes the redundant macros and gcc options
+# JIRA SONIC-69062
+UNIQE = $(if $1,$(firstword $1) $(call UNIQE,$(filter-out $(firstword $1),$1)))
+CFLAGS := $(call UNIQE,$(CFLAGS))
+CFGFLAGS := $(call UNIQE,$(CFGFLAGS))
+endif
+
+clean_d::
+ifdef QUIET
+	@$(ECHO) Cleaning dependencies for ${LOCALDIR}
+endif
+ifdef GENERATE_C_FILES
+	$Q$(RM) $(ZFC:%=$(SDK)/$(LOCALDIR)/%) $(ZFC:%.c=$(SDK)/$(LOCALDIR)/%Console.c)
+endif
+
+clean:: clean_d
