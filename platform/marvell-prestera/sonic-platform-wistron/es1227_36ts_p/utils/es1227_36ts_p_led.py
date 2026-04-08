@@ -1,4 +1,4 @@
-rm#!/usr/bin/env python
+#!/usr/bin/env python
 #
 # Copyright (C) 2023 Wistron Corporation
 #
@@ -37,7 +37,7 @@ LED_STATE = [0] * 24
 
 #need to define all failed value and then parse it
 #POE_PORT_FAILED_STATUS_CODE = [0x7, 0x8, 0xc, 0x11, 0x12, 0x1c, 0x1e, 0x1f, 0x20, 0x21, 0x24, 0x25, 0x26, 0x36, 0x43, 0x44, 0x45, 0xa0, 0xa7]
-POE_PORT_FAILED_STATUS_CODE = [0x7, 0x8, 0xc, 0x11, 0x12, 0x1e, 0x1f, 0x20, 0x21, 0x24, 0x25, 0x26, 0x36, 0x43, 0x44, 0x45, 0xa0, 0xa7]
+POE_PORT_FAILED_STATUS_CODE = [0x7, 0x8, 0xc, 0x11, 0x12, 0x1e, 0x1f, 0x20, 0x21, 0x24, 0x26, 0x36, 0x43, 0x44, 0x45, 0xa0, 0xa7]
 
 class poe_led_monitor(object):
     def __init__(self):
@@ -80,8 +80,14 @@ class poe_led_monitor(object):
         return None
 
     def set_led(self, port, state):
-        path= "/sys/bus/i2c/devices/0-0033/port{}_poe_led".format(port+1)
-        self.__write_txt_file(path, str(state))
+        if port < 0 or port >= NUM_POE_PORT:
+            print(f"Error: Invalid port {port}")
+            return
+        path = "/sys/bus/i2c/devices/0-0033/port{}_poe_led".format(port+1)
+        if os.path.exists(path):
+            self.__write_txt_file(path, str(state))
+        else:
+            print(f"Error: {path} does not exist")
 
 def main():
     monitor = poe_led_monitor()

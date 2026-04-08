@@ -109,8 +109,8 @@ def power():
     #VOLTAGE_220_1_VALUE = 1410  # 220V for one bank
     #VOLTAGE_220_2_VALUE = 2400  # 220V for two banks
 
-    PSU240W_VALUE = 250
-    PSU400W_VALUE = 400
+    PSU240W_VALUE = 150
+    PSU400W_VALUE = 300
 
     POWER_BANK_1 = 0X1
     POWER_BANK_2 = 0X2
@@ -236,16 +236,16 @@ def main():
             # Delete the the file if it exists
             os.remove(tmp_file)
 
-    FILE_PATH = "/sys/bus/i2c/devices/0-0033/psu_budget_mode"
-    if not os.path.exists(FILE_PATH):
-        log.log_error("FILE_PATH is not exsiting " + FILE_PATH)
+    #FILE_PATH = "/sys/bus/i2c/devices/0-0033/psu_budget_mode"
+    #if not os.path.exists(FILE_PATH):
+    #    log.log_error("FILE_PATH is not exsiting " + FILE_PATH)
 
-    cmd = "sudo echo  %s >> %s" % (value, FILE_PATH)
-    try:
-        result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
+    #cmd = "sudo echo  %s >> %s" % (value, FILE_PATH)
+    #try:
+    #    result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # print(result.strip())
-    except subprocess.CalledProcessError as e:
-        log.log_error("Error running run_power_redundant_cmd command:" + e)
+    #except subprocess.CalledProcessError as e:
+    #    log.log_error("Error running run_power_redundant_cmd command:" + e)
 
     # PoE port configuration
     CONFIG_DB_FILE = '/etc/sonic/config_db.json'

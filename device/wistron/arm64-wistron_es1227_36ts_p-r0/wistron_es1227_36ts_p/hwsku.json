@@ -195,22 +195,26 @@
         "Ethernet32": {
             "default_brkout_mode": "1x10G[1000]",
             "fec" : "none",
-            "autoneg" : "off"
+            "autoneg" : "off",
+            "port_type": "SFP+"
         },
         "Ethernet33": {
             "default_brkout_mode": "1x10G[1000]",
             "fec" : "none",
-            "autoneg" : "off"
+            "autoneg" : "off",
+            "port_type": "SFP+"
         },
         "Ethernet34": {
             "default_brkout_mode": "1x10G[1000]",
             "fec" : "none",
-            "autoneg" : "off"
+            "autoneg" : "off",
+            "port_type": "SFP+"
         },
         "Ethernet35": {
             "default_brkout_mode": "1x10G[1000]",
             "fec" : "none",
-            "autoneg" : "off"
+            "autoneg" : "off",
+            "port_type": "SFP+"
         }
     }
 }

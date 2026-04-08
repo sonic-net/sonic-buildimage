@@ -75,7 +75,8 @@ class Component(ComponentBase):
         """
 
         if self.index == 0:
-            cmdstatus, uboot_version = cmd.getstatusoutput('grep --null-data ^U-Boot /dev/mtd0 | tail -n 1 | cut -d" " -f2')
+            command = "grep -a 'U-Boot ' /dev/mtd0 | tail -n 1 | awk -F 'U-Boot' '{print $2}' | awk '{print $1}'"
+            cmdstatus, uboot_version = cmd.getstatusoutput(command)
             return uboot_version
 
         if self.index == 1:

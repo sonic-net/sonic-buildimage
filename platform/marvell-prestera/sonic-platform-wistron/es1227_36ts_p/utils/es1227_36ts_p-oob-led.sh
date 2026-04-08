@@ -103,7 +103,7 @@ do_task()
 main()
 {
     init
-    do_task
+    #do_task
 }
 
 main

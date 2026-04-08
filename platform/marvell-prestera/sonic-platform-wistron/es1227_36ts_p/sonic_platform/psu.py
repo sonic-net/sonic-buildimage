@@ -14,7 +14,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-PSU_NAME_LIST = ["PSU-1", "PSU-2"]
+PSU_NAME_LIST = []
 
 PSU_HWMON_PATH = "/sys/bus/i2c/devices/{0}-00{1}/hwmon"
 PSU_SYSFS_PATH = "/sys/bus/i2c/devices/{0}-00{1}"
