@@ -143,7 +143,7 @@ def get_asic_device_id(asic_id):
 
     with open(asic_conf_file_path) as asic_conf_file:
         for line in asic_conf_file:
-            tokens = line.split('=')
+            tokens = line.split('=', 1)
             if len(tokens) < 2:
                continue
             if tokens[0] == device_str:
