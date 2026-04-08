@@ -67,6 +67,12 @@ stages:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
+  - template: .azure-pipelines/azure-pipelines-build.yml
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      jobGroups:
+      - name: vpp
+        continueOnError: true
 
 - stage: Build
   pool: sonicso1ES-amd64
@@ -104,6 +110,11 @@ stages:
       - name: nvidia-bluefield
         pool: sonicso1ES-arm64
         variables:
+          PLATFORM_ARCH: arm64
+      - name: aspeed-arm64
+        pool: sonicso1ES-arm64
+        variables:
+          PLATFORM_NAME: aspeed
           PLATFORM_ARCH: arm64
 
 - stage: Test
@@ -202,5 +213,4 @@ stages:
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      GLOBAL_PARAMS:
-        PTF_MODIFIED: $(PTF_MODIFIED)
+      PTF_MODIFIED: $(PTF_MODIFIED)

@@ -39,6 +39,8 @@ RUN chmod +x /usr/bin/bmp_watchdog
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 # Make apt-get non-interactive

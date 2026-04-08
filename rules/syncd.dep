@@ -1,5 +1,6 @@
 
 ifneq ($(CONFIGURED_PLATFORM),vs)
+ifneq ($(CONFIGURED_PLATFORM),nokia-vs)
 
 #DPKG FRK
 SPATH       := $($(SYNCD)_SRC_PATH)
@@ -17,4 +18,5 @@ $(SYNCD)_DEP_FILES   := $(DEP_FILES)
 $(SYNCD)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
 $(SYNCD)_SMDEP_PATHS := $(SMDEP_PATHS)
 
+endif
 endif
