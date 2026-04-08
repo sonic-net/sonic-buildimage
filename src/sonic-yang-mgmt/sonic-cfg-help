@@ -107,6 +107,8 @@ class SonicCfgDescriber:
             return []
         if isinstance(key, dict):
             if key.get('description', {}).get('text') is not None:
+                if desc:
+                    desc += "\n"
                 desc += "\n".join(textwrap.wrap(re.sub(r"\s+", " ",
                                   key['description']['text']), width=50))
             if key.get('mandatory') is not None:
