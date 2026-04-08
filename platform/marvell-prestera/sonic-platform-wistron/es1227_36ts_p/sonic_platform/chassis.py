@@ -11,9 +11,10 @@ try:
     import os
     import time
     import subprocess
+    from sonic_py_common import logger
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.fan import Fan
-    from sonic_platform.psu import Psu
+    #from sonic_platform.psu import Psu
     from sonic_platform.component import Component
     from sonic_platform.thermal import Thermal
     from sonic_platform.sfp import Sfp
@@ -229,6 +230,10 @@ class Chassis(ChassisBase):
         forever = False
         change_event = False
 
+        if timeout is None:
+            raise ValueError("Timeout value is None, unable to convert to int")
+        return int(timeout)
+
         if timeout == 0:
             forever = True
         elif timeout > 0:
@@ -297,7 +302,9 @@ class Chassis(ChassisBase):
                 watchdog_device = "watchdog1"
                 self._watchdog = WatchdogImplBase(watchdog_device)
         except Exception as e:
-            sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
+            #.log_warning(" Fail to load watchdog {}".format(repr(e)))
+            sonic_logger = logger.Logger()
+            sonic_logger.log_warning("Failed to load watchdog: {}".format(repr(e)))
 
         return self._watchdog
 
@@ -320,16 +327,16 @@ class Chassis(ChassisBase):
         self.system_led = color
 
         sysled_path="{}/sys_led".format(CPLD_SYSFS_DIR)
-        psuled_path="{}/psu_led".format(CPLD_SYSFS_DIR)
-        fanled_path="{}/fan_led".format(CPLD_SYSFS_DIR)
+        #psuled_path="{}/psu_led".format(CPLD_SYSFS_DIR)
+        #fanled_path="{}/fan_led".format(CPLD_SYSFS_DIR)
         watchdog_update_path="{}/watchdog_kick".format(CPLD_SYSFS_DIR)
 
-        #if color == "red":
-        #    val = 2
-        #elif color == "green_blinking":
-        #    val = 3
-        #elif color == "green":
-        #    val = 1
+        if color == "red":
+            val = 2
+        elif color == "green_blinking":
+            val = 3
+        elif color == "green":
+            val = 1
 
         color=int(self.__read_txt_file(sysled_path))
         if color is None:

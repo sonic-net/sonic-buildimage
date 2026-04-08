@@ -167,6 +167,90 @@
             "poe_status": "enableDynamic",
             "poe_maxpower": "0",
             "poe_tlv": "disable"
+        },
+        "Ethernet24": {
+            "lanes": "24",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet25": {
+            "lanes": "25",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet26": {
+            "lanes": "26",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet27": {
+            "lanes": "27",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet28": {
+            "lanes": "28",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet29": {
+            "lanes": "29",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet30": {
+            "lanes": "30",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet31": {
+            "lanes": "31",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet32": {
+            "lanes": "48",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet33": {
+            "lanes": "49",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet34": {
+            "lanes": "50",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet35": {
+            "lanes": "51",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
         }
     }
 }

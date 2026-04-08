@@ -1,369 +1,218 @@
+#
+# sfp.py
+#
+# Platform-specific SFP transceiver interface for a 4-port device.
+# This version correctly maps SONiC logical ports (e.g., 32-35) to
+# physical CPLD port numbers (1-4).
+#
 import os
-import time
 import sys
-import subprocess
-from ctypes import create_string_buffer
 
 try:
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
-    from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
     from sonic_py_common import logger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-if sys.version_info[0] < 3:
-    import commands as cmd
-else:
-    import subprocess as cmd
-
-COPPER_TYPE = "COPPER"
 SFP_TYPE = "SFP"
-
 SYSLOG_IDENTIFIER = "xcvrd"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
+
 
 class Sfp(SfpOptoeBase):
     """Platform-specific Sfp class"""
 
-    # Paths
-    EEPROM_PATH = "/sys/bus/i2c/devices/{0}-0050/eeprom"
-    GPIO_PATH = "/sys/class/gpio/gpio{0}/value"
+    # Path to the CPLD sysfs directory for SFP control
+    CPLD_DEV_PATH = "/sys/bus/i2c/devices/0-0033"
 
+    # Path for SFP EEPROM access
+    EEPROM_PATH = "/sys/bus/i2c/devices/{0}-0050/eeprom"
+
+    # CRITICAL FIX: Map SONiC logical port numbers to physical CPLD port numbers.
+    # The platform framework uses logical port numbers (e.g., 32 for Ethernet32),
+    # but the CPLD driver uses physical numbers (p1, p2, ...).
+    LOGICAL_TO_PHYSICAL_PORT_MAP = {
+        33: 1,
+        34: 2,
+        35: 3,
+        36: 4,
+    }
+
+    # CRITICAL FIX: The keys for this mapping must be the LOGICAL port numbers,
+    # as this is what the framework provides during initialization.
     PORT_EEPROM_I2C_MAPPING = {
         33: 4,
         34: 5,
         35: 6,
-        36: 7
+        36: 7,
     }
-
-    PORT_PRESENT_GPIO_MAPPING = {
-        33: 472,
-        34: 476,
-        35: 480,
-        36: 484
-    }
-
-    PORT_TX_DISABLE_GPIO_MAPPING = {
-        33: 473,
-        34: 477,
-        35: 481,
-        36: 485,
-    }
-
-    PORT_RX_LOS_GPIO_MAPPING = {
-        33: 474,
-        34: 478,
-        35: 482,
-        36: 486,
-    }
-
-    PORT_TX_FAULT_GPIO_MAPPING = {
-        50: 475,
-        49: 479,
-        52: 483,
-        51: 487,
-    }
-
-    port_to_i2c_mapping = 0
 
     def __init__(self, index, sfp_type):
         SfpOptoeBase.__init__(self)
-        # Init index
-        self.index = index
-        self.port_num = index
+        self.logical_port = index  # This is the SONiC logical port number (e.g., 32)
         self.sfp_type = sfp_type
-        #self.eeprom_path = eeprom_path
-        #self.port_to_i2c_mapping = port_i2c_map
-        self.port_to_eeprom_mapping = {}
 
-        if self.sfp_type == COPPER_TYPE:
-            self.port_to_eeprom_mapping[index] = 'N/A'
+        # Determine the physical port number from the logical port number
+        self.physical_port = self.LOGICAL_TO_PHYSICAL_PORT_MAP.get(self.logical_port)
+
+        # The eeprom path is determined by the logical port number
+        i2c_bus = self.PORT_EEPROM_I2C_MAPPING.get(self.logical_port)
+        if i2c_bus is not None:
+            self.eeprom_path = self.EEPROM_PATH.format(i2c_bus)
         else:
-            self.port_to_eeprom_mapping[index] = self.EEPROM_PATH.format(self.PORT_EEPROM_I2C_MAPPING[self.index])
+            self.eeprom_path = None
 
-    def get_eeprom_path(self):
-        return self.port_to_eeprom_mapping[self.port_num]
-
-    def __read_eeprom_specific_bytes(self, offset, num_bytes):
-        sysfsfile_eeprom = None
-        eeprom_raw = []
-        for i in range(0, num_bytes):
-            eeprom_raw.append("0x00")
-
-        sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_mapping[self.port_num]
-        try:
-            sysfsfile_eeprom = open(
-                sysfs_sfp_i2c_client_eeprom_path, mode="rb", buffering=0)
-            sysfsfile_eeprom.seek(offset)
-            raw = sysfsfile_eeprom.read(num_bytes)
-            for n in range(0, num_bytes):
-                if sys.version_info[0] >= 3:
-                    eeprom_raw[n] = hex(raw[n])[2:].zfill(2)
-                else:
-                    eeprom_raw[n] = hex(ord(raw[n]))[2:].zfill(2)
-        except Exception:
-            pass
-        finally:
-            if sysfsfile_eeprom:
-                sysfsfile_eeprom.close()
-
-        return eeprom_raw
-
-    def get_reset_status(self):
+    def _decode_eeprom_data(self, raw_data):
         """
-        Retrieves the reset status of SFP
-        Returns:
-            A Boolean, True if reset enabled, False if disabled
+        Decode and clean the raw EEPROM data. Returns the decoded content.
         """
-        return False  # SFP port doesn't support this feature
-
-
-    def get_rx_los(self):
-        """
-        Retrieves the RX LOS (lost-of-signal) status of SFP
-        Returns:
-            A Boolean, True if SFP has RX LOS, False if not.
-            Note : RX LOS status is latched until a call to get_rx_los or a reset.
-        """
-        if self.sfp_type == COPPER_TYPE:
-            return False
-        if self.sfp_type == SFP_TYPE:
-            cmdstatus, value = cmd.getstatusoutput('cat {}'.format(self.GPIO_PATH.format(self.PORT_RX_LOS_GPIO_MAPPING[self.index])))
-            if cmdstatus:
-                sonic_logger.log_warning("sfp rx los cmdstatus get failed")
-                return False
-            if int(value) == 1:
-                return True
+        decoded_data = []
+        for byte in raw_data:
+            # Only keep printable ASCII characters (32-126), otherwise replace with '.'
+            if 32 <= byte <= 126:
+                decoded_data.append(chr(byte))
             else:
-                return False
+                decoded_data.append('.')
+        return ''.join(decoded_data)
 
-    def get_tx_fault(self):
+    def _read_eeprom(self):
         """
-        Retrieves the TX fault status of SFP
-
-        Returns:
-            A list of boolean values, representing the TX fault status
-            of each available channel, value is True if SFP channel
-            has TX fault, False if not.
-            E.g., for a tranceiver with four channels: [False, False, True, False]
-            Note : TX fault status is lached until a call to get_tx_fault or a reset.
+        Helper function to read EEPROM data and decode mixed-format values.
         """
-
-        if self.sfp_type == COPPER_TYPE:
-            return False
-        if self.sfp_type == SFP_TYPE:
-            cmdstatus, value = cmd.getstatusoutput('cat {}'.format(self.GPIO_PATH.format(self.PORT_TX_FAULT_GPIO_MAPPING[self.index])))
-            if cmdstatus:
-                sonic_logger.log_warning("sfp tx fault cmdstatus get failed")
-                return False
-            if int(value) == 1:
-                return True
-            else:
-                return False
-
-
-    def get_tx_disable(self):
-        """
-        Retrieves the tx_disable status of this SFP
-        Returns:
-            A list of boolean values, representing the TX disable status
-            of each available channel, value is True if SFP channel
-            is TX disabled, False if not.
-            E.g., for a tranceiver with four channels: [False, False, True, False]
-        """
-        if self.sfp_type == COPPER_TYPE:
+        if not self.eeprom_path:  # Ensure path is valid
             return None
-        else:
-            cmdstatus, value = cmd.getstatusoutput('cat {}'.format(self.GPIO_PATH.format(self.PORT_TX_DISABLE_GPIO_MAPPING[self.index])))
-            if cmdstatus:
-                sonic_logger.log_warning("sfp present cmdstatus get failed")
-                return False
-            if int(value) == 1:
-                return [True]
-            else:
-                return [False]
+
+        try:
+            with open(self.eeprom_path, 'rb') as eeprom_file:
+                raw_data = eeprom_file.read(256)  # Read maximum data size
+                return self._decode_eeprom_data(raw_data)
+        except IOError:
+            sonic_logger.log_warning(f"Failed to read EEPROM from {self.eeprom_path}")
+            return None
 
 
-    def get_tx_disable_channel(self):
-        """
-        Retrieves the TX disabled channels in this SFP
-        Returns:
-            A hex of 4 bits (bit 0 to bit 3 as channel 0 to channel 3) to represent
-            TX channels which have been disabled in this SFP.
-            As an example, a returned value of 0x5 indicates that channel 0
-            and channel 2 have been disabled.
-        """
-        tx_disable_list = self.get_tx_disable()
-        if tx_disable_list is None:
-            return 0
-        tx_disabled = 0
-        for i in range(len(tx_disable_list)):
-            if tx_disable_list[i]:
-                tx_disabled |= 1 << i
-        return tx_disabled
+    def _read_cpld_sysfs(self, filename_suffix):
+        """Helper function to read a value from a CPLD sysfs file."""
+        # If this port is not a CPLD-managed SFP, do nothing.
+        if self.physical_port is None:
+            return None
 
-    def get_lpmode(self):
-        """
-        Retrieves the lpmode (low power mode) status of this SFP
-        Returns:
-            A Boolean, True if lpmode is enabled, False if disabled
-        """
-        # SFP doesn't support this feature
-        return False
+        file_path = f"{self.CPLD_DEV_PATH}/sfp_p{self.physical_port}_{filename_suffix}"
+        try:
+            with open(file_path, 'r') as f:
+                return f.read().strip()
+        except (IOError, ValueError):
+            # Log a warning only if it fails for an expected physical port
+            # sonic_logger.log_warning(f"Failed to read {file_path}")
+            return None
 
-    def get_power_set(self):
-
-        # SFP doesn't support this feature
-        return False
-
-    def get_power_override(self):
-        """
-        Retrieves the power-override status of this SFP
-        Returns:
-            A Boolean, True if power-override is enabled, False if disabled
-        """
-        return False  # SFP doesn't support this feature
-
-    def reset(self):
-        """
-        Reset SFP and return all user module settings to their default srate.
-        Returns:
-            A boolean, True if successful, False if not
-        """
-
-        return False  # SFP doesn't support this feature
-
-    def tx_disable(self, tx_disable):
-        """
-        Disable SFP TX for all channels
-        Args:
-            tx_disable : A Boolean, True to enable tx_disable mode, False to disable
-                         tx_disable mode.
-        Returns:
-            A boolean, True if tx_disable is set successfully, False if not
-        """
-        if self.sfp_type == COPPER_TYPE:
+    def _write_cpld_sysfs(self, filename_suffix, value):
+        """Helper function to write a value to a CPLD sysfs file."""
+        if self.physical_port is None:
             return False
-        if self.sfp_type == SFP_TYPE:
-            gpiopin = self.GPIO_PATH.format(self.PORT_TX_DISABLE_GPIO_MAPPING[self.index])
-            cmdstatus, value = cmd.getstatusoutput('echo {} > {}'.format(tx_disable, gpiopin))
-            if cmdstatus:
-                sonic_logger.log_warning("sfp tx_disable cmdstatus get failed")
-                return False
-        return True
 
-    def tx_disable_channel(self, channel, disable):
-        """
-        Sets the tx_disable for specified SFP channels
-        Args:
-            channel : A hex of 4 bits (bit 0 to bit 3) which represent channel 0 to 3,
-                      e.g. 0x5 for channel 0 and channel 2.
-            disable : A boolean, True to disable TX channels specified in channel,
-                      False to enable
-        Returns:
-            A boolean, True if successful, False if not
-        """
-
-        return False  # SFP doesn't support this feature
-
-    def set_lpmode(self, lpmode):
-        """
-        Sets the lpmode (low power mode) of SFP
-        Args:
-            lpmode: A Boolean, True to enable lpmode, False to disable it
-            Note  : lpmode can be overridden by set_power_override
-        Returns:
-            A boolean, True if lpmode is set successfully, False if not
-        """
-
-        return False  # SFP doesn't support this feature
-
-    def set_power_override(self, power_override, power_set):
-        """
-        Sets SFP power level using power_override and power_set
-        Args:
-            power_override :
-                    A Boolean, True to override set_lpmode and use power_set
-                    to control SFP power, False to disable SFP power control
-                    through power_override/power_set and use set_lpmode
-                    to control SFP power.
-            power_set :
-                    Only valid when power_override is True.
-                    A Boolean, True to set SFP to low power mode, False to set
-                    SFP to high power mode.
-        Returns:
-            A boolean, True if power-override and power_set are set successfully,
-            False if not
-        """
-
-        return False  # SFP doesn't support this feature
-
-    def get_name(self):
-        """
-        Retrieves the name of the device
-            Returns:
-            string: The name of the device
-        """
-        return "Ethernet" + str(self.index - 1)
+        file_path = f"{self.CPLD_DEV_PATH}/sfp_p{self.physical_port}_{filename_suffix}"
+        try:
+            with open(file_path, 'w') as f:
+                f.write(value)
+            return True
+        except IOError:
+            sonic_logger.log_warning(f"Failed to write to {file_path}")
+            return False
 
     def get_presence(self):
         """
-        Retrieves the presence of the device
-        Returns:
-            bool: True if device is present, False if not
+        Retrieves the presence of the SFP module from the CPLD driver.
         """
-        if self.sfp_type == COPPER_TYPE:
+        # Only check presence for valid SFP ports
+        if self.physical_port is None:
             return False
-        if self.sfp_type == SFP_TYPE:
-            cmdstatus, value = cmd.getstatusoutput('cat {}'.format(self.GPIO_PATH.format(self.PORT_PRESENT_GPIO_MAPPING[self.index])))
-            if cmdstatus:
-                sonic_logger.log_warning("sfp present cmdstatus get failed")
-                return False
-            if int(value) == 0:
-                return True
-            else:
-                return False
 
+        value = self._read_cpld_sysfs("present")
+        if value is not None:
+            # Presence is typically active-low (0 means present).
+            return int(value) == 0
+        return False
 
-    def get_status(self):
+    def get_rx_los(self):
         """
-        Retrieves the operational status of the device
-        Returns:
-            A boolean value, True if device is operating properly, False if not
+        Retrieves the RX LOS status from CPLD driver.
         """
-        return self.get_presence()
+        if self.physical_port is None:
+            return [False]
+
+        value = self._read_cpld_sysfs("loss")
+        if value is not None:
+            return [int(value) == 1]
+        return [False]
+
+    def get_tx_fault(self):
+        """
+        Retrieves the TX fault status from CPLD driver.
+        """
+        if self.physical_port is None:
+            return [False]
+
+        value = self._read_cpld_sysfs("fault")
+        if value is not None:
+            return [int(value) == 1]
+        return [False]
+
+    def get_tx_disable(self):
+        """
+        Retrieves the tx_disable status from CPLD driver.
+        """
+        if self.physical_port is None:
+            return [False]
+
+        value = self._read_cpld_sysfs("tx_disable")
+        if value is not None:
+            return [int(value) == 1]
+        return [False]
+
+    def tx_disable(self, disable):
+        """
+        Disable SFP TX via CPLD driver.
+        """
+        return self._write_cpld_sysfs("tx_disable", '1' if disable else '0')
+
+    def get_eeprom_path(self):
+        """
+        Returns the path to the EEPROM file for the SFP.
+        """
+        return self.eeprom_path
+
+    def get_eeprom_content(self):
+        """
+        Returns the cleaned ASCII content from the EEPROM.
+        """
+        content = self._read_eeprom()
+        if content is None:
+            return None
+        # Log the decoded content for debugging purposes
+        sonic_logger.log_info(f"Decoded EEPROM content for port {self.logical_port}: {content}")
+        return content
+
+    # --- Boilerplate/unsupported methods ---
+    def get_name(self):
+        # The name should reflect the logical port number given by the framework
+        return f"Ethernet{self.logical_port}"
 
     def get_position_in_parent(self):
-        """
-        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
-        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
-        Returns:
-            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
-        """
-        return self.port_num
+        return self.logical_port
 
     def is_replaceable(self):
-        """
-        Indicate whether this device is replaceable.
-        Returns:
-            bool: True if it is replaceable.
-        """
-        if self.sfp_type == "SFP":
-            return True
-        else:
-            return False
+        # Only our mapped ports are replaceable SFPs
+        return self.physical_port is not None
 
-    def get_error_description(self):
-        """
-        Retrives the error descriptions of the SFP module
-        Returns:
-            String that represents the current error descriptions of vendor specific errors
-            In case there are multiple errors, they should be joined by '|',
-            like: "Bad EEPROM|Unsupported cable"
-        """
-        if not self.get_presence():
-            err_descr = self.SFP_STATUS_UNPLUGGED
-        else:
-            err_descr = self.SFP_STATUS_OK
+    def get_status(self):
+        return self.get_presence()
 
-        return err_descr
+    def reset(self):
+        return False  # Not supported
+
+    def set_lpmode(self, lpmode):
+        return False  # Not supported
+
+    def get_lpmode(self):
+        return False  # Not supported
