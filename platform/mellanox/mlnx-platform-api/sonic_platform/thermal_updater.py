@@ -163,7 +163,7 @@ class ThermalUpdater:
                 return 0
             return int(float(temperature) * TEMPERATURE_SCALE)
         except Exception as e:
-            logger.log_error(f'Failed to read ASIC {asic_name} temperature - {temperature} - {e}')
+            logger.log_error(f'Failed to read ASIC {asic_index} temperature - {temperature} - {e}')
             return None
 
     def get_asic_temp_warning_threshold(self):

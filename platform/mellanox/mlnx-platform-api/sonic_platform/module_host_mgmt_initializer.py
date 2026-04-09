@@ -17,20 +17,32 @@
 #
 
 from . import utils
+from .device_data import DeviceDataManager
 from sonic_py_common.logger import Logger
 
 import atexit
 import os
 import sys
 import threading
+import fcntl
 
 MODULE_READY_MAX_WAIT_TIME = 300
 MODULE_READY_CHECK_INTERVAL = 5
-MODULE_READY_CONTAINER_FILE = '/tmp/module_host_mgmt_ready'
-MODULE_READY_HOST_FILE = '/tmp/nv-syncd-shared/module_host_mgmt_ready'
+ASIC_READY_DIR = '/tmp/asic_ready'
+ASIC_READY_FILE_PREFIX = 'module_host_mgmt_asic_ready'
 DEDICATE_INIT_DAEMON = 'xcvrd'
-initialization_owner = False
 
+
+def get_asic_ready_file_path(asic_id):
+    """Return path to the ready file for one ASIC. asic_id can be int (e.g. 0) or str (e.g. 'asic0')."""
+    if isinstance(asic_id, str) and asic_id.startswith('asic'):
+        suffix = asic_id
+    else:
+        suffix = f'asic{asic_id}'
+    return os.path.join(ASIC_READY_DIR, f'{ASIC_READY_FILE_PREFIX}_{suffix}')
+
+
+initialization_owner = False
 logger = Logger()
 
 
@@ -40,6 +52,10 @@ class ModuleHostMgmtInitializer:
     def __init__(self):
         self.initialized = False
         self.lock = threading.Lock()
+        self.asic_count = DeviceDataManager.get_asic_count()
+        self.initialized_list = [False] * self.asic_count
+        if ASIC_READY_DIR:
+            os.makedirs(ASIC_READY_DIR, exist_ok=True)
 
     def initialize(self, chassis):
         """Initialize all modules. Only applicable for module host management mode.
@@ -50,74 +66,74 @@ class ModuleHostMgmtInitializer:
             chassis (object): chassis object
         """
         global initialization_owner
-        if self.initialized:
+        not_initialized = []
+        for i in range(len(self.initialized_list)):
+            if not self.initialized_list[i]:
+                not_initialized.append(i)
+
+        if not not_initialized:
             return
-        
         if utils.is_host():
-            self.wait_module_ready()
             chassis.initialize_sfp()
         else:
             if self.is_initialization_owner():
-                if not self.initialized:
+                if not_initialized:
                     with self.lock:
-                        if not self.initialized:
-                            from sonic_platform.device_data import DeviceDataManager
-                            logger.log_notice('Waiting for modules to be ready...')
-                            sfp_count = chassis.get_num_sfps()
-                            if not DeviceDataManager.wait_sysfs_ready(sfp_count):
-                                logger.log_error('Modules are not ready')
-                            else:
-                                logger.log_notice('Modules are ready')
+                        logger.log_notice('Waiting for modules to be ready...')
+                        sfp_count = chassis.get_num_sfps()
+                        if not DeviceDataManager.wait_sysfs_ready(sfp_count):
+                            logger.log_error('Modules are not ready')
+                        else:
+                            logger.log_notice('Modules are ready')
 
-                            logger.log_notice('Starting module initialization for module host management...')
-                            initialization_owner = True
-                            self.remove_module_ready_file()
-                            
-                            chassis.initialize_sfp()
-                            
-                            from .sfp import SFP
-                            SFP.initialize_sfp_modules(chassis._sfp_list)
-                            
-                            self.create_module_ready_file()    
-                            self.initialized = True
+                        logger.log_notice('Starting module initialization for module host management...')
+                        initialization_owner = True
+                        self.remove_asics_from_ready_file(not_initialized)
+                        chassis.initialize_sfp()
+                        asic_ready_list = []
+                        sfp_list = []
+                        for asic_id in not_initialized:
+                            asic_id_for_file = asic_id + 1
+                            if utils.read_int_from_file(f'/var/run/hw-management/config/asic{asic_id_for_file}_ready') == 1:
+                                asic_ready_list.append(asic_id)
+                                asic_id = f'asic{asic_id}'
+                                sfp_list.extend(chassis._asic_modules_dict[asic_id])
+                        from .sfp import SFP
+                        if sfp_list:
+                            SFP.initialize_sfp_modules(sfp_list)
+                            self.add_asics_to_ready_file(asic_ready_list)
+                            for asic_index in asic_ready_list:
+                                self.initialized_list[asic_index] = True
                             logger.log_notice('Module initialization for module host management done')
             else:
-                self.wait_module_ready()
                 chassis.initialize_sfp()
-                  
-    @classmethod
-    def create_module_ready_file(cls):
-        """Create module ready file
-        """
-        with open(MODULE_READY_CONTAINER_FILE, 'w'):
-            pass
 
-    @classmethod
-    def remove_module_ready_file(cls):
-        """Remove module ready file
+    def remove_asics_from_ready_file(self, asic_ids):
         """
-        if os.path.exists(MODULE_READY_CONTAINER_FILE):
-            os.remove(MODULE_READY_CONTAINER_FILE)
-                
-    def wait_module_ready(self):
-        """Wait up to MODULE_READY_MAX_WAIT_TIME seconds for all modules to be ready
+        Remove Asic IDs from the asic ready files (one file per ASIC).
+        Deletes the ready file for each given asic_id.
+        Args:
+            asic_ids (list): list of asic ids to remove (numbers)
         """
-        if utils.is_host():
-            module_ready_file = MODULE_READY_HOST_FILE
-        else:
-            module_ready_file = MODULE_READY_CONTAINER_FILE
+        for asic_id in asic_ids:
+            path = get_asic_ready_file_path(asic_id)
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
 
-        if os.path.exists(module_ready_file):
-            self.initialized = True
-            return
-        else:
-            print('Waiting module to be initialized...')
-        
-        if utils.wait_until(os.path.exists, MODULE_READY_MAX_WAIT_TIME, MODULE_READY_CHECK_INTERVAL, module_ready_file):
-            self.initialized = True
-        else:
-            logger.log_error('Module initialization timeout', True)
-            
+    def add_asics_to_ready_file(self, asic_ids):
+        """
+        Add Asic IDs to the asic ready files (one file per ASIC).
+        Creates or overwrites the ready file for each given asic_id.
+        Args:
+            asic_ids (list): list of asic ids to add (numbers)
+        """
+        for asic_id in asic_ids:
+            path = get_asic_ready_file_path(asic_id)
+            with open(path, 'w') as file:
+                file.write(f"asic{asic_id}\n")
+
     def is_initialization_owner(self):
         """Indicate whether current thread is the owner of doing module initialization
 
@@ -126,12 +142,12 @@ class ModuleHostMgmtInitializer:
         """
         cmd = os.path.basename(sys.argv[0])
         return DEDICATE_INIT_DAEMON in cmd
-
-@atexit.register
-def clean_up():
-    """Remove module ready file when program exits.
-    When module host management is enabled, xcvrd is the dependency for all other
-    daemon/CLI who potentially uses SFP API.
-    """
-    if initialization_owner:
-        ModuleHostMgmtInitializer.remove_module_ready_file()
+    
+    def set_asic_ready_value(self, asic_id, ready_bool):
+        """
+        Update self.initialized_list with ready_bool in case something has changed.
+        """
+        self.initialized_list[asic_id] = ready_bool
+        if not ready_bool:
+            # if the asic becomes not ready, remove it from the ready file
+            self.remove_asics_from_ready_file([asic_id])

@@ -29,12 +29,14 @@ try:
     import os
     import threading
     import time
+    import fcntl
     from sonic_py_common.logger import Logger
     from sonic_py_common import multi_asic
     from swsscommon.swsscommon import SonicV2Connector, ConfigDBConnector
     from . import utils
     from .db_table_helper import get_db_table_helper
     from .device_data import DeviceDataManager
+    from .module_host_mgmt_initializer import get_asic_ready_file_path
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
     from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
@@ -476,16 +478,18 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
+        asic_id = self.asic_id
+        asic_id_for_file = "asic" + str(int(asic_id.replace("asic", "")) + 1)
+        if utils.read_int_from_file(f'/var/run/hw-management/config/{asic_id_for_file}_ready') == 1:
+            if DeviceDataManager.is_module_host_management_mode():
+                if not os.path.exists(get_asic_ready_file_path(asic_id)):
+                    return False
 
-        try:
-            presence_file =  'hw_present' if self.is_sw_control() else 'present'
-            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
-                return False
-            eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
-            return eeprom_raw is not None
-        except Exception as e:
-            logger.log_warning(f'Failed to check presence of SFP {self.sdk_index}: {e}')
-            return False
+            presence_file = 'hw_present' if self.is_sw_control() else 'present'
+            presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}'
+            if utils.read_int_from_file(presence_sysfs, log_func=None) == 1:
+                return True
+        return False
 
     @classmethod
     def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
@@ -1609,7 +1613,7 @@ class SFP(NvidiaSFPCommon):
             sfp_list (object): all sfps
         """
         wait_ready_task = cls.get_wait_ready_task()
-        wait_ready_task.start()
+        wait_ready_task.start_once()
         
         for s in sfp_list:
             s.on_event(EVENT_START)
@@ -1731,7 +1735,7 @@ class SFP(NvidiaSFPCommon):
     def get_asic_index(self):
         return self.asic_index
 
-
+        
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
