@@ -107,13 +107,17 @@ RUN apt-get update          \
 # to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN GO_ARCH=armv6l \
+    && GO_SHA256=7d4f0d266d871301e08ef4ac31c56e66048688893b2848392e5c600276351ee8 \
 {% elif CONFIGURED_ARCH == "arm64" %}
 RUN GO_ARCH=arm64 \
+    && GO_SHA256=ec342e7389b7f489564ed5463c63b16cf8040023dabc7861256677165a8c0e2b \
 {% else %}
 RUN GO_ARCH=amd64 \
+    && GO_SHA256=00859d7bd6defe8bf84d9db9e57b9a4467b2887c18cd93ae7460e713db774bc1 \
 {% endif %}
-    && GO_VERSION=1.25.8 \
+    && GO_VERSION=1.25.9 \
     && curl -L "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz \
+    && echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz
 
@@ -125,12 +129,14 @@ RUN GRPCURL_VERSION=v1.9.3 \
     && git clone --depth 1 --branch "${GRPCURL_VERSION}" https://github.com/fullstorydev/grpcurl.git /tmp/grpcurl \
     && cd /tmp/grpcurl \
     && go get google.golang.org/grpc@v1.79.3 \
+    && go get github.com/go-jose/go-jose/v4@latest \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
     && go build -o /usr/local/bin/grpcurl ./cmd/grpcurl \
     && chmod +x /usr/local/bin/grpcurl \
-    && rm -rf /tmp/grpcurl
+    && rm -rf /tmp/grpcurl /root/go/pkg/mod /root/.cache/go-build
 # Security fixes: upgrade all vulnerable system packages (S360 scan remediation)
+# Covers CVE-2026-33416 and CVE-2026-33636 (libpng16-16) among others
 RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -406,13 +412,15 @@ RUN git clone https://github.com/karimra/gnoic.git \
     && git checkout 27bc5a6 \
     && go get google.golang.org/grpc@v1.79.3 \
     && go get github.com/go-viper/mapstructure/v2@v2.4.0 \
+    && go get github.com/go-jose/go-jose/v4@latest \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
     && go mod tidy \
     && go build -o /usr/local/bin/gnoic . \
     && cd .. \
-    && rm -rf gnoic
+    && rm -rf gnoic /root/go/pkg/mod /root/.cache/go-build
 
 # Build gnmic from source with upgraded deps to address known CVEs
+COPY gocloud-patches/ /tmp/gocloud-patches/
 RUN GNMIC_VERSION=v0.43.0 \
     && git clone --depth 1 --branch "${GNMIC_VERSION}" https://github.com/openconfig/gnmic.git /tmp/gnmic \
     && cd /tmp/gnmic \
@@ -420,13 +428,19 @@ RUN GNMIC_VERSION=v0.43.0 \
     && go get github.com/cloudflare/circl@v1.6.3 \
     && go get github.com/go-git/go-git/v5@latest \
     && go get github.com/nats-io/nats-server/v2@latest \
-    && go get go.opentelemetry.io/otel/sdk@v1.40.0 \
+    && go get go.opentelemetry.io/otel/sdk@latest \
     && go get github.com/docker/docker@latest \
+    && go get github.com/go-jose/go-jose/v4@latest \
+    && go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@latest github.com/aws/aws-sdk-go-v2/service/s3@latest github.com/aws/aws-sdk-go-v2/feature/s3/manager@latest \
     && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
+    && go get gocloud.dev@v0.25.1-0.20220408200107-09b10f7359f7 \
     && go mod tidy \
+    && GOCLOUD_DIR="$(go list -m -f '{{ '{{' }}.Dir{{ '}}' }}' gocloud.dev)" \
+    && chmod -R +w "$GOCLOUD_DIR" \
+    && patch --forward -d "$GOCLOUD_DIR" -p1 < /tmp/gocloud-patches/0001-fix-aws-sdk-go-v2-pointer-api-changes.patch \
     && go build -o /usr/local/bin/gnmic . \
     && chmod +x /usr/local/bin/gnmic \
-    && rm -rf /tmp/gnmic
+    && rm -rf /tmp/gnmic /tmp/gocloud-patches /root/go/pkg/mod /root/.cache/go-build
 
 # Remove Go toolchain to reduce image size
 RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
