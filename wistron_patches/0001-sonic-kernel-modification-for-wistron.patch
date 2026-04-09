@@ -1,0 +1,444 @@
+Submodule src/sonic-linux-kernel contains modified content
+diff --git a/src/sonic-linux-kernel/patch/0018-arm64-dts-marvell-Add-Wistron-ES-1227-36TS-P.patch b/src/sonic-linux-kernel/patch/0018-arm64-dts-marvell-Add-Wistron-ES-1227-36TS-P.patch
+new file mode 100644
+index 0000000..387cc75
+--- /dev/null
++++ b/src/sonic-linux-kernel/patch/0018-arm64-dts-marvell-Add-Wistron-ES-1227-36TS-P.patch
+@@ -0,0 +1,405 @@
++diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
++index 5fa9dbf4e..7e0031c3a 100644
++--- a/arch/arm64/boot/dts/marvell/Makefile
+++++ b/arch/arm64/boot/dts/marvell/Makefile
++@@ -30,3 +30,4 @@ dtb-$(CONFIG_ARCH_MVEBU) += armada-7020-comexpress.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += 7215-ixs-a1.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += smc_sse-g3748.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += es1227-54ts.dtb
+++dtb-$(CONFIG_ARCH_MVEBU) += es1227-36ts-p.dtb
++diff --git a/arch/arm64/boot/dts/marvell/es1227-36ts-p.dts b/arch/arm64/boot/dts/marvell/es1227-36ts-p.dts
++new file mode 100644
++index 000000000..5d1242fff
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/es1227-36ts-p.dts
++@@ -0,0 +1,74 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Copyright (C) 2021 Marvell International Ltd.
+++ *
+++ * Device tree for the CN9130-CRB-A board.
+++ */
+++
+++#include "es1227-36ts-p.dtsi"
+++/ {
+++	model = "Wistron ES1227 board";
+++};
+++
+++&cp0_pcie2 {
+++	status = "okay";
+++	num-lanes = <1>;
+++	num-viewport = <8>;
+++
+++	/* Generic PHY, providing serdes lanes */
+++	phys = <&cp0_comphy5 2>;
+++	iommu-map = <0x0   &smmu 0x480 0x20>,
+++		    <0x100 &smmu 0x4a0 0x20>,
+++		    <0x200 &smmu 0x4c0 0x20>;
+++	iommu-map-mask = <0x031f>;
+++};
+++
+++&cp0_mdio {
+++	status = "okay";
+++	pinctrl-names = "default";
+++	pinctrl-0 = <&cp0_ge_mdio_pins>;
+++
+++	phy0: ethernet-phy@0 {
+++		reg = <0>;
+++		marvell,reg-init = <0x2 0x1A 0x7FFF 0x8000>,
+++				   <0x2 0x0 0x7FFF  0x8000>,
+++				   <0x1 0x10 0xFDFF 0x200>;
+++	};
+++};
+++
+++&cp0_xmdio {
+++	status = "disabled";
+++};
+++
+++&cp0_uart0 {
+++	pinctrl-names = "default";
+++	status = "okay";
+++	pinctrl-0 = <&cp0_uart0_pins>;
+++};
+++
+++&cp0_usb3_0 {
+++	status = "okay";
+++	usb-phy = <&cp0_usb3_0_phy0>;
+++	phys = <&cp0_comphy1 0>;
+++	phy-names = "usb3";
+++};
+++
+++&cp0_eth0 {
+++	status = "disabled";
+++};
+++
+++/* CON56 */
+++&cp0_eth1 {
+++	status = "okay";
+++	phys = <&cp0_comphy3 1>;
+++	phy-handle = <&phy0>;
+++	phy-mode = "sgmii";
+++};
+++
+++&cp0_eth2 {
+++	status = "disabled";
+++};
+++
+++&cp0_rtc {
+++	status = "disabled";
+++};
++diff --git a/arch/arm64/boot/dts/marvell/es1227-36ts-p.dtsi b/arch/arm64/boot/dts/marvell/es1227-36ts-p.dtsi
++new file mode 100644
++index 000000000..3aaf006c7
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/es1227-36ts-p.dtsi
++@@ -0,0 +1,310 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Copyright (C) 2021 Marvell International Ltd.
+++ *
+++ * Device tree for the CN9130-CRB boards.
+++ */
+++
+++#include "cn9130.dtsi"
+++
+++#include <dt-bindings/gpio/gpio.h>
+++
+++/ {
+++	model = "Wistron ES1227";
+++	compatible = "marvell,cn9130", "marvell,armada-ap807-quad",
+++		     "marvell,armada-ap807";
+++
+++	chosen {
+++		stdout-path = "serial0:115200n8";
+++	};
+++
+++	aliases {
+++		gpio1 = &cp0_gpio1;
+++		gpio2 = &cp0_gpio2;
+++		i2c0 = &cp0_i2c0;
+++		i2c1 = &cp0_i2c1;
+++		ethernet0 = &cp0_eth0;
+++		ethernet1 = &cp0_eth1;
+++		spi1 = &cp0_spi0;
+++		spi2 = &cp0_spi1;
+++	};
+++
+++	/*16G */
+++	memory@00000000 {
+++		device_type = "memory";
+++		reg = <0x0 0x0 0x4 0x00000000>;
+++	};
+++
+++	cp0_usb3_0_phy0: cp0_usb3_phy@0 {
+++		compatible = "usb-nop-xceiv";
+++	};
+++
+++	cp0_usb3_0_phy1: cp0_usb3_phy@1 {
+++		compatible = "usb-nop-xceiv";
+++	};
+++
+++	cp0_reg_sd_vccq: cp0_sd_vccq@0 {
+++		compatible = "regulator-gpio";
+++		regulator-name = "cp0_sd_vccq";
+++		regulator-min-microvolt = <1800000>;
+++		regulator-max-microvolt = <3300000>;
+++		gpios = <&cp0_gpio2 18 GPIO_ACTIVE_HIGH>;
+++		states = <1800000 0x1
+++			  3300000 0x0>;
+++	};
+++
+++	cp0_reg_sd_vcc: cp0_sd_vcc@0 {
+++		compatible = "regulator-fixed";
+++		regulator-name = "cp0_sd_vcc";
+++		regulator-min-microvolt = <3300000>;
+++		regulator-max-microvolt = <3300000>;
+++		gpio = <&cp0_gpio2 19 GPIO_ACTIVE_HIGH>;
+++		enable-active-high;
+++		regulator-always-on;
+++	};
+++};
+++
+++&uart0 {
+++	status = "okay";
+++};
+++
+++&ap_sdhci0 {
+++	pinctrl-names = "default";
+++	bus-width = <8>;
+++	status = "okay";
+++};
+++
+++&cp0_crypto {
+++	status = "okay";
+++};
+++
+++&cp0_ethernet {
+++	status = "okay";
+++};
+++
+++&cp0_eth1 {
+++	status = "okay";
+++	phy = <&phy0>;
+++	phy-mode = "rgmii-id";
+++};
+++
+++&cp0_gpio1 {
+++	status = "okay";
+++};
+++
+++&cp0_gpio2 {
+++	status = "okay";
+++};
+++
+++&cp0_i2c0 {
+++	status = "okay";
+++	pinctrl-names = "default";
+++	pinctrl-0 = <&cp0_i2c0_pins>;
+++	clock-frequency = <100000>;
+++
+++	i2c-switch1@77 {
+++		compatible = "nxp,pca9548";
+++		#address-cells = <1>;
+++		#size-cells = <0>;
+++		reg = <0x77>;
+++		i2c-mux-idle-disconnect;
+++
+++		i2c@0 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <0>;
+++
+++			tmp75@49 {
+++				compatible = "ti,tmp75";
+++				reg = <0x49>;
+++			};
+++			tmp75@4a {
+++				compatible = "ti,tmp75";
+++				reg = <0x4a>;
+++			};
+++			tmp75@4b {
+++				compatible = "ti,tmp75";
+++				reg = <0x4b>;
+++			};
+++		};
+++
+++		i2c@1 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <1>;
+++		};
+++
+++		i2c@2 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <2>;
+++		};
+++
+++		i2c@3 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <3>;
+++		};
+++
+++		i2c@4 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <4>;
+++		};
+++
+++		i2c@5 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <5>;
+++		};
+++
+++		i2c@6 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <6>;
+++
+++			rtc0:rtc-ds1338@68 {
+++				compatible = "dallas,ds1338";
+++				/* PDF P13 : 1101 000 R/nW , 0x68+ R/nW */
+++				reg = <0x68>;
+++			};
+++		};
+++
+++		i2c@7 {
+++			#address-cells = <1>;
+++			#size-cells = <0>;
+++			reg = <7>;
+++		};
+++	};
+++
+++	eeprom@55 {
+++		compatible = "atmel,24c02";
+++		reg = <0x55>;
+++	};
+++};
+++
+++&cp0_i2c1 {
+++	status = "okay";
+++	pinctrl-names = "default";
+++	pinctrl-0 = <&cp0_i2c1_pins>;
+++	clock-frequency = <100000>;
+++};
+++
+++
+++/* U55 */
+++&cp0_spi1 {
+++	status = "okay";
+++	pinctrl-names = "default";
+++	pinctrl-0 = <&cp0_spi0_pins>;
+++	reg = <0x700680 0x50>;
+++
+++	spi-flash@0 {
+++		#address-cells = <0x1>;
+++		#size-cells = <0x1>;
+++		compatible = "jedec,spi-nor";
+++		reg = <0x0>;
+++		spi-max-frequency = <50000000>;
+++
+++		partitions {
+++			compatible = "fixed-partitions";
+++			#address-cells = <1>;
+++			#size-cells = <1>;
+++
+++			partition@0 {
+++				label = "U-Boot-0";
+++				reg = <0x0 0x200000>;
+++			};
+++
+++			partition@3f0000 {
+++				label = "uboot-env";
+++				reg = <0x3f0000 0x10000>;
+++				env_size = <0x10000>;
+++			};
+++
+++			partition@400000 {
+++				label = "Filesystem-0";
+++				reg = <0x400000 0xc00000>;
+++			};
+++
+++			partition@1000000 {
+++				label = "onie";
+++				reg = <0x1000000 0x1000000>;
+++			};
+++		};
+++	};
+++};
+++
+++&cp0_syscon0 {
+++	cp0_pinctrl: pinctrl {
+++		compatible = "marvell,cp115-standalone-pinctrl";
+++
+++		cp0_uart0_pins: cp0-uart0-pins-0 {
+++			marvell,pins = "mpp0", "mpp1";
+++			marvell,function = "uart0";
+++		};
+++
+++		cp0_ge_mdio_pins: ge-mdio-pins {
+++			marvell,pins = "mpp40", "mpp41";
+++			marvell,function = "ge";
+++		};
+++
+++		cp0_i2c0_pins: cp0-i2c-pins-0 {
+++			marvell,pins = "mpp37", "mpp38";
+++			marvell,function = "i2c0";
+++		};
+++
+++		cp0_i2c1_pins: cp0-i2c-pins-1 {
+++			marvell,pins = "mpp35", "mpp36";
+++			marvell,function = "i2c1";
+++		};
+++
+++		cp0_ge1_rgmii_pins: cp0-ge-rgmii-pins-0 {
+++			marvell,pins = "mpp0", "mpp1", "mpp2",
+++				       "mpp3", "mpp4", "mpp5",
+++				       "mpp6", "mpp7", "mpp8",
+++				       "mpp9", "mpp10", "mpp11";
+++			marvell,function = "ge0";
+++		};
+++
+++		cp0_ge2_rgmii_pins: cp0-ge-rgmii-pins-1 {
+++			marvell,pins = "mpp44", "mpp45", "mpp46",
+++				       "mpp47", "mpp48", "mpp49",
+++				       "mpp50", "mpp51", "mpp52",
+++				       "mpp53", "mpp54", "mpp55";
+++			marvell,function = "ge1";
+++		};
+++
+++		cp0_sdhci_cd_pins: cp0-sdhci-cd-pins-0 {
+++			marvell,pins = "mpp43";
+++			marvell,function = "gpio";
+++		};
+++
+++		cp0_sdhci_pins: cp0-sdhi-pins-0 {
+++			marvell,pins = "mpp56", "mpp57", "mpp58",
+++				       "mpp59", "mpp60", "mpp61";
+++			marvell,function = "sdio";
+++		};
+++
+++		cp0_spi0_pins: cp0-spi-pins-0 {
+++			marvell,pins = "mpp13", "mpp14", "mpp15", "mpp16";
+++			marvell,function = "spi1";
+++		};
+++
+++		cp0_sdhci_cd_pins_crb: cp0-sdhci-cd-pins-crb {
+++			marvell,pins = "mpp55";
+++			marvell,function = "gpio";
+++		};
+++	};
+++};
+++
+++&cp0_usb3_0 {
+++	status = "okay";
+++	usb-phy = <&cp0_usb3_0_phy0>;
+++	phy-names = "usb";
+++};
+++
+++&cp0_usb3_1 {
+++	status = "okay";
+++	usb-phy = <&cp0_usb3_0_phy1>;
+++	phy-names = "usb";
+++};
+diff --git a/src/sonic-linux-kernel/patch/0019-modify-88e1514-phy-led-for-wistron.patch b/src/sonic-linux-kernel/patch/0019-modify-88e1514-phy-led-for-wistron.patch
+new file mode 100644
+index 0000000..b16c2c3
+--- /dev/null
++++ b/src/sonic-linux-kernel/patch/0019-modify-88e1514-phy-led-for-wistron.patch
+@@ -0,0 +1,13 @@
++diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
++index 7ee1b2449..30a52dd02 100644
++--- a/drivers/net/phy/marvell.c
+++++ b/drivers/net/phy/marvell.c
++@@ -162,7 +162,7 @@
++ 
++ #define MII_PHY_LED_CTRL	        16
++ #define MII_88E1121_PHY_LED_DEF		0x0030
++-#define MII_88E1510_PHY_LED_DEF		0x1177
+++#define MII_88E1510_PHY_LED_DEF		0x0340
++ #define MII_88E1510_PHY_LED0_LINK_LED1_ACTIVE	0x1040
++ 
++ #define MII_M1011_PHY_STATUS		0x11
+diff --git a/src/sonic-linux-kernel/patch/series b/src/sonic-linux-kernel/patch/series
+index 6ae9363..06dc9c4 100755
+--- a/src/sonic-linux-kernel/patch/series
++++ b/src/sonic-linux-kernel/patch/series
+@@ -193,6 +193,8 @@ cisco-npu-disable-other-bars.patch
+ 0015-arm64-dts-marvell-Add-Supermicro-SSE-G3748-board.patch
+ 0016-arm64-dts-marvell-Add-Wistron-ES-1227-54TS-board.patch
+ 0017-Extend-driver-to-support-XMC-XM25QH256C-device.patch
++0018-arm64-dts-marvell-Add-Wistron-ES-1227-36TS-P.patch
++0019-modify-88e1514-phy-led-for-wistron.patch
+ 0018-i2c-mv64xxx-kdump-sonic.patch
+ 0019-mrvl-gicp-clr-irqs-on-probe.patch
+ 

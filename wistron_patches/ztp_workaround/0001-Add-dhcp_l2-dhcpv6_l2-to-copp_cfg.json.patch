@@ -1,0 +1,16 @@
+diff --git a/files/image_config/copp/copp_cfg.j2 b/files/image_config/copp/copp_cfg.j2
+index fc2002cff..520ae8a35 100755
+--- a/files/image_config/copp/copp_cfg.j2
++++ b/files/image_config/copp/copp_cfg.j2
+@@ -110,6 +110,11 @@
+ 		    "trap_ids": "dhcp,dhcpv6",
+ 		    "trap_group": "queue4_group3"
+ 	    },
++	    "dhcp": {
++		    "trap_ids": "dhcp,dhcpv6,dhcp_l2,dhcpv6_l2",
++		    "trap_group": "queue4_group3",
++		    "always_enabled": "true"
++	    },
+ 	    "udld": {
+ 		    "trap_ids": "udld",
+ 		    "trap_group": "queue4_group3",

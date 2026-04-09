@@ -1,0 +1,36 @@
+Submodule src/sonic-swss contains modified content
+diff --git a/src/sonic-swss/Cargo.lock b/src/sonic-swss/Cargo.lock
+index f8a031d6..c489f7d2 100644
+--- a/src/sonic-swss/Cargo.lock
++++ b/src/sonic-swss/Cargo.lock
+@@ -1347,7 +1347,7 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+ [[package]]
+ name = "swss-common"
+ version = "0.1.0"
+-source = "git+https://github.com/sonic-net/sonic-swss-common.git?branch=master#1484a851dbfdd4b122c361cd7ea03eca0afe5d63"
++source = "git+https://github.com/sonic-net/sonic-swss-common.git?branch=master#16a8a937f6726bfa2309fc4b78b1c7e1d86594dd"
+ dependencies = [
+  "bindgen",
+  "getset",
+diff --git a/src/sonic-swss/debian/rules b/src/sonic-swss/debian/rules
+index 8412a6f1..5b211b5f 100755
+--- a/src/sonic-swss/debian/rules
++++ b/src/sonic-swss/debian/rules
+@@ -39,13 +39,13 @@ endif
+ override_dh_auto_configure:
+ 	dh_auto_configure -- $(configure_opts)
+ 	# Configure Rust build for countersyncd
+-	cargo fetch
+-	cargo update -p swss-common
++	#cargo fetch
++	#cargo update -p swss-common
+ 
+ override_dh_auto_build:
+-	dh_auto_build
++	make -j2
+ 	# Build and test countersyncd Rust project
+-	cargo build --release
++	cargo build --release --locked
+ 
+ override_dh_auto_install:
+ 	dh_auto_install --destdir=debian/swss

@@ -1,0 +1,12 @@
+diff --git a/functions.sh b/functions.sh
+index cb52bf816..b1460d805 100644
+--- a/functions.sh
++++ b/functions.sh
+@@ -63,6 +63,6 @@ sonic_get_version() {
+     if [ -n "$latest_tag" ] && [ "$describe" == "$latest_tag" ]; then
+         echo "${latest_tag}${dirty}" | sed 's/\//_/g'
+     else
+-        echo "${branch_name}.${BUILD_NUMBER}${dirty:--$(git rev-parse --short HEAD)}" | sed 's/\//_/g'
++        echo "Wistron.M.1.0.1" | sed 's/\//_/g'
+     fi
+ }

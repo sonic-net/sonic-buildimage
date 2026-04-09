@@ -1,0 +1,63 @@
+diff --git a/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/hwsku.json b/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/hwsku.json
+index 32d4c5230..d0a41811f 100644
+--- a/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/hwsku.json
++++ b/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/hwsku.json
+@@ -289,32 +289,32 @@
+             "port_type": "RJ45"
+         },
+         "Ethernet48": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         },
+         "Ethernet49": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         },
+         "Ethernet50": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         },
+         "Ethernet51": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         },
+         "Ethernet52": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         },
+         "Ethernet53": {
+-            "default_brkout_mode": "1x25G[10G]",
++            "default_brkout_mode": "1x10G[25G]",
+             "fec" : "none",
+             "autoneg" : "off"
+         }
+diff --git a/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/port_config.ini b/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/port_config.ini
+index c7fb9e672..599b02db8 100644
+--- a/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/port_config.ini
++++ b/device/wistron/arm64-wistron_es1227_54ts_p2-r0/wistron_es1227_54ts_p2/port_config.ini
+@@ -47,9 +47,9 @@ Ethernet44     44     Eth45       1000     on       none    45      low
+ Ethernet45     45     Eth46       1000     on       none    46      low         enableDynamic       0              disable
+ Ethernet46     46     Eth47       1000     on       none    47      low         enableDynamic       0              disable
+ Ethernet47     47     Eth48       1000     on       none    48      low         enableDynamic       0              disable
+-Ethernet48     48     Eth49       25000    off      none    49      NA          NA                  0              NA
+-Ethernet49     49     Eth50       25000    off      none    50      NA          NA                  0              NA
+-Ethernet50     50     Eth51       25000    off      none    51      NA          NA                  0              NA
+-Ethernet51     51     Eth52       25000    off      none    52      NA          NA                  0              NA
+-Ethernet52     52     Eth53       25000    off      none    53      NA          NA                  0              NA
+-Ethernet53     53     Eth54       25000    off      none    54      NA          NA                  0              NA
++Ethernet48     48     Eth49       10000    off      none    49      NA          NA                  0              NA
++Ethernet49     49     Eth50       10000    off      none    50      NA          NA                  0              NA
++Ethernet50     50     Eth51       10000    off      none    51      NA          NA                  0              NA
++Ethernet51     51     Eth52       10000    off      none    52      NA          NA                  0              NA
++Ethernet52     52     Eth53       10000    off      none    53      NA          NA                  0              NA
++Ethernet53     53     Eth54       10000    off      none    54      NA          NA                  0              NA
