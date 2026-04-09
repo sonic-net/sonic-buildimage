@@ -432,7 +432,7 @@ def wait_until_conditions(conditions, timeout, interval=1):
         timeout -= interval
     return False
 
-  
+
 class TimerEvent:
     def __init__(self, interval, cb, repeat):
         self.interval = interval
