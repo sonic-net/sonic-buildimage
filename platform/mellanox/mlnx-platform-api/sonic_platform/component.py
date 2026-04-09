@@ -756,7 +756,6 @@ class ComponentCPLD(Component):
     ASIC_DETECT_SCRIPT = '/usr/bin/asic_detect/asic_detect.sh'
 
     CPLD_FIRMWARE_UPDATE_COMMAND_SPC1 = ['cpldupdate', '--dev', '', '--print-progress', '']
-    # GPIO path does not take an MST device; image at [3]
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']
 
     def __init__(self, idx):
