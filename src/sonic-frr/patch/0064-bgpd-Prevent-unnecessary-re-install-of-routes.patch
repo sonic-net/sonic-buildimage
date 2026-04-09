@@ -30,11 +30,11 @@ Signed-off-by: Donald Sharp <sharpd@nvidia.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
-index 330af64379..b720e37bb4 100644
+index 573fd44333..e8f7058413 100644
 --- a/bgpd/bgp_nht.c
 +++ b/bgpd/bgp_nht.c
-@@ -1472,7 +1472,9 @@ void evaluate_paths(struct bgp_nexthop_cache *bnc)
- 		if (path_valid != bnc_is_valid_nexthop)
+@@ -1504,7 +1504,9 @@ void evaluate_paths(struct bgp_nexthop_cache *bnc)
+ 		if (old_path_valid != bnc_is_valid_nexthop)
  			hook_call(bgp_nht_path_update, bgp_path, path, bnc_is_valid_nexthop);
  
 -		bgp_process(bgp_path, dest, path, afi, safi);
