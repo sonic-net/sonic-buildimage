@@ -684,6 +684,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         try:
             dnode_list = list(self.root.find_path(data_xpath).data())
         except Exception as e:
+            # Possible no data paths matched, ignore
             pass
 
         if len(dnode_list) == 0:
@@ -720,6 +721,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
                 if subtype is not None:
                     leaf_value = subtype.value_str()
             except Exception as e:
+                # Node may not support subtype/value_str, skip
                 continue
 
             # Find schema backlinks for this specific leaf
