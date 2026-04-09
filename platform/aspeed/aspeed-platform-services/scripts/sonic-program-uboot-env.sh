@@ -45,7 +45,7 @@ fi
 CONSOLE_DEV=${CONSOLE_DEV:-12}
 CONSOLE_SPEED=${CONSOLE_SPEED:-115200}
 EARLYCON=${EARLYCON:-"earlycon=uart8250,mmio32,0x14c33b00"}
-VAR_LOG_SIZE=${VAR_LOG_SIZE:-512}
+VAR_LOG_SIZE=${VAR_LOG_SIZE:-128} # 128MB for /var/log tmpfs
 CONSOLE_PORT="ttyS${CONSOLE_DEV}"
 
 FS_ROOT_DEV=$UBOOT_ENV_BOOT_DEVICE
@@ -84,7 +84,7 @@ fw_setenv fit_name_old "" || sonic_uboot_env_log "ERROR: Failed to set fit_name_
 fw_setenv sonic_version_2 "None" || sonic_uboot_env_log "ERROR: Failed to set sonic_version_2"
 fw_setenv linuxargs_old "" || sonic_uboot_env_log "ERROR: Failed to set linuxargs_old"
 
-LINUXARGS_VAL="console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=${VAR_LOG_SIZE}"
+LINUXARGS_VAL="console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=$IMAGE_DIR/fs.squashfs varlog_size=${VAR_LOG_SIZE} logs_inram=on"
 fw_setenv linuxargs "$LINUXARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to set linuxargs"
 BOOTARGS_VAL="root=$ROOT_DEV rw rootwait panic=1 $LINUXARGS_VAL"
 fw_setenv bootargs "$BOOTARGS_VAL" || sonic_uboot_env_log "ERROR: Failed to set bootargs"

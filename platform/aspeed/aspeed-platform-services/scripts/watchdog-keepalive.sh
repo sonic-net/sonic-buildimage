@@ -9,12 +9,22 @@
 
 WATCHDOG_DEVICE="/dev/watchdog0"
 KEEPALIVE_INTERVAL=60  # seconds
-LOG_FILE="/var/log/aspeed-watchdog.log"
+LOG_DIR="/host/bmc"
+LOG_FILE="${LOG_DIR}/watchdog.log"
 MAX_RETAINED_LOGS=5
+KEEPALIVE_LOG_INTERVAL=3600  # Log keepalive status every hour (3600 seconds)
+
+# Ensure log directory exists
+if [ ! -d "$LOG_DIR" ]; then
+    mkdir -p "$LOG_DIR" || {
+        echo "ERROR: Failed to create log directory: $LOG_DIR" >&2
+        exit 1
+    }
+fi
 
 # Rotate old logs
 rotate_logs() {
-    ls -t /var/log/aspeed-watchdog*.log 2>/dev/null | cat -n | while read n f; do
+    ls -t ${LOG_DIR}/watchdog*.log 2>/dev/null | cat -n | while read n f; do
         if [ $n -gt $MAX_RETAINED_LOGS ]; then
             rm -f "$f"
         fi
@@ -71,10 +81,18 @@ echo "$(date -u): Opened $WATCHDOG_DEVICE with FD $wdt_fd" >> "$LOG_FILE"
 echo "w" >&${wdt_fd}
 echo "$(date -u): First watchdog keepalive sent" >> "$LOG_FILE"
 
-# Main keepalive loop
+# Main keepalive loop with reduced logging
+keepalive_count=0
+log_threshold=$((KEEPALIVE_LOG_INTERVAL / KEEPALIVE_INTERVAL))
+
 while true; do
     sleep $KEEPALIVE_INTERVAL
     echo "w" >&${wdt_fd}
-    echo "$(date -u): Watchdog keepalive sent" >> "$LOG_FILE"
+
+    # Only log periodically (every hour by default) to reduce eMMC writes
+    keepalive_count=$((keepalive_count + 1))
+    if [ $((keepalive_count % log_threshold)) -eq 0 ]; then
+        echo "$(date -u): Watchdog keepalive active (sent $keepalive_count keepalives)" >> "$LOG_FILE"
+    fi
 done
 

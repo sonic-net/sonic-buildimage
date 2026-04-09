@@ -109,38 +109,11 @@ ip link set "${INTERFACE_NAME}" up
 # Enable IPv6 on the interface
 sysctl -w net.ipv6.conf.${INTERFACE_NAME}.disable_ipv6=0 2>/dev/null || true
 
-# Step 6b: Add static IPv4 for gNOI communication with switch host
-# Read configuration from bmc.json
-BMC_CONFIG="/usr/share/sonic/platform/bmc.json"
-BMC_IPV4=""
-
-if [ -f "${BMC_CONFIG}" ]; then
-    logger -t usb-network "Reading BMC configuration from ${BMC_CONFIG}"
-    BMC_IPV4=$(python3 -c "
-import json
-import sys
-try:
-    with open('${BMC_CONFIG}') as f:
-        data = json.load(f)
-    bmc_ip = data.get('usb_network', {}).get('bmc_ipv4', '')
-    if bmc_ip:
-        print(bmc_ip)
-    else:
-        sys.exit(1)
-except Exception as e:
-    print(f'Error reading BMC config: {e}', file=sys.stderr)
-    sys.exit(1)
-" 2>/dev/null)
-fi
-
-if [ -n "${BMC_IPV4}" ]; then
-	# Configure IPv4 address
-	ip addr add "${BMC_IPV4}" dev "${INTERFACE_NAME}"
-
-	# Display configuration
-	IPV4_ADDR=$(ip -4 addr show dev "${INTERFACE_NAME}" | grep -oP 'inet \K[0-9.]+')
-	logger -t usb-network "IPv4 address configured: ${IPV4_ADDR}"
-fi
+# Step 6b: IP address configuration handled by /etc/network/interfaces
+# The interface configuration is managed through sonic-cfggen and interfaces.j2 template
+# which reads from bmc.json (DEVICE_METADATA['bmc']) and generates /etc/network/interfaces
+# This approach ensures consistent network configuration management across SONiC
+logger -t usb-network "IP configuration will be applied by networking.service from /etc/network/interfaces"
 
 # Wait a moment for interface to stabilize
 sleep 1

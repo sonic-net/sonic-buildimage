@@ -21,7 +21,7 @@ BOOTCONF="nexthop-b27-r0"
 CONSOLE_DEV="12"
 CONSOLE_SPEED="115200"
 EARLYCON="earlycon=uart8250,mmio32,0x14c33b00"
-VAR_LOG_SIZE="512"
+VAR_LOG_SIZE="128"  # 128MB for /var/log tmpfs
 
 # Color output
 RED='\033[0;31m'
@@ -160,7 +160,7 @@ log_info "Configuring U-Boot environment for dual boot..."
 CONSOLE_PORT="ttyS${CONSOLE_DEV}"
 
 # Construct kernel command line arguments (linuxargs)
-LINUXARGS="console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=${IMAGE_DIR}/fs.squashfs varlog_size=${VAR_LOG_SIZE}"
+LINUXARGS="console=${CONSOLE_PORT},${CONSOLE_SPEED}n8 ${EARLYCON} loopfstype=squashfs loop=${IMAGE_DIR}/fs.squashfs varlog_size=${VAR_LOG_SIZE} logs_inram=on"
 
 # FIT image path
 FIT_NAME="${IMAGE_DIR}/boot/sonic_arm64.fit"
