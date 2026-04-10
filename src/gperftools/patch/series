@@ -1,0 +1,2 @@
+# This series applies on gperftools 2.10-1
+0001-Enable-FREE_MMAP_PROT_NONE-for-Linux.patch

@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: StormLiangMS <stormliang@microsoft.com>
+Date: Sun, 29 Mar 2026 17:00:00 +0800
+Subject: [PATCH] Enable FREE_MMAP_PROT_NONE for Linux
+
+Without this define, MallocExtension_ReleaseToSystem() does not
+actually release memory back to the OS on Linux. This is required
+for the FRR tcmalloc memory release timer to function correctly.
+
+Reference: FRR doc/developer/building-tcmalloc.rst
+
+Signed-off-by: StormLiangMS <stormliang@microsoft.com>
+---
+ configure.ac | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -53,4 +53,5 @@ case "$host" in
+    *-cygwin*) default_enable_heap_checker=no; default_enable_cpu_profiler=no;;
+    *-freebsd*) default_enable_heap_checker=no;;
+    *-darwin*) default_enable_heap_checker=no;;
++   *-linux*) AC_DEFINE(FREE_MMAP_PROT_NONE, 1, [Use mmap PROT_NONE to release memory on Linux]);;
+ esac
