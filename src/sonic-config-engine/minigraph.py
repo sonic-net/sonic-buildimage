@@ -2062,6 +2062,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    if hwsku == 'Arista-7050CX3-32C-S128' and 'Ethernet33' in alias_map:
+        del alias_map['Ethernet33']
 
     asic_hostname = get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname)
 
