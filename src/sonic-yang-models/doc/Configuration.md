@@ -3470,22 +3470,22 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
         "vdpu0": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu0"]
+            "main_dpu_ids": "dpu0"
         },
         "vdpu1": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu1"]
+            "main_dpu_ids": "dpu1"
         },
         "vdpu2": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu2"]
+            "main_dpu_ids": "dpu2"
         },
         "vdpu3": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu3"]
+            "main_dpu_ids": "dpu3"
         }
     }
 }
@@ -3502,11 +3502,15 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`. 
+
 ```json
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
             "vnet_name": "Vnet55",
+            "dpu_vnet": "Vnet55",
+            "dpu_vlan": "Vlan55",
             "cp_data_channel_port": "11362",
             "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3520,7 +3524,11 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 }
 ```
 
-**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
+**vnet_name**: Deprecated. Use `dpu_vnet` instead. Vnet name used in SmartSwitch HA scenarios.
+
+**dpu_vnet**: Name of the vnet used for VNET tunnel route in SmartSwitch HA scenarios. Replaces `vnet_name`.
+
+**dpu_vlan**: DPU VLAN identifier, referencing a VLAN name from the VLAN table.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 

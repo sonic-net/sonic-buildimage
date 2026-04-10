@@ -133,6 +133,12 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
+{%- elif docker_container_name == "dhcp_server" %}
+    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
+    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
+    # Restrict to docker0 interface to minimize security impact.
+    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
+        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
 {%- else %}
     : # nothing
 {%- endif %}
@@ -862,6 +868,10 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
+{%- if docker_container_name == "dhcp_server" %}
+    # Remove syslog iptables exception added during start
+    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
+{%- endif %}
     {%- endif %}
 }
 

@@ -40,7 +40,7 @@ RUN pip3 install psutil
 RUN apt-get remove -y build-essential     \
                       python3-dev
 
-COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
+COPY ["docker_init.sh", "start.sh", "wait_for_dhcpservd.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]

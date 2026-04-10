@@ -41,8 +41,10 @@ si_param_list = [
     "regn_bfm1n",
     "unreliable_los",
     "rxpolarity",
-    "interface_type"
+    "interface_type",
+    "media_type"
 ]
+
 lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
