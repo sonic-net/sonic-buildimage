@@ -567,7 +567,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=systemd --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
