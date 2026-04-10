@@ -1,0 +1,11 @@
+--- a/src/Linux/hsflowd.c
++++ b/src/Linux/hsflowd.c
+@@ -1849,7 +1849,7 @@
+     sigaction(SIGILL, &sa, NULL);
+     sigaction(SIGBUS, &sa, NULL);
+     sigaction(SIGXFSZ, &sa, NULL);
+-    sigaction(SIGABRT, &sa, NULL);
++    // sigaction(SIGABRT, &sa, NULL);  // Let SIGABRT produce core dump
+     sigaction(SIGUSR1, &sa, NULL);
+     sigaction(SIGUSR2, &sa, NULL);
+     sigaction(SIGHUP, &sa, NULL);
