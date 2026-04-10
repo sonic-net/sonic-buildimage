@@ -98,5 +98,20 @@
                 }
             }
         }
+    },
+
+    "KDUMP_WITH_INVALID_SSH_STRING_USERNAME": {
+        "sonic-kdump:sonic-kdump": {
+            "sonic-kdump:KDUMP": {
+                "config": {
+                    "enabled": "true",
+                    "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
+                    "num_dumps": 3,
+                    "remote": "true",
+                    "ssh_string": "1user@192.168.0.188",
+                    "ssh_path": "/root/.ssh/id_rsa"
+                }
+            }
+        }
     }
 }
