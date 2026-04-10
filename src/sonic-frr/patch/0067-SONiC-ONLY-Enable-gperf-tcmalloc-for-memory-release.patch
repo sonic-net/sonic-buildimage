@@ -1,0 +1,30 @@
+[PATCH] Enable gperftools tcmalloc for FRR daemons
+
+From: StormLiangMS <stormliang@microsoft.com>
+Date: Thu, 10 Apr 2026 05:00:00 +0800
+Subject: [PATCH] Enable gperftools tcmalloc for FRR daemons
+
+Enable tcmalloc via --enable-gperf-tcmalloc configure flag so that FRR
+links against libtcmalloc and activates the periodic memory release timer
+(MallocExtension_ReleaseToSystem). This reduces memory fragmentation and
+returns freed memory to the OS.
+
+Reference: FRRouting/frr#19377
+
+Signed-off-by: StormLiangMS <stormliang@microsoft.com>
+---
+ debian/rules |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/debian/rules b/debian/rules
+index 41b6c9f57..b8e3a1c00 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -73,6 +73,7 @@ override_dh_auto_configure:
+ 		--disable-protobuf \
+ 		--disable-zeromq \
+ 		--enable-ospfapi \
++		--enable-gperf-tcmalloc \
+ 		--enable-multipath=514 \
+ 		--enable-pcre2posix \
+ 		\
