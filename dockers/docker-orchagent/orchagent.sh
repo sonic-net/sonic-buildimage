@@ -18,6 +18,7 @@ fi
 # Create a folder for SwSS record files
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
+$DPU_BATCH_SIZE=125000
 
 LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
 if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
@@ -26,7 +27,7 @@ if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
     ORCHAGENT_ARGS+="-b 128 "
 elif [[ x"$LOCALHOST_SWITCHTYPE" == x"dpu" ]]; then
     # To handle high volume of objects in DPU
-    ORCHAGENT_ARGS+="-b 125000 "
+    ORCHAGENT_ARGS+="-b $DPU_BATCH_SIZE "
 else
     # Set orchagent pop batch size to 1024
     ORCHAGENT_ARGS+="-b 1024 "
@@ -36,7 +37,7 @@ fi
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
 if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
-    ORCHAGENT_ARGS+="-z zmq_sync -k 125000 "
+    ORCHAGENT_ARGS+="-z zmq_sync -k $DPU_BATCH_SIZE "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
