@@ -118,6 +118,8 @@ class WatchdogImplBase(WatchdogBase):
 
         timeout_path = self.watchdog_sysfs_path + "timeout"
         timeout = self.__read_txt_file(timeout_path)
+        if timeout is None:
+            return None
         return int(timeout)
 
     def _gettimeleft(self):
@@ -128,6 +130,8 @@ class WatchdogImplBase(WatchdogBase):
 
         timeleft_path = self.watchdog_sysfs_path + "timeleft"
         timeleft = self.__read_txt_file(timeleft_path)
+        if timeleft is None:
+            return None
         return int(timeleft)
 
 
