@@ -244,7 +244,13 @@ def parse_port_config_file(port_config_file):
             # alias to asic_port_name mapping
             if 'asic_port_name' in data:
                 port_alias_asic_map[data['alias']] = data['asic_port_name'].strip()
+
+    for alias in list(port_alias_map.keys()):
+        if alias in ports:
+            del port_alias_map[alias]
+
     return (ports, port_alias_map, port_alias_asic_map)
+
 
 class BreakoutCfg(object):
 
@@ -446,7 +452,8 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
         raise Exception("Ports dictionary is None")
 
     for i in ports.keys():
-        port_alias_map[ports[i]["alias"]]= i
+        if ports[i]["alias"] not in ports:
+            port_alias_map[ports[i]["alias"]]= i
     return (ports, port_alias_map, port_alias_asic_map)
 
 
