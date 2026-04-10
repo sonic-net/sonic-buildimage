@@ -132,6 +132,25 @@ RUN GRPCURL_VERSION=v1.9.3 \
 # Security fixes: upgrade all vulnerable system packages (S360 scan remediation)
 RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
+
+# Install InfluxDB for HFT E2E tests (not available for armhf)
+{% if CONFIGURED_ARCH != "armhf" %}
+RUN set -eux \
+{% if CONFIGURED_ARCH == "arm64" %}
+    && INFLUXDB_ARCH=linux_arm64 \
+{% else %}
+    && INFLUXDB_ARCH=linux_amd64 \
+{% endif %}
+    && INFLUXDB_VERSION=2.8.0 \
+    && cd /tmp \
+    && curl --fail --show-error --location --retry 3 --retry-delay 5 -O "https://dl.influxdata.com/influxdb/releases/v${INFLUXDB_VERSION}/influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
+    && tar xzf "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
+    && mv "influxdb2-${INFLUXDB_VERSION}/influxd" /usr/local/bin/influxd \
+    && chmod +x /usr/local/bin/influxd \
+    && rm -f "influxdb2-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
+    && rm -rf "/tmp/influxdb2-${INFLUXDB_VERSION}"
+{% endif %}
+
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 \
