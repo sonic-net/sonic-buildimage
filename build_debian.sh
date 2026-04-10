@@ -507,6 +507,10 @@ rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
 set /files/etc/ssh/sshd_config/PermitEmptyPasswords no
 ins #comment before /files/etc/ssh/sshd_config/PermitEmptyPasswords
 set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PermitEmptyPasswords]] "Deny SSH login with empty password; use console to set a real password first"
+rm /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/AllowAgentForwarding no
+ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
 save
 quit
 EOF
