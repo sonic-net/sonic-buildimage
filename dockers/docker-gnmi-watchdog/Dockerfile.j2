@@ -1,4 +1,7 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+{% from "dockers/dockerfile-macros.j2" import rsync_from_builder_stage %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS builder
 
 # Update apt's cache of available packages
 RUN apt-get update && apt-get install -y \
@@ -18,7 +21,7 @@ COPY watchdog/ ./
 # Build from within /watchdog
 RUN cargo build --release
 
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -34,4 +37,10 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY --from=builder /watchdog/target/release/watchdog /usr/bin/gnmi_watchdog
 RUN chmod +x /usr/bin/gnmi_watchdog
 
+FROM $BASE
+ARG image_version
+
+{{ rsync_from_builder_stage() }}
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IMAGE_VERSION=$image_version
 ENTRYPOINT ["/usr/local/bin/supervisord"]
