@@ -138,7 +138,7 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
                 dq = deque(fb)
         except FileNotFoundError as err:
             syslog.syslog(syslog.LOG_WARNING, "Lease file not yet available: {}".format(self.lease_file))
-            return {}
+            raise
 
         new_lease = {}
         # Get newest lease information of each client
