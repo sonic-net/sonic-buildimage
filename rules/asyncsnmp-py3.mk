@@ -7,3 +7,7 @@ $(ASYNCSNMP_PY3)_PYTHON_VERSION = 3
 $(ASYNCSNMP_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) $(SONIC_PLATFORM_COMMON_PY3)
 $(ASYNCSNMP_PY3)_DEBS_DEPENDS += $(LIBSWSSCOMMON) $(PYTHON3_SWSSCOMMON)
 SONIC_PYTHON_WHEELS += $(ASYNCSNMP_PY3)
+# TODO: Re-enable once sonic-net/sonic-snmpagent#371 merges (conftest.py fix).
+# On trixie the wheel cache misses, tests run, and fail with
+# ModuleNotFoundError: No module named 'sonic_ax_impl' during collection.
+$(ASYNCSNMP_PY3)_TEST = n
