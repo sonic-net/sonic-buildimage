@@ -39,7 +39,7 @@ KERNEL_MFT_TARGET = kernel-mft-dkms-modules-$(KVERSION)_$(MFT_VERSION)_$(CONFIGU
 MAIN_TARGET = mft_$(MFT_VERSION)-$(MFT_REVISION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = mft-oem_$(MFT_VERSION)-$(MFT_REVISION)_$(CONFIGURED_ARCH).deb
 
-DKMS_CTRL = /var/lib/dkms/kernel-mft-dkms/
+DKMS_CTRL = /var/lib/dkms/kernel-mft-dkms/$(MFT_VERSION)/
 DKMS_TMP := $(shell mktemp -u -d -t dkms.XXXXXXXXXX)
 
 MFT_TMP = /tmp/mft_build/
@@ -84,7 +84,7 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 	sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
 
 	# copy the built modules
-	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/*.ko \
+	cp -r $(DKMS_CTRL)/$(KVERSION)/$(CONFIGURED_ARCH)/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 
 	pushd $(MFT_NAME)/DEBS
