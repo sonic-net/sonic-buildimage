@@ -52,7 +52,7 @@ class AggregateAddressMgr(Manager):
                 if self.address_set_handler(address[0], address[1]):
                     self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
                 else:
-                    log_err("AggregateAddressMgr::set address %s failed during BBR change (validation or FRR push error)" % key2prefix(address[0]))
+                    log_info("AggregateAddressMgr::set address %s failed during BBR change (validation or FRR push error)" % key2prefix(address[0]))
                     self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
             log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
@@ -64,18 +64,24 @@ class AggregateAddressMgr(Manager):
 
     def set_handler(self, key, data):
         data = dict(data)
+        prefix = key2prefix(key)
+        net, reason = validate_prefix(prefix)
+        if net is None:
+            log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
+            self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
+            return True
         bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
         if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED):
-            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address %s" % key2prefix(key))
+            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address %s" % prefix)
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED and data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING:
-            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % key2prefix(key))
+            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % prefix)
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
             if self.address_set_handler(key, data):
                 self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
-                log_err("AggregateAddressMgr::set address %s failed (validation or FRR push error)" % key2prefix(key))
+                log_info("AggregateAddressMgr::set address %s failed (validation or FRR push error)" % prefix)
                 self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
