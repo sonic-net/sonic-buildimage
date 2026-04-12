@@ -68,6 +68,7 @@ stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
+stdout_capture_maxbytes=1MB
 dependent_startup=true
 dependent_startup_wait_for={{ orchagent_dependent_startup_wait_for }}
 {% if ENABLE_ASAN == "y" %}
