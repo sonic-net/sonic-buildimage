@@ -8,7 +8,7 @@ from datetime import datetime
 from dhcp_utilities.common.utils import is_smart_switch
 
 DHCP_SERVER_IPV4_LEASE = "DHCP_SERVER_IPV4_LEASE"
-KEA_LEASE_FILE_PATH = "/tmp/kea-lease.csv"
+KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DEFAULE_LEASE_UPDATE_INTERVAL = 2  # unit: sec
 
 
@@ -22,6 +22,19 @@ class LeaseManager(object):
         """
         for handler in self.lease_handlers:
             handler.register()
+
+    def sync_existing_leases(self):
+        """
+        Replay initial leases into STATE_DB during startup.
+        Called after startup completes to recover any leases assigned
+        before dhcpservd was fully initialized.
+        """
+        for handler in self.lease_handlers:
+            try:
+                handler.update_lease()
+            except FileNotFoundError:
+                syslog.syslog(syslog.LOG_INFO,
+                              "Lease file not found during startup sync, skipping initial lease replay")
 
 
 class LeaseHanlder(object):
@@ -67,31 +80,38 @@ class LeaseHanlder(object):
                 return
         if not self.lock.acquire(False):
             return
-        new_lease = self._read()
-        # Store old lease key
-        old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
-        old_lease_key = set(old_lease_table.keys())
+        try:
+            try:
+                new_lease = self._read()
+            except FileNotFoundError:
+                syslog.syslog(syslog.LOG_INFO, "Lease file not found, skipping lease update")
+                return
 
-        # 1.1 If start time equal to end time or lease expired, means lease has been released
-        #     1.1.1 If current lease table has this old lease, delete it
-        #     1.1.2 Else skip
-        # 1.2 Else, means lease valid, save it.
-        for key, value in new_lease.items():
-            unix_time = datetime.now().timestamp()
-            if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
-                if key in old_lease_key:
+            # Store old lease key
+            old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
+            old_lease_key = set(old_lease_table.keys())
+
+            # 1.1 If start time equal to end time or lease expired, means lease has been released
+            #     1.1.1 If current lease table has this old lease, delete it
+            #     1.1.2 Else skip
+            # 1.2 Else, means lease valid, save it.
+            for key, value in new_lease.items():
+                unix_time = datetime.now().timestamp()
+                if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
+                    if key in old_lease_key:
+                        self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
+                    continue
+                new_key = "{}|{}".format(DHCP_SERVER_IPV4_LEASE, key)
+                for k, v in new_lease[key].items():
+                    self.db_connector.state_db.hset(new_key, k, v)
+            # Delete old lease not in new lease set
+            for key in old_lease_key:
+                if key not in new_lease.keys():
+                    # Delete entry
                     self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
-                continue
-            new_key = "{}|{}".format(DHCP_SERVER_IPV4_LEASE, key)
-            for k, v in new_lease[key].items():
-                self.db_connector.state_db.hset(new_key, k, v)
-        # Delete old lease not in new lease set
-        for key in old_lease_key:
-            if key not in new_lease.keys():
-                # Delete entry
-                self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
-        self.last_update_time = datetime.now()
-        self.lock.release()
+            self.last_update_time = datetime.now()
+        finally:
+            self.lock.release()
 
 
 class KeaDhcp4LeaseHandler(LeaseHanlder):
@@ -117,7 +137,7 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
             with open(self.lease_file, "r", encoding="utf-8") as fb:
                 dq = deque(fb)
         except FileNotFoundError as err:
-            syslog.syslog(syslog.LOG_ERR, "Cannot find lease file: {}".format(self.lease_file))
+            syslog.syslog(syslog.LOG_WARNING, "Lease file not yet available: {}".format(self.lease_file))
             raise err
 
         new_lease = {}

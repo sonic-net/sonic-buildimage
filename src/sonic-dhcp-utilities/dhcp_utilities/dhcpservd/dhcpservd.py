@@ -16,7 +16,7 @@ from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
 KEA_DHCP4_PROC_NAME = "kea-dhcp4"
-KEA_LEASE_FILE_PATH = "/tmp/kea-lease.csv"
+KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DHCPSERVD_READY_FLAG = "/tmp/dhcpservd_ready"
 REDIS_SOCK_PATH = "/var/run/redis/redis.sock"
 DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"
@@ -89,15 +89,22 @@ class DhcpServd(object):
     def start(self):
         start_time = time.time()
         syslog.syslog(syslog.LOG_INFO, "dhcpservd starting")
+        # Register the SIGUSR1 lease-update signal handler FIRST.
+        # kea-dhcp4 is started by supervisor shortly after dhcpservd,
+        # and sends SIGUSR1 (via lease_update.sh) on every lease change.
+        # If the handler is not registered, the default SIGUSR1 disposition
+        # terminates this process, and with autorestart=false it stays dead.
+        lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
+        lease_manager.start()
+        syslog.syslog(syslog.LOG_INFO, "SIGUSR1 handler registered, elapsed=%.3fs" % (time.time() - start_time))
         self.dump_dhcp4_config()
         syslog.syslog(syslog.LOG_INFO, "dump_dhcp4_config done, elapsed=%.3fs" % (time.time() - start_time))
         self._update_dhcp_server_ip()
         syslog.syslog(syslog.LOG_INFO, "update_dhcp_server_ip done, elapsed=%.3fs" % (time.time() - start_time))
         self.dhcp_servd_monitor.enable_checkers(self.enabled_checker)
-        lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
-        lease_manager.start()
+        lease_manager.sync_existing_leases()
         self._signal_readiness()
-        syslog.syslog(syslog.LOG_INFO, "SIGUSR1 handler registered, ready flag written, total startup=%.3fs" % (time.time() - start_time))
+        syslog.syslog(syslog.LOG_INFO, "ready flag written, total startup=%.3fs" % (time.time() - start_time))
 
     def _signal_readiness(self):
         """Write readiness flag so wait_for_dhcpservd.sh can gate kea-dhcp4 startup."""

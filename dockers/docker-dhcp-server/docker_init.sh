@@ -5,6 +5,8 @@
 mkdir -p /etc/supervisor/conf.d/
 # Generate kea folder
 mkdir -p /etc/kea/
+# Ensure persistent lease directory exists (bind-mounted from host)
+mkdir -p /var/lib/kea/
 udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 hostname=$(hostname)
 
