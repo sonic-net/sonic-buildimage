@@ -201,6 +201,10 @@ install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_
 install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
+# Install python3-ijson from Debian repos first — provides the yajl2_c C extension backend.
+# This must happen before pip installs sonic-yang-mgmt (which depends on ijson>=3.2.3),
+# so pip can use the distro-provided python3-ijson package and avoid downloading from PyPI.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-ijson
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 
 # Install some dependencies for pyangbind
@@ -573,7 +577,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=systemd --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
