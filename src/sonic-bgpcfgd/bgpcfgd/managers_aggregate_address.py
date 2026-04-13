@@ -229,6 +229,8 @@ def validate_prefix(prefix):
         net = ipaddress.ip_network(prefix, strict=True)
     except ValueError as e:
         return None, str(e)
+    if net.prefixlen == net.max_prefixlen:
+        return None, "host prefix /%d not useful for aggregation" % net.prefixlen
     return net, None
 
 
