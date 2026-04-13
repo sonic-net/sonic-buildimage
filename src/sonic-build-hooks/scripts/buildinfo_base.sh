@@ -507,7 +507,10 @@ update_version_file()
     [ -f "$version_file" ] && package_versions="$package_versions $(cat $version_file)"
     declare -A versions
     for pacakge_version in $package_versions; do
-        package=$(echo $pacakge_version | awk -F"==" '{print $1}')
+        # convert package name to lower case to avoid the issue caused by the case sensitivity of pip package name 
+        #for example, "PyYAML" and "pyyaml" are the same package but with different case, 
+        # which will cause the issue when we merge the versions pyyaml==6.0.1 and PyYAML==6.0.3.
+        package=$(echo $pacakge_version | awk -F"==" '{print $1}' | tr '[:upper:]' '[:lower:]')
         version=$(echo $pacakge_version | awk -F"==" '{print $2}')
         if [ -z "$package" ] || [ -z "$version" ]; then
             continue
