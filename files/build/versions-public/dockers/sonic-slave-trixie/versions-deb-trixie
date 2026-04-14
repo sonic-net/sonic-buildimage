@@ -27,9 +27,9 @@ autopoint==0.23.1-2
 autotools-dev==20240727.1
 bash-completion==1:2.16.0-7
 bc==1.07.1-4+b1
-bind9-dnsutils==1:9.20.18-1~deb13u1
-bind9-host==1:9.20.18-1~deb13u1
-bind9-libs==1:9.20.18-1~deb13u1
+bind9-dnsutils==1:9.20.21-1~deb13u1
+bind9-host==1:9.20.21-1~deb13u1
+bind9-libs==1:9.20.21-1~deb13u1
 binfmt-support==2.2.2-7+b1
 binutils==2.44-3
 binutils-aarch64-linux-gnu==2.44-3
@@ -122,7 +122,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.3.0-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.3.1-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2

@@ -1,9 +1,9 @@
 cron==3.0pl1-162
 cron-daemon-common==3.0pl1-162
-frr==10.4.1-sonic-0
-frr-dbgsym==10.4.1-sonic-0
-frr-snmp==10.4.1-sonic-0
-frr-snmp-dbgsym==10.4.1-sonic-0
+frr==10.5.1-sonic-0
+frr-dbgsym==10.5.1-sonic-0
+frr-snmp==10.5.1-sonic-0
+frr-snmp-dbgsym==10.5.1-sonic-0
 gdb==13.1-3
 gdbserver==13.1-3
 libbabeltrace1==1.5.11-1+b2
