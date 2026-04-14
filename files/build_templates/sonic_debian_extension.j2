@@ -201,6 +201,10 @@ install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_
 install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
+# Install python3-ijson from Debian repos first — provides the yajl2_c C extension backend.
+# This must happen before pip installs sonic-yang-mgmt (which depends on ijson>=3.2.3),
+# so pip can use the distro-provided python3-ijson package and avoid downloading from PyPI.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-ijson
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 
 # Install some dependencies for pyangbind
@@ -380,6 +384,12 @@ sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/conf.d/*
+# Remove inapplicable monit checks on DPU platforms
+if [[ $CONFIGURED_PLATFORM == pensando ]] || [[ $CONFIGURED_PLATFORM == nvidia-bluefield ]]; then
+    sudo sed -i '/^# route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# dualtor_neighbor_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# vnet_route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+fi
 sudo cp $IMAGE_CONFIGS/monit/container_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/memory_checker $FILESYSTEM_ROOT/usr/bin/
@@ -567,7 +577,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=systemd --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
@@ -1165,10 +1175,6 @@ for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
     sudo cp $files_path/$MLNX_CPLD_ARCHIVE $FILESYSTEM_ROOT/etc/mlnx/cpld/
 done
 
-j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
@@ -1236,10 +1242,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Copy component-versions file
 sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
 
-# Install current running versions script
-j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}

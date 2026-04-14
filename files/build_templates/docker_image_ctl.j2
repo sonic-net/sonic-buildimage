@@ -133,6 +133,12 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
+{%- elif docker_container_name == "dhcp_server" %}
+    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
+    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
+    # Restrict to docker0 interface to minimize security impact.
+    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
+        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
 {%- else %}
     : # nothing
 {%- endif %}
@@ -190,8 +196,9 @@ function postStartAction()
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     if [[ -f $CHASSISDB_CONF && $DATABASE_TYPE != "dpudb" ]]; then
-        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())')
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())')
+        echo "${DOCKERNAME} slot_id=${slot_id} supervisor_slot_id=${supervisor_slot_id}"
     fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -306,7 +313,7 @@ function postStartAction()
             fi
         fi
 
-        if [ -e /tmp/pending_config_migration ] || [ -e /tmp/pending_config_initialization ]; then
+        if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
             # this is first boot to a new image, config-setup execution is pending.
             # for warmboot case, DB is loaded but migration is still pending
             # For firstbboot/fast/cold reboot case, DB contains nothing at this point
@@ -699,6 +706,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
+        mkdir -p /var/log/sdk_dbg/$DEV
         ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
@@ -731,7 +739,7 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v /var/log/sdk_dbg/$DEV:/var/log/sdk_dbg:rw \
         -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
@@ -860,6 +868,10 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
+{%- if docker_container_name == "dhcp_server" %}
+    # Remove syslog iptables exception added during start
+    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
+{%- endif %}
     {%- endif %}
 }
 

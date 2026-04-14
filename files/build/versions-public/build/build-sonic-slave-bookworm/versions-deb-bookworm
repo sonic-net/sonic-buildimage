@@ -2,7 +2,7 @@ doca-sdk-argp==3.3.0055-1
 doca-sdk-common==3.3.0055-1
 doca-sdk-dpdk-bridge==3.3.0055-1
 doca-sdk-flow==3.3.0055-1
-frr==10.4.1-sonic-0
+frr==10.5.1-sonic-0
 libdashapi==1.0.0
 libdoca-sdk-argp-dev==3.3.0055-1
 libdoca-sdk-common-dev==3.3.0055-1

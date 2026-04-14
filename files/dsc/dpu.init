@@ -74,6 +74,12 @@ function start_polaris()
     mkdir -p $DPU_DOCKER_INFO_DIR
     echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
+    if [ -w /sys/firmware/pensando/reboot/panic_reboot ]; then
+        echo 1 > /sys/firmware/pensando/reboot/panic_reboot
+    else
+        log_msg "Pensando panic_reboot sysfs node not writable; skipping configuration"
+    fi
+
     sync; sync;
     sleep 3;
 

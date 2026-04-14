@@ -1,12 +1,12 @@
 bcrypt==5.0.0
-blessed==1.33.0
+blessed==1.37.0
 certifi==2026.2.25
 cffi==2.0.0
 charset-normalizer==3.4.6
 click==8.1.8
 click-log==0.4.0
 colorful==0.5.8
-cryptography==46.0.5
+cryptography==46.0.6
 dbus-python==1.4.0
 docker==7.1.0
 docker-image-py==0.1.13
@@ -34,7 +34,7 @@ pygments==2.19.2
 pygobject==3.42.2
 pynacl==1.6.2
 pyroute2==0.9.5
-requests==2.32.5
+requests==2.33.0
 scapy==2.5.0
 scp==0.14.5
 semantic-version==2.10.0

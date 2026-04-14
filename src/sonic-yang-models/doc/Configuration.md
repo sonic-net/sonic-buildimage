@@ -84,6 +84,7 @@
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE](#vnet_route)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
@@ -2794,6 +2795,27 @@ monitoring sessions for the vnet routes and is optional.
 }
 ```
 
+### VNET_ROUTE
+
+VNET_ROUTE table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the vnet route. The table includes the following attributes:
+- NEXTHOP: Comma-separated nexthop IPs (mandatory). They are used to identify the nexthops of the vnet route.
+- IFNAME: The interface names (mandatory), such as "Ethernet1". It identifies the outgoing interfaces for the vnet route.
+
+```
+{
+  "VNET_ROUTE": {
+    "Vnet_2000|100.100.3.0/24": {
+        "nexthop": "100.100.3.1,100.100.3.2",
+        "ifname": "Ethernet1,Ethernet2"
+    },
+    "Vnet_3000|100.100.4.0/24": {
+        "nexthop": "100.100.4.1",
+        "ifname": "Ethernet2"
+    }
+  }
+}
+```
+
 ### VNET_ROUTE_TUNNEL
 
 VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
@@ -3448,22 +3470,22 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
         "vdpu0": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu0"]
+            "main_dpu_ids": "dpu0"
         },
         "vdpu1": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu1"]
+            "main_dpu_ids": "dpu1"
         },
         "vdpu2": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu2"]
+            "main_dpu_ids": "dpu2"
         },
         "vdpu3": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu3"]
+            "main_dpu_ids": "dpu3"
         }
     }
 }
@@ -3480,11 +3502,15 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`. 
+
 ```json
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
             "vnet_name": "Vnet55",
+            "dpu_vnet": "Vnet55",
+            "dpu_vlan": "Vlan55",
             "cp_data_channel_port": "11362",
             "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3498,7 +3524,11 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 }
 ```
 
-**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
+**vnet_name**: Deprecated. Use `dpu_vnet` instead. Vnet name used in SmartSwitch HA scenarios.
+
+**dpu_vnet**: Name of the vnet used for VNET tunnel route in SmartSwitch HA scenarios. Replaces `vnet_name`.
+
+**dpu_vlan**: DPU VLAN identifier, referencing a VLAN name from the VLAN table.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 
