@@ -1317,8 +1317,6 @@ setup_devices () {
 		return 0
 	fi
 
-set -x
-
 	case "$HOST_OS" in
 	    kfreebsd*)
 		;;
@@ -1330,16 +1328,12 @@ set -x
 		touch "$TARGET/dev/console"
 		;;
 	    *)
-			set -e
-			set -o
 		if ! setup_devices_simple ||
 		   !  sh -c ': >"$1"' -- "$TARGET/dev/null" 2>/dev/null; then
 			setup_devices_bind
 		fi
 		;;
 	esac
-
-set +x
 }
 
 # enable the dynamic device nodes
