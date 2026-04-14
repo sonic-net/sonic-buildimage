@@ -7,6 +7,6 @@ index cb52bf816..b1460d805 100644
          echo "${latest_tag}${dirty}" | sed 's/\//_/g'
      else
 -        echo "${branch_name}.${BUILD_NUMBER}${dirty:--$(git rev-parse --short HEAD)}" | sed 's/\//_/g'
-+        echo "Wistron.M.1.0.2" | sed 's/\//_/g'
++        echo "Wistron.M.1.0.1" | sed 's/\//_/g'
      fi
  }
