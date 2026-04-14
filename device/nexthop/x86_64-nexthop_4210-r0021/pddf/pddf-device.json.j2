@@ -23573,6 +23573,645 @@
     "attr_list": [
       {
         "attr_name": "version",
+        "get_cmd": "adm1266_version 8-0041"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM1 {}"
+      }
+    ]
+  },
+  "VOLTAGE1": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL1",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS12V0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in1_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in1_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in1_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in1_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in1_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE2": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL2",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS5V0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE3": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL3",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS2V0_PHY"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in3_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in3_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in3_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in3_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in3_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE4": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL4",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS5V0_S0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in4_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in4_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in4_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in4_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in4_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE5": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL5",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V0_A7"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in5_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in5_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in5_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in5_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in5_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE6": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL6",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8_A7"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in6_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in6_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in6_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in6_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in6_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE7": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL7",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in7_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in7_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in7_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in7_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in7_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE8": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL8",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS0V74_PHY"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in8_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in8_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in8_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in8_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in8_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE9": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL9",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_A7"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in9_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in9_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in9_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in9_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in9_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE10": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL10",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS0V75_S5"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in10_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in10_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in10_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in10_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in10_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE11": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL11",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8_S5"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in11_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in11_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in11_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in11_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in11_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE12": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL12",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3_S5"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in12_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in12_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in12_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in12_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in12_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE13": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL13",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V1_S0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in13_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in13_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in13_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in13_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in13_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE14": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL14",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V5_SWT"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in14_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in14_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in14_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in14_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in14_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE15": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL15",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V15_SWT"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in15_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in15_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in15_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in15_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in15_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE16": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL16",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8_S0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in16_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in16_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in16_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in16_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in16_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE17": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM1-RAIL17",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM1"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3_S0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in17_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in17_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in17_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in17_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in17_lcrit"
+        }
+      ]
+    }
+  },
+  "DPM2": {
+    "dev_info": {
+      "device_type": "DPM",
+      "device_name": "DPM2",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0xa",
+        "dev_addr": "0x41",
+        "dev_type": "nh_adm1266"
+      }
+    }
+  },
+  "COMPONENT13": {
+    "comp_attr": {
+      "name": "DPM2",
+      "type": "dpm",
+      "description": "Digital Power Manager",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
         "get_cmd": "adm1266_version 10-0041"
       },
       {
