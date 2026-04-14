@@ -496,6 +496,21 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
 }
 ```
 
+The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).  
+**asn** is the confederation identifier (the ASN visible to external peers).  
+**peers** is a semicolon-separated list of sub-AS numbers that are members of the confederation.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "CONFED": {
+        "asn": 65100,
+        "peers": "66000;63000"
+    }
+}
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
