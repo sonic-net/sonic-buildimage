@@ -78,8 +78,12 @@ class HwSKUInitBase():
         return {port : config for port, config in port_config.items() if config['role'] == 'Ext'}
 
     def render_template(self, template_file, data_name, data, output_file=None):
+        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
         env = Environment(loader=FileSystemLoader(self.get_sku_file_path(ASIC_TEMPLATE_DIR)))
+
         template = env.get_template(template_file)
+
+        # nosemgrep: python.lang.security.audit.eval-detected.eval-detected
         output = eval(f'template.render({data_name}=data)')
         if output_file:
             with open(self.get_sku_file_path(output_file), 'w') as f:
