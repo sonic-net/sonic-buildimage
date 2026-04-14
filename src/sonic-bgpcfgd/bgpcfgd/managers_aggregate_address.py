@@ -70,11 +70,15 @@ class AggregateAddressMgr(Manager):
             log_err("AggregateAddressMgr::invalid aggregate prefix %s: %s" % (prefix, reason))
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
             return True
-        bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
-        if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED):
-            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address %s" % prefix)
+        if self.directory.path_exist(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY):
+            bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
+        else:
+            bbr_status = ""
+        bbr_required = data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING
+        if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED) and bbr_required:
+            log_info("AggregateAddressMgr::BBR state is unknown and bbr-required is true. Skip the address %s" % prefix)
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
-        elif bbr_status == BGP_BBR_STATUS_DISABLED and data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING:
+        elif bbr_status == BGP_BBR_STATUS_DISABLED and bbr_required:
             log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % prefix)
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
@@ -229,8 +233,6 @@ def validate_prefix(prefix):
         net = ipaddress.ip_network(prefix, strict=True)
     except ValueError as e:
         return None, str(e)
-    if net.prefixlen == net.max_prefixlen:
-        return None, "host prefix /%d not useful for aggregation" % net.prefixlen
     return net, None
 
 
