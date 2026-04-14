@@ -963,6 +963,7 @@ static void run_bar_op_for_all_fpgas(struct protocol_module *proto, bool map)
 			work_item->pci_dev = fpga_node->dev;
 			work_item->kobj = fpga_node->kobj;
 			work_item->map_bar = proto->ops->map_bar;
+			work_item->unmap_bar = proto->ops->unmap_bar;
 			// Get bar length from pci_privdata
 			struct pddf_multifpgapci_drvdata *pci_privdata =
 				dev_get_drvdata(&fpga_node->dev->dev);
@@ -979,18 +980,18 @@ static void run_bar_op_for_all_fpgas(struct protocol_module *proto, bool map)
 
 	// Execute work items without locks
 	list_for_each_entry_safe(work_item, tmp, &work_list, list) {
-		if (work_item->map_bar) {
-			if (map) {
+		if (map) {
+			if (work_item->map_bar)
 				work_item->map_bar(work_item->pci_dev,
 						   work_item->bar_base,
 						   work_item->bar_start,
 						   work_item->bar_len);
-			} else {
+		} else {
+			if (work_item->unmap_bar)
 				work_item->unmap_bar(work_item->pci_dev,
 						     work_item->bar_base,
 						     work_item->bar_start,
 						     work_item->bar_len);
-			}
 		}
 		list_del(&work_item->list);
 		kfree(work_item);
