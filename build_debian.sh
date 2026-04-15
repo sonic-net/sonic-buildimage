@@ -293,7 +293,18 @@ sudo cp files/docker/docker.service.conf $_
 
 ## Add SmartSwitch-only docker bridge-midplane dependency override
 if [ -f $FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json ] && \
-   sudo jq -e 'has("DPUS")' $FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json >/dev/null 2>&1; then
+   python3 - <<'EOF'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path) as f:
+    data = json.load(f)
+
+sys.exit(0 if "DPUS" in data else 1)
+EOF \
+   "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json"
+then
     sudo cp files/docker/docker-smartswitch.conf \
         $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 fi
