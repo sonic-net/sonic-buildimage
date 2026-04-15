@@ -207,7 +207,7 @@ module sonic-mirror-session {
                     when "current()/../type = 'ERSPAN'";
                     type uint32 {
                         range "0|64..9216" {
-                            error-message "Truncate size must be 0 (no sampling/full mirroring) or 64-9216 bytes";
+                            error-message "Truncate size must be 0 (no truncation) or 64-9216 bytes";
                             error-app-tag truncate-size-invalid;
                         }
                     }
