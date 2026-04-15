@@ -292,21 +292,19 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 sudo cp files/docker/docker.service.conf $_
 
 ## Add SmartSwitch-only docker bridge-midplane dependency override
-if [ -f $FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json ] && \
-   python3 - <<'EOF'
+if [ -f "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json" ] && \
+   python3 - "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json" <<'EOF'
 import json
 import sys
 
-path = sys.argv[1]
-with open(path) as f:
+with open(sys.argv[1]) as f:
     data = json.load(f)
 
 sys.exit(0 if "DPUS" in data else 1)
-EOF \
-   "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json"
+EOF
 then
     sudo cp files/docker/docker-smartswitch.conf \
-        $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
+        "$FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/"
 fi
 
 ## Create default user
