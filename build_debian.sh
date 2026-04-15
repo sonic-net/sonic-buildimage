@@ -295,6 +295,13 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
 
+## Add SmartSwitch-only docker bridge-midplane dependency override
+if [ -f $FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json ] && \
+   sudo jq -e 'has("DPUS")' $FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json >/dev/null 2>&1; then
+    sudo cp files/docker/docker-smartswitch.conf \
+        $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
+fi
+
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
