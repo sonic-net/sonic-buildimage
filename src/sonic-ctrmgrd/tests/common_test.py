@@ -576,6 +576,9 @@ def set_mock_image_op(clean_image, tag_latest):
 
 
 def str_comp(needle, hay):
+    if isinstance(needle, list) and isinstance(hay, list):
+        return needle == hay
+
     nlen = len(needle)
     hlen = len(hay)
 

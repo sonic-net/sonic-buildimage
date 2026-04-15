@@ -65,10 +65,8 @@ write_labels_test_data = {
         common_test.ARGS: { "foo": "bar", "hello": "World!", "test": "ok" },
         common_test.PROC_CMD: [
 "kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
-"kubectl --kubeconfig {} label --overwrite nodes none hello-".format(
-    KUBE_ADMIN_CONF),
-"kubectl --kubeconfig {} label --overwrite nodes none hello=World! test=ok".format(
-    KUBE_ADMIN_CONF)
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello-"],
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "hello=World!", "test=ok"]
  ],
         common_test.PROC_OUT: ["foo=bar,hello=world", "", ""]
     },
@@ -90,6 +88,16 @@ write_labels_test_data = {
 "kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
 ],
         common_test.PROC_ERR: ["read failed"]
+    },
+    3: {
+        common_test.DESCR: "write labels: injection attempt in name and value is not executed",
+        common_test.RETVAL: 0,
+        common_test.ARGS: { "foo; id>/tmp/pwned #": "bar; rm -rf / #" },
+        common_test.PROC_CMD: [
+"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
+["kubectl", "--kubeconfig", KUBE_ADMIN_CONF, "label", "--overwrite", "nodes", "none", "foo; id>/tmp/pwned #=bar; rm -rf / #"]
+ ],
+        common_test.PROC_OUT: ["", ""]
     }
 }
 

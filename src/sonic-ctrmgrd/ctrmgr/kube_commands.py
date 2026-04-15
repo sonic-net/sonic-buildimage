@@ -58,10 +58,14 @@ def get_device_name():
 
 
 def _run_command(cmd, timeout=5):
-    """ Run shell command and return exit code, along with stdout. """
+    """ Run command and return exit code, along with stdout.
+    If cmd is a list, it is executed directly (shell=False).
+    If cmd is a string, it is passed to the shell (shell=True).
+    """
     ret = 0
+    use_shell = isinstance(cmd, str)
     try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, shell=use_shell, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
         (o, e) = proc.communicate(timeout)
         output = to_str(o)
@@ -107,7 +111,8 @@ def kube_read_labels():
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
-    KUBECTL_SET_CMD = "kubectl --kubeconfig {} label --overwrite nodes {} {}"
+    KUBECTL_SET_BASE = ["kubectl", "--kubeconfig", KUBE_ADMIN_CONF,
+                        "label", "--overwrite", "nodes", get_device_name()]
 
     ret, node_labels = kube_read_labels()
     if ret != 0:
@@ -115,33 +120,30 @@ def kube_write_labels(set_labels):
                 format(str(set_labels)))
         return ret
 
-    del_label_str = ""
-    add_label_str = ""
+    del_label_args = []
+    add_label_args = []
     for (name, val) in set_labels.items():
         skip = False
         if name in node_labels:
             if val != node_labels[name]:
                 # label value can't be modified. Remove it first
                 # and then add
-                del_label_str += "{}- ".format(name)
+                del_label_args.append("{}-".format(name))
             else:
                 # Already exists with same value.
                 skip = True
         if not skip:
             # Add label
-            add_label_str += "{}={} ".format(name, val)
+            add_label_args.append("{}={}".format(name, val))
 
-
-    if add_label_str:
+    if add_label_args:
         # First remove if any
-        if del_label_str:
-            (ret, _, _) = _run_command(KUBECTL_SET_CMD.format(
-            KUBE_ADMIN_CONF, get_device_name(), del_label_str.strip()))
-        (ret, _, _) = _run_command(KUBECTL_SET_CMD.format(
-            KUBE_ADMIN_CONF, get_device_name(), add_label_str.strip()))
+        if del_label_args:
+            (ret, _, _) = _run_command(KUBECTL_SET_BASE + del_label_args)
+        (ret, _, _) = _run_command(KUBECTL_SET_BASE + add_label_args)
 
         log_debug("{} kube labels {} ret={}".format(
-            "Applied" if ret == 0 else "Failed to apply", add_label_str, ret))
+            "Applied" if ret == 0 else "Failed to apply", add_label_args, ret))
     else:
         log_debug("Given labels are in sync with node labels. Hence no-op")
 
