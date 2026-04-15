@@ -562,7 +562,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 50000
+                        "sample_rate": "50000"
                     }
                 ]
             }
@@ -579,7 +579,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 256
+                        "sample_rate": "256"
                     }
                 ]
             }
@@ -596,7 +596,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 8388608
+                        "sample_rate": "8388608"
                     }
                 ]
             }
@@ -613,7 +613,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "truncate_size": 128
+                        "truncate_size": "128"
                     }
                 ]
             }
@@ -630,7 +630,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "truncate_size": 64
+                        "truncate_size": "64"
                     }
                 ]
             }
@@ -647,7 +647,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "truncate_size": 9216
+                        "truncate_size": "9216"
                     }
                 ]
             }
@@ -664,8 +664,8 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 50000,
-                        "truncate_size": 128
+                        "sample_rate": "50000",
+                        "truncate_size": "128"
                     }
                 ]
             }
@@ -682,7 +682,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 100
+                        "sample_rate": "100"
                     }
                 ]
             }
@@ -699,7 +699,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "sample_rate": 8388609
+                        "sample_rate": "8388609"
                     }
                 ]
             }
@@ -716,7 +716,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "truncate_size": 32
+                        "truncate_size": "32"
                     }
                 ]
             }
@@ -733,7 +733,7 @@
                         "src_ip": "10.1.1.1",
                         "gre_type": "0x1234",
                         "dscp": "10",
-                        "truncate_size": 9217
+                        "truncate_size": "9217"
                     }
                 ]
             }
@@ -746,7 +746,7 @@
                     {
                         "name": "span",
                         "type": "SPAN",
-                        "sample_rate": 50000
+                        "sample_rate": "50000"
                     }
                 ]
             }
@@ -759,7 +759,7 @@
                     {
                         "name": "span",
                         "type": "SPAN",
-                        "truncate_size": 128
+                        "truncate_size": "128"
                     }
                 ]
             }
