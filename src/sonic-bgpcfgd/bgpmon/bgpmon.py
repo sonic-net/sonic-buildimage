@@ -87,7 +87,7 @@ class BgpStateGet:
                     bgpd_rc, _ = getstatusoutput_noshell(["pgrep", "-x", "bgpd"])
                     zebra_rc, _ = getstatusoutput_noshell(["pgrep", "-x", "zebra"])
                     if bgpd_rc != 0 or zebra_rc != 0:
-                        syslog.syslog(syslog.LOG_WARNING, "vtysh failed (rc={}), bgpd or zebra not running — container may be shutting down".format(rc))
+                        syslog.syslog(syslog.LOG_WARNING, "vtysh failed (rc={}) when execute: {} Output: {} bgpd or zebra not running — container may be shutting down".format(rc, cmd, output[:200] if output else ""))
                     else:
                         syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
                     return
