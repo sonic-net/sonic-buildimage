@@ -189,6 +189,7 @@ module sonic-mirror-session {
                     description
                         "Policer to be applied for the mirrored traffic.";
                 }
+                
                 leaf sample_rate {
                     when "current()/../type = 'ERSPAN'";
                     type uint32 {
