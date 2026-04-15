@@ -32,6 +32,91 @@ from sonic_platform import chassis
 from sonic_platform import sfp
 
 
+class TestChangeEventSeekFailure:
+    """Cover OSError from fd.seek(0) in change-event polling loops."""
+
+    @mock.patch('sonic_platform.sfp.SFP.get_fd_for_polling_legacy')
+    @mock.patch('select.poll')
+    @mock.patch('time.monotonic')
+    @mock.patch(
+        'sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
+        mock.MagicMock(return_value=False),
+    )
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
+    @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.sfp.SFP.get_module_status')
+    @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
+    def test_get_change_event_legacy_seek_fails(self, mock_status, mock_time, mock_create_poll, mock_get_fd):
+        c = chassis.Chassis()
+        c.get_sfp(1)
+        mock_status.return_value = sfp.SFP_STATUS_INSERTED
+
+        mock_poll = mock.MagicMock()
+        mock_create_poll.return_value = mock_poll
+        mock_poll.poll = mock.MagicMock(return_value=[(1, 10)])
+
+        mock_file = mock.MagicMock()
+        mock_get_fd.return_value = mock_file
+        mock_file.fileno = mock.MagicMock(return_value=1)
+        mock_file.seek.side_effect = OSError(5, 'seek failed')
+
+        mock_time.side_effect = [0, 1000]
+
+        _, change_event = c.get_change_event(1000)
+        assert 'sfp' in change_event and not change_event['sfp']
+        mock_file.seek.assert_called_with(0)
+        mock_file.read.assert_not_called()
+
+    @mock.patch('sonic_platform.wait_sfp_ready_task.WaitSfpReadyTask.get_ready_set')
+    @mock.patch('sonic_platform.sfp.SFP.get_fd')
+    @mock.patch('select.poll')
+    @mock.patch('time.monotonic')
+    @mock.patch(
+        'sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode',
+        mock.MagicMock(return_value=True),
+    )
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
+    @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.initialize', mock.MagicMock())
+    def test_get_change_event_module_host_management_seek_fails(
+        self, mock_time, mock_create_poll, mock_get_fd, mock_ready,
+    ):
+        c = chassis.Chassis()
+        c.initialize_sfp()
+        s = c._sfp_list[0]
+        s.state = sfp.STATE_SW_CONTROL
+
+        mock_poll = mock.MagicMock()
+        mock_create_poll.return_value = mock_poll
+        mock_poll.poll = mock.MagicMock(return_value=[(1, 10)])
+
+        mock_hw_present_file = mock.MagicMock()
+        mock_power_good_file = mock.MagicMock()
+        mock_hw_present_file.read = mock.MagicMock(return_value=sfp.SFP_STATUS_INSERTED)
+        mock_hw_present_file.fileno = mock.MagicMock(return_value=1)
+        mock_hw_present_file.seek.side_effect = OSError(5, 'seek failed')
+        mock_power_good_file.read = mock.MagicMock(return_value=1)
+        mock_power_good_file.fileno = mock.MagicMock(return_value=2)
+
+        def get_fd(fd_type):
+            if fd_type == 'hw_present':
+                return mock_hw_present_file
+            if fd_type == 'power_good':
+                return mock_power_good_file
+            return mock.MagicMock()
+
+        mock_get_fd.side_effect = get_fd
+        mock_ready.return_value = set()
+
+        mock_time.side_effect = [0, 1000]
+
+        _, change_event = c.get_change_event(1000)
+        assert 'sfp' in change_event and not change_event['sfp']
+        mock_hw_present_file.seek.assert_called_with(0)
+
+
 class TestChangeEvent:
     @mock.patch('sonic_platform.sfp.SFP.get_fd_for_polling_legacy')
     @mock.patch('select.poll')
