@@ -20,6 +20,12 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-04-14 {
+        description
+            "Add sample_rate and truncate_size leaves for sampled port mirroring
+             with truncation support.";
+    }
+
     revision 2021-06-15 {
         description
             "Initial revision.";
@@ -187,7 +193,7 @@ module sonic-mirror-session {
                     when "current()/../type = 'ERSPAN'";
                     type uint32 {
                         range "0|256..8388608" {
-                            error-message "Sample rate must be 0 (disabled) or 256-8388608";
+                            error-message "Sample rate must be 0 (no sampling/full mirroring) or 256-8388608";
                             error-app-tag sample-rate-invalid;
                         }
                     }
@@ -201,7 +207,7 @@ module sonic-mirror-session {
                     when "current()/../type = 'ERSPAN'";
                     type uint32 {
                         range "0|64..9216" {
-                            error-message "Truncate size must be 0 (disabled) or 64-9216 bytes";
+                            error-message "Truncate size must be 0 (no sampling/full mirroring) or 64-9216 bytes";
                             error-app-tag truncate-size-invalid;
                         }
                     }
