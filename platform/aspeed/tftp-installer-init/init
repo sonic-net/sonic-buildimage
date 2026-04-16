@@ -146,9 +146,9 @@ bringup_network() {
     esac
     modprobe ftgmac100 2>/dev/null || true
 
-    echo "Waiting for $IFACE in sysfs (up to 10s)..."
+    echo "Waiting for $IFACE in sysfs (up to 30s)..."
     n=0
-    while [ ! -d "/sys/class/net/$IFACE" ] && [ "$n" -lt 10 ]; do
+    while [ ! -d "/sys/class/net/$IFACE" ] && [ "$n" -lt 30 ]; do
         sleep 1
         n=$((n + 1))
     done

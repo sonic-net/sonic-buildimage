@@ -35,10 +35,16 @@ partprobe "$EMMC" 2>/dev/null || true
 
 echo "Writing $IMG to $EMMC..."
 # Smaller bs + full pipe reads: fewer phys_seg per I/O on some MMC hosts than bs=1M; conv=fsync at end.
-if ! gunzip -c "$IMG" | dd of="$EMMC" bs=128k iflag=fullblock conv=fsync; then
-    echo "Error: write to $EMMC failed (see kernel log for mmcblk I/O errors)."
+# Pipeline exit status is only from dd; corrupt/truncated gzip can still yield dd exit 0, so require gunzip success.
+gz_ok=$(mktemp) || exit 1
+(gunzip -c "$IMG" && echo ok >"$gz_ok") | dd of="$EMMC" bs=128k iflag=fullblock conv=fsync
+DD_RC=$?
+if [ "$DD_RC" -ne 0 ] || [ ! -s "$gz_ok" ]; then
+    rm -f "$gz_ok"
+    echo "Error: write to $EMMC failed, or image is corrupt/truncated (see kernel log for mmcblk I/O errors)."
     exit 1
 fi
+rm -f "$gz_ok"
 echo "Syncing..."
 sync
 blockdev --flushbufs "$EMMC" 2>/dev/null || true
