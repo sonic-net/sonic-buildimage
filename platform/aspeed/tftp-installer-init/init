@@ -1,0 +1,230 @@
+#!/bin/sh
+# TFTP installer initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
+# (init-top + /conf/modules + init-premount/udev) so MDIO/I2C/GPIO/PHY deps match full initramfs.
+# If cmdline has sonic_install.tftp_server=, DHCP (or existing ip=) + TFTP + /sbin/install-to-emmc.sh;
+# else interactive shell. Optional: sonic_install.tftp_image= sonic_install.reboot=1 (network: always eth0)
+
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+mkdir -p /proc /sys /dev /tmp /run
+
+mount -t proc -o nodev,noexec,nosuid proc /proc || {
+    echo "Error: mount -t proc proc /proc failed (ifconfig/ip need /proc)."
+    exec /bin/sh
+}
+mount -t sysfs -o nodev,noexec,nosuid sysfs /sys || {
+    echo "Warning: sysfs mount failed."
+}
+mount -t devtmpfs -o nosuid,mode=0755 udev /dev 2>/dev/null || \
+    mount -t devtmpfs devtmpfs /dev || {
+    echo "Warning: devtmpfs mount failed."
+}
+
+[ ! -h /dev/fd ] && ln -sf /proc/self/fd /dev/fd 2>/dev/null || true
+[ ! -h /dev/stdin ] && ln -sf /proc/self/fd/0 /dev/stdin 2>/dev/null || true
+[ ! -h /dev/stdout ] && ln -sf /proc/self/fd/1 /dev/stdout 2>/dev/null || true
+[ ! -h /dev/stderr ] && ln -sf /proc/self/fd/2 /dev/stderr 2>/dev/null || true
+mkdir -p /dev/pts
+mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts 2>/dev/null || true
+
+refresh_machine_conf_for_installer() {
+    INSTALLER_MACHINE_CONF=/tmp/machine.conf
+    rm -f "$INSTALLER_MACHINE_CONF"
+    if [ -x /sbin/sonic-machine-conf-init.sh ]; then
+        MACHINE_CONF="$INSTALLER_MACHINE_CONF" LOG_FILE=/dev/null \
+            /bin/sh /sbin/sonic-machine-conf-init.sh || true
+    fi
+    if [ -f "$INSTALLER_MACHINE_CONF" ]; then
+        . "$INSTALLER_MACHINE_CONF"
+        export onie_platform
+    fi
+}
+
+# Match Debian initramfs-tools early boot (see usr/share/initramfs-tools/init): loads modules and
+# runs udev coldplug so Ethernet/PHY/MDIO match "full" SONiC initramfs behavior.
+run_initramfs_tools_drivers() {
+    [ -f /scripts/functions ] && [ -f /conf/arch.conf ] || return 0
+    (
+        cd /
+        export DPKG_ARCH=
+        . /conf/arch.conf
+        export MODPROBE_OPTIONS="-qb"
+        export ROOT= ROOTDELAY= ROOTFLAGS= ROOTFSTYPE=
+        export LOOP= LOOPFLAGS= LOOPFSTYPE= LOOPOFFSET=
+        export IP= DEVICE= BOOT= BOOTIF= UBIMTD=
+        export init=/sbin/init readonly=y rootmnt=/root
+        export resume= resume_offset= noresume= drop_caps=
+        export fastboot=n forcefsck=n fsckfix=
+        export debug= panic= blacklist= break=
+        RUNSIZE=10%
+        quiet=n
+        netconsole=
+        for x in $(cat /proc/cmdline); do
+            case $x in
+            quiet) quiet=y ;;
+            initramfs.runsize=*) RUNSIZE="${x#initramfs.runsize=}" ;;
+            blacklist=*) blacklist=${x#blacklist=} ;;
+            panic=*) panic=${x#panic=} ;;
+            break=*) break=${x#break=} ;;
+            break) break=premount ;;
+            debug|debug=*) debug=y; quiet=n ;;
+            netconsole=*) netconsole=${x#netconsole=} ;;
+            esac
+        done
+        export quiet blacklist panic break debug netconsole
+        [ -d /root ] || mkdir -m 0700 /root
+        mkdir -p /var/lock
+        mkdir -p /run/initramfs
+        if command -v mountpoint >/dev/null 2>&1; then
+            mountpoint -q /run || mount -t tmpfs -o "nodev,noexec,nosuid,size=${RUNSIZE},mode=0755" tmpfs /run
+        else
+            mount -t tmpfs -o "nodev,noexec,nosuid,size=${RUNSIZE},mode=0755" tmpfs /run 2>/dev/null || true
+        fi
+        mkdir -m 0700 /run/initramfs
+        . /conf/initramfs.conf
+        for conf in /conf/conf.d/*; do
+            [ -f "$conf" ] && . "$conf"
+        done
+        . /scripts/functions
+        if [ -n "$netconsole" ]; then
+            /sbin/modprobe netconsole netconsole="$netconsole" 2>/dev/null || true
+        fi
+        run_scripts /scripts/init-top
+        load_modules
+        run_scripts /scripts/init-premount
+    ) || echo "Warning: initramfs-tools driver phase had errors (continuing to shell)."
+}
+
+run_initramfs_tools_drivers
+
+refresh_machine_conf_for_installer
+
+cd /tmp
+
+DEFAULT_TFTP_IMAGE=sonic-aspeed-arm64-emmc.img.gz
+TFTP_SERVER=
+TFTP_IMAGE="$DEFAULT_TFTP_IMAGE"
+INSTALL_REBOOT=
+for x in $(cat /proc/cmdline); do
+    case $x in
+    sonic_install.tftp_server=*) TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
+    sonic_install.tftp_image=*) TFTP_IMAGE="${x#sonic_install.tftp_image=}" ;;
+    sonic_install.reboot=1|sonic_install.reboot=yes|sonic_install.reboot=true)
+        INSTALL_REBOOT=y ;;
+    esac
+done
+
+drop_shell() {
+    echo "Aspeed TFTP installer: dropping to shell."
+    echo "  Manual install: /sbin/install-to-emmc.sh /tmp/<image.img.gz>"
+    echo "  Auto install: add to bootargs, e.g. sonic_install.tftp_server=<tftp-ip> [sonic_install.tftp_image=$DEFAULT_TFTP_IMAGE]"
+    echo ""
+    if [ -x /bin/bash ]; then
+        exec /bin/bash
+    fi
+    if [ -x /usr/bin/bash ]; then
+        exec /usr/bin/bash
+    fi
+    exec /bin/sh
+}
+
+iface_has_ipv4() {
+    if command -v ip >/dev/null 2>&1; then
+        ip -4 -o addr show dev "$1" 2>/dev/null | grep -q .
+        return $?
+    fi
+    ifconfig "$1" 2>/dev/null | grep -q 'inet '
+}
+
+bringup_network() {
+    IFACE=eth0
+    case "$onie_platform" in
+    arm64-aspeed_nvidia_ast2700_a1_bmc-r0)
+        # Reload ftgmac100 to ensure the driver is loaded and the interface is up
+        rmmod ftgmac100 2>/dev/null || true
+        ;;
+    esac
+    modprobe ftgmac100 2>/dev/null || true
+
+    echo "Waiting for $IFACE in sysfs (up to 10s)..."
+    n=0
+    while [ ! -d "/sys/class/net/$IFACE" ] && [ "$n" -lt 10 ]; do
+        sleep 1
+        n=$((n + 1))
+    done
+    if [ ! -d "/sys/class/net/$IFACE" ]; then
+        echo "Error: /sys/class/net/$IFACE not found."
+        return 1
+    fi
+    echo "Using interface $IFACE"
+    ip link set "$IFACE" up 2>/dev/null || ifconfig "$IFACE" up 2>/dev/null || true
+    sleep 1
+    if iface_has_ipv4 "$IFACE"; then
+        echo "Interface $IFACE already has an IPv4 address (kernel/ip=)."
+        return 0
+    fi
+    if [ ! -x /sbin/udhcpc.script ]; then
+        echo "Error: /sbin/udhcpc.script missing (TFTP initrd must ship udhcpc.script next to install-to-emmc.sh)."
+        return 1
+    fi
+    echo "Running DHCP on $IFACE..."
+    udhcpc -n -q -i "$IFACE" -s /sbin/udhcpc.script -t 10 -T 3 || true
+    if iface_has_ipv4 "$IFACE"; then
+        return 0
+    fi
+    echo "Error: no IPv4 on $IFACE (set ip=... in bootargs or fix DHCP)."
+    return 1
+}
+
+tftp_fetch_image() {
+    srv="$1"
+    img="$2"
+    dest="/tmp/$(basename "$img")"
+    rm -f "$dest"
+    echo "TFTP: $srv -> $dest ($img)"
+    if command -v tftp >/dev/null 2>&1 && tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        return 0
+    fi
+    if command -v busybox >/dev/null 2>&1 && busybox tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        return 0
+    fi
+    echo "Error: tftp failed or empty file (check server, filename, firewall)."
+    return 1
+}
+
+if [ -z "$TFTP_SERVER" ]; then
+    echo "Aspeed TFTP installer: no sonic_install.tftp_server= in cmdline — interactive shell."
+    echo "  eMMC helper: /sbin/install-to-emmc.sh <path-to-raw-image>"
+    echo ""
+    drop_shell
+fi
+
+if ! bringup_network; then
+    drop_shell
+fi
+
+if ! tftp_fetch_image "$TFTP_SERVER" "$TFTP_IMAGE"; then
+    drop_shell
+fi
+
+if [ ! -x /sbin/install-to-emmc.sh ]; then
+    echo "Error: /sbin/install-to-emmc.sh missing from initramfs."
+    drop_shell
+fi
+
+if ! /sbin/install-to-emmc.sh "/tmp/$(basename "$TFTP_IMAGE")"; then
+    echo "Install script failed."
+    drop_shell
+fi
+
+if [ -x /sbin/sonic-uboot-env-init.sh ]; then
+    SONIC_UBOOT_ENV_INSTALLER=1 /sbin/sonic-uboot-env-init.sh || echo "Warning: U-Boot env update failed or incomplete."
+fi
+
+if [ "$INSTALL_REBOOT" = y ]; then
+    echo "Rebooting..."
+    sync
+    reboot -f 2>/dev/null || busybox reboot -f 2>/dev/null || /sbin/reboot -f
+fi
+
+drop_shell

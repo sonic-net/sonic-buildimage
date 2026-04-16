@@ -8,6 +8,7 @@ Before=sonic.target
 
 [Service]
 Type=oneshot
+Environment=SONIC_MACHINE_CONF=/host/machine.conf
 ExecStart=/usr/bin/sonic-uboot-env-init.sh
 RemainAfterExit=yes
 
