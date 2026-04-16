@@ -565,7 +565,11 @@ class Chassis(ChassisBase):
                 
                 sfp_index, fd, fd_type = self.registered_fds[fileno]
                 s = self._sfp_list[sfp_index]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd_value = int(fd.read().strip())
                 except Exception as e:
@@ -696,7 +700,11 @@ class Chassis(ChassisBase):
                     continue
                 
                 sfp_index, fd = self.registered_fds[fileno]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd.read()
                 except Exception as e:
@@ -1104,6 +1112,7 @@ class Chassis(ChassisBase):
     def initialize_reboot_cause(self):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,

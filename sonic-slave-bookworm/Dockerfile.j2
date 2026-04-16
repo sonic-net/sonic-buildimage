@@ -99,6 +99,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pigz \
         git \
         build-essential \
+        ccache \
         remake \
         libtool \
         lintian \
@@ -350,7 +351,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         dosfstools \
         qemu-kvm \
         libvirt-clients \
-        python3-pexpect \
 # For rasdaemon build
         libsqlite3-dev \
         libgettextpo-dev \
@@ -568,7 +568,9 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng
+# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
+RUN pip3 install jsonpath_ng!=1.8.0
 RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
@@ -624,6 +626,9 @@ RUN eatmydata apt-get install -y vim
 
 # Install rsyslog
 RUN eatmydata apt-get install -y rsyslog
+
+# # For sonic vs image build
+RUN pip3 install pexpect
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest
