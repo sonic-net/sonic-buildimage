@@ -5,7 +5,7 @@ use sonic_supervisord_utilities_rs::{
     proc_exit_listener::*,
 };
 use swss_common::ConfigDBConnector;
-use syslog::Severity;
+use sonic_rs_common::logger::Severity;
 use std::io::Write;
 use tempfile::NamedTempFile;
 use std::time::Duration;
@@ -69,13 +69,13 @@ fn test_generate_alerting_message() {
     // Test generate_alerting_message function
     // This function should log the message (we can't easily test the actual logging)
     // but we can test that it doesn't panic and follows the expected format
-    generate_alerting_message("test_process", "not running", 5, Severity::LOG_ERR);
-    generate_alerting_message("heartbeat_process", "stuck", 2, Severity::LOG_WARNING);
+    generate_alerting_message("test_process", "not running", 5, Severity::Error);
+    generate_alerting_message("heartbeat_process", "stuck", 2, Severity::Warning);
 
     // Test with namespace environment variables
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::set_var("NAMESPACE_ID", "0");
-    generate_alerting_message("test_process", "not running", 10, Severity::LOG_ERR);
+    generate_alerting_message("test_process", "not running", 10, Severity::Error);
     
     // Clean up
     std::env::remove_var("NAMESPACE_PREFIX");
@@ -155,17 +155,17 @@ fn test_namespace_detection() {
     // Test default namespace (host) - should not panic
     std::env::remove_var("NAMESPACE_PREFIX");
     std::env::remove_var("NAMESPACE_ID");
-    generate_alerting_message("test_process", "not running", 5, Severity::LOG_ERR);
+    generate_alerting_message("test_process", "not running", 5, Severity::Error);
 
     // Test asic namespace - should not panic
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::set_var("NAMESPACE_ID", "0");
-    generate_alerting_message("test_process", "not running", 5, Severity::LOG_ERR);
+    generate_alerting_message("test_process", "not running", 5, Severity::Error);
 
     // Test partial namespace (should fallback to host) - should not panic
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::remove_var("NAMESPACE_ID");
-    generate_alerting_message("test_process", "not running", 5, Severity::LOG_ERR);
+    generate_alerting_message("test_process", "not running", 5, Severity::Error);
 
     // Cleanup
     std::env::remove_var("NAMESPACE_PREFIX");
@@ -194,10 +194,10 @@ fn test_autorestart_state_checking() {
 fn test_alerting_message_generation() {
     // Test different message types and priorities - function logs but doesn't return string
     // Main test is that it doesn't panic with various inputs
-    generate_alerting_message("orchagent", "not running", 5, Severity::LOG_ERR);
-    generate_alerting_message("portsyncd", "stuck", 10, Severity::LOG_WARNING);
-    generate_alerting_message("test", "status", 0, Severity::LOG_INFO);
-    generate_alerting_message("", "", 999, Severity::LOG_ALERT); // Edge case
+    generate_alerting_message("orchagent", "not running", 5, Severity::Error);
+    generate_alerting_message("portsyncd", "stuck", 10, Severity::Warning);
+    generate_alerting_message("test", "status", 0, Severity::Info);
+    generate_alerting_message("", "", 999, Severity::Alert); // Edge case
 }
 
 #[test]
@@ -280,9 +280,9 @@ fn test_function_robustness() {
     // Test that functions handle edge cases without panicking
 
     // Test generate_alerting_message with various inputs
-    generate_alerting_message("test", "status", 0, Severity::LOG_ERR);
-    generate_alerting_message("", "", 999, Severity::LOG_DEBUG);
-    generate_alerting_message("very_long_process_name_that_should_work", "some status", 60, Severity::LOG_WARNING);
+    generate_alerting_message("test", "status", 0, Severity::Error);
+    generate_alerting_message("", "", 999, Severity::Debug);
+    generate_alerting_message("very_long_process_name_that_should_work", "some status", 60, Severity::Warning);
     
     // Test get_current_time multiple calls
     let times: Vec<f64> = (0..5).map(|_| {
