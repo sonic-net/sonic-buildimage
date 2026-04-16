@@ -327,7 +327,7 @@ function postStartAction()
                 $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
             else
                 $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
-                # this is not a first time boot to a new image. Datbase container starts w/ old pre-existing config
+                # this is not a first time boot to a new image. Database container starts w/ old pre-existing config
                 if [[ -x /usr/local/bin/db_migrator.py ]]; then
                     # Migrate the DB to the latest schema version if needed
                     if [ -z "$DEV" ]; then
