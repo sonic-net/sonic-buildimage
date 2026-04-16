@@ -7,7 +7,7 @@
 #include "eventconsume.h"
 #include "loghandler.h"
 #include "eventutils.h"
-#include "events_common.h"
+#include <swss/events_common.h>
 
 
 using namespace std::chrono;

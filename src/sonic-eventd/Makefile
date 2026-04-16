@@ -16,9 +16,9 @@ CP := cp
 MKDIR := mkdir
 CC := g++
 LIBS := -lhiredis -lswsscommon -lzmq -lboost_serialization -llua5.1
-TEST_LIBS := -L/usr/src/gtest -lgtest -lgtest_main -lgmock -lgmock_main
+TEST_LIBS := -lgtest -lgtest_main -lgmock -lgmock_main
 
-CFLAGS += -Wall -std=c++17 -fPIE
+CFLAGS += -Wall -std=c++17 -fPIE -I/usr/include/swss
 PWD := $(shell pwd)
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -111,7 +111,7 @@ deinstall:
 	$(RM) -rf $(DESTDIR)/etc
 
 clean:
-	-$(RM) $(EVENTD_TARGET) $(OBJS) $(EVENTD_TOOL) $(TOOL_OBJS) $(RSYSLOG-PLUGIN_TARGET) $(RSYSLOG-PLUGIN_OBJS) $(EVENTD_TEST) $(TEST_OBJS) $(RSYSLOG-PLUGIN_TEST) $(RSYSLOG-PLUGIN-TEST_OBJS) $(C_DEPS)
+	-$(RM) $(EVENTD_TARGET) $(OBJS) $(EVENTD_TOOL) $(TOOL_OBJS) $(RSYSLOG-PLUGIN_TARGET) $(RSYSLOG-PLUGIN_OBJS) $(EVENTD_TEST) $(TEST_OBJS) $(EVENTDB_TEST) $(EVENTDB_TEST_OBJS) $(RSYSLOG-PLUGIN_TEST) $(RSYSLOG-PLUGIN-TEST_OBJS) $(C_DEPS)
 	-@echo ' '
 
 .PHONY: all clean dependents

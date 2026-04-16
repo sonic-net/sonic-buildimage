@@ -7,8 +7,8 @@
 #include <vector>
 #include <unistd.h>
 #include <nlohmann/json.hpp>
-#include "logger.h"
-#include "table.h"
+#include <swss/logger.h>
+#include <swss/table.h>
 
 using namespace swss;
 using namespace std;

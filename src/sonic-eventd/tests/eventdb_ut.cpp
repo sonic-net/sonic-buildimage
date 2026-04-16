@@ -1,9 +1,9 @@
 #include<string>
 #include "gtest/gtest.h"
-#include "events_common.h"
-#include "events.h"
+#include <swss/events_common.h>
+#include <swss/events.h>
 #include <unordered_map>
-#include "dbconnector.h"
+#include <swss/dbconnector.h>
 #include <iostream>
 
 #include<sstream>

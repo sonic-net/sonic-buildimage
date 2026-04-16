@@ -3,10 +3,10 @@
 
 #include <string>
 #include <map>
-#include "events.h"
+#include <swss/events.h>
 #include "eventutils.h"
-#include "dbconnector.h"
-#include "subscriberstatetable.h"
+#include <swss/dbconnector.h>
+#include <swss/subscriberstatetable.h>
 
 using namespace swss;
 using namespace std;
