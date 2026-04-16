@@ -23,13 +23,13 @@ from setuptools import setup, find_packages
 import sys
 
 setup(
-    name="mellanox-fw-manager",
+    name="mellanox-platform-utils",
     version="1.0.0",
     author="Oleksandr Ivantsiv",
     author_email="oivantsiv@nvidia.com",
-    description="Firmware management package for Mellanox ASICs",
-    url="https://github.com/Azure/sonic-buildimage",
-    packages=["mellanox_fw_manager"],
+    description="Platform utilities package for Mellanox ASICs",
+    url="https://github.com/sonic-net/sonic-buildimage",
+    packages=["mellanox_component_versions", "mellanox_fw_manager"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -43,6 +43,7 @@ setup(
     ],
     python_requires=">=3.7",
     install_requires=[
+        "tabulate",
         "click>=7.0",
     ],
     extras_require={
@@ -56,6 +57,7 @@ setup(
     entry_points={
         "console_scripts": [
             "mlnx-fw-manager=mellanox_fw_manager.main:main",
+            "get_component_versions.py=mellanox_component_versions.main:main",
         ],
     },
     include_package_data=True,

@@ -218,3 +218,27 @@ def test_prefix_list_del_radian():
              "bgpd/radian/del_radian.conf.j2",
              "radian/del_radian.json",
              "radian/del_radian.conf")
+
+def test_bgp_confed_ut2_multi_asic():
+    run_test("BGP Confederation Upper T2 Multi-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.json",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.conf")
+
+def test_bgp_confed_ut2_single_asic():
+    run_test("BGP Confederation Upper T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_upper_t2.json",
+             "bgpd.main.conf.j2/single_asic_upper_t2.conf")
+
+def test_bgp_confed_lt2_single_asic():
+    run_test("BGP Confederation Lower T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lt2.json",
+             "bgpd.main.conf.j2/single_asic_lt2.conf")
+
+def test_bgp_confed_ft2_single_asic():
+    run_test("BGP Confederation Fabric T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_ft2.json",
+             "bgpd.main.conf.j2/single_asic_ft2.conf")
