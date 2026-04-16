@@ -77,7 +77,8 @@ class TestJ2Files(TestCase):
         dir_exist = True
         mode = {'arista': 'aboot',
                 'dell': 'onie',
-                'mellanox': 'onie'
+                'mellanox': 'onie',
+                'nexthop': 'onie'
                }
         echo_cmd1 = ["echo", '{}_platform={}'.format(mode[vendor], platform)]
         echo_cmd2 = ["sudo", "tee", "-a", "/host/machine.conf"]
@@ -784,6 +785,17 @@ class TestJ2Files(TestCase):
                                             minigraph='sample-urh-nh5010-minigraph.xml',
                                             buffer_template='buffers.json.j2',
                                             expected='buffer-urh-nh5010.json')
+
+    def test_buffers_lrh_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        self._test_buffers_render_template(vendor='nexthop',
+                                            platform='x86_64-nexthop_5010-r0',
+                                            sku='NH-5010-F-O64',
+                                            minigraph='sample-lrh-nh5010-minigraph.xml',
+                                            buffer_template='buffers.json.j2',
+                                            expected='buffer-lrh-nh5010.json')
     
     def test_ipinip_multi_asic(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
