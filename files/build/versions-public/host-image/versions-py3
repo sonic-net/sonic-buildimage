@@ -23,7 +23,6 @@ filelock==3.25.2
 grpcio==1.66.2
 grpcio-tools==1.66.2
 idna==3.11
-ijson==3.2.3
 inflect==7.3.1
 inotify==0.2.12
 ipaddr==2.2.0

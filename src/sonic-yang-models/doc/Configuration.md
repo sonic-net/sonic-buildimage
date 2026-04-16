@@ -497,6 +497,21 @@ The IDF isolation state **idf_isolation_state** could be one of isolated_no_expo
 }
 ```
 
+The **CONFED** object contains BGP confederation configuration for disaggregated T2 devices (LowerSpineRouter, UpperSpineRouter, FabricSpineRouter).  
+**asn** is the confederation identifier (the ASN visible to external peers).  
+**peers** is a semicolon-separated list of sub-AS numbers that are members of the confederation.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "CONFED": {
+        "asn": 65100,
+        "peers": "66000;63000"
+    }
+}
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
@@ -3470,22 +3485,22 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
         "vdpu0": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu0"]
+            "main_dpu_ids": "dpu0"
         },
         "vdpu1": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu1"]
+            "main_dpu_ids": "dpu1"
         },
         "vdpu2": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu2"]
+            "main_dpu_ids": "dpu2"
         },
         "vdpu3": {
             "profile": "",
             "tier": "",
-            "main_dpu_ids": ["dpu3"]
+            "main_dpu_ids": "dpu3"
         }
     }
 }
@@ -3502,11 +3517,15 @@ The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Proc
 The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
 Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
 
+`vnet_name` will be deprecated with the introduction of `dpu_vnet`. 
+
 ```json
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
             "vnet_name": "Vnet55",
+            "dpu_vnet": "Vnet55",
+            "dpu_vlan": "Vlan55",
             "cp_data_channel_port": "11362",
             "dp_channel_dst_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3520,7 +3539,11 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 }
 ```
 
-**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
+**vnet_name**: Deprecated. Use `dpu_vnet` instead. Vnet name used in SmartSwitch HA scenarios.
+
+**dpu_vnet**: Name of the vnet used for VNET tunnel route in SmartSwitch HA scenarios. Replaces `vnet_name`.
+
+**dpu_vlan**: DPU VLAN identifier, referencing a VLAN name from the VLAN table.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 
