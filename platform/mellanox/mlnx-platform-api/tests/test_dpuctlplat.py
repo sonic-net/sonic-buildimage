@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,10 +66,12 @@ class TestDpuCtlPlatInit:
         """Test logger setup"""
         # Test with print mode
         dpuctl_obj.setup_logger(True)
-        # Test that the logger functions add timestamps
+        # Test that the logger functions add timestamps. Patch logger so it doesn't
+        # run in test (avoids socket errors and extra print calls from errors).
         with patch('time.strftime') as mock_time:
             mock_time.return_value = "2024-01-01 12:00:00"
-            with patch('builtins.print') as mock_print:
+            with patch('builtins.print') as mock_print, \
+                 patch('sonic_platform.dpuctlplat.logger.log_notice'):
                 dpuctl_obj.logger_info("test message")
                 mock_print.assert_called_once_with("[2024-01-01 12:00:00] test message")
 

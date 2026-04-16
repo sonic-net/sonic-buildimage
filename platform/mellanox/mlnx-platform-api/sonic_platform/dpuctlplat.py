@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ SYSTEM_BASE = os.path.join(HW_BASE, "system/")
 PCI_BASE = "/sys/bus/pci/"
 PCI_DEV_BASE = os.path.join(PCI_BASE, "devices/")
 
-logger = SysLogger()
+logger = SysLogger("dpuctl_plat")
 
 WAIT_FOR_SHTDN = 120
 WAIT_FOR_DPU_READY = 180
@@ -112,6 +112,7 @@ class DpuCtlPlat():
         def print_with_time(msg):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] {msg}")
+            logger.log_notice(f"{msg}")
 
         if use_print:
             self.logger_info = print_with_time
@@ -270,7 +271,8 @@ class DpuCtlPlat():
             for pci_dev_path in self.get_pci_dev_path():
                 remove_path = os.path.join(pci_dev_path, "remove")
                 if os.path.exists(remove_path):
-                    self.write_file(remove_path, OperationType.SET.value)
+                    with self.time_check_context(f"pci remove {pci_dev_path}"):
+                        self.write_file(remove_path, OperationType.SET.value)
             return True
         except Exception as e:
             self.log_error(f"Failed PCI Removal with error {e}")
