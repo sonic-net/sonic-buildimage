@@ -17,6 +17,7 @@
 #
 
 """Tests for dpuctlplat Platform API Wrapper"""
+import errno
 import os
 import sys
 import time
@@ -355,6 +356,32 @@ class TestDpuCtlPlatStatus:
             dpuctl_obj.update_boot_prog_once(DummyPoller())
             assert dpuctl_obj.boot_prog_state == 99
             assert dpuctl_obj.boot_prog_indication == "99 - N/A"
+
+    def test_read_boot_prog_retries_on_enxio(self, dpuctl_obj):
+        """read_boot_prog retries twice on ENXIO with 1s delay, then returns value."""
+        dpuctl_obj.boot_prog_path = os.path.join(test_path, "mock_dpu_boot_prog")
+        enxio = OSError(errno.ENXIO, os.strerror(errno.ENXIO))
+
+        with patch("sonic_platform.utils.read_int_from_file") as mock_read, \
+                patch("sonic_platform.dpuctlplat.time.sleep") as mock_sleep:
+            mock_read.side_effect = [enxio, enxio, 5]
+            assert dpuctl_obj.read_boot_prog() == 5
+            assert mock_read.call_count == 3
+            mock_sleep.assert_has_calls([call(1), call(1)])
+
+    def test_read_boot_prog_raises_after_enxio_retries_exhausted(self, dpuctl_obj):
+        """After three ENXIO failures, the last error is propagated."""
+        dpuctl_obj.boot_prog_path = os.path.join(test_path, "mock_dpu_boot_prog")
+        enxio = OSError(errno.ENXIO, os.strerror(errno.ENXIO))
+
+        with patch("sonic_platform.utils.read_int_from_file") as mock_read, \
+                patch("sonic_platform.dpuctlplat.time.sleep") as mock_sleep:
+            mock_read.side_effect = [enxio, enxio, enxio]
+            with pytest.raises(OSError) as excinfo:
+                dpuctl_obj.read_boot_prog()
+            assert excinfo.value.errno == errno.ENXIO
+            assert mock_read.call_count == 3
+            mock_sleep.assert_has_calls([call(1), call(1)])
 
     def test_status_updates(self, dpuctl_obj):
         """Test DPU status updates"""
