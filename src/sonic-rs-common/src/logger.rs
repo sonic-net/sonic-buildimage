@@ -1,62 +1,92 @@
-use syslog::{Facility, Severity};
-use std::env;
-use std::path::Path;
+use std::ffi::CString;
+use std::sync::Mutex;
 
 #[derive(thiserror::Error, Debug)]
 pub enum LoggerError {
-    #[error("Syslog error")]
-    Syslog(#[from] syslog::Error),
+    #[error("Only one instance is allowed")]
+    MultipleInstances,
+    #[error("Invalid log identifier: {0}")]
+    InvalidIdentifier(String),
+}
+
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum Facility {
+    Daemon = libc::LOG_DAEMON,
+    User = libc::LOG_USER,
+}
+
+#[repr(i32)]
+#[derive(Copy, Clone)]
+pub enum Severity {
+    Emergency = libc::LOG_EMERG,
+    Alert = libc::LOG_ALERT,
+    Critical = libc::LOG_CRIT,
+    Error = libc::LOG_ERR,
+    Warning = libc::LOG_WARNING,
+    Notice = libc::LOG_NOTICE,
+    Info = libc::LOG_INFO,
+    Debug = libc::LOG_DEBUG,
 }
 
 pub type LoggerResult<T> = std::result::Result<T, LoggerError>;
 
 pub struct Logger {
-    writer: Option<syslog::Logger<syslog::LoggerBackend, syslog::Formatter3164>>,
+    log_facility: Facility,
     min_log_priority: Severity,
+    _ident: Option<CString>,
 }
 
+// Due to how libc::openlog() behaves, we can only have one instance of this class at any given time
+// This mutex ensures that
+static LOGGER_GUARD: Mutex<bool> = Mutex::new(false);
+
 impl Logger {
-    pub const LOG_FACILITY_DAEMON: Facility = Facility::LOG_DAEMON;
-    pub const LOG_FACILITY_USER: Facility = Facility::LOG_USER;
-
-    pub const LOG_PRIORITY_ERROR: Severity = Severity::LOG_ERR;
-    pub const LOG_PRIORITY_WARNING: Severity = Severity::LOG_WARNING;
-    pub const LOG_PRIORITY_NOTICE: Severity = Severity::LOG_NOTICE;
-    pub const LOG_PRIORITY_INFO: Severity = Severity::LOG_INFO;
-    pub const LOG_PRIORITY_DEBUG: Severity = Severity::LOG_DEBUG;
-
-    pub const DEFAULT_LOG_FACILITY: Facility = Self::LOG_FACILITY_USER;
+    const DEFAULT_LOG_FACILITY: Facility = Facility::User;
+    // Format specifier for libc::syslog()
+    const SYSLOG_FMT: &'static core::ffi::CStr = cstr::cstr!(b"%s");
 
     pub fn new(log_identifier: Option<String>) -> LoggerResult<Self> {
         Self::new_with_options(log_identifier, Self::DEFAULT_LOG_FACILITY)
     }
 
     pub fn new_with_options(log_identifier: Option<String>, log_facility: Facility) -> LoggerResult<Self> {
-        let identifier = match log_identifier {
-            Some(id) => id,
-            None => {
-                let args: Vec<String> = env::args().collect();
-                Path::new(args.first().unwrap_or(&String::new()))
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or("")
-                    .to_string()
+        let mut guard = match LOGGER_GUARD.lock () {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                let mut guard = poisoned.into_inner();
+                // This lock will only get poisoned if a panic occurs when creating or dropping the logger.
+                // It is safe to assume that if we panic when creating it, it was never created in the first place,
+                // thus we can call openlog() again.
+                *guard = false;
+                guard
+            },
+        };
+
+        if *guard {
+            return Err(LoggerError::MultipleInstances);
+        }
+
+        let ident = match log_identifier {
+            Some(id) => {
+                let c_ident = CString::new(id)
+                    .map_err(|e| LoggerError::InvalidIdentifier(e.to_string()))?;
+
+                unsafe {
+                    libc::openlog(c_ident.as_ptr(), 0, log_facility as i32);
+                }
+
+                Some(c_ident)
             }
+            None => None,
         };
 
-        let formatter = syslog::Formatter3164 {
-            facility: log_facility,
-            hostname: None,
-            process: identifier,
-            pid: std::process::id(),
-        };
-
-        // Try to create syslog writer, but don't fail if it doesn't work
-        let writer = syslog::unix(formatter).ok();
+        *guard = true;
 
         Ok(Logger {
-            writer,
-            min_log_priority: Self::LOG_PRIORITY_NOTICE,
+            log_facility,
+            min_log_priority: Severity::Notice,
+            _ident: ident,
         })
     }
 
@@ -65,63 +95,70 @@ impl Logger {
     }
 
     pub fn set_min_log_priority_error(&mut self) {
-        self.set_min_log_priority(Self::LOG_PRIORITY_ERROR);
+        self.set_min_log_priority(Severity::Error);
     }
 
     pub fn set_min_log_priority_warning(&mut self) {
-        self.set_min_log_priority(Self::LOG_PRIORITY_WARNING);
+        self.set_min_log_priority(Severity::Warning);
     }
 
     pub fn set_min_log_priority_notice(&mut self) {
-        self.set_min_log_priority(Self::LOG_PRIORITY_NOTICE);
+        self.set_min_log_priority(Severity::Notice);
     }
 
     pub fn set_min_log_priority_info(&mut self) {
-        self.set_min_log_priority(Self::LOG_PRIORITY_INFO);
+        self.set_min_log_priority(Severity::Info);
     }
 
     pub fn set_min_log_priority_debug(&mut self) {
-        self.set_min_log_priority(Self::LOG_PRIORITY_DEBUG);
+        self.set_min_log_priority(Severity::Debug);
     }
 
     pub fn log(&mut self, priority: Severity, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
         if self.min_log_priority as i32 >= priority as i32 {
-            // Only log to syslog if writer is available
-            if let Some(ref mut writer) = self.writer {
-                match priority {
-                    Severity::LOG_ERR => writer.err(msg)?,
-                    Severity::LOG_WARNING => writer.warning(msg)?,
-                    Severity::LOG_NOTICE => writer.notice(msg)?,
-                    Severity::LOG_INFO => writer.info(msg)?,
-                    Severity::LOG_DEBUG => writer.debug(msg)?,
-                    _ => writer.info(msg)?,
-                }
+            let c_msg = CString::new(msg).unwrap_or_default();
+
+            unsafe {
+                libc::syslog(self.log_facility as i32 | priority as i32, Self::SYSLOG_FMT.as_ptr(), c_msg.as_ptr());
             }
 
             if also_print_to_console {
                 println!("{}", msg);
             }
         }
+
         Ok(())
     }
 
     pub fn log_error(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        self.log(Self::LOG_PRIORITY_ERROR, msg, also_print_to_console)
+        self.log(Severity::Error, msg, also_print_to_console)
     }
 
     pub fn log_warning(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        self.log(Self::LOG_PRIORITY_WARNING, msg, also_print_to_console)
+        self.log(Severity::Warning, msg, also_print_to_console)
     }
 
     pub fn log_notice(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        self.log(Self::LOG_PRIORITY_NOTICE, msg, also_print_to_console)
+        self.log(Severity::Notice, msg, also_print_to_console)
     }
 
     pub fn log_info(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        self.log(Self::LOG_PRIORITY_INFO, msg, also_print_to_console)
+        self.log(Severity::Info, msg, also_print_to_console)
     }
 
     pub fn log_debug(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        self.log(Self::LOG_PRIORITY_DEBUG, msg, also_print_to_console)
+        self.log(Severity::Debug, msg, also_print_to_console)
+    }
+}
+
+impl Drop for Logger {
+    fn drop(&mut self) {
+        unsafe {
+            libc::closelog();
+        }
+
+        if let Ok(mut guard) = LOGGER_GUARD.lock() {
+            *guard = false;
+        }
     }
 }
