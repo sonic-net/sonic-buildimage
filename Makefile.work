@@ -209,6 +209,7 @@ $(shell \
 	DBGOPT='$(DBGOPT)' \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
 	PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+	BUILD_APT_GET_HTTP_TIMEOUT=$(BUILD_APT_GET_HTTP_TIMEOUT) \
 	scripts/generate_buildinfo_config.sh)
 
 # Generate the slave Dockerfile, and prepare build info for it
@@ -573,6 +574,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+						   BUILD_APT_GET_HTTP_TIMEOUT=$(BUILD_APT_GET_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
@@ -600,6 +602,7 @@ export MIRROR_SECURITY_URLS
 export MIRROR_SNAPSHOT
 export SONIC_VERSION_CONTROL_COMPONENTS
 export PIP_HTTP_TIMEOUT
+export BUILD_APT_GET_HTTP_TIMEOUT
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
