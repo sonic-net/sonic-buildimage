@@ -74,6 +74,7 @@ def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_6
         generate_lanemap(vs_hwsku, port_config, has_chassis, reserve_midplane)
 
     # Process numbered subdirectories (0, 1, 2) for multi-ASIC
+    i = 1 if reserve_midplane else 0
     for subdir_idx in ["0", "1", "2"]:
         subdir = vs_hwsku / subdir_idx
         if subdir.is_dir():
@@ -93,7 +94,49 @@ def process_hwsku(hwsku_dir, src_dir, device_base, vs_platform="x86_64-kvm_x86_6
             # Generate lanemap for subdir
             sub_port_config = subdir / "port_config.ini"
             if sub_port_config.exists():
-                generate_lanemap(subdir, sub_port_config, has_chassis, reserve_midplane)
+                i = generate_lanemap_for_subdir(subdir, sub_port_config, has_chassis, i)
+
+def generate_lanemap_for_subdir(target_dir, port_config_path, has_chassis, start_i):
+    """Generate lanemap.ini and coreportindexmap.ini, returning the updated i."""
+    lanemap_lines = []
+    coremap_lines = []
+    i = start_i
+    num_columns = 0
+
+    with open(port_config_path) as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line or not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            num_columns = len(parts)
+            i += 1
+            lanes = parts[1]
+            lanemap_lines.append(f"eth{i}:{lanes}")
+            if num_columns >= 9:
+                core = parts[7]
+                core_port = parts[8]
+                coremap_lines.append(f"eth{i}:{core},{core_port}")
+
+    if lanemap_lines:
+        lanemap_path = target_dir / "lanemap.ini"
+        with open(lanemap_path, "w") as f:
+            f.write("\n".join(lanemap_lines) + "\n")
+            if has_chassis:
+                f.write("Cpu0:999\n")
+                i += 1  # bash loop increments i for Cpu0 if lanemap.ini is written
+
+    if coremap_lines:
+        coremap_path = target_dir / "coreportindexmap.ini"
+        with open(coremap_path, "w") as f:
+            f.write("\n".join(coremap_lines) + "\n")
+            if has_chassis:
+                f.write("Cpu0:0,0\n")
+
+    return i
+
 def generate_lanemap(target_dir, port_config_path, has_chassis, reserve_midplane):
     """Generate lanemap.ini and coreportindexmap.ini from port_config.ini."""
     lanemap_lines = []
