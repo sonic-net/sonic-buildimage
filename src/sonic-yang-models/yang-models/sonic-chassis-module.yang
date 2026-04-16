@@ -20,15 +20,25 @@ module sonic-chassis-module {
                 key "name";
                 leaf name {
                     type string {
-                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+|DPU[0-9]+";
+                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+|DPU[0-9]+|SWITCH-HOST";
                     }
-                    description "Line-card or fabric-card or dpu module name";
+                    description "Line-card, fabric-card, dpu, or switch-host module name";
                 }
 
                 leaf admin_status {
                     type stypes:admin_status;
                     default up;
                     description "Administrative state of chassis module";
+                }
+
+                leaf power_on_delay {
+                    type uint32;
+                    description "Time in seconds BMC waits before powering on Switch-Host when device is powered ON (default: 0)";
+                }
+
+                leaf graceful_shutdown_timeout {
+                    type uint32;
+                    description "Time in seconds BMC waits for graceful shutdown before forcing power-off (default: 120). Set to 0 to skip graceful shutdown and power off immediately";
                 }
             }
         }
