@@ -349,7 +349,7 @@ run_pip_command()
         parameters+=("${tmp_version_file}")
     fi
 
-    if [ "$install" == "y" ] && { [ "$ENABLE_VERSION_CONTROL_PY2" == "y" ] || [ "$ENABLE_VERSION_CONTROL_PY3" == "y" ]; }; then
+    if [ "$install" == "y" ] && [ "$ENABLE_VERSION_CONTROL_PY" == "y" ]; then
         parameters+=("--no-build-isolation")
     fi
 
