@@ -22,6 +22,8 @@
 0065-SONiC-ONLY-bgpd-reduce-suppress-fib-advertisement-delay-to-50ms.patch
 0066-SONiC-ONLY-zebra-skip-if-add-update-in-speed-timer-for-unready-ifp.patch
 0067-lib-build-support-gperftools-tcmalloc-release-free-memory-to-host-OS.patch
+0068-debian-add-pkg.frr.tcmalloc-build-profile.patch
+0069-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
 0107-staticd-Fix-SRv6-SID-use-after-free-on-locator-deletion.patch

@@ -16,6 +16,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update   && \
     apt-get install -y  \
         iproute2        \
+{% if enable_frr_tcmalloc == "y" %}
+        libgoogle-perftools4t64 \
+{% endif %}
         logrotate
 
 RUN groupadd -g ${frr_user_gid} frr
