@@ -12,6 +12,8 @@ $(FRR)_UNINSTALLS = $(LIBYANG3_DEV)
 $(FRR)_SRC_PATH = $(SRC_PATH)/sonic-frr
 SONIC_MAKE_DEBS += $(FRR)
 
+export ENABLE_FRR_TCMALLOC
+
 FRR_PYTHONTOOLS = frr-pythontools_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_all.deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_PYTHONTOOLS)))
 
