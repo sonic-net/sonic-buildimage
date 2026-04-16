@@ -226,7 +226,20 @@ run_dpuctl_reset() {
     if [[ "$use_verbose" == true ]]; then
         reset_cmd="$reset_cmd -v"
     fi
-    eval $reset_cmd
+    local start_time
+    start_time=$(date +%s)
+    eval $reset_cmd &
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        local elapsed=$(($(date +%s) - start_time))
+        printf "\r%s: Reboot: %d seconds elapsed" "$dpu" "$elapsed"
+        sleep 5
+    done
+    wait $pid
+    local end_time
+    end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    printf "\r%s: Reboot: %d seconds elapsed in total\n" "$dpu" "$elapsed"
 }
 
 # Function to reset DPU using reboot helper or fallback to dpuctl
