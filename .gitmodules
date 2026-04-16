@@ -95,7 +95,7 @@
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
 	url = https://github.com/sonic-net/saibcm-modules.git
-	branch =  sdk-6.5.22-gpl-dnx
+	branch =  sdk-6.5.34-dnx-gpl
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git
