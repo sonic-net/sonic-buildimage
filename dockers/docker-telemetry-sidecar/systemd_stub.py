@@ -12,7 +12,8 @@ from typing import Dict, List
 from sonic_py_common.sidecar_common import (
     get_bool_env_var, logger, SyncItem, run_nsenter,
     read_file_bytes_local, host_read_bytes, host_write_atomic,
-    db_hget, db_hgetall, db_hset, db_del, sync_items, SYNC_INTERVAL_S
+    db_hget, db_hgetall, db_hset, db_hdel, db_del, db_get_table_keys,
+    sync_items, SYNC_INTERVAL_S
 )
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
@@ -174,6 +175,19 @@ def _ensure_user_auth_cert() -> None:
             logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
 
 
+def _ensure_user_auth_absent() -> None:
+    cur = db_hget("TELEMETRY|gnmi", "user_auth")
+    if cur is None:
+        return
+    if db_hdel("TELEMETRY|gnmi", "user_auth"):
+        logger.log_notice(f"Removed TELEMETRY|gnmi.user_auth (was: {cur})")
+        rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "telemetry"])
+        if rc != 0:
+            logger.log_error(f"Failed to restart telemetry after user_auth removal: {err}")
+    else:
+        logger.log_error("Failed to remove TELEMETRY|gnmi.user_auth")
+
+
 def _ensure_cname_present(cname: str, role: str) -> None:
     key = f"GNMI_CLIENT_CERT|{cname}"
     entry = db_hgetall(key)
@@ -198,15 +212,18 @@ def reconcile_config_db_once() -> None:
       - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
           * Ensure TELEMETRY|gnmi.user_auth=cert
           * Ensure every GNMI_CLIENT_CERT|<CNAME> entry exists with its role
-      - When false: ensure all CNAME rows are absent
+      - When false:
+          * Remove TELEMETRY|gnmi.user_auth
+          * Remove all entries under GNMI_CLIENT_CERT table
     """
     if GNMI_VERIFY_ENABLED:
         _ensure_user_auth_cert()
         for entry in GNMI_CLIENT_CERTS:
             _ensure_cname_present(entry["cname"], entry["role"])
     else:
-        for entry in GNMI_CLIENT_CERTS:
-            _ensure_cname_absent(entry["cname"])
+        _ensure_user_auth_absent()
+        for cname in db_get_table_keys("GNMI_CLIENT_CERT"):
+            _ensure_cname_absent(cname)
 
 # Host destination for service_checker.py
 HOST_SERVICE_CHECKER = "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"
