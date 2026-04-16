@@ -2017,23 +2017,23 @@
             "autoneg": "off"
         },
         "Ethernet504": {
-            "default_brkout_mode": "4x100G[200G]",
+            "default_brkout_mode": "4x100G(4)+1x400G(4)",
             "autoneg": "off"
         },
         "Ethernet505": {
-            "default_brkout_mode": "4x100G[200G]",
+            "default_brkout_mode": "4x100G(4)+1x400G(4)",
             "autoneg": "off"
         },
         "Ethernet506": {
-            "default_brkout_mode": "4x100G[200G]",
+            "default_brkout_mode": "4x100G(4)+1x400G(4)",
             "autoneg": "off"
         },
         "Ethernet507": {
-            "default_brkout_mode": "4x100G[200G]",
+            "default_brkout_mode": "4x100G(4)+1x400G(4)",
             "autoneg": "off"
         },
         "Ethernet508": {
-            "default_brkout_mode": "1x400G",
+            "default_brkout_mode": "4x100G(4)+1x400G(4)",
             "autoneg": "off"
         },
         "Ethernet512": {
