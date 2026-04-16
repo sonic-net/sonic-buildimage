@@ -34,7 +34,7 @@ SLK_SERIES = SLK_PATCH_LOC + "series"
 NON_UP_PATCH_DIR = "platform/mellanox/non-upstream-patches/"
 NON_UP_PATCH_LOC = NON_UP_PATCH_DIR + "patches"
 NON_UP_DIFF = NON_UP_PATCH_DIR + "external-changes.patch"
-KCFG_HDR_RE = "\[(.*)\]"
+KCFG_HDR_RE = r"\[(.*)\]"
 KERNEL_BACKPORTS = "kernel_backports"
  # kconfig_inclusion headers to consider
 HDRS = ["common", "amd64"]

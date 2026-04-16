@@ -205,7 +205,7 @@ class TestSDKAction(TestCase):
         assert Data.old_patches[-1] == "0001-psample-Encapsulate-packet-metadata-in-a-struct.patch"
 
     def test_get_new_patches(self):
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         self.action.get_kernel_dir()
         print(Data.k_dir)
@@ -215,7 +215,7 @@ class TestSDKAction(TestCase):
         assert Data.new_patches[1] == "0002-psample-Add-additional-metadata-attributes.patch"
 
     def test_update_series(self):
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         Data.old_series = MOCK_SLK_SERIES.splitlines(True)
         self.action.refresh_markers()
@@ -229,7 +229,7 @@ class TestSDKAction(TestCase):
         assert "mellanox_sdk-end" in Data.old_series[Data.i_sdk_end]
 
     def test_update_series_1(self):
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         Data.old_series = MOCK_SLK_SERIES_1.splitlines(True)
         self.action.refresh_markers()
@@ -243,7 +243,7 @@ class TestSDKAction(TestCase):
         assert "mellanox_sdk-end" in Data.old_series[Data.i_sdk_end]
 
     def test_process_patches_1(self):
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         self.create_files(root_dir, EXT_PTCH_LIST)
         Data.old_series = MOCK_SLK_SERIES.splitlines(True)
@@ -257,7 +257,7 @@ class TestSDKAction(TestCase):
         assert check_lists(MOCK_FINAL_SLK_SERIES.splitlines(True), Data.new_series)
 
     def test_process_patches_2(self):
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         self.create_files(root_dir, EXT_PTCH_LIST)
         Data.old_series = MOCK_SLK_SERIES_1.splitlines(True)
@@ -286,7 +286,7 @@ class TestSDKAction(TestCase):
     def test_commit_msg(self, mock_read_strip_mock):
         global LINES_READ 
         LINES_READ = MOCK_README.splitlines()
-        root_dir = "/tmp/kernel_backports/5.10/5.10.27"
+        root_dir = os.path.join("/tmp", KERNEL_BACKPORTS, "5.10/5.10.27")
         self.create_files(root_dir, PTCH_LIST)
         self.create_files(root_dir, ["0003-psample-define-the-macro-PSAMPLE_MD_EXTENDED_ATTR.patch"])
         Data.old_series = MOCK_SLK_SERIES.splitlines(True)
