@@ -2,7 +2,7 @@ Source: sonic-scouty
 Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 12), cargo, rustc
+Build-Depends: debhelper (>= 12)
 Standards-Version: 4.6.2
 
 Package: sonic-scouty
