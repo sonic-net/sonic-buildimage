@@ -44,14 +44,14 @@ RUN apt-get install -y net-tools \
                        # (these can be uninstalled after installation)
                        libcairo2-dev \
                        libdbus-1-dev \
-                       libgirepository1.0-dev \
+                       libgirepository-2.0-dev \
                        libsystemd-dev \
                        pkg-config \
                        # For installing dependent Python packages of sonic-host-services
                        # these packages are needed at runtime
                        gir1.2-glib-2.0 \
                        libdbus-1-3 \
-                       libgirepository-1.0-1 \
+                       libgirepository-2.0-1 \
                        {%- if ENABLE_ASAN == "y" %}
                        libasan6 \
                        {%- endif %}
@@ -106,7 +106,7 @@ RUN apt-get install -y libzmq3-dev
 # Clean up
 RUN apt-get purge -y build-essential libssl-dev swig
 RUN apt-get purge -y python3-dev
-RUN apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsystemd-dev pkg-config
+RUN apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository-2.0-dev libsystemd-dev pkg-config
 RUN apt-get clean -y
 RUN apt-get autoclean -y
 RUN apt-get autoremove -y
