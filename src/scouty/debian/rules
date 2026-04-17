@@ -4,13 +4,13 @@
 	dh $@
 
 override_dh_auto_build:
-	cargo build --release --all
+	cargo build --release --workspace
 
 override_dh_auto_install:
 	:
 
 override_dh_auto_clean:
-	cargo clean --release || true
+	cargo clean || true
 
 override_dh_auto_test:
 	:

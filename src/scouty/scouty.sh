@@ -64,22 +64,19 @@ done
 
 duration_to_seconds() {
     local duration="$1"
-    local num="${duration%[mhdMHD]}"
-    local unit="${duration##*[0-9]}"
 
-    if ! [[ "$num" =~ ^[0-9]+$ ]]; then
-        echo "Error: invalid duration number: $duration" >&2
+    if ! [[ "$duration" =~ ^([0-9]+)([mhdMHD])$ ]]; then
+        echo "Error: invalid duration '$duration'. Use format: 30m, 1h, 1d (m=min, h=hour, d=day)." >&2
         return 1
     fi
+
+    local num="${BASH_REMATCH[1]}"
+    local unit="${BASH_REMATCH[2]}"
 
     case "$unit" in
         m|M) echo $((num * 60)) ;;
         h|H) echo $((num * 3600)) ;;
         d|D) echo $((num * 86400)) ;;
-        *)
-            echo "Error: invalid duration unit '$unit' in '$duration'. Use m (minutes), h (hours), or d (days)." >&2
-            return 1
-            ;;
     esac
 }
 
@@ -88,8 +85,12 @@ collect_logs() {
     local max="$2"
     local cutoff_epoch="${3:-0}"
     local count=0
+    local -a files=()
 
-    for f in $(ls -t $pattern 2>/dev/null); do
+    # Sort by mtime desc, handle empty matches and filenames with spaces.
+    mapfile -t files < <(stat --printf='%Y\t%n\n' $pattern 2>/dev/null | sort -rn | cut -f2-)
+
+    for f in "${files[@]}"; do
         [[ -f "$f" ]] || continue
 
         if [[ "$cutoff_epoch" -gt 0 ]]; then
@@ -145,4 +146,4 @@ for f in "${LOG_FILES[@]}"; do
     echo "  $f" >&2
 done
 
-exec scouty-tui "${EXTRA_ARGS[@]}" "${LOG_FILES[@]}"
+exec scouty-tui ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} "${LOG_FILES[@]}"

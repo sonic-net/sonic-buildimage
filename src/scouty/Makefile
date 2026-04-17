@@ -9,10 +9,15 @@ SCOUTY_TARGET = sonic-scouty_$(SCOUTY_VERSION)_$(CONFIGURED_ARCH).deb
 $(addprefix $(DEST)/, $(SCOUTY_TARGET)): $(DEST)/% :
 	# Remove any stale files
 	rm -rf scouty-$(SCOUTY_VERSION)
+	rm -f scouty-$(SCOUTY_VERSION).tar.gz
 
-	# Download and extract source
+	# Download and verify source
 	curl -sL $(SCOUTY_URL) -o scouty-$(SCOUTY_VERSION).tar.gz
+	echo "$(SCOUTY_SHA256)  scouty-$(SCOUTY_VERSION).tar.gz" | sha256sum -c -
 	tar xzf scouty-$(SCOUTY_VERSION).tar.gz
+
+	# Update changelog version to match SCOUTY_VERSION
+	sed -i "1s/^sonic-scouty ([^)]*)/sonic-scouty ($(SCOUTY_VERSION))/" debian/changelog
 
 	# Copy debian packaging and SONiC files into source tree
 	cp -r debian scouty-$(SCOUTY_VERSION)/
@@ -28,4 +33,5 @@ else
 endif
 	popd
 
+	test -f $* || { echo "ERROR: $* not found after build"; exit 1; }
 	mv $* $(DEST)/
