@@ -788,7 +788,8 @@ ENV RUSTUP_HOME=$RUST_ROOT
 ENV PATH=$PATH:$RUST_ROOT/bin
 
 # Install cargo-tarpaulin for code coverage
-RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+# Pin version for reproducible builds; bump deliberately when newer releases are validated.
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.2
 
 {# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
 {% with DEBIAN_VERSION='trixie' %}
