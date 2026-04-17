@@ -20,7 +20,7 @@ import time
 from unittest import mock
 
 from sonic_platform import utils
-from sonic_platform.thermal_updater import ThermalUpdater, clean_thermal_data, hw_management_independent_mode_update
+from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update, clean_thermal_data
 from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD, \
                                            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
@@ -98,7 +98,6 @@ class TestThermalUpdater:
     @mock.patch('sonic_platform.thermal_updater.logger')
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
-    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.write_file')
     def test_start_stop(self, mock_write, mock_logger):
         mock_sfp = mock.MagicMock()
@@ -130,75 +129,50 @@ class TestThermalUpdater:
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
     def test_update_module(self):
+        from sonic_platform.sfp import SFP
+        sfp = SFP(0)
+        
         hw_management_independent_mode_update.reset_mock()
-        mock_sfp = mock.MagicMock()
-        mock_sfp.sdk_index = 10
-        mock_sfp.get_presence = mock.MagicMock(return_value=True)
-        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(True, 55.0, 70.0, 80.0))
-        updater = ThermalUpdater([mock_sfp])
+        sfp.get_presence = mock.MagicMock(return_value=True)
+        sfp.get_temperature_from_db = mock.MagicMock(return_value=30.0)
+        sfp.get_warning_threshold_from_db = mock.MagicMock(return_value=25.0)
+        sfp.get_critical_threshold_from_db = mock.MagicMock(return_value=30.0)
+        sfp.get_vendor_name_from_db = mock.MagicMock(return_value='Mellanox')
+        sfp.get_part_number_from_db = mock.MagicMock(return_value='SFP-10G-SR')
+        
+        updater = ThermalUpdater([sfp])
         updater.update_module()
-        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 55000, 80000, 70000, 0)
-
-        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(True, 0.0, 0.0, 0.0))
-        hw_management_independent_mode_update.reset_mock()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 30000, 30000, 25000, 0)
+        hw_management_independent_mode_update.vendor_data_set_module.assert_called_with(0, sfp.sdk_index + 1, {'manufacturer': 'Mellanox', 'part_number': 'SFP-10G-SR'})
+        
+        sfp.get_warning_threshold_from_db.return_value = 25.0        
+        sfp.get_critical_threshold_from_db.return_value = 20
         updater.update_module()
-        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
-
-        mock_sfp.get_presence = mock.MagicMock(return_value=False)
-        hw_management_independent_mode_update.reset_mock()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 30000, 20000, 25000, 254000)
+        
+        sfp.get_temperature_from_db.return_value = 0.0
         updater.update_module()
-        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
-
-    # ---- SFP.get_temperature_info publishes vendor info on module change ----
-    def _make_sfp_for_publish(self, sn_changed=True, vendor=('Innolight', 'TR-iQ13L-NVS')):
-        # Import locally to avoid any potential name resolution issues in test scope
-        from sonic_platform.sfp import SFP as _SFP
-        sfp = object.__new__(_SFP)
-        sfp.sdk_index = 10
-        sfp.retry_read_vendor = 5 if sn_changed else 0
-        sfp.is_sw_control = mock.MagicMock(return_value=True)
-        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=sn_changed)
-        if vendor is None:
-            sfp.get_vendor_info = mock.MagicMock(return_value=(None, None))
-        else:
-            sfp.get_vendor_info = mock.MagicMock(return_value=vendor)
-        api = mock.MagicMock()
-        api.get_transceiver_thresholds_support = mock.MagicMock(return_value=False)
-        sfp.get_xcvr_api = mock.MagicMock(return_value=api)
-        return sfp
-
-    def test_sfp_get_temperature_info_publishes_vendor_on_sn_change(self):
-        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
-        sfp = self._make_sfp_for_publish(sn_changed=True, vendor=('Innolight', 'TR-iQ13L-NVS'))
-        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
-            sfp_hw_management_independent_mode_update.reset_mock()
-            sfp.get_temperature_info()
-            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_called_once_with(
-                0, 11, {'manufacturer': 'Innolight', 'part_number': 'TR-iQ13L-NVS'}
-            )
-
-    def test_sfp_get_temperature_info_no_publish_when_no_change(self):
-        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
-        sfp = self._make_sfp_for_publish(sn_changed=False, vendor=('Innolight', 'TR-iQ13L-NVS'))
-        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
-            sfp_hw_management_independent_mode_update.reset_mock()
-            sfp.get_temperature_info()
-            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_not_called()
-
-    def test_sfp_get_temperature_info_no_publish_when_vendor_missing(self):
-        from sonic_platform.sfp import hw_management_independent_mode_update as sfp_hw_management_independent_mode_update
-        sfp = self._make_sfp_for_publish(sn_changed=True, vendor=None)
-        with mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature', return_value=55.0):
-            sfp_hw_management_independent_mode_update.reset_mock()
-            sfp.get_temperature_info()
-            sfp_hw_management_independent_mode_update.vendor_data_set_module.assert_not_called()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 0, 0, 0, 0)
+        
+        sfp.get_temperature_from_db.return_value = -1
+        updater.update_module()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 0, 0, 0, 254000)
+        
+        sfp.get_presence.return_value = False
+        updater.update_module()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 0, 0, 0, 0)
+        hw_management_independent_mode_update.vendor_data_set_module.assert_called_with(0, sfp.sdk_index + 1, {'manufacturer': '', 'part_number': ''})
+        
+        sfp.get_presence.side_effect = Exception('test exception')
+        updater.update_module()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_with(0, sfp.sdk_index + 1, 0, 0, 0, 254000)
 
     @mock.patch('sonic_platform.thermal_updater.clean_thermal_data')
     @mock.patch('sonic_platform.thermal_updater.atexit.register')
     def test_registers_exit_cleanup(self, mock_register, mock_clean):
         hw_management_independent_mode_update.reset_mock()
         sfp = mock.MagicMock()
-        updater = ThermalUpdater([sfp])
+        ThermalUpdater([sfp])
 
         mock_register.assert_called_once()
         exit_callback = mock_register.call_args[0][0]
@@ -209,20 +183,3 @@ class TestThermalUpdater:
         # Simulate process exit and confirm cleanup uses the bound SFP list
         exit_callback()
         mock_clean.assert_called_once_with([sfp])
-
-    def test_clean_thermal_data_only_sw_control_modules(self):
-        hw_management_independent_mode_update.reset_mock()
-
-        sfp_sw = mock.MagicMock()
-        sfp_sw.sdk_index = 3
-        sfp_sw.is_sw_control = mock.MagicMock(return_value=True)
-
-        sfp_no_sw = mock.MagicMock()
-        sfp_no_sw.sdk_index = 4
-        sfp_no_sw.is_sw_control = mock.MagicMock(return_value=False)
-
-        clean_thermal_data([sfp_sw, sfp_no_sw])
-
-        hw_management_independent_mode_update.module_data_set_module_counter.assert_called_once_with(2)
-        hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once_with(0, sfp_sw.sdk_index + 1)
-

@@ -1,0 +1,25 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "65001",
+            "type": "FabricRegionalHub"
+        }
+    },
+    "BGP_DEVICE_GLOBAL": {
+        "CONFED" : {
+            "asn": "65000",
+            "peers": "65001;65002"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|55.55.55.55/32": {},
+        "Loopback1|fc00::1/128": {}
+    },
+    "constants": {
+        "bgp": {
+            "multipath_relax": {},
+            "graceful_restart": {},
+            "maximum_paths": {}
+        }
+    }
+}
