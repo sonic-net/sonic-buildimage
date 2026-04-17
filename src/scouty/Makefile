@@ -16,13 +16,13 @@ $(addprefix $(DEST)/, $(SCOUTY_TARGET)): $(DEST)/% :
 	echo "$(SCOUTY_SHA256)  scouty-$(SCOUTY_VERSION).tar.gz" | sha256sum -c -
 	tar xzf scouty-$(SCOUTY_VERSION).tar.gz
 
-	# Update changelog version to match SCOUTY_VERSION
-	sed -i "1s/^sonic-scouty ([^)]*)/sonic-scouty ($(SCOUTY_VERSION))/" debian/changelog
-
 	# Copy debian packaging and SONiC files into source tree
 	cp -r debian scouty-$(SCOUTY_VERSION)/
 	cp scouty.sh scouty-$(SCOUTY_VERSION)/
 	cp config.yaml scouty-$(SCOUTY_VERSION)/
+
+	# Update changelog version to match SCOUTY_VERSION (in the copied tree, not the repo)
+	sed -i "1s/^sonic-scouty ([^)]*)/sonic-scouty ($(SCOUTY_VERSION))/" scouty-$(SCOUTY_VERSION)/debian/changelog
 
 	pushd scouty-$(SCOUTY_VERSION)
 
