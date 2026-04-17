@@ -37,7 +37,7 @@ expected_dhcp_config = {
         "lease-database": {
             "type": "memfile",
             "persist": True,
-            "name": "/tmp/kea-lease.csv",
+            "name": "/var/lib/kea/kea-lease.csv",
             "lfc-interval": 3600
         },
         "subnet4": [
@@ -97,7 +97,7 @@ expected_dhcp_config = {
                 "name": "kea-dhcp4",
                 "output_options": [
                     {
-                        "output": "/var/log/kea-dhcp.log",
+                        "output": "/var/log/kea/kea-dhcp4.log",
                         "pattern": "%-5p %m\n"
                     }
                 ],
@@ -151,7 +151,7 @@ expected_dhcp_config_without_port_config = {
         "lease-database": {
             "type": "memfile",
             "persist": True,
-            "name": "/tmp/kea-lease.csv",
+            "name": "/var/lib/kea/kea-lease.csv",
             "lfc-interval": 3600
         },
         "subnet4": [
@@ -161,7 +161,7 @@ expected_dhcp_config_without_port_config = {
                 "name": "kea-dhcp4",
                 "output_options": [
                     {
-                        "output": "/var/log/kea-dhcp.log",
+                        "output": "/var/log/kea/kea-dhcp4.log",
                         "pattern": "%-5p %m\n"
                     }
                 ],
@@ -270,7 +270,7 @@ expected_render_obj = {
         {"name": "sonic-host:etp11", "condition": "substring(relay4[1].hex, -16, 16) == 'sonic-host:etp11'"}
     ],
     "lease_update_script_path": "/etc/kea/lease_update.sh",
-    "lease_path": "/tmp/kea-lease.csv",
+    "lease_path": "/var/lib/kea/kea-lease.csv",
     "customized_options": {
         "option223": {
             "id": "223",
