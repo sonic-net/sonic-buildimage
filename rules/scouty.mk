@@ -1,0 +1,10 @@
+# scouty — CLI TUI log viewer
+
+SCOUTY_VERSION = 0.3.3
+
+export SCOUTY_VERSION
+
+SONIC_SCOUTY = sonic-scouty_$(SCOUTY_VERSION)_$(CONFIGURED_ARCH).deb
+$(SONIC_SCOUTY)_SRC_PATH = $(SRC_PATH)/scouty
+
+SONIC_MAKE_DEBS += $(SONIC_SCOUTY)
