@@ -112,7 +112,7 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
     def run_firmware_update(self) -> bool:
         """Run the actual firmware update command for Spectrum ASICs."""
         # MST device for mlxfwmanager/flint is intentionally fixed to mt53124_pciconf0 (PCI config
-        # access). Product/MFT require this path for SPC6 burn (see RM4953771). A plain
+        # access). Product/MFT require this path for SPC6 burn. A plain
         # `mlxfwmanager` query may list PCI Device Name as mt53124_pci_cr0; that is not a signal to
         # change the burn device here without explicit MFT/product approval.
         sx_loaded = False
