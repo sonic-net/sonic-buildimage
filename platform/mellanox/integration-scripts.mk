@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,12 +45,22 @@ KCFG_BASE_ARM = $(KCFG_BASE_TMPDIR)/arm64.config
 KCFG_LIST_ARM = $(TEMP_HW_MGMT_DIR)/kconfig_arm64
 KCFG_DOWN_LIST_ARM = $(TEMP_HW_MGMT_DIR)/kconfig_downstream_arm64
 
+# Platform-specific kconfig temp files (used by aspeed BMC; unused by default mellanox flow)
+KCFG_BASE_ASPEED = $(KCFG_BASE_TMPDIR)/aspeed.config
+KCFG_LIST_ASPEED = $(TEMP_HW_MGMT_DIR)/kconfig_aspeed
+BMC_PATCH_TABLE = $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/Patch_BMC_Status_Table.txt
+
+# Platform path for hw-mgmt source and integration scripts.
+# Defaults to $(PLATFORM_PATH) which is platform/mellanox for SONiC mellanox builds.
+# Override to platform/mellanox when building for other platforms (e.g., aspeed BMC)
+MLNX_PLATFORM_PATH ?= $(PLATFORM_PATH)
+
 
 integrate-mlnx-hw-mgmt:
 	$(FLUSH_LOG)
 	rm -rf $(TEMP_HW_MGMT_DIR) $(TMPFILE_OUT)
 	mkdir -p $(PTCH_DIR) $(NON_UP_PTCH_DIR) $(KCFG_BASE_TMPDIR)
-	touch $(PTCH_LIST) $(KCFG_LIST) $(KCFG_DOWN_LIST) $(KCFG_LIST_ARM) $(KCFG_DOWN_LIST_ARM)
+	touch $(PTCH_LIST) $(KCFG_LIST) $(KCFG_DOWN_LIST) $(KCFG_LIST_ARM) $(KCFG_DOWN_LIST_ARM) $(KCFG_LIST_ASPEED)
 
 	# Fetch the vanilla .config files
 	pushd $(KCFG_BASE_TMPDIR) $(LOG_SIMPLE)
@@ -61,11 +71,12 @@ integrate-mlnx-hw-mgmt:
 	pushd linux
 	rm -rf .config; make ARCH=x86_64 defconfig; cp -f .config $(KCFG_BASE) $(LOG_SIMPLE)
 	rm -rf .config; make ARCH=arm64 defconfig; cp -f .config $(KCFG_BASE_ARM) $(LOG_SIMPLE)
+	cp -f $(KCFG_BASE_ARM) $(KCFG_BASE_ASPEED)
 	popd
 	popd $(LOG_SIMPLE)
 
 	# clean up existing untracked files
-	pushd $(BUILD_WORKDIR); git clean -f -- platform/mellanox/
+	pushd $(BUILD_WORKDIR); git clean -f -- $(MLNX_PLATFORM_PATH)/
 ifeq ($(CREATE_BRANCH), y)
 	git checkout -B "$(BRANCH_SONIC)_$(SB_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION)" HEAD
 	echo $(BRANCH_SONIC)_$(SB_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION) branch created in sonic-buildimage
@@ -80,12 +91,12 @@ endif
 	popd
 
 	echo "#### Integrate HW-MGMT $(MLNX_HW_MANAGEMENT_VERSION) Kernel Patches into SONiC" > ${HWMGMT_USER_OUTFILE}
-	pushd $(BUILD_WORKDIR)/$(PLATFORM_PATH) $(LOG_SIMPLE)
+	pushd $(BUILD_WORKDIR)/$(MLNX_PLATFORM_PATH) $(LOG_SIMPLE)
 
 	# Run tests
 	pushd integration-scripts/tests; pytest-3 -v; popd
 
-	# Checkout to the corresponding hw-mgmt version and update mk file
+	# Checkout to the corresponding hw-mgmt version and update mk file.
 	pushd hw-management/hw-mgmt; git checkout V.${MLNX_HW_MANAGEMENT_VERSION}; popd
 	sed -i "s/\(^MLNX_HW_MANAGEMENT_VERSION = \).*/\1${MLNX_HW_MANAGEMENT_VERSION}/g" hw-management.mk
 
@@ -95,6 +106,8 @@ endif
 							--config_base_arm $(KCFG_BASE_ARM) \
 							--config_inc_amd $(KCFG_LIST) \
 							--config_inc_arm $(KCFG_LIST_ARM) \
+							--config_base_aspeed $(KCFG_BASE_ASPEED) \
+							--config_inc_aspeed $(KCFG_LIST_ASPEED) \
 							--build_root $(BUILD_WORKDIR) \
 							--kernel_version $(KERNEL_VERSION) \
 							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION} $(LOG_SIMPLE)
@@ -120,6 +133,34 @@ endif
 							--arch amd64 \
 							--os_type sonic $(LOG_SIMPLE)
 
+	# Deploy aspeed/BMC kernel patches.
+	# Guarded at runtime: Patch_BMC_Status_Table.txt indicates this hw-mgmt supports aspeed/BMC.
+	# Must use shell if (not Make ifeq) because hw-mgmt is git-checked-out during this recipe.
+	if [ -f $(BMC_PATCH_TABLE) ]; then \
+		$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
+							--dst_accepted_folder $(PTCH_DIR) \
+							--dst_candidate_folder $(NON_UP_PTCH_DIR) \
+							--series_file $(PTCH_LIST) \
+							--config_file $(KCFG_LIST_ASPEED) \
+							--kernel_version $(KERNEL_VERSION) \
+							--arch aspeed \
+							--os_type sonic $(LOG_SIMPLE) && \
+		cp -f $(PTCH_LIST) $(PTCH_LIST).pre_bmc && \
+		$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
+							--dst_accepted_folder $(PTCH_DIR) \
+							--dst_candidate_folder $(NON_UP_PTCH_DIR) \
+							--series_file $(PTCH_LIST) \
+							--config_file $(KCFG_LIST_ASPEED) \
+							--kernel_version $(KERNEL_VERSION) \
+							--arch aspeed \
+							--os_type sonic \
+							--patch_table Patch_BMC_Status_Table.txt $(LOG_SIMPLE) && \
+		{ grep -vFxf $(PTCH_LIST).pre_bmc $(PTCH_LIST) > $(TEMP_HW_MGMT_DIR)/bmc_only_patches || true; } ; \
+	else \
+		echo "NOTICE: Patch_BMC_Status_Table.txt not found in hw-mgmt, skipping aspeed/BMC patch deploy" ; \
+		touch $(TEMP_HW_MGMT_DIR)/bmc_only_patches ; \
+	fi
+
 	# Post-processing
 	integration-scripts/hwmgmt_kernel_patches.py post \
 							--patches $(PTCH_DIR) \
@@ -132,16 +173,19 @@ endif
 							--config_inc_arm $(KCFG_LIST_ARM) \
 							--config_inc_down_amd $(KCFG_DOWN_LIST) \
 							--config_inc_down_arm $(KCFG_DOWN_LIST_ARM) \
+							--config_base_aspeed $(KCFG_BASE_ASPEED) \
+							--config_inc_aspeed $(KCFG_LIST_ASPEED) \
 							--series $(PTCH_LIST) \
 							--current_non_up_patches $(HWMGMT_NONUP_LIST) \
+							--bmc_patches $(TEMP_HW_MGMT_DIR)/bmc_only_patches \
 							--build_root $(BUILD_WORKDIR) \
 							--sb_msg $(SB_COM_MSG) \
 							--slk_msg $(SLK_COM_MSG) $(LOG_SIMPLE)
-	
+
 	# Commit the changes in linux kernel and and log the diff
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel
 	git add -- patches-sonic/
-	git add -- config.local/ 
+	git add -- config.local/
 
 	echo -en "\n###-> series file changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged -- patches-sonic/series >> ${HWMGMT_USER_OUTFILE}
@@ -155,6 +199,12 @@ endif
 	echo -en "\n###-> ARM64 config changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged -- config.local/arm64/config.sonic-mellanox >> ${HWMGMT_USER_OUTFILE}
 
+	echo -en "\n###-> Platform config changes in sonic-linux-kernel <-###\n" >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- config.local/ \
+		':!config.local/featureset-sonic/config' \
+		':!config.local/amd64/config.sonic' \
+		':!config.local/arm64/config.sonic-mellanox' >> ${HWMGMT_USER_OUTFILE}
+
 	echo -en '\n###-> Summary of files updated in sonic-linux-kernel <-###\n' >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged --stat --output=${TMPFILE_OUT}
 	cat ${TMPFILE_OUT} | tee -a ${HWMGMT_USER_OUTFILE}
@@ -165,11 +215,11 @@ endif
 	# Commit the changes in buildimage and log the diff
 	pushd $(BUILD_WORKDIR)
 	git add -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)
-	git add -- $(PLATFORM_PATH)/non-upstream-patches/
-	git add -- $(PLATFORM_PATH)/hw-management.mk
+	git add -- $(MLNX_PLATFORM_PATH)/non-upstream-patches/
+	git add -- $(MLNX_PLATFORM_PATH)/hw-management.mk
 
 	echo -en '\n###-> Non Upstream changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/ >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- $(MLNX_PLATFORM_PATH)/non-upstream-patches/ >> ${HWMGMT_USER_OUTFILE}
 
 	echo -en '\n###-> Non Upstream patch list file <-###\n' >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches >> ${HWMGMT_USER_OUTFILE}
@@ -178,10 +228,10 @@ endif
 	git diff --no-color --staged -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt >> ${HWMGMT_USER_OUTFILE}
 
 	echo -en '\n###-> hw-management make file version change <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- $(PLATFORM_PATH)/hw-management.mk >> ${HWMGMT_USER_OUTFILE}
-	
+	git diff --no-color --staged -- $(MLNX_PLATFORM_PATH)/hw-management.mk >> ${HWMGMT_USER_OUTFILE}
+
 	echo -en '\n###-> Summary of buildimage changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged --stat --output=${TMPFILE_OUT} -- $(PLATFORM_PATH)
+	git diff --no-color --staged --stat --output=${TMPFILE_OUT} -- $(MLNX_PLATFORM_PATH)
 	cat ${TMPFILE_OUT} | tee -a ${HWMGMT_USER_OUTFILE}
 
 	git diff --staged --quiet || git commit -m "$$(cat $(SB_COM_MSG))";

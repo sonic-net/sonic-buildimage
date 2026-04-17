@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +46,11 @@ class KCFGData:
     noarch_incl = OrderedDict()
     noarch_excl = OrderedDict()
     noarch_down = OrderedDict()
+    # Aspeed BMC kconfig (populated when --config_base_aspeed is provided)
+    aspeed_base = OrderedDict()
+    aspeed_updated = OrderedDict()
+    aspeed_incl = OrderedDict()
+    aspeed_excl = OrderedDict()
 
 
 class KConfigTask():
@@ -64,7 +70,10 @@ class KConfigTask():
         if os.path.isfile(self.args.config_inc_down_arm):
             print(" -> Downstream Config for arm64 found..")
             KCFGData.arm_down = FileHandler.read_kconfig(self.args.config_inc_down_arm)
-        return 
+
+        KCFGData.aspeed_base = FileHandler.read_kconfig(self.args.config_base_aspeed)
+        KCFGData.aspeed_updated = FileHandler.read_kconfig(self.args.config_inc_aspeed)
+        return
 
 
     def parse_inc_exc(self, base: OrderedDict, updated: OrderedDict):
@@ -212,15 +221,70 @@ class KConfigTask():
         return all_lines
 
 
+    def get_aspeed_kconfig(self):
+        """ Rebuild the nvidia_aspeed_bmc block in config.sonic-aspeed.
+            Returns the rebuilt config lines. The block is rebuilt unconditionally so that
+            configs dropped by hw-mgmt (including a full drop of BMC support) are cleared.
+            Returns None when markers are absent AND there are no changes to apply
+            (backward compat with pre-BMC sonic-linux-kernel). Fatals when markers are
+            absent but changes would need to be written.
+        """
+        aspeed_config_path = os.path.join(self.args.build_root, SLK_KCONFIG_ASPEED)
+        config = FileHandler.read_raw(aspeed_config_path)
+
+        start, end = FileHandler.find_marker_indices(config, MLNX_ASPEED_MARKER)
+        if start < 0 or end >= len(config):
+            if KCFGData.aspeed_incl or KCFGData.aspeed_excl:
+                print("-> FATAL: {} markers not found in {}. "
+                      "Please update sonic-linux-kernel to include the markers.".format(
+                          MLNX_ASPEED_MARKER, SLK_KCONFIG_ASPEED))
+                sys.exit(1)
+            print("-> NOTICE: {} markers not in {}, skipping aspeed kconfig update".format(
+                MLNX_ASPEED_MARKER, SLK_KCONFIG_ASPEED))
+            return None
+
+        final = OrderedDict(
+            list(KCFGData.aspeed_incl.items()) +
+            [(k, "n") for k in KCFGData.aspeed_excl.keys()]
+        )
+        config = FileHandler.insert_kcfg_data(config, start, end, final)
+        print("\n -> INFO: aspeed kconfig file generated \n {}".format("".join(config)))
+        return config
+
+
     def perform(self):
         self.read_data()
         KCFGData.x86_incl, KCFGData.x86_excl = self.parse_inc_exc(KCFGData.x86_base, KCFGData.x86_updated)
         KCFGData.arm_incl, KCFGData.arm_excl = self.parse_inc_exc(KCFGData.arm_base, KCFGData.arm_updated)
-        self.parse_noarch_inc_exc()
-        # Get the updated common, amd64, arm64 configs for each file
-        common_config, amd64_config, arm64_config = self.get_upstream_kconfig()
-        FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG), common_config, True)
-        FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG_AMD64), amd64_config, True)
-        FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG_ARM64), arm64_config, True)
-        # return the downstream kconfig diff
-        return self.get_downstream_kconfig_diff(common_config, amd64_config, arm64_config)
+
+        all_lines = []
+
+        # Standard amd64/arm64 kconfig processing.
+        # Skip if no changes — prevents erasing existing configs during aspeed-only builds
+        # (when deploy ran with --arch aspeed, x86/arm64 base == updated → no inclusions).
+        has_standard_changes = (
+            KCFGData.x86_incl or KCFGData.x86_excl or
+            KCFGData.arm_incl or KCFGData.arm_excl or
+            KCFGData.x86_down or KCFGData.arm_down
+        )
+        if has_standard_changes:
+            self.parse_noarch_inc_exc()
+            common_config, amd64_config, arm64_config = self.get_upstream_kconfig()
+            FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG), common_config, True)
+            FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG_AMD64), amd64_config, True)
+            FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG_ARM64), arm64_config, True)
+            all_lines = self.get_downstream_kconfig_diff(common_config, amd64_config, arm64_config)
+
+        # Aspeed BMC kconfig — always rebuild the marker block so that configs dropped
+        # by hw-mgmt (including a full drop of BMC support) are cleared from disk.
+        KCFGData.aspeed_incl, KCFGData.aspeed_excl = self.parse_inc_exc(
+            KCFGData.aspeed_base, KCFGData.aspeed_updated
+        )
+        aspeed_config = self.get_aspeed_kconfig()
+        if aspeed_config is not None:
+            FileHandler.write_lines(
+                os.path.join(self.args.build_root, SLK_KCONFIG_ASPEED),
+                aspeed_config, True
+            )
+
+        return all_lines
