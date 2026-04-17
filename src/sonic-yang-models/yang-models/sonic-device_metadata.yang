@@ -32,6 +32,10 @@ module sonic-device_metadata {
         description "Added async_swss_rec field to control async swss recorder.";
     }
 
+    revision 2026-04-11 {
+        description "Added route_state_async_publish to control async route state publishing.";
+    }
+
     revision 2021-02-27 {
         description "Added frr_mgmt_framework_config field to handle BGP
             config DB schema events to configure FRR protocols.";
