@@ -1229,9 +1229,19 @@ class SonicYangExtMixin(SonicYangPathMixin):
     load_data: load Config DB, crop, xlate and create data tree from it. (Public)
     input:    configdbJson - will NOT be modified
               debug Flag
-    returns:  True - success   False - failed
+              quiet  - when True, suppress the informational "Try to load Data"
+                       syslog line and the "Data Loading Failed" syslog LOG_ERR
+                       line on failure. The SonicYangException is still raised
+                       so callers that want to recover silently (e.g. tools that
+                       speculatively validate many candidate configs, like the
+                       generic_config_updater patch sorter) can do so without
+                       polluting /var/log/syslog with transient errors they are
+                       already handling via the exception. Default False keeps
+                       existing behavior for all current callers.
+    returns:  True on success
+    raises:   SonicYangException on failure
     """
-    def loadData(self, configdbJson, debug=False):
+    def loadData(self, configdbJson, debug=False, quiet=False):
 
        try:
           # write Translated config in file if debug enabled
@@ -1248,14 +1258,16 @@ class SonicYangExtMixin(SonicYangPathMixin):
           # xlated result will be in self.xlateJson
           self._xlateConfigDB(xlateFile=xlateFile)
           #print(self.xlateJson)
-          self.sysLog(msg="Try to load Data in the tree")
+          if not quiet:
+              self.sysLog(msg="Try to load Data in the tree")
           self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), \
                         ly.LYD_JSON, ly.LYD_OPT_CONFIG|ly.LYD_OPT_STRICT)
 
        except Exception as e:
            self.root = None
-           self.sysLog(msg="Data Loading Failed:{}".format(str(e)), \
-            debug=syslog.LOG_ERR, doPrint=True)
+           if not quiet:
+               self.sysLog(msg="Data Loading Failed:{}".format(str(e)), \
+                debug=syslog.LOG_ERR, doPrint=True)
            raise SonicYangException("Data Loading Failed\n{}".format(str(e)))
 
        return True
