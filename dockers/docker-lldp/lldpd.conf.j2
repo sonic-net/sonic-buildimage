@@ -27,24 +27,15 @@ configure system ip management pattern {{ mgmt_if.ipv6 }}
 {% endif %}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
-{# Configure port ID subtype for front-panel ports at startup.
-   Without this, lldpd uses MAC address as default Port ID. When lldpd
-   auto-resumes after config processing, the first LLDP frame would carry
-   MAC-based Port IDs. Peers see a transient MSAP change when lldpmgrd
-   later reconfigures portidsubtype, causing unnecessary neighbor flaps.
-   Special ports (inband/recirculation/backplane) are excluded to match
-   lldpmgrd behavior which skips these port types. #}
-{% if PORT %}
-{% for port_name in PORT|sort %}
-{% if not port_name.startswith('Ethernet-IB') and not port_name.startswith('Ethernet-Rec') and not port_name.startswith('Ethernet-BP') %}
-{% set port_alias = PORT[port_name].alias|default('') %}
-{% if port_alias %}
-configure ports {{ port_name }} lldp portidsubtype local {{ port_alias }}
-{% else %}
-configure ports {{ port_name }} lldp portidsubtype local {{ port_name }}
-{% endif %}
-{% endif %}
-{% endfor %}
-{% endif %}
+{# Set global portidsubtype to ifname so the first LLDP frame after startup
+   uses the Linux interface name (e.g. Ethernet0) instead of MAC address.
+   This avoids the per-port loop from PR #26144 which added N config lines
+   (one per front-panel port). On high-port-count platforms (e.g. 512 ports),
+   processing 512 lines delays lldpd startup by ~11 seconds, causing LLDP
+   neighbor churn and cascading force-repopulate storms in lldp_syncd.
+   The single global directive achieves the same goal (no MAC-as-Port-ID)
+   with O(1) config processing time. lldpmgrd still runs later to set the
+   final portidsubtype to local+alias per port. #}
+configure lldp portidsubtype ifname
 {# pause lldpd operations until all interfaces are well configured, resume command will run in lldpmgrd #}
 pause
