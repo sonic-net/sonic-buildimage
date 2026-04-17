@@ -283,6 +283,9 @@ COPY ["tacacs+", "/etc/default"]
 
 RUN python3 -m venv env-python3
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
+# Python 3 reproducible build hooks are not used after this point in docker-ptf.
+# Once PATH is switched to the virtualenv, pip3 resolves to the venv binary
+# instead of the host pip3 wrapper, so run_pip_command is bypassed.
 ENV VIRTUAL_ENV=/root/env-python3
 ARG BACKUP_OF_PATH="$PATH"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
