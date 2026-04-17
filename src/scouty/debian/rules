@@ -4,7 +4,11 @@
 	dh $@
 
 override_dh_auto_build:
-	cargo build --release --workspace
+	# Some transitive deps (darling 0.23, time 0.3.47, instability 0.3.11)
+	# require rustc >= 1.88, but the sonic-slave-trixie default toolchain is
+	# rustc 1.86. Use rustup to pin a compatible toolchain for this build
+	# (rustup auto-installs the toolchain on first use).
+	RUSTUP_TOOLCHAIN=1.88.0 cargo build --release --workspace
 
 override_dh_auto_install:
 	:
