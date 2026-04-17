@@ -57,7 +57,7 @@ startsecs=0
 dependent_startup=true
 {% endif %}
 
-{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) and not IS_SWITCH_BMC %}
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3

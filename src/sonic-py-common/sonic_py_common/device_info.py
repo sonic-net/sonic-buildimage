@@ -738,36 +738,6 @@ def is_switch_bmc():
     return False
 
 
-def is_liquid_cooled():
-    """
-    Check if this system uses liquid (or hybrid) cooling.  Reads the
-    'liquid_cooled' key from platform_env.conf.
-
-    Returns:
-        True if liquid_cooled=true is present in platform_env.conf, False otherwise.
-    """
-    platform_env_conf_file_path = get_platform_env_conf_file_path()
-    if platform_env_conf_file_path is None:
-        return False
-    with open(platform_env_conf_file_path) as platform_env_conf_file:
-        for line in platform_env_conf_file:
-            tokens = line.split('=')
-            if len(tokens) < 2:
-                continue
-            if tokens[0].lower() == 'liquid_cooled':
-                return tokens[1].strip().lower() == 'true'
-    return False
-
-
-def is_air_cooled():
-    """
-    Check if this system uses air cooling (i.e., is NOT liquid cooled).
-
-    Returns:
-        True when the system is not liquid cooled, False otherwise.
-    """
-    return not is_liquid_cooled()
-
 
 def is_supervisor():
     platform_env_conf_file_path = get_platform_env_conf_file_path()

@@ -778,6 +778,9 @@ sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 # Copy ASN configuration files
 sudo cp $IMAGE_CONFIGS/constants/constants.yml $FILESYSTEM_ROOT/etc/sonic/
 
+# Copy BMC network configuration file
+sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT/etc/sonic/
+
 # Copy sudoers configuration file
 sudo cp $IMAGE_CONFIGS/sudoers/sudoers $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/sudoers/sudoers.lecture $FILESYSTEM_ROOT/etc/

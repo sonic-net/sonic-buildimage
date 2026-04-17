@@ -381,10 +381,6 @@ switch_host=1
 liquid_cooled=true
 """
 
-    PLATFORM_ENV_AIR_CONTENTS = """\
-switch_host=1
-"""
-
     @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
     def test_is_switch_bmc(self, mock_get_env_path):
         # platform_env.conf not found
@@ -414,29 +410,6 @@ switch_host=1
         open_bmc = mock.mock_open(read_data=self.PLATFORM_ENV_BMC_CONTENTS)
         with mock.patch("{}.open".format(BUILTINS), open_bmc):
             assert device_info.is_switch_host() is False
-
-    @mock.patch("sonic_py_common.device_info.get_platform_env_conf_file_path")
-    def test_is_liquid_cooled(self, mock_get_env_path):
-        # platform_env.conf not found
-        mock_get_env_path.return_value = None
-        assert device_info.is_liquid_cooled() is False
-
-        open_lc = mock.mock_open(read_data=self.PLATFORM_ENV_HOST_CONTENTS)
-        with mock.patch("{}.open".format(BUILTINS), open_lc):
-            mock_get_env_path.return_value = "/usr/share/sonic/platform/platform_env.conf"
-            assert device_info.is_liquid_cooled() is True
-
-        open_air = mock.mock_open(read_data=self.PLATFORM_ENV_AIR_CONTENTS)
-        with mock.patch("{}.open".format(BUILTINS), open_air):
-            assert device_info.is_liquid_cooled() is False
-
-    @mock.patch("sonic_py_common.device_info.is_liquid_cooled")
-    def test_is_air_cooled(self, mock_lc):
-        mock_lc.return_value = True
-        assert device_info.is_air_cooled() is False
-
-        mock_lc.return_value = False
-        assert device_info.is_air_cooled() is True
 
     @mock.patch("os.path.exists")
     @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
