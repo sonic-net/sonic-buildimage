@@ -431,18 +431,6 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
-    # switch_host=1 / switch_bmc=1 may be set by platform_env.conf above.
-    # Normalise to 0 when absent so downstream env vars are always defined.
-    IS_SWITCH_HOST=${switch_host:-0}
-    IS_SWITCH_BMC=${switch_bmc:-0}
-
-    # Derive IS_BMC_DEVICE from switch_bmc so docker-database-init.sh can use
-    # the existing IS_BMC_DEVICE mechanism without extra env vars.
-    if [[ "$IS_SWITCH_BMC" == "1" ]]; then
-        IS_BMC_DEVICE=true
-    fi
-
-
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
     # Set the SYNCD_SHM_SIZE if this variable not defined
@@ -666,7 +654,6 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
-            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi

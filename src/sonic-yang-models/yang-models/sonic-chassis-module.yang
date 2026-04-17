@@ -9,6 +9,10 @@ module sonic-chassis-module {
     }
     description "CHASSIS_MODULE YANG to administratively set SONIC modules state";
 
+    revision 2026-04-17 {
+        description "Add SWITCH-HOST to name pattern; add power_on_delay and graceful_shutdown_timeout leaves for BMC support";
+    }
+
     revision 2023-02-24 {
         description "Initial version";
     }
@@ -33,12 +37,18 @@ module sonic-chassis-module {
 
                 leaf power_on_delay {
                     type uint32;
-                    description "Time in seconds BMC waits before powering on Switch-Host when device is powered ON (default: 0)";
+                    must "current()/../name = 'SWITCH-HOST'" {
+                        error-message "power_on_delay is only applicable to SWITCH-HOST";
+                    }
+                    description "Time in seconds BMC waits before powering on Switch-Host when device is powered ON. Applicable only to SWITCH-HOST.";
                 }
 
                 leaf graceful_shutdown_timeout {
                     type uint32;
-                    description "Time in seconds BMC waits for graceful shutdown before forcing power-off (default: 120). Set to 0 to skip graceful shutdown and power off immediately";
+                    must "current()/../name = 'SWITCH-HOST'" {
+                        error-message "graceful_shutdown_timeout is only applicable to SWITCH-HOST";
+                    }
+                    description "Time in seconds BMC waits for graceful shutdown before forcing power-off. Set to 0 to skip graceful shutdown and power off immediately. Applicable only to SWITCH-HOST.";
                 }
             }
         }

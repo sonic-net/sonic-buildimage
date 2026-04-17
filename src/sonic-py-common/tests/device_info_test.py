@@ -419,7 +419,9 @@ liquid_cooled=true
         BMC_PLATFORM = '{"bmc_if_name": "usb0", "bmc_if_addr": "169.254.0.2", ' \
                        '"bmc_addr": "169.254.0.1", "bmc_net_mask": "255.255.255.252"}'
 
-        # global bmc.json exists – should be returned
+        mock_platform_dir.return_value = "/usr/share/sonic/platform"
+
+        # Platform bmc.json absent, global bmc.json present – global is returned
         def exists_global(path):
             return path == device_info.GLOBAL_BMC_DATA_FILE
 
@@ -431,9 +433,24 @@ liquid_cooled=true
         assert result["bmc_addr"] == "169.254.100.1"
         assert result["bmc_if_name"] == "bmc0"
 
-        # global bmc.json absent, platform bmc.json present
-        mock_platform_dir.return_value = "/usr/share/sonic/platform"
+        # Platform bmc.json present – platform takes precedence over global
+        def exists_both(path):
+            return path in (device_info.GLOBAL_BMC_DATA_FILE,
+                            "/usr/share/sonic/platform/bmc.json")
 
+        mock_exists.side_effect = exists_both
+        # open() returns platform data for platform path, global data for global path
+        def open_side_effect(path, *args, **kwargs):
+            data = BMC_PLATFORM if "platform" in path else BMC_GLOBAL
+            return mock.mock_open(read_data=data)()
+
+        with mock.patch("{}.open".format(BUILTINS), side_effect=open_side_effect):
+            result = device_info.get_bmc_data()
+        assert result is not None
+        assert result["bmc_addr"] == "169.254.0.1", "Platform bmc.json must take precedence"
+        assert result["bmc_if_name"] == "usb0"
+
+        # Platform bmc.json present, global absent – platform is returned
         def exists_platform(path):
             return path == "/usr/share/sonic/platform/bmc.json"
 

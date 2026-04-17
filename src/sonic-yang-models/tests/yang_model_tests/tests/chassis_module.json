@@ -17,5 +17,10 @@
         "desc": "Load chassis module table with invalid SWITCH-HOST name variant",
         "eStrKey": "Pattern",
         "eStr": ["name"]
+    },
+    "CHASSIS_MODULE_LINECARD_WITH_SWITCH_HOST_FIELDS": {
+        "desc": "power_on_delay and graceful_shutdown_timeout must only be set on SWITCH-HOST, not LINE-CARD",
+        "eStrKey": "Must",
+        "eStr": ["power_on_delay"]
     }
 }

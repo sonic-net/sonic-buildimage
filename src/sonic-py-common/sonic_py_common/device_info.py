@@ -1031,26 +1031,25 @@ def get_bmc_data():
     """
     Get BMC network configuration.
 
-    Checks the SONiC-wide global bmc.json (/etc/sonic/bmc.json) first; if
-    that file is absent, falls back to the platform-specific bmc.json in
-    the platform directory.  A platform bmc.json overrides the global file
-    when both are present in the sense that sonic-config-engine will copy
-    the platform file over the installed global one during image generation.
+    Checks the platform-specific bmc.json in the platform directory first;
+    if absent, falls back to the SONiC-wide global bmc.json (/etc/sonic/bmc.json).
+    This allows a platform to override the global defaults with platform-specific
+    IP addresses.
 
     Returns:
         A dict with bmc_if_name, bmc_if_addr, bmc_addr and bmc_net_mask,
         or None if no bmc.json is found.
     """
     try:
-        if os.path.exists(GLOBAL_BMC_DATA_FILE):
-            with open(GLOBAL_BMC_DATA_FILE, "r") as f:
-                return json.load(f)
         platform_path = get_path_to_platform_dir()
         if platform_path:
             json_file = os.path.join(platform_path, BMC_DATA_FILE)
             if os.path.exists(json_file):
                 with open(json_file, "r") as f:
                     return json.load(f)
+        if os.path.exists(GLOBAL_BMC_DATA_FILE):
+            with open(GLOBAL_BMC_DATA_FILE, "r") as f:
+                return json.load(f)
         return None
     except Exception:
         return None

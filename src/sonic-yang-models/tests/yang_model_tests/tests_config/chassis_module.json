@@ -89,5 +89,18 @@
                 ]
             }
         }
+    },
+    "CHASSIS_MODULE_LINECARD_WITH_SWITCH_HOST_FIELDS": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "LINE-CARD0",
+                        "admin_status": "up",
+                        "power_on_delay": 30
+                    }
+                ]
+            }
+        }
     }
 }
