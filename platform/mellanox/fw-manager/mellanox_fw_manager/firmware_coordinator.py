@@ -123,9 +123,9 @@ class FirmwareCoordinator:
         failure_count = 0
         timeout_failures = set()
 
-        # Wait for all processes with timeout (10 minutes per ASIC)
-        # Firmware upgrades typically take 1-3 minutes, so 10 minutes provides a safe margin
-        timeout_per_asic = 600  # seconds
+        # Wait for all processes with timeout per ASIC
+        # SPC6 and similar can take 10+ minutes; use 15 min to allow burn to complete (align with mlnx-fw-manager.service TimeoutSec=900)
+        timeout_per_asic = 900  # seconds
         for process in processes:
             process.join(timeout=timeout_per_asic)
             if process.is_alive():

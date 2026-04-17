@@ -25,7 +25,8 @@ RemainAfterExit=yes
 ExecStartPre=/usr/bin/mst start --with_i2cdev
 ExecStart=/usr/local/bin/mlnx-fw-manager --clear-semaphore --verbose
 ExecStop=/usr/bin/mst stop
-TimeoutSec=300
+# Firmware burn (mlxfwmanager -u) can take 10+ minutes on SPC6; 5min was causing start timeout
+TimeoutSec=900
 User=root
 
 [Install]

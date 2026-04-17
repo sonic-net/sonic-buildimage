@@ -189,8 +189,9 @@ Device Info:
 
         self.assertIsNone(result)
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_success(self, mock_run_cmd):
+    def test_run_firmware_update_success(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when successful"""
         manager = self._create_manager()
 
@@ -207,9 +208,12 @@ Device Info:
         call_args = mock_run_cmd.call_args[0][0]
         self.assertIn('mlxfwmanager', call_args)
         self.assertIn('-u', call_args)
+        mock_sx_kernel.assert_any_call('start')
+        mock_sx_kernel.assert_any_call('stop')
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_failure(self, mock_run_cmd):
+    def test_run_firmware_update_failure(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when firmware update fails"""
         manager = self._create_manager()
 
@@ -222,9 +226,12 @@ Device Info:
         result = manager.run_firmware_update()
 
         self.assertFalse(result)
+        mock_sx_kernel.assert_any_call('start')
+        mock_sx_kernel.assert_any_call('stop')
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_reactivation_required(self, mock_run_cmd):
+    def test_run_firmware_update_reactivation_required(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when reactivation is required"""
         manager = self._create_manager()
 
@@ -242,9 +249,12 @@ Device Info:
         reactivate_call = mock_run_cmd.call_args_list[1][0][0]
         self.assertIn('flint', reactivate_call)
         self.assertIn('ir', reactivate_call)
+        mock_sx_kernel.assert_any_call('start')
+        mock_sx_kernel.assert_any_call('stop')
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_reactivation_fails_but_continues(self, mock_run_cmd):
+    def test_run_firmware_update_reactivation_fails_but_continues(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when reactivation fails but continues with retry"""
         manager = self._create_manager()
 
@@ -259,8 +269,9 @@ Device Info:
         self.assertTrue(result)
         self.assertEqual(mock_run_cmd.call_count, 3)
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_reactivation_required_retry_fails(self, mock_run_cmd):
+    def test_run_firmware_update_reactivation_required_retry_fails(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when reactivation required but retry fails"""
         manager = self._create_manager()
 
@@ -275,8 +286,9 @@ Device Info:
         self.assertFalse(result)
         self.assertEqual(mock_run_cmd.call_count, 3)
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_exception(self, mock_run_cmd):
+    def test_run_firmware_update_exception(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update when exception occurs"""
         manager = self._create_manager()
 
@@ -285,9 +297,11 @@ Device Info:
         result = manager.run_firmware_update()
 
         self.assertFalse(result)
+        mock_sx_kernel.assert_any_call('stop')
 
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
-    def test_run_firmware_update_with_verbose_mode(self, mock_run_cmd):
+    def test_run_firmware_update_with_verbose_mode(self, mock_run_cmd, mock_sx_kernel):
         """Test run_firmware_update passes correct environment in verbose mode"""
         manager = self._create_manager(verbose=True)
 
@@ -306,6 +320,23 @@ Device Info:
         env = call_kwargs['env']
         self.assertIn('FLASH_ACCESS_DEBUG', env)
         self.assertIn('FW_COMPS_DEBUG', env)
+
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=False)
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_command')
+    def test_run_firmware_update_sx_kernel_start_fails_still_burns(self, mock_run_cmd, mock_sx_kernel):
+        """If sx-kernel start fails, burn continues and stop is not invoked (sx_loaded was False)."""
+        manager = self._create_manager()
+        mock_run_cmd.return_value = MagicMock(
+            returncode=0,
+            stdout="ok",
+            stderr=""
+        )
+
+        result = manager.run_firmware_update()
+
+        self.assertTrue(result)
+        mock_sx_kernel.assert_called_once_with('start')
+        mock_run_cmd.assert_called_once()
 
 
 if __name__ == '__main__':

@@ -30,6 +30,9 @@ from .firmware_base import FirmwareManagerBase, FW_ALREADY_UPDATED_FAILURE
 class SpectrumFirmwareManager(FirmwareManagerBase):
     """Firmware manager for Spectrum ASICs."""
 
+    # Same path as sx-kernel.service ExecStart (sonic_debian_extension installs to /usr/bin).
+    _SX_KERNEL_SH = '/usr/bin/sx-kernel.sh'
+
     # PCI ID to ASIC type mapping for Spectrum devices
     ASIC_TYPE_MAP = {
         '15b3:cb84': 'SPC',
@@ -52,6 +55,37 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
     def _get_mst_device_type(self) -> str:
         """Get MST device type for Spectrum ASICs."""
         return "Spectrum"
+
+    def _run_sx_kernel(self, action: str) -> bool:
+        """
+        Run sx-kernel.sh start or stop.
+
+        Loading the Spectrum driver before mlxfwmanager can reduce burn time (e.g. DMA vs
+        register-only access). Unloading after burn lets sx-kernel.service bring the driver up
+        cleanly for syncd, avoiding a stuck or failed reactivation when the driver stayed loaded.
+
+        Args:
+            action: 'start' or 'stop'
+
+        Returns:
+            True if the script exited 0, else False.
+        """
+        if action not in ('start', 'stop'):
+            raise ValueError(f'invalid sx-kernel action: {action!r}')
+        cmd = [self._SX_KERNEL_SH, action]
+        try:
+            result = self._run_command(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                err = (result.stderr or result.stdout or '').strip()
+                self.logger.warning(
+                    f'sx-kernel.sh {action} failed (exit {result.returncode}){": " + err if err else ""}'
+                )
+                return False
+            self.logger.info(f'sx-kernel.sh {action} completed successfully')
+            return True
+        except Exception as e:
+            self.logger.warning(f'sx-kernel.sh {action} failed: {e}')
+            return False
 
     def _get_available_firmware_version(self, psid: str) -> Optional[str]:
         """Get available firmware version for Spectrum ASICs using mlxfwmanager."""
@@ -77,15 +111,26 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
 
     def run_firmware_update(self) -> bool:
         """Run the actual firmware update command for Spectrum ASICs."""
+        # MST device for mlxfwmanager/flint is intentionally fixed to mt53124_pciconf0 (PCI config
+        # access). Product/MFT require this path for SPC6 burn (see RM4953771). A plain
+        # `mlxfwmanager` query may list PCI Device Name as mt53124_pci_cr0; that is not a signal to
+        # change the burn device here without explicit MFT/product approval.
+        sx_loaded = False
         try:
-            cmd = ['mlxfwmanager', '-u', '-f', '-y', '-d', self.pci_id, '-i', self.fw_file]
+            sx_loaded = self._run_sx_kernel('start')
+            if not sx_loaded:
+                self.logger.warning(
+                    'Continuing firmware burn without sx-kernel start (slower path or already loaded)'
+                )
+
+            cmd = ['mlxfwmanager', '-u', '-f', '-y', '-d', '/dev/mst/mt53124_pciconf0', '-i', self.fw_file]
             env = self._get_env()
 
             result = self._run_command(cmd, env=env, capture_output=True, text=True)
 
             if result.returncode == FW_ALREADY_UPDATED_FAILURE:
                 self.logger.info("FW reactivation is required. Reactivating and updating FW ...")
-                reactivate_cmd = ['flint', '-d', self.pci_id, 'ir']
+                reactivate_cmd = ['flint', '-d', '/dev/mst/mt53124_pciconf0', 'ir']
                 reactivate_result = self._run_command(reactivate_cmd, capture_output=True, text=True)
                 if reactivate_result.returncode != 0:
                     self.logger.warning(f"FW reactivation failed with return code {reactivate_result.returncode}: {reactivate_result.stderr}")
@@ -100,3 +145,6 @@ class SpectrumFirmwareManager(FirmwareManagerBase):
         except Exception as e:
             self.logger.error(f"Failed to run firmware update for Spectrum ASICs: {e}")
             return False
+        finally:
+            if sx_loaded:
+                self._run_sx_kernel('stop')

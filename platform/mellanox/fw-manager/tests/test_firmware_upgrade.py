@@ -119,7 +119,8 @@ class TestFirmwareUpgrade(unittest.TestCase):
 
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._initialize_asic')
     @patch('mellanox_fw_manager.spectrum_manager.subprocess.run')
-    def test_spectrum_firmware_upgrade_success(self, mock_run, mock_init_asic):
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
+    def test_spectrum_firmware_upgrade_success(self, mock_sx_kernel, mock_run, mock_init_asic):
         """Test successful firmware upgrade for Spectrum ASIC"""
         mock_init_asic.return_value = None
 
@@ -150,7 +151,7 @@ class TestFirmwareUpgrade(unittest.TestCase):
             self.assertIn('-f', upgrade_call[0][0])
             self.assertIn('-y', upgrade_call[0][0])
             self.assertIn('-d', upgrade_call[0][0])
-            self.assertIn('01:00.0', upgrade_call[0][0])
+            self.assertIn('/dev/mst/mt53124_pciconf0', upgrade_call[0][0])
             self.assertIn('-i', upgrade_call[0][0])
             self.assertIn('/test/fw/fw-SPC3.mfa', upgrade_call[0][0])
 
@@ -207,7 +208,8 @@ class TestFirmwareUpgrade(unittest.TestCase):
 
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._initialize_asic')
     @patch('mellanox_fw_manager.spectrum_manager.subprocess.run')
-    def test_firmware_upgrade_failure(self, mock_run, mock_init_asic):
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
+    def test_firmware_upgrade_failure(self, mock_sx_kernel, mock_run, mock_init_asic):
         """Test firmware upgrade failure handling"""
         mock_init_asic.return_value = None
 
@@ -223,7 +225,8 @@ class TestFirmwareUpgrade(unittest.TestCase):
 
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._initialize_asic')
     @patch('mellanox_fw_manager.spectrum_manager.subprocess.run')
-    def test_spectrum_firmware_reactivation_scenario(self, mock_run, mock_init_asic):
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
+    def test_spectrum_firmware_reactivation_scenario(self, mock_sx_kernel, mock_run, mock_init_asic):
         """Test firmware upgrade with reactivation required (return code 2)"""
         mock_init_asic.return_value = None
 
@@ -244,7 +247,7 @@ class TestFirmwareUpgrade(unittest.TestCase):
             reactivate_call = mock_run.call_args_list[1]
             self.assertIn('flint', reactivate_call[0][0])
             self.assertIn('-d', reactivate_call[0][0])
-            self.assertIn('01:00.0', reactivate_call[0][0])
+            self.assertIn('/dev/mst/mt53124_pciconf0', reactivate_call[0][0])
             self.assertIn('ir', reactivate_call[0][0])
 
             retry_call = mock_run.call_args_list[2]
@@ -299,7 +302,8 @@ class TestFirmwareUpgrade(unittest.TestCase):
 
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._initialize_asic')
     @patch('mellanox_fw_manager.spectrum_manager.subprocess.run')
-    def test_clear_semaphore_functionality(self, mock_run, mock_init_asic):
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
+    def test_clear_semaphore_functionality(self, mock_sx_kernel, mock_run, mock_init_asic):
         """Test clear semaphore functionality"""
         mock_init_asic.return_value = None
 
@@ -328,7 +332,8 @@ class TestFirmwareUpgrade(unittest.TestCase):
 
     @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._initialize_asic')
     @patch('mellanox_fw_manager.spectrum_manager.subprocess.run')
-    def test_verbose_mode_commands(self, mock_run, mock_init_asic):
+    @patch('mellanox_fw_manager.spectrum_manager.SpectrumFirmwareManager._run_sx_kernel', return_value=True)
+    def test_verbose_mode_commands(self, mock_sx_kernel, mock_run, mock_init_asic):
         """Test that verbose mode affects mlxfwmanager commands"""
         mock_init_asic.return_value = None
 
