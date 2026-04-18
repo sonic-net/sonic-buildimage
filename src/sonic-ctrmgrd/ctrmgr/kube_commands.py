@@ -398,30 +398,41 @@ def _do_tag(docker_id, image_ver):
     err = ""
     out = ""
     ret = 1
-    status, _, err = _run_command("docker ps |grep {}".format(docker_id))
+    status, ps_out, err = _run_command(["docker", "ps"])
     if status == 0:
-        _, image_item, err = _run_command("docker inspect {} |jq -r .[].Image".format(docker_id))
-        if image_item:
-            image_id = image_item.split(":")[1][:12]
-            _, image_info, err = _run_command("docker images |grep {}".format(image_id))
-            if image_info:
-                # Only need the docker repo name without acr domain
-                image_rep = image_info.split()[0].split("/")[-1]
-                tag_res, _, err = _run_command("docker tag {} {}:latest".format(image_id, image_rep))
-                if tag_res == 0:
-                    out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
-                    ret = 0
+        if docker_id not in ps_out:
+            out = "New version {} is not running.".format(image_ver)
+            ret = -1
+            return (ret, out, err)
+        insp_ret, insp_out, err = _run_command(["docker", "inspect", docker_id])
+        if insp_ret == 0 and insp_out:
+            try:
+                insp_data = json.loads(insp_out)
+                image_full = insp_data[0]["Image"]
+                image_id = image_full.split(":")[1][:12] if ":" in image_full else image_full[:12]
+            except (ValueError, KeyError, IndexError) as e:
+                err = "Failed to parse docker inspect output for {}: {}".format(docker_id, str(e))
+                return (ret, out, err)
+            img_ret, img_out, err = _run_command(["docker", "images"])
+            if img_ret == 0 and img_out:
+                image_info = next((line for line in img_out.splitlines() if image_id in line), None)
+                if image_info:
+                    # Only need the docker repo name without acr domain
+                    image_rep = image_info.split()[0].split("/")[-1]
+                    tag_res, _, err = _run_command(["docker", "tag", image_id, "{}:latest".format(image_rep)])
+                    if tag_res == 0:
+                        out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
+                        ret = 0
+                    else:
+                        err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
                 else:
-                    err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
+                    err = "Failed to find image {} in docker images output".format(image_id)
             else:
-                err = "Failed to docker images |grep {} to get image repo. Err: {}".format(image_id, err)
+                err = "Failed to run docker images. Err: {}".format(err)
         else:
-            err = "Failed to inspect container:{} to get image id. Err: {}".format(docker_id, err)
-    elif err:
-        err = "Error happens when execute docker ps |grep {}. Err: {}".format(docker_id, err)
+            err = "Failed to inspect container: {}. Err: {}".format(docker_id, err)
     else:
-        out = "New version {} is not running.".format(image_ver)
-        ret = -1
+        err = "Failed to run docker ps. Err: {}".format(err)
 
     return (ret, out, err)
 
@@ -429,23 +440,29 @@ def _remove_container(feat):
     err = ""
     out = ""
     ret = 0
-    _, feat_status, err = _run_command("docker inspect {} |jq -r .[].State.Running".format(feat))
-    if feat_status:
-        if feat_status == 'true':
+    insp_ret, insp_out, insp_err = _run_command(["docker", "inspect", feat])
+    if insp_ret == 0 and insp_out:
+        try:
+            insp_data = json.loads(insp_out)
+            feat_running = insp_data[0]["State"]["Running"]
+        except (ValueError, KeyError, IndexError) as e:
+            err = "Failed to parse docker inspect output for {}: {}".format(feat, str(e))
+            ret = 1
+            return (ret, out, err)
+        if feat_running:
             err = "Feature {} container is running, it's unexpected".format(feat)
             ret = 1
         else:
-            rm_res, _, err = _run_command("docker rm {}".format(feat))
+            rm_res, _, err = _run_command(["docker", "rm", feat])
             if rm_res == 0:
                 out = "Remove origin local {} container successfully".format(feat)
             else:
                 err = "Failed to docker rm {}. Err: {}".format(feat, err)
                 ret = 1
-    elif err.startswith("Error: No such object"):
+    elif insp_err.startswith("Error: No such object"):
         out = "Origin local {} container has been removed before".format(feat)
-        err = ""
     else:
-        err = "Failed to docker inspect {} |jq -r .[].State.Running. Err: {}".format(feat, err)
+        err = "Failed to docker inspect {}. Err: {}".format(feat, insp_err)
         ret = 1
 
     return (ret, out, err)

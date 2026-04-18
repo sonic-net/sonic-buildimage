@@ -227,19 +227,19 @@ tag_latest_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"],
+            ["docker", "rm", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
             "",
-            "false",
+            '[{"State": {"Running": false}}]',
             ""
         ]
     },
@@ -248,18 +248,16 @@ tag_latest_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
-            "",
             "",
             ""
         ],
@@ -268,8 +266,7 @@ tag_latest_test_data = {
             "",
             "",
             "",
-            "Error: No such object",
-            ""
+            "Error: No such object"
         ]
     },
     2: {
@@ -277,10 +274,10 @@ tag_latest_test_data = {
         common_test.RETVAL: -1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456"
+            ["docker", "ps"]
         ],
-        common_test.PROC_CODE: [
-            1
+        common_test.PROC_OUT: [
+            "abc other_container"
         ]
     },
     3: {
@@ -288,7 +285,7 @@ tag_latest_test_data = {
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456"
+            ["docker", "ps"]
         ],
         common_test.PROC_ERR: [
             "err"
@@ -299,20 +296,18 @@ tag_latest_test_data = {
         common_test.RETVAL: 1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
-            "docker ps |grep 123456",
-            "docker inspect 123456 |jq -r .[].Image",
-            "docker images |grep 5425bcbd23c5",
-            "docker tag 5425bcbd23c5 snmp:latest",
-            "docker inspect snmp |jq -r .[].State.Running",
-            "docker rm snmp"
+            ["docker", "ps"],
+            ["docker", "inspect", "123456"],
+            ["docker", "images"],
+            ["docker", "tag", "5425bcbd23c5", "snmp:latest"],
+            ["docker", "inspect", "snmp"]
         ],
         common_test.PROC_OUT: [
-            "",
-            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "abc 123456 snmp",
+            '[{"Image": "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc"}]',
             "acr.io/snmp v1 5425bcbd23c5",
             "",
-            "true",
-            ""
+            '[{"State": {"Running": true}}]'
         ]
     }
 }
