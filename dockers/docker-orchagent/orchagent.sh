@@ -62,6 +62,11 @@ if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
 
+SUPPRESS_FIB_OPER=$(sonic-db-cli STATE_DB hget "FIB_SUPPRESS_TABLE|system" "oper_state")
+if [ "$SUPPRESS_FIB_OPER" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-F "
+fi
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
