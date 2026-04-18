@@ -674,7 +674,7 @@ def mock_procs_init():
 def mock_subproc_side_effect(cmd, shell=False, stdout=None, stderr=None):
     global procs_index
 
-    assert shell == True
+    assert shell == isinstance(cmd, str)
     assert stdout == subprocess.PIPE
     assert stderr == subprocess.PIPE
     index = procs_index
