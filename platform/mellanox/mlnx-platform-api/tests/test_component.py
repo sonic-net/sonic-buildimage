@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -207,14 +208,16 @@ class TestComponent:
         with pytest.raises(RuntimeError):
             c.get_firmware_version()
 
+    @mock.patch('sonic_platform.component.ComponentCPLD._is_spc1_asic')
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.subprocess.check_call')
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
     @mock.patch('sonic_platform.component.os.path.exists')
-    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call):
+    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
         c = ComponentCPLD(1)
+        mock_is_spc1.return_value = True
         c._read_generic_file = mock.MagicMock(side_effect=[None, '1', None])
         assert c.get_firmware_version() == 'CPLD000000_REV0100'
 
@@ -239,6 +242,9 @@ class TestComponent:
         assert not c._install_firmware('')
         c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value='some dev')
         assert c._install_firmware('')
+        mock_check_call.assert_called_once_with(
+            ['cpldupdate', '--dev', 'some dev', '--print-progress', ''],
+            universal_newlines=True)
         mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
         assert not c._install_firmware('')
 
@@ -280,6 +286,27 @@ class TestComponent:
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_ERR_UNKNOWN
         c.install_firmware = mock.MagicMock(return_value=True)
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_SCHEDULED
+
+    @mock.patch('sonic_platform.component.ComponentCPLD._is_spc1_asic')
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    def test_cpld_component_install_non_spc1(self, mock_check_call, mock_is_spc1):
+        """Non-SPC1 CPLD component install: GPIO cpldupdate path, no MST device."""
+        c = ComponentCPLD(1)
+        mock_is_spc1.return_value = False
+        c._check_file_validity = mock.MagicMock(return_value=True)
+        c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value=None)
+        install_path = '/tmp/test_cpld.vme'
+
+        assert c._install_firmware(install_path)
+        c._ComponentCPLD__get_mst_device.assert_not_called()
+        mock_check_call.assert_called_once_with(
+            ['cpldupdate', '--gpio', '--print-progress', install_path],
+            universal_newlines=True)
+
+        mock_check_call.reset_mock()
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
+        assert not c._install_firmware(install_path)
+        c._ComponentCPLD__get_mst_device.assert_not_called()
 
     @mock.patch('sonic_platform.component.ComponentCPLD._read_generic_file', mock.MagicMock(return_value='3'))
     def test_cpld_get_component_list(self):
