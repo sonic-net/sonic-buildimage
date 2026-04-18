@@ -118,7 +118,7 @@ module sonic-dhcpv4-relay {
                 leaf agent_relay_mode {
                     description "How to forward packets that already have a relay option";
                     type stypes:relay-agent-mode;
-                    default forward_untouched;
+                    default discard;
                 }
 
                 leaf max_hop_count {
