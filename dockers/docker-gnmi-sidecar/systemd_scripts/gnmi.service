@@ -8,12 +8,8 @@ StartLimitIntervalSec=1200
 StartLimitBurst=3
 
 [Service]
-Type=simple
-User=root
+User=admin
 ExecStartPre=/usr/local/bin/gnmi.sh start
 ExecStart=/usr/local/bin/gnmi.sh wait
 ExecStop=/usr/local/bin/gnmi.sh stop
 RestartSec=30
-TimeoutStartSec=30s
-TimeoutStopSec=30s
-Restart=always
