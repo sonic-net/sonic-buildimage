@@ -99,7 +99,8 @@ def kube_read_labels():
 
         for label in lst:
             tmp = label.split("=")
-            labels[tmp[0]] = tmp[1]
+            if len(tmp) == 2:
+                labels[tmp[0]] = tmp[1]
 
     # log_debug("{} kube labels {} ret={}".format(
         # "Applied" if ret == 0 else "Failed to apply",
