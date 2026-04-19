@@ -839,6 +839,20 @@ define ARCHIVE_PATCHED_SOURCE
 			--exclude='.tox/' \
 			--exclude='.pytest_cache/' \
 			--exclude='*.egg/' \
+			--exclude='debian/tmp/' \
+			--exclude='debian/.debhelper/' \
+			--exclude='debian/debhelper-build-stamp' \
+			--exclude='debian/files' \
+			--exclude='debian/*.substvars' \
+			--exclude='debian/*.log' \
+			--exclude='debian/*.debhelper' --exclude='debian/*.debhelper.log' \
+			--filter='exclude debian/*/DEBIAN/' \
+			--filter='exclude debian/*/usr/' \
+			--filter='exclude debian/*/lib/' \
+			--filter='exclude debian/*/etc/' \
+			--filter='exclude debian/*/var/' \
+			--exclude='config.log' --exclude='config.status' \
+			--exclude='stamp-h*' --exclude='autom4te.cache/' \
 			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/; \
 	fi
 endef
