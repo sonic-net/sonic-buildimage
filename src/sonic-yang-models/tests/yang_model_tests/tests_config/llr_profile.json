@@ -1,0 +1,156 @@
+{
+    "LLR_PROFILE_VALID": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_800000_40m_profile",
+                        "max_outstanding_frames": 264,
+                        "max_outstanding_bytes": 135000,
+                        "max_replay_count": 3,
+                        "max_replay_timer": 5000,
+                        "pcs_lost_timeout": 50000,
+                        "data_age_timeout": 20000,
+                        "ctlos_spacing_bytes": 2048,
+                        "init_action": "best_effort",
+                        "flush_action": "best_effort"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_VALID_DEFAULTS_ONLY": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_minimal",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_MISSING_MANDATORY_FRAMES": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_missing_frames",
+                        "max_outstanding_bytes": 31184
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_MISSING_MANDATORY_BYTES": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_missing_bytes",
+                        "max_outstanding_frames": 61
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_INVALID_INIT_ACTION": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_bad_init",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "init_action": "drop"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_INVALID_FLUSH_ACTION": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_bad_flush",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "flush_action": "forward"
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_REPLAY_COUNT": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_bad_replay_count",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "max_replay_count": 256
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_REPLAY_COUNT_ZERO": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_replay_count_zero",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "max_replay_count": 0
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_CTLOS_BELOW_MIN": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_ctlos_low",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "ctlos_spacing_bytes": 100
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_CTLOS_ABOVE_MAX": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_ctlos_high",
+                        "max_outstanding_frames": 61,
+                        "max_outstanding_bytes": 31184,
+                        "ctlos_spacing_bytes": 32768
+                    }
+                ]
+            }
+        }
+    },
+    "LLR_PROFILE_OUT_OF_RANGE_OUTSTANDING_FRAMES": {
+        "sonic-llr-profile:sonic-llr-profile": {
+            "sonic-llr-profile:LLR_PROFILE": {
+                "LLR_PROFILE_LIST": [
+                    {
+                        "name": "llr_frames_overflow",
+                        "max_outstanding_frames": 524289,
+                        "max_outstanding_bytes": 31184
+                    }
+                ]
+            }
+        }
+    }
+}
