@@ -329,6 +329,37 @@ def _extract_git_info_from_make_n(output: str):
     return url, dest.lstrip("./") or Path(url).stem, ref, use_reset_hard
 
 
+def _find_deb_var_for_pkg(pkg_dir: Path, rules_mk: "Path | None") -> str | None:
+    """
+    Find the Make variable name for the deb corresponding to pkg_dir.
+    First checks for a _SRC_PATH assignment pointing to this package,
+    then falls back to name-based matching.
+    """
+    if not rules_mk or not rules_mk.exists():
+        return None
+    content = rules_mk.read_text(errors="replace")
+    repo_root = rules_mk.parents[1]  # rules_mk is at <root>/rules/pkg.mk
+    try:
+        rel = str(pkg_dir.relative_to(repo_root / "src"))
+    except ValueError:
+        rel = pkg_dir.name
+    # Prefer _SRC_PATH match — exact package association
+    m = re.search(
+        r"\$\((\w+)\)_SRC_PATH\s*=\s*\$\(SRC_PATH\)/" + re.escape(rel),
+        content,
+    )
+    if m:
+        return m.group(1)
+    # Fallback: first .deb var whose name contains pkg name (uppercase)
+    pkg_upper = pkg_dir.name.upper().replace("-", "_")
+    for m in re.finditer(r"^(\w+)\s*=\s*\S+\.deb", content, re.MULTILINE):
+        if pkg_upper in m.group(1):
+            return m.group(1)
+    # Last resort: first .deb var in file
+    m = re.search(r"^(\w+)\s*=\s*\S+\.deb", content, re.MULTILINE)
+    return m.group(1) if m else None
+
+
 def _parse_git_clone_info_via_make_n(pkg_dir: Path, rules_mk: "Path | None"):
     """
     Use make -n (dry-run) to discover git clone info for a SONIC_MAKE_DEBS package.
@@ -340,11 +371,9 @@ def _parse_git_clone_info_via_make_n(pkg_dir: Path, rules_mk: "Path | None"):
     if not (pkg_dir / "Makefile").exists():
         return None
 
-    mk_content = rules_mk.read_text(errors="replace")
-    deb_m = re.search(r"^(\w+)\s*=\s*\S+\.deb", mk_content, re.MULTILINE)
-    if not deb_m:
+    deb_var = _find_deb_var_for_pkg(pkg_dir, rules_mk)
+    if not deb_var:
         return None
-    deb_var = deb_m.group(1)
 
     mk_path = str(rules_mk.resolve())
     pkg_mk_path = str((pkg_dir / "Makefile").resolve())
@@ -384,11 +413,9 @@ def _parse_git_clone_info_via_make_n(pkg_dir: Path, rules_mk: "Path | None"):
 
 
 def fetch_git_clone(pkg_dir: Path, rules_mk: Path | None):
-    # Try make -n approach first (fully expands Make variables, no regex parsing)
+    # Use make -n (dry-run) to discover git clone info.
+    # This fully expands Make variables rather than fragile regex parsing.
     info = _parse_git_clone_info_via_make_n(pkg_dir, rules_mk)
-    # Fall back to heuristic regex parsing if make -n did not work
-    if not info:
-        info = _parse_git_clone_info(pkg_dir, rules_mk)
     if not info:
         print(f"  SKIP {pkg_dir}: no git clone found")
         return
