@@ -826,9 +826,13 @@ define ARCHIVE_PATCHED_SOURCE
 		rsync -a --delete \
 			--exclude='.git' \
 			--exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*' \
-			--exclude='*.deb' --exclude='*.changes' --exclude='*.buildinfo' \
-			--exclude='*.pyc' --exclude='__pycache__/' \
-			--exclude='*.egg-info/' \
+			--exclude='*.lo' --exclude='*.la' \
+			--exclude='*.deb' --exclude='*.changes' --exclude='*.buildinfo' --exclude='*.ddeb' \
+			--exclude='*.pyc' --exclude='__pycache__/' --exclude='*.egg-info/' \
+			--exclude='target/debug/' --exclude='target/release/' \
+			--exclude='target/*/build/' --exclude='target/*/deps/' \
+			--exclude='*.rlib' --exclude='*.rmeta' \
+			--exclude='pkg/' \
 			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/; \
 	fi
 endef
