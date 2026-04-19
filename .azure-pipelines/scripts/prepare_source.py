@@ -260,9 +260,11 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
         raw_ref = raw_ref[len("tags/"):]
 
     # Resolve Make variables
-    url = resolve_make_var(rules_mk, raw_url) if rules_mk else raw_url
-    dest = resolve_make_var(rules_mk, raw_dest) if rules_mk else raw_dest
-    ref = resolve_make_var(rules_mk, raw_ref) if rules_mk and raw_ref else raw_ref
+    pkg_mk = pkg_dir / "Makefile"
+    extra = pkg_mk if pkg_mk.exists() else None
+    url = resolve_make_var(rules_mk, raw_url, extra_mk=extra) if rules_mk else raw_url
+    dest = resolve_make_var(rules_mk, raw_dest, extra_mk=extra) if rules_mk else raw_dest
+    ref = resolve_make_var(rules_mk, raw_ref, extra_mk=extra) if rules_mk and raw_ref else raw_ref
 
     return url, dest.lstrip("./") or Path(url).stem, ref, use_reset_hard
 
