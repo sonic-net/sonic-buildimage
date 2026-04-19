@@ -833,6 +833,10 @@ define ARCHIVE_PATCHED_SOURCE
 			--exclude='target/*/build/' --exclude='target/*/deps/' \
 			--exclude='*.rlib' --exclude='*.rmeta' \
 			--exclude='pkg/' \
+			--exclude='dist/' \
+			--exclude='.tox/' \
+			--exclude='.pytest_cache/' \
+			--exclude='*.egg/' \
 			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/; \
 	fi
 endef
