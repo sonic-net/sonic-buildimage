@@ -18,7 +18,7 @@ fi
 # Create a folder for SwSS record files
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
-$DPU_BATCH_SIZE=125000
+readonly DPU_BATCH_SIZE=125000
 
 LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
 if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
