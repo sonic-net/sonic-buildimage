@@ -1,0 +1,60 @@
+# Static Analysis Pipeline (build-time source archive)
+#
+# This pipeline runs static analysis (Semgrep) against the patched source
+# tree produced during a full sonic-buildimage build.
+#
+# The build populates target/sonic-buildimage-source/ by copying each
+# package's working directory after patches are applied (slave.mk:
+# ARCHIVE_PATCHED_SOURCE macro). This job downloads that artifact and
+# runs analysis against it.
+#
+# Triggered after the main build pipeline completes.
+
+trigger: none
+
+resources:
+  pipelines:
+    - pipeline: build
+      source: 'sonic-buildimage-build'
+      trigger:
+        branches:
+          include:
+            - master
+            - 202*
+
+pool:
+  vmImage: 'ubuntu-22.04'
+
+steps:
+  - download: build
+    artifact: sonic-buildimage-source
+    displayName: 'Download source archive from build'
+
+  - script: |
+      pip install semgrep --quiet
+    displayName: 'Install Semgrep'
+
+  - script: |
+      set -e
+      SOURCE_DIR=$(Pipeline.Workspace)/build/sonic-buildimage-source
+      echo "Source archive size: $(du -sh "$SOURCE_DIR" | cut -f1)"
+      echo "Packages present:"
+      ls "$SOURCE_DIR/src/" 2>/dev/null | head -20
+    displayName: 'Inspect source archive'
+
+  - script: |
+      set -e
+      SOURCE_DIR=$(Pipeline.Workspace)/build/sonic-buildimage-source
+      semgrep scan \
+        --config=auto \
+        --sarif \
+        --output=$(Build.ArtifactStagingDirectory)/semgrep.sarif \
+        --no-git-ignore \
+        "$SOURCE_DIR/src/" \
+        2>&1 | tail -20
+    displayName: 'Run Semgrep static analysis'
+    continueOnError: true
+
+  - publish: $(Build.ArtifactStagingDirectory)/semgrep.sarif
+    artifact: semgrep-results
+    displayName: 'Publish Semgrep SARIF results'
