@@ -160,6 +160,16 @@ module sonic-types {
         }
     }
 
+    typedef port_llr_frame_action {
+        type enumeration {
+            enum discard;
+            enum block;
+            enum best_effort;
+        }
+        description
+            "Action for LLR TX Frame: discard, block, or best_effort.";
+    }
+
     typedef ip-protocol-type {
         description "IP transport protocol type";
         type enumeration {

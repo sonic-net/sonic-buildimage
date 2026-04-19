@@ -22,5 +22,8 @@
     "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_INVALID_MAX_MATCH_COUNT": {
         "desc": "Out of range max_match_count.",
         "eStrKey": "Range"
+    },
+    "FLEX_COUNTER_LLR_VALID": {
+        "desc": "Valid LLR flex counter configuration."
     }
 }

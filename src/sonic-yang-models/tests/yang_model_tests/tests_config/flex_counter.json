@@ -362,5 +362,15 @@
                 ]
             }
         }
+    },
+    "FLEX_COUNTER_LLR_VALID": {
+        "sonic-flex_counter:sonic-flex_counter": {
+            "sonic-flex_counter:FLEX_COUNTER_TABLE": {
+                "LLR": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 10000
+                }
+            }
+        }
     }
 }

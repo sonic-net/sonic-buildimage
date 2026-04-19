@@ -1,0 +1,96 @@
+module sonic-llr-port {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-llr-port";
+    prefix llr-port;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-llr-profile {
+        prefix llr-profile;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "LLR Port YANG Module for SONiC OS";
+
+    revision 2025-11-06 {
+        description "Initial Revision";
+    }
+
+    container sonic-llr-port {
+
+        container LLR_PORT {
+
+            description "LLR_PORT part of config_db.json";
+
+            list LLR_PORT_LIST {
+
+                key "port";
+
+                leaf port {
+                    type leafref {
+                        path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                    }
+                    description "Interface name. Must reference an existing physical port.";
+                }
+
+                leaf llr_mode {
+                    type enumeration {
+                        enum static;
+                        enum dynamic;
+                    }
+                    default "static";
+                    description
+                        "LLR configuration mode for the port.
+                         'static':  per-port LLR enables from CONFIG_DB llr_local/llr_remote are used.
+                         'dynamic': LLDP negotiation drives per-port LLR enables (Phase II).";
+                }
+
+                leaf llr_local {
+                    type stypes:admin_mode;
+                    default "disabled";
+                    description
+                        "Enable LLR local (reception) on the port.
+                         Active only when llr_mode is 'static'. Ignored when llr_mode is 'dynamic'.";
+                }
+
+                leaf llr_remote {
+                    type stypes:admin_mode;
+                    default "disabled";
+                    description
+                        "Enable LLR remote (transmission) on the port.
+                         Active only when llr_mode is 'static'. Ignored when llr_mode is 'dynamic'.";
+                }
+
+                leaf llr_profile {
+                    type leafref {
+                        path "/llr-profile:sonic-llr-profile/llr-profile:LLR_PROFILE/llr-profile:LLR_PROFILE_LIST/llr-profile:name";
+                    }
+                    description
+                        "User-defined LLR profile name bound to the port.
+                         When set, takes precedence over vendor INI-derived profiles.";
+                }
+
+            }
+            /* end of list LLR_PORT_LIST */
+
+        }
+        /* end of container LLR_PORT */
+
+    }
+    /* end of container sonic-llr-port */
+
+}
+/* end of module sonic-llr-port */
