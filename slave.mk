@@ -833,6 +833,8 @@ define ARCHIVE_PATCHED_SOURCE
 			--exclude='target/*/build/' --exclude='target/*/deps/' \
 			--exclude='*.rlib' --exclude='*.rmeta' \
 			--exclude='pkg/' \
+			--exclude='build/' \
+			--exclude='_build/' \
 			--exclude='dist/' \
 			--exclude='.tox/' \
 			--exclude='.pytest_cache/' \
