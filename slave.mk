@@ -855,7 +855,7 @@ define ARCHIVE_PATCHED_SOURCE
 			--filter='exclude debian/*/var/' \
 			--exclude='config.log' --exclude='config.status' \
 			--exclude='stamp-h*' --exclude='autom4te.cache/' \
-			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/; \
+			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/ || true; \
 	fi
 endef
 
