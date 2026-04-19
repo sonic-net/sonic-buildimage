@@ -260,17 +260,129 @@ def _parse_git_clone_info(pkg_dir: Path, rules_mk: Path | None):
         raw_ref = raw_ref[len("tags/"):]
 
     # Resolve Make variables
-    pkg_mk = pkg_dir / "Makefile"
-    extra = pkg_mk if pkg_mk.exists() else None
-    url = resolve_make_var(rules_mk, raw_url, extra_mk=extra) if rules_mk else raw_url
-    dest = resolve_make_var(rules_mk, raw_dest, extra_mk=extra) if rules_mk else raw_dest
-    ref = resolve_make_var(rules_mk, raw_ref, extra_mk=extra) if rules_mk and raw_ref else raw_ref
+    url = resolve_make_var(rules_mk, raw_url) if rules_mk else raw_url
+    dest = resolve_make_var(rules_mk, raw_dest) if rules_mk else raw_dest
+    ref = resolve_make_var(rules_mk, raw_ref) if rules_mk and raw_ref else raw_ref
 
     return url, dest.lstrip("./") or Path(url).stem, ref, use_reset_hard
 
 
+
+# ---------------------------------------------------------------------------
+# make -n based git clone discovery (SONIC_MAKE_DEPS no-op approach)
+# ---------------------------------------------------------------------------
+
+_MAKE_N_CLONE_RE = re.compile(r"git clone\b([^\n]+)")
+_MAKE_N_CLONE_URL_RE = re.compile(r"(https?://\S+)")
+_MAKE_N_CLONE_B_RE = re.compile(r"\s-b\s+(\S+)")
+_MAKE_N_RESET_RE = re.compile(r"git reset --hard\s+(\S+)")
+_MAKE_N_CO_DASH_B_RE = re.compile(r"git checkout\s+-b\s+\S+\s+(\S+)")
+_MAKE_N_CO_BEFORE_B_RE = re.compile(r"git checkout\s+(?!-[bf])(\S+)")
+_MAKE_N_CO_AFTER_FLAGS_RE = re.compile(r"git checkout\s+(-\S+\s+)*(\S+)")
+_SKIP_REFS = frozenset({"-f", "-a", "push", "pop", "init", "--hard", "-b"})
+
+
+def _extract_git_info_from_make_n(output: str):
+    """Parse git clone URL, dest, ref from make -n dry-run output."""
+    cm = _MAKE_N_CLONE_RE.search(output)
+    if not cm:
+        return None
+    clone_line = cm.group(1)
+    url_m = _MAKE_N_CLONE_URL_RE.search(clone_line)
+    if not url_m:
+        return None
+    url = url_m.group(1)
+
+    tokens = [t for t in clone_line.split() if not t.startswith("-")]
+    dest = tokens[-1] if tokens else Path(url).stem
+    if dest.startswith("http"):
+        dest = Path(url).stem
+
+    # Ref priority: -b in clone line > git checkout -b branch <ref> >
+    #               git checkout <ref> [-b ...] > git reset --hard <ref>
+    b_m = _MAKE_N_CLONE_B_RE.search(clone_line)
+    if b_m:
+        ref = b_m.group(1).strip("\"'")
+    else:
+        dash_b_m = _MAKE_N_CO_DASH_B_RE.search(output)
+        before_b_m = _MAKE_N_CO_BEFORE_B_RE.search(output)
+        after_flags_m = _MAKE_N_CO_AFTER_FLAGS_RE.search(output)
+        reset_m = _MAKE_N_RESET_RE.search(output)
+        if dash_b_m and dash_b_m.group(1) not in _SKIP_REFS:
+            ref = dash_b_m.group(1)
+        elif before_b_m and before_b_m.group(1) not in _SKIP_REFS:
+            ref = before_b_m.group(1)
+        elif reset_m:
+            ref = reset_m.group(1)
+        elif after_flags_m and after_flags_m.group(2) not in _SKIP_REFS:
+            ref = after_flags_m.group(2)
+        else:
+            ref = ""
+
+    use_reset_hard = bool(_MAKE_N_RESET_RE.search(output))
+    return url, dest.lstrip("./") or Path(url).stem, ref, use_reset_hard
+
+
+def _parse_git_clone_info_via_make_n(pkg_dir: Path, rules_mk: "Path | None"):
+    """
+    Use make -n (dry-run) to discover git clone info for a SONIC_MAKE_DEBS package.
+    This lets Make fully expand all variables rather than fragile regex parsing.
+    Falls back to None if make -n cannot produce usable output.
+    """
+    if not rules_mk or not rules_mk.exists():
+        return None
+    if not (pkg_dir / "Makefile").exists():
+        return None
+
+    mk_content = rules_mk.read_text(errors="replace")
+    deb_m = re.search(r"^(\w+)\s*=\s*\S+\.deb", mk_content, re.MULTILINE)
+    if not deb_m:
+        return None
+    deb_var = deb_m.group(1)
+
+    mk_path = str(rules_mk.resolve())
+    pkg_mk_path = str((pkg_dir / "Makefile").resolve())
+
+    for arch in ("amd64", "arm64", ""):
+        arch_line = "CONFIGURED_ARCH := " + arch + "\n" if arch else ""
+        wrapper_base = (
+            "DEST := /tmp/dest\n" + arch_line +
+            "include " + mk_path + "\n" +
+            "include " + pkg_mk_path + "\n"
+        )
+        print_mk = wrapper_base + "print_deb:\n\t@echo $(" + deb_var + ")\n"
+        try:
+            dv = subprocess.run(
+                ["make", "-f", "/dev/stdin", "--no-print-directory", "print_deb"],
+                input=print_mk, capture_output=True, text=True, timeout=3,
+                cwd=str(pkg_dir), check=False,
+            )
+            deb_val = dv.stdout.strip()
+            if not deb_val or "$(" in deb_val:
+                continue
+
+            target = "/tmp/dest/" + deb_val
+            r = subprocess.run(
+                ["make", "-n", "-f", "/dev/stdin", target],
+                input=wrapper_base, capture_output=True, text=True, timeout=5,
+                cwd=str(pkg_dir), check=False,
+            )
+            if r.returncode != 0:
+                continue
+            result = _extract_git_info_from_make_n(r.stdout)
+            if result:
+                return result
+        except Exception:
+            pass
+    return None
+
+
 def fetch_git_clone(pkg_dir: Path, rules_mk: Path | None):
-    info = _parse_git_clone_info(pkg_dir, rules_mk)
+    # Try make -n approach first (fully expands Make variables, no regex parsing)
+    info = _parse_git_clone_info_via_make_n(pkg_dir, rules_mk)
+    # Fall back to heuristic regex parsing if make -n did not work
+    if not info:
+        info = _parse_git_clone_info(pkg_dir, rules_mk)
     if not info:
         print(f"  SKIP {pkg_dir}: no git clone found")
         return
