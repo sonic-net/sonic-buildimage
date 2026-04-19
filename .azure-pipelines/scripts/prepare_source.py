@@ -279,7 +279,7 @@ _MAKE_N_RESET_RE = re.compile(r"git reset --hard\s+(\S+)")
 _MAKE_N_CO_DASH_B_RE = re.compile(r"git checkout\s+-b\s+\S+\s+(\S+)")
 _MAKE_N_CO_BEFORE_B_RE = re.compile(r"git checkout\s+(?!-[bf])(\S+)")
 _MAKE_N_CO_AFTER_FLAGS_RE = re.compile(r"git checkout\s+(-\S+\s+)*(\S+)")
-_SKIP_REFS = frozenset({"-f", "-a", "push", "pop", "init", "--hard", "-b"})
+_SKIP_REFS = frozenset({"-f", "-a", "push", "pop", "init", "--hard", "-b", "stg", "stg_temp"})
 
 
 def _extract_git_info_from_make_n(output: str):
@@ -320,6 +320,12 @@ def _extract_git_info_from_make_n(output: str):
             ref = ""
 
     use_reset_hard = bool(_MAKE_N_RESET_RE.search(output))
+    # Strip "tags/" prefix — git clone --branch does not accept it
+    if ref.startswith("tags/"):
+        ref = ref[len("tags/"):]
+    # Skip partial refs ending in / (incomplete variable expansion)
+    if ref.endswith("/"):
+        ref = ""
     return url, dest.lstrip("./") or Path(url).stem, ref, use_reset_hard
 
 
