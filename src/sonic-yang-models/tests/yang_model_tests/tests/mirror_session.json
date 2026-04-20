@@ -125,6 +125,14 @@
         "desc": "Configuring ERSPAN entry with sample_rate below minimum (100).",
         "eStr": "Sample rate must be 0 (no sampling/full mirroring) or 256-8388608"
     },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_ONE": {
+        "desc": "Configuring ERSPAN entry with sample_rate=1 (in the invalid 1-255 gap).",
+        "eStr": "Sample rate must be 0 (no sampling/full mirroring) or 256-8388608"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_255": {
+        "desc": "Configuring ERSPAN entry with sample_rate=255 (boundary of invalid 1-255 gap).",
+        "eStr": "Sample rate must be 0 (no sampling/full mirroring) or 256-8388608"
+    },
     "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_HIGH": {
         "desc": "Configuring ERSPAN entry with sample_rate above maximum (8388609).",
         "eStr": "Sample rate must be 0 (no sampling/full mirroring) or 256-8388608"
