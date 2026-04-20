@@ -24,6 +24,7 @@ RUN apt-get install -y net-tools \
                        libjudydebian1 \
                        openssh-client \
                        openssh-server \
+                       sudo \
                        libc-ares2 \
                        bash-completion \
                        logrotate \
@@ -121,25 +122,28 @@ RUN apt-get autoremove -y
 # Remove temporary sonic-host-services/dbus-python build backend tools
 RUN pip3 uninstall -y meson-python meson ninja patchelf
 RUN rm -rf /debs ~/.cache
-
-RUN sed -ri 's/^# save ""$/save ""/g;                    \
-             s/^daemonize yes$/daemonize no/;            \
-             s/^logfile .*$/logfile ""/;                 \
-             s/^# syslog-enabled no$/syslog-enabled no/; \
-             s/^# unixsocket/unixsocket/;                \
-             s/redis-server.sock/redis.sock/g;           \
-             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
-             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
-             s/^databases [0-9]+$/databases 100/ \
-            ' /etc/redis/redis.conf
+# Database feature (from docker-database via --build-context)
+{% set copy_from = "database" %}
+{% include "docker-database/Dockerfile.common.j2" %}
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
-COPY ["start.sh", "orchagent.sh", "files/update_chassisdb_config", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY --from=lldp supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2
+COPY --from=fpm-frr frr/supervisord/supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2
+COPY --from=teamd supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.teamd.j2
+COPY --from=nat supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.nat.j2
+COPY --from=sflow supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.sflow.j2
+COPY --from=orchagent supervisord.conf.common.j2 /usr/share/sonic/templates/supervisord.conf.swss.j2
+COPY --from=lldp start.sh /usr/bin/start-lldp.sh
+RUN chmod +x /usr/bin/start-lldp.sh
+COPY --from=teamd start.sh /usr/bin/start-teamd.sh
+RUN chmod +x /usr/bin/start-teamd.sh
 COPY ["files/configdb-load.sh", "/usr/bin/"]
-COPY ["files/arp_update", "/usr/bin/"]
-COPY ["files/buffers_config.j2", "files/qos_config.j2", "files/arp_update_vars.j2", "files/copp_cfg.j2", "/usr/share/sonic/templates/"]
+COPY ["files/buffers_config.j2", "files/qos_config.j2", "files/copp_cfg.j2", "/usr/share/sonic/templates/"]
+
 COPY ["files/sonic_version.yml", "/etc/sonic/"]
+COPY ["constants.yml", "/etc/sonic/"]
 COPY ["port_breakout_config_db.json", "/etc/sonic/"]
 COPY ["database_config.json", "/etc/default/sonic-db/"]
 COPY ["hostname.j2", "/usr/share/sonic/templates/"]
@@ -147,7 +151,6 @@ COPY ["init_cfg.json.j2", "/usr/share/sonic/templates/"]
 COPY ["default_chassis_cfg.json", "/etc/default/sonic-db/"]
 COPY ["asic_table.json", "/etc/sonic/"]
 COPY ["zero_profiles.json", "/etc/sonic"]
-COPY ["buffermgrd.sh", "/usr/bin/"]
 
 COPY ["platform.json", "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/"]
 COPY ["platform-dpu-2p.json", "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/"]
@@ -157,7 +160,7 @@ COPY ["hwsku.json", "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/Mellanox-SN270
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
-RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2
+RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2 /usr/share/sonic/templates/supervisord.conf.lldp.j2 /usr/share/sonic/templates/supervisord.conf.frr.j2 /usr/share/sonic/templates/supervisord.conf.swss.j2 /usr/share/sonic/templates/supervisord.conf.teamd.j2 /usr/share/sonic/templates/supervisord.conf.nat.j2 /usr/share/sonic/templates/supervisord.conf.sflow.j2
 
 {%- if ENABLE_ASAN == "y" %}
 RUN mkdir -p /var/log/asan
@@ -171,6 +174,18 @@ RUN touch /etc/quagga/zebra.conf
 RUN rm /etc/frr/frr.conf
 
 COPY ["frr/zebra.conf", "/etc/frr/"]
+
+# FRR feature (from docker-fpm-frr via --build-context)
+{% set copy_from = "fpm-frr" %}
+{% include "docker-fpm-frr/Dockerfile.common.j2" %}
+
+# LLDP feature (from docker-lldp via --build-context)
+{% set copy_from = "lldp" %}
+{% include "docker-lldp/Dockerfile.common.j2" %}
+
+# SWSS feature (from docker-orchagent via --build-context)
+{% set copy_from = "orchagent" %}
+{% include "docker-orchagent/Dockerfile.common.j2" %}
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
