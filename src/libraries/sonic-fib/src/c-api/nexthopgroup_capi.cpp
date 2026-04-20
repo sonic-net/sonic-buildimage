@@ -4,6 +4,7 @@
 #include "src/nexthopgroupfull_json.h"
 #include "src/c_nexthopgroupfull.h"
 #include "src/nexthopgroup_debug.h"
+#include "nexthopgroup_capi.h"
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -18,6 +19,11 @@ using NextHopGroupFull = fib::NextHopGroupFull;
 
 // Declare C-compatible API directly (no need for header here)
 extern "C" {
+
+const char* nexthopgroup_version(void) {
+    return LIBNEXTHOPGROUP_VERSION;
+}
+
 
 char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);
 char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);

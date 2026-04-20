@@ -5,6 +5,12 @@
 extern "C" {
 #endif
 
+/* Library version */
+#define LIBNEXTHOPGROUP_VERSION "1.0.0"
+
+/* Returns the runtime version string of the loaded library */
+const char* nexthopgroup_version(void);
+
 typedef struct NextHopGroupFull NextHopGroupFull;
 
 // Generate C++ NextHopGroupFull from C_NextHopGroupFull
