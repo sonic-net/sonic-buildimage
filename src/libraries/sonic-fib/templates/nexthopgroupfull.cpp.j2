@@ -88,23 +88,8 @@ using namespace fib;
             nh_srv6 = nullptr;
             return;
         }
-
-        memcpy(nh_srv6->seg6_segs, nh_seg6_segs_in, sizeof(struct seg6_seg_stack));
-
-        if (nh_srv6->seg6_segs->num_segs > 0)
-        {
-            for (size_t i = 0; i < nh_srv6->seg6_segs->num_segs; i++)
-            {
-                if (i < nh_segs_in.size())
-                    memcpy(&nh_srv6->seg6_segs->seg[i], &nh_segs_in[i], sizeof(struct in6_addr));
-                else
-                {
-                    memset(&nh_srv6->seg6_segs->seg[i], 0, sizeof(in6_addr));
-                    FIB_LOG(fib::LogLevel::DEBUG, "Size between num_segs and vector segs is not matching, num_segs %d, vector size %zu",
-                                nh_srv6->seg6_segs->num_segs, nh_segs_in.size());
-                }
-            }
-        }
+        // Copy the whole "seg6_segs" structure (including flexible array)
+        memcpy(nh_srv6->seg6_segs, nh_seg6_segs_in, total_size);
     }
     FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] {{ root_struct_name }} construction finished (singleton) for id: %d",  id_in);
 }
