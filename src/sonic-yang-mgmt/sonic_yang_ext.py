@@ -132,10 +132,14 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
             for grouping in groupings:
                 gName = grouping["@name"]
-                self.preProcessedYang['grouping'][moduleName][gName] = dict()
-                self.preProcessedYang['grouping'][moduleName][gName]["leaf"] = grouping.get('leaf')
-                self.preProcessedYang['grouping'][moduleName][gName]["leaf-list"] = grouping.get('leaf-list')
-                self.preProcessedYang['grouping'][moduleName][gName]["choice"] = grouping.get('choice')
+                gdata = dict()
+                # Extract all possible child node types from the grouping
+                for node_type in ['leaf', 'leaf-list', 'choice', 'container',
+                                  'list', 'uses']:
+                    val = grouping.get(node_type)
+                    if val is not None:
+                        gdata[node_type] = val
+                self.preProcessedYang['grouping'][moduleName][gName] = gdata
 
         except Exception as e:
             self.sysLog(msg="_preProcessYangGrouping failed:{}".format(str(e)), \
@@ -225,7 +229,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 self._compileUsesClauseModel(module, item)
             return
 
-        for model_name in [ "container", "list", "choice", "case" ]:
+        for model_name in [ "container", "list", "choice", "case",
+                             "notification" ]:
             node = model.get(model_name)
             if node:
                 self._compileUsesClauseModel(module, node)
@@ -249,11 +254,11 @@ class SonicYangExtMixin(SonicYangPathMixin):
             grouping = uses['@name'].split(':')[-1].strip()
             groupdata = self.preProcessedYang['grouping'][uses_module_name][grouping]
 
-            # Merge leaf from uses
+            # Merge all node types from uses grouping
             refine = uses.get("refine")
-            self._compileUsesClauseList(model, groupdata, 'leaf', refine)
-            self._compileUsesClauseList(model, groupdata, 'leaf-list', refine)
-            self._compileUsesClauseList(model, groupdata, 'choice', refine)
+            for node_type in ['leaf', 'leaf-list', 'choice', 'container',
+                              'list', 'uses']:
+                self._compileUsesClauseList(model, groupdata, node_type, refine)
 
         # Delete the uses node so callers don't use it.
         del model["uses"]
@@ -1224,11 +1229,9 @@ class SonicYangExtMixin(SonicYangPathMixin):
     load_data: load Config DB, crop, xlate and create data tree from it. (Public)
     input:    configdbJson - will NOT be modified
               debug Flag
-              error_log_level - syslog level for data loading failures
-                                (default: syslog.LOG_WARNING)
     returns:  True - success   False - failed
     """
-    def loadData(self, configdbJson, debug=False, error_log_level=syslog.LOG_WARNING):
+    def loadData(self, configdbJson, debug=False):
 
        try:
           # write Translated config in file if debug enabled
@@ -1252,7 +1255,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
        except Exception as e:
            self.root = None
            self.sysLog(msg="Data Loading Failed:{}".format(str(e)), \
-            debug=error_log_level, doPrint=True)
+            debug=syslog.LOG_ERR, doPrint=True)
            raise SonicYangException("Data Loading Failed\n{}".format(str(e)))
 
        return True
