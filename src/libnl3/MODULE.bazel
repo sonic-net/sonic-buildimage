@@ -31,7 +31,6 @@ libnl3_src(
     build_file_template = "//:libnl3.BUILD",
     patches = [
         "//:patch/0003-Adding-support-for-RTA_NH_ID-attribute.patch",
-        "//:bazel_patches/fix-icmp6-mib-max-assert.patch",
     ],
     sha256 = "9fe43ccbeeea72c653bdcf8c93332583135cda46a79507bfd0a483bb57f65939",
     strip_prefix = "libnl-{}".format(LIBNL_3_VERSION),

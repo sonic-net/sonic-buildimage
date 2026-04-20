@@ -137,6 +137,7 @@ jobs:
           git clone https://github.com/thesayyn/p4-constraints
           git clone https://github.com/thesayyn/p4c
           cd -
+          sed -i '4i\    version = "0.0.0",' src/sonic-sairedis/SAI/MODULE.bazel
           BLDENV=bookworm make -f Makefile.work $BUILD_OPTIONS sonic-slave-run SONIC_RUN_CMDS="bazel build //dockers/docker-base-bookworm:load"
         displayName: "Build sonic image"
       - bash: |
