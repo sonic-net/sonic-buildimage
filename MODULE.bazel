@@ -86,25 +86,25 @@ use_repo(
 bazel_dep(name = "p4runtime", repo_name = "com_github_p4lang_p4runtime")
 local_path_override(
     module_name = "p4runtime",
-    path = "../p4runtime/proto",
+    path = "target/rep/p4runtime/proto",
 )
 
 bazel_dep(name = "p4constraints", repo_name = "com_github_p4lang_p4_constraints")
 local_path_override(
     module_name = "p4constraints",
-    path = "../p4-constraints",
+    path = "target/rep/p4-constraints",
 )
 
 bazel_dep(name = "p4c", repo_name = "com_github_p4lang_p4c")
 local_path_override(
     module_name = "p4c",
-    path = "../p4c",
+    path = "target/rep/p4c",
 )
 
 bazel_dep(name = "gutil", version = "20250502.0", repo_name = "com_google_gutil")
 local_path_override(
     module_name = "gutil",
-    path = "../gutil",
+    path = "target/rep/gutil",
 )
 
 bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
