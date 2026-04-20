@@ -248,7 +248,7 @@
           "minItems": 0
         }
       },
-      "required": ["encap_behavior", "segs"],
+      "required": ["encap_behavior", "seg"],
       "additionalProperties": false
     },
     "nexthop_srv6": {
