@@ -53,9 +53,14 @@ REST_SERVER_ARGS="-ui /rest_ui -logtostderr"
 [ ! -z $SERVER_KEY  ] && REST_SERVER_ARGS+=" -key $SERVER_KEY"
 [ ! -z $CA_CRT      ] && REST_SERVER_ARGS+=" -cacert $CA_CRT"
 
-echo "REST_SERVER_ARGS = $REST_SERVER_ARGS"
+MGMT_VRF_ENABLED=$(sonic-db-cli CONFIG_DB hget "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled" 2> /dev/null)
 
+echo "REST_SERVER_ARGS = $REST_SERVER_ARGS"
 
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
-exec /usr/sbin/rest_server ${REST_SERVER_ARGS}
+if [ "$MGMT_VRF_ENABLED" = "true" ]; then
+    exec ip vrf exec mgmt /usr/sbin/rest_server ${REST_SERVER_ARGS}
+else
+    exec /usr/sbin/rest_server ${REST_SERVER_ARGS}
+fi

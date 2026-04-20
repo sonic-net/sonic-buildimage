@@ -37,5 +37,11 @@ else
     RESTAPI_ARGS+=" -loglevel=trace"
 fi 
 
+MGMT_VRF_ENABLED=$(sonic-db-cli CONFIG_DB hget "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled" 2> /dev/null)
+
 logger "RESTAPI_ARGS: $RESTAPI_ARGS"
-exec /usr/sbin/go-server-server ${RESTAPI_ARGS}
+if [ "$MGMT_VRF_ENABLED" = "true" ]; then
+    exec ip vrf exec mgmt /usr/sbin/go-server-server ${RESTAPI_ARGS}
+else
+    exec /usr/sbin/go-server-server ${RESTAPI_ARGS}
+fi

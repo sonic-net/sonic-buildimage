@@ -477,6 +477,7 @@ sudo cp files/image_config/logrotate/logrotateOverride.conf $FILESYSTEM_ROOT/etc
 ## Remove sshd host keys, and will regenerate on first sshd start
 sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp files/sshd/sshd-starter.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
 # Config sshd
