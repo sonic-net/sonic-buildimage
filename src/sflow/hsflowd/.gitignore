@@ -3,3 +3,8 @@
 !Makefile
 !patch/
 !patch/*
+# Bazel module files
+!MODULE.bazel
+!BUILD.bazel
+!*.BUILD
+!.bazelversion

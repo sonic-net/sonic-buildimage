@@ -1,0 +1,21 @@
+[project]
+name = "sonic-yang-mgmt"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "xmltodict==0.12.0",
+    "ijson==3.2.3",
+    "jsonpointer>=1.9",
+    "jsondiff>=1.2.0",
+    "tabulate==0.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+build = [
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]

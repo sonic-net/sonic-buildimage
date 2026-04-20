@@ -1,0 +1,48 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary")
+load("@bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@tar.bzl", "mutate", "tar")
+
+filegroup(
+    name = "models_srcs",
+    srcs = glob([
+        "yang-models/**/*",
+        "yang-templates/**/*",
+    ]),
+)
+
+py_binary(
+    name = "render_templates",
+    srcs = ["render_templates.py"],
+    data = [":models_srcs"],
+    deps = [
+        "@sonic_yang_models_pip//jinja2",
+    ],
+)
+
+run_binary(
+    name = "gen_templates",
+    srcs = [":models_srcs"],
+    env = {
+        "RULEDIR": "$(RULEDIR)",
+    },
+    out_dirs = [
+        "yang-models",
+        "cvlyang-models",
+    ],
+    tool = ":render_templates",
+)
+
+tar(
+    name = "dist",
+    srcs = [":gen_templates"],
+    mutate = mutate(
+        package_dir = "/usr/lib/python3/dist-packages",
+        strip_prefix = package_name(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# TODO(bazel-ready): Implement tests
+# Tests require libyang Python bindings and YANG model files which are not
+# available in the standalone Bazel build. Tests are excluded from the default
+# build and can be run using the original pytest setup.

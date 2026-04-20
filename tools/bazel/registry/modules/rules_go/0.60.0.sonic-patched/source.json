@@ -1,0 +1,11 @@
+{
+    "integrity": "sha256-+VWfsVoSaVFgOI7TezTzT1X4NzrqPOrJXogjRt8yTJ8=",
+    "strip_prefix": "rules_go-0.60.0",
+    "url": "https://github.com/bazel-contrib/rules_go/archive/refs/tags/v0.60.0.tar.gz",
+    "patches": {
+        "0001_patch_forward_to_base_of_4574.patch": "sha256-pJve40GBS/+lLMIFqsZuqFIH3ooFT8vzwxfjWdDJrow=",
+        "0002_import_pr_4574.patch": "sha256-SJqo7KZ807++Pke0OC+yLmEAg4V1mOyHEyXz6CMpx4E=",
+        "0003_add_execroot_relative_includes_to_cgo_actions.patch": "sha256-5jsy6Dgwf9zAzP9G/BNMD+zA9ATXqWw8haCJh9cXqbg="
+    },
+    "patch_strip": 1
+}

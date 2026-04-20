@@ -1,0 +1,72 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+
+write_file(
+    name = "config_status_gen",
+    out = "config_status",
+    content = ["# Config files managed by sonic-config-engine"],
+)
+
+flatten(
+    name = "apt_deps",
+    deduplicate = True,
+    tars = [
+        "@bookworm//libdbus-1-3",
+        "@bookworm//libdbus-c++-1-0v5",
+        # TODO(bazel-ready): Technically this should be src/protobuf,
+        # but we don't apply any patches there so we should be fine.
+        #
+        # Also, technically this is an rdep, but adding it in the rdeps target
+        # creates a duplicate paths error when we `docker load` the image.
+        "@bookworm//libprotobuf32",
+    ],
+)
+
+tar(
+    name = "source_files",
+    srcs = [
+        "critical_processes",
+        "supervisord.conf",
+        ":config_status_gen",
+    ],
+    mtree = [
+        "./etc/supervisor/conf.d/supervisord.conf time=0 type=file content=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes time=0 type=file content=$(location :critical_processes)",
+        "./var/sonic type=dir time=0",
+        "./var/sonic/config_status time=0 type=file content=$(location :config_status_gen)",
+    ],
+)
+
+flatten(
+    name = "rdeps",
+    deduplicate = True,
+    tars = [
+        "@sonic_swss_common//:libswsscommon_pkg",
+        "@sonic_sysmgr//:sysmgr_pkg",
+    ],
+)
+
+
+oci_image(
+    name = "docker-sysmgr",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":apt_deps",
+        "//dockers/docker-base-bookworm:libswsscommon_rdeps",
+        ":rdeps",
+        ":source_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-sysmgr",
+    repo_tags = ["docker-sysmgr:latest"],
+)

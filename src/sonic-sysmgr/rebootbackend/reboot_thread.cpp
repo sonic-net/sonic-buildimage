@@ -15,6 +15,7 @@
 #include "subscriberstatetable.h"
 #include "system/system.pb.h"
 #include "timestamp.h"
+#include "proto_compat.h"
 
 namespace rebootbackend {
 
@@ -136,7 +137,7 @@ RebootThread::Progress RebootThread::send_dbus_reboot_request() {
   gpu::Status status = gpu::MessageToJsonString(m_request, &json_string);
   if (!status.ok()) {
     std::string error_string = "unable to convert reboot protobuf to json: " +
-                               status.message().as_string();
+                               std::string(status.message());
     log_error_and_set_non_retry_failure(error_string);
     return Progress::EXIT_EARLY;
   }

@@ -5,6 +5,7 @@ import jinja2
 import sys
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
+from render_templates import render
 
 # read me
 with open('README.rst') as readme_file:
@@ -234,28 +235,7 @@ class my_build_py(build_py):
             sys.exit(1)
         print("Validation passed. Proceeding with build...")
 
-        if not os.path.exists("./yang-models"):
-            os.makedirs("./yang-models")
-
-        if not os.path.exists("./cvlyang-models"):
-            os.makedirs("./cvlyang-models")
-
-        # copy non-template yang model to internal yang model directory
-        for fname in glob.glob("./yang-models/*.yang"):
-            bfname = os.path.basename(fname)
-            shutil.copyfile("./yang-models/{}".format(bfname), "./cvlyang-models/{}".format(bfname))
-
-        # templated yang models
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader('./yang-templates/'), trim_blocks=True)
-        for fname in glob.glob("./yang-templates/*.yang.j2"):
-            bfname = os.path.basename(fname)
-            template = env.get_template(bfname)
-            yang_model = template.render(yang_model_type="py")
-            cvlyang_model = template.render(yang_model_type="cvl")
-            with open("./yang-models/{}".format(bfname.strip(".j2")), 'w') as f:
-                f.write(yang_model)
-            with open("./cvlyang-models/{}".format(bfname.strip(".j2")), 'w') as f:
-                f.write(cvlyang_model)
+        render(self.dry_run)
 
         build_py.run(self)
 
@@ -287,7 +267,8 @@ setup(
     ],
     setup_requires = [
         'pytest-runner',
-        'wheel'
+        'wheel',
+        "jinja2",
     ],
     extras_require = {
         "testing": [

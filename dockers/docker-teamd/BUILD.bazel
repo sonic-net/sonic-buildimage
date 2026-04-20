@@ -1,0 +1,37 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+
+tar(
+    name = "source_files",
+    srcs = [
+        "critical_processes",
+        "start.sh",
+        "supervisord.conf",
+    ],
+    mtree = [
+        "./usr/bin/start.sh type=file mode=755 content=$(location :start.sh)",
+        "./etc/supervisor/conf.d/supervisord.conf type=file content=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes type=file content=$(location :critical_processes)",
+    ],
+)
+
+oci_image(
+    name = "docker-teamd",
+    base = "//dockers/docker-swss-layer-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        "@libteam//:libteamdctl0_pkg",
+        "@libteam//:libteam-utils_pkg",
+        ":source_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-teamd",
+    repo_tags = ["docker-teamd:latest"],
+)

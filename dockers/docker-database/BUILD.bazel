@@ -1,0 +1,168 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "mutate", "tar")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+load("@rules_deb//distroless:defs.bzl", "flatten", "group", "passwd")
+
+# The redis user/group is normally created by the redis-server package's postinst
+# script, which Bazel does not run. Define them explicitly.
+# TODO(bazel-ready): Make passwd and group additive, or otherwise share the code with docker-base-bookworm.
+# These rules overwrite /etc/passwd and /etc/group from the base image,
+# so we must re-declare all entries from docker-base-bookworm here.
+passwd(
+    name = "passwd",
+    entries = [
+        {
+            "uid": 0,
+            "gid": 0,
+            "home": "/root",
+            "shell": "/bin/bash",
+            "username": "root",
+        },
+        {
+            "uid": 999,
+            "gid": 999,
+            "home": "/var/lib/redis",
+            "shell": "/usr/sbin/nologin",
+            "username": "redis",
+        },
+    ],
+)
+
+group(
+    name = "group",
+    entries = [
+        {
+            "name": "root",
+            "gid": 0,
+        },
+        {
+            "name": "adm",
+            "gid": 4,
+        },
+        {
+            "name": "redis",
+            "gid": 999,
+        },
+    ],
+)
+
+site_packages(
+    name = "pip-packages",
+    srcs = [
+        "@pip//click",
+    ],
+)
+
+flatten(
+    name = "apt_deps",
+    deduplicate = True,
+    tars = [
+        # Required by the docker startup script.
+        "@bookworm//gawk",
+        "@bookworm//redis-server",
+    ],
+)
+
+tar(
+    name = "jinja_templates",
+    srcs = [
+        "critical_processes.j2",
+        "database_config.json.j2",
+        "database_global.json.j2",
+        "multi_database_config.json.j2",
+        "supervisord.conf.j2",
+    ],
+    mutate = mutate(
+        mtime = "0",
+        package_dir = "./usr/share/sonic/templates",
+        strip_prefix = package_name(),
+    ),
+)
+
+# Extract the default redis.conf from the @bookworm//redis-server package.
+# tar.bzl does not support extraction yet, so we use a genrule with its toolchain.
+genrule(
+    name = "default_redis_conf",
+    srcs = ["@bookworm//redis-server:data"],
+    outs = ["default_redis.conf"],
+    cmd = "$(BSDTAR_BIN) -xf $(SRCS) --to-stdout ./etc/redis/redis.conf > $(OUTS)",
+    toolchains = ["@bsd_tar_toolchains//:resolved_toolchain"],
+)
+
+genrule(
+    name = "redis_conf",
+    srcs = [":default_redis_conf"],
+    outs = ["redis.conf"],
+    cmd = """
+sed -r \
+    -e 's/^# save ""$$/save ""/g' \
+    -e 's/^daemonize yes$$/daemonize no/' \
+    -e 's/^logfile .*$$/logfile ""/' \
+    -e 's/^# syslog-enabled no$$/syslog-enabled no/' \
+    -e 's/^# unixsocket/unixsocket/' \
+    -e 's/redis-server.sock/redis.sock/g' \
+    -e 's/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/' \
+    -e 's/^notify-keyspace-events ""$$/notify-keyspace-events AKE/' \
+    -e 's/^databases [0-9]+$$/databases 100/' \
+    $(SRCS) > $(OUTS)
+""",
+)
+
+tar(
+    name = "source_files",
+    srcs = [
+        "docker-database-init.sh",
+        "flush_unused_database",
+        "//files:image_config/sysctl/sysctl-net.conf",
+        "//files:scripts/update_chassisdb_config",
+        ":redis_conf",
+    ],
+    mtree = [
+        "./usr/local/bin/docker-database-init.sh mode=755 time=0 type=file content=$(location :docker-database-init.sh)",
+        "./usr/local/bin/flush_unused_database mode=755 time=0 type=file content=$(location :flush_unused_database)",
+        "./etc/sysctl.d/sysctl-net.conf time=0 type=file content=$(location //files:image_config/sysctl/sysctl-net.conf)",
+        "./usr/local/bin/update_chassisdb_config mode=755 time=0 type=file content=$(location //files:scripts/update_chassisdb_config)",
+        # Override the configuration file we imported from @bookworm//redis-server with the modified one.
+        "./etc/redis/redis.conf time=0 type=file content=$(location :redis_conf)",
+        # TODO(bazel-ready): @bookworm//gawk extracts the package without running post-install
+        # scripts, so the Debian alternatives symlink /usr/bin/awk -> /usr/bin/gawk is not created.
+        "./usr/bin/awk time=0 type=link link=/usr/bin/gawk",
+    ],
+)
+
+flatten(
+    name = "rdeps",
+    deduplicate = True,
+    tars = [
+        "@sonic_dash_api//:libdashapi_dev_pkg",
+        "@sonic_swss_common//:libswsscommon_pkg",
+        "@sonic_swss_common//:sonic-db-cli_pkg",
+    ],
+)
+
+oci_image(
+    name = "docker-database",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/local/bin/docker-database-init.sh"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+        "SUPERVISORD_LOCATION": "/usr/bin/supervisord",
+    },
+    tars = [
+        ":passwd",
+        ":group",
+        ":pip-packages",
+        "//dockers/docker-base-bookworm:libswsscommon_rdeps",
+        ":apt_deps",
+        ":jinja_templates",
+        ":source_files",
+        ":rdeps",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-database",
+    repo_tags = ["docker-database:latest"],
+)

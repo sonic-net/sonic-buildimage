@@ -1,0 +1,28 @@
+[project]
+name = "sonic-config-engine"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "bitarray==2.8.1",
+    "ipaddress==1.0.23",
+    "lxml==4.9.1",
+    "netaddr==0.8.0",
+    "Jinja2>=2.10",
+    "pyyaml==6.0.1",
+    "pytest>=7.0",
+    "redis>=4.0",
+
+    # for libyang
+    "cffi",
+]
+
+# Note: sonic-py-common, sonic-yang-mgmt, sonic-yang-models, swsscommon, swsssdk
+# dependencies are internal and will be stubbed for testing
+# Note: mockredispy is excluded as it requires setuptools for building
+
+[dependency-groups]
+build = [
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]

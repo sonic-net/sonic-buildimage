@@ -1,0 +1,23 @@
+module(name = "sonic-supervisord-utilities", version = "0.0.0")
+
+bazel_dep(name = "rules_python", version = "1.0.0")
+bazel_dep(name = "aspect_rules_py", version = "1.7.1")
+bazel_dep(name = "tar.bzl", version = "0.5.6")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.11.6",
+)
+
+uv = use_extension("@aspect_rules_py//uv/unstable:extension.bzl", "uv")
+uv.declare_hub(hub_name = "sonic_supervisord_utilities_pip")
+uv.declare_venv(
+    hub_name = "sonic_supervisord_utilities_pip",
+    venv_name = "default",
+)
+uv.lockfile(
+    src = "//:uv.lock",
+    hub_name = "sonic_supervisord_utilities_pip",
+    venv_name = "default",
+)
+use_repo(uv, "sonic_supervisord_utilities_pip")

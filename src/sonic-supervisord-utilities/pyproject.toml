@@ -1,0 +1,7 @@
+[project]
+name = "sonic-supervisord-utilities"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "supervisor>=4.0.0",
+]

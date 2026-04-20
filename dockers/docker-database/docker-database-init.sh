@@ -152,4 +152,4 @@ if [[ -d $REDIS_BMP_DIR ]]; then
     chown -R redis:redis $REDIS_BMP_DIR
 fi
 
-exec /usr/local/bin/supervisord
+exec "${SUPERVISORD_LOCATION:-/usr/local/bin/supervisord}"

@@ -124,3 +124,7 @@ sources.list.*
 
 # Generated mirror configs
 apt-retries-count
+
+# Bazel directories
+bazel-*
+*bazel-*

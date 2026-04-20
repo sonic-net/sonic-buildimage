@@ -1,0 +1,2 @@
+lrwxr-xr-x  0 0      0           0 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang-cpp.so.1 -> libyang-cpp.so.1.2.2
+-rwxr-xr-x  0 0      0     3207544 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang-cpp.so.1.2.2

@@ -1,0 +1,1 @@
+exports_files(glob(["database_config.json"]))

@@ -1,0 +1,23 @@
+alias(
+    name = "libpsample",
+    actual = "@psample_src//:libpsample",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libpsample_shared",
+    actual = "@psample_src//:libpsample_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "psample",
+    actual = "@psample_src//:psample",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "psample_pkg",
+    actual = "@psample_src//:psample_pkg",
+    visibility = ["//visibility:public"],
+)

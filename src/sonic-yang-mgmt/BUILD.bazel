@@ -1,0 +1,43 @@
+load("@aspect_rules_py//py:defs.bzl", "py_library", "py_test")
+load("@tar.bzl//:tar.bzl", "mutate", "tar")
+
+# Main sonic-yang-mgmt library
+# Note: This library requires libyang Python bindings (yang module) which must be
+# provided by the system or a separate build target, as it is a C extension.
+py_library(
+    name = "sonic-yang-mgmt",
+    srcs = [
+        "sonic_yang.py",
+        "sonic_yang_ext.py",
+        "sonic_yang_path.py",
+    ],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@sonic_yang_mgmt_pip//ijson",
+        "@sonic_yang_mgmt_pip//jsondiff",
+        "@sonic_yang_mgmt_pip//jsonpointer",
+        "@sonic_yang_mgmt_pip//tabulate",
+        "@sonic_yang_mgmt_pip//xmltodict",
+    ],
+)
+
+# Distribution tar for container installation
+tar(
+    name = "dist",
+    srcs = [
+        "sonic_yang.py",
+        "sonic_yang_ext.py",
+        "sonic_yang_path.py",
+    ],
+    mutate = mutate(
+        package_dir = "/usr/lib/python3/dist-packages",
+        strip_prefix = package_name(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# TODO(bazel-ready): Implement tests
+# Tests require libyang Python bindings and YANG model files which are not
+# available in the standalone Bazel build. Tests are excluded from the default
+# build and can be run using the original pytest setup.

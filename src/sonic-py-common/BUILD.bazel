@@ -1,0 +1,34 @@
+load("@aspect_rules_py//py:defs.bzl", "py_library")
+load("@tar.bzl//:tar.bzl", "mutate", "tar")
+
+# Main sonic-py-common library
+py_library(
+    name = "sonic-py-common",
+    srcs = glob(
+        ["sonic_py_common/**/*.py"],
+        exclude = ["sonic_py_common/sonic_db_dump_load.py"],  # Requires redis-dump-load
+    ),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@sonic_py_common_pip//natsort",
+        "@sonic_py_common_pip//pyyaml",
+    ],
+)
+
+# Distribution tar for container installation
+tar(
+    name = "dist",
+    srcs = glob(
+        ["sonic_py_common/**/*.py"],
+        exclude = ["sonic_py_common/sonic_db_dump_load.py"],
+    ),
+    mutate = mutate(
+        package_dir = "/usr/lib/python3/dist-packages",
+        strip_prefix = package_name(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# Note: Console scripts (sonic-db-dump, sonic-db-load) are excluded as they
+# require redis-dump-load which needs setuptools for building

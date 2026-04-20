@@ -1,0 +1,20 @@
+[project]
+name = "sonic-yang-models"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+]
+
+[dependency-groups]
+tests = [
+    'pytest',
+    'ijson==3.2.3',
+    'pytest-runner',
+    'wheel',
+]
+build = [
+    "jinja2",
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]
