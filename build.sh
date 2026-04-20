@@ -187,7 +187,7 @@ submodule_prs () {
 
   #sonic-bmc aspeed
   #https://github.com/sonic-net/sonic-linux-kernel/pull/553
-  _submodule_add src/sonic-linux-kernel nats-nokia https://github.com/nats-nokia/sonic-linux-kernel.git dbc835c
+  _submodule_add src/sonic-linux-kernel nats-nokia https://github.com/nats-nokia/sonic-linux-kernel.git 5c1ba16
   
   # apply patches
   apply_patch_files
