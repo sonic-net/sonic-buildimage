@@ -139,6 +139,7 @@ jobs:
           cd -
           sed -i '4i\    version = "0.0.0",' src/sonic-sairedis/SAI/MODULE.bazel
           BLDENV=bookworm make -f Makefile.work $BUILD_OPTIONS sonic-slave-run SONIC_RUN_CMDS="make docker-start; bazel build //dockers/docker-base-bookworm:load; bash bazel-bin/dockers/docker-base-bookworm/load.sh; docker save docker-base-bookworm:latest | pigz > target/docker-base-bookworm.tar.gz"
+          make $BUILD_OPTIONS target/docker-base-bookworm.gz
         displayName: "Build sonic image"
       - bash: |
           sleep 117200
