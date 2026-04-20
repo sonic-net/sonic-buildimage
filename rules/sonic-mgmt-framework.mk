@@ -1,6 +1,7 @@
 # SONiC mgmt-framework package
 
 ifeq ($(INCLUDE_MGMT_FRAMEWORK), y)
+ifeq ($(BLDENV),trixie)
 
 SONIC_MGMT_FRAMEWORK = sonic-mgmt-framework_1.0-01_$(CONFIGURED_ARCH).deb
 $(SONIC_MGMT_FRAMEWORK)_SRC_PATH = $(SRC_PATH)/sonic-mgmt-framework
@@ -13,4 +14,5 @@ $(SONIC_MGMT_FRAMEWORK_DBG)_DEPENDS += $(SONIC_MGMT_FRAMEWORK)
 $(SONIC_MGMT_FRAMEWORK_DBG)_RDEPENDS += $(SONIC_MGMT_FRAMEWORK)
 $(eval $(call add_derived_package,$(SONIC_MGMT_FRAMEWORK),$(SONIC_MGMT_FRAMEWORK_DBG)))
 
+endif
 endif
