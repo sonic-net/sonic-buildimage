@@ -80,8 +80,11 @@ char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_
         nexthopgroup_free(cpp_nhg);
         return json_str;
 
+    } catch (const std::exception& e) {
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_multi::Converting failed: %s", e.what());
+        return nullptr;
     } catch (...) {
-        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_multi::Converting failed");
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_multi::Converting failed with unknown exception");
         return nullptr;
     }
 }
@@ -152,8 +155,11 @@ char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull
 
         return json_str;
 
+    } catch (const std::exception& e) {
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_singleton::Converting failed: %s", e.what());
+        return nullptr;
     } catch (...) {
-        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_singleton::Converting failed");
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroupfull_json_from_c_nhg_singleton::Converting failed with unknown exception");
         return nullptr;
     }
 }
@@ -176,7 +182,11 @@ char* nexthopgroup_to_json(NextHopGroupFull* obj)
             std::memcpy(c_str, json_str.c_str(), json_str.size() + 1);
         }
         return c_str;
+    } catch (const std::exception& e) {
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroup_to_json failed: %s", e.what());
+        return nullptr;
     } catch (...) {
+        FIB_LOG(fib::LogLevel::ERROR, "nexthopgroup_to_json failed with unknown exception");
         return nullptr;
     }
 }
