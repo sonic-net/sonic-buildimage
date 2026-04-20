@@ -276,7 +276,7 @@ _MAKE_N_CLONE_RE = re.compile(r"git clone\b([^\n]+)")
 _MAKE_N_CLONE_URL_RE = re.compile(r"(https?://\S+)")
 _MAKE_N_CLONE_B_RE = re.compile(r"\s-b\s+(\S+)")
 _MAKE_N_RESET_RE = re.compile(r"git reset --hard\s+(\S+)")
-_MAKE_N_CO_DASH_B_RE = re.compile(r"git checkout\s+-b\s+\S+\s+(\S+)")
+_MAKE_N_CO_DASH_B_RE = re.compile(r"git checkout\s+-b\s+\S+\s+(?:-\S+\s+)*(\S+)")
 _MAKE_N_CO_BEFORE_B_RE = re.compile(r"git checkout\s+(?!-[bf])(\S+)")
 _MAKE_N_CO_AFTER_FLAGS_RE = re.compile(r"git checkout\s+(-\S+\s+)*(\S+)")
 _SKIP_REFS = frozenset({"-f", "-a", "push", "pop", "init", "--hard", "-b", "stg", "stg_temp"})
@@ -297,6 +297,14 @@ def _extract_git_info_from_make_n(output: str):
     dest = tokens[-1] if tokens else Path(url).stem
     if dest.startswith("http"):
         dest = Path(url).stem
+
+    # Check if clone is inside a pushd subdir (e.g. pushd freeradius; git clone ...)
+    # Look for "pushd <subdir>" on the line before the git clone
+    pushd_m = re.search(r"pushd\s+(\S+)\s*\n[^\n]*\n?[^\n]*git clone", output)
+    if pushd_m:
+        subdir = pushd_m.group(1)
+        if not subdir.startswith(".") and not subdir.startswith("/"):
+            dest = subdir + "/" + dest
 
     # Ref priority: -b in clone line > git checkout -b branch <ref> >
     #               git checkout <ref> [-b ...] > git reset --hard <ref>
