@@ -64,40 +64,59 @@ def test_clear_dhcp_relay_ipv6_counter(interface, patch_import_module):
         mock_counter.clear_table.assert_has_calls(calls)
 
 
-@pytest.mark.parametrize("test_param_result", [
-    ["", True, True],
-    ["Vlan1000", True, True],
-    ["Vlan1000", False, False]
+@pytest.mark.parametrize("interface, vlan_exists, interface_keys, port_data, expected_valid, expected_type", [
+    # Empty interface (all interfaces)
+    ("", False, [], {}, True, None),
+    # Valid VLAN interface
+    ("Vlan1000", True, [], {}, True, 'vlan'),
+    # Invalid VLAN interface
+    ("Vlan1000", False, [], {}, False, None),
+    # Valid routed interface with dhcp_servers
+    ("Ethernet104", False, ["INTERFACE|Ethernet104|10.0.0.1/31"], {'dhcp_servers': '192.0.2.1'}, True, 'routed'),
+    # Invalid routed interface without dhcp_servers
+    ("Ethernet104", False, ["INTERFACE|Ethernet104|10.0.0.1/31"], {}, False, None),
+    # Invalid routed interface without INTERFACE keys
+    ("Ethernet104", False, [], {}, False, None),
 ])
-def test_is_vlan_interface_valid(patch_import_module, test_param_result):
+def test_is_interface_valid(patch_import_module, interface, vlan_exists, interface_keys,
+                            port_data, expected_valid, expected_type):
     clear_dhcp_relay = patch_import_module
     mock_db = MagicMock()
-    vlan_interface = test_param_result[0]
-    mock_db.exists.return_value = test_param_result[1]
-    exp_res = test_param_result[2]
-    act_res = clear_dhcp_relay.is_vlan_interface_valid(vlan_interface, mock_db)
-    assert act_res == exp_res, ("Result {} is unexpected with [vlan_interface: {}, exists: {}]"
-                                .format(act_res, vlan_interface, test_param_result[1]))
+    mock_db.exists.return_value = vlan_exists
+    mock_db.keys.return_value = interface_keys
+    mock_db.get_all.return_value = port_data
+
+    is_valid, interface_type = clear_dhcp_relay.is_interface_valid(interface, mock_db)
+
+    assert is_valid == expected_valid, ("is_valid {} is unexpected for interface {}".format(is_valid, interface))
+    assert interface_type == expected_type, ("interface_type {} is unexpected for interface {}".format(interface_type, interface))
 
 
-@pytest.mark.parametrize("direction, type, keys, db_dhcp_type, paused_vlans, prefix, supported_types", [
-    # v4 test cases
-    (None, None, ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                             "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover"]), set(["Vlan100"]),
+@pytest.mark.parametrize("direction, type, keys, db_dhcp_type, paused_interfaces, prefix, supported_types", [
+    # v4 VLAN test cases
+    (None, None, ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE:Vlan100",
+                  "DHCPV4_COUNTER_TABLE:Vlan1000"], set(["Discover"]), set(["Vlan100"]),
      "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
-    ("RX", "Offer", ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                                "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover", "Offer"]), set(["Vlan100"]),
+    ("RX", "Offer", ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE:Vlan100",
+                     "DHCPV4_COUNTER_TABLE:Vlan1000"], set(["Discover", "Offer"]), set(["Vlan100"]),
      "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
-    # v6 test cases
-    (None, None, ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE_Vlan100",
-                             "DHCPV6_COUNTER_TABLE_Vlan1000"], set(["Solicit"]), set(["Vlan100"]),
+    # v4 routed interface test cases
+    (None, None, ["DHCPV4_COUNTER_TABLE:Ethernet104:Ethernet108", "DHCPV4_COUNTER_TABLE:Ethernet104",
+                  "DHCPV4_COUNTER_TABLE:Ethernet10"], set(["Discover"]), set(["Ethernet104"]),
+     "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
+    ("RX", "Offer", ["DHCPV4_COUNTER_TABLE:Ethernet104:Ethernet108", "DHCPV4_COUNTER_TABLE:Ethernet104",
+                     "DHCPV4_COUNTER_TABLE:Ethernet10"], set(["Discover", "Offer"]), set(["Ethernet104"]),
+     "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
+    # v6 VLAN test cases
+    (None, None, ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE:Vlan100",
+                  "DHCPV6_COUNTER_TABLE:Vlan1000"], set(["Solicit"]), set(["Vlan100"]),
      "DHCPV6_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCPV6_TYPE"),
-    ("TX", "Reply", ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE_Vlan100",
-                              "DHCPV6_COUNTER_TABLE_Vlan1000"], set(["Solicit", "Reply"]), set(["Vlan100"]),
+    ("TX", "Reply", ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE:Vlan100",
+                     "DHCPV6_COUNTER_TABLE:Vlan1000"], set(["Solicit", "Reply"]), set(["Vlan100"]),
      "DHCPV6_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCPV6_TYPE"),
 ])
 def test_clear_dhcpmon_db_counters(patch_import_module, direction, type, keys,
-                                  db_dhcp_type, paused_vlans, prefix, supported_types):
+                                  db_dhcp_type, paused_interfaces, prefix, supported_types):
     clear_dhcp_relay = patch_import_module
     mock_db = MagicMock()
     table_prefix = getattr(clear_dhcp_relay, prefix)
@@ -115,27 +134,31 @@ def test_clear_dhcpmon_db_counters(patch_import_module, direction, type, keys,
         mock_db.get.return_value = json.dumps(count_obj).replace("\"", "\'")
     else:
         mock_db.get.return_value = None
-    with patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=True):
-        clear_dhcp_relay.clear_dhcpmon_db_counters(
-            mock_db,
-            direction,
-            type,
-            paused_vlans,
-            table_prefix,
-            sup_types
-        )
-        calls = []
-        for vlan_interface in paused_vlans:
-            for key in keys:
-                if not (":{}:".format(vlan_interface) in key or key.endswith(vlan_interface)):
+    clear_dhcp_relay.clear_dhcpmon_db_counters(
+        mock_db,
+        direction,
+        type,
+        paused_interfaces,
+        table_prefix,
+        sup_types
+    )
+    calls = []
+    for interface in paused_interfaces:
+        for key in keys:
+            key_parts = key.split(":")
+            if len(key_parts) >= 2:
+                key_interface = key_parts[1]
+                if key_interface != interface and not key.startswith(
+                    table_prefix + ":" + interface + ":"
+                ):
                     continue
-                for curr_dir in directions:
-                    current_count_obj = copy.deepcopy(count_obj)
-                    for curr_type in types:
-                        current_count_obj[curr_type] = "0"
-                # Expect set count to zero
-                calls.append(call(ANY, key, curr_dir, json.dumps(current_count_obj).replace("\"", "\'")))
-        mock_db.set.assert_has_calls(calls, any_order=True)
+            for curr_dir in directions:
+                current_count_obj = copy.deepcopy(count_obj)
+                for curr_type in types:
+                    current_count_obj[curr_type] = "0"
+            # Expect set count to zero
+            calls.append(call(ANY, key, curr_dir, json.dumps(current_count_obj).replace("\"", "\'")))
+    mock_db.set.assert_has_calls(calls, any_order=True)
 
 
 @pytest.mark.parametrize("sig, vlan_interface, procs", [
@@ -251,27 +274,26 @@ def test_clear_dhcp_relay_ipv4_counters_locked(patch_import_module):
         ])
 
 
-def test_clear_dhcp_relay_ipv4_counters_vlan_invalid(patch_import_module):
+@pytest.mark.parametrize("interface", ["Vlan1000", "Ethernet104"])
+def test_clear_dhcp_relay_ipv4_counters_interface_invalid(patch_import_module, interface):
     clear_dhcp_relay = patch_import_module
     runner = CliRunner()
     with patch.object(os, "geteuid", return_value=0), \
-         patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=False), \
+         patch.object(clear_dhcp_relay, "is_interface_valid", return_value=(False, None)), \
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
         mock_get_ctx.return_value = mock_ctx
-        result = runner.invoke(
-            clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"],
-            "--interface=Vlan1000"
-        )
+        result = runner.invoke(clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"],
+                              "--interface={}".format(interface))
         assert result.exit_code == 0
-        mock_ctx.fail.assert_called_once_with("Vlan1000 doesn't exist")
+        mock_ctx.fail.assert_called_once_with("{} doesn't exist or is not configured for DHCP relay".format(interface))
 
 
-@pytest.mark.parametrize("interface", ["", "Vlan1000"])
+@pytest.mark.parametrize("interface", ["", "Vlan1000", "Ethernet104"])
 @pytest.mark.parametrize("dir", [None, "RX", "TX"])
 @pytest.mark.parametrize("type", [None, "Discover"])
-@pytest.mark.parametrize("failed_vlans", [{}, {"Vlan1000": set(["RX", "TX"])}])
-def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, type, failed_vlans):
+@pytest.mark.parametrize("failed_interfaces", [{}, {"Vlan1000": set(["RX", "TX"])}, {"Ethernet104": set(["RX", "TX"])}])
+def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, type, failed_interfaces):
     clear_dhcp_relay = patch_import_module
     runner = CliRunner()
     args = []
@@ -281,15 +303,15 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
         args.append("--dir={}".format(dir))
     if type is not None:
         args.append("--type={}".format(type))
-    paused_vlans = set()
+    paused_interfaces = set()
     with patch.object(os, "geteuid", return_value=0), \
          patch.object(clear_dhcp_relay, "open"), \
          patch.object(fcntl, "flock") as mock_flock, \
          patch.object(clear_dhcp_relay, "notify_dhcpmon_processes", return_value=set()) as mock_notify, \
-         patch.object(clear_dhcp_relay, "get_paused_vlans", return_value=paused_vlans), \
+         patch.object(clear_dhcp_relay, "get_paused_interfaces", return_value=paused_interfaces), \
          patch.object(clear_dhcp_relay, "clear_dhcpmon_db_counters") as mock_clear, \
-         patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=True), \
-         patch.object(clear_dhcp_relay, "get_failed_vlans_for_table", return_value=failed_vlans), \
+         patch.object(clear_dhcp_relay, "is_interface_valid", return_value=(True, 'vlan' if 'Vlan' in interface else 'routed')), \
+         patch.object(clear_dhcp_relay, "get_failed_vlans_for_table", return_value=failed_interfaces), \
          patch.object(clear_dhcp_relay, "clear_state_db_flags") as mock_clear_state_db_flags, \
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
@@ -307,8 +329,8 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
         mock_clear.assert_called_once()
         clear_args = mock_clear.call_args[0]
         assert len(clear_args) >= 4
-        assert clear_args[1:4] == (dir, type, paused_vlans)
-        if failed_vlans:
+        assert clear_args[1:4] == (dir, type, paused_interfaces)
+        if failed_interfaces:
             mock_ctx.fail.assert_called_once()
         mock_clear_state_db_flags.assert_has_calls([
             call(ANY, ANY),
@@ -344,17 +366,25 @@ def test_clear_writing_state_db_flag(patch_import_module):
     mock_db.delete.assert_has_calls([call(ANY, key) for key in keys])
 
 
-@pytest.mark.parametrize("is_write_db_paused, vlans, result", [
+@pytest.mark.parametrize("is_write_db_paused, interfaces, result", [
+    # VLAN interfaces
     (True, set(["Vlan1000", "Vlan2000"]), set(["Vlan1000", "Vlan2000"])),
-    (False,set( ["Vlan1000", "Vlan2000"]), set()),
+    (False, set(["Vlan1000", "Vlan2000"]), set()),
+    # Routed interfaces
+    (True, set(["Ethernet104", "Ethernet108"]), set(["Ethernet104", "Ethernet108"])),
+    (False, set(["Ethernet104", "Ethernet108"]), set()),
+    # Mixed VLAN and routed interfaces
+    (True, set(["Vlan1000", "Ethernet104"]), set(["Vlan1000", "Ethernet104"])),
+    (False, set(["Vlan1000", "Ethernet104"]), set()),
+    # Empty set
     (True, set(), set()),
     (False, set(), set())
 ])
-def test_get_paused_vlans(patch_import_module, is_write_db_paused, vlans, result):
+def test_get_paused_interfaces(patch_import_module, is_write_db_paused, interfaces, result):
     clear_dhcp_relay = patch_import_module
     with patch.object(clear_dhcp_relay, "is_write_db_paused", return_value=is_write_db_paused):
-        paused_vlans = clear_dhcp_relay.get_paused_vlans(MagicMock(), "table_name", vlans)
-    assert paused_vlans == result
+        paused_interfaces = clear_dhcp_relay.get_paused_interfaces(MagicMock(), "table_name", interfaces)
+    assert paused_interfaces == result
 
 
 def test_is_write_db_paused(patch_import_module):
@@ -455,8 +485,8 @@ def test_clear_dhcp_relay_ipv6_counters_vlan_invalid(
     runner = CliRunner()
     with patch.object(os, "geteuid", return_value=0), \
          patch.object(
-             clear_dhcp_relay, "is_vlan_interface_valid",
-             return_value=False
+             clear_dhcp_relay, "is_interface_valid",
+             return_value=(False, None)
          ), \
          patch.object(
              click, "get_current_context"
@@ -470,7 +500,7 @@ def test_clear_dhcp_relay_ipv6_counters_vlan_invalid(
         )
         assert result.exit_code == 0
         mock_ctx.fail.assert_called_once_with(
-            "Vlan1000 doesn't exist"
+            "Vlan1000 doesn't exist or is not configured for DHCP relay"
         )
 
 
@@ -502,15 +532,15 @@ def test_clear_dhcp_relay_ipv6_counters_full(
              return_value=set()
          ) as mock_notify, \
          patch.object(
-             clear_dhcp_relay, "get_paused_vlans",
+             clear_dhcp_relay, "get_paused_interfaces",
              return_value=paused_vlans
          ), \
          patch.object(
              clear_dhcp_relay, "clear_dhcpmon_db_counters"
          ) as mock_clear, \
          patch.object(
-             clear_dhcp_relay, "is_vlan_interface_valid",
-             return_value=True
+             clear_dhcp_relay, "is_interface_valid",
+             return_value=(True, 'vlan')
          ), \
          patch.object(
              clear_dhcp_relay, "get_failed_vlans_for_table",

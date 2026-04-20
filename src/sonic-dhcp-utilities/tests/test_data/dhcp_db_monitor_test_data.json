@@ -335,5 +335,75 @@
             ],
             "exp_res": true
         }
+    ],
+    "test_interface_update": [
+        {
+            "table": [
+                ["Ethernet0", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Ethernet0|10.0.0.1/31", "SET", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Ethernet0|fc02::1/64", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Ethernet44|10.0.0.3/31", "SET", []]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Ethernet0|10.0.0.1/31", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["PortChannel101|10.1.0.1/31", "SET", []]
+            ],
+            "exp_res": false
+        }
+    ],
+    "test_port_table_update": [
+        {
+            "table": [
+                ["Ethernet0", "SET", [["dhcp_servers", "240.127.1.100"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Ethernet0", "SET", [["admin_status", "up"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["Ethernet44", "SET", [["dhcp_servers", "240.127.1.100"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Ethernet1", "SET", [["dhcp_servers", "240.127.1.100"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["Ethernet0", "DEL", []]
+            ],
+            "exp_res": true
+        }
     ]
 }

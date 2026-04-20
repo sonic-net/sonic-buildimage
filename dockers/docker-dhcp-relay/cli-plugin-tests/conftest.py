@@ -60,6 +60,11 @@ def mock_cfgdb():
             "Ethernet8|10.0.0.4/31": {},
             "Ethernet12": {},
             "Ethernet12|10.0.0.6/31": {},
+        },
+        'PORT': {
+            'Ethernet0': {},
+            'Ethernet4': {},
+            'Ethernet8': {},
         }
     }
 
