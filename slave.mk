@@ -825,7 +825,7 @@ SONIC_TARGET_LIST += $(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES))
 define ARCHIVE_PATCHED_SOURCE
 	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ] && [ -n "$($1_SRC_PATH)" ]; then \
 		mkdir -p $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH); \
-		rsync -a --delete \
+		rsync -aL --delete \
 			--exclude='.git' \
 			--exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*' \
 			--exclude='*.lo' --exclude='*.la' \
@@ -855,6 +855,7 @@ define ARCHIVE_PATCHED_SOURCE
 			--filter='exclude debian/*/var/' \
 			--exclude='config.log' --exclude='config.status' \
 			--exclude='stamp-h*' --exclude='autom4te.cache/' \
+			--exclude='generated/' \
 			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/ || true; \
 	fi
 endef
