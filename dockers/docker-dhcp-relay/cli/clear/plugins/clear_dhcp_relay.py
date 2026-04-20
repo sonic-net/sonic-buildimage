@@ -78,12 +78,29 @@ def clear_dhcp_relay_ipv4_vlan_counter(direction, pkt_type, interface):
 #      into cache (picking up the zeroed values), then resumes
 # ============================================================
 
-def is_vlan_interface_valid(vlan_interface, db):
-    if vlan_interface == "":
-        return True
-    if not db.exists(db.CONFIG_DB, "VLAN|{}".format(vlan_interface)):
-        return False
-    return True
+def is_interface_valid(interface, db):
+    """Check if interface is valid for DHCP relay (VLAN or routed port)
+
+    Args:
+        interface: Interface name (e.g., 'Vlan1000' or 'Ethernet104')
+        db: Database connector
+
+    Returns:
+        tuple: (is_valid, interface_type) where interface_type is 'vlan', 'routed', or None
+    """
+    if interface == "":
+        return (True, None)
+
+    if db.exists(db.CONFIG_DB, "VLAN|{}".format(interface)):
+        return (True, 'vlan')
+
+    interface_keys = db.keys(db.CONFIG_DB, "INTERFACE|{}|*".format(interface))
+    if interface_keys:
+        port_data = db.get_all(db.CONFIG_DB, "PORT|{}".format(interface))
+        if port_data and 'dhcp_servers' in port_data:
+            return (True, 'routed')
+
+    return (False, None)
 
 
 def notify_dhcpmon_processes(vlan_interface, sig):
@@ -99,9 +116,7 @@ def notify_dhcpmon_processes(vlan_interface, sig):
         try:
             if proc.name() != "dhcpmon":
                 continue
-            match = re.search(
-                r'-id\s+(Vlan\d+)', " ".join(proc.cmdline())
-            )
+            match = re.search(r'-id\s+(\S+)', " ".join(proc.cmdline()))
             if not match:
                 continue
             if vlan_interface != "" and vlan_interface != match.group(1):
@@ -129,24 +144,24 @@ def is_write_db_paused(db, table_name, vlan_interface):
     ) == "done"
 
 
-def get_paused_vlans(db, table_name, vlans):
+def get_paused_interfaces(db, table_name, interfaces):
     """Wait for dhcpmon to confirm it has paused DB writes."""
-    paused_vlan = set()
+    paused_interface = set()
     for _ in range(WAITING_DB_WRITING_RETRY_TIMES + 1):
-        for vlan in vlans:
-            if is_write_db_paused(db, table_name, vlan):
-                paused_vlan.add(vlan)
-        if len(paused_vlan) == len(vlans):
+        for interface in interfaces:
+            if is_write_db_paused(db, table_name, interface):
+                paused_interface.add(interface)
+        if len(paused_interface) == len(interfaces):
             break
         time.sleep(1)
     else:
         click.echo(
             "Skip clearing counter for {} due to writing "
             "COUNTERS_DB hasn't been stopped.".format(
-                vlans - paused_vlan
+                interfaces - paused_interface
             )
         )
-    return paused_vlan
+    return paused_interface
 
 
 def clear_dhcpmon_db_counters(
@@ -162,9 +177,13 @@ def clear_dhcpmon_db_counters(
             + COUNTERS_DB_SEPRATOR + vlan + "*"
         )
         for key in (db.keys(db.COUNTERS_DB, counters_key) or []):
-            if not (":{}:".format(vlan) in key
-                    or key.endswith(vlan)):
-                continue
+            key_parts = key.split(COUNTERS_DB_SEPRATOR)
+            if len(key_parts) >= 2:
+                key_interface = key_parts[1]
+                if key_interface != vlan and not key.startswith(
+                    counter_table_prefix + COUNTERS_DB_SEPRATOR + vlan + COUNTERS_DB_SEPRATOR
+                ):
+                    continue
             for dir in directions:
                 count_str = db.get(db.COUNTERS_DB, key, dir)
                 if count_str is None:
@@ -232,8 +251,9 @@ def clear_dhcpmon_counters(
             .format(version_label)
         )
         return
-    if not is_vlan_interface_valid(interface, db.db):
-        ctx.fail("{} doesn't exist".format(interface))
+    is_valid, interface_type = is_interface_valid(interface, db.db)
+    if not is_valid:
+        ctx.fail("{} doesn't exist or is not configured for DHCP relay".format(interface))
         return
     with open(lock_file_path, "w") as lock_file:
         locked = False
@@ -241,24 +261,24 @@ def clear_dhcpmon_counters(
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             locked = True
             clear_state_db_flags(db.db, state_table)
-            notified_vlans = notify_dhcpmon_processes(
+            notified_interfaces = notify_dhcpmon_processes(
                 interface, signal.SIGUSR1
             )
-            paused_vlans = get_paused_vlans(
-                db.db, state_table, notified_vlans
+            paused_interfaces = get_paused_interfaces(
+                db.db, state_table, notified_interfaces
             )
             clear_dhcpmon_db_counters(
-                db.db, dir, type, paused_vlans,
+                db.db, dir, type, paused_interfaces,
                 counter_table_prefix, supported_types
             )
             notify_dhcpmon_processes(interface, signal.SIGUSR2)
-            failed_vlans = get_failed_vlans_for_table(
-                db.db, state_table, paused_vlans
+            failed_interfaces = get_failed_vlans_for_table(
+                db.db, state_table, paused_interfaces
             )
-            if failed_vlans:
+            if failed_interfaces:
                 failed_msg = ", ".join(
-                    ["{}({})".format(vlan, ",".join(dirs))
-                     for vlan, dirs in failed_vlans.items()]
+                    ["{}({})".format(intf, ",".join(dirs))
+                     for intf, dirs in failed_interfaces.items()]
                 )
                 ctx.fail(
                     "Failed to clear counter for {}".format(
