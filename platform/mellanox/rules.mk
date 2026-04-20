@@ -24,6 +24,8 @@ include $(PLATFORM_PATH)/mft-fwtrace-cfg.mk
 include $(PLATFORM_PATH)/mlnx-sai.mk
 include $(PLATFORM_PATH)/hw-management.mk
 include $(PLATFORM_PATH)/mlnx-platform-api.mk
+# Before one-image.mk / kvm-image.mk: installers reference $(MELLANOX_PLATFORM_UTILS).
+include $(PLATFORM_PATH)/platform-utils/platform-utils.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mlnx.mk
@@ -41,7 +43,6 @@ include $(PLATFORM_PATH)/integration-scripts.mk
 include $(PLATFORM_PATH)/rshim.mk
 include $(PLATFORM_PATH)/component-versions.mk
 include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
-include $(PLATFORM_PATH)/platform-utils/platform-utils.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(SONIC_KVM_IMAGE) \
