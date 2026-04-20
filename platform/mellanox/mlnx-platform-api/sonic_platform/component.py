@@ -52,6 +52,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+from . import utils
+
 logger = Logger("mlnx-platform-api")
 
 class MPFAManager(object):
@@ -758,6 +760,8 @@ class ComponentCPLD(Component):
     CPLD_FIRMWARE_UPDATE_COMMAND_SPC1 = ['cpldupdate', '--dev', '', '--print-progress', '']
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']
 
+    AUX_PWR_CYCLE_FILE = '/var/run/hw-management/system/aux_pwr_cycle'
+
     def __init__(self, idx):
         super(ComponentCPLD, self).__init__()
 
@@ -901,16 +905,22 @@ class ComponentCPLD(Component):
         with MPFAManager(image_path) as mpfa:
             if not mpfa.get_metadata().has_option('firmware', 'burn'):
                 raise RuntimeError("Failed to get {} burn firmware".format(self.name))
-            if not mpfa.get_metadata().has_option('firmware', 'refresh'):
-                raise RuntimeError("Failed to get {} refresh firmware".format(self.name))
 
             burn_firmware = mpfa.get_metadata().get('firmware', 'burn')
-            refresh_firmware = mpfa.get_metadata().get('firmware', 'refresh')
-
             print("INFO: Processing {} burn file: firmware install".format(self.name))
             if not self._install_firmware(os.path.join(mpfa.get_path(), burn_firmware)):
                 return
 
+            is_platform_with_bmc = device_info.get_bmc_data() is not None
+            if is_platform_with_bmc:
+                print("INFO: Burning {} firmware completed. Running aux power cycle to complete firmware update".format(self.name))
+                utils.write_file(self.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
+                return
+
+            if not mpfa.get_metadata().has_option('firmware', 'refresh'):
+                raise RuntimeError("Failed to get {} refresh firmware".format(self.name))
+
+            refresh_firmware = mpfa.get_metadata().get('firmware', 'refresh')
             print("INFO: Processing {} refresh file: firmware update".format(self.name))
             self._install_firmware(os.path.join(mpfa.get_path(), refresh_firmware))
 
