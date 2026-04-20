@@ -152,5 +152,8 @@
     "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
         "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
         "eStrKey": "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_ZERO_SAMPLE_RATE_AND_TRUNCATE": {
+        "desc": "Configuring ERSPAN entry with sample_rate=0 and truncate_size=0 (disabled/full mirroring)."
     }
 }

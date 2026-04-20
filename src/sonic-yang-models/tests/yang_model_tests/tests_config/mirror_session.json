@@ -798,5 +798,23 @@
                 ]
             }
         }
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_ZERO_SAMPLE_RATE_AND_TRUNCATE": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "11.1.1.1",
+                        "src_ip": "10.1.1.1",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "sample_rate": "0",
+                        "truncate_size": "0"
+                    }
+                ]
+            }
+        }
     }
 }
