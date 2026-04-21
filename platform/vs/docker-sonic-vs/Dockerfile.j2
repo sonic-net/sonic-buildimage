@@ -188,6 +188,7 @@ COPY ["frr/zebra.conf", "/etc/frr/"]
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
+RUN mkdir -p /zmq_swss
 
 # Create /zmq_swss directory for ZMQ IPC sockets
 RUN mkdir -p /zmq_swss
