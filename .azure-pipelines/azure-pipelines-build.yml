@@ -141,11 +141,13 @@ jobs:
           BLDENV=bookworm make -f Makefile.work $BUILD_OPTIONS sonic-slave-run SONIC_RUN_CMDS="make docker-start -f slave.mk || sudo service docker start; bazel build //dockers/docker-base-bookworm:load; bash bazel-bin/dockers/docker-base-bookworm/load.sh; docker save docker-base-bookworm:latest | pigz > target/docker-base-bookworm.tar.gz"
           BLDENV=bookworm make -f Makefile.work $BUILD_OPTIONS target/docker-base-bookworm.gz
         displayName: "Build sonic image"
-      - bash: |
-          sleep 117200
-          exit 1
-        condition: true
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish s/target as artifact'
+        inputs:
+          PathtoPublish: 's/target'
+          ArtifactName: 'drop'
+          publishLocation: 'Container'
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
         timeoutInMinutes: 60
