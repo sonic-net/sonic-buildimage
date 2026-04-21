@@ -78,7 +78,7 @@ TEST(NextHopGroupFull_CAPI, multi_nexthop) {
 
     /* Call c-api to convert C_NextHopGroupFull to C++ NextHopGroupFull and return JSON string */
     cout << "[DEBUG] Calling nexthopgroupfull_json_from_c_nhg_multi ..." << endl;
-    char* json_str = nexthopgroupfull_json_from_c_nhg_multi(&c_nhg, MULTIPATH_NUM);
+    char* json_str = nexthopgroupfull_json_from_c_nhg_multi(&c_nhg, 5, 3, 2);
 
     ASSERT_NE(json_str, nullptr) << "[ERROR] C-API returned nullptr";
 
@@ -202,7 +202,7 @@ TEST(NextHopGroupFull_CAPI, singleton) {
 
     /* Call c-api to convert C_NextHopGroupFull to C++ NextHopGroupFull and return JSON string */
     cout << "[DEBUG] Calling nexthopgroupfull_json_from_c_nhg_singleton ..." << endl;
-    char* json_str = nexthopgroupfull_json_from_c_nhg_singleton(&c_nhg, MULTIPATH_NUM);
+    char* json_str = nexthopgroupfull_json_from_c_nhg_singleton(&c_nhg, 3, 2);
 
     ASSERT_NE(json_str, nullptr) << "[ERROR] C-API returned nullptr";
 

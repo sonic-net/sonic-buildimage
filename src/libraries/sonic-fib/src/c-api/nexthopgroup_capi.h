@@ -14,8 +14,13 @@ const char* nexthopgroup_version(void);
 typedef struct NextHopGroupFull NextHopGroupFull;
 
 // Generate C++ NextHopGroupFull from C_NextHopGroupFull
-char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);
-char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, uint16_t multipaths);
+char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, 
+                                              uint32_t nh_grp_full_count, 
+                                              uint32_t depends_count, 
+                                              uint32_t dependents_count);
+char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, 
+                                                  uint32_t depends_count, 
+                                                  uint32_t dependents_count);
 
 // Free the object
 void nexthopgroup_free(NextHopGroupFull* obj);
