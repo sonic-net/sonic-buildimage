@@ -57,74 +57,12 @@ fi
 # Automatically log out console ttyS* sessions after 15 minutes of inactivity
 tty | egrep -q '^/dev/ttyS[[:digit:]]+$' && TMOUT=900
 
-console_state_set() {
-    local line_num="$1"
-    local state="$2"
-    local pid="${3:-}"
-    local start_time="${4:-}"
-    local key="CONSOLE_PORT|${line_num}"
-
-    sonic-db-cli STATE_DB hset "$key" state "$state" > /dev/null 2>&1 || true
-    sonic-db-cli STATE_DB hset "$key" pid "$pid" > /dev/null 2>&1 || true
-    sonic-db-cli STATE_DB hset "$key" start_time "$start_time" > /dev/null 2>&1 || true
-}
-
-console_find_active_session() {
-    local console_device="$1"
-
-    ps -eo pid=,lstart=,args= | awk -v dev="$console_device" '
-        $0 ~ /(mini|pico)com/ && index($0, dev) {
-            print $1 "|" $2 " " $3 " " $4 " " $5 " " $6
-            exit
-        }
-    '
-}
-
 # if SSH_TARGET_CONSOLE_LINE was set, attach to console line interactive cli directly
 if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then
     if [ $SSH_TARGET_CONSOLE_LINE -eq $SSH_TARGET_CONSOLE_LINE 2>/dev/null ]; then
         # enter the interactive cli
-        SONIC_PLATFORM=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" platform 2>/dev/null)
-        UDEV_PREFIX_CONF="/usr/share/sonic/device/${SONIC_PLATFORM}/udevprefix.conf"
-        DEVICE_PREFIX=""
-        if [ -r "$UDEV_PREFIX_CONF" ]; then
-            read -r DEVICE_PREFIX < "$UDEV_PREFIX_CONF"
-        fi
-        if [ "$DEVICE_PREFIX" = "ttyCO" ]; then
-            CONSOLE_SWITCH_ENABLED=$(sonic-db-cli CONFIG_DB hget "CONSOLE_SWITCH|console_mgmt" enabled 2>/dev/null)
-            if [ -z "$CONSOLE_SWITCH_ENABLED" ] || [ "$CONSOLE_SWITCH_ENABLED" = "no" ]; then
-                echo "Console switch feature is disabled"
-                exit 1
-            fi
-            CONSOLE_BAUD=$(sonic-db-cli CONFIG_DB hget "CONSOLE_PORT|${SSH_TARGET_CONSOLE_LINE}" baud_rate)
-            CONSOLE_FLOW=$(sonic-db-cli CONFIG_DB hget "CONSOLE_PORT|${SSH_TARGET_CONSOLE_LINE}" flow_control)
-            CONSOLE_DEVICE=/dev/"${DEVICE_PREFIX}${SSH_TARGET_CONSOLE_LINE}"
-            if [ -z "$CONSOLE_BAUD" ]; then
-                echo "Cannot connect: line [${SSH_TARGET_CONSOLE_LINE}] has no baud rate"
-                exit 4
-            fi
-            if [ "$CONSOLE_FLOW" = "1" ]; then
-                FLOW_FLAG="h"
-            else
-                FLOW_FLAG="n"
-            fi
+        connect line $SSH_TARGET_CONSOLE_LINE
 
-            ACTIVE_SESSION=$(console_find_active_session "$CONSOLE_DEVICE")
-            if [ -n "$ACTIVE_SESSION" ]; then
-                ACTIVE_PID=${ACTIVE_SESSION%%|*}
-                ACTIVE_START=${ACTIVE_SESSION#*|}
-                console_state_set "$SSH_TARGET_CONSOLE_LINE" busy "$ACTIVE_PID" "$ACTIVE_START"
-                echo "Cannot connect: line [${SSH_TARGET_CONSOLE_LINE}] is busy"
-                exit 5
-            fi
-
-            console_state_set "$SSH_TARGET_CONSOLE_LINE" busy "$$" "$(ps -p $$ -o lstart= | sed 's/^ *//')"
-            trap 'console_state_set "$SSH_TARGET_CONSOLE_LINE" idle "" ""' EXIT HUP INT TERM
-            printf 'Successful connection to line [%s]\nPress ^A ^X to disconnect\n' "$SSH_TARGET_CONSOLE_LINE"
-            picocom --quiet -b "$CONSOLE_BAUD" -f "$FLOW_FLAG" "$CONSOLE_DEVICE"
-        else
-            connect line $SSH_TARGET_CONSOLE_LINE
-        fi
         # test exit code, 1 means the console switch feature not enabled
         if [ $? -ne 1 ]; then
             # exit after console session ended

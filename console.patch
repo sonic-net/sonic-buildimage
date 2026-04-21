@@ -1,0 +1,186 @@
+diff --git a/connect/main.py b/connect/main.py
+index 52d17a27..7c1b8d59 100755
+--- a/connect/main.py
++++ b/connect/main.py
+@@ -1,6 +1,5 @@
+ import configparser
+ import os
+-import pexpect
+ import sys
+ 
+ import click
+@@ -66,15 +65,6 @@ class AliasedGroup(click.Group):
+             return click.Group.get_command(self, ctx, matches[0])
+         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
+ 
+-def run_command(command, display_cmd=False):
+-    if display_cmd:
+-        click.echo(click.style("Command: ", fg='cyan') + click.style(command, fg='green'))
+-
+-    proc = pexpect.spawn(command)
+-    proc.interact()
+-    proc.close()
+-    return proc.exitstatus
+-
+ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help', '-?'])
+ 
+ #
+@@ -95,8 +85,8 @@ def connect():
+ @click.option('--devicename', '-d', is_flag=True, help="connect by name - if flag is set, interpret target as device name instead")
+ def line(target, devicename):
+     """Connect to line LINENUM via serial connection"""
+-    cmd = "consutil connect {}".format("--devicename " if devicename else "") + str(target)
+-    sys.exit(run_command(cmd))
++    from consutil.lib import console_connect
++    console_connect(target, use_device=devicename)
+ 
+ #
+ # 'device' command ("connect device")
+@@ -105,8 +95,8 @@ def line(target, devicename):
+ @click.argument('devicename')
+ def device(devicename):
+     """Connect to device DEVICENAME via serial connection"""
+-    cmd = "consutil connect -d " + devicename
+-    sys.exit(run_command(cmd))
++    from consutil.lib import console_connect
++    console_connect(devicename, use_device=True)
+ 
+ if __name__ == '__main__':
+     connect()
+diff --git a/consutil/lib.py b/consutil/lib.py
+index dbadcf8d..77dfa42d 100644
+--- a/consutil/lib.py
++++ b/consutil/lib.py
+@@ -204,6 +204,21 @@ class ConsolePortInfo(object):
+         cmd = "picocom {} -b {} -f {} {}{}".format(escape_cmd, self.baud, flow_cmd,
+                                                    SysInfoProvider.DEVICE_PREFIX, self.line_num)
+ 
++        # If a platform-specific console script exists, hand off the entire
++        # interactive session to it and bypass pexpect around picocom.
++        try:
++            platform_path = device_info.get_path_to_platform_dir()
++        except Exception:
++            platform_path = None
++        console_script = os.path.join(platform_path, "console_connect.sh") if platform_path else None
++        if console_script and os.path.isfile(console_script):
++            escape_display = self.escape_char.upper() if self.escape_char else "A"
++            quiet_cmd = cmd.replace("picocom ", "picocom --quiet ", 1)
++            os.execvp("/bin/bash", [
++                "/bin/bash", console_script,
++                self.line_num, escape_display, quiet_cmd
++            ])
++
+         # start connection
+         try:
+             proc = pexpect.spawn(cmd)
+@@ -384,6 +399,48 @@ class DbUtils(object):
+             START_TIME_KEY: date
+         }
+ 
++def initialize_console_runtime(db):
++    """Validate console feature state and initialize device prefix."""
++    config_db = db.cfgdb
++    data = config_db.get_entry(CONSOLE_SWITCH_TABLE, FEATURE_KEY)
++    if FEATURE_ENABLED_KEY not in data or data[FEATURE_ENABLED_KEY] == "no":
++        click.echo("Console switch feature is disabled")
++        sys.exit(ERR_DISABLE)
++
++    SysInfoProvider.init_device_prefix()
++
++def console_connect(target, use_device=False, db=None):
++    """Connect to a console port. Can be called directly without Click context."""
++    if db is None:
++        from utilities_common.db import Db
++        db = Db()
++        initialize_console_runtime(db)
++
++    port_provider = ConsolePortProvider(db, configured_only=False)
++    try:
++        target_port = port_provider.get(target, use_device=use_device)
++    except LineNotFoundError:
++        click.echo("Cannot connect: target [{}] does not exist".format(target))
++        sys.exit(ERR_DEV)
++
++    line_num = target_port.line_num
++
++    try:
++        session = target_port.connect()
++    except LineBusyError:
++        click.echo("Cannot connect: line [{}] is busy".format(line_num))
++        sys.exit(ERR_BUSY)
++    except InvalidConfigurationError as cfg_err:
++        click.echo("Cannot connect: {}".format(cfg_err.message))
++        sys.exit(ERR_CFG)
++    except ConnectionFailedError:
++        click.echo("Cannot connect: unable to open picocom process")
++        sys.exit(ERR_DEV)
++
++    click.echo("Successful connection to line [{}]\nPress ^{} ^X to disconnect"
++               .format(line_num, target_port.escape_char.upper() if target_port.escape_char is not None else "A"))
++    session.interact()
++
+ class InvalidConfigurationError(Exception):
+     def __init__(self, config_key, message):
+         self.config_key = config_key
+diff --git a/consutil/main.py b/consutil/main.py
+index bec26820..417503e6 100644
+--- a/consutil/main.py
++++ b/consutil/main.py
+@@ -22,13 +22,7 @@ except ImportError as e:
+ @clicommon.pass_db
+ def consutil(db):
+     """consutil - Command-line utility for interacting with switches via console device"""
+-    config_db = db.cfgdb
+-    data = config_db.get_entry(CONSOLE_SWITCH_TABLE, FEATURE_KEY)
+-    if FEATURE_ENABLED_KEY not in data or data[FEATURE_ENABLED_KEY] == "no":
+-        click.echo("Console switch feature is disabled")
+-        sys.exit(ERR_DISABLE)
+-
+-    SysInfoProvider.init_device_prefix()
++    initialize_console_runtime(db)
+ 
+ 
+ # 'show' subcommand
+@@ -116,7 +110,6 @@ def clear(db, target, devicename):
+     else:
+         click.echo("Cleared line")
+ 
+-
+ # 'connect' subcommand
+ @consutil.command()
+ @clicommon.pass_db
+@@ -125,33 +118,7 @@ def clear(db, target, devicename):
+               help="connect by name - if flag is set, interpret target as device name instead")
+ def connect(db, target, devicename):
+     """Connect to switch via console device - TARGET is line number or device name of switch"""
+-    # identify the target line
+-    port_provider = ConsolePortProvider(db, configured_only=False)
+-    try:
+-        target_port = port_provider.get(target, use_device=devicename)
+-    except LineNotFoundError:
+-        click.echo("Cannot connect: target [{}] does not exist".format(target))
+-        sys.exit(ERR_DEV)
+-
+-    line_num = target_port.line_num
+-
+-    # connect
+-    try:
+-        session = target_port.connect()
+-    except LineBusyError:
+-        click.echo("Cannot connect: line [{}] is busy".format(line_num))
+-        sys.exit(ERR_BUSY)
+-    except InvalidConfigurationError as cfg_err:
+-        click.echo("Cannot connect: {}".format(cfg_err.message))
+-        sys.exit(ERR_CFG)
+-    except ConnectionFailedError:
+-        click.echo("Cannot connect: unable to open picocom process")
+-        sys.exit(ERR_DEV)
+-
+-    # interact
+-    click.echo("Successful connection to line [{}]\nPress ^{} ^X to disconnect"
+-               .format(line_num, target_port.escape_char.upper() if target_port.escape_char is not None else "A"))
+-    session.interact()
++    console_connect(target, use_device=devicename, db=db)
+ 
+ 
+ if __name__ == '__main__':

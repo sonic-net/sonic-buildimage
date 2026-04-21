@@ -110,6 +110,7 @@ apply_patch_files() {
 
     # Increase timeout for route_check to 500s
     _add_patch src/sonic-utilities ../../route_check_timeout.patch
+    _add_patch src/sonic-utilities ../../console.patch
     
     # _add_patch src/sonic-swss ../../media_type.patch
     
