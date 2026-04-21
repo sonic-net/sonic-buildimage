@@ -197,26 +197,6 @@ def _take_lock():
     return lock_fd
 
 
-def _download_file(server, port, insecure):
-    """ Download file from Kube master to assist join as node. """
-
-    if insecure:
-        r = urllib.request.urlopen(SERVER_ADMIN_URL.format(server),
-                context=ssl._create_unverified_context())
-    else:
-        r = urllib.request.urlopen(SERVER_ADMIN_URL.format(server))
-
-    (h, fname) = tempfile.mkstemp(suffix="_kube_join")
-    data = r.read()
-    os.write(h, data)
-    os.close(h)
-    log_debug("Downloaded = {}".format(fname))
-
-    shutil.copyfile(fname, KUBE_ADMIN_CONF)
-
-    log_debug("{} downloaded".format(KUBE_ADMIN_CONF))
-
-
 def _gen_cli_kubeconf(server, port, insecure):
     """generate identity which can help authenticate and
        authorization to k8s cluster
