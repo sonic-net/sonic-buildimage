@@ -58,14 +58,38 @@ def get_device_name():
 
 
 def _run_command(cmd, timeout=5):
-    """ Run command and return exit code, along with stdout.
-    If cmd is a list, it is executed directly (shell=False).
-    If cmd is a string, it is passed to the shell (shell=True).
+    """ Run shell command and return exit code, along with stdout. """
+    ret = 0
+    try:
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        (o, e) = proc.communicate(timeout)
+        output = to_str(o)
+        err = to_str(e)
+        ret = proc.returncode
+    except subprocess.TimeoutExpired as error:
+        proc.kill()
+        output = ""
+        err = str(error)
+        ret = -1
+
+    log_debug("cmd:{}\nret={}".format(cmd, ret))
+    if output:
+        log_debug("out:{}".format(output))
+    if err:
+        log_debug("err:{}".format(err))
+
+    return (ret, output.strip(), err.strip())
+
+
+def _run_command_list(cmd, timeout=5):
+    """ Run command as a list with shell=False to avoid shell metacharacter injection.
+    Use this for commands assembled from untrusted input (e.g. CONFIG_DB/STATE_DB values).
+    cmd must be a list.
     """
     ret = 0
-    use_shell = isinstance(cmd, str)
     try:
-        proc = subprocess.Popen(cmd, shell=use_shell, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
         (o, e) = proc.communicate(timeout)
         output = to_str(o)
@@ -140,8 +164,8 @@ def kube_write_labels(set_labels):
     if add_label_args:
         # First remove if any
         if del_label_args:
-            (ret, _, _) = _run_command(KUBECTL_SET_BASE + del_label_args)
-        (ret, _, _) = _run_command(KUBECTL_SET_BASE + add_label_args)
+            (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + del_label_args)
+        (ret, _, _) = _run_command_list(KUBECTL_SET_BASE + add_label_args)
 
         log_debug("{} kube labels {} ret={}".format(
             "Applied" if ret == 0 else "Failed to apply", add_label_args, ret))
@@ -399,13 +423,13 @@ def _do_tag(docker_id, image_ver):
     err = ""
     out = ""
     ret = 1
-    status, ps_out, err = _run_command(["docker", "ps"])
+    status, ps_out, err = _run_command_list(["docker", "ps"])
     if status == 0:
         if docker_id not in ps_out:
             out = "New version {} is not running.".format(image_ver)
             ret = -1
             return (ret, out, err)
-        insp_ret, insp_out, err = _run_command(["docker", "inspect", docker_id])
+        insp_ret, insp_out, err = _run_command_list(["docker", "inspect", docker_id])
         if insp_ret == 0 and insp_out:
             try:
                 insp_data = json.loads(insp_out)
@@ -414,13 +438,13 @@ def _do_tag(docker_id, image_ver):
             except (ValueError, KeyError, IndexError) as e:
                 err = "Failed to parse docker inspect output for {}: {}".format(docker_id, str(e))
                 return (ret, out, err)
-            img_ret, img_out, err = _run_command(["docker", "images"])
+            img_ret, img_out, err = _run_command_list(["docker", "images"])
             if img_ret == 0 and img_out:
                 image_info = next((line for line in img_out.splitlines() if image_id in line), None)
                 if image_info:
                     # Only need the docker repo name without acr domain
                     image_rep = image_info.split()[0].split("/")[-1]
-                    tag_res, _, err = _run_command(["docker", "tag", image_id, "{}:latest".format(image_rep)])
+                    tag_res, _, err = _run_command_list(["docker", "tag", image_id, "{}:latest".format(image_rep)])
                     if tag_res == 0:
                         out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
                         ret = 0
@@ -441,7 +465,7 @@ def _remove_container(feat):
     err = ""
     out = ""
     ret = 0
-    insp_ret, insp_out, insp_err = _run_command(["docker", "inspect", feat])
+    insp_ret, insp_out, insp_err = _run_command_list(["docker", "inspect", feat])
     if insp_ret == 0 and insp_out:
         try:
             insp_data = json.loads(insp_out)
@@ -454,7 +478,7 @@ def _remove_container(feat):
             err = "Feature {} container is running, it's unexpected".format(feat)
             ret = 1
         else:
-            rm_res, _, err = _run_command(["docker", "rm", feat])
+            rm_res, _, err = _run_command_list(["docker", "rm", feat])
             if rm_res == 0:
                 out = "Remove origin local {} container successfully".format(feat)
             else:
