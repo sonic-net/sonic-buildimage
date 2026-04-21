@@ -1,0 +1,81 @@
+#!/bin/bash
+
+function update_psu_sensors_configuration() {
+    local SENSORS_CONFIG_FILE="/tmp/sensors.conf"
+    local PSU_SENSORS_CONFIG="/usr/share/sonic/platform/psu_sensors.json"
+
+    if [ -f $SENSORS_CONFIG_FILE ]; then
+        rm $SENSORS_CONFIG_FILE
+    fi
+
+    if [ -z "$1" ]; then
+        echo "psu_sensors_conf_updater ERROR: no sensors configuration file had been selected"
+        return
+    else
+        cp $1 $SENSORS_CONFIG_FILE
+    fi
+
+    platform=$(jq -r '.chassis.name' /usr/share/sonic/platform/platform.json)
+    # built-in psu, no need for dynamic configruation
+    if [[ "$platform" == "MSN2100" || "$platform" == "MSN2010" ]]; then return; fi
+    # incase we don't have this platform's info
+    if [[ $(jq -r --arg platform "$platform" '.platform[$platform]' $PSU_SENSORS_CONFIG) == "null" ]]; then return; fi
+
+    local rev=$(cat "$1" | grep "Hardware revision" | awk '{print $NF}')
+    # incase we don't find the revision number
+    if [ ! $rev ]; then return; fi
+    # incase we don't have that revision's data
+    if [[ $(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev]' $PSU_SENSORS_CONFIG) == "null" ]]; then return; fi
+
+    start_marker_number=$(grep -n "Power supplies" $SENSORS_CONFIG_FILE |  cut -f1 -d:)
+    end_marker_number=$(($(tail -n +$(($start_marker_number + 1)) $SENSORS_CONFIG_FILE | grep -n '^$' | head -n 1 | cut -d: -f1) + $start_marker_number))
+    # In some cases, the PSU sensor section may be at the end of the file,
+    # so using grep alone may not match it. Let's set the end marker
+    # to the total number of lines in the file directly.
+    if [ "$end_marker_number" == "$start_marker_number" ]; then
+        end_marker_number=$(wc -l $SENSORS_CONFIG_FILE | cut -f1 -d' ')
+    fi
+    
+    sed -i "${start_marker_number},${end_marker_number}d" $SENSORS_CONFIG_FILE
+
+    echo "" >> $SENSORS_CONFIG_FILE
+    echo "# Power supplies" >> $SENSORS_CONFIG_FILE
+
+    bus=$(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].bus | map("\"" + . + "\"") | join(" ")' $PSU_SENSORS_CONFIG)
+    if [ "$bus" ]; then echo "bus $bus" >> $SENSORS_CONFIG_FILE; fi
+
+    mapfile -t chips < <(jq -r --arg platform "$platform" --arg rev "$rev" '.platform[$platform][$rev].chip | to_entries[] | .key' $PSU_SENSORS_CONFIG )
+
+    for chip in "${chips[@]}"; do
+        number=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[0].value' $PSU_SENSORS_CONFIG)
+        side=$(jq -r --arg platform "$platform" --arg rev "$rev" --arg chip "$chip" '.platform[$platform][$rev].chip[$chip] | to_entries | .[1].value' $PSU_SENSORS_CONFIG)
+        psu=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "PN_VPD_FIELD" | cut -d ' ' -f 2 2>&1)
+        if [ ! "$psu" ]; then
+            echo "psu_sensors_conf_updater ERROR: Failed to read from /var/run/hw-management/eeprom/psu${number}_vpd"
+            # keep looking for the rest psus
+            continue
+        else
+            psu=$(echo "$psu" | sed -r 's/-PSR|-PSF//g')
+            if [ "$psu" == "MTEF-AC-G" ]; then
+                vendor=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "MFR_NAME:" | cut -d ' ' -f 2 2>&1)
+                psu="${psu}-${vendor}"
+            fi
+
+            echo "    chip \""$chip"\"" >> $SENSORS_CONFIG_FILE
+            mapfile -t opers < <(jq -r --arg psu "$psu" '.psu[$psu] | keys[]' $PSU_SENSORS_CONFIG)
+            for oper in "${opers[@]}"; do
+                if [ "$oper" == "label" ]; then
+                    section=$(jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " " + . + "\"") | join("\n")' $PSU_SENSORS_CONFIG)                
+                    if [[ ! "$side" || "$side" == "null" ]]; then
+                        echo "$section" | sed "s/PSU/\"PSU-$number/g"   >> $SENSORS_CONFIG_FILE
+                    else
+                        echo "$section" | sed "s/PSU/\"PSU-$number($side)/g" >> $SENSORS_CONFIG_FILE
+                    fi
+                else
+                    jq -r --arg psu "$psu" --arg oper "$oper" '.psu[$psu][$oper] | map("        " + $oper + " "  + .) | join("\n")' $PSU_SENSORS_CONFIG >> $SENSORS_CONFIG_FILE   
+                fi
+            done
+        fi
+    done
+
+}
