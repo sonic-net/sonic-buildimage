@@ -143,9 +143,9 @@ jobs:
         displayName: "Build sonic image"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
       - task: PublishBuildArtifacts@1
-        displayName: 'Publish s/target as artifact'
+        displayName: 'Publish target as artifact'
         inputs:
-          PathtoPublish: 's/target'
+          PathtoPublish: 'target'
           ArtifactName: 'drop'
           publishLocation: 'Container'
       - task: ManifestGeneratorTask@0
