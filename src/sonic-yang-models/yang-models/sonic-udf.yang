@@ -1,0 +1,187 @@
+/* SONiC UDF YANG model — flat-fields schema (UDF + UDF_SELECTOR) */
+module sonic-udf {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-udf";
+    prefix udf;
+
+    description "UDF YANG Module for SONiC OS — flat-fields schema";
+
+    revision 2026-04-21 {
+        description "Replace JSON-in-string select/match with flat typed leaves";
+    }
+
+    revision 2024-03-16 {
+        description "Initial revision for UDF support";
+    }
+
+    container sonic-udf {
+
+        /* ================================================================
+         * UDF — defines the custom field (maps to SAI UDF_GROUP internally)
+         * Key: UDF|<udf_name>
+         * ================================================================ */
+        container UDF {
+
+            description "UDF field definitions";
+
+            list UDF_LIST {
+
+                key "UDF_NAME";
+
+                leaf UDF_NAME {
+                    type string {
+                        length 1..64;
+                        pattern "[a-zA-Z0-9_-]+";
+                    }
+                    description "Unique UDF field name. Referenced by ACL_TABLE_TYPE MATCHES and ACL_RULE fields.";
+                }
+
+                leaf length {
+                    mandatory true;
+                    type uint8 {
+                        range "1..255";
+                    }
+                    description "Extraction length in bytes";
+                }
+
+                leaf field_type {
+                    type enumeration {
+                        enum GENERIC {
+                            description "Generic UDF type — used for ACL matching";
+                        }
+                        enum HASH {
+                            description "Hash UDF type — used for ECMP hashing";
+                        }
+                    }
+                    default "GENERIC";
+                    description "UDF group type (default: GENERIC)";
+                }
+
+                leaf description {
+                    type string {
+                        length 0..128;
+                    }
+                    description "Optional human-readable label";
+                }
+            }
+        }
+
+        /* ================================================================
+         * UDF_SELECTOR — per-packet-type extraction definition
+         * Key: UDF_SELECTOR|<udf_name>|<selector_name>
+         * Maps to SAI UDF_MATCH + SAI UDF objects internally
+         * ================================================================ */
+        container UDF_SELECTOR {
+
+            description "UDF selector definitions";
+
+            list UDF_SELECTOR_LIST {
+
+                key "UDF_NAME SELECTOR_NAME";
+
+                leaf UDF_NAME {
+                    type leafref {
+                        path "/udf:sonic-udf/udf:UDF/udf:UDF_LIST/udf:UDF_NAME";
+                    }
+                    description "Reference to parent UDF field";
+                }
+
+                leaf SELECTOR_NAME {
+                    type string {
+                        length 1..64;
+                        pattern "[a-zA-Z0-9_-]+";
+                    }
+                    description "Selector name (e.g., roce_v1, roce_v2)";
+                }
+
+                /* ---- extraction location ---- */
+
+                leaf select_base {
+                    mandatory true;
+                    type enumeration {
+                        enum L2 { description "Offset from start of L2 (Ethernet) header"; }
+                        enum L3 { description "Offset from start of L3 (IP) header"; }
+                        enum L4 { description "Offset from start of L4 (TCP/UDP) header"; }
+                    }
+                    description "Packet layer used as the offset base";
+                }
+
+                leaf select_offset {
+                    mandatory true;
+                    type uint8 {
+                        range "0..255";
+                    }
+                    description "Byte offset from select_base";
+                }
+
+                /* ---- packet match criteria (at least one required) ---- */
+
+                leaf match_l2_type {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "EtherType value to match (hex, e.g. 0x8915 for RoCEv1)";
+                }
+
+                leaf match_l2_type_mask {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "EtherType mask (hex, default 0xFFFF if match_l2_type is set)";
+                }
+
+                leaf match_l3_type {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,2}";
+                    }
+                    description "IP protocol value to match (hex, e.g. 0x11 for UDP)";
+                }
+
+                leaf match_l3_type_mask {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,2}";
+                    }
+                    description "IP protocol mask (hex, default 0xFF if match_l3_type is set)";
+                }
+
+                leaf match_gre_type {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "GRE protocol type value to match (hex)";
+                }
+
+                leaf match_gre_type_mask {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "GRE protocol type mask (hex, default 0xFFFF if match_gre_type is set)";
+                }
+
+                leaf match_l4_dst_port {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "L4 destination port value to match (decimal, e.g. 4791 for RoCEv2)";
+                }
+
+                leaf match_l4_dst_port_mask {
+                    type string {
+                        pattern "0x[0-9a-fA-F]{1,4}";
+                    }
+                    description "L4 destination port mask (default 0xFFFF if match_l4_dst_port is set)";
+                }
+
+                leaf match_priority {
+                    type uint8 {
+                        range "0..255";
+                    }
+                    default 0;
+                    description "Match priority (0-255). When multiple selectors match a packet, the highest priority wins.";
+                }
+            }
+        }
+    }
+}

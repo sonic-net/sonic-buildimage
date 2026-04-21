@@ -3083,6 +3083,20 @@
                 "swbus_port": "23607"
             }
         },
+        "UDF": {
+            "my_udf": {
+                "field_type": "GENERIC",
+                "length": "4"
+            }
+        },
+        "UDF_SELECTOR": {
+            "my_udf|sel1": {
+                "select_base":        "L3",
+                "select_offset":      "0",
+                "match_l2_type":      "0x0800",
+                "match_l2_type_mask": "0xFFFF"
+            }
+        },
         "VDPU": {
             "vdpu0": {
                 "profile": "none",

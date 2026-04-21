@@ -205,6 +205,7 @@ yang_files = [
     'sonic-trimming.yang',
     'sonic-tunnel.yang',
     'sonic-types.yang',
+    'sonic-udf.yang',
     'sonic-versions.yang',
     'sonic-vlan-sub-interface.yang',
     'sonic-vlan.yang',
