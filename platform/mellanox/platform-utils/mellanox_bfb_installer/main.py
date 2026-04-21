@@ -90,13 +90,14 @@ def _lock_file_or_exit(lock_file_path: str = LOCK_FILE):
             logger.error(f"Could not open lock file {lock_file_path}: {e}")
             sys.exit(1)
 
-        yield lock_file
-
-        # Close, but swallow errors after logging them
         try:
-            lock_file.close()
-        except Exception as e:
-            logger.warning(f"Could not close lock file: {e}")
+            yield lock_file
+        finally:
+            # Close, but swallow errors after logging them
+            try:
+                lock_file.close()
+            except Exception as e:
+                logger.warning(f"Could not close lock file: {e}")
 
     with _open_with_best_effort_close(lock_file_path, "w") as lock_file:
         try:

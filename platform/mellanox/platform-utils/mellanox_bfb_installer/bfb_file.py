@@ -113,7 +113,7 @@ def _extract_bfb(bfb_file: str, work_dir: str) -> Tuple[str, Optional[str]]:
         sys.exit(1)
 
     logger.info("Extracted BFB file: %s", extracted_bfb)
-    os.chmod(extracted_bfb, 0o755)
+    os.chmod(extracted_bfb, 0o644)
 
     extracted_sha256 = extracted_bfb + ".sha256"
     if os.path.isfile(extracted_sha256):
@@ -141,8 +141,11 @@ def _validate_bfb_sha256(
         logger.error("Failed to read SHA256 hash file: %s", e)
         sys.exit(1)
 
+    sha256 = hashlib.sha256()
     with open(extracted_bfb_path, "rb") as f:
-        actual_hash = hashlib.sha256(f.read()).hexdigest()
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            sha256.update(chunk)
+    actual_hash = sha256.hexdigest()
 
     if expected_hash != actual_hash:
         logger.error("SHA256 checksum mismatch!")

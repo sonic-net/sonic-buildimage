@@ -181,6 +181,70 @@ class TestUserDpuSelectionToDpusFromPlatformJson:
         assert "not found" in mock_log.error.call_args[0][0]
         assert mock_log.error.call_args[0][1] == "dpu99"
 
+    @pytest.mark.parametrize(
+        "dpus_arg",
+        [
+            ",",
+            "dpu1,",
+            ",dpu1",
+            "dpu1,,dpu2",
+        ],
+    )
+    def test_exits_when_dpus_list_has_empty_segments_from_commas(self, dpus_arg):
+        """Comma-only, leading/trailing, or doubled commas produce empty DPU names and exit."""
+        from mellanox_bfb_installer import device_selection
+
+        print_usage = mock.MagicMock()
+        mock_log = mock.MagicMock()
+        expected_msg = "If providing a list of DPUs, it cannot contain empty strings! (Check for extra commas.)"
+        with (
+            mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1", "dpu2"]),
+            mock.patch.object(device_selection, "logger", mock_log),
+        ):
+            with pytest.raises(SystemExit) as ctx:
+                device_selection._user_dpu_selection_to_dpus_from_platform_json(
+                    dpus=dpus_arg, rshims=None, script_name="test", print_usage_callback=print_usage
+                )
+        assert isinstance(ctx.value, SystemExit)
+        assert ctx.value.code == 1
+        print_usage.assert_called_once()
+        mock_log.error.assert_called_once()
+        assert mock_log.error.call_args[0][0] == expected_msg
+
+    @pytest.mark.parametrize(
+        "rshims_arg",
+        [
+            ",",
+            "rshim1,",
+            ",rshim1",
+            "rshim1,,rshim2",
+        ],
+    )
+    def test_exits_when_rshims_list_has_empty_segments_from_commas(self, rshims_arg):
+        """Comma-only, leading/trailing, or doubled commas produce empty rshim names and exit."""
+        from mellanox_bfb_installer import device_selection
+
+        def rshim2dpu_mock(rshim):
+            return {"rshim0": "dpu0", "rshim1": "dpu1", "rshim2": "dpu2"}.get(rshim)
+
+        print_usage = mock.MagicMock()
+        mock_log = mock.MagicMock()
+        expected_msg = "If providing a list of rshims, it cannot contain empty strings! (Check for extra commas.)"
+        with (
+            mock.patch.object(device_selection.platform_dpu, "list_dpus", return_value=["dpu0", "dpu1", "dpu2"]),
+            mock.patch.object(device_selection, "rshim2dpu", side_effect=rshim2dpu_mock),
+            mock.patch.object(device_selection, "logger", mock_log),
+        ):
+            with pytest.raises(SystemExit) as ctx:
+                device_selection._user_dpu_selection_to_dpus_from_platform_json(
+                    dpus=None, rshims=rshims_arg, script_name="test", print_usage_callback=print_usage
+                )
+        assert isinstance(ctx.value, SystemExit)
+        assert ctx.value.code == 1
+        print_usage.assert_called_once()
+        mock_log.error.assert_called_once()
+        assert mock_log.error.call_args[0][0] == expected_msg
+
     def test_returns_dpus_via_rshims_comma_separated(self):
         """Returns DPU list when rshims is comma-separated and all map to DPUs."""
         from mellanox_bfb_installer import device_selection

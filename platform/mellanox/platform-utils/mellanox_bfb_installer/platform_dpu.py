@@ -140,7 +140,7 @@ def get_dpus_detected_pci_bus_ids() -> Dict[str, Dict[str, str]]:
         line_parts = line.split()
         if len(line_parts) < 3:
             logger.warning(
-                'Invalid `lspci -D -n` output line. Expected at least 3 tokens. Skipping line: "%s"',
+                'Invalid `lspci -D -n` output line. Expected at least 3 columns. Skipping line: "%s"',
                 line,
             )
             continue

@@ -68,8 +68,14 @@ def _user_dpu_selection_to_dpus_from_platform_json(
         target_dpu_list = all_dpus_list
         user_selected_all = True
     elif dpus:
-        target_dpu_list = [s.strip() for s in dpus.split(",") if s.strip()]
+        target_dpu_list = [s.strip() for s in dpus.split(",")]
         for dpu in target_dpu_list:
+            if not dpu:
+                logger.error(
+                    "If providing a list of DPUs, it cannot contain empty strings! (Check for extra commas.)"
+                )
+                print_usage_callback()
+                sys.exit(1)
             if dpu not in all_dpus_list:
                 logger.error(
                     'DPU "%s" is not found in platform.json dpus list: [%s]!',
@@ -79,8 +85,14 @@ def _user_dpu_selection_to_dpus_from_platform_json(
                 print_usage_callback()
                 sys.exit(1)
     elif rshims:
-        _rshim_list = [s.strip() for s in rshims.split(",") if s.strip()]
+        _rshim_list = [s.strip() for s in rshims.split(",")]
         for rshim in _rshim_list:
+            if not rshim:
+                logger.error(
+                    "If providing a list of rshims, it cannot contain empty strings! (Check for extra commas.)"
+                )
+                print_usage_callback()
+                sys.exit(1)
             dpu = rshim2dpu(rshim)
             if not dpu:
                 logger.error('No DPU in platform.json exists with rshim "%s"', rshim)
