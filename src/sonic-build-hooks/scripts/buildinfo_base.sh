@@ -11,7 +11,6 @@ POST_VERSION_PATH=$BUILDINFO_PATH/post-versions
 VERSION_DEB_PREFERENCE=$BUILDINFO_PATH/versions/01-versions-deb
 WEB_VERSION_FILE=$VERSION_PATH/versions-web
 BUILD_WEB_VERSION_FILE=$BUILD_VERSION_PATH/versions-web
-REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 GET_RETRY_COUNT=5
 
@@ -34,7 +33,7 @@ PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
 . ${BUILDINFO_PATH}/scripts/utils.sh
 
 
-URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
+URL_PREFIX=$(echo "${BUILD_PACKAGES_URL}" | sed -E "s#(//[^/]*/).*#\1#")
 
 log_err()
 {
@@ -112,15 +111,15 @@ get_version_cache_option()
 set_reproducible_mirrors()
 {
     # Remove the charater # in front of the line if matched
-    local expression="s/^#\s*\(.*$REPR_MIRROR_URL_PATTERN\)/\1/"
+    local expression="s,^#\s*\(.*$BUILD_SNAPSHOT_URL\),\1,"
     # Add the character # in front of the line, if not match the URL pattern condition
-    local expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#*deb/#&/"
+    local expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#*deb,#&,"
     local expression3="\$a#SET_REPR_MIRRORS"
     if [ "$1" = "-d" ]; then
         # Add the charater # in front of the line if match
-        expression="s/^deb.*$REPR_MIRROR_URL_PATTERN/#\0/"
+        expression="s,^deb.*$BUILD_SNAPSHOT_URL,#\0,"
         # Remove the character # in front of the line, if not match the URL pattern condition
-        expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#\s*(#*deb)/\1/"
+        expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#\s*(#*deb),\1,"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
@@ -132,7 +131,7 @@ set_reproducible_mirrors()
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
     for mirror in $mirrors; do
-        if ! grep -iq "$REPR_MIRROR_URL_PATTERN" "$mirror"; then
+        if ! grep -iq "$BUILD_SNAPSHOT_URL" "$mirror"; then
             continue
         fi
 
@@ -212,7 +211,7 @@ download_packages()
                 else
 
                     local version_filename="${filename}-${version}"
-                    local proxy_url="${PACKAGE_URL_PREFIX}/${version_filename}"
+                    local proxy_url="${BUILD_PACKAGES_URL}/${version_filename}"
                     local url_exist=$(check_if_url_exist $proxy_url)
                     if [ "$url_exist" == y ]; then
                         parameters[$i]=$proxy_url
@@ -350,6 +349,10 @@ run_pip_command()
         parameters+=("${tmp_version_file}")
     fi
 
+    if [ "$install" == "y" ] && [ "$ENABLE_VERSION_CONTROL_PY" == "y" ]; then
+        parameters+=("--no-build-isolation")
+    fi
+
     if [ ! -z "$(get_version_cache_option)" ]; then
         FLOCK ${PIP_CACHE_PATH}
         $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}"
@@ -424,7 +427,7 @@ check_dpkg_need_lock()
 # Print warning message if a debian package version not specified when debian version control enabled.
 check_apt_version()
 {
-    VERSION_FILE="${VERSION_PATH}/versions-deb"
+    local VERSION_FILE="${VERSION_PATH}/versions-deb"
     local install=$(check_apt_install "$@")
     if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ "$install" == "y" ]; then
         for para in "$@"
@@ -441,7 +444,7 @@ check_apt_version()
                 continue
             else
                 package=$para
-                if ! grep -q "^${package}=" $VERSION_FILE; then
+                if ! grep -q "^${package}==" "$VERSION_FILE"; then
                     echo "Warning: the version of the package ${package} is not specified." 1>&2
                 fi
             fi
@@ -488,6 +491,9 @@ update_preference_deb()
         for pacakge_version in $(cat "$version_file"); do
             package=$(echo $pacakge_version | awk -F"==" '{print $1}')
             version=$(echo $pacakge_version | awk -F"==" '{print $2}')
+            # Strip +fips suffix — FIPS packages are locally rebuilt
+            # and not available from Debian apt repos
+            version="${version%+fips}"
             echo -e "Package: $package\nPin: version $version\nPin-Priority: 999\n\n" >> $VERSION_DEB_PREFERENCE
         done
     fi
@@ -505,7 +511,10 @@ update_version_file()
     [ -f "$version_file" ] && package_versions="$package_versions $(cat $version_file)"
     declare -A versions
     for pacakge_version in $package_versions; do
-        package=$(echo $pacakge_version | awk -F"==" '{print $1}')
+        # convert package name to lower case to avoid the issue caused by the case sensitivity of pip package name 
+        #for example, "PyYAML" and "pyyaml" are the same package but with different case, 
+        # which will cause the issue when we merge the versions pyyaml==6.0.1 and PyYAML==6.0.3.
+        package=$(echo $pacakge_version | awk -F"==" '{print $1}' | tr '[:upper:]' '[:lower:]')
         version=$(echo $pacakge_version | awk -F"==" '{print $2}')
         if [ -z "$package" ] || [ -z "$version" ]; then
             continue
