@@ -16,7 +16,11 @@
     exit 1
 }
 
-## Password for the default user (empty is allowed; means no password on console, SSH blocked)
+## Password for the default user
+[ -n "$PASSWORD" ] || {
+    echo "Error: no or empty PASSWORD"
+    exit 1
+}
 
 ## Include common functions
 . functions.sh
@@ -291,32 +295,11 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
 
-## Add SmartSwitch-only docker bridge-midplane dependency override
-if [ -f "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json" ] && \
-   python3 - "$FILESYSTEM_ROOT/usr/share/sonic/device/$CONFIGURED_PLATFORM/platform.json" <<'EOF'
-import json
-import sys
-
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-
-sys.exit(0 if "DPUS" in data else 1)
-EOF
-then
-    sudo cp files/docker/docker-smartswitch.conf \
-        "$FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/"
-fi
-
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
-## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
-if [ -n "$PASSWORD" ]; then
-    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
-else
-    sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
-fi
+echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -519,10 +502,6 @@ rm /files/etc/ssh/sshd_config/Banner
 set /files/etc/ssh/sshd_config/Banner /etc/issue
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
-rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
-set /files/etc/ssh/sshd_config/PermitEmptyPasswords no
-ins #comment before /files/etc/ssh/sshd_config/PermitEmptyPasswords
-set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PermitEmptyPasswords]] "Deny SSH login with empty password; use console to set a real password first"
 rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
