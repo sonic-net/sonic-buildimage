@@ -7,17 +7,18 @@ module sonic-banner {
         prefix stypes;
     }
 
-    description "BANNER_MESSAGE YANG Module for SONiC-based OS";
+    description "Login, MOTD, and logout banner message YANG module for SONiC OS.";
     revision 2023-05-18 {
         description "First Revision";
     }
     container sonic-banner {
         container BANNER_MESSAGE {
-            description "BANNER_MESSAGE part of config_db.json";
+            description "Banner messages displayed during login and logout.";
             container global {
+                description "Global banner message settings.";
                 leaf state {
                     type stypes:admin_mode;
-                    description "Banner feature state";
+                    description "Enable or disable the banner feature.";
                     default disabled;
                 }
                 leaf login {
@@ -42,7 +43,7 @@ module sonic-banner {
                 }
                 leaf logout {
                     type string;
-                    description "Banner message dispalyed to the users on logout";
+                    description "Banner message displayed to users on logout.";
                     default "";
                 }
             } /* end of container MESSAGE */

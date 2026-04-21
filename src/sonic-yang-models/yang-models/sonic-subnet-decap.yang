@@ -14,7 +14,7 @@ module sonic-subnet-decap {
         prefix stypes;
     }
 
-    description "Subnet decap configuration for SONiC OS.";
+    description "Subnet-based IPinIP tunnel decapsulation rules for SONiC.";
 
     revision 2024-12-19 {
         description "Initial version";
@@ -23,7 +23,7 @@ module sonic-subnet-decap {
     container sonic-subnet-decap {
         container SUBNET_DECAP {
 
-            description "CONFIG_DB subnet decap configuration.";
+            description "Subnet decapsulation entries defining source IP prefixes for IPinIP decap.";
 
             list SUBNET_DECAP_LIST {
 
@@ -31,24 +31,24 @@ module sonic-subnet-decap {
 
                 leaf name {
                     type string;
-                    description "Subnet Decap config name.";
+                    description "Subnet decap rule name.";
                 }
 
                 leaf status {
                     type stypes:mode-status;
                     default disable;
-                    description "Subnet Decap status.";
+                    description "Enable or disable this subnet decap rule.";
                 }
 
                 leaf src_ip {
                     type inet:ipv4-prefix;
-                    description "Subnet decap term source IPv4 prefix.";
+                    description "Outer source IPv4 prefix identifying traffic eligible for decapsulation.";
                     mandatory true;
                 }
 
                 leaf src_ip_v6 {
                     type inet:ipv6-prefix;
-                    description "Subnet decap term source IPv6 prefix.";
+                    description "Outer source IPv6 prefix identifying traffic eligible for decapsulation.";
                     mandatory true;
                 }
             }

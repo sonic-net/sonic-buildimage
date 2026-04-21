@@ -20,7 +20,7 @@ module sonic-heartbeat {
     container sonic-heartbeat {
 
         container HEARTBEAT {
-            description "HEARTBEAT config TABLE part of config_db.json";
+            description "Heartbeat monitoring configuration for system processes";
 
             list HEARTBEAT_LIST {
                 key "name";
