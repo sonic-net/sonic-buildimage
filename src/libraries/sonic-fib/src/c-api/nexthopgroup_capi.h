@@ -13,7 +13,9 @@ const char* nexthopgroup_version(void);
 
 typedef struct NextHopGroupFull NextHopGroupFull;
 
-// Generate C++ NextHopGroupFull from C_NextHopGroupFull
+#ifdef __cplusplus
+namespace fib { class NextHopGroupFull; }
+// C++ APIs
 char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, 
                                               uint32_t nh_grp_full_count, 
                                               uint32_t depends_count, 
@@ -21,12 +23,20 @@ char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_
 char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, 
                                                   uint32_t depends_count, 
                                                   uint32_t dependents_count);
-
-// Free the object
+void nexthopgroup_free(fib::NextHopGroupFull* obj);
+char* nexthopgroup_to_json(fib::NextHopGroupFull* obj);
+#else
+/* C APIs */
+char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, 
+                                              uint32_t nh_grp_full_count, 
+                                              uint32_t depends_count, 
+                                              uint32_t dependents_count);
+char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, 
+                                                  uint32_t depends_count, 
+                                                  uint32_t dependents_count);
 void nexthopgroup_free(NextHopGroupFull* obj);
-
-// JSON APIs ---
 char* nexthopgroup_to_json(NextHopGroupFull* obj);
+#endif
 
 /* C callback signature matching FRR's needs */
 typedef void (*fib_frr_log_fn)(int level,

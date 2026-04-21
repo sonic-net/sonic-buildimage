@@ -13,22 +13,11 @@
 
 using namespace std;
 
-
-// Optional: bring into global scope for convenience
-using NextHopGroupFull = fib::NextHopGroupFull;
-
-// Declare C-compatible API directly (no need for header here)
 extern "C" {
 
 const char* nexthopgroup_version(void) {
     return LIBNEXTHOPGROUP_VERSION;
 }
-
-
-char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, uint32_t nh_grp_full_count, uint32_t depends_count, uint32_t dependents_count);
-char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, uint32_t depends_count, uint32_t dependents_count);
-void nexthopgroup_free(NextHopGroupFull* obj);
-char* nexthopgroup_to_json(NextHopGroupFull* obj);
 
 char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, uint32_t nh_grp_full_count, uint32_t depends_count, uint32_t dependents_count)
 {
@@ -42,7 +31,7 @@ char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_
             nh_grp_full_count, depends_count, dependents_count);
         /* Convert C array to C++ vector */
         vector<fib::nh_grp_full> cpp_nh_grp_full_list;
-        for (int i = 0; i < nh_grp_full_count; i++) {
+        for (uint32_t i = 0; i < nh_grp_full_count; i++) {
             /* convert C nh_grp_full to C++ fib::nh_grp_full explicitly */
             fib::nh_grp_full cpp_nh = {
                 c_nhg->nh_grp_full_list[i].id,
@@ -52,16 +41,16 @@ char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_
             cpp_nh_grp_full_list.push_back(cpp_nh);
         }
         vector<uint32_t> cpp_depends;
-        for (int i = 0; i < depends_count; i++) {
+        for (uint32_t i = 0; i < depends_count; i++) {
             cpp_depends.push_back(c_nhg->depends[i]);
         }
         vector<uint32_t> cpp_dependents;
-        for (int i = 0; i < dependents_count; i++) {
+        for (uint32_t i = 0; i < dependents_count; i++) {
             cpp_dependents.push_back(c_nhg->dependents[i]);
         }
 
         /* Call NextHopGroupFull constructor(multi) to create NextHopGroupFull object */
-        NextHopGroupFull* cpp_nhg = new NextHopGroupFull(c_nhg->id, c_nhg->key, c_nhg->nhg_flags,
+        fib::NextHopGroupFull* cpp_nhg = new fib::NextHopGroupFull(c_nhg->id, c_nhg->key, c_nhg->nhg_flags,
                                                    cpp_nh_grp_full_list, cpp_depends, cpp_dependents);
 
         /* Convert C++ Obj to JSON stirng */
@@ -91,11 +80,11 @@ char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull
     try {
         /* Convert C array to C++ vector */
         vector<uint32_t> cpp_depends;
-        for (int i = 0; i < depends_count; i++) {
+        for (uint32_t i = 0; i < depends_count; i++) {
             cpp_depends.push_back(c_nhg->depends[i]);
         }
         vector<uint32_t> cpp_dependents;
-        for (int i = 0; i < dependents_count; i++) {
+        for (uint32_t i = 0; i < dependents_count; i++) {
             cpp_dependents.push_back(c_nhg->dependents[i]);
         }
 
@@ -117,7 +106,7 @@ char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull
 
         /* Call NextHopGroupFull constructor(singleton) to create NextHopGroupFull object */
         /* Convert C types to C++ fib types by force */
-        NextHopGroupFull* cpp_nhg = new NextHopGroupFull(c_nhg->id, c_nhg->key,
+        fib::NextHopGroupFull* cpp_nhg = new fib::NextHopGroupFull(c_nhg->id, c_nhg->key,
                                                          static_cast<fib::nexthop_types_t>(c_nhg->type),
                                                          static_cast<fib::vrf_id_t>(c_nhg->vrf_id),
                                                          static_cast<fib::ifindex_t>(c_nhg->ifindex),
@@ -150,19 +139,19 @@ char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull
     }
 }
 
-void nexthopgroup_free(NextHopGroupFull* obj)
+void nexthopgroup_free(fib::NextHopGroupFull* obj)
 {
     delete obj;
 }
 
-char* nexthopgroup_to_json(NextHopGroupFull* obj)
+char* nexthopgroup_to_json(fib::NextHopGroupFull* obj)
 {
     if (!obj) {
         return nullptr;
     }
 
     try {
-        std::string json_str = to_json_string(*obj);
+        std::string json_str = fib::to_json_string(*obj);
         char* c_str = static_cast<char*>(std::malloc(json_str.size() + 1));
         if (c_str) {
             std::memcpy(c_str, json_str.c_str(), json_str.size() + 1);
