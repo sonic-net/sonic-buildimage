@@ -294,7 +294,8 @@ def test_bmp_single_target_single_collector(run_cmd):
             return {
                 ('sonic-bmp', '192.168.1.100', '5000'): {
                     'min-retry': '30000',
-                    'max-retry': '720000'
+                    'max-retry': '720000',
+                    'source-interface': 'Loopback0'
                 }
             }
         elif table_name == 'BMP_TARGET_AFI_SAFI':
@@ -330,7 +331,7 @@ def test_bmp_single_target_single_collector(run_cmd):
     assert 'router bgp 65000' in config_cmd
     assert 'bmp mirror buffer-limit 4294967214' in commands[1]
     assert 'bmp targets sonic-bmp' in config_cmd
-    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000' in config_cmd
+    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in config_cmd
     assert 'bmp stats interval 2000' in config_cmd
 
     # Check AFI/SAFI monitoring command
@@ -363,7 +364,8 @@ def test_bmp_multiple_collectors(run_cmd):
             return {
                 ('sonic-bmp', '192.168.1.100', '5000'): {
                     'min-retry': '30000',
-                    'max-retry': '720000'
+                    'max-retry': '720000',
+                    'source-interface': 'Loopback0'
                 },
                 ('sonic-bmp', '192.168.1.101', '5001'): {
                     'min-retry': '30000',
@@ -400,9 +402,10 @@ def test_bmp_multiple_collectors(run_cmd):
             break
 
     assert config_cmd is not None, "Could not find command with 'bmp targets sonic-bmp' and 'bmp connect'"
-    # Both collectors should be configured
-    assert 'bmp connect 192.168.1.100 port 5000' in config_cmd, f"Collector 1 not found in: {config_cmd}"
-    assert 'bmp connect 192.168.1.101 port 5001' in config_cmd, f"Collector 2 not found in: {config_cmd}"
+    # Both collectors should be configured; only the first has a source-interface
+    assert "'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0'" in config_cmd, f"Collector 1 not found in: {config_cmd}"
+    assert "'bmp connect 192.168.1.101 port 5001 min-retry 30000 max-retry 720000'" in config_cmd, f"Collector 2 not found in: {config_cmd}"
+    assert config_cmd.count('source-interface') == 1, f"Expected exactly one source-interface clause, got: {config_cmd}"
 
 
 @patch.dict('sys.modules', **mockmapping)
@@ -685,11 +688,13 @@ def test_bmp_multiple_afi_safi_per_target(run_cmd):
             return {
                 ('production', '192.168.1.100', '5000'): {
                     'min-retry': '30000',
-                    'max-retry': '720000'
+                    'max-retry': '720000',
+                    'source-interface': 'Loopback0'
                 },
                 ('production', '192.168.1.101', '5000'): {
                     'min-retry': '30000',
-                    'max-retry': '720000'
+                    'max-retry': '720000',
+                    'source-interface': 'Ethernet0'
                 }
             }
         elif table_name == 'BMP_TARGET_AFI_SAFI':
@@ -741,9 +746,9 @@ def test_bmp_multiple_afi_safi_per_target(run_cmd):
 
     assert config_cmd is not None, "Could not find BMP target configuration command"
 
-    # Verify multiple collectors
-    assert 'bmp connect 192.168.1.100 port 5000' in config_cmd
-    assert 'bmp connect 192.168.1.101 port 5000' in config_cmd
+    # Verify multiple collectors, each with its own source-interface
+    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in config_cmd
+    assert 'bmp connect 192.168.1.101 port 5000 min-retry 30000 max-retry 720000 source-interface Ethernet0' in config_cmd
 
     # Verify mirror and stats-interval
     assert 'bmp mirror' in config_cmd
@@ -799,6 +804,9 @@ def test_bmp_no_config_uses_default_sonic_bmp_target(run_cmd):
 
     # Verify default collector 127.0.0.1:5000
     assert 'bmp connect 127.0.0.1 port 5000' in all_commands
+
+    # Default target has no source-interface configured
+    assert 'source-interface' not in all_commands
 
     # Verify default stats interval (1000ms)
     assert 'bmp stats interval 1000' in all_commands
@@ -956,7 +964,8 @@ def test_bmp_collector_deletion_rebuilds_target(run_cmd):
                 # Second collector was deleted, only one remains
                 ('production', '192.168.1.100', '5000'): {
                     'min-retry': '30000',
-                    'max-retry': '720000'
+                    'max-retry': '720000',
+                    'source-interface': 'Loopback0'
                 }
             }
         elif table_name == 'BMP_TARGET_AFI_SAFI':
@@ -985,8 +994,8 @@ def test_bmp_collector_deletion_rebuilds_target(run_cmd):
     assert 'no bmp targets production' in all_commands or 'no bmp targets sonic-bmp' in all_commands
     assert 'bmp targets production' in all_commands
 
-    # Should have only one collector now
-    assert '192.168.1.100 port 5000' in all_commands
+    # Should have only one collector now, with its source-interface preserved
+    assert 'bmp connect 192.168.1.100 port 5000 min-retry 30000 max-retry 720000 source-interface Loopback0' in all_commands
     # The deleted collector should not be present
     assert '192.168.1.101' not in all_commands
 

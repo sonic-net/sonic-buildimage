@@ -90,7 +90,7 @@ class TestCfgGen(TestCase):
                 "production": {"mirror": "true", "stats-interval": "5000"}
             },
             "BMP_TARGET_COLLECTOR": {
-                "production|192.168.1.100|5000": {"min-retry": "30000", "max-retry": "720000"}
+                "production|192.168.1.100|5000": {"min-retry": "30000", "max-retry": "720000", "source-interface": "Loopback0"}
             },
             "BMP_TARGET_AFI_SAFI": {
                 "production|ipv4_unicast": {"adj-rib-in-pre": "true", "adj-rib-in-post": "false", "loc-rib": "false"},
@@ -111,7 +111,7 @@ class TestCfgGen(TestCase):
             },
             "BMP_TARGET_COLLECTOR": {
                 "production|192.168.1.100|5000": {"min-retry": "30000", "max-retry": "720000"},
-                "troubleshooting|10.0.0.1|6000": {"min-retry": "20000", "max-retry": "600000"}
+                "troubleshooting|10.0.0.1|6000": {"min-retry": "20000", "max-retry": "600000", "source-interface": "Loopback0"}
             },
             "BMP_TARGET_AFI_SAFI": {
                 "production|ipv4_unicast": {"adj-rib-in-pre": "true", "adj-rib-in-post": "false", "loc-rib": "false"},

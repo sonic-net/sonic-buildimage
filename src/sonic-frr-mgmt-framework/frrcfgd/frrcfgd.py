@@ -4058,7 +4058,8 @@ class BGPConfigDaemon:
                     'ip': collector_ip,
                     'port': collector_port,
                     'min_retry': collector_value.get('min-retry', '30000'),
-                    'max_retry': collector_value.get('max-retry', '720000')
+                    'max_retry': collector_value.get('max-retry', '720000'),
+                    'source_interface': collector_value.get('source-interface', None)
                 })
 
         # Add AFI/SAFI configs from BMP_TARGET_AFI_SAFI table
@@ -4105,7 +4106,8 @@ class BGPConfigDaemon:
                     'ip': '127.0.0.1',
                     'port': '5000',
                     'min_retry': '10000',
-                    'max_retry': '15000'
+                    'max_retry': '15000',
+                    'source_interface': None
                 }],
                 'afi_safis': [
                     {
@@ -4169,8 +4171,11 @@ class BGPConfigDaemon:
                 
                 # Add collectors
                 for collector in target_config['collectors']:
-                    command += " -c 'bmp connect {} port {} min-retry {} max-retry {}'".format(
+                    connect_cmd = "bmp connect {} port {} min-retry {} max-retry {}".format(
                         collector['ip'], collector['port'], collector['min_retry'], collector['max_retry'])
+                    if collector.get('source_interface'):
+                        connect_cmd += " source-interface {}".format(collector['source_interface'])
+                    command += " -c '{}'".format(connect_cmd)
                 
                 # Add mirror setting
                 if target_config['mirror'] == 'true':

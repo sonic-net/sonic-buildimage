@@ -173,6 +173,13 @@ module sonic-bmp {
                     default 720000;
                     description "Maximum connection retry interval";
                 }
+
+                leaf source-interface {
+                    type string {
+                        length "1..64";
+                    }
+                    description "Interface whose address is used as the source for the outgoing BMP session";
+                }
             }
         }
 

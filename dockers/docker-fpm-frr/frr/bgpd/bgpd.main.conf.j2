@@ -191,7 +191,9 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {%         if collector_target == target_name and collector_ip is not none and collector_port is not none %}
 {%           set min_retry = collector_value.get('min-retry', '30000') %}
 {%           set max_retry = collector_value.get('max-retry', '720000') %}
-  bmp connect {{ collector_ip }} port {{ collector_port }} min-retry {{ min_retry }} max-retry {{ max_retry }}
+{%           set source_interface = collector_value.get('source-interface', '') %}
+{%           set src_if_clause = (' source-interface ' ~ source_interface) if source_interface else '' %}
+  bmp connect {{ collector_ip }} port {{ collector_port }} min-retry {{ min_retry }} max-retry {{ max_retry }}{{ src_if_clause }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
