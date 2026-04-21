@@ -22,7 +22,7 @@ module sonic-bmp {
     description "BMP YANG Module for SONiC OS";
 
     revision 2026-01-02 {
-        description "Add BMP collector configuration parameters";
+        description "Add BMP collector configuration parameters.";
     }
 
     revision 2024-03-20 {
@@ -32,28 +32,28 @@ module sonic-bmp {
     typedef afi-safi-type {
         type enumeration {
             enum ipv4_unicast {
-                description "IPv4 unicast address family";
+                description "IPv4 unicast address family.";
             }
             enum ipv6_unicast {
-                description "IPv6 unicast address family";
+                description "IPv6 unicast address family.";
             }
             enum ipv4_multicast {
-                description "IPv4 multicast address family";
+                description "IPv4 multicast address family.";
             }
             enum ipv6_multicast {
-                description "IPv6 multicast address family";
+                description "IPv6 multicast address family.";
             }
             enum l2vpn_evpn {
-                description "L2VPN EVPN address family";
+                description "L2VPN EVPN address family.";
             }
             enum ipv4_vpn {
-                description "IPv4 VPN address family";
+                description "IPv4 VPN address family.";
             }
             enum ipv6_vpn {
-                description "IPv6 VPN address family";
+                description "IPv6 VPN address family.";
             }
         }
-        description "Address family identifier and subsequent address family identifier";
+        description "Combined Address Family Identifier (AFI) and Subsequent Address Family Identifier (SAFI).";
     }
 
     container sonic-bmp {
@@ -63,7 +63,7 @@ module sonic-bmp {
             description "BGP Monitoring Protocol (BMP) table dump configuration.";
 
             container global {
-                description "Global BMP settings";
+                description "Global BMP settings applied across all targets.";
 
                 leaf mirror-buffer-limit {
                     type uint64 {
@@ -100,24 +100,24 @@ module sonic-bmp {
 
         container BMP_TARGET {
 
-            description "BMP_TARGET part of config_db.json";
+            description "BMP monitoring target configuration.";
 
             list BMP_TARGET_LIST {
                 key "name";
 
-                description "BMP target configuration";
+                description "List of BMP monitoring targets.";
 
                 leaf name {
                     type string {
                         length "1..64";
                     }
-                    description "Target name identifier";
+                    description "Name of the BMP monitoring target.";
                 }
 
                 leaf mirror {
                     type boolean;
                     default false;
-                    description "Enable BMP route mirroring for this target";
+                    description "Enable or disable BMP route mirroring for this target.";
                 }
 
                 leaf stats-interval {
@@ -125,35 +125,35 @@ module sonic-bmp {
                         range "100..86400000";
                     }
                     units "milliseconds";
-                    description "Interval to send BMP statistics messages";
+                    description "Interval between BMP statistics messages sent to the collector.";
                 }
             }
         }
 
         container BMP_TARGET_COLLECTOR {
 
-            description "BMP_TARGET_COLLECTOR part of config_db.json";
+            description "BMP collector (outgoing session) configuration.";
 
             list BMP_TARGET_COLLECTOR_LIST {
                 key "target_name ip port";
 
-                description "BMP collector (outgoing session) configuration";
+                description "List of BMP collectors associated with BMP targets.";
 
                 leaf target_name {
                     type leafref {
                         path "../../../BMP_TARGET/BMP_TARGET_LIST/name";
                     }
-                    description "Reference to BMP target";
+                    description "Reference to the BMP target this collector belongs to.";
                 }
 
                 leaf ip {
                     type inet:ip-address;
-                    description "BMP collector IP address or hostname";
+                    description "IP address of the BMP collector.";
                 }
 
                 leaf port {
                     type inet:port-number;
-                    description "BMP collector TCP port number";
+                    description "TCP port on which the BMP collector accepts connections.";
                 }
 
                 leaf min-retry {
@@ -162,7 +162,7 @@ module sonic-bmp {
                     }
                     units "milliseconds";
                     default 30000;
-                    description "Minimum connection retry interval";
+                    description "Minimum interval between retries when establishing the BMP session.";
                 }
 
                 leaf max-retry {
@@ -171,55 +171,55 @@ module sonic-bmp {
                     }
                     units "milliseconds";
                     default 720000;
-                    description "Maximum connection retry interval";
+                    description "Maximum interval between retries when establishing the BMP session.";
                 }
 
                 leaf source-interface {
                     type string {
                         length "1..64";
                     }
-                    description "Interface whose address is used as the source for the outgoing BMP session";
+                    description "Interface whose address is used as the source for the outgoing BMP session.";
                 }
             }
         }
 
         container BMP_TARGET_AFI_SAFI {
 
-            description "BMP_TARGET_AFI_SAFI part of config_db.json";
+            description "Per-address-family BMP monitoring configuration.";
 
             list BMP_TARGET_AFI_SAFI_LIST {
                 key "target_name afi_safi_name";
 
-                description "Address family specific BMP monitoring configuration";
+                description "List of address-family-specific BMP monitoring entries per target.";
 
                 leaf target_name {
                     type leafref {
                         path "../../../BMP_TARGET/BMP_TARGET_LIST/name";
                     }
-                    description "Reference to BMP target";
+                    description "Reference to the BMP target this entry belongs to.";
                 }
 
                 leaf afi_safi_name {
                     type afi-safi-type;
-                    description "Address family identifier";
+                    description "Address family (AFI/SAFI) this monitoring policy applies to.";
                 }
 
                 leaf adj-rib-in-pre {
                     type boolean;
                     default false;
-                    description "Send state before policy and filter processing (Adj-RIB-In pre-policy)";
+                    description "Enable or disable sending of pre-policy Adj-RIB-In state to the collector.";
                 }
 
                 leaf adj-rib-in-post {
                     type boolean;
                     default false;
-                    description "Send state after policy and filter processing (Adj-RIB-In post-policy)";
+                    description "Enable or disable sending of post-policy Adj-RIB-In state to the collector.";
                 }
 
                 leaf loc-rib {
                     type boolean;
                     default false;
-                    description "Send state from local RIB (Loc-RIB)";
+                    description "Enable or disable sending of Loc-RIB state to the collector.";
                 }
             }
         }
