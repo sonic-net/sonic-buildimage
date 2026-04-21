@@ -24,11 +24,13 @@ module sonic-exp-fc-map {
 
         container EXP_TO_FC_MAP {
 
-            description "EXP_TO_FC_MAP part of config_db.json";
+            description "Maps MPLS EXP bits to forwarding class for Class-Based Forwarding.";
 
             list EXP_TO_FC_MAP_LIST {
 
                 key "name";
+
+                description "A named MPLS EXP to forwarding class map.";
 
                 leaf name {
                     type string {
@@ -38,11 +40,14 @@ module sonic-exp-fc-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the EXP to FC map.";
                 }
 
-                list EXP_TO_FC_MAP { //this is list inside list for storing mapping between two fields
+                list EXP_TO_FC_MAP {
 
                     key "exp";
+
+                    description "Single mapping entry from an MPLS EXP value to a forwarding class.";
 
                     leaf exp {
                         type string {
@@ -51,6 +56,7 @@ module sonic-exp-fc-map {
                                 error-app-tag exp-invalid;
                             }
                         }
+                        description "MPLS EXP bit value (0-7).";
                     }
 
                     leaf fc {
@@ -60,6 +66,7 @@ module sonic-exp-fc-map {
                                 error-app-tag fc-invalid;
                             }
                         }
+                        description "Target forwarding class (0-7) for Class-Based Forwarding.";
                     }
                 }
             }

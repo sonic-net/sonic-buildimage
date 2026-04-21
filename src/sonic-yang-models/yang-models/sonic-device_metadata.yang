@@ -32,12 +32,13 @@ module sonic-device_metadata {
 
         container DEVICE_METADATA {
 
-            description "DEVICE_METADATA part of config_db.json";
+            description "Global device configuration including hostname, hardware SKU, platform, MAC address, BGP ASN, and operational settings.";
 
             container localhost{
 
                 leaf hwsku {
                     type stypes:hwsku;
+                    description "Hardware SKU identifier defining port layout and capabilities.";
                 }
 
                 leaf asic_id {
@@ -53,6 +54,7 @@ module sonic-device_metadata {
                         enum down;
                     }
                     default up;
+                    description "Default BGP daemon operational state on startup.";
                 }
 
                 leaf docker_routing_config_mode {
@@ -69,16 +71,19 @@ module sonic-device_metadata {
 
                 leaf hostname {
                     type stypes:hostname;
+                    description "System hostname for the device.";
                 }
 
                 leaf platform {
                     type string {
                         length 1..255;
                     }
+                    description "Platform identifier (vendor and model).";
                 }
 
                 leaf mac {
                     type yang:mac-address;
+                    description "System base MAC address.";
                 }
 
                 leaf default_pfcwd_status {
@@ -87,14 +92,17 @@ module sonic-device_metadata {
                         enum enable;
                     }
                     default disable;
+                    description "Default PFC watchdog operational state on startup.";
                 }
 
                 leaf bgp_asn {
                     type inet:as-number;
+                    description "BGP autonomous system number for the device.";
                 }
 
                 leaf deployment_id {
                     type uint32;
+                    description "Deployment identifier for grouping devices in the same network segment.";
                 }
 
                 leaf type {
@@ -102,6 +110,7 @@ module sonic-device_metadata {
                         length 1..255;
                         pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|MiniTs|LeafTs|SpineTs|CoreTs|ConsoleServer|TerminalServer|SonicHost|SmartSwitchDPU|FilterLeaf|NetworkBmc|not-provisioned|LowerRegionalHub|FabricRegionalHub|UpperRegionalHub";
                     }
+                    description "Device role type (e.g., ToRRouter, LeafRouter, SpineRouter).";
                 }
 
                 leaf buffer_model {
@@ -129,19 +138,23 @@ module sonic-device_metadata {
                         enum disable;
                     }
                     default enable;
+                    description "Enable or disable ASIC synchronous mode for orchagent.";
                 }
 
                 leaf yang_config_validation {
                     type stypes:mode-status;
                     default disable;
+                    description "Enable or disable YANG model validation for configuration changes.";
                 }
 
                 leaf cloudtype {
                     type string;
+                    description "Cloud environment type where the device is deployed.";
                 }
 
                 leaf region {
                     type string;
+                    description "Geographic region where the device is deployed.";
                 }
 
                 leaf sub_role {
@@ -151,10 +164,12 @@ module sonic-device_metadata {
 
                 leaf downstream_subrole {
                     type string;
+                    description "Sub-role of the downstream device connected to this device.";
                 }
 
                 leaf resource_type {
                     type string;
+                    description "Resource type classification for the device.";
                 }
 
                 leaf mgmt_type {
@@ -171,14 +186,17 @@ module sonic-device_metadata {
                     type string {
                         pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
                     }
+                    description "Device subtype for specialized topology roles (e.g., DualToR, SmartSwitch).";
                 }
 
                 leaf peer_switch {
                     type stypes:hostname;
+                    description "Hostname of the peer switch in a dual ToR configuration.";
                 }
 
                 leaf storage_device {
                     type boolean;
+                    description "Indicates whether the device is connected to a storage backend.";
                 }
 
                 leaf asic_name {
