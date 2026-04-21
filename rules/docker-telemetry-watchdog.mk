@@ -20,8 +20,8 @@ SONIC_TRIXIE_DBG_DOCKERS += $(DOCKER_TELEMETRY_WATCHDOG_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_TELEMETRY_WATCHDOG_DBG)
 
 $(DOCKER_TELEMETRY_WATCHDOG)_CONTAINER_NAME = telemetry_watchdog
-$(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -t --privileged --pid=host
-$(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
+$(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -t --pid=host
+$(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:ro
 $(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
