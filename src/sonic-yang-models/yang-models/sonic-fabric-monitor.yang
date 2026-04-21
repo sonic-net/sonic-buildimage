@@ -19,7 +19,7 @@ module sonic-fabric-monitor{
 
         container FABRIC_MONITOR {
 
-            description "FABRIC_MONITOR part of config_db.json";
+            description "Fabric link monitoring thresholds and isolation parameters";
 
             container FABRIC_MONITOR_DATA {
 
