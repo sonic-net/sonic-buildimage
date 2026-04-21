@@ -353,7 +353,7 @@ static int dfd_get_psu_fan_speed_cal_str(int power_type, char *psu_buf, int buf_
         return -DFD_RV_DEV_NOTSUPPORT;
     }
     mem_clear(psu_buf, buf_len);
-    strlcpy(psu_buf, speed_cal, buf_len);
+    strscpy(psu_buf, speed_cal, buf_len);
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu speed cal match ok, speed_cal: %s\n", psu_buf);
     return DFD_RV_OK;
 }
@@ -421,7 +421,7 @@ static int dfd_psu_product_name_decode(int power_type, char *psu_buf, int buf_le
         return -DFD_RV_DEV_NOTSUPPORT;
     }
     mem_clear(psu_buf, buf_len);
-    strlcpy(psu_buf, p_decode_name, buf_len);
+    strscpy(psu_buf, p_decode_name, buf_len);
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu name match ok, display psu name: %s\n", psu_buf);
     return DFD_RV_OK;
 }

@@ -22,6 +22,7 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/of.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/err.h>
@@ -513,7 +514,7 @@ static const struct attribute_group xdpe132g5c_sysfs_attrs_group = {
     .attrs = xdpe132g5c_sysfs_attrs,
 };
 
-static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int xdpe132g5c_probe(struct i2c_client *client)
 {
     struct xdpe_data *data;
     int ret;

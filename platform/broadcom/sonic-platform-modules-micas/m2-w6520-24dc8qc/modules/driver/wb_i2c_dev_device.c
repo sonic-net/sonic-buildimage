@@ -141,7 +141,7 @@ static int __init wb_i2c_dev_device_init(void)
             continue;
         }
         client = i2c_new_client_device(adap, &i2c_dev_device_info[i]);
-        if (!client) {
+        if (IS_ERR(client)) {
             i2c_dev_device_data->client = NULL;
             printk(KERN_ERR "Failed to register i2c dev device %d at bus %d!\n",
                 i2c_dev_device_data->i2c_addr, i2c_dev_device_data->i2c_bus);

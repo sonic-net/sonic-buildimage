@@ -72,7 +72,7 @@ struct spi_board_info spi_dev_device_info[] = {
 static int __init wb_spi_dev_device_init(void)
 {
     int i;
-    struct spi_master *master;
+    struct spi_controller *master;
     struct spi_device *spi;
     int spi_dev_num;
 

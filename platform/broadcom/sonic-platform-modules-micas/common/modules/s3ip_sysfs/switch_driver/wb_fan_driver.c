@@ -440,7 +440,7 @@ static int dfd_fan_product_name_decode(char *fan_buf, int buf_len)
                     return -DFD_RV_DEV_NOTSUPPORT;
                 }
                 mem_clear(fan_buf, buf_len);
-                strlcpy(fan_buf, p_decode_name, buf_len);
+                strscpy(fan_buf, p_decode_name, buf_len);
                 DFD_FAN_DEBUG(DBG_VERBOSE, "fan name match ok, display fan name: %s.\n", fan_buf);
                 return DFD_RV_OK;
             }
