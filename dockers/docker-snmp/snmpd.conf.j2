@@ -86,7 +86,7 @@ CreateUser {{ user }} {{ SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] }} {{ SNMP_USER[
 #  See snmpd.conf(5) for more details
 
 {% if SNMP is defined and SNMP.LOCATION is defined %}
-sysLocation    {{ SNMP.LOCATION.Location }}
+sysLocation    {{ SNMP.LOCATION.Location | replace('\n', ' ') }}
 {% else %}
 sysLocation    public
 {% endif %}
