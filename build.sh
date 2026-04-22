@@ -175,7 +175,7 @@ submodule_prs () {
   #
   ############################################################################################################################
   #https://github.com/sonic-net/sonic-swss/pull/3660
-  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss a42395a
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss c51d864
 
   #https://github.com/sonic-net/sonic-swss/pull/4001
   _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 9fa297a
