@@ -16,11 +16,12 @@ module sonic-versions {
 
         container VERSIONS {
 
-            description "DATABASE SCHEMA VERSIONS part of config_db.json";
+            description "Database schema version tracking for config_db migrations";
 
             container DATABASE {
 
                 leaf VERSION {
+                    description "Database schema version string";
                     type string {
                         length 1..255;
                         pattern 'version_(([1-9]|[1-9]{1}[0-9]{1})_([0-9]{1,2})_([0-9]{1,2})|([1-9]{1}[0-9]{5})_([0-9]{2}))';

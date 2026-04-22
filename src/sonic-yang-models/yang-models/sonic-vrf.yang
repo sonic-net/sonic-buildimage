@@ -13,7 +13,7 @@ module sonic-vrf {
         "SONiC";
 
     description
-        "SONIC VRF";
+        "Virtual Routing and Forwarding (VRF) instance configuration for L3 traffic isolation";
 
     revision 2021-03-30 {
         description
@@ -22,12 +22,15 @@ module sonic-vrf {
 
     container sonic-vrf {
         container VRF {
-            description "Vrf configuration.";
+            description "VRF instance configuration table";
 
             list VRF_LIST {
+                description "Configuration entry for a Virtual Routing and Forwarding instance";
+
                 key "name";
 
                 leaf name {
+                    description "VRF instance name (e.g. Vrf_blue)";
                     type stypes:interface_name {
                         pattern "Vrf[a-zA-Z0-9_-]+" {
                             error-message "Invalid VRF name";
