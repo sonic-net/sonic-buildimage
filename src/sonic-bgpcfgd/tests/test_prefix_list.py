@@ -69,7 +69,6 @@ def test_del_handler_ipv6(mocked_log_debug):
     del_handler_test(m, "ANCHOR_PREFIX|fc02:100::/64")
     mocked_log_debug.assert_called_with("PrefixListMgr:: Anchor prefix fc02:100::/64 removed from radian configuration")
 
-# test unsupported prefix type
 def constructor_unsupported_device():
     cfg_mgr = MagicMock()
     common_objs = {

@@ -25,7 +25,7 @@ class PrefixListMgr(Manager):
         self.cfg_mgr = common_objs['cfg_mgr']
         self.constants = common_objs['constants']
         self.templates = {}
-        for ptype, cfg in PREFIX_TYPE_CONFIG.items():
+        for cfg in PREFIX_TYPE_CONFIG.values():
             self.templates[cfg["add_template"]] = common_objs['tf'].from_file(cfg["add_template"] + ".conf.j2")
             self.templates[cfg["del_template"]] = common_objs['tf'].from_file(cfg["del_template"] + ".conf.j2")
         super(PrefixListMgr, self).__init__(
@@ -52,6 +52,7 @@ class PrefixListMgr(Manager):
         try:
             device_type = metadata["type"]
             device_subtype = metadata.get("subtype", "")
+            bgp_asn = metadata["bgp_asn"]
         except KeyError as e:
             log_warn("PrefixListMgr:: Missing metadata key: %s" % e)
             return False
@@ -60,7 +61,7 @@ class PrefixListMgr(Manager):
             log_warn("PrefixListMgr:: Device type %s/%s not supported for %s" % (device_type, device_subtype, prefix_type))
             return False
 
-        data["bgp_asn"] = metadata["bgp_asn"]
+        data["bgp_asn"] = bgp_asn
         data["prefix_list_name"] = type_cfg["prefix_list_name"](data["ipv"])
 
         template_key = type_cfg["add_template"] if add else type_cfg["del_template"]
