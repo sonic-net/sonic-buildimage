@@ -37,3 +37,14 @@ COPY \
     {%- endfor %}
     {{ dest }}
 {%- endmacro %}
+
+{% macro install_offending_packages(packages) -%}
+    {%- for pkg in packages %}
+        RUN pip3 install {{ pkg }}
+        RUN pip3 install setuptools
+    {%- endfor %}
+{%- endmacro %}
+
+{% macro rsync_from_builder_stage() -%}
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+{%- endmacro %}
