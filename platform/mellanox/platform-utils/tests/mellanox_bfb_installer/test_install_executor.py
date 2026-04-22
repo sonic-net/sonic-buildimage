@@ -98,9 +98,10 @@ class TestInstallExecutor(unittest.TestCase):
         from mellanox_bfb_installer import install_executor
         import signal as sig
 
-        # Task appends pids to the deque run_parallel passes; handler kills them
+        # Task appends pids to the collection run_parallel passes; handler kills them
         def task_fn(idx, child_pids):
-            child_pids.extend([100, 200])
+            child_pids.append(100)
+            child_pids.append(200)
             return 0
 
         with mock.patch.object(install_executor.signal, "signal") as mock_signal_fn:

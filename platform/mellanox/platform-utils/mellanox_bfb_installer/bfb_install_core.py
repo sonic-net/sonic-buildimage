@@ -30,8 +30,9 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Deque, Optional
+from typing import Optional
 
+from mellanox_bfb_installer import install_executor
 from mellanox_bfb_installer import platform_dpu
 from mellanox_bfb_installer import reset_dpu
 from mellanox_bfb_installer import rshim_daemon
@@ -47,7 +48,7 @@ def _run_bfb_install_image_delivery(
     rshim_id: str,
     bfb_path: str,
     result_file_path: str,
-    child_pids: Deque[int],
+    child_pids: install_executor.PidCollection,
     config_path: Optional[str] = None,
     verbose: bool = False,
     timeout_secs: int = BFB_INSTALL_TIMEOUT_SEC,
@@ -65,7 +66,6 @@ def _run_bfb_install_image_delivery(
     logger.info("Installing bfb image on DPU connected to %s using %s", rshim, cmd_str)
 
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    child_pids.append(proc.pid)
 
     def capture_output():
         with open(result_file_path, "w") as result_file:
@@ -92,25 +92,40 @@ def _run_bfb_install_image_delivery(
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    reader = threading.Thread(target=capture_output)
-    progress = threading.Thread(target=progress_loop)
-    reader.start()
-    progress.start()
-    proc.wait()
-    reader.join()
-    progress.join()
+    def maybe_output_result_file(exit_status: int):
+        if verbose or exit_status != 0:
+            with open(result_file_path) as f:
+                sys.stdout.write(f.read())
+            sys.stdout.flush()
+
+    try:
+        reader = None
+        progress = None
+        child_pids.append(proc.pid)
+        reader = threading.Thread(target=capture_output)
+        progress = threading.Thread(target=progress_loop)
+        reader.start()
+        progress.start()
+        proc.wait()
+    except Exception as e:
+        logger.error("%s: Error: Installation failed on connected DPU! Exception: %s", rshim_id, e)
+        maybe_output_result_file(1)
+        return 1
+    finally:
+        if reader:
+            reader.join()
+        if progress:
+            progress.join()
+        child_pids.remove_if_contains(proc.pid)
 
     exit_status = proc.returncode
     if exit_status != 0:
-        logger.error("%s: Error: Installation failed on connected DPU!", rshim_id)
+        logger.error(
+            "%s: Error: Installation failed on connected DPU! Exit code: %s", rshim_id, exit_status
+        )
     else:
         logger.info("%s: Installation Successful", rshim_id)
-
-    if verbose or exit_status != 0:
-        with open(result_file_path) as f:
-            sys.stdout.write(f.read())
-        sys.stdout.flush()
-
+    maybe_output_result_file(exit_status)
     return exit_status
 
 
@@ -125,7 +140,7 @@ def full_install_bfb_on_device(
     bfb_path: str,
     work_dir: str,
     verbose: bool,
-    child_pids: Deque[int],
+    child_pids: install_executor.PidCollection,
 ) -> int:
     """Run the full install sequence for one device.
 

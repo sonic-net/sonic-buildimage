@@ -29,7 +29,7 @@ import os
 import sys
 import tempfile
 import time
-from typing import Deque, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 from mellanox_bfb_installer import bfb_file
@@ -206,7 +206,7 @@ def _install_on_dpus(
     additional_config_lines = _generate_additional_config_lines()
     _add_additional_config_lines(targets, additional_config_lines, temp_work_dir)
 
-    def _install_one_dpu(idx: int, child_pids: Deque[int]) -> int:
+    def _install_one_dpu(idx: int, child_pids: install_executor.PidCollection) -> int:
         target = targets[idx]
         rshim_name = target.rshim
         return bfb_install_core.full_install_bfb_on_device(

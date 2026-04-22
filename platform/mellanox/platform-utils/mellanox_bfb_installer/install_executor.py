@@ -23,32 +23,57 @@ import logging
 import os
 import signal
 import sys
-from collections import deque
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Deque
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 
+class PidCollection:
+    """Thread-safe list of child process PIDs."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._pids: list[int] = []
+
+    def append(self, pid: int) -> None:
+        with self._lock:
+            self._pids.append(pid)
+
+    def remove_if_contains(self, pid: int) -> None:
+        with self._lock:
+            try:
+                self._pids.remove(pid)
+            except ValueError:
+                pass
+
+    def copy_to_list(self) -> list[int]:
+        """Return a copy of the PID list for safe iteration (e.g. in a signal handler)."""
+        with self._lock:
+            return list(self._pids)
+
+
 def run_parallel(
     task_count: int,
-    task_fn: Callable[[int, Deque[int]], int],
+    task_fn: Callable[[int, PidCollection], int],
 ) -> int:
     """
     Run task_fn(0, child_pids), task_fn(1, child_pids), ... in parallel via ThreadPoolExecutor.
 
     The task_fn is expected to install a bfb image to a single device, by forking child processes.
-    The task_fn must append the child process PIDs to the child_pids deque that is passed to it as
-    the second argument. This parallel executor will install signal handlers that kill all child
-    processes on SIGINT/SIGTERM/SIGHUP.
+    The task_fn must append the child process PIDs to the child_pids collection that is passed to
+    it as the second argument. This parallel executor will install signal handlers that kill all
+    child processes on SIGINT/SIGTERM/SIGHUP.
 
     Returns the number of tasks that exited with a non-zero status or raised an exception.
     """
-    child_pids: Deque[int] = deque()
+    child_pids = PidCollection()
 
     def _kill_child_procs(_signum=None, _frame=None):
         logger.warning("Installation interrupted. Killing all child procs.")
-        for pid in list(child_pids):
+        pids = child_pids.copy_to_list()
+        for pid in pids:
             try:
                 logger.debug("Killing child proc PID %s.", pid)
                 os.kill(pid, signal.SIGKILL)

@@ -24,11 +24,12 @@ import os
 import shutil
 import sys
 import tempfile
-from collections import deque
 import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
+from mellanox_bfb_installer import install_executor  # noqa: E402
 
 
 class TestBfBInstallCore(unittest.TestCase):
@@ -56,7 +57,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     rshim_id="0",
                     bfb_path="/path/to.bfb",
                     result_file_path=result_path,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                     verbose=False,
                 )
             self.assertEqual(status, 0)
@@ -93,12 +94,14 @@ class TestBfBInstallCore(unittest.TestCase):
                     rshim="rshim1",
                     rshim_id="1",
                     bfb_path="/bfb.bfb",
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                     result_file_path=result_path,
                     verbose=False,
                 )
             self.assertEqual(status, 1)
-            mock_log.error.assert_called_once_with("%s: Error: Installation failed on connected DPU!", "1")
+            mock_log.error.assert_called_once_with(
+                "%s: Error: Installation failed on connected DPU! Exit code: %s", "1", 1
+            )
         finally:
             os.unlink(result_path)
 
@@ -122,7 +125,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     rshim_id="0",
                     bfb_path="/b.bfb",
                     result_file_path=result_path,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                     config_path="/c.yaml",
                     verbose=False,
                 )
@@ -171,7 +174,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 1)
             mock_log.error.assert_called_once()
@@ -199,7 +202,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 1)
         finally:
@@ -228,7 +231,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 1)
         finally:
@@ -259,7 +262,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             mock_wait.assert_called_once_with("dpu7")
             mock_start.assert_called_once()
@@ -291,7 +294,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 0)
             mock_stop.assert_called_once_with("0")
@@ -305,7 +308,7 @@ class TestBfBInstallCore(unittest.TestCase):
 
         work_dir = tempfile.mkdtemp()
         try:
-            child_pids = deque()
+            child_pids = install_executor.PidCollection()
             with (
                 mock.patch.object(bfb_install_core.reset_dpu, "wait_for_module_transition_to_complete"),
                 mock.patch.object(bfb_install_core.platform_dpu, "remove_cx7_pci_device"),
@@ -365,7 +368,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             mock_remove.assert_called_once_with("0000:08:00.0", "2: ")
         finally:
@@ -396,7 +399,7 @@ class TestBfBInstallCore(unittest.TestCase):
                     bfb_path="/x.bfb",
                     work_dir=work_dir,
                     verbose=False,
-                    child_pids=deque(),
+                    child_pids=install_executor.PidCollection(),
                 )
             self.assertEqual(status, 1)
             mock_stop.assert_called_once_with("0")
