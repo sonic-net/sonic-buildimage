@@ -117,8 +117,9 @@ def get_dpus_detected_pci_bus_ids() -> Dict[str, Dict[str, str]]:
     dpus = list_dpus()
 
     # Identify which bus IDs the devices are expected to be at according to platform.json.
-    # Store in `needed_bus_ids`, a dict from bus ID to (dpu, interface type).
-    needed_bus_ids: Dict[str, Tuple[str, DpuInterfaceEnum]] = {}
+    # Store in `needed_bus_ids`, a dict from bus ID to (dpu, interface type). The interface type
+    # string is a DpuInterfaceEnum value.
+    needed_bus_ids: Dict[str, Tuple[str, str]] = {}
     for dpu in dpus:
         # "bus_info"/"rshim_bus_info" in platform.json are the PCI bus IDs.
         bus_info = DeviceDataManager.get_dpu_interface(dpu, DpuInterfaceEnum.PCIE_INT.value)
@@ -132,9 +133,9 @@ def get_dpus_detected_pci_bus_ids() -> Dict[str, Dict[str, str]]:
 
     # Scan the pci system to find the devices present on the needed bus IDs.
     # Build the return value `detected_bus_ids` which maps from dpu to (interface type -> bus ID)
-    # for each detected device.
+    # for each detected device. The interface type string is a DpuInterfaceEnum value.
     lspci_out = _run_lspci_d_n()
-    detected_bus_ids: Dict[str, Dict[DpuInterfaceEnum, str]] = {}
+    detected_bus_ids: Dict[str, Dict[str, str]] = {}
     for line in lspci_out.splitlines():
         line_parts = line.split()
         if len(line_parts) < 3:

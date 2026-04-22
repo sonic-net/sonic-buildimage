@@ -146,8 +146,14 @@ def _generate_additional_config_lines() -> str:
 def _add_additional_config_lines(
     targets: List[device_selection.TargetInfo], temp_config_lines: str, tempdir: str
 ) -> None:
-    """For each newly encountered config file, create a temp copy with original contents plus 'line 1' and 'line 2'; update targets to use the new paths."""
-    processed_configs: Dict[str, str] = {}
+    """Update the targets to use temporary copies of the config files with additional content.
+
+    For each config file encountered (by path), create a temp copy with original contents plus
+    temp_config_lines, and update the target to use the new path. If the config file at a given
+    path has already been processed, re-use the existing temp copy. If the config file is None,
+    create an empty temp copy and append the additional lines.
+    """
+    processed_configs: Dict[Optional[str], str] = {}
     for target in targets:
         config_path = target.config_path
         if config_path in processed_configs:

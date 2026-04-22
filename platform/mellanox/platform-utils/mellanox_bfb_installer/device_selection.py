@@ -33,7 +33,10 @@ logger = logging.getLogger(__name__)
 
 
 def _user_dpu_selection_to_dpus_from_platform_json(
-    dpus: str, rshims: str, script_name: str, print_usage_callback: Callable[[], None]
+    dpus: Optional[str],
+    rshims: Optional[str],
+    script_name: str,
+    print_usage_callback: Callable[[], None],
 ) -> Tuple[List[str], bool]:
 
     all_dpus_list: List[str] = sorted(platform_dpu.list_dpus())
@@ -103,7 +106,7 @@ def _validate_config_files(config_paths: List[str]) -> None:
 
 def _parse_config_paths(
     configs: Optional[str], num_dpus: int, user_selected_all_dpus: bool
-) -> List[str]:
+) -> List[Optional[str]]:
     if configs is None:
         return [None] * num_dpus
 

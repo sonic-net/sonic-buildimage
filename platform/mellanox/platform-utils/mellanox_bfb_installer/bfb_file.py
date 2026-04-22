@@ -52,8 +52,8 @@ def _maybe_download_bfb(url_or_path: str, work_dir: str) -> str:
         if result.returncode != 0:
             logger.error("the curl command failed with: %s", result.returncode)
             sys.exit(1)
-    except FileNotFoundError:
-        logger.error("the curl command failed with: 1")
+    except FileNotFoundError as err:
+        logger.error("curl command not found: %s", err)
         sys.exit(1)
     logger.debug("bfb path changed to %s", filename)
     return filename

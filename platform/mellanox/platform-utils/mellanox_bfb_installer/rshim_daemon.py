@@ -103,7 +103,7 @@ def stop_rshim_daemon(rid: str) -> bool:
 
 
 def wait_for_rshim_boot(rshim: str) -> bool:
-    """Poll /dev/{rshim}/boot for up to 10 seconds.
+    """Poll /dev/{rshim}/boot for up to BOOT_WAIT_TIMEOUT_SEC seconds.
 
     Returns True if boot file appeared, False otherwise.
     """
