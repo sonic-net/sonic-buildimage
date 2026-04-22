@@ -572,6 +572,6 @@ class DpuModule(ModuleBase):
             return_dict[cpu] = chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
             return_dict[nvme] = chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
         except Exception as e:
-            logger.log_error(f"Failed to check obtain DPU temperature information for {self.get_name()}! {e}")
+            logger.log_error(f"Failed to obtain DPU temperature information for {self.get_name()}! {e}")
             return {}
         return return_dict
