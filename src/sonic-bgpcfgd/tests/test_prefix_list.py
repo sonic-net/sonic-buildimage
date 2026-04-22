@@ -68,3 +68,29 @@ def test_del_handler_ipv6(mocked_log_debug):
     set_handler_test(m, "ANCHOR_PREFIX|fc02:100::/64", {})
     del_handler_test(m, "ANCHOR_PREFIX|fc02:100::/64")
     mocked_log_debug.assert_called_with("PrefixListMgr:: Anchor prefix fc02:100::/64 removed from radian configuration")
+
+# test unsupported prefix type
+def constructor_unsupported_device():
+    cfg_mgr = MagicMock()
+    common_objs = {
+        'directory': Directory(),
+        'cfg_mgr':   cfg_mgr,
+        'tf':        TemplateFabric(TEMPLATE_PATH),
+        'constants': {},
+    }
+    m = PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost",
+                    {"bgp_asn": "65100", "type": "SpineRouter", "subtype": "DownstreamLC"})
+    return m
+
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_unsupported_prefix_type(mocked_log_warn):
+    m = constructor()
+    set_handler_test(m, "UNKNOWN_TYPE|10.0.0.0/24", {})
+    mocked_log_warn.assert_called_with("PrefixListMgr:: Prefix type 'UNKNOWN_TYPE' is not supported")
+
+@patch('bgpcfgd.managers_prefix_list.log_warn')
+def test_anchor_prefix_wrong_device(mocked_log_warn):
+    m = constructor_unsupported_device()
+    set_handler_test(m, "ANCHOR_PREFIX|192.168.0.0/24", {})
+    mocked_log_warn.assert_called_with("PrefixListMgr:: Device type SpineRouter/DownstreamLC not supported for ANCHOR_PREFIX")

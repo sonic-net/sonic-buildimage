@@ -32,17 +32,45 @@ check_root_privileges() {
     fi
 }
 
-# Function to check if the device is supported device with type spine routers and subtype UpstreamLC
-check_spine_router() {
-    type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
-    subtype=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
+# Function to check if the device is a supported device type
+DEVICE_TYPE=""
+DEVICE_SUBTYPE=""
 
-    # only supported on UpstreamLC or UpperSpineRouter
-    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]; then
+read_device_metadata() {
+    if [[ -z "$DEVICE_TYPE" ]]; then
+        DEVICE_TYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
+        DEVICE_SUBTYPE=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
+    fi
+}
+
+check_supported_device() {
+    read_device_metadata
+    if [[ ("$DEVICE_TYPE" == "SpineRouter" && "$DEVICE_SUBTYPE" == "UpstreamLC") || \
+          "$DEVICE_TYPE" == "UpperSpineRouter" ]]; then
         return
     fi
+    echo "Operation is not supported on this device type." >&2
+    exit 1
+}
 
-    echo "Operation is only supported on Upstream SpineRouter." >&2
+declare -A prefix_type_devices
+prefix_type_devices=(
+    ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter"
+)
+
+validate_device_for_type() {
+    local prefix_type=$1
+    read_device_metadata
+    local allowed="${prefix_type_devices[$prefix_type]}"
+    local device_id="$DEVICE_TYPE:$DEVICE_SUBTYPE"
+    for entry in $allowed; do
+        if [[ "$entry" == *":"* ]]; then
+            [[ "$device_id" == "$entry" ]] && return
+        else
+            [[ "$DEVICE_TYPE" == "$entry" ]] && return
+        fi
+    done
+    echo "Prefix type '$prefix_type' is not supported on device type '$DEVICE_TYPE' (subtype: '$DEVICE_SUBTYPE')." >&2
     exit 1
 }
 
@@ -156,10 +184,13 @@ fi
 if [ "$1" != "status" ]; then
     check_root_privileges
 fi
-check_spine_router
+check_supported_device
 skip_chassis_supervisor
 
 validate_operation $1 $2
+if [[ "$1" == "add" || "$1" == "remove" ]]; then
+    validate_device_for_type "$2"
+fi
 
 # Read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
