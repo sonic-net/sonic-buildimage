@@ -558,7 +558,6 @@ class DpuModule(ModuleBase):
         """
         This function is used to obtain the TEMPERATURE INFO TABLE from CHASSIS_STATE_DB
         """
-        chassis_state_db = self.get_chassis_db_conn()
         chassis_state_db_name = "CHASSIS_STATE_DB"
         ddr = "DDR"
         nvme = "NVME"
@@ -568,6 +567,7 @@ class DpuModule(ModuleBase):
         dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
         return_dict = {}
         try:
+            chassis_state_db = self.get_chassis_db_conn()
             return_dict[ddr] = chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
             return_dict[cpu] = chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
             return_dict[nvme] = chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
