@@ -220,6 +220,7 @@ yang_files = [
     'sonic-fast-linkup.yang',
     'sonic-alarm.yang',
     'sonic-event.yang',
+    'sonic-monitor-link-group.yang',
 ]
 
 class my_build_py(build_py):
