@@ -33,10 +33,6 @@ For reference, the outdated ONIE specification is located [here](https://opencom
 
 ```mermaid
 graph TD
-    classDef firmware fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef kernel fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef userspace fill:#bfb,stroke:#333,stroke-width:2px;
-
     subgraph Firmware ["Platform Firmware"]
         UEFI[UEFI Firmware] -->|Generates| SMB[SMBIOS Tables]
     end
@@ -52,10 +48,6 @@ graph TD
         SCR -->|Finds Plugin| CB[Vendor Discovery Callback Plugin]
         CB -->|Populates| CONF["/host/machine.conf"]
     end
-
-    class UEFI,SMB firmware;
-    class CFG,DMI,SYS kernel;
-    class SCR,CB,CONF userspace;
 ```
 
 ### 3.4 Platform Discovery Flow Chart
