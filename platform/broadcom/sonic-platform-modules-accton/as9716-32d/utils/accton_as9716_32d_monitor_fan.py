@@ -19,6 +19,7 @@
 # HISTORY:
 #    mm/dd/yyyy (A.D.)
 #    12/13/2018:  Jostar create for as9716-32d
+#    9/25/2019:   Jostar fix that get fan_fault=1 when fan_insert and read cpld
 # ------------------------------------------------------------------
 
 try:
@@ -107,12 +108,8 @@ class device_monitor(object):
             logging.getLogger('').addHandler(console)
 
         sys_handler = logging.handlers.SysLogHandler(address = '/dev/log')
-        #sys_handler.setLevel(logging.WARNING)       
         sys_handler.setLevel(logging.INFO)       
         logging.getLogger('').addHandler(sys_handler)
-        
-
-        #logging.debug('SET. logfile:%s / loglevel:%d', log_file, log_level)
         
     def manage_fan(self):      
         
@@ -134,7 +131,6 @@ class device_monitor(object):
                 return False
             content = val_file.readline().rstrip()
             val_file.close()
-            # content is a string, either "0" or "1"
             if content == "1":
                 if fan_state[idx]!=1:
                     fan_state[idx]=FAN_STATE_INSERT
@@ -143,6 +139,7 @@ class device_monitor(object):
                 if fan_state[idx]!=0:
                     fan_state[idx]=FAN_STATE_REMOVE
                     logging.warning("Alarm for FAN-%d absent is detected", idx+1)  
+                    fan_status_state[idx]=FAN_STATUS_NORMAL
                                     
         for idx in range (0, self.fan_num):           
             node = self.fan_path + self.fault[idx]
@@ -153,13 +150,15 @@ class device_monitor(object):
                 return False
             content = val_file.readline().rstrip()
             val_file.close()
-            # content is a string, either "0" or "1"
             if content == "1":
                 if fan_status_state[idx]!=FAN_STATUS_FAULT:                    
                     if fan_state[idx] == FAN_STATE_INSERT:
                         logging.warning("Alarm for FAN-%d failed is detected", idx+1);
                         fan_status_state[idx]=FAN_STATUS_FAULT
             else:
+                if fan_status_state[idx]==FAN_STATUS_FAULT and fan_state[idx] == FAN_STATE_INSERT:
+                    logging.info("FAN-%d becomes operational", idx+1)
+                
                 fan_status_state[idx]=FAN_STATUS_NORMAL
       
         return True
