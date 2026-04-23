@@ -1281,6 +1281,9 @@ serdes_core_tx_polarity_flip_physical{254}=0xD6
 serdes_core_tx_polarity_flip_physical{255}=0xD6
 serdes_core_tx_polarity_flip_physical{256}=0xD6
 
+#Set default medium to copper
+serdes_lane_config_media_type=copper
+
 #dport_map_port_38=129
 #portmap_38=257:10
 #dport_map_port_118=130
