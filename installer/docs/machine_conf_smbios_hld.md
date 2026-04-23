@@ -189,7 +189,17 @@ class MachineConfPluginFactory:
         match_strings = plugin_instance.get_match_strings()
         if isinstance(match_strings, str):
             match_strings = [match_strings]
-        cls._match_registry[vendor_key] = [s.lower() for s in match_strings]
+            
+        normalized_strings = [s.lower() for s in match_strings]
+        
+        # Check for conflicts across vendors
+        for existing_vendor, existing_strings in cls._match_registry.items():
+            if existing_vendor != vendor_key:
+                for s in normalized_strings:
+                    if s in existing_strings:
+                        raise ValueError(f"Conflict: String '{s}' is already registered by vendor '{existing_vendor}'")
+                        
+        cls._match_registry[vendor_key] = normalized_strings
 
     @classmethod
     def get_plugin(cls, vendor_name: str) -> MachineConfPlugin:
