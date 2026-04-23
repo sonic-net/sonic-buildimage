@@ -88,9 +88,30 @@ def test_community_list():
         comm_list = CommunityList('comm', ext)
         assert(comm_list.name == 'comm')
         assert(comm_list.is_ext == ext)
+        assert(comm_list.is_large == False)
         assert(comm_list.match_action is None)
         assert(comm_list.is_std is None)
+        assert(comm_list.action == 'permit')
         assert(len(comm_list.mbr_list) == 0)
+
+    lc_list = CommunityList('lc', False, large=True)
+    assert(lc_list.name == 'lc')
+    assert(lc_list.is_ext == False)
+    assert(lc_list.is_large == True)
+    assert(lc_list.action == 'permit')
+
+def test_community_list_action():
+    comm_list = CommunityList('comm', False)
+    assert(comm_list.action == 'permit')
+
+    comm_list.db_data_to_attr('action', 'deny')
+    assert(comm_list.action == 'deny')
+
+    comm_list.db_data_to_attr('action', 'PERMIT')
+    assert(comm_list.action == 'permit')
+
+    comm_list.db_data_to_attr('action', None)
+    assert(comm_list.action == 'permit')
 
 def test_match_prefix():
     pfx = MatchPrefix(socket.AF_INET, '1.2.3.4/16')
