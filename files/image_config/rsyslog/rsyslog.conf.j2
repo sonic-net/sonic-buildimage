@@ -17,6 +17,8 @@
 {% set rate_limit_interval = gconf.get('rate_limit_interval') -%}
 {% set rate_limit_burst = gconf.get('rate_limit_burst') -%}
 
+global(net.enableDNS="off")
+
 module(load="imuxsock" {% if rate_limit_interval is not none %}SysSock.RateLimit.Interval="{{ rate_limit_interval }}"{% endif %} {% if rate_limit_burst is not none %}SysSock.RateLimit.Burst="{{ rate_limit_burst }}"{% endif %}) # provides support for local system logging
 module(load="imklog" ParseKernelTimestamp="off" KeepKernelTimestamp="on")   # provides kernel logging support
 #module(load="immark")  # provides --MARK-- message capability

@@ -208,8 +208,8 @@ libsaivs==1.0.0
 libsaivs-dbgsym==1.0.0
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
-libssl-dev==3.0.18-1~deb12u2
-libssl3==3.0.18-1~deb12u2
+libssl-dev==3.0.19-1~deb12u2
+libssl3==3.0.19-1~deb12u2
 libstdc++-12-dev==12.2.0-14+deb12u1
 libswsscommon-dbgsym==1.0.0
 libthrift-0.17.0==0.17.0-2+b2
@@ -245,10 +245,10 @@ ocl-icd-libopencl1==2.3.1-1
 openmpi-bin==4.1.4-3+b1
 openmpi-common==4.1.4-3
 openssh-client==1:9.2p1-2+deb12u5+fips
-openssl==3.0.18-1~deb12u2
-p4lang-bmv2==1.15.0-7
+openssl==3.0.19-1~deb12u2
+p4lang-bmv2==1.15.0-9
 p4lang-p4c==1.2.4.2-2
-p4lang-pi==0.1.0-15
+p4lang-pi==0.1.0-17
 pkg-config==1.8.1-1
 pkgconf==1.8.1-1
 pkgconf-bin==1.8.1-1
