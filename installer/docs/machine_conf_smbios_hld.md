@@ -33,21 +33,29 @@ For reference, the outdated ONIE specification is located [here](https://opencom
 
 ```mermaid
 graph TD
-    subgraph Firmware ["1. Platform Firmware"]
+    classDef firmware fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef kernel fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef userspace fill:#bfb,stroke:#333,stroke-width:2px;
+
+    subgraph Firmware ["Platform Firmware"]
         UEFI[UEFI Firmware] -->|Generates| SMB[SMBIOS Tables]
     end
 
-    subgraph Kernel ["2. Linux Kernel"]
-        SMB -->|Parsed by| DMI[DMI Subsystem]
-        CFG[UEFI Config Table] -.->|Points to| SMB
-        DMI -->|Exposed via| SYS["sysfs:<br/>/sys/class/dmi/id/<br/>chassis_vendor"]
+    subgraph Kernel ["Linux Kernel"]
+        CFG[UEFI Configuration Table] -->|Pointer to| SMB
+        DMI[DMI Subsystem] -->|Parses| SMB
+        SYS["sysfs: /sys/class/dmi/id/chassis_vendor"] -->|Exposes| DMI
     end
 
-    subgraph UserSpace ["3. SONIE (User Space)"]
-        SYS -->|Read by| SCR[Platform Discovery Script]
-        SCR -->|Finds| CB[Vendor Discovery Callback Plugin]
+    subgraph UserSpace ["SONIE (User Space)"]
+        SYS -->|Read Vendor| SCR[Platform Discovery Script]
+        SCR -->|Finds Plugin| CB[Vendor Discovery Callback Plugin]
         CB -->|Populates| CONF["/host/machine.conf"]
     end
+
+    class UEFI,SMB firmware;
+    class CFG,DMI,SYS kernel;
+    class SCR,CB,CONF userspace;
 ```
 
 ### 3.4 Platform Discovery Flow Chart
@@ -56,10 +64,10 @@ graph TD
 graph TD
     Start([Start Discovery]) --> CheckCmdline{"Check Kernel Cmdline\nfor onie_platform?"}
     CheckCmdline -- Found --> WriteConf["Write to /host/machine.conf"]
-    CheckCmdline -- Not Found --> ReadVendor["Read:<br/>/sys/class/dmi/id/<br/>chassis_vendor"]
+    CheckCmdline -- Not Found --> ReadVendor["Read /sys/class/dmi/id/chassis_vendor"]
     
     ReadVendor --> Normalize[Normalize Vendor Name]
-    Normalize --> LocatePlugin["Locate Vendor Plugin:<br/>/usr/share/sonic/<br/>platform/vendor/<br/>machine_conf_plugin.py"]
+    Normalize --> LocatePlugin["Locate Vendor Plugin\n/usr/share/sonic/platform/vendor/machine_conf_plugin.py"]
     LocatePlugin --> CheckPlugin{"Plugin Exists?"}
     
     CheckPlugin -- Yes --> RunPlugin["Run populate_machine_conf()"]
@@ -105,66 +113,228 @@ Plugins should be located in the vendor's platform directory:
 -   **Build Integration**: The build system must ensure these files are copied to the target path `/usr/share/sonic/platform/...` during image assembly.
 
 #### 5.2.2 Plugin Interface
-The plugin must implement a standard interface. It can be a Python module with specific functions:
+The plugin must implement a standard interface. It must inherit from an abstract base class:
 
 ```python
-def get_onie_platform() -> str:
-    """
-    Returns the onie_platform string (e.g., 'x86_64-google-toggle').
-    """
-    pass
+from abc import ABC, abstractmethod
 
-def populate_machine_conf(target_path: str) -> bool:
+class MachineConfPlugin(ABC):
     """
-    Optionally populates /host/machine.conf directly on the target.
-    Returns True if successful, False if fallback to generic discovery is needed.
+    Abstract base class for vendor-specific platform discovery plugins.
     """
-    pass
+
+    @abstractmethod
+    def get_onie_platform(self) -> str:
+        """Returns the onie_platform string (e.g., 'x86_64-google-toggle')."""
+        pass
+
+    @abstractmethod
+    def get_onie_vendor(self) -> str:
+        """Returns the onie_vendor string (e.g., 'google')."""
+        pass
+
+    @abstractmethod
+    def get_onie_machine(self) -> str:
+        """Returns the onie_machine string (e.g., 'toggle')."""
+        pass
+
+    @abstractmethod
+    def get_onie_arch(self) -> str:
+        """Returns the onie_arch string (e.g., 'x86_64')."""
+        pass
+
+    @abstractmethod
+    def get_onie_machine_rev(self) -> str:
+        """Returns the onie_machine_rev string (e.g., '0')."""
+        pass
+
+    @abstractmethod
+    def get_onie_switch_asic(self) -> str:
+        """Returns the onie_switch_asic string (e.g., 'mlnx')."""
+        pass
+
+    @abstractmethod
+    def get_onie_version(self) -> str:
+        """Returns the onie_version string (e.g., '2021.11')."""
+        pass
+
+    @abstractmethod
+    def get_match_strings(self) -> list:
+        """Returns a list of SMBIOS strings this plugin matches against."""
+        pass
+
+    def get_onie_base_mac(self) -> str:
+        """
+        Optionally returns the base MAC address.
+        Returns None if not available.
+        """
+        return None
 ```
 
-#### 5.2.3 Fallback Mechanism
+#### 5.2.3 Factory Class & Registration
+To centralize the writing of `/host/machine.conf`, a Factory class extracts the parameters from the registered vendor plugins.
+
+```python
+class MachineConfPluginFactory:
+    _plugins = {}
+    _match_registry = {}
+
+    @classmethod
+    def register_plugin(cls, vendor_name: str, plugin_cls):
+        """
+        Registers a plugin class for a specific vendor, mapped to one
+        or more SMBIOS matching strings provided by the plugin.
+        """
+        vendor_key = vendor_name.lower()
+        cls._plugins[vendor_key] = plugin_cls
+        
+        plugin_instance = plugin_cls()
+        match_strings = plugin_instance.get_match_strings()
+        if isinstance(match_strings, str):
+            match_strings = [match_strings]
+        cls._match_registry[vendor_key] = [s.lower() for s in match_strings]
+
+    @classmethod
+    def get_plugin(cls, vendor_name: str) -> MachineConfPlugin:
+        """Retrieves a plugin instance for the given vendor."""
+        plugin_cls = cls._plugins.get(vendor_name.lower())
+        if not plugin_cls:
+            raise ValueError(f"No plugin registered for vendor: {vendor_name}")
+        return plugin_cls()
+
+    @classmethod
+    def get_plugin_for_smbios_string(cls, smbios_val: str) -> MachineConfPlugin:
+        """
+        Locates and instantiates the plugin matching a given SMBIOS string.
+        """
+        val = smbios_val.lower()
+        for vendor_key, match_list in cls._match_registry.items():
+            if val in match_list:
+                return cls.get_plugin(vendor_key)
+        raise ValueError(f"No plugin matches SMBIOS value: {smbios_val}")
+
+    @classmethod
+    def populate_machine_conf(cls, vendor_name: str, target_path: str) -> bool:
+        """
+        Retrieves the registered plugin for the vendor and writes its 
+        ONIE parameters to /host/machine.conf.
+        """
+        try:
+            plugin = cls.get_plugin(vendor_name)
+            with open(f"{target_path}/host/machine.conf", "w") as f:
+                f.write(
+                    f"onie_platform={plugin.get_onie_platform()}\n"
+                    f"onie_vendor={plugin.get_onie_vendor()}\n"
+                    f"onie_machine={plugin.get_onie_machine()}\n"
+                    f"onie_arch={plugin.get_onie_arch()}\n"
+                    f"onie_machine_rev={plugin.get_onie_machine_rev()}\n"
+                    f"onie_switch_asic={plugin.get_onie_switch_asic()}\n"
+                    f"onie_version={plugin.get_onie_version()}\n"
+                )
+                base_mac = plugin.get_onie_base_mac()
+                if base_mac:
+                    f.write(f"onie_base_mac={base_mac}\n")
+            return True
+        except Exception:
+            return False
+```
+
+#### 5.2.4 Fallback Mechanism
 If no vendor plugin is found, or if the plugin fails, the system will fail to load the platform drivers. Out-of-band communication with the device via the CPU complex *should* be supported.
 
-#### 5.2.4 Example: VS Platform Plugin
+#### 5.2.5 Example: VS Platform Plugin
 
 Here is an example of what a plugin for the `vs` platform might look like:
 
 ```python
 # /usr/share/sonic/platform/vs/machine_conf_plugin.py
+from sonic_platform_base.machine_conf_plugin_base import MachineConfPlugin, MachineConfPluginFactory
 
-def get_onie_platform() -> str:
-    """
-    Returns the virtual switch platform identifier.
-    """
-    return "x86_64-kvm_x86_64-r0"
+class VsMachineConfPlugin(MachineConfPlugin):
+    def get_onie_platform(self) -> str:
+        return "x86_64-kvm_x86_64-r0"
 
-def populate_machine_conf(target_path: str) -> bool:
-    """
-    Populates machine.conf for virtual switch emulation.
-    """
-    try:
-        with open(f"{target_path}/host/machine.conf", "w") as f:
-            f.write(
-                "onie_platform=x86_64-kvm_x86_64-r0\n"
-                "onie_vendor=vs\n"
-                "onie_machine=kvm_x86_64\n"
-            )
-        return True
-    except Exception:
-        return False
+    def get_onie_vendor(self) -> str:
+        return "vs"
+
+    def get_onie_machine(self) -> str:
+        return "kvm_x86_64"
+
+    def get_onie_arch(self) -> str:
+        return "x86_64"
+
+    def get_onie_machine_rev(self) -> str:
+        return "0"
+
+    def get_onie_switch_asic(self) -> str:
+        return "kvm"
+
+    def get_onie_version(self) -> str:
+        return "2021.11"
+
+    def get_match_strings(self) -> list:
+        return ["KVM", "Virtual Switch", "QEMU"]
+
+# Register the plugin at build time
+MachineConfPluginFactory.register_plugin("vs", VsMachineConfPlugin)
 ```
 
 ### 5.3 Integration Point
 The population mechanism can run in two primary modes:
 
-#### 5.4.1 During Installation
-In the Installer (running in SONIE or ONIE), the platform identification runs before partition creation. If `machine.conf` is missing from the target, the installer will:
-1.  Attempt syseeprom scan.
-2.  Fallback to SMBIOS/DMI reading.
-3.  Write the discovered variables to the target `/host/machine.conf`.
+In environments where ONIE is present (traditional ONIE installations), discovery via SMBIOS is unnecessary. ONIE already supplies the relevant platform identifiers via the environment (e.g., `$onie_platform`) or through `/etc/machine.conf`.
+
+Discovery via SMBIOS during installation is only used if installation is launched from a generic/bare recovery environment (like SONIE) where ONIE is not running.
 
 #### 5.4.2 During OS Boot
-A script (e.g., `populate_machine_conf.sh`) can run early in the boot sequence (systemd service) to ensure `/host/machine.conf` is populated if it was reset or missing. This script will read sysfs and create the file if it doesn't exist.
+A script (e.g., `populate_machine_conf.py`) runs early in the boot sequence via systemd to ensure `/host/machine.conf` exists:
+
+```python
+#!/usr/bin/env python3
+# populate_machine_conf.py - Runs early in the boot sequence to ensure /host/machine.conf exists
+
+import glob
+import importlib.util
+import os
+import sys
+
+from sonic_platform_base.machine_conf_plugin_base import MachineConfPluginFactory
+
+CONF_FILE = "/host/machine.conf"
+DMI_VENDOR_FILE = "/sys/class/dmi/id/chassis_vendor"
+
+def main():
+    if os.path.exists(CONF_FILE):
+        print(f"{CONF_FILE} already exists. Skipping creation.")
+        sys.exit(0)
+
+    if not os.path.exists(DMI_VENDOR_FILE):
+        print(f"Error: {DMI_VENDOR_FILE} not found. Platform discovery failed.", file=sys.stderr)
+        sys.exit(1)
+
+    with open(DMI_VENDOR_FILE) as f:
+        smbios_vendor = f.read().strip()
+
+    # Programmatically import all registered vendor plugins
+    for plugin_path in glob.glob('/usr/share/sonic/platform/*/machine_conf_plugin.py'):
+        try:
+            spec = importlib.util.spec_from_file_location('plugin', plugin_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except Exception as e:
+            print(f"Failed to load plugin {plugin_path}: {e}", file=sys.stderr)
+
+    # Populate machine.conf via the Factory
+    success = MachineConfPluginFactory.populate_machine_conf(smbios_vendor, '')
+    if success:
+        print(f"Successfully populated {CONF_FILE} via SMBIOS table.")
+    else:
+        print(f"Failed to populate {CONF_FILE}.", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+```
 
 ## 6. Verification Plan
 
