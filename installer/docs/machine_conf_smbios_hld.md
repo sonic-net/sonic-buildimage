@@ -58,11 +58,10 @@ graph TD
     CheckCmdline -- Found --> WriteConf["Write to /host/machine.conf"]
     CheckCmdline -- Not Found --> ReadVendor["Read /sys/class/dmi/id/chassis_vendor"]
     
-    ReadVendor --> Normalize[Normalize Vendor Name]
-    Normalize --> LocatePlugin["Locate Vendor Plugin\n/usr/share/sonic/platform/vendor/machine_conf_plugin.py"]
-    LocatePlugin --> CheckPlugin{"Plugin Exists?"}
+    ReadVendor --> LocatePlugin["Match via Factory Registry\n(using SMBIOS strings)"]
+    LocatePlugin --> CheckPlugin{"Match Found?"}
     
-    CheckPlugin -- Yes --> RunPlugin["Run populate_machine_conf()"]
+    CheckPlugin -- Yes --> RunPlugin["Run Factory populate_machine_conf()"]
     RunPlugin --> WriteConf
     WriteConf --> EndSuccess([Success])
     
@@ -73,7 +72,6 @@ graph TD
 *   **Command Line Override**: Allow overriding discovery via kernel command line parameters (e.g., `onie_platform=...`).
 *   **Lightweight Extraction**: Read `/sys/class/dmi/id/chassis_vendor` (sysfs) to identify the vendor if no override is present.
 *   **Vendor Delegation**: Delegate platform-specific discovery (like `onie_platform`) to vendor-provided callbacks.
-*   **Standardized Naming**: Normalize vendor names (lowercase, replace spaces with underscores) to locate callbacks and identify platform elements.
 
 ## 5. High-Level Design
 
