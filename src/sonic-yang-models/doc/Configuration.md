@@ -1112,17 +1112,14 @@ instance is supported in SONiC.
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
         "bgp_router_id": "8.8.8.8",
-        "frr_mgmt_framework_cfg_template_restore": "true"
+        "use_template_render_for_restore": "true"
     }
   }
 }
-
 ```
-
 
 ### Device neighbor metada
 
-```
 {
 "DEVICE_NEIGHBOR_METADATA": {
     "ARISTA01T1": {

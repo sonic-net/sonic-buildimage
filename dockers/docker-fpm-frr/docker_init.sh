@@ -65,6 +65,7 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf
     write_default_zebra_config /etc/frr/frr.conf
 elif [ "$CONFIG_TYPE" == "separated" ]; then
+    logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. The system will use unified mode instead."
     echo "Config Type separated is deprecated"
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
@@ -85,7 +86,7 @@ elif [ "$CONFIG_TYPE" == "separated" ]; then
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
           /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf
-elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE" == "separated" ]; then
+elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ]; then
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
         CFGGEN_PARAMS=" \

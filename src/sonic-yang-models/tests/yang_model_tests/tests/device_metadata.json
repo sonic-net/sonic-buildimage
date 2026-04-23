@@ -279,7 +279,7 @@
     "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
         "desc": "Verifying valid anchor_route_source."
     },
-    "DEVICE_METADATA_FRR_MGMT_FRAMEWORK_CFG_TEMPLATE_RESTORE": {
-        "desc": "Verifying unified_config_restore configuration."
+    "DEVICE_METADATA_USE_TEMPLATE_RENDER_FOR_RESTORE": {
+        "desc": "Verifying use_template_render_for_restore configuration."
     }
 }
