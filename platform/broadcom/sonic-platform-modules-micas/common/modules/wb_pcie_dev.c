@@ -24,12 +24,14 @@
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/pci.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/uio.h>
+#include <linux/version.h>
 
 #include "wb_pcie_dev.h"
 
@@ -865,7 +867,11 @@ io_unmap:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int pci_dev_remove(struct platform_device *pdev)
+#else
+static void pci_dev_remove(struct platform_device *pdev)
+#endif
 {
     int i;
 
@@ -878,8 +884,9 @@ static int pci_dev_remove(struct platform_device *pdev)
             pcie_dev_arry[i] = NULL;
         }
     }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct of_device_id pci_dev_match[] = {
