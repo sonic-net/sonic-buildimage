@@ -159,6 +159,13 @@ class MachineConfPlugin(ABC):
         Returns None if not available.
         """
         return None
+
+    def get_optional_properties(self) -> dict:
+        """
+        Optionally returns a dictionary of additional key-value pairs
+        to be populated in machine.conf.
+        """
+        return {}
 ```
 
 #### 5.2.3 Factory Class & Registration
@@ -224,6 +231,11 @@ class MachineConfPluginFactory:
                 base_mac = plugin.get_onie_base_mac()
                 if base_mac:
                     f.write(f"onie_base_mac={base_mac}\n")
+                
+                # Write optional properties
+                optional_props = plugin.get_optional_properties()
+                for key, value in optional_props.items():
+                    f.write(f"{key}={value}\n")
             return True
         except Exception:
             return False
@@ -264,6 +276,9 @@ class VsMachineConfPlugin(MachineConfPlugin):
 
     def get_match_strings(self) -> list:
         return ["KVM", "Virtual Switch", "QEMU"]
+
+    def get_optional_properties(self) -> dict:
+        return {"optional_key": "optional_value"}
 
 # Register the plugin at build time
 MachineConfPluginFactory.register_plugin("vs", VsMachineConfPlugin)
