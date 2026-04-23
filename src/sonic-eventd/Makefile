@@ -18,7 +18,7 @@ CC := g++
 LIBS := -lhiredis -lswsscommon -lzmq -lboost_serialization -llua5.1
 TEST_LIBS := -lgtest -lgtest_main -lgmock -lgmock_main
 
-CFLAGS += -Wall -std=c++17 -fPIE -I/usr/include/swss
+CFLAGS += -Wall -std=c++17 -fPIE
 PWD := $(shell pwd)
 
 ifneq ($(MAKECMDGOALS),clean)

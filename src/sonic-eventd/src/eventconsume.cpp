@@ -4,12 +4,15 @@
 #include <limits>
 #include <queue>
 #include <unistd.h>
+#include <swss/events_common.h>
 #include "eventconsume.h"
 #include "loghandler.h"
 #include "eventutils.h"
-#include <swss/events_common.h>
 
 
+
+using namespace swss;
+using namespace std;
 using namespace std::chrono;
 
 // map to store sequence-id for alarms
@@ -20,7 +23,7 @@ EventMap static_event_table;
 
 std::atomic<bool> reload_config_flag(false); // Definition and initialization
 
-bool g_run = true;
+volatile bool g_run = true;
 uint64_t seq_id = 0;
 uint64_t PURGE_SECONDS = 86400;
 
@@ -97,7 +100,7 @@ void EventConsume::run()
             reload_config_flag.store(false);
         }
 
-        int rc = event_receive(hsub, evt); 
+        int rc = event_receive(hsub, evt);
         if (rc != 0) {
             SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
             continue;
@@ -323,7 +326,6 @@ void EventConsume::updateEventStatistics(bool is_add, bool is_raise, bool is_ack
                 } else {
                     fv.second = to_string(stoi(fv.second.c_str())-1);
                 }
-                temp.push_back(fv);
             } else if (!fv.first.compare("raised")) {
                 if (is_raise) {
                     if (is_add) {
@@ -331,7 +333,6 @@ void EventConsume::updateEventStatistics(bool is_add, bool is_raise, bool is_ack
                     } else {
                         fv.second = to_string(stoi(fv.second.c_str())-1);
                     }
-                    temp.push_back(fv);
                 }
             } else if (!fv.first.compare("cleared")) {
                 if (is_clear) {
@@ -340,7 +341,6 @@ void EventConsume::updateEventStatistics(bool is_add, bool is_raise, bool is_ack
                     } else {
                         fv.second = to_string(stoi(fv.second.c_str())-1);
                     }
-                    temp.push_back(fv);
                 }
             } else if (!fv.first.compare("acked")) {
                 if (is_ack) {
@@ -349,9 +349,9 @@ void EventConsume::updateEventStatistics(bool is_add, bool is_raise, bool is_ack
                     } else {
                         fv.second = to_string(stoi(fv.second.c_str())-1);
                     }
-                    temp.push_back(fv);
                 }
             }
+            temp.push_back(fv);
         }
 
         m_eventStatsTable.set("state", temp);
@@ -397,14 +397,14 @@ void EventConsume::purge_events() {
     }
 
     const auto p1 = system_clock::now();
-    unsigned tnow_seconds = duration_cast<seconds>(p1.time_since_epoch()).count();
+    uint64_t tnow_seconds = duration_cast<seconds>(p1.time_since_epoch()).count();
 
     while (!event_history_list.empty()) {
         pair <uint64_t,uint64_t> oldest_entry = event_history_list.top();
-	    unsigned old_seconds = oldest_entry.second / 1000000000ULL;
+	    uint64_t old_seconds = oldest_entry.second / 1000000000ULL;
 
         if ((tnow_seconds - old_seconds) > PURGE_SECONDS) {
-            SWSS_LOG_NOTICE("Rollover based on time (%lu days). Deleting %lu.. now %u old %u", (PURGE_SECONDS/m_days), oldest_entry.second, tnow_seconds, old_seconds);
+            SWSS_LOG_NOTICE("Rollover based on time (%u days). Deleting %lu.. now %lu old %lu", m_days, oldest_entry.second, tnow_seconds, old_seconds);
             modifyEventStats(to_string(oldest_entry.first));
             m_eventTable.del(to_string(oldest_entry.first));
             event_history_list.pop();
@@ -475,15 +475,16 @@ void EventConsume::clearAckAlarmStatistic() {
     vector<FieldValueTuple> temp;
 
     if (m_alarmStatsTable.get("state", vec)) {
+        bool ack_found = false;
         for (auto fv: vec) {
-            if (!fv.first.compare("acknowledged")) {
+            if (!ack_found && !fv.first.compare("acknowledged")) {
                 fv.second = to_string(stoi(fv.second.c_str())-1);
-                temp.push_back(fv);
-                m_alarmStatsTable.set("state", temp);
-		return;
+                ack_found = true;
             }
+            temp.push_back(fv);
         }
-    } 
+        m_alarmStatsTable.set("state", temp);
+    }
 }
 
 
@@ -541,7 +542,7 @@ bool EventConsume::staticInfoExists(string &ev_id, string &ev_act, string &ev_se
         // discard the event as event_static_map shows enable is false for this event
         if (tmp.enable == EVENT_ENABLE_FALSE_STR) {
             SWSS_LOG_NOTICE("Discarding event <%s> as it is set to disabled", ev_id.c_str());
-            return false;;
+            return false;
         }
 
         // get severity in the map and store it in the db

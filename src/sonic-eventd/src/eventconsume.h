@@ -4,51 +4,49 @@
 #include <string>
 #include <map>
 #include <swss/events.h>
-#include "eventutils.h"
 #include <swss/dbconnector.h>
 #include <swss/subscriberstatetable.h>
-
-using namespace swss;
-using namespace std;
+#include "eventutils.h"
 
 extern std::atomic<bool> reload_config_flag;
+extern volatile bool g_run;
 
 class EventConsume
 {
 public:
-    EventConsume(DBConnector *dbConn,
-                 string evProfile =EVENTD_DEFAULT_MAP_FILE,
-                 string dbProfile =EVENTD_CONF_FILE);
+    EventConsume(swss::DBConnector *dbConn,
+                 std::string evProfile =EVENTD_DEFAULT_MAP_FILE,
+                 std::string dbProfile =EVENTD_CONF_FILE);
     ~EventConsume();
     void read_eventd_config(bool read_all=true);
     void run();
 
 private:
-    Table m_eventTable;
-    Table m_alarmTable;
-    Table m_eventStatsTable;
-    Table m_alarmStatsTable;
+    swss::Table m_eventTable;
+    swss::Table m_alarmTable;
+    swss::Table m_eventStatsTable;
+    swss::Table m_alarmStatsTable;
     u_int32_t m_days, m_count;
-    string m_evProfile;
-    string m_dbProfile;
+    std::string m_evProfile;
+    std::string m_dbProfile;
 
     void handle_notification(const event_receive_op_t& evt);
     void read_events();
-    void updateAlarmStatistics(string ev_sev, string ev_act);
+    void updateAlarmStatistics(std::string ev_sev, std::string ev_act);
     void updateEventStatistics(bool is_add, bool is_alarm, bool is_ack, bool is_clear);
     void read_config_and_purge();
-    void update_events(string seq_id, string ts, vector<FieldValueTuple> vec);
+    void update_events(std::string seq_id, std::string ts, std::vector<swss::FieldValueTuple> vec);
     void purge_events();
-    void modifyEventStats(string seq_id);
+    void modifyEventStats(std::string seq_id);
     void clearAckAlarmStatistic();
     void resetAlarmStats(int, int, int, int, int, int);
-    void fetchFieldValues(const event_receive_op_t& evt , vector<FieldValueTuple> &, string &, string &, string &, string &, string &);
-    bool isFloodedEvent(string, string, string, string);
-    bool staticInfoExists(string &, string &, string &, string &, vector<FieldValueTuple> &);
-    bool udpateLocalCacheAndAlarmTable(string, bool &);
+    void fetchFieldValues(const event_receive_op_t& evt , std::vector<swss::FieldValueTuple> &, std::string &, std::string &, std::string &, std::string &, std::string &);
+    bool isFloodedEvent(std::string, std::string, std::string, std::string);
+    bool staticInfoExists(std::string &, std::string &, std::string &, std::string &, std::vector<swss::FieldValueTuple> &);
+    bool udpateLocalCacheAndAlarmTable(std::string, bool &);
     void initStats();
-    void updateAckInfo(bool, string, string, string, string);
-    bool fetchRaiseInfo(vector<FieldValueTuple> &, string, string &, string &, string &, string &, string &);
+    void updateAckInfo(bool, std::string, std::string, std::string, std::string);
+    bool fetchRaiseInfo(std::vector<swss::FieldValueTuple> &, std::string, std::string &, std::string &, std::string &, std::string &, std::string &);
 };
 
 
