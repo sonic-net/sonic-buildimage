@@ -175,9 +175,7 @@ module sonic-bmp {
                 }
 
                 leaf source-interface {
-                    type string {
-                        length "1..64";
-                    }
+                    type stypes:interface_name;
                     description "Interface whose address is used as the source for the outgoing BMP session.";
                 }
             }
