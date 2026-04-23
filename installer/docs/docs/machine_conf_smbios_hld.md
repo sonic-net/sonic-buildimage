@@ -32,40 +32,84 @@ For reference, the outdated ONIE specification is located [here](https://opencom
 ### 3.3 Functional Architecture Diagram
 
 ```mermaid
+%%{
+  init: {
+    "theme": "dark",
+    "themeVariables": {
+      "primaryColor": "#1f2937",
+      "primaryTextColor": "#f9fafb",
+      "primaryBorderColor": "#6366f1",
+      "lineColor": "#818cf8",
+      "secondaryColor": "#111827",
+      "tertiaryColor": "#1e1b4b"
+    }
+  }
+}%%
 graph TD
     subgraph Firmware ["Platform Firmware"]
-        UEFI[UEFI Firmware] -->|Generates| SMB[SMBIOS Tables]
+        UEFI["UEFI Firmware"] -->|Generates| SMB["SMBIOS Tables"]
     end
 
     subgraph Kernel ["Linux Kernel"]
-        CFG[UEFI Configuration Table] -->|Pointer to| SMB
-        DMI[DMI Subsystem] -->|Parses| SMB
+        CFG["UEFI Configuration Table"] -->|Pointer to| SMB
+        DMI["DMI Subsystem"] -->|Parses| SMB
         SYS["sysfs: /sys/class/dmi/id/chassis_vendor"] -->|Exposes| DMI
     end
 
     subgraph UserSpace ["SONIE (User Space)"]
-        SYS -->|Read Vendor| SCR[Platform Discovery Script]
-        SCR -->|Finds Plugin| CB[Vendor Discovery Callback Plugin]
+        SYS -->|Read Vendor| SCR["Platform Discovery Script"]
+        SCR -->|Finds Plugin| CB["Vendor Discovery Callback Plugin"]
         CB -->|Populates| CONF["/host/machine.conf"]
     end
+
+    classDef fw fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#e0e7ff;
+    classDef krnl fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#e0e7ff;
+    classDef user fill:#111827,stroke:#4f46e5,stroke-width:2px,color:#f9fafb;
+
+    class UEFI,SMB fw;
+    class CFG,DMI,SYS krnl;
+    class SCR,CB,CONF user;
 ```
 
 ### 3.4 Platform Discovery Flow Chart
 
 ```mermaid
+%%{
+  init: {
+    "theme": "dark",
+    "themeVariables": {
+      "primaryColor": "#1f2937",
+      "primaryTextColor": "#f9fafb",
+      "primaryBorderColor": "#6366f1",
+      "lineColor": "#818cf8",
+      "secondaryColor": "#111827",
+      "tertiaryColor": "#1e1b4b"
+    }
+  }
+}%%
 graph TD
-    Start([Start Discovery]) --> CheckCmdline{"Check Kernel Cmdline\nfor onie_platform?"}
-    CheckCmdline -- Found --> WriteConf["Write to /host/machine.conf"]
-    CheckCmdline -- Not Found --> ReadVendor["Read /sys/class/dmi/id/chassis_vendor"]
+    Start(["Start Discovery"]) --> CheckCmdline{"Check Kernel Cmdline\nfor onie_platform?"}
+    CheckCmdline -->|"Found"| WriteConf["Write to /host/machine.conf"]
+    CheckCmdline -->|"Not Found"| ReadVendor["Read /sys/class/dmi/id/chassis_vendor"]
     
     ReadVendor --> LocatePlugin["Match via Factory Registry\n(using SMBIOS strings)"]
     LocatePlugin --> CheckPlugin{"Match Found?"}
     
-    CheckPlugin -- Yes --> RunPlugin["Run Factory populate_machine_conf()"]
+    CheckPlugin -->|"Yes"| RunPlugin["Run Factory populate_machine_conf()"]
     RunPlugin --> WriteConf
-    WriteConf --> EndSuccess([Success])
+    WriteConf --> EndSuccess(["Success"])
     
-    CheckPlugin -- No --> EndFail([Fail])
+    CheckPlugin -->|"No"| EndFail(["Fail"])
+
+    classDef success fill:#065f46,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
+    classDef fail fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fef2f2;
+    classDef normal fill:#1f2937,stroke:#6366f1,stroke-width:2px,color:#f9fafb;
+    classDef decision fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#f9fafb;
+
+    class Start,EndSuccess success;
+    class EndFail fail;
+    class ReadVendor,LocatePlugin,RunPlugin,WriteConf normal;
+    class CheckCmdline,CheckPlugin decision;
 ```
 
 ## 4. Requirements
@@ -140,7 +184,7 @@ class MachineConfPlugin(ABC):
 
     @abstractmethod
     def get_onie_switch_asic(self) -> str:
-        """Returns the onie_switch_asic string (e.g., 'mlnx')."""
+        """Returns the onie_switch_asic string (e.g., 'vs')."""
         pass
 
     @abstractmethod
@@ -192,7 +236,7 @@ class MachineConfPluginFactory:
             
         # Check for conflicts and populate reverse mapping
         for s in match_strings:
-            val = s.lower()
+            val = s.strip().lower()
             if val in cls._string_to_vendor and cls._string_to_vendor[val] != vendor_key:
                 raise ValueError(f"Conflict: String '{s}' is already registered by vendor '{cls._string_to_vendor[val]}'")
             cls._string_to_vendor[val] = vendor_key
@@ -210,21 +254,23 @@ class MachineConfPluginFactory:
         """
         Locates and instantiates the plugin matching a given SMBIOS string.
         """
-        val = smbios_val.lower()
+        val = smbios_val.strip().lower()
         vendor_key = cls._string_to_vendor.get(val)
         if vendor_key:
             return cls.get_plugin(vendor_key)
         raise ValueError(f"No plugin matches SMBIOS value: {smbios_val}")
 
     @classmethod
-    def populate_machine_conf(cls, vendor_name: str, target_path: str) -> bool:
+    def populate_machine_conf(cls, vendor_name: str, target_path: str = "/") -> bool:
         """
         Retrieves the registered plugin for the vendor and writes its 
         ONIE parameters to /host/machine.conf.
         """
         try:
             plugin = cls.get_plugin(vendor_name)
-            with open(f"{target_path}/host/machine.conf", "w") as f:
+            conf_file = os.path.join(target_path, "host", "machine.conf")
+            os.makedirs(os.path.dirname(conf_file), exist_ok=True)
+            with open(conf_file, "w") as f:
                 f.write(
                     f"onie_platform={plugin.get_onie_platform()}\n"
                     f"onie_vendor={plugin.get_onie_vendor()}\n"
@@ -243,7 +289,9 @@ class MachineConfPluginFactory:
                 for key, value in optional_props.items():
                     f.write(f"{key}={value}\n")
             return True
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"Error writing machine.conf: {e}", file=sys.stderr)
             return False
 ```
 
@@ -326,10 +374,12 @@ def main():
     with open(DMI_VENDOR_FILE) as f:
         smbios_vendor = f.read().strip()
 
-    # Programmatically import all registered vendor plugins
+    # Programmatically import all registered vendor plugins with unique module names
     for plugin_path in glob.glob('/usr/share/sonic/platform/*/machine_conf_plugin.py'):
         try:
-            spec = importlib.util.spec_from_file_location('plugin', plugin_path)
+            vendor_dir = os.path.basename(os.path.dirname(plugin_path))
+            module_name = f"machine_conf_plugin_{vendor_dir}"
+            spec = importlib.util.spec_from_file_location(module_name, plugin_path)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
         except Exception as e:
@@ -338,7 +388,7 @@ def main():
     # Populate machine.conf via the Factory
     try:
         plugin = MachineConfPluginFactory.get_plugin_for_smbios_string(smbios_vendor)
-        success = MachineConfPluginFactory.populate_machine_conf(plugin.get_onie_vendor(), '')
+        success = MachineConfPluginFactory.populate_machine_conf(plugin.get_onie_vendor(), '/')
         if success:
             print(f"Successfully populated {CONF_FILE} via SMBIOS table.")
         else:
