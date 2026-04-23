@@ -14,7 +14,7 @@ module sonic-dns {
     contact
         "SONiC";
 
-    description "DNS YANG module for SONiC OS";
+    description "Domain Name System (DNS) resolver configuration YANG module for SONiC OS.";
 
     revision 2023-02-14 {
         description "Initial version";
@@ -24,16 +24,16 @@ module sonic-dns {
 
         container DNS_NAMESERVER {
 
-            description "DNS_NAMESERVER part of config_db.json";
+            description "DNS nameserver addresses for name resolution.";
 
             list DNS_NAMESERVER_LIST {
                 max-elements 3;
-                description "List of nameservers IPs";
+                description "Ordered list of DNS nameserver IP addresses.";
 
                 key "ip";
 
                 leaf ip {
-                    description "IP as DHCP_SERVER";
+                    description "IPv4 or IPv6 address of a DNS nameserver.";
                     type inet:ip-address;
                 }
             } /* end of list DNS_NAMESERVER_LIST */
@@ -41,7 +41,7 @@ module sonic-dns {
         } /* end of container DNS_NAMESERVER */
 
         container DNS_OPTIONS {
-            description "DNS_OPTIONS requires at least one DNS_NAMESERVER to be set.";
+            description "DNS resolver options; requires at least one nameserver to be configured.";
 
             leaf-list search {
                 description "Configure the DNS search suffix list";

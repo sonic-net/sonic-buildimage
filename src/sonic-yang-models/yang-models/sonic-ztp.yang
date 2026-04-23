@@ -5,7 +5,7 @@ module sonic-ztp {
     namespace "http://github.com/sonic-net/sonic-ztp";
     prefix ztp;
 
-    description "ZTP YANG Module for SONiC OS";
+    description "Zero Touch Provisioning (ZTP) configuration YANG module for SONiC OS.";
 
     revision 2025-04-03 {
         description "First Revision";
@@ -15,49 +15,50 @@ module sonic-ztp {
 
         container ZTP {
 
-            description "ZTP part of config_db.json used only temporarily during ZTP provisioning";
+            description "Transient ZTP state used during initial device provisioning.";
 
             container mode {
+                description "ZTP operational mode and provisioning constraints.";
 
                 leaf profile {
                     type enumeration {
                         enum active;
                     }
-                    description "Whether or not ZTP is active";
+                    description "ZTP activation state; 'active' enables provisioning.";
                 }
 
                 leaf inband {
                     type boolean;
                     default true;
-                    description "If in-band ports are allowed to be used for ZTP";
+                    description "Allow in-band (front-panel) ports for ZTP provisioning.";
                 }
 
                 leaf out-of-band {
                     type boolean;
                     default true;
-                    description "If out-of-band ports are allowed to be used for ZTP";
+                    description "Allow out-of-band (management) ports for ZTP provisioning.";
                 }
 
                 leaf ipv4 {
                     type boolean;
                     default true;
-                    description "If ipv4 is allowed to be used for ZTP";
+                    description "Allow IPv4 DHCP discovery and provisioning for ZTP.";
                 }
 
                 leaf ipv6 {
                     type boolean;
                     default true;
-                    description "If ipv6 is allowed to be used for ZTP";
+                    description "Allow IPv6 DHCP discovery and provisioning for ZTP.";
                 }
 
                 leaf product-name {
                     type string;
-                    description "Product string as returned from decode-syseeprom -p";
+                    description "Switch product name from EEPROM, used in ZTP HTTP headers.";
                 }
 
                 leaf serial-no {
                     type string;
-                    description "Serial number as returned from decode-syseeprom -s";
+                    description "Switch serial number from EEPROM, used in ZTP HTTP headers.";
                 }
 
             }
