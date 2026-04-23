@@ -105,7 +105,7 @@ Once the `onie_vendor` is identified from SMBIOS Type 3 (`chassis_vendor`), the 
 
 #### 5.2.1 Plugin Location & Installation
 Plugins should be located in the vendor's platform directory:
-`/usr/share/sonic/platform/${normalized_vendor}/machine_conf_plugin.py`
+`/usr/share/sonic/platform/${vendor}/machine_conf_plugin.py`
 
 **Installation Requirements**:
 -   **Pre-installed**: Plugins must be pre-installed in the generic image to enable out-of-the-box discovery without internet or runtime package installation dependencies.
