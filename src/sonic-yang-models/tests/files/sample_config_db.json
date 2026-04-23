@@ -422,7 +422,7 @@
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
                 "zebra_nexthop": "disabled",
-                "frr_mgmt_framework_cfg_template_restore": "true"
+                "use_template_render_for_restore": "true"
             }
         },
         "VLAN": {

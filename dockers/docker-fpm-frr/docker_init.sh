@@ -67,9 +67,9 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     write_default_zebra_config /etc/frr/frr.conf
 elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     if [ "$CONFIG_TYPE" == "separated" ]; then
+        logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. The system will use unified mode instead."
         echo "Config Type separated is not supported"
     fi
-
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
         CFGGEN_PARAMS=" \
