@@ -266,3 +266,104 @@ def test_bgp_neighbor_shutdown():
     # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
     # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
     data_set_del_test(neighbor_shutdown_data, skip_del=True)
+
+
+# ---------------------------------------------------------------------------
+# COMMUNITY_SET tests
+# ---------------------------------------------------------------------------
+community_set_data = [
+    # Standard community-list with permit action, ALL match
+    CmdMapTestInfo('COMMUNITY_SET', 'comm1',
+                   {'set_type': 'STANDARD', 'match_action': 'ALL',
+                    'community_member': ['1:1', '2:2'], 'action': 'permit'},
+                   [conf_cmd, 'bgp community-list standard comm1 permit 1:1 2:2'],
+                   False,
+                   [conf_cmd, 'no bgp community-list standard comm1']),
+    # Standard community-list with deny action, ALL match
+    CmdMapTestInfo('COMMUNITY_SET', 'comm2',
+                   {'set_type': 'STANDARD', 'match_action': 'ALL',
+                    'community_member': ['3:3'], 'action': 'deny'},
+                   [conf_cmd, 'bgp community-list standard comm2 deny 3:3'],
+                   False,
+                   [conf_cmd, 'no bgp community-list standard comm2']),
+]
+
+
+def test_community_set():
+    data_set_del_test(community_set_data)
+
+
+# ---------------------------------------------------------------------------
+# LARGE_COMMUNITY_SET tests
+# ---------------------------------------------------------------------------
+large_community_set_data = [
+    CmdMapTestInfo('LARGE_COMMUNITY_SET', 'lc1',
+                   {'set_type': 'STANDARD', 'match_action': 'ALL',
+                    'community_member': ['65000:1:1', '65000:1:2'], 'action': 'permit'},
+                   [conf_cmd, 'bgp large-community-list standard lc1 permit 65000:1:1 65000:1:2'],
+                   False,
+                   [conf_cmd, 'no bgp large-community-list standard lc1']),
+]
+
+
+def test_large_community_set():
+    data_set_del_test(large_community_set_data)
+
+
+# ---------------------------------------------------------------------------
+# Route-map community feature tests
+# ---------------------------------------------------------------------------
+# Helper matching the existing conf_bgp_cmd style
+conf_rm_cmd = lambda name, op, seq: [conf_cmd, 'route-map {} {} {}'.format(name, op, seq)]
+
+route_map_community_data = [
+    # --- RMAP1: set community additive ---
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP1|10',
+                   {'route_operation': 'permit'},
+                   conf_rm_cmd('RMAP1', 'permit', '10'),
+                   False, [conf_cmd, 'no route-map RMAP1 permit 10'],
+                   None, None, None),
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP1|10',
+                   {'set_community_inline': ['5:6', '10:20'], 'set_community_additive': 'true'},
+                   conf_rm_cmd('RMAP1', 'permit', '10') + ['{}set community 5:6 10:20 additive'],
+                   False,
+                   conf_rm_cmd('RMAP1', 'permit', '10') + ['no set community 5:6 10:20'],
+                   None, ['bgpd']),
+    # --- RMAP2: set community none ---
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP2|10',
+                   {'route_operation': 'permit'},
+                   conf_rm_cmd('RMAP2', 'permit', '10'),
+                   False, [conf_cmd, 'no route-map RMAP2 permit 10'],
+                   None, None, None),
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP2|10',
+                   {'set_community_inline': ['none']},
+                   conf_rm_cmd('RMAP2', 'permit', '10') + ['{}set community none'],
+                   False, None, None, ['bgpd']),
+    # --- RMAP3: set extcommunity none (delete emits empty list, skip del) ---
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP3|10',
+                   {'route_operation': 'permit'},
+                   conf_rm_cmd('RMAP3', 'permit', '10'),
+                   False, [conf_cmd, 'no route-map RMAP3 permit 10'],
+                   None, None, None),
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP3|10',
+                   {'set_ext_community_inline': ['none']},
+                   conf_rm_cmd('RMAP3', 'permit', '10') + ['set extcommunity none'],
+                   True, None, None, ['bgpd']),
+    # --- RMAP4: set large-community additive ---
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP4|10',
+                   {'route_operation': 'permit'},
+                   conf_rm_cmd('RMAP4', 'permit', '10'),
+                   False, [conf_cmd, 'no route-map RMAP4 permit 10'],
+                   None, None, None),
+    CmdMapTestInfo('ROUTE_MAP', 'RMAP4|10',
+                   {'set_large_community_inline': ['65000:1:1', '65000:2:2'],
+                    'set_community_additive': 'true'},
+                   conf_rm_cmd('RMAP4', 'permit', '10') + ['{}set large-community 65000:1:1 65000:2:2 additive'],
+                   False,
+                   conf_rm_cmd('RMAP4', 'permit', '10') + ['no set large-community 65000:1:1 65000:2:2'],
+                   None, ['bgpd']),
+]
+
+
+def test_route_map_community():
+    data_set_del_test(route_map_community_data)
