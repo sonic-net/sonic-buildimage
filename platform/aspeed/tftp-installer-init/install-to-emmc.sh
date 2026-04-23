@@ -4,7 +4,8 @@
 # Default: /tmp/sonic-aspeed-arm64-emmc.img.gz
 # After running, reboot to boot from eMMC.
 # Initramfs must provide: sgdisk, wipefs, blockdev, partprobe, e2fsck,
-# gunzip, dd, blkid, mount. (TFTP installer ramfs has no swap and no eMMC mounts.)
+# gunzip, dd (with conv=sparse — coreutils, not BusyBox's), blkdiscard,
+# blkid, mount. (TFTP installer ramfs has no swap and no eMMC mounts.)
 
 IMG="${1:-/tmp/sonic-aspeed-arm64-emmc.img.gz}"
 EMMC="/dev/mmcblk0"
@@ -33,11 +34,18 @@ sync
 blockdev --rereadpt "$EMMC" 2>/dev/null || true
 partprobe "$EMMC" 2>/dev/null || true
 
+# -z (BLKZEROOUT): the sparse dd below assumes skipped regions read as zero;
+# plain discard does not guarantee that on this eMMC (discard_zeroes_data=0).
+echo "Zeroing all blocks on $EMMC..."
+blkdiscard -z "$EMMC"
+sync
+
 echo "Writing $IMG to $EMMC..."
-# Smaller bs + full pipe reads: fewer phys_seg per I/O on some MMC hosts than bs=1M; conv=fsync at end.
+# Smaller bs + full pipe reads: fewer phys_seg per I/O on some MMC hosts than bs=1M; conv=sparse,fsync at end.
+# sparse: lseek() over all-zero source blocks instead of writing them.
 # Pipeline exit status is only from dd; corrupt/truncated gzip can still yield dd exit 0, so require gunzip success.
 gz_ok=$(mktemp) || exit 1
-(gunzip -c "$IMG" && echo ok >"$gz_ok") | dd of="$EMMC" bs=128k iflag=fullblock conv=fsync
+(gunzip -c "$IMG" && echo ok >"$gz_ok") | dd of="$EMMC" bs=128k iflag=fullblock conv=sparse,fsync
 DD_RC=$?
 if [ "$DD_RC" -ne 0 ] || [ ! -s "$gz_ok" ]; then
     rm -f "$gz_ok"

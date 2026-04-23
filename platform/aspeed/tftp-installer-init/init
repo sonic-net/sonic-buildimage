@@ -1,8 +1,15 @@
 #!/bin/sh
-# TFTP installer initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
+# Net-install initramfs: minimal bring-up, then same driver load path as stock SONiC initramfs
 # (init-top + /conf/modules + init-premount/udev) so MDIO/I2C/GPIO/PHY deps match full initramfs.
-# If cmdline has sonic_install.tftp_server=, DHCP (or existing ip=) + TFTP + /sbin/install-to-emmc.sh;
-# else interactive shell. Optional: sonic_install.tftp_image= sonic_install.reboot=1 (network: always eth0)
+# If cmdline has sonic_install.bmc_image=, DHCP (or existing ip=) + fetch + /sbin/install-to-emmc.sh;
+# else interactive shell. Optional: sonic_install.reboot=1 (network: always eth0)
+#
+# Transport is selected from the bmc_image value:
+#   http://… or https://…  -> curl
+#   plain path / filename  -> TFTP, server from sonic_install.tftp_server=
+#
+# The FIT is still TFTP-loaded by U-Boot (U-Boot-side transport unchanged); only the large eMMC
+# payload fetch inside this initramfs picks per-scheme.
 
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
@@ -101,29 +108,25 @@ refresh_machine_conf_for_installer
 
 cd /tmp
 
-DEFAULT_TFTP_IMAGE=sonic-aspeed-arm64-emmc.img.gz
-TFTP_SERVER=
-TFTP_IMAGE="$DEFAULT_TFTP_IMAGE"
+INSTALL_BMC_IMAGE=
+INSTALL_TFTP_SERVER=
 INSTALL_REBOOT=
 for x in $(cat /proc/cmdline); do
     case $x in
-    sonic_install.tftp_server=*) TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
-    sonic_install.tftp_image=*) TFTP_IMAGE="${x#sonic_install.tftp_image=}" ;;
+    sonic_install.bmc_image=*) INSTALL_BMC_IMAGE="${x#sonic_install.bmc_image=}" ;;
+    sonic_install.tftp_server=*) INSTALL_TFTP_SERVER="${x#sonic_install.tftp_server=}" ;;
     sonic_install.reboot=1|sonic_install.reboot=yes|sonic_install.reboot=true)
         INSTALL_REBOOT=y ;;
     esac
 done
 
 drop_shell() {
-    echo "Aspeed TFTP installer: dropping to shell."
+    echo "Aspeed net-install: dropping to shell."
     echo "  Manual install: /sbin/install-to-emmc.sh /tmp/<image.img.gz>"
-    echo "  Auto install: add to bootargs, e.g. sonic_install.tftp_server=<tftp-ip> [sonic_install.tftp_image=$DEFAULT_TFTP_IMAGE]"
-    echo ""
+    echo "  Auto install (HTTP/HTTPS): sonic_install.bmc_image=http(s)://<host>/<path>/<image.img.gz>"
+    echo "  Auto install (TFTP):       sonic_install.bmc_image=<path-or-filename> sonic_install.tftp_server=<ip>"
     if [ -x /bin/bash ]; then
         exec /bin/bash
-    fi
-    if [ -x /usr/bin/bash ]; then
-        exec /usr/bin/bash
     fi
     exec /bin/sh
 }
@@ -164,7 +167,7 @@ bringup_network() {
         return 0
     fi
     if [ ! -x /sbin/udhcpc.script ]; then
-        echo "Error: /sbin/udhcpc.script missing (TFTP initrd must ship udhcpc.script next to install-to-emmc.sh)."
+        echo "Error: /sbin/udhcpc.script missing (net-install initrd must ship udhcpc.script next to install-to-emmc.sh)."
         return 1
     fi
     echo "Running DHCP on $IFACE..."
@@ -176,24 +179,63 @@ bringup_network() {
     return 1
 }
 
+http_fetch_image() {
+    url="$1"
+    name=${url%%\?*}; name=${name%%#*}; name=${name##*/}
+    [ -n "$name" ] || name=sonic-aspeed-arm64-emmc.img.gz
+    dest="/tmp/$name"
+    rm -f "$dest"
+    echo "HTTP/HTTPS: $url -> $dest"
+    if curl -fkL --retry 3 --connect-timeout 10 -o "$dest" "$url" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
+        return 0
+    fi
+    rm -f "$dest"
+    echo "Error: curl failed or empty file (check URL, server, DNS)."
+    return 1
+}
+
 tftp_fetch_image() {
     srv="$1"
     img="$2"
-    dest="/tmp/$(basename "$img")"
+    name=${img##*/}
+    [ -n "$name" ] || name=sonic-aspeed-arm64-emmc.img.gz
+    dest="/tmp/$name"
     rm -f "$dest"
-    echo "TFTP: $srv -> $dest ($img)"
+    echo "TFTP: $srv:$img -> $dest"
     if command -v tftp >/dev/null 2>&1 && tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
         return 0
     fi
     if command -v busybox >/dev/null 2>&1 && busybox tftp -g -r "$img" -l "$dest" "$srv" && [ -s "$dest" ]; then
+        FETCHED_IMAGE="$dest"
         return 0
     fi
+    rm -f "$dest"
     echo "Error: tftp failed or empty file (check server, filename, firewall)."
     return 1
 }
 
-if [ -z "$TFTP_SERVER" ]; then
-    echo "Aspeed TFTP installer: no sonic_install.tftp_server= in cmdline — interactive shell."
+fetch_image_by_scheme() {
+    case "$INSTALL_BMC_IMAGE" in
+    http://*|https://*)
+        http_fetch_image "$INSTALL_BMC_IMAGE"
+        return $?
+        ;;
+    *)
+        if [ -z "$INSTALL_TFTP_SERVER" ]; then
+            echo "Error: TFTP transport selected (sonic_install.bmc_image=$INSTALL_BMC_IMAGE has no http/https scheme),"
+            echo "       but sonic_install.tftp_server= is missing from bootargs."
+            return 1
+        fi
+        tftp_fetch_image "$INSTALL_TFTP_SERVER" "$INSTALL_BMC_IMAGE"
+        return $?
+        ;;
+    esac
+}
+
+if [ -z "$INSTALL_BMC_IMAGE" ]; then
+    echo "Aspeed net-install: no sonic_install.bmc_image= in cmdline — interactive shell."
     echo "  eMMC helper: /sbin/install-to-emmc.sh <path-to-raw-image>"
     echo ""
     drop_shell
@@ -203,7 +245,7 @@ if ! bringup_network; then
     drop_shell
 fi
 
-if ! tftp_fetch_image "$TFTP_SERVER" "$TFTP_IMAGE"; then
+if ! fetch_image_by_scheme; then
     drop_shell
 fi
 
@@ -212,7 +254,7 @@ if [ ! -x /sbin/install-to-emmc.sh ]; then
     drop_shell
 fi
 
-if ! /sbin/install-to-emmc.sh "/tmp/$(basename "$TFTP_IMAGE")"; then
+if ! /sbin/install-to-emmc.sh "$FETCHED_IMAGE"; then
     echo "Install script failed."
     drop_shell
 fi
