@@ -1,7 +1,7 @@
 # HLD - Populating machine.conf via UEFI SMBIOS
 
 ## 1. Scope
-This document describes the High-Level Design for populating the `/host/machine.conf` file in SONIE using UEFI SMBIOS tables. This mechanism provides a standardized way to identify hardware platforms without relying on hardcoded configurations or external database lookups during early boot or installation.
+This document describes the High-Level Design for populating the `/host/machine.conf` file in SONIE using UEFI SMBIOS tables. This mechanism provides a standardized way to identify hardware platforms without relying on hardcoded configurations or external database lookups during early boot or installation. Additionally, it provides a recovery mechanism to reconstruct `/host/machine.conf` in SONiC if the file becomes missing or corrupted.
 
 ## 2. Definitions/Abbreviations
 *   **SMBIOS**: System Management BIOS
@@ -275,7 +275,7 @@ class VsMachineConfPlugin(MachineConfPlugin):
         return "2021.11"
 
     def get_match_strings(self) -> list:
-        return ["KVM", "Virtual Switch", "QEMU"]
+        return ["KVM", "Virtual Switch", "QEMU", "OVMF"]
 
     def get_optional_properties(self) -> dict:
         return {"optional_key": "optional_value"}
