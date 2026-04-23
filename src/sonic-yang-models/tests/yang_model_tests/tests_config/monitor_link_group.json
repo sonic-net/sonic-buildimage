@@ -1,0 +1,367 @@
+{
+    "MONITOR_LINK_GROUP_VALID": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "group1",
+                        "uplinks": ["Ethernet0", "PortChannel101"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Test monitor link group",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_MINIMAL": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "minimal_group",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"]
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_COMPREHENSIVE": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "comprehensive_group",
+                        "uplinks": ["Ethernet0", "Ethernet1", "PortChannel101", "PortChannel102"],
+                        "downlinks": ["Ethernet4", "Ethernet5", "PortChannel201"],
+                        "description": "Comprehensive test with all fields and multiple interfaces",
+                        "startup-delay": "30",
+                        "min-uplinks": "2"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_PATTERN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "invalid@group!",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid group name with special characters",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_LENGTH": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "this_is_an_extremely_long_group_name_that_exceeds_the_maximum_allowed_length_of_128_characters_for_group_names_in_monitor_link_groups_and_should_fail_validation_test",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid group name length test",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_EMPTY": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Empty group name test",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PATTERN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group1",
+                        "uplinks": ["InvalidInterface0", "BadInterface1"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid uplink interface pattern",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_ETHERNET_RANGE": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group2",
+                        "uplinks": ["Ethernet99999"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid Ethernet interface range",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PORTCHANNEL_FORMAT": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group3",
+                        "uplinks": ["PortChannel", "PortChannelABC"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid PortChannel format",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PATTERN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group4",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["InvalidDownlink0", "BadDownlink1"],
+                        "description": "Invalid downlink interface pattern",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_ETHERNET_RANGE": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group5",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet99999"],
+                        "description": "Invalid downlink Ethernet interface range",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PORTCHANNEL_FORMAT": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group6",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["PortChannel", "PortChannelXYZ"],
+                        "description": "Invalid downlink PortChannel format",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_DESCRIPTION_LENGTH_MAX": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group7",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "This is an extremely long description that exceeds the maximum allowed length of 255 characters for monitor link group descriptions and should fail validation testing the length constraint properly implemented in the YANG model for comprehensive testing coverage of all possible edge cases and boundary conditions that might occur in real world deployments of SONiC monitor link functionality",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_DESCRIPTION_LENGTH_MIN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group8",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "",
+                        "startup-delay": "10",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_PATTERN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group9",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid startup-delay pattern test",
+                        "startup-delay": "10abc",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_NEGATIVE": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group10",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid negative startup-delay test",
+                        "startup-delay": "-5",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_PATTERN": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group11",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid min-uplinks pattern test",
+                        "startup-delay": "10",
+                        "min-uplinks": "2abc"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_NEGATIVE": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "test_group12",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Invalid negative min-uplinks test",
+                        "startup-delay": "10",
+                        "min-uplinks": "-1"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_VALID_ETHERNET_RANGES": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "ethernet_ranges_test",
+                        "uplinks": ["Ethernet0", "Ethernet1", "Ethernet999", "Ethernet1000", "Ethernet9999"],
+                        "downlinks": ["Ethernet4", "Ethernet100", "Ethernet500"],
+                        "description": "Valid Ethernet interface ranges test",
+                        "startup-delay": "15",
+                        "min-uplinks": "3"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_VALID_PORTCHANNEL_RANGES": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "portchannel_ranges_test",
+                        "uplinks": ["PortChannel1", "PortChannel100", "PortChannel999", "PortChannel9999"],
+                        "downlinks": ["PortChannel10", "PortChannel500"],
+                        "description": "Valid PortChannel interface ranges test",
+                        "startup-delay": "20",
+                        "min-uplinks": "2"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_VALID_MIXED_INTERFACES": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "mixed_interfaces_test",
+                        "uplinks": ["Ethernet0", "PortChannel101", "Ethernet48", "PortChannel200"],
+                        "downlinks": ["Ethernet4", "PortChannel50", "Ethernet96"],
+                        "description": "Valid mixed Ethernet and PortChannel interfaces test",
+                        "startup-delay": "25",
+                        "min-uplinks": "2"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_VALID_NUMERIC_EDGE_CASES": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "numeric_edge_cases_test",
+                        "uplinks": ["Ethernet0", "Ethernet1"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "Valid numeric field edge cases test",
+                        "startup-delay": "0",
+                        "min-uplinks": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "MONITOR_LINK_GROUP_VALID_DESCRIPTION_EDGE_CASES": {
+        "sonic-monitor-link-group:sonic-monitor-link-group": {
+            "sonic-monitor-link-group:MONITOR_LINK_GROUP": {
+                "MONITOR_LINK_GROUP_LIST": [
+                    {
+                        "group_name": "description_edge_cases_test",
+                        "uplinks": ["Ethernet0"],
+                        "downlinks": ["Ethernet4"],
+                        "description": "A",
+                        "startup-delay": "5",
+                        "min-uplinks": "1"
+                    }
+                ]
+            }
+        }
+    }
+}

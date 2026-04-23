@@ -3246,6 +3246,68 @@
                 "guard_time": "2",
                 "ber_threshold": "12"
             }
+        },
+        "TAM": {
+            "device": {
+                "device-id": "12345",
+                "enterprise-id": "54321",
+                "ifa": "true"
+            }
+        },
+        "TAM_COLLECTOR": {
+            "collector1": {
+                "src_ip": "1.1.1.1",
+                "dst_ip": "2.2.2.2",
+                "dst_port": "10000",
+                "dscp_value": "32"
+            }
+        },
+        "TAM_FLOW_GROUP": {
+            "flow1": {
+                "aging_interval": "1000",
+                "ports": [
+                    "Ethernet0"
+                ]
+            },
+            "flow1|rule1": {
+                "src_ip_prefix": "10.1.1.0/24",
+                "dst_ip_prefix": "20.2.2.0/24",
+                "ip_protocol": "6",
+                "l4_src_port": "1000",
+                "l4_dst_port": "80"
+            }
+        },
+        "TAM_SESSION": {
+            "SESSION1": {
+                "type": "drop-monitor",
+                "report_type": "ipfix",
+                "flow_group": "flow1",
+                "collector": [
+                    "collector1"
+                ]
+            }
+        },
+        "MONITOR_LINK_GROUP": {
+            "critical_links": {
+                "description": "Critical uplink and downlink monitoring group",
+                "uplinks": ["Ethernet0", "Ethernet4", "Ethernet8", "PortChannel100"],
+                "downlinks": ["Ethernet12", "Ethernet16", "PortChannel200"],
+                "min-uplinks": "3",
+                "startup-delay": "5"
+            },
+            "backup_links": {
+                "description": "Backup link monitoring group",
+                "uplinks": ["Ethernet20", "Ethernet24"],
+                "downlinks": ["Ethernet28", "Ethernet32"],
+                "min-uplinks": "2",
+                "startup-delay": "10"
+            },
+            "edge_links": {
+                "description": "Edge link monitoring group with minimal configuration",
+                "uplinks": ["Ethernet36"],
+                "downlinks": ["Ethernet40"],
+                "min-uplinks": "1"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

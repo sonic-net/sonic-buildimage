@@ -1,0 +1,114 @@
+module sonic-monitor-link-group {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-monitor-link-group";
+    prefix mlg;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC monitor link group YANG Module for SONiC OS";
+
+    revision 2026-04-27 {
+        description
+            "Initial version";
+    }
+
+    container sonic-monitor-link-group {
+
+        container MONITOR_LINK_GROUP {
+
+            description "Link State Tracking Group configuration";
+
+            list MONITOR_LINK_GROUP_LIST {
+
+                key "group_name";
+
+                leaf group_name {
+                    type string {
+                        length "1..128" {
+                            error-message "Unsatisfied length for group_name";
+                        }
+                        pattern "[a-zA-Z0-9_-]+" {
+                            error-message "pattern does not satisfy for group_name";
+                        }
+                    }
+                    description "Name of the link state tracking group";
+                }
+
+                leaf-list uplinks {
+                    /* union of leafref is allowed in YANG 1.1 */
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                        type string {
+                            pattern "";
+                        }
+                    }
+                    ordered-by user;
+                    default "";
+                    description "List of uplink interfaces for this monitor link group";
+                }
+
+                leaf-list downlinks {
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                        type string {
+                            pattern "";
+                        }
+                    }
+                    ordered-by user;
+                    default "";
+                    description "List of downlink interfaces for this monitor link group";
+                }
+
+                leaf description {
+                    type string {
+                        length "1..255" {
+                            error-message "Unsatisfied length for description";
+                        }
+                    }
+                    description "Description of the link state tracking group";
+                }
+
+                leaf link-up-delay {
+                    type string;
+                    default "0";
+                    description "Seconds to wait after uplinks recover before bringing the group UP; prevents churn from link flaps";
+                }
+
+                leaf min-uplinks {
+                    type string;
+                    default "1";
+                    description "Minimum number of uplinks that must be operational for the group to be considered up";
+                }
+
+            }
+            /* end of list MONITOR_LINK_GROUP_LIST */
+        }
+        /* end of container MONITOR_LINK_GROUP */
+    }
+    /* end of container sonic-monitor-link-group */
+}
