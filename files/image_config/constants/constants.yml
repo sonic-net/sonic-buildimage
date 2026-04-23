@@ -13,6 +13,7 @@ constants:
     anchor_contributing_route_community: 12345:777
     route_do_not_send_appdb_tag: 202
     route_eligible_for_fallback_to_default_tag: 203
+    hide_internal_community: 55555:55555
     families:
       - ipv4
       - ipv6

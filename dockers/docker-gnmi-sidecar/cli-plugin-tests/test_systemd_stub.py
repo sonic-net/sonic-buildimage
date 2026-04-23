@@ -153,6 +153,10 @@ def ss(tmp_path, monkeypatch):
     # Now import systemd_stub (it will use patched sidecar_common)
     ss = importlib.import_module("systemd_stub")
 
+    # Reset the one-shot cleanup flag so each test starts fresh
+    ss._stale_unit_cleaned = False
+    monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
+
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
@@ -258,29 +262,107 @@ def test_env_controls_gnmi_src_default(monkeypatch):
     assert ss._GNMI_SRC.endswith("gnmi.sh")
 
 
-def test_gnmi_service_syncs_to_host_when_different(ss):
-    ss, container_fs, host_fs, commands = ss
+# ─────────────────────────── Tests for stale gnmi.service cleanup ───────────────────────────
 
-    # Prepare container unit content and host old content
-    container_fs[ss.CONTAINER_GNMI_SERVICE] = b"UNIT-NEW"
-    host_fs[ss.HOST_GNMI_SERVICE] = b"UNIT-OLD"
+STALE_UNIT = b"""[Unit]
+Description=GNMI container
 
-    # Only include the gnmi service item to make the assertion clear
-    ss.SYNC_ITEMS[:] = [
-        ss.SyncItem(ss.CONTAINER_GNMI_SERVICE, ss.HOST_GNMI_SERVICE, 0o644)
-    ]
+[Service]
+User=root
+ExecStartPre=/usr/local/bin/gnmi.sh start
+ExecStart=/usr/local/bin/gnmi.sh wait
+"""
 
-    # Add post actions for gnmi.service
-    ss.POST_COPY_ACTIONS[ss.HOST_GNMI_SERVICE] = [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "gnmi"],
-    ]
+CLEAN_UNIT = b"""[Unit]
+Description=GNMI container
 
-    ok = ss.ensure_sync()
-    assert ok is True
-    assert host_fs[ss.HOST_GNMI_SERVICE] == b"UNIT-NEW"
+[Service]
+User=admin
+ExecStartPre=/usr/local/bin/gnmi.sh start
+ExecStart=/usr/local/bin/gnmi.sh wait
+"""
 
-    # Verify systemctl actions were invoked
+
+def test_cleanup_stale_unit_restores_from_packed_file(ss):
+    """When host gnmi.service has User=root, cleanup overwrites it with the packed clean file."""
+    ss_mod, container_fs, host_fs, commands = ss
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_GNMI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # Host file should now be the clean version
+    assert host_fs[ss_mod._HOST_GNMI_SERVICE] == CLEAN_UNIT
+    # daemon-reload and restart should follow
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
     assert ("sudo", "systemctl", "restart", "gnmi") in post_cmds
+
+
+def test_cleanup_skips_when_user_admin(ss):
+    """When host gnmi.service already has User=admin, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands = ss
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # No write should have occurred
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_skips_when_file_missing(ss):
+    """When host gnmi.service doesn't exist, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands = ss
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_runs_only_once(ss):
+    """The cleanup is a one-shot; second call should be a no-op."""
+    ss_mod, container_fs, host_fs, commands = ss
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_GNMI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_GNMI_SERVICE] == CLEAN_UNIT
+
+    # Revert host to stale to prove second call is a no-op
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    # Should still be stale because the flag prevented re-run
+    assert host_fs[ss_mod._HOST_GNMI_SERVICE] == STALE_UNIT
+
+
+def test_cleanup_retries_after_transient_read_failure(ss):
+    """When host_read_bytes fails transiently, cleanup retries on the next call."""
+    ss_mod, container_fs, host_fs, commands = ss
+    container_fs[ss_mod._CONTAINER_GNMI_SERVICE] = CLEAN_UNIT
+    # First call: host file missing (transient failure)
+
+    ss_mod._cleanup_stale_service_unit()
+    assert ss_mod._stale_unit_cleaned is False  # flag NOT set; will retry
+
+    # Second call: host file now present with stale content
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_GNMI_SERVICE] == CLEAN_UNIT
+    assert ss_mod._stale_unit_cleaned is True
+
+
+def test_cleanup_disabled_by_env(ss, monkeypatch):
+    """When STALE_UNIT_CLEANUP_ENABLED=false, cleanup is skipped entirely."""
+    ss_mod, container_fs, host_fs, commands = ss
+    monkeypatch.setattr(ss_mod, "_STALE_UNIT_CLEANUP_ENABLED", False)
+    host_fs[ss_mod._HOST_GNMI_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_GNMI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    # File should NOT be overwritten
+    assert host_fs[ss_mod._HOST_GNMI_SERVICE] == STALE_UNIT
+    # Flag set so it won't retry
+    assert ss_mod._stale_unit_cleaned is True

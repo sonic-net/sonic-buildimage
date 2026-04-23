@@ -25,7 +25,7 @@ module sonic-vnet {
         "SONiC";
 
     description
-        "VNET YANG Module for SONiC OS";
+        "Virtual Network (VNET) configuration for overlay networking using VxLAN tunnels";
 
     revision 2023-04-25 {
         description
@@ -36,14 +36,16 @@ module sonic-vnet {
 
         container VNET {
 
-            description "config db VNET table";
+            description "Virtual Network configuration table for overlay networking";
 
             list VNET_LIST {
+
+                description "Configuration entry for a Virtual Network instance";
 
                 key "name";
 
                 leaf name {
-                    description "An alphanumaric string to represent the name of the unique vnet";
+                    description "Unique alphanumeric name identifying the virtual network";
                     type string {
                         length 1..255;
                     }
@@ -106,9 +108,11 @@ module sonic-vnet {
 
         container VNET_ROUTE {
 
-            description "ConfigDB VNET_ROUTE table";
+            description "Static routes within a virtual network";
 
             list VNET_ROUTE_LIST {
+                description "Static route entry within a virtual network";
+
                 key "vnet_name prefix";
 
                 leaf vnet_name {
@@ -141,9 +145,10 @@ module sonic-vnet {
 
         container VNET_ROUTE_TUNNEL {
 
-            description "ConfigDB VNET_ROUTE_TUNNEL table";
+            description "Tunnel-encapsulated routes within a virtual network";
             
             list VNET_ROUTE_TUNNEL_LIST {
+                description "Tunnel-encapsulated route entry for overlay traffic within a virtual network";
                 key "vnet_name prefix";
 
                 leaf vnet_name {
