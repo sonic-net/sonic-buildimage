@@ -174,7 +174,7 @@ To centralize the writing of `/host/machine.conf`, a Factory class extracts the 
 ```python
 class MachineConfPluginFactory:
     _plugins = {}
-    _match_registry = {}
+    _string_to_vendor = {}  # Maps SMBIOS strings to vendor keys
 
     @classmethod
     def register_plugin(cls, vendor_name: str, plugin_cls):
@@ -190,16 +190,12 @@ class MachineConfPluginFactory:
         if isinstance(match_strings, str):
             match_strings = [match_strings]
             
-        normalized_strings = [s.lower() for s in match_strings]
-        
-        # Check for conflicts across vendors
-        for existing_vendor, existing_strings in cls._match_registry.items():
-            if existing_vendor != vendor_key:
-                for s in normalized_strings:
-                    if s in existing_strings:
-                        raise ValueError(f"Conflict: String '{s}' is already registered by vendor '{existing_vendor}'")
-                        
-        cls._match_registry[vendor_key] = normalized_strings
+        # Check for conflicts and populate reverse mapping
+        for s in match_strings:
+            val = s.lower()
+            if val in cls._string_to_vendor and cls._string_to_vendor[val] != vendor_key:
+                raise ValueError(f"Conflict: String '{s}' is already registered by vendor '{cls._string_to_vendor[val]}'")
+            cls._string_to_vendor[val] = vendor_key
 
     @classmethod
     def get_plugin(cls, vendor_name: str) -> MachineConfPlugin:
@@ -215,9 +211,9 @@ class MachineConfPluginFactory:
         Locates and instantiates the plugin matching a given SMBIOS string.
         """
         val = smbios_val.lower()
-        for vendor_key, match_list in cls._match_registry.items():
-            if val in match_list:
-                return cls.get_plugin(vendor_key)
+        vendor_key = cls._string_to_vendor.get(val)
+        if vendor_key:
+            return cls.get_plugin(vendor_key)
         raise ValueError(f"No plugin matches SMBIOS value: {smbios_val}")
 
     @classmethod
