@@ -1,0 +1,9 @@
+-rw-r--r--  0 0      0        2750 Jan  1  1970 ./usr/include/libyang/dict.h
+-rw-r--r--  0 0      0       16173 Jan  1  1970 ./usr/include/libyang/extensions.h
+-rw-r--r--  0 0      0      104136 Jan  1  1970 ./usr/include/libyang/libyang.h
+-rw-r--r--  0 0      0       86751 Jan  1  1970 ./usr/include/libyang/tree_data.h
+-rw-r--r--  0 0      0      148297 Jan  1  1970 ./usr/include/libyang/tree_schema.h
+-rw-r--r--  0 0      0        2939 Jan  1  1970 ./usr/include/libyang/user_types.h
+-rw-r--r--  0 0      0       12475 Jan  1  1970 ./usr/include/libyang/xml.h
+lrwxr-xr-x  0 0      0           0 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/libyang.so -> libyang.so.1.2.2
+-rw-r--r--  0 0      0         359 Jan  1  1970 ./usr/lib/x86_64-linux-gnu/pkgconfig/libyang.pc

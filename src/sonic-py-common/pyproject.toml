@@ -1,0 +1,18 @@
+[project]
+name = "sonic-py-common"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "natsort",
+    "pyyaml",
+]
+
+# Note: redis-dump-load is excluded as it requires setuptools and is only
+# needed for the sonic-db-dump/load console scripts which can be built separately
+
+[dependency-groups]
+build = [
+    # Needed for Bazel
+    "build",
+    "setuptools",
+]

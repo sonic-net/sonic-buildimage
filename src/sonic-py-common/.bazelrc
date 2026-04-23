@@ -1,0 +1,7 @@
+# TODO(bazel-ready): This assumes this repo is a submodule of sonic-buildimage.
+common --registry=file://%workspace%/../../tools/bazel/registry
+
+common --registry=https://bcr.bazel.build
+common --registry=https://raw.githubusercontent.com/aspect-build/bazel-central-registry/aspect_rules_py-v1.7.1
+common --@sonic_py_common_pip//venv=default
+common --@rules_python//python/config_settings:python_version=3.11.6

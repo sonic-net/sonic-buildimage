@@ -1,0 +1,60 @@
+load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+
+flatten(
+    name = "apt_deps",
+    deduplicate = True,
+    tars = [
+        "@bookworm//python3-dev",
+        "@bookworm//protobuf-compiler:data",
+        "@bookworm//python3-protobuf:data",
+        # TODO(bazel-ready): Determine if we need a different version of iputils-ping.
+        # The Dockerfile runs `apt-get update` before installing this dependency,
+        # so the version from the snapshot might be out of date.
+        "@bookworm//iputils-ping:data",
+
+        # Read libteam and libteandctl from our internal (patched) code.
+        "@libteam//:libteam5_pkg",
+        "@libteam//:libteamdctl0_pkg",
+    ],
+)
+
+flatten(
+    name = "rdeps",
+    deduplicate = True,
+    tars = [
+        "@sonic_sairedis//meta:libsaimetadata_dev_pkg",
+        "@sonic_sairedis//lib:libsairedis_dev_pkg",
+        "@sonic_dash_api//:libdashapi_dev_pkg",
+        "@sonic_swss_common//:libswsscommon_pkg",
+        "@sonic_swss_common//pyext:swsscommon_pkg",
+    ],
+)
+
+oci_image(
+    name = "docker-swss-layer-bookworm",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":apt_deps",
+        "//dockers/docker-base-bookworm:libswsscommon_rdeps",
+        ":rdeps",
+        "@sonic_swss//:debian-data",
+    ],
+    visibility = [
+        "//dockers/docker-orchagent:__subpackages__",
+        "//dockers/docker-sflow:__subpackages__",
+        "//dockers/docker-swss-layer-bookworm:__subpackages__",
+        "//dockers/docker-teamd:__subpackages__",
+    ],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-swss-layer-bookworm",
+    repo_tags = ["docker-swss-layer-bookworm:latest"],
+)

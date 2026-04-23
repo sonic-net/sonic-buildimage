@@ -1,0 +1,11 @@
+alias(
+    name = "sflowtool",
+    actual = "@sflowtool_src//:sflowtool",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "sflowtool_pkg",
+    actual = "@sflowtool_src//:sflowtool_pkg",
+    visibility = ["//visibility:public"],
+)

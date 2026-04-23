@@ -1,0 +1,65 @@
+alias(
+    name = "libteam",
+    actual = "@libteam_src//:libteam",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteam_shared",
+    actual = "@libteam_src//:libteam_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteamdctl",
+    actual = "@libteam_src//:libteamdctl",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteamdctl_headers",
+    actual = "@libteam_src//:libteamdctl_headers",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteamdctl_shared",
+    actual = "@libteam_src//:teamdctl",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "teamd",
+    actual = "@libteam_src//:teamd",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "teamdctl",
+    actual = "@libteam_src//:teamdctl_bin",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "teamnl",
+    actual = "@libteam_src//:teamnl",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteam5_pkg",
+    actual = "@libteam_src//:libteam5_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteamdctl0_pkg",
+    actual = "@libteam_src//:libteamdctl0_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libteam-utils_pkg",
+    actual = "@libteam_src//:libteam-utils_pkg",
+    visibility = ["//visibility:public"],
+)

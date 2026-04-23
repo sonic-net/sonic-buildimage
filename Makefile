@@ -5,7 +5,7 @@ NOSTRETCH ?= 1
 NOBUSTER ?= 1
 NOBULLSEYE ?= 1
 NOBOOKWORM ?= 0
-NOTRIXIE ?= 0
+NOTRIXIE ?= 1
 
 override Q := @
 ifeq ($(QUIET),n)

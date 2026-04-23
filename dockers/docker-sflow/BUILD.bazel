@@ -1,0 +1,46 @@
+load("@bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@rules_deb//distroless:defs.bzl", "flatten", "group", "passwd")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "mutate", "tar")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+
+tar(
+    name = "source_files",
+    srcs = [
+        ":supervisord.conf",
+        ":critical_processes",
+        "port_index_mapper.py",
+    ],
+    mtree = [
+        "./etc/supervisor/conf.d/supervisord.conf type=file content=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes type=file content=$(location :critical_processes)",
+        "./usr/bin/port_index_mapper.py type=file mode=755 content=$(location :port_index_mapper.py)",
+    ],
+)
+
+# TODO(bazel-ready): Debug image.
+oci_image(
+    name = "docker-sflow",
+    base = "//dockers/docker-swss-layer-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        "@bookworm//dmidecode:data",
+
+        # Note: $(SWSS) is brought in by the base image.
+        "@hsflowd//:hsflowd_pkg",
+        "@sflowtool//:sflowtool_pkg",
+        "@psample//:psample_pkg",
+
+        ":source_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-sflow",
+    repo_tags = ["docker-sflow:latest"],
+)

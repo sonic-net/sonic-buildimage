@@ -1,0 +1,76 @@
+alias(
+    name = "libyang",
+    actual = "@libyang_src//:libyang",
+    visibility = ["//visibility:public"],
+)
+
+# Export headers for downstream consumers
+alias(
+    name = "headers",
+    actual = "@libyang_src//:public_headers",
+    visibility = ["//visibility:public"],
+)
+
+# Shared library for runtime use in containers
+alias(
+    name = "libyang_shared",
+    actual = "@libyang_src//:libyang_shared",
+    visibility = ["//visibility:public"],
+)
+
+# C++ bindings
+alias(
+    name = "libyang-cpp",
+    actual = "@libyang_src//:libyang-cpp",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libyang-cpp_shared",
+    actual = "@libyang_src//:libyang-cpp_shared",
+    visibility = ["//visibility:public"],
+)
+
+# Python SWIG bindings
+alias(
+    name = "yang",
+    actual = "@libyang_src//:yang",
+    visibility = ["//visibility:public"],
+)
+
+# Deb packages
+alias(
+    name = "libyang_pkg",
+    actual = "@libyang_src//:libyang_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libyang-dev_pkg",
+    actual = "@libyang_src//:libyang-dev_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "python3-yang_pkg",
+    actual = "@libyang_src//:python3-yang_pkg",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libyang-cpp_pkg",
+    actual = "@libyang_src//:libyang-cpp_pkg",
+    visibility = ["//visibility:public"],
+)
+
+# Package tests
+test_suite(
+    name = "tests",
+    tests = [
+        "@libyang_src//:libyang_pkg_test",
+        "@libyang_src//:libyang-dev_pkg_test",
+        "@libyang_src//:python3-yang_pkg_test",
+        "@libyang_src//:libyang-cpp_pkg_test",
+    ],
+    visibility = ["//visibility:public"],
+)

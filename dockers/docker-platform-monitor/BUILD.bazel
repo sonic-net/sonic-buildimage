@@ -1,0 +1,91 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl//:tar.bzl", "mutate", "tar")
+
+# Generate docker_init.sh from the template
+# This renders the jinja2 template with generic platform settings
+genrule(
+    name = "docker_init_sh",
+    srcs = ["docker_init.j2"],
+    outs = ["docker_init.sh"],
+    cmd = """
+        # Filter out jinja2 conditionals for a generic platform
+        # Removes mellanox/nvidia-bluefield specific sections
+        # Also fix supervisord path from /usr/local/bin to /usr/bin
+        sed '/^{%.*mellanox/,/^{% endif %}/d; /^{%.*nvidia-bluefield/,/^{% endif %}/d; s|/usr/local/bin/supervisord|/usr/bin/supervisord|g' $(location docker_init.j2) > $@
+    """,
+)
+
+# Package all local files
+tar(
+    name = "files",
+    srcs = [
+        "critical_processes",
+        "delay.py",
+        "docker-pmon.supervisord.conf.j2",
+        "docker_init.j2",
+        "lm-sensors.sh",
+        ":docker_init_sh",
+    ],
+    mtree = [
+        "./usr/bin/lm-sensors.sh uid=0 gid=0 mode=0755 type=file content=$(location :lm-sensors.sh)",
+        "./usr/share/sonic/templates/docker-pmon.supervisord.conf.j2 uid=0 gid=0 mode=0644 type=file content=$(location :docker-pmon.supervisord.conf.j2)",
+        "./usr/share/sonic/templates/docker_init.j2 uid=0 gid=0 mode=0644 type=file content=$(location :docker_init.j2)",
+        "./etc/supervisor/critical_processes uid=0 gid=0 mode=0644 type=file content=$(location :critical_processes)",
+        "./usr/bin/delay.py uid=0 gid=0 mode=0755 type=file content=$(location :delay.py)",
+        "./usr/bin/docker_init.sh uid=0 gid=0 mode=0755 type=file content=$(location :docker_init_sh)",
+    ],
+)
+
+# Package rsyslog config
+tar(
+    name = "rsyslog-config",
+    srcs = ["etc/rsyslog.conf"],
+    mtree = [
+        "./etc/rsyslog.conf uid=0 gid=0 mode=0644 type=file content=$(location :etc/rsyslog.conf)",
+    ],
+)
+
+# Package ssd_tools binaries
+tar(
+    name = "ssd-tools",
+    srcs = [
+        "ssd_tools/SmartCmd",
+        "ssd_tools/iSmart",
+    ],
+    mtree = [
+        "./usr/bin/iSmart uid=0 gid=0 mode=0755 type=file content=$(location :ssd_tools/iSmart)",
+        "./usr/bin/SmartCmd uid=0 gid=0 mode=0755 type=file content=$(location :ssd_tools/SmartCmd)",
+    ],
+)
+
+# Create stormond directory
+tar(
+    name = "stormond-dir",
+    mtree = [
+        "./usr/share/stormond uid=0 gid=0 mode=0755 type=dir",
+    ],
+)
+
+oci_image(
+    name = "docker-platform-monitor",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/bin/docker_init.sh"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":files",
+        ":rsyslog-config",
+        ":ssd-tools",
+        ":stormond-dir",
+        "@sonic_platform_common//:dist",
+        "@sonic_platform_daemons//:dist",
+        "@sonic_swss_common//pyext:swsscommon_pkg",
+    ],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-platform-monitor",
+    repo_tags = ["docker-platform-monitor:latest"],
+)

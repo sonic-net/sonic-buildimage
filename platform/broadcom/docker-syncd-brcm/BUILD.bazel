@@ -1,0 +1,120 @@
+load("@rules_deb//distroless:defs.bzl", "flatten")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+
+flatten(
+    name = "debian_packages",
+    deduplicate = True,
+    tars = [
+        "@bookworm//iproute2:data",
+        "@bookworm//libcap2-bin:data",
+        # TODO(bazel-complete): Unify versions of pkg_resources
+        #       We remove this so that it doesn't conflict with pip-installed versions of setuptools.
+        #       Otherwise, we get a cyclic dependency because `pkg_resources` ends up trying to import itself.
+        # "@bookworm//python3-setuptools:data",
+
+        # Broadcom-specific packages
+        "@bookworm//kmod:data",
+        "@bookworm//ethtool:data",
+    ],
+)
+
+flatten(
+    name = "syncd",
+    deduplicate = True,
+    tars = [
+        "@sonic_sairedis//meta:libsaimetadata_pkg",
+        "@sonic_sairedis//lib:libsairedis_dev_pkg",
+        "@sonic_sairedis//vslib:libsaivs_pkg",
+        # TODO(bazel-ready): Add sswsyncd package (provides dsserve and bcmcmd binaries).
+        # Source at platform/broadcom/sswsyncd/, currently built via Make/Debian.
+    ],
+)
+
+filegroup(
+    name = "rdeps",
+    srcs = [
+        ":syncd",
+        "//src/sonic-device-data:sonic-device-data_all_pkg",
+        "@libteam//:libteam-utils_pkg",
+        "@libteam//:libteamdctl0_pkg",
+        "@libyang3//:libyang3_pkg",
+        "@libyang3_py3//:libyang3-python_pkg",
+        "@sonic_host_services//data:sonic-host-services-data_all_pkg",
+        "@sonic_swss_common//pyext:swsscommon_pkg",
+        "@sonic_sysmgr//:sysmgr_pkg",
+        "@sonic_utilities//sonic-utilities-data:sonic-utilities-data_all_pkg",
+    ],
+)
+
+filegroup(
+    name = "py_deps",
+    srcs = [
+        "@sonic_host_services//:sdist",
+        "@sonic_platform_common//:dist",
+        "@sonic_py_common//:dist",
+        "@sonic_utilities//:dist",
+        "@sonic_yang_mgmt//:dist",
+        "@sonic_yang_models//:dist",
+    ],
+)
+
+# TODO(bazel-ready): Verify debug tools.
+# Debug versions of all dependencies should already be built when building with `-c dbg`,
+# but we should verify that they are debuggable.
+#
+# ifeq ($(INSTALL_DEBUG_TOOLS), y)
+# $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
+#                                      $(LIBSWSSCOMMON_DBG) \
+#                                      $(LIBSAIMETADATA_DBG) \
+#                                      $(LIBSAIREDIS_DBG)
+# endif
+
+tar(
+    name = "loose_files",
+    srcs = [
+        "bcmsh",
+        "base_image_files/bcmcmd",
+        "base_image_files/bcm_common",
+        "critical_processes",
+        "start.sh",
+        "start_led.sh",
+        "supervisord.conf",
+        # TODO(bazel-ready): Add rdb-cli binary.
+        # Source at src/rdb-cli/, currently built via Make/Debian.
+        # In the Makefile build, it's copied to /usr/bin/rdb-cli via:
+        #   $(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI)
+    ],
+    mtree = [
+        "./usr/bin/start.sh type=file content=$(location :start.sh)",
+        "./usr/bin/start_led.sh type=file content=$(location :start_led.sh)",
+        "./usr/bin/bcmsh type=file content=$(location :bcmsh)",
+        "./usr/bin/bcmcmd type=file content=$(location :base_image_files/bcmcmd)",
+        "./usr/bin/bcm_common type=file content=$(location :base_image_files/bcm_common)",
+        "./etc/supervisor/conf.d/supervisord.conf type=file content=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes type=file content=$(location :critical_processes)",
+    ],
+)
+
+oci_image(
+    name = "docker-syncd-brcm",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":debian_packages",
+        ":rdeps",
+        ":py_deps",
+        ":loose_files",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-syncd-brcm",
+    repo_tags = ["docker-syncd-brcm:latest"],
+    visibility = ["//visibility:public"],
+)

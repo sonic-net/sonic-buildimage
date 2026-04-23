@@ -1,0 +1,187 @@
+load("@aspect_rules_py//py/unstable:defs.bzl", "py_venv_binary")
+load("@rules_deb//distroless:defs.bzl", "flatten", "group", "passwd")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+load("@tar.bzl", "mutate", "tar")
+
+site_packages(
+    name = "site-packages",
+    srcs = [
+        "@pip//j2cli",
+        "@pip//supervisor",
+        "@pip//supervisord_dependent_startup",
+    ],
+    visibility = [":__subpackages__"],
+)
+
+passwd(
+    name = "passwd",
+    entries = [
+        {
+            "uid": 0,
+            "gid": 0,
+            "home": "/root",
+            "shell": "/bin/bash",
+            "username": "root",
+        },
+    ],
+)
+
+group(
+    name = "group",
+    entries = [
+        {
+            "name": "root",
+            "gid": 0,
+        },
+        {
+            "name": "adm",
+            "gid": 4,
+        },
+    ],
+)
+
+tar(
+    name = "rootfs",
+    srcs = glob([
+        "etc/**/*",
+        "root/*",
+    ]),
+    mutate = mutate(strip_prefix = package_name()),
+)
+
+tar(
+    name = "rootdirslinks",
+    mtree = [
+        "./bin/sh type=link link=/bin/bash",
+        "./var/log/supervisor type=dir",
+        "./etc/supervisor/conf.d type=dir",
+        "./usr/bin/vim.tiny type=link link=/usr/bin/vim",
+    ],
+)
+
+flatten(
+    name = "flat",
+    deduplicate = True,
+    tars = [
+        "@bookworm//base-files",
+        "@bookworm//ca-certificates",
+        "@bookworm//libc6",
+        "@bookworm//libc-bin",
+        "@bookworm//libssl3",
+        "@bookworm//netbase",
+        "@bookworm//openssl",
+        "@bookworm//tzdata",
+        "@bookworm//media-types",
+        "@bookworm//gcc-12-base",
+        "@bookworm//libgcc-s1",
+        "@bookworm//libgomp1",
+        "@bookworm//libgmpxx4ldbl",
+        "@bookworm//libstdc++6",
+        "@bookworm//binutils",
+        "@bookworm//krb5-multidev",
+        ":passwd",
+        ":group",
+        "@bookworm//bash",
+        "@bookworm//coreutils",
+        "@bookworm//curl",
+        "@bookworm//less",
+        "@bookworm//perl",
+        "@bookworm//procps",
+        "@bookworm//python3",
+        "@bookworm//python-is-python3",
+        "@bookworm//python3-dev",
+        "@bookworm//vim-tiny",
+        "@bookworm//rsyslog",
+        "@bookworm//redis-tools",
+        "@bookworm//libdaemon0",
+        "@bookworm//libdbus-1-3",
+        "@bookworm//libjansson4",
+        "@bookworm//iproute2",
+        "@bookworm//net-tools",
+        "@bookworm//jq",
+        "@bookworm//libzmq5",
+        "@bookworm//libwrap0",
+        "@bookworm//libatomic1",
+        "@bookworm//libgmp10",
+
+        # Transitives
+        "@bookworm//libhiredis-dev",
+        "@libnl3//:libnl-3-dev_pkg",
+        "@libnl3//:libnl-genl-3-dev_pkg",
+        "@libnl3//:libnl-route-3-dev_pkg",
+        "@libnl3//:libnl-nf-3-dev_pkg",
+        "@bookworm//libboost-dev",
+        "@bookworm//libboost-serialization-dev",
+        "@bookworm//uuid-dev",
+        "@bookworm//libzmq3-dev",
+        "@bookworm//libpcre2-8-0",
+        "@bookworm//libyang2-dev",
+    ],
+)
+
+oci_image(
+    name = "docker-base-bookworm",
+    architecture = "amd64",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    os = "linux",
+    tars = [
+        ":rootfs",
+        ":rootdirslinks",
+        ":flat",
+        ":site-packages",
+        "@sonic_supervisord_utilities//:dist",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = "docker-base-bookworm",
+    repo_tags = ["docker-base-bookworm:latest"],
+)
+
+# Tools that are expected to exist in debug containers.
+# We do not bake them into a base image, because they should be installed as a layer on top of existing containers.
+# For instance, the `docker-orchagent-dbg` container should be:
+#   - FROM docker-orchagent
+#   - install :debug-packages
+#
+# For now, binary symbols are not stripped in Bazel, so the binaries in the containers should be enough to debug.
+# Note: This is not true for binaries in `sonic-swss`.
+# These are stripped, you should include the package `@sonic_swss//:debian-debug-data` in your image.
+#
+# TODO(bazel-ready): Strip binary symbols and create versions of the containers with debug symbols.
+flatten(
+    name = "debug-packages",
+    tars = [
+        "@bookworm//gdb:data",
+        "@bookworm//gdbserver:data",
+        "@bookworm//vim:data",
+        "@bookworm//openssh-client:data",
+        "@bookworm//sshpass:data",
+        "@bookworm//strace:data",
+    ],
+    deduplicate = True,
+)
+
+# Rdeps necessary to run $(LIBSWSSCOMMON).
+# We don't want every target that depends on $(LIBSWSSCOMMON) to depend
+# on these transitively, because we want to avoid including duplicate packages in layers.
+# TODO(bazel-ready): Replace with a build graph when we have an automatic way to minimize layers.
+flatten(
+    name = "libswsscommon_rdeps",
+    deduplicate = True,
+    tars = [
+        "@libnl3//:libnl-3_pkg",
+        "@libnl3//:libnl-genl-3_pkg",
+        "@libnl3//:libnl-route-3_pkg",
+        "@libnl3//:libnl-nf-3_pkg",
+        "@libnl3//:libnl-cli-3_pkg",
+        "@libyang//:libyang_pkg",
+    ],
+    visibility = ["//:__subpackages__"],
+)

@@ -1,0 +1,73 @@
+module(name = "sonic-sysmgr", version = "0.0.0")
+
+# TODO(bazel-ready): Add buildifier for automatic formatting
+
+bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "tar.bzl", version = "0.9.0")
+bazel_dep(name = "bazel_lib", version = "3.1.1")
+bazel_dep(name = "protobuf", version = "33.4")
+# gnoi C++ proto targets come from sonic-mgmt-common's sonic_go_repos extension.
+bazel_dep(name = "sonic-mgmt-common", version = "1.0.0")
+
+sonic_go_repos = use_extension("@sonic-mgmt-common//:go_repos.bzl", "sonic_go_repos")
+use_repo(sonic_go_repos, "com_github_openconfig_gnoi")
+
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+
+register_toolchains("@sonic_build_infra//toolchains/gcc:host_gcc_toolchain")
+
+bazel_dep(name = "sonic-swss-common", version = "0.0.0", repo_name = "sonic_swss_common")
+
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm"],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "sysmgr_deps",
+    packages = [
+        "libdbus-c++-1-0v5",  # This provides the right library for -ldbus-c++1, which is what we should actually be using.
+        "libdbus-c++-bin",
+        "libdbus-c++-dev",
+    ],
+    suites = ["bookworm", "bookworm-security"],
+)
+use_repo(apt, "sysmgr_deps")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# TODO(bazel-ready): remove once we add support for binaries in rules_distroless.
+# We use an http archive of a deb file instead of `@bookworm` because extract_tar doesn't handle aliases,
+# so we'd have to pass the canonical name of the generated repository by rules_distroless to `extact_tar`,
+# and that canonical name already has the version baked in anyway.
+
+http_archive(
+    name = "libdbus_data",
+    build_file = "//:libdbus_bin.BUILD",
+    sha256 = "557a117138ddf9eea614e1d53562e89a04266770cc8f5a980fb23a6bb84a8622",
+    strip_prefix = "libdbus-c++-bin_0.9.0-16",
+    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/d/dbus-c++/libdbus-c++-bin_0.9.0-16_amd64.deb"],
+)
+
+extract_tar = use_repo_rule("@sonic_build_infra//tar:extract_tar.bzl", "extract_tar")
+
+extract_tar(
+    name = "libdbus_bin",
+    archive = "@libdbus_data//:data.tar.xz",
+    build_file = "//:libdbus_bin.BUILD",
+)

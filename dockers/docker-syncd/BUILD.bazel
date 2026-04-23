@@ -1,0 +1,28 @@
+# Note: Will resolve to the right docker image based on platform, or fail if no platform is specified or if the specified platform is not supported.
+alias(
+    name = "docker-syncd",
+    actual = select({
+        "@sonic_build_infra//config:platform_vs": "//platform/vs/docker-syncd-vs",
+        "@sonic_build_infra//config:platform_broadcom": "//platform/broadcom/docker-syncd-brcm",
+        "//conditions:default": ":empty",
+    }),
+    target_compatible_with = select({
+        "@sonic_build_infra//config:platform_vs": [],
+        "@sonic_build_infra//config:platform_broadcom": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+alias(
+    name = "load",
+    actual = select({
+        "@sonic_build_infra//config:platform_vs": "//platform/vs/docker-syncd-vs:load",
+        "@sonic_build_infra//config:platform_broadcom": "//platform/broadcom/docker-syncd-brcm:load",
+        "//conditions:default": ":empty",
+    }),
+    target_compatible_with = select({
+        "@sonic_build_infra//config:platform_vs": [],
+        "@sonic_build_infra//config:platform_broadcom": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)

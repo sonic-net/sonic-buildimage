@@ -152,12 +152,12 @@ NotificationResponse RebootBE::HandleRebootRequest(
                                    .json_string = ""};
 
   gnoi::system::RebootRequest request;
-  Status status = gpu::JsonStringToMessage(jsonRebootRequest, &request);
+  absl::Status status = gpu::JsonStringToMessage(jsonRebootRequest, &request);
 
   if (!status.ok()) {
     std::string error_string =
         "unable to convert json to rebootRequest protobuf: " +
-        status.message().as_string();
+        std::string(status.message());
     SWSS_LOG_ERROR("%s", error_string.c_str());
     SWSS_LOG_ERROR("json = |%s|", jsonRebootRequest.c_str());
     response.status = swss::StatusCode::SWSS_RC_INTERNAL,
@@ -237,7 +237,7 @@ NotificationResponse RebootBE::HandleStatusRequest(
       m_RebootThread.GetResponse();
 
   std::string json_reboot_response_string;
-  google::protobuf::util::Status status =
+  absl::Status status =
       gpu::MessageToJsonString(reboot_response, &json_reboot_response_string);
 
   NotificationResponse response;
@@ -247,7 +247,7 @@ NotificationResponse RebootBE::HandleStatusRequest(
   } else {
     std::string error_string =
         "unable to convert reboot status response protobuf to json: " +
-        status.message().as_string();
+        std::string(status.message());
     SWSS_LOG_ERROR("%s", error_string.c_str());
     response.status = swss::StatusCode::SWSS_RC_INTERNAL;
     response.json_string = error_string;

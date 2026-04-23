@@ -6,3 +6,8 @@
 !debian/sflowtool.install
 !debian/rules
 !Makefile
+# Bazel module files
+!MODULE.bazel
+!BUILD.bazel
+!*.BUILD
+!.bazelversion

@@ -1,0 +1,125 @@
+alias(
+    name = "libsflow",
+    actual = "@hsflowd_src//:libsflow",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libcjson",
+    actual = "@hsflowd_src//:libcjson",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libcjson_shared",
+    actual = "@hsflowd_src//:libcjson_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libcjson_utils",
+    actual = "@hsflowd_src//:libcjson_utils",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libcjson_utils_shared",
+    actual = "@hsflowd_src//:libcjson_utils_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "libhsflowd",
+    actual = "@hsflowd_src//:libhsflowd",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "hsflowd",
+    actual = "@hsflowd_src//:hsflowd",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "util_netlink",
+    actual = "@hsflowd_src//:util_netlink",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_sonic",
+    actual = "@hsflowd_src//:mod_sonic",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_sonic_shared",
+    actual = "@hsflowd_src//:mod_sonic_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_psample",
+    actual = "@hsflowd_src//:mod_psample",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_psample_shared",
+    actual = "@hsflowd_src//:mod_psample_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_docker",
+    actual = "@hsflowd_src//:mod_docker",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_docker_shared",
+    actual = "@hsflowd_src//:mod_docker_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_dropmon",
+    actual = "@hsflowd_src//:mod_dropmon",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_dropmon_shared",
+    actual = "@hsflowd_src//:mod_dropmon_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_json",
+    actual = "@hsflowd_src//:mod_json",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_json_shared",
+    actual = "@hsflowd_src//:mod_json_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_dnssd",
+    actual = "@hsflowd_src//:mod_dnssd",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "mod_dnssd_shared",
+    actual = "@hsflowd_src//:mod_dnssd_shared",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "hsflowd_pkg",
+    actual = "@hsflowd_src//:hsflowd_pkg",
+    visibility = ["//visibility:public"],
+)

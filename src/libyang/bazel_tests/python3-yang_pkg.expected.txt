@@ -1,0 +1,2 @@
+-rwxr-xr-x  0 0      0     8361936 Jan  1  1970 ./usr/lib/python3/dist-packages/_yang.so
+-rw-r--r--  0 0      0      148718 Jan  1  1970 ./usr/lib/python3/dist-packages/yang.py

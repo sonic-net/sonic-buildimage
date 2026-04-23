@@ -1,0 +1,70 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl//:tar.bzl", "mutate", "tar")
+load("@sonic_build_infra//python:site_packages.bzl", "site_packages")
+
+# Python pip dependencies (excluding libyang which needs special handling)
+site_packages(
+    name = "pip-packages",
+    srcs = [
+        "@pip//bitarray",
+        "@pip//cffi",
+        "@pip//ipaddress",
+        "@pip//jinja2",
+        "@pip//lxml",
+        "@pip//netaddr",
+        "@pip//pyyaml",
+        "@pip//natsort",
+        # sonic-yang-mgmt deps
+        "@pip//xmltodict",
+        "@pip//ijson",
+        "@pip//jsonpointer",
+        "@pip//jsondiff",
+        "@pip//tabulate",
+    ],
+)
+
+# sonic-cfggen entrypoint script
+tar(
+    name = "sonic-cfggen-tar",
+    srcs = ["@sonic_config_engine//:sonic-cfggen"],
+    mtree = [
+        "./usr/local/bin/sonic-cfggen uid=0 gid=0 mode=0755 type=file content=$(location @sonic_config_engine//:sonic-cfggen)",
+    ],
+)
+
+# Copy p4rt_vars.j2 template for testing
+tar(
+    name = "templates",
+    srcs = ["//dockers/docker-sonic-p4rt:p4rt_vars.j2"],
+    mutate = mutate(
+        package_dir = "/usr/share/sonic/templates",
+        strip_prefix = "dockers/docker-sonic-p4rt",
+    ),
+)
+
+oci_image(
+    name = "docker-config-engine-bookworm",
+    base = "//dockers/docker-base-bookworm:docker-base-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        "@sonic_config_engine//:dist",
+        "@sonic_py_common//:dist",
+        "@sonic_yang_mgmt//:dist",
+        "@sonic_swss_common//pyext:swsscommon_pkg",
+        ":pip-packages",
+        "@libyang3_py3//:libyang3-python_pkg",
+        "@libyang3//:libyang3_pkg",
+        ":sonic-cfggen-tar",
+        ":templates",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-config-engine-bookworm",
+    repo_tags = ["docker-config-engine-bookworm:latest"],
+)

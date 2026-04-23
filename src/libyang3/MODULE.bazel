@@ -1,0 +1,51 @@
+module(
+    name = "libyang3",
+    version = "3.12.2",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "rules_cc", version = "0.2.10")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+# Get pcre2 from Debian bookworm
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm"],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "libyang3_deps",
+    packages = [
+        "libpcre2-dev",
+    ],
+    suites = ["bookworm", "bookworm-security"],
+)
+use_repo(apt, "libyang3_deps")
+
+# libyang3 C library source from Debian
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "libyang3_src",
+    build_file = "//:libyang3.BUILD",
+    patch_args = ["-p1"],
+    # Apply patch series from Makefile
+    patches = ["//:patch/0001-pr2362-lyd_validate_noextdeps.patch"],
+    sha256 = "d7b35a5f9f3a5b929b9c9ee0c2b1b63fbef7be788d88f74e1362b85990002db3",
+    strip_prefix = "libyang-3.12.2",
+    urls = ["http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz"],
+)

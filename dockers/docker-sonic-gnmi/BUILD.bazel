@@ -1,0 +1,45 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@tar.bzl", "tar")
+
+# TODO(bazel-ready): Not guaranteed to work yet.
+tar(
+    name = "files",
+    srcs = [
+        "critical_processes",
+        "dialout.sh",
+        "gnmi-native.sh",
+        "start.sh",
+        "supervisord.conf",
+        "telemetry_vars.j2",
+    ],
+    mtree = [
+        # TODO(bazel-ready): Add database_config.json if we're not reading from the main build.
+        "./usr/bin/start.sh type=file contents=$(location :start.sh)",
+        "./usr/bin/gnmi-native.sh type=file contents=$(location :gnmi-native.sh)",
+        "./usr/bin/dialout.sh type=file contents=$(location :dialout.sh)",
+        "./usr/share/sonic/templates/telemetry_vars.j2 type=file contents=$(location :telemetry_vars.j2)",
+        "./etc/supervisor/conf.d/supervisord.conf type=file contents=$(location :supervisord.conf)",
+        "./etc/supervisor/critical_processes type=file contents=$(location :critical_processes)",
+    ],
+)
+
+oci_image(
+    name = "docker-sonic-gnmi",
+    base = "//dockers/docker-config-engine-bookworm",
+    entrypoint = ["/usr/bin/supervisord"],
+    env = {
+        "DEBIAN_FRONTEND": "noninteractive",
+    },
+    tars = [
+        ":files",
+        "@sonic-gnmi//:sonic-gnmi_pkg",
+        "@sonic_swss_common//pyext:swsscommon_dist",
+        "@sonic_swss_common//:sonic-db-cli_pkg",
+    ],
+)
+
+oci_load(
+    name = "load",
+    image = ":docker-sonic-gnmi",
+    repo_tags = ["docker-sonic-gnmi:latest"],
+)

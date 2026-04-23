@@ -1,0 +1,17 @@
+module(
+    name = "sflowtool",
+    version = "5.04",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.10")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "sflowtool_src",
+    build_file = "//:sflowtool.BUILD",
+    sha256 = "918b37a07e6b0b26d538593586ba1ee597cae880e6de0ed978d2171d0183201d",
+    strip_prefix = "sflowtool-6c2963b1c1b75b384ba6c9ce27e6272fdc11dc25",
+    urls = ["https://github.com/sflow/sflowtool/archive/6c2963b1c1b75b384ba6c9ce27e6272fdc11dc25.tar.gz"],
+)

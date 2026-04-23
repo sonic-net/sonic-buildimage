@@ -1,0 +1,59 @@
+module(
+    name = "hsflowd",
+    version = "2.0.51-26",
+)
+
+# TODO(bazel-ready): Some features are not supported because they are not needed for SONiC.
+# - Testing, GCOV and GPROF support.
+# - FEATURES other than "SONIC"
+# - Operating Systems and distros other than Linux Debian (e.g. no RedHat).
+# - DEB metadata, like a changelog.
+
+bazel_dep(name = "rules_cc", version = "0.2.10")
+bazel_dep(name = "tar.bzl", version = "0.8.1")
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+git_override(
+    module_name = "rules_distroless",
+    commit = "ebfd74a2e07b83235e064bb63ace98a1a5223e02",
+    remote = "https://github.com/bazel-contrib/rules_distroless",
+)
+
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm"],
+    uris = ["https://snapshot.debian.org/archive/debian/20251001T023456Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["bookworm-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20251001T023456Z"],
+)
+apt.install(
+    dependency_set = "hsflowd_deps",
+    packages = [
+        "libc6-dev",
+        "libhiredis-dev",
+    ],
+    suites = ["bookworm", "bookworm-security"],
+)
+use_repo(apt, "hsflowd_deps")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "hsflowd_src",
+    build_file = "//:hsflowd.BUILD",
+    patch_args = ["-p1"],
+    patches = [
+        "//:patch/0001-host_sflow_psample.patch",
+        "//:patch/0002-host_sflow_debian.patch",
+        "//:patch/0003-sflow-enabled-drop-monitor-support-for-SONiC.patch",
+        "//:patch/0004-When-interface-removed-just-as-we-discover-it-log-wi.patch",
+    ],
+    sha256 = "789e275ea1867caf28701cbc275805c1ae3ef61fd5d9af10a0ef99f086e17aac",
+    strip_prefix = "host-sflow-2.0.51-26",
+    urls = ["https://github.com/sflow/host-sflow/archive/refs/tags/v2.0.51-26.tar.gz"],
+)

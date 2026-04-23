@@ -72,4 +72,4 @@ if [ -f "$IS_SUPERVISOR" ]; then
     fi
 fi
 
-exec /usr/local/bin/supervisord
+exec "${SUPERVISORD_LOCATION:-/usr/local/bin/supervisord}"

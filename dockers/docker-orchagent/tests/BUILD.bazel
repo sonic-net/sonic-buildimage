@@ -1,0 +1,7 @@
+load("@sonic_build_infra//tar:assert_tar.bzl", "assert_tar")
+
+assert_tar(
+    name = "site-packages_assert",
+    tar = "//dockers/docker-orchagent:site-packages",
+    expected = ":site-packages.expected.txt",
+)

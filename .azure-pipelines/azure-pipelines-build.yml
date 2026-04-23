@@ -130,77 +130,25 @@ jobs:
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
-          if echo $(GROUP_NAME) | grep mellanox; then
-            BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
-          fi
-          if [ $(GROUP_NAME) == pensando ]; then
-            make $BUILD_OPTIONS target/sonic-pensando.tar
-          elif [ $(GROUP_NAME) == vs ]; then
-            if [ $(dbg_image) == yes ]; then
-              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vs.img.gz
-              mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
-            fi
-            if [ $(asan_image) == yes ]; then
-              make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
-              mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
-            fi
-            if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
-              make $BUILD_OPTIONS INCLUDE_KUBERNETES_MASTER=y target/sonic-vs.img.gz
-              gzip -d target/sonic-vs.img.gz
-              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
-              gzip target/sonic-vs.vhdx
-              mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
-              rm target/sonic-vs.img
-            fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
-            make $BUILD_OPTIONS target/docker-ptf.gz
-            if [ $(Build.Reason) != 'PullRequest' ];then
-              gzip -kd target/sonic-vs.img.gz
-              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
-              rm target/sonic-vs.img
-            fi
-          elif [ $(GROUP_NAME) == vpp ]; then
-            if [ $(dbg_image) == yes ]; then
-              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
-              mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
-            fi
-            make $BUILD_OPTIONS target/sonic-vpp.img.gz
-          else
-            if [ $(dbg_image) == yes ]; then
-              make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-dbg.bin
-            fi
-            if [ $(swi_image) == yes ]; then
-              make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi
-            fi
-            if [ $(docker_syncd_rpc_image) == yes ]; then
-              # workaround for issue in rules/sairedis.dep, git ls-files will list un-exist files for cache
-              make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-$(platform_rpc)-rpc.gz
-              pushd ./src/sonic-sairedis/SAI
-              git stash
-              popd
-              if [ $(GROUP_NAME) == broadcom ]; then
-                make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-$(platform_rpc)-dnx-rpc.gz
-                pushd ./src/sonic-sairedis/SAI
-                git stash
-                popd
-              fi
-            fi
-            if [ $(syncd_rpc_image) == yes ]; then
-              make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-rpc.bin
-            fi
-            if [ $(session_monitor) == yes ]; then
-              make $BUILD_OPTIONS ENABLE_SESSION_MONITOR=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-session-monitor.bin
-            fi
-            if [ $(GROUP_NAME) == nvidia-bluefield ]; then
-              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
-            fi
-            make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
-          fi
+          mkdir -p target/rep
+          cd target/rep
+          git clone https://github.com/thesayyn/p4runtime
+          git clone https://github.com/thesayyn/gutil
+          git clone https://github.com/thesayyn/p4-constraints
+          git clone https://github.com/thesayyn/p4c
+          cd -
+          sed -i '4i\    version = "0.0.0",' src/sonic-sairedis/SAI/MODULE.bazel
+
+          BLDENV=bullseye make -f Makefile.work $BUILD_OPTIONS sonic-slave-run SONIC_RUN_CMDS="make docker-start -f slave.mk || sudo service docker start; bazel build //dockers/docker-base-bookworm:load; bash bazel-bin/dockers/docker-base-bookworm/load.sh; docker save docker-base-bookworm:latest | pigz > target/docker-base-bookworm.tar.gz"
+          bazel build //dockers/docker-base-bookworm:load
         displayName: "Build sonic image"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish target as artifact'
+        inputs:
+          PathtoPublish: 'target'
+          ArtifactName: 'drop'
+          publishLocation: 'Container'
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
         timeoutInMinutes: 60
