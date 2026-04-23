@@ -19,7 +19,8 @@ namespace fib { class NextHopGroupFull; }
 char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, 
                                               uint32_t nh_grp_full_count, 
                                               uint32_t depends_count, 
-                                              uint32_t dependents_count);
+                                              uint32_t dependents_count,
+                                              bool is_recurisve);
 char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, 
                                                   uint32_t depends_count, 
                                                   uint32_t dependents_count);
@@ -30,7 +31,8 @@ char* nexthopgroup_to_json(fib::NextHopGroupFull* obj);
 char* nexthopgroupfull_json_from_c_nhg_multi(const struct C_NextHopGroupFull* c_nhg, 
                                               uint32_t nh_grp_full_count, 
                                               uint32_t depends_count, 
-                                              uint32_t dependents_count);
+                                              uint32_t dependents_count,
+                                              bool is_recurisve);
 char* nexthopgroupfull_json_from_c_nhg_singleton(const struct C_NextHopGroupFull* c_nhg, 
                                                   uint32_t depends_count, 
                                                   uint32_t dependents_count);

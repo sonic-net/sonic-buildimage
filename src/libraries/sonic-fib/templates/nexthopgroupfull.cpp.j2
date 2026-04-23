@@ -10,6 +10,35 @@
 using namespace std;
 using namespace fib;
 
+/* Constructor for recursive NH {{ root_struct_name }} */
+{{ root_struct_name }}::{{ root_struct_name }}(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in,
+                union g_addr gateway_in, enum nexthop_types_t type_in,
+                const std::vector<nh_grp_full>& nh_grp_full_list_in,
+                const std::vector<uint32_t>& depends_in,
+                const std::vector<uint32_t>& dependents_in)
+    : id(id_in), key(key_in), nhg_flags(nhg_flags_in), nh_grp_full_list(nh_grp_full_list_in), depends(depends_in), dependents(dependents_in)
+{
+
+    FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] {{ root_struct_name }} construction started (multi-nexthop) with id: %d, key: %d, nhg_flags: %d", id_in, key_in, nhg_flags_in);
+    for (size_t i = 0; i < nh_grp_full_list_in.size(); i++) {
+        FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] nh_grp_full_list item %d: id= %d weight %d num_direct %d", i, nh_grp_full_list_in[i].id, static_cast<unsigned int>(nh_grp_full_list_in[i].weight), nh_grp_full_list_in[i].num_direct);
+    }
+    for (size_t i = 0; i < depends_in.size(); i++) {
+        FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] depends item %d : %d ", i, depends_in[i]);
+    }
+    for (size_t i = 0; i < dependents_in.size(); i++) {
+        FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] dependents item %d : %d", i, dependents_in[i]);
+    }
+
+    // For recursive case, set gate and type
+    this->gate = gateway_in;
+    this->type = type_in;
+    memset(&src, 0, sizeof(src));
+    memset(&rmap_src, 0, sizeof(rmap_src));
+
+    FIB_LOG(fib::LogLevel::DEBUG, "[CPP DEBUG] {{ root_struct_name }} construction finished (multi-nexthop) for id: %d", id_in);
+}
+
 /* Constructor for multi-path {{ root_struct_name }} */
 {{ root_struct_name }}::{{ root_struct_name }}(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in,
                 const std::vector<nh_grp_full>& nh_grp_full_list_in,

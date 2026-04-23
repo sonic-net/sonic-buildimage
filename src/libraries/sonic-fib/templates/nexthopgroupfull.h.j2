@@ -89,12 +89,19 @@ namespace fib {
         // Add default constructor
         NextHopGroupFull() = default;
 
-        // Constructors
+        // Constructors for recursive NH
+        NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in, union g_addr gateway_in, enum nexthop_types_t type_in,
+                         const std::vector<nh_grp_full>& nh_grp_full_list_in,
+                         const std::vector<uint32_t>& depends_in,
+                         const std::vector<uint32_t>& dependents_in);
+
+        // Constructors for ECMP
         NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in,
                          const std::vector<nh_grp_full>& nh_grp_full_list_in,
                          const std::vector<uint32_t>& depends_in,
                          const std::vector<uint32_t>& dependents_in);
 
+        // Constructors for regular nexthop
         NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, enum nexthop_types_t type_in,
                          vrf_id_t vrf_id_in, ifindex_t ifindex_in, std::string ifname_in,
                          const std::vector<uint32_t>& depends_in,
