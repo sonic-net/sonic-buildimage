@@ -10,7 +10,7 @@ cpp-14-aarch64-linux-gnu==14.2.0-19
 cpp-14-x86-64-linux-gnu==14.2.0-19
 cpp-aarch64-linux-gnu==4:14.2.0-1
 cpp-x86-64-linux-gnu==4:14.2.0-1
-dpkg-dev==1.22.21
+dpkg-dev==1.22.22
 g++==4:14.2.0-1
 g++-14==14.2.0-19
 g++-14-aarch64-linux-gnu==14.2.0-19
@@ -26,13 +26,13 @@ gcc-x86-64-linux-gnu==4:14.2.0-1
 libasan8==14.2.0-19
 libbinutils==2.44-3
 libboost-serialization1.83.0==1.83.0-4.2
-libc-dev-bin==2.41-12+deb13u1
-libc6-dev==2.41-12+deb13u1
+libc-dev-bin==2.41-12+deb13u2
+libc6-dev==2.41-12+deb13u2
 libcc1-0==14.2.0-19
 libcrypt-dev==1:4.4.38-1
 libctf-nobfd0==2.44-3
 libctf0==2.44-3
-libdpkg-perl==1.22.21
+libdpkg-perl==1.22.22
 libexpat1-dev==2.7.1-2
 libgcc-14-dev==14.2.0-19
 libgcrypt20==1.11.0-7

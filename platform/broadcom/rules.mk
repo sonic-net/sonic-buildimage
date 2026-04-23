@@ -9,7 +9,7 @@ include $(PLATFORM_PATH)/platform-modules-dell.mk
 include $(PLATFORM_PATH)/platform-modules-arista.mk
 include $(PLATFORM_PATH)/platform-modules-nexthop.mk
 #include $(PLATFORM_PATH)/platform-modules-ingrasys.mk
-#include $(PLATFORM_PATH)/platform-modules-accton.mk
+include $(PLATFORM_PATH)/platform-modules-accton.mk
 #include $(PLATFORM_PATH)/platform-modules-alphanetworks.mk
 #include $(PLATFORM_PATH)/platform-modules-inventec.mk
 include $(PLATFORM_PATH)/platform-modules-cel.mk
@@ -28,6 +28,7 @@ include $(PLATFORM_PATH)/docker-syncd-brcm.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-brcm.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th.mk
+include $(PLATFORM_PATH)/docker-syncd-brcm-legacy-th-rpc.mk
 ifeq ($(INCLUDE_PDE), y)
 include $(PLATFORM_PATH)/docker-pde.mk
 include $(PLATFORM_PATH)/sonic-pde-tests.mk

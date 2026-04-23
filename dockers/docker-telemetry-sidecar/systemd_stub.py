@@ -10,13 +10,10 @@ import argparse
 from typing import Dict, List
 
 from sonic_py_common.sidecar_common import (
-    get_bool_env_var, logger, SyncItem,
+    get_bool_env_var, logger, SyncItem, run_nsenter,
+    read_file_bytes_local, host_read_bytes, host_write_atomic,
     db_hget, db_hgetall, db_hset, db_del, sync_items, SYNC_INTERVAL_S
 )
-
-# ───────────── telemetry.service sync paths ─────────────
-CONTAINER_TELEMETRY_SERVICE = "/usr/share/sonic/systemd_scripts/telemetry.service"
-HOST_TELEMETRY_SERVICE = "/lib/systemd/system/telemetry.service"
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
@@ -72,8 +69,7 @@ logger.log_notice(f"telemetry source set to {_TELEMETRY_SRC}")
 
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
-    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/k8s_pod_control.sh"),
-    SyncItem(CONTAINER_TELEMETRY_SERVICE, HOST_TELEMETRY_SERVICE, mode=0o644),
+    SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-telemetry-sidecar/k8s_pod_control.sh"),
 ]
 
 # Compile regex patterns once at module level to avoid repeated compilation
@@ -149,10 +145,6 @@ def _get_branch_name() -> str:
 
 
 POST_COPY_ACTIONS = {
-    "/lib/systemd/system/telemetry.service": [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "telemetry"],
-    ],
     "/usr/local/bin/telemetry.sh": [
         ["sudo", "docker", "stop", "telemetry"],
         ["sudo", "docker", "rm", "telemetry"],
@@ -165,6 +157,10 @@ POST_COPY_ACTIONS = {
     ],
     "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py": [
         ["sudo", "systemctl", "restart", "system-health"],
+    ],
+    "/usr/share/sonic/scripts/docker-telemetry-sidecar/k8s_pod_control.sh": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "telemetry"],
     ],
 }
 
@@ -215,8 +211,58 @@ def reconcile_config_db_once() -> None:
 # Host destination for service_checker.py
 HOST_SERVICE_CHECKER = "/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"
 
+# TO-be-deleted in next rounds releases, as long as telemetry.service rollouted have been restored.
+# Previous sidecar versions overwrote /lib/systemd/system/telemetry.service
+# with a variant containing "User=root" (needed for kubectl).  Now that kubectl
+# is gone we no longer sync that file, but hosts upgraded from the old sidecar
+# still carry the stale unit.  This one-shot cleanup restores the original
+# build-template version (User=admin) packed inside this container.
+_CONTAINER_TELEMETRY_SERVICE = "/usr/share/sonic/systemd_scripts/telemetry.service"
+_HOST_TELEMETRY_SERVICE = "/lib/systemd/system/telemetry.service"
+_STALE_UNIT_CLEANUP_ENABLED = get_bool_env_var("STALE_UNIT_CLEANUP_ENABLED", default=True)
+_stale_unit_cleaned = False
+
+def _cleanup_stale_service_unit() -> None:
+    """If the host telemetry.service still has User=root from a prior sidecar, restore it."""
+    global _stale_unit_cleaned
+    if _stale_unit_cleaned:
+        return
+    if not _STALE_UNIT_CLEANUP_ENABLED:
+        _stale_unit_cleaned = True
+        return
+
+    host_bytes = host_read_bytes(_HOST_TELEMETRY_SERVICE)
+    if host_bytes is None:
+        return  # transient failure or file missing; retry next cycle
+
+    host_content = host_bytes.decode("utf-8", errors="ignore")
+    if "\nUser=root\n" not in f"\n{host_content}\n":
+        _stale_unit_cleaned = True  # unit is clean; no further retries needed
+        return
+
+    clean_bytes = read_file_bytes_local(_CONTAINER_TELEMETRY_SERVICE)
+    if clean_bytes is None:
+        logger.log_error(f"Cannot read restore file {_CONTAINER_TELEMETRY_SERVICE}")
+        return  # container file missing; retry next cycle
+
+    logger.log_notice("Stale sidecar telemetry.service detected (User=root); restoring from packed file")
+    if not host_write_atomic(_HOST_TELEMETRY_SERVICE, clean_bytes, 0o644):
+        logger.log_error("Failed to restore telemetry.service")
+        return  # write failed; retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "daemon-reload"])
+    if rc != 0:
+        logger.log_error(f"daemon-reload failed after telemetry.service restore: {err}")
+        return  # retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "telemetry"])
+    if rc != 0:
+        logger.log_error(f"telemetry restart failed after telemetry.service restore: {err}")
+        return  # retry next cycle
+    _stale_unit_cleaned = True
+    logger.log_notice("Restored telemetry.service and restarted")
+
 
 def ensure_sync() -> bool:
+    _cleanup_stale_service_unit()
     branch_name = _get_branch_name()
 
     if branch_name in ("202411", "202412", "202505"):

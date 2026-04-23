@@ -27,5 +27,7 @@ configure system ip management pattern {{ mgmt_if.ipv6 }}
 {% endif %}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
+{# Use ifname globally to avoid MAC-as-Port-ID; lldpmgrd sets alias per port later. #}
+configure lldp portidsubtype ifname
 {# pause lldpd operations until all interfaces are well configured, resume command will run in lldpmgrd #}
 pause

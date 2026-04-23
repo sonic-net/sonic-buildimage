@@ -193,6 +193,10 @@ def ss(tmp_path, monkeypatch):
     # Use "master" because it falls through to the default (non-branch-specific) path.
     monkeypatch.setattr(ss, "_get_branch_name", lambda: "master")
 
+    # Reset the one-shot cleanup flag so each test starts fresh
+    ss._stale_unit_cleaned = False
+    monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
+
     # Provide a default container_checker in both filesystems so the auto-appended
     # SyncItem from ensure_sync() is always satisfied and is a no-op.
     container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"default-checker"
@@ -308,32 +312,111 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
 
 
-def test_telemetry_service_syncs_to_host_when_different(ss):
-    ss, container_fs, host_fs, commands, config_db = ss
 
-    # Prepare container unit content and host old content
-    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
-    host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
+# ─────────────────────────── Tests for stale telemetry.service cleanup ───────────────────────────
 
-    # Only include the telemetry service item to make the assertion clear
-    ss.SYNC_ITEMS[:] = [
-        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
-    ]
+STALE_UNIT = b"""[Unit]
+Description=Telemetry container
 
-    # Add post actions for telemetry.service
-    ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "telemetry"],
-    ]
+[Service]
+User=root
+ExecStartPre=/usr/local/bin/telemetry.sh start
+ExecStart=/usr/local/bin/telemetry.sh wait
+"""
 
-    ok = ss.ensure_sync()
-    assert ok is True
-    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
+CLEAN_UNIT = b"""[Unit]
+Description=Telemetry container
 
-    # Verify systemctl actions were invoked
+[Service]
+User=admin
+ExecStartPre=/usr/local/bin/telemetry.sh start
+ExecStart=/usr/local/bin/telemetry.sh wait
+"""
+
+
+def test_cleanup_stale_unit_restores_from_packed_file(ss):
+    """When host telemetry.service has User=root, cleanup overwrites it with the packed clean file."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # Host file should now be the clean version
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+    # daemon-reload and restart should follow
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
     assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
+
+
+def test_cleanup_skips_when_user_admin(ss):
+    """When host telemetry.service already has User=admin, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # No write should have occurred
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_skips_when_file_missing(ss):
+    """When host telemetry.service doesn't exist, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_runs_only_once(ss):
+    """The cleanup is a one-shot; second call should be a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+
+    # Revert host to stale to prove second call is a no-op
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    # Should still be stale because the flag prevented re-run
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == STALE_UNIT
+
+def test_cleanup_retries_after_transient_read_failure(ss):
+    """When host_read_bytes fails transiently, cleanup retries on the next call."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+    # First call: host file missing (transient failure)
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+    assert ss_mod._stale_unit_cleaned is False  # flag NOT set; will retry
+
+    # Second call: host file now present with stale content
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+    assert ss_mod._stale_unit_cleaned is True
+
+
+def test_cleanup_disabled_by_env(ss, monkeypatch):
+    """When STALE_UNIT_CLEANUP_ENABLED=false, cleanup is skipped entirely."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "_STALE_UNIT_CLEANUP_ENABLED", False)
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    # File should NOT be overwritten
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == STALE_UNIT
+    # Flag set so it won't retry
+    assert ss_mod._stale_unit_cleaned is True
 
 
 # ─────────────────────────── New tests for CONFIG_DB reconcile ───────────────────────────

@@ -107,6 +107,8 @@ class SonicCfgDescriber:
             return []
         if isinstance(key, dict):
             if key.get('description', {}).get('text') is not None:
+                if desc:
+                    desc += "\n"
                 desc += "\n".join(textwrap.wrap(re.sub(r"\s+", " ",
                                   key['description']['text']), width=50))
             if key.get('mandatory') is not None:
@@ -118,7 +120,13 @@ class SonicCfgDescriber:
                     reference = self.get_referenced_table_field(
                                           key['type']['path'].get('@value'))
                 elif key['type'].get('@name') == 'union':
-                    for types in key['type']['type']:
+                    union_types = key['type']['type']
+                    if isinstance(union_types, list):
+                        type_list = union_types
+                    else:
+                        type_list = [union_types]
+
+                    for types in type_list:
                         if 'path' in types:
                             val = self.get_referenced_table_field(
                                           types['path'].get('@value'))
