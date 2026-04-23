@@ -85,7 +85,7 @@ void EventConsume::run()
 {
 
     SWSS_LOG_ENTER();
-    event_handle_t hsub = events_init_subscriber();
+    event_handle_t hsub = events_init_subscriber(false, 1000);
 
     if (hsub == nullptr) {
         SWSS_LOG_ERROR("Failed to initialize event subscriber");
@@ -102,6 +102,10 @@ void EventConsume::run()
 
         int rc = event_receive(hsub, evt);
         if (rc != 0) {
+            if (rc == 11) {
+                // Timeout - loop will check g_run
+                continue;
+            }
             SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
             continue;
         }

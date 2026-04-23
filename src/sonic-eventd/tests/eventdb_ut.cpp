@@ -94,6 +94,7 @@ void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst)
 class EventDbFixture : public ::testing::Test { 
     protected:
     void SetUp() override {
+        g_run = true;
         zctx = zmq_ctx_new();
         EXPECT_TRUE(NULL != zctx);
 
@@ -103,10 +104,10 @@ class EventDbFixture : public ::testing::Test {
 
         /* Starting proxy */
         EXPECT_EQ(0, pxy->init());
-        DBConnector eventDb("EVENT_DB", 0, true);
-        //delete any entries in the EVENT_DB        
-        delete_evdb(eventDb);
-        evtConsume= new EventConsume(&eventDb, event_profile, event_db_profile);
+        eventDb = new DBConnector("EVENT_DB", 0, true);
+        //delete any entries in the EVENT_DB
+        delete_evdb(*eventDb);
+        evtConsume= new EventConsume(eventDb, event_profile, event_db_profile);
         consumerThread = std::thread(&EventConsume::run, evtConsume);
     }
     
@@ -120,15 +121,19 @@ class EventDbFixture : public ::testing::Test {
         delete evtConsume;
         evtConsume = nullptr;
 
-        delete pxy;
-        pxy= nullptr;
+        delete eventDb;
+        eventDb = nullptr;
 
         zmq_ctx_term(zctx);
         zctx = nullptr;
 
+        delete pxy;
+        pxy= nullptr;
+
         clear_eventdb_data();
     }
     EventConsume *evtConsume;
+    DBConnector *eventDb;
     void *zctx;
     eventd_proxy *pxy;
     std::thread consumerThread;
