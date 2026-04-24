@@ -45,7 +45,7 @@
 #       --city CITY          City (default: Bengaluru)
 #       --org NAME           Organization name (default: Nexthop AI)
 #       --ou OU              Organizational unit (default: BMC)
-#       --client-cn CN       Client Common Name for mTLS (default: bmc-client)
+#       --client-cn CN       Client Common Name for mTLS (default: bmcweb)
 #       --bmc-user USER      BMC SSH user (default: admin)
 #       --container NAME     Docker container name (default: redfish)
 #   -h, --help               Show this help message
@@ -62,7 +62,7 @@ STATE="Karnataka"
 CITY="Bengaluru"
 ORG="Nexthop AI"
 OU="BMC"
-CLIENT_CN="bmc-client"
+CLIENT_CN="bmcweb"
 INSTALL=false
 BMC_IP=""
 BMC_USER="admin"
@@ -164,15 +164,24 @@ if $INSTALL; then
         fi
     done
 
-    # Check for sshpass
-    if ! command -v sshpass &>/dev/null; then
-        echo "ERROR: sshpass is required for --install. Install with: sudo apt install sshpass"
+    # Check if SSH key auth works, otherwise require sshpass
+    if ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 "${BMC_USER}@${BMC_IP}" true 2>/dev/null; then
+        echo "Using SSH key authentication"
+        SCP="scp -o StrictHostKeyChecking=no"
+        SSH="ssh -o StrictHostKeyChecking=no"
+    elif command -v sshpass &>/dev/null; then
+        echo "Using sshpass for authentication"
+        export SSHPASS="$BMC_PASS"
+        SCP="sshpass -e scp -o StrictHostKeyChecking=no"
+        SSH="sshpass -e ssh -o StrictHostKeyChecking=no"
+    else
+        echo "ERROR: Cannot authenticate to BMC."
+        echo ""
+        echo "Either:"
+        echo "  1. Set up SSH key auth:  ssh-copy-id ${BMC_USER}@${BMC_IP}"
+        echo "  2. Install sshpass:      sudo apt install sshpass"
         exit 1
     fi
-
-    export SSHPASS="$BMC_PASS"
-    SCP="sshpass -e scp -o StrictHostKeyChecking=no"
-    SSH="sshpass -e ssh -o StrictHostKeyChecking=no"
 
     echo "==========================================================="
     echo " INSTALLING CERTIFICATES"
@@ -275,7 +284,7 @@ if [ -n "$MISSING" ]; then
     echo "Usage: $0 -i <IP> [options]"
     echo ""
     echo "Example:"
-    echo "  $0 -i 10.61.1.186 -c 10.61.1.186 --client-cn admin"
+    echo "  $0 -i <BMC_IP> -c <BMC_IP> --client-cn bmcweb"
     echo ""
     echo "Run with -h for full usage."
     exit 1
