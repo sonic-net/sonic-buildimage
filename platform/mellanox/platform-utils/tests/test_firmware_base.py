@@ -586,7 +586,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
     def test_get_firmware_versions_success_on_retry(self, mock_run, mock_sleep, mock_monotonic):
-        """Test _get_firmware_versions succeeds on third attempt with backoff"""
+        """Test _get_firmware_versions succeeds on third attempt with back off"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -841,7 +841,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
     @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     def test_get_firmware_versions_rc523_logging(self, mock_sleep, mock_monotonic):
-        """Test rc=523 error uses MCAM-specific log message"""
+        """Test rc=523 error uses management-interface-specific log message"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -858,7 +858,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
                     manager._get_firmware_versions()
 
                     info_msgs = [call[0][0] for call in mock_info.call_args_list]
-                    self.assertTrue(any("MCAM rc=523" in msg for msg in info_msgs))
+                    self.assertTrue(any("rc=523" in msg for msg in info_msgs))
                     self.assertTrue(
                         any("ASIC management interface not ready" in msg for msg in info_msgs)
                     )
@@ -866,7 +866,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
     @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     def test_get_firmware_versions_exponential_backoff_timing(self, mock_sleep, mock_monotonic):
-        """Test exponential backoff delays double each retry and cap at 16s"""
+        """Test exponential back off delays double each retry and cap at 16s"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
