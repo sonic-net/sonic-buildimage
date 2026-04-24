@@ -263,38 +263,72 @@ class FirmwareManagerBase(Process):
             FirmwareManagerError: If query fails or versions cannot be retrieved
         """
         cmd = ['mlxfwmanager', '--query-format', 'XML', '-d', self.pci_id]
-        result = self._run_command(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise FirmwareManagerError("Query returned non-zero exit code")
+        env = self._get_env()
+        result = self._run_command(cmd, env=env, capture_output=True, text=True)
 
-        root = ET.fromstring(result.stdout)
+        output = result.stdout or ''
+
+        if result.returncode != 0:
+            raise FirmwareManagerError(f"Query returned non-zero exit code: {output}")
+
+        # Extract XML block from potentially verbose debug output
+        xml_start = output.find('<Devices>')
+        xml_end = output.find('</Devices>')
+        if xml_start < 0 or xml_end < 0:
+            raise FirmwareManagerError(f"No XML device data found in query output: {output}")
+
+        xml_str = output[xml_start:xml_end + len('</Devices>')]
+        root = ET.fromstring(xml_str)
         current_version = root.find('.//Device/Versions/FW').get('current')
         psid = root.find('.//Device').get('psid')
 
-        if not current_version or not psid:
-            raise FirmwareManagerError("Version or PSID not found in response")
+        if not current_version or current_version == '--' or not psid:
+            raise FirmwareManagerError(f"Version or PSID not found in response: {output}")
 
         available_version = self._get_available_firmware_version(psid)
         return current_version, available_version
 
     def _get_firmware_versions(self) -> Tuple[Optional[str], Optional[str]]:
-        """Get current and available firmware versions with retry logic."""
-        query_retry_count = 0
-        query_retry_count_max = 10
+        """Get current and available firmware versions with exponential backoff retry."""
+        max_wait = 60
+        delay = 1
+        max_delay = 16
+        start_time = time.monotonic()
+        attempt = 0
 
-        while query_retry_count < query_retry_count_max:
+        while True:
+            attempt += 1
             try:
                 return self._query_firmware_versions()
             except Exception as e:
-                if query_retry_count >= query_retry_count_max - 1:
-                    self.logger.error(f"Failed to get firmware versions after {query_retry_count_max} attempts: {str(e)}")
+                elapsed = time.monotonic() - start_time
+                remaining = max_wait - elapsed
+
+                if remaining <= 0:
+                    self.logger.error(
+                        f"Failed to get firmware versions for {self.pci_id} "
+                        f"after {attempt} attempts ({elapsed:.0f}s elapsed): {str(e)}"
+                    )
                     return None, None
-                self.logger.info(f"Unable to get firmware versions (attempt {query_retry_count + 1}/{query_retry_count_max}): {str(e)}, retrying...")
 
-            query_retry_count += 1
-            time.sleep(1)
+                sleep_time = min(delay, remaining)
+                error_str = str(e)
 
-        return None, None
+                if 'rc = 523' in error_str:
+                    self.logger.info(
+                        f"ASIC management interface not ready for {self.pci_id} "
+                        f"(MCAM rc=523): {error_str} "
+                        f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
+                    )
+                else:
+                    self.logger.info(
+                        f"Unable to get firmware versions for {self.pci_id} "
+                        f"(attempt {attempt}): {error_str} "
+                        f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
+                    )
+
+                time.sleep(sleep_time)
+                delay = min(delay * 2, max_delay)
 
     @abstractmethod
     def _get_available_firmware_version(self, psid: str) -> Optional[str]:
