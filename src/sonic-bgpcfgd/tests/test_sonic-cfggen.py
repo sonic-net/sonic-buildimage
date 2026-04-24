@@ -218,3 +218,45 @@ def test_prefix_list_del_radian():
              "bgpd/radian/del_radian.conf.j2",
              "radian/del_radian.json",
              "radian/del_radian.conf")
+
+def test_bgp_confed_ut2_multi_asic():
+    run_test("BGP Confederation Upper T2 Multi-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.json",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.conf")
+
+def test_bgp_confed_ut2_single_asic():
+    run_test("BGP Confederation Upper T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_upper_t2.json",
+             "bgpd.main.conf.j2/single_asic_upper_t2.conf")
+
+def test_bgp_confed_lt2_single_asic():
+    run_test("BGP Confederation Lower T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lt2.json",
+             "bgpd.main.conf.j2/single_asic_lt2.conf")
+
+def test_bgp_confed_ft2_single_asic():
+    run_test("BGP Confederation Fabric T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_ft2.json",
+             "bgpd.main.conf.j2/single_asic_ft2.conf")
+
+def test_bgp_confed_lrh_single_asic():
+    run_test("BGP Confederation LowerRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lrh.json",
+             "bgpd.main.conf.j2/single_asic_lrh.conf")
+
+def test_bgp_confed_frh_single_asic():
+    run_test("BGP Confederation FabricRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_frh.json",
+             "bgpd.main.conf.j2/single_asic_frh.conf")
+
+def test_bgp_confed_urh_single_asic():
+    run_test("BGP Confederation UpperRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_urh.json",
+             "bgpd.main.conf.j2/single_asic_urh.conf")

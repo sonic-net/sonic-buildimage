@@ -16,11 +16,7 @@
     exit 1
 }
 
-## Password for the default user
-[ -n "$PASSWORD" ] || {
-    echo "Error: no or empty PASSWORD"
-    exit 1
-}
+## Password for the default user (empty is allowed; means no password on console, SSH blocked)
 
 ## Include common functions
 . functions.sh
@@ -165,9 +161,6 @@ fi
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
 
-## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
-
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
 sudo cp files/initramfs-tools/arista-convertfs $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
@@ -299,7 +292,12 @@ sudo cp files/docker/docker.service.conf $_
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
-echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+if [ -n "$PASSWORD" ]; then
+    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+else
+    sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
+fi
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -502,6 +500,14 @@ rm /files/etc/ssh/sshd_config/Banner
 set /files/etc/ssh/sshd_config/Banner /etc/issue
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
+rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/PermitEmptyPasswords no
+ins #comment before /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PermitEmptyPasswords]] "Deny SSH login with empty password; use console to set a real password first"
+rm /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/AllowAgentForwarding no
+ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::AllowAgentForwarding]] "Disable SSH agent forwarding - not required for SONiC operation"
 save
 quit
 EOF
