@@ -1,5 +1,5 @@
 [Unit]
-Description=Delays management framework container until SONiC has started
+Description=Delays netconf-server container until SONiC has started
 PartOf=netconf-server.service
 
 [Timer]

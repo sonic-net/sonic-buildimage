@@ -184,7 +184,7 @@ INCLUDE_SFLOW = y
 INCLUDE_MGMT_FRAMEWORK = y
 
 # INCLUDE_NETCONF_SERVER - build docker-sonic-netconf server for NETCONF support
-INCLUDE_NETCONF_SERVER = y
+INCLUDE_NETCONF_SERVER ?= n
 
 # ENABLE_HOST_SERVICE_ON_START - enable sonic-host-server for mgmt-framework and/or
 # gnmi containers to access host functionality by default
