@@ -1,0 +1,591 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import logging
+import click
+import threading
+import sonic_platform
+from sonic_py_common import device_info, logger, multi_asic
+import sonic_platform_base.sonic_sfp.sfputilhelper
+import utilities_common.cli as clicommon
+from cpo_platform_config import OE_INDEX_LIST, RLM_INDEX_LIST, PORT_INDEX_LIST
+import socket
+import json
+
+EXIT_FAIL = -1
+EXIT_SUCCESS = 0
+ERROR_PERMISSIONS = 1
+ERROR_CHASSIS_LOAD = 2
+ERROR_SFPUTILHELPER_LOAD = 3
+ERROR_PORT_CONFIG_LOAD = 4
+ERROR_NOT_IMPLEMENTED = 5
+ERROR_INVALID_PORT = 6
+ERROR_CPOUTIL_LOAD = 7
+
+# Global platform-specific Chassis class instance
+platform_chassis = None
+
+# Global platform-specific sfputil class instance
+platform_sfputil = None
+
+# Global platform-specific cpoutil class instance
+cpo_util = None
+
+if __name__ == "__main__":
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(sys.stdout))
+else:
+    logger = logging.getLogger(__name__)
+
+"""
+logger.debug("This is a debug message")
+logger.info("This is an info message")
+logger.warning("This is a warning message")
+logger.error("This is an error message")
+logger.critical("This is a critical message")
+"""
+
+revision_log = """\nMost Recent:\n
+10/05/2023 Rev 00.01
+\t- Initial Creation
+"""
+
+def eth_key(key):
+    key_len = len("Ethernet")
+    if len(key) < key_len:
+        return 0
+    return int(key[key_len:])
+
+# Instantiate SfpUtilHelper class
+def load_sfputilhelper():
+    global platform_sfputil
+    # we have to make use of sfputil for some features
+    # even though when new platform api is used for all vendors.
+    # in this sense, we treat it as a part of new platform api.
+    # we have already moved sfputil to sonic_platform_base
+    # which is the root of new platform api.
+    platform_sfputil = sonic_platform_base.sonic_sfp.sfputilhelper.SfpUtilHelper()
+    if not platform_sfputil:
+        return False
+    return True
+
+def load_port_config():
+    try:
+        if multi_asic.is_multi_asic():
+            # For multi ASIC platforms we pass DIR of port_config_file_path and the number of asics
+            (platform_path, hwsku_path) = device_info.get_paths_to_platform_and_hwsku_dirs()
+
+            # Load platform module from source
+            platform_sfputil.read_all_porttab_mappings(hwsku_path, multi_asic.get_num_asics())
+        else:
+            # For single ASIC platforms we pass port_config_file_path and the asic_inst as 0
+            port_config_file_path = device_info.get_path_to_port_config_file()
+            platform_sfputil.read_porttab_mappings(port_config_file_path, 0)
+    except Exception as e:
+        print("Error reading port info ({})".format(str(e)))
+        return False
+    return True
+
+# Instantiate platform-specific Chassis class
+def load_platform_chassis():
+    global platform_chassis
+    # Load new platform api class
+    try:
+        platform_chassis = sonic_platform.platform.Platform().get_chassis()
+    except Exception as e:
+        print("Failed to instantiate Chassis due to {}".format(repr(e)))
+    if not platform_chassis:
+        return False
+    return True
+
+def print_all_valid_port_values():
+    click.echo("Valid values for port: {}\n".format(str(platform_sfputil.logical)))
+
+def logical_port_name_to_physical_port_list(port_name):
+    if port_name.startswith("Ethernet"):
+        if platform_sfputil.is_logical_port(port_name):
+            return platform_sfputil.get_logical_to_physical(port_name)
+        else:
+            click.echo("Error: Invalid port '{}'".format(port_name))
+            return None
+    else:
+        return [int(port_name)]
+
+def logical_port_to_physical_port_index(port_name):
+    if not platform_sfputil.is_logical_port(port_name):
+        click.echo("Error: invalid port '{}'\n".format(port_name))
+        print_all_valid_port_values()
+        sys.exit(ERROR_INVALID_PORT)
+
+    physical_port = logical_port_name_to_physical_port_list(port_name)[0]
+    if physical_port is None:
+        click.echo("Error: No physical port found for logical port '{}'".format(port_name))
+        sys.exit(EXIT_FAIL)
+
+    return physical_port
+
+try:
+    from cpoutil import cpoutilbase
+    cpo_util = cpoutilbase()
+except KeyError:
+    cpo_util = None
+
+def get_dict_str_format(indict, indent):
+    output = ''
+    if indict != None:
+        for key, value in indict.items():
+            if type(value) == dict:
+                output += "{}{}:\n{}".format(indent, key, get_dict_str_format(value, indent + (' ' * 4)))
+            else:
+                output += "{}{}: {}\n".format(indent, key, value)
+    return output
+
+def send_cmd(msg, strip=False):
+    client_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock_file = '/tmp/cpo_socket'
+    client_socket.connect(sock_file)
+    client_socket.sendall(bytes(msg, encoding="utf-8"))
+    chunk_size = 4096
+    response = b''
+    while True:
+        try:
+            data = client_socket.recv(chunk_size)
+            if not data:
+                break
+            response += data
+        except ConnectionResetError:
+            break
+    ret = json.loads(response.decode('utf-8'))
+    retval = ret.get("retval", False)
+    info = ret.get("info", None)
+    if retval:
+        if isinstance(info, dict):
+            if not strip:
+                click.echo(json.dumps(info, indent=4))
+            else:
+                click.echo(get_dict_str_format(indict=info, indent=''))
+        elif isinstance(info, str) and len(info)>0:
+            click.echo(info)
+    else:
+        click.echo("rc: {}, msg: {}".format(retval, info))
+    client_socket.close()
+
+def _get_rlm_list(paramater):
+    return get_list(paramater, "rlm")
+
+def _get_oe_list(paramater):
+    return get_list(paramater, "oe")
+
+def _get_port_list(paramater):
+    return get_list(paramater, "port")
+
+def get_list(paramater:str, list_type:str):
+    allowed_list = {
+        "OE_INDEX_LIST": OE_INDEX_LIST,
+        "RLM_INDEX_LIST": RLM_INDEX_LIST,
+        "PORT_INDEX_LIST": PORT_INDEX_LIST
+    }
+    INDEX_LIST = allowed_list.get("{}_INDEX_LIST".format(list_type.upper()))
+    if paramater == None:
+        return INDEX_LIST, ""
+    if isinstance(paramater, int) == True:
+        if paramater not in INDEX_LIST:
+            return None, "invalid paramater!"
+        else:
+            return [paramater], None
+    if isinstance(paramater, str) == False:
+        return None, "invalid paramater!"
+    paramater = paramater.lower()
+    if paramater == "all":
+        return INDEX_LIST, ""
+    num_list = list()
+    try:
+        _str_list = paramater.split(',')
+        for area_str in _str_list:
+            _num_list = None
+            _str_list = area_str.split('-')
+            _str_list = [item.replace(list_type.lower(), '') for item in _str_list]
+            _str_list = [item.replace(list_type.upper(), '') for item in _str_list]
+            _num_list = [int(item) for item in _str_list]
+            if len(_num_list) == 2:
+                _start = min(_num_list)
+                _end = max(_num_list)
+                if _start not in INDEX_LIST:
+                    return None, "invalid paramater!"
+                if _end not in INDEX_LIST:
+                    return None, "invalid paramater!"
+                _num_list = list(range(_start, _end+1))
+            else:
+                if _num_list[0] not in INDEX_LIST:
+                    return None, "invalid paramater!"
+                _num_list = [_num_list[0]]
+            num_list.extend(_num_list)
+    except Exception as e:
+        return None, str(e)
+    return num_list, ""
+
+_global_options = [
+    click.option('-r', '--rlm', default=0, type=click.IntRange(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]), help='RLM Index Number Ranges from {} to {}'.format(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]))
+]
+
+def global_options(func):
+    global _global_options
+    for option in reversed(_global_options):
+        func = option(func)
+    return func
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help', '-?'])
+
+@click.group(cls=clicommon.AliasedGroup, context_settings=CONTEXT_SETTINGS)
+@click.pass_context
+def cli(ctx):
+    if os.geteuid() != 0:
+        click.echo("Root privileges are required for this operation")
+        sys.exit(ERROR_PERMISSIONS)
+
+    # Load platform-specific Chassis class
+    if not load_platform_chassis():
+        sys.exit(ERROR_CHASSIS_LOAD)
+
+    # Load SfpUtilHelper class
+    if not load_sfputilhelper():
+        sys.exit(ERROR_SFPUTILHELPER_LOAD)
+
+    # Load port info
+    if not load_port_config():
+        sys.exit(ERROR_PORT_CONFIG_LOAD)
+
+@cli.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def show():
+    pass
+
+@show.command('portmap')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=False)
+def show_portmap(port_index):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"port_index_list":port_index_list, "cmd":"show_portmap"}))
+    send_cmd(cmd)
+
+@show.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def rlm():
+    """Display status of RLM"""
+    pass
+
+@show.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def interface():
+    """Display status of interface"""
+    pass
+
+@interface.command('dom')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=False)
+@click.option('-s', '--strip', metavar='<>', is_flag=True)
+@click.option('--json-format-output', '-j', is_flag=True, help="JSON format output")
+def show_dom(port_index, strip, json_format_output):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"port_index_list":port_index_list, "output_format": "", "cmd":"show_interface_dom_info"}))
+    if json_format_output:
+        cmd = (str({"port_index_list":port_index_list, "output_format": "json", "cmd":"show_interface_dom_info"}))
+    send_cmd(cmd, strip)
+
+@interface.command('speed')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=False)
+def show_speed(port_index):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"port_index_list":port_index_list, "cmd":"show_interface_speed"}))
+    send_cmd(cmd)
+
+@interface.command('tx_disable')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=False)
+@click.option('-l', '--lane', metavar='<Lane Number Ranges from 0 to 7>', default=None, type=click.IntRange(0, 7))
+@click.option('-s', '--strip', metavar='<>', is_flag=True)
+def show_tx_disable(port_index, lane, strip):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    if lane != None:
+        lane_index_list = [lane]
+    else:
+        lane_index_list = None
+    cmd = (str({"port_index_list":port_index_list, "lane_index_list": lane_index_list, "cmd":"show_tx_output"}))
+    send_cmd(cmd, strip)
+
+@rlm.command('eeprom')
+@click.argument('rlm', metavar='<RLM Number Ranges from {} to {}>'.format(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]), required=False)
+@click.option('--json-format-output', '-j', is_flag=True, help="JSON format output")
+def show_eeprom(rlm, json_format_output):
+    """Display EEPROM data of RLM"""
+    global cpo_util
+    if cpo_util == None:
+        click.echo("Not supported!")
+        return -1
+
+    rlm_list, msg = _get_rlm_list(rlm)
+    if rlm_list == None:
+        click.echo(msg)
+        return -1
+
+    for rlm in rlm_list:
+        oe = cpo_util.get_oe_by_rlm(rlm)
+        rlm_name = cpo_util.get_rlm_name(rlm)
+        if json_format_output:
+            click.echo(json.dumps({"{}(OE{})".format(rlm_name, oe): cpo_util.get_rlm_info_dict(rlm)}))
+            continue
+        click.echo("{}(OE{}):".format(rlm_name, oe))
+        rlm_info_dict = cpo_util.get_rlm_info_dict(rlm)
+        if type(rlm_info_dict) == dict:
+            rlm_info_dict = cpo_util.get_dict_str_format(indict=rlm_info_dict, indent=' ' * 8)
+        click.echo(rlm_info_dict)
+
+@rlm.command('presence')
+@click.argument('rlm', metavar='<RLM Number Ranges from {} to {}>'.format(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]), required=False)
+def show_presence(rlm):
+    """Display presence of RLM"""
+    global cpo_util
+    if cpo_util == None:
+        click.echo("Not supported!")
+        return -1
+
+    rlm_list, msg = _get_rlm_list(rlm)
+    if rlm_list == None:
+        click.echo(msg)
+        return -1
+
+    for rlm in rlm_list:
+        oe = cpo_util.get_oe_by_rlm(rlm)
+        rlm_name = cpo_util.get_rlm_name(rlm)
+        if cpo_util.get_rlm_presence(rlm) == False:
+            click.echo("{}(OE{}): Not Presence.".format(rlm_name, oe))
+        else:
+            click.echo("{}(OE{}): Presence.".format(rlm_name, oe))
+
+@rlm.command('lpmode')
+@click.argument('rlm', metavar='<RLM Number Ranges from {} to {}>'.format(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]), required=False)
+@click.option('-s', '--strip', metavar='<>', is_flag=True)
+def show_lpmode(rlm, strip):
+    """Display laser power-mode of RLM"""
+    rlm_list, msg = _get_rlm_list(rlm)
+    if rlm_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"rlm_index_list":rlm_list, "cmd":"show_rlm_power_mode"}))
+    send_cmd(cmd, strip)
+
+@show.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def oe():
+    """Display status of OE"""
+    pass
+
+@oe.command('status')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=True)
+def show_oe_status(oe):
+    """Show oe module status"""
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    threads = list()
+    for oe in oe_list:
+        if (int(oe) not in OE_INDEX_LIST):
+            click.echo("invalid oe!")
+            return -1
+        cmd = (str({"oe_index":oe, "cmd":"show_status"}))
+        threads.append(threading.Thread(target=send_cmd, args=(cmd,)))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+@oe.command('temperature')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=False)
+def show_oe_temperature(oe):
+    """Show oe module status"""
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"oe_index_list":oe_list, "cmd":"show_oe_temperature"}))
+    send_cmd(cmd)
+
+@oe.command('speed')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=False)
+def show_speed(oe):
+    """Display speed of OE"""
+    global cpo_util
+    if cpo_util == None:
+        click.echo("Not supported!")
+        return -1
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    port_index_list = cpo_util.get_port_index_list()
+    for port_index in port_index_list:
+        speed = cpo_util.get_speed(port_index)
+        click.echo("{}: {}".format(port_index, speed))
+
+@cli.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def config():
+    pass
+
+@config.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def rlm():
+    pass
+
+# rlm: 1-16
+@rlm.command('lpmode')
+@click.argument('rlm', metavar='<RLM Number Ranges from {} to {}>'.format(RLM_INDEX_LIST[0], RLM_INDEX_LIST[-1]), required=True)
+@click.argument('mode', metavar='<RLM Power Mode>', required=True, type=click.Choice(['full-power', 'half-power']))
+def rlm_lpmode(rlm, mode):
+    """Config RLM laser power-mode"""
+    rlm_index_list, msg = _get_rlm_list(rlm)
+    if rlm_index_list == None:
+        click.echo(msg)
+        return -1
+    threads = list()
+    for rlm_index in rlm_index_list:
+        cmd = (str({"rlm_index_list":[rlm_index], "cmd":"set_rlm_power_mode", "power_mode": mode}))
+        threads.append(threading.Thread(target=send_cmd, args=(cmd,)))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+@config.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def oe():
+    pass
+
+@oe.command('enabled')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=True)
+def oe_enabled(oe):
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    threads = list()
+    for oe in oe_list:
+        if (int(oe) not in OE_INDEX_LIST):
+            click.echo("invalid oe!")
+            return -1
+        cmd = (str({"oe_index":oe, "cmd":"enter_mission_mode", "manully": True}))
+        threads.append(threading.Thread(target=send_cmd, args=(cmd,)))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+@oe.command('disabled')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=True)
+def oe_disabled(oe):
+    """Config OE disabled"""
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    threads = list()
+    for oe in oe_list:
+        if (int(oe) not in OE_INDEX_LIST):
+            click.echo("invalid oe!")
+            return -1
+        cmd = (str({"oe_index":oe, "cmd":"exit_mission_mode", "manully": True}))
+        threads.append(threading.Thread(target=send_cmd, args=(cmd,)))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+@oe.command('reset')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=True)
+@click.option('-H', '--Hard', is_flag=True, help='Use hardware reset')
+def reset_oe(oe, hard):
+    """Reset OE"""
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    cmd = (str({"oe_index_list":oe_list, "cmd":"oe_reset", "hardware_reset": hard}))
+    send_cmd(cmd)
+
+@cli.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def cdb():
+    pass
+
+@cdb.command('load')
+@click.argument('filename', type=click.Path(exists=True, readable=True))
+@click.option('-s', '--size', default=2048, type=click.IntRange(1, 2048))
+@click.option('-a', '--all', is_flag=True)
+@click.option('-r', '--rlm', default=None, type=click.IntRange(0, 1))
+@click.option('-b', '--bypass', is_flag=True, help='Bypass serial number checking')
+@click.option('-oe', default=0, type=click.IntRange(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), help='OE Number Ranges from {} to {}'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]))
+def cdb_load_general_cli(filename, size, oe, all, rlm, bypass):
+    """Load cdb image"""
+    verify = True
+    if bypass:
+        verify = False
+    if all:
+        oe = None
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    for _oe in oe_list:
+        cpo_util.oe_fw_upgrade(_oe, filename, size, rlm, verify)
+
+@cdb.command('laserPwr')
+@click.argument('oe', metavar='<OE Number Ranges from {} to {}>'.format(OE_INDEX_LIST[0], OE_INDEX_LIST[-1]), required=True)
+def cdb_mpd_sum(oe):
+    """Display EIC Laser Input Power"""
+    oe_list, msg = _get_oe_list(oe)
+    if oe_list == None:
+        click.echo(msg)
+        return -1
+    for _oe in oe_list:
+        cpo_util.oe_dump_laser_pwr(_oe)
+
+@config.group(cls=clicommon.AbbreviationGroup, context_settings=CONTEXT_SETTINGS)
+def interface():
+    pass
+
+@interface.command('tx_disable')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=True)
+@click.option('-l', '--lane', metavar='<Lane Number Ranges from 0 to 7>', default=None, type=click.IntRange(0, 7))
+def set_tx_disable(port_index, lane):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    if lane != None:
+        lane_index_list = [lane]
+    else:
+        lane_index_list = None
+    cmd = (str({"port_index_list":port_index_list, "lane_index_list": lane_index_list, "cmd":"set_tx_output", "turn_on": False}))
+    send_cmd(cmd)
+
+@interface.command('tx_enable')
+@click.argument('port_index', metavar='<Port Number Ranges from {} to {}>'.format(PORT_INDEX_LIST[0], PORT_INDEX_LIST[-1]), required=True)
+@click.option('-l', '--lane', metavar='<Lane Number Ranges from 0 to 7>', default=None, type=click.IntRange(0, 7))
+def set_tx_disable(port_index, lane):
+    port_index_list, msg = _get_port_list(port_index)
+    if port_index_list == None:
+        click.echo(msg)
+        return -1
+    if lane != None:
+        lane_index_list = [lane]
+    else:
+        lane_index_list = None
+    cmd = (str({"port_index_list":port_index_list, "lane_index_list": lane_index_list, "cmd":"set_tx_output", "turn_on": True}))
+    send_cmd(cmd)
+
+if __name__ == '__main__':
+    cli()

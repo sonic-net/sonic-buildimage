@@ -85,7 +85,8 @@ __all__ = [
     "DEV_LEDS",
     "fanloc",
     "PLATFORM_POWER_CONF",
-    "POWER_CTRL_CONF"
+    "POWER_CTRL_CONF",
+    "PRODUCT_NAME_CONF",
 ]
 
 # driver blacklist parameter
@@ -160,6 +161,9 @@ PLATFORM_POWER_CONF = []
 
 # power control config
 POWER_CTRL_CONF = {}
+
+# product name config
+PRODUCT_NAME_CONF = {}
 
 ################################ fancontrol parameter###################################
 MONITOR_TEMP_MIN = 38
