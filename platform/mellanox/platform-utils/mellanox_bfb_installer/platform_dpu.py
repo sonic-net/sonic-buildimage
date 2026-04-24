@@ -174,8 +174,8 @@ def get_dpus_detected_pci_bus_ids() -> Dict[str, Dict[str, str]]:
             elif actual_iface_type == DpuInterfaceEnum.PCIE_INT.value:
                 if expected_iface_type == DpuInterfaceEnum.RSHIM_PCIE_INT.value:
                     logger.error(
-                        "PCI device detected for DPU %s RC7 pci device at bus id %s is device id "
-                        "%s, not a BFSOC (%s)",
+                        "PCI device detected for DPU %s at bus id %s is the CX7 device id %s, not "
+                        "the expected BFSOC / rshim device id %s",
                         *(dpu, bus_id, device_id, BFSOC_DEV_ID),  # *(...) is autoformatter hack
                     )
                 detected_bus_ids[dpu][actual_iface_type] = bus_id

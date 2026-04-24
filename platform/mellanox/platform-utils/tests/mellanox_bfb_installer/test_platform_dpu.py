@@ -329,7 +329,8 @@ class TestPlatformDpu(unittest.TestCase):
 
         mock_log.error.assert_called_once()
         self.assertEqual(
-            "PCI device detected for DPU %s RC7 pci device at bus id %s is device id %s, not a BFSOC (%s)",
+            "PCI device detected for DPU %s at bus id %s is the CX7 device id %s, not "
+            "the expected BFSOC / rshim device id %s",
             mock_log.error.call_args[0][0],
         )
         self.assertEqual(mock_log.error.call_args[0][1], "dpu0")
