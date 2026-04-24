@@ -13,10 +13,6 @@ ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start
 ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop
 RestartSec=30
-MemoryHigh=300M
-MemoryMax=600M
-CPUQuota=600m
-CPUWeight=300
 
 [Install]
 WantedBy=sonic.target
