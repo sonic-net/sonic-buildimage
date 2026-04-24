@@ -2,11 +2,13 @@
 MPATH       := $($(BRCM_OPENNSL_KERNEL)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai-modules.mk platform/broadcom/sai-modules.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(MPATH))
+SMDEP_FILES := $(addprefix $(MPATH)/,$(shell cd $(MPATH) && git ls-files))
 
 $(BRCM_OPENNSL_KERNEL)_CACHE_MODE  := GIT_CONTENT_SHA 
 $(BRCM_OPENNSL_KERNEL)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(BRCM_OPENNSL_KERNEL)_DEP_FILES   := $(DEP_FILES)
+$(BRCM_OPENNSL_KERNEL)_SMDEP_FILES := $(SMDEP_FILES)
+$(BRCM_OPENNSL_KERNEL)_SMDEP_PATHS := $(MPATH)
 
 # SAI bcm modules for DNX family ASIC
 MPATH_DNX   := $($(BRCM_DNX_OPENNSL_KERNEL)_SRC_PATH)

@@ -147,3 +147,7 @@
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
 	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "platform/broadcom/saibcm-modules"]
+	path = platform/broadcom/saibcm-modules
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.34-xgs
