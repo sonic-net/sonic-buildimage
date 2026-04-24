@@ -20,7 +20,7 @@
     },
     "CHASSIS_MODULE_LINECARD_WITH_SWITCH_HOST_FIELDS": {
         "desc": "power_on_delay and graceful_shutdown_timeout must only be set on SWITCH-HOST, not LINE-CARD",
-        "eStrKey": "Must",
-        "eStr": ["power_on_delay"]
+        "eStrKey": "None",
+        "eStr": ["power_on_delay is only applicable to SWITCH-HOST"]
     }
 }
