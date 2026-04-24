@@ -316,7 +316,7 @@ class FirmwareManagerBase(Process):
 
                 if 'rc = 523' in error_str:
                     self.logger.info(
-                        f"ASIC management interface not ready for {self.pci_id} "
+                        f"ASIC not ready for {self.pci_id} "
                         f"(rc=523): {error_str} "
                         f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
                     )

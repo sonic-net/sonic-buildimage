@@ -841,7 +841,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
     @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     def test_get_firmware_versions_rc523_logging(self, mock_sleep, mock_monotonic):
-        """Test rc=523 error uses management-interface-specific log message"""
+        """Test rc=523 error uses ASIC-not-ready log message"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -860,7 +860,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
                     info_msgs = [call[0][0] for call in mock_info.call_args_list]
                     self.assertTrue(any("rc=523" in msg for msg in info_msgs))
                     self.assertTrue(
-                        any("ASIC management interface not ready" in msg for msg in info_msgs)
+                        any("ASIC not ready" in msg for msg in info_msgs)
                     )
 
     @patch('mellanox_fw_manager.firmware_base.time.monotonic')
