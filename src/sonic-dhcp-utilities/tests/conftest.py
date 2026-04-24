@@ -40,5 +40,5 @@ def mock_parse_port_map_alias(scope="function"):
                       new_callable=PropertyMock), \
          patch.object(DhcpServCfgGenerator, "lease_update_script_path", return_value="/etc/kea/lease_update.sh",
                       new_callable=PropertyMock), \
-         patch.object(DhcpServCfgGenerator, "lease_path", return_value="/tmp/kea-lease.csv", new_callable=PropertyMock):
+         patch.object(DhcpServCfgGenerator, "lease_path", return_value="/var/lib/kea/kea-lease.csv", new_callable=PropertyMock):
         yield mock_map

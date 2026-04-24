@@ -31,7 +31,7 @@ expected_kea_config = {
         "lease-database": {
             "type": "memfile",
             "persist": True,
-            "name": "/tmp/kea-lease.csv",
+            "name": "/var/lib/kea/kea-lease.csv",
             "lfc-interval": 3600
         },
         "subnet4": [
