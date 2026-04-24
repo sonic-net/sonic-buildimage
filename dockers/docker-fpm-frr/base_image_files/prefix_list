@@ -43,25 +43,17 @@ read_device_metadata() {
     fi
 }
 
-check_supported_device() {
-    read_device_metadata
-    if [[ ("$DEVICE_TYPE" == "SpineRouter" && "$DEVICE_SUBTYPE" == "UpstreamLC") || \
-          "$DEVICE_TYPE" == "UpperSpineRouter" ]]; then
-        return
-    fi
-    echo "Operation is not supported on this device type." >&2
-    exit 1
-}
-
 declare -A prefix_type_devices
 prefix_type_devices=(
     ["ANCHOR_PREFIX"]="SpineRouter:UpstreamLC UpperSpineRouter"
+    ["SUPPRESS_PREFIX"]=""
 )
 
 validate_device_for_type() {
     local prefix_type=$1
-    read_device_metadata
     local allowed="${prefix_type_devices[$prefix_type]}"
+    [[ -z "$allowed" ]] && return
+    read_device_metadata
     local device_id="$DEVICE_TYPE:$DEVICE_SUBTYPE"
     for entry in $allowed; do
         if [[ "$entry" == *":"* ]]; then
@@ -175,7 +167,7 @@ handle_prefix_list_single() {
 }
 
 prefix_list_operations=("add" "remove" "status")
-supported_prefix_types=("ANCHOR_PREFIX")
+supported_prefix_types=("ANCHOR_PREFIX" "SUPPRESS_PREFIX")
 # Main script execution
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     display_help
@@ -184,7 +176,6 @@ fi
 if [ "$1" != "status" ]; then
     check_root_privileges
 fi
-check_supported_device
 skip_chassis_supervisor
 
 validate_operation $1 $2

@@ -4,6 +4,10 @@ import os
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from . import swsscommon_test
+
+import sys
+sys.modules["swsscommon"] = swsscommon_test
+
 from swsscommon import swsscommon
 
 from bgpcfgd.managers_prefix_list import PrefixListMgr
@@ -69,7 +73,7 @@ def test_del_handler_ipv6(mocked_log_debug):
     del_handler_test(m, "ANCHOR_PREFIX|fc02:100::/64")
     mocked_log_debug.assert_called_with("PrefixListMgr:: Anchor prefix fc02:100::/64 removed from radian configuration")
 
-def constructor_unsupported_device():
+def constructor_generic_device():
     cfg_mgr = MagicMock()
     common_objs = {
         'directory': Directory(),
@@ -79,17 +83,49 @@ def constructor_unsupported_device():
     }
     m = PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
     m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost",
-                    {"bgp_asn": "65100", "type": "SpineRouter", "subtype": "DownstreamLC"})
+                    {"bgp_asn": "65100", "type": "ToRRouter", "subtype": ""})
     return m
 
 @patch('bgpcfgd.managers_prefix_list.log_warn')
 def test_unsupported_prefix_type(mocked_log_warn):
-    m = constructor()
+    m = constructor_generic_device()
     set_handler_test(m, "UNKNOWN_TYPE|10.0.0.0/24", {})
     mocked_log_warn.assert_called_with("PrefixListMgr:: Prefix type 'UNKNOWN_TYPE' is not supported")
 
 @patch('bgpcfgd.managers_prefix_list.log_warn')
 def test_anchor_prefix_wrong_device(mocked_log_warn):
-    m = constructor_unsupported_device()
+    m = constructor_generic_device()
     set_handler_test(m, "ANCHOR_PREFIX|192.168.0.0/24", {})
-    mocked_log_warn.assert_called_with("PrefixListMgr:: Device type SpineRouter/DownstreamLC not supported for ANCHOR_PREFIX")
+    mocked_log_warn.assert_called_with("PrefixListMgr:: Device type ToRRouter/ not supported for ANCHOR_PREFIX")
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_ipv4(mocked_log_debug):
+    m = constructor_generic_device()
+    set_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24", {})
+    mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix 10.0.0.0/24 added to suppress_prefix configuration")
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_ipv6(mocked_log_debug):
+    m = constructor_generic_device()
+    set_handler_test(m, "SUPPRESS_PREFIX|fc00::/64", {})
+    mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix fc00::/64 added to suppress_prefix configuration")
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_del_ipv4(mocked_log_debug):
+    m = constructor_generic_device()
+    set_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24", {})
+    del_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24")
+    mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix 10.0.0.0/24 removed from suppress_prefix configuration")
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_del_ipv6(mocked_log_debug):
+    m = constructor_generic_device()
+    set_handler_test(m, "SUPPRESS_PREFIX|fc00::/64", {})
+    del_handler_test(m, "SUPPRESS_PREFIX|fc00::/64")
+    mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix fc00::/64 removed from suppress_prefix configuration")
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_any_device(mocked_log_debug):
+    m = constructor()
+    set_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24", {})
+    mocked_log_debug.assert_called_with("PrefixListMgr:: Suppress prefix 10.0.0.0/24 added to suppress_prefix configuration")

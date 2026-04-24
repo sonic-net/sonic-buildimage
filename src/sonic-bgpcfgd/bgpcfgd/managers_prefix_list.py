@@ -15,6 +15,14 @@ PREFIX_TYPE_CONFIG = {
         "log_label": "Anchor prefix",
         "log_label_target": "radian",
     },
+    "SUPPRESS_PREFIX": {
+        "add_template": "bgpd/suppress_prefix/add_suppress_prefix",
+        "del_template": "bgpd/suppress_prefix/del_suppress_prefix",
+        "allowed_devices": None,
+        "prefix_list_name": lambda ipv: "SUPPRESS_IPV4_PREFIX" if ipv == "ip" else "SUPPRESS_IPV6_PREFIX",
+        "log_label": "Suppress prefix",
+        "log_label_target": "suppress_prefix",
+    },
 }
 
 class PrefixListMgr(Manager):
@@ -36,6 +44,8 @@ class PrefixListMgr(Manager):
         )
 
     def _is_device_allowed(self, device_type, device_subtype, allowed_list):
+        if allowed_list is None:
+            return True
         for allowed_type, allowed_subtype in allowed_list:
             if device_type == allowed_type:
                 if allowed_subtype is None or device_subtype == allowed_subtype:
@@ -62,6 +72,8 @@ class PrefixListMgr(Manager):
             return False
 
         data["bgp_asn"] = bgp_asn
+        data["device_type"] = device_type
+        data["device_subtype"] = device_subtype
         data["prefix_list_name"] = type_cfg["prefix_list_name"](data["ipv"])
 
         template_key = type_cfg["add_template"] if add else type_cfg["del_template"]
