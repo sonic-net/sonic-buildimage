@@ -6,7 +6,7 @@ include $(PLATFORM_PATH)/platform-modules-dell.dep
 include $(PLATFORM_PATH)/platform-modules-arista.dep
 include $(PLATFORM_PATH)/platform-modules-nexthop.dep
 #include $(PLATFORM_PATH)/platform-modules-ingrasys.dep
-#include $(PLATFORM_PATH)/platform-modules-accton.dep
+include $(PLATFORM_PATH)/platform-modules-accton.dep
 #include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
 #include $(PLATFORM_PATH)/platform-modules-inventec.dep
 include $(PLATFORM_PATH)/platform-modules-cel.dep
