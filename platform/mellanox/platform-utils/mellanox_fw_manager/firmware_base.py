@@ -289,7 +289,7 @@ class FirmwareManagerBase(Process):
         return current_version, available_version
 
     def _get_firmware_versions(self) -> Tuple[Optional[str], Optional[str]]:
-        """Get current and available firmware versions with exponential backoff retry."""
+        """Get current and available firmware versions with exponential back off retry."""
         max_wait = 60
         delay = 1
         max_delay = 16
@@ -317,7 +317,7 @@ class FirmwareManagerBase(Process):
                 if 'rc = 523' in error_str:
                     self.logger.info(
                         f"ASIC management interface not ready for {self.pci_id} "
-                        f"(MCAM rc=523): {error_str} "
+                        f"(rc=523): {error_str} "
                         f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
                     )
                 else:
