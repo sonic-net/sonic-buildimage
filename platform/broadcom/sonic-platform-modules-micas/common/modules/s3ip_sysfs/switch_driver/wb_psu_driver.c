@@ -20,6 +20,7 @@
 
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include "wb_module.h"
 #include "dfd_cfg.h"
@@ -353,7 +354,11 @@ static int dfd_get_psu_fan_speed_cal_str(int power_type, char *psu_buf, int buf_
         return -DFD_RV_DEV_NOTSUPPORT;
     }
     mem_clear(psu_buf, buf_len);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
     strlcpy(psu_buf, speed_cal, buf_len);
+#else
+    strscpy(psu_buf, speed_cal, buf_len);
+#endif
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu speed cal match ok, speed_cal: %s\n", psu_buf);
     return DFD_RV_OK;
 }
@@ -421,7 +426,11 @@ static int dfd_psu_product_name_decode(int power_type, char *psu_buf, int buf_le
         return -DFD_RV_DEV_NOTSUPPORT;
     }
     mem_clear(psu_buf, buf_len);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
     strlcpy(psu_buf, p_decode_name, buf_len);
+#else
+    strscpy(psu_buf, p_decode_name, buf_len);
+#endif
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu name match ok, display psu name: %s\n", psu_buf);
     return DFD_RV_OK;
 }
@@ -947,4 +956,3 @@ int dfd_clear_psu_blackbox(unsigned int psu_index, uint8_t value)
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu_index: %u, clear blackbox info success\n", psu_index);
     return DFD_RV_OK;
 }
-

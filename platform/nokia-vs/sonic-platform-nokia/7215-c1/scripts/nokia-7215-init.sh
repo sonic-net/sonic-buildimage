@@ -190,7 +190,7 @@ load_kernel_drivers() {
     sudo insmod /lib/modules/${KVER}/kernel/extra/nokia_7215_ixs_c1_cpld.ko
     fi
     sudo insmod /lib/modules/${KVER}/kernel/extra/cn9130_cpu_thermal_sensor.ko
-    sudo insmod /lib/modules/${KVER}/kernel/extra/nokia_console_fpga.ko
+    sudo insmod /lib/modules/${KVER}/kernel/extra/mule.ko
     sudo insmod /lib/modules/${KVER}/kernel/extra/cn9130_led.ko
 }
 
@@ -303,6 +303,8 @@ ip link set tmpeth2 name eth1
 
 for i in 1 2 3; do
     ip link set eth$i down
+    ethtool -K eth$i rxhash on
+    ethtool -X eth$i weight 1 1 0 1
 done
 
 exit 0

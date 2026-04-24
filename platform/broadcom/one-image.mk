@@ -7,7 +7,9 @@ $(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie
 $(SONIC_ONE_IMAGE)_INSTALLS += $(PDDF_PLATFORM_MODULE)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(FLASHROM)
-$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
+$(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
+                               $(ARISTA_PLATFORM_MODULE_ALL) \
+                               $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_Z9264F_PLATFORM_MODULE) \
                                $(DELL_S5212F_PLATFORM_MODULE) \
                                $(DELL_S5224F_PLATFORM_MODULE) \
@@ -22,7 +24,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_N3248PXE_PLATFORM_MODULE) \
                                $(DELL_N3248TE_PLATFORM_MODULE) \
                                $(DELL_E3224F_PLATFORM_MODULE) \
-			       $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_Z9864F_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_54XC_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_64XC_PLATFORM_MODULE) \
                                $(INGRASYS_S9100_PLATFORM_MODULE) \
@@ -94,6 +97,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_32D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H6_64_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H6_128_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X1B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X4_PLATFORM_MODULE) \

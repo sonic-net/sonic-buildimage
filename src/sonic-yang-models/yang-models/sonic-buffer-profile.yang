@@ -13,7 +13,7 @@ module sonic-buffer-profile {
         "SONiC";
 
     description
-        "SONIC BUFFER PROFILE";
+        "Named buffer configuration profiles with pool reference, size, and thresholds.";
 
     revision 2021-07-01 {
         description
@@ -25,7 +25,11 @@ module sonic-buffer-profile {
 
         container BUFFER_PROFILE {
 
+            description "Configures named buffer profiles that define pool binding, reserved size, and admission thresholds.";
+
             list BUFFER_PROFILE_LIST {
+
+                description "A named buffer profile entry.";
                 key "name";
 
                 leaf name {
@@ -35,20 +39,20 @@ module sonic-buffer-profile {
 
                 leaf static_th {
                     type uint64;
-                    description "The maximum size of the buffer pool the port can occupy";
+                    description "Static threshold in bytes for the maximum buffer pool occupancy.";
                 }
 
                 leaf dynamic_th {
                     type int32 {
                         range "-8..7";
                     }
-                    description "The maximum proportion of the free size of the buffer pool the port can occupy (Alpha value)";
+                    description "Dynamic threshold alpha value controlling the maximum proportion of free buffer pool space.";
                 }
 
                 leaf size {
                     mandatory true;
                     type uint64;
-                    description "Reserved Size";
+                    description "Reserved buffer size in bytes for this profile.";
                 }
 
                 leaf pool {
@@ -56,25 +60,25 @@ module sonic-buffer-profile {
                     type leafref {
                         path "/bpl:sonic-buffer-pool/bpl:BUFFER_POOL/bpl:BUFFER_POOL_LIST/bpl:name";
                     }
-                    description "Buffer Pool name defined in BUFFER_POOL";
+                    description "Reference to the buffer pool this profile draws from.";
                 }
 
                 leaf xon_offset {
                     type uint64;
                     default 0;
-                    description "Xon Offset Threshold for ingress PG. Triggered if total buffer usage <= max(xon, total buffer limit - xon_offset)";
+                    description "Xon offset threshold in bytes; PFC resume is triggered when buffer usage falls to max(xon, buffer_limit - xon_offset).";
                 }
 
                 leaf xon {
                     type uint64;
                     default 0;
-                    description "Xon Threshold for ingress PG";
+                    description "Xon threshold in bytes for PFC resume on the ingress priority group.";
                 }
 
                 leaf xoff {
                     type uint64;
                     default 0;
-                    description "Xoff Threshold for ingress PG";
+                    description "Xoff threshold in bytes for PFC pause generation on the ingress priority group.";
                 }
 
                 leaf headroom_type {
@@ -83,7 +87,7 @@ module sonic-buffer-profile {
                         enum static;
                         enum dynamic;
                     }
-                    description "Profile is dynamically calculated or user configured";
+                    description "Whether the headroom is dynamically calculated or statically configured by the user.";
                 }
 
                 leaf packet_discard_action {
@@ -91,7 +95,7 @@ module sonic-buffer-profile {
                         enum drop;
                         enum trim;
                     }
-                    description "Action on failure to admit a packet to Shared Buffer/MMU";
+                    description "Action taken when a packet cannot be admitted to the shared buffer (drop or trim for congestion telemetry).";
                 }
             }
         }

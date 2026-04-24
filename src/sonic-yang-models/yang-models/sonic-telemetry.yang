@@ -25,9 +25,10 @@ module sonic-telemetry {
 
         container TELEMETRY {
 
-            description "TELEMETRY TABLE part of config_db.json";
+            description "gRPC streaming telemetry server configuration.";
 
             container certs {
+                description "TLS certificate paths for the telemetry server.";
 
                 leaf ca_crt {
                     type string {
@@ -53,6 +54,7 @@ module sonic-telemetry {
             }
 
             container gnmi {
+                description "gNMI server operational settings.";
 
                 leaf client_auth {
                     type boolean;

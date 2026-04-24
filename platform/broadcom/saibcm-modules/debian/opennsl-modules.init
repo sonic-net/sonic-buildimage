@@ -54,7 +54,7 @@ function load_kernel_modules()
         modprobe linux-user-bde
         modprobe psample
 
-        modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100
+        modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100 use_napi=$use_napi
         modprobe linux-knet-cb
         modprobe linux_ngbde
     fi
@@ -92,6 +92,7 @@ function load_platform_env()
     # Set the default configuration for dmasize and usemsi parameters
     dmasize=32M
     usemsi=0
+    use_napi=0
     is_ltsw_chip=0
     rx_buffer_size=9216
 

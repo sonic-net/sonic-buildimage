@@ -1,4 +1,4 @@
-grub-common==2.12-9
-grub2-common==2.12-9
+grub-common==2.12-9+deb13u1
+grub2-common==2.12-9+deb13u1
 libfuse3-4==3.17.2-3
 mrvlprestera==1.0

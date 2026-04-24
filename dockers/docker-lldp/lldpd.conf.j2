@@ -27,24 +27,7 @@ configure system ip management pattern {{ mgmt_if.ipv6 }}
 {% endif %}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
-{# Configure port ID subtype for front-panel ports at startup.
-   Without this, lldpd uses MAC address as default Port ID. When lldpd
-   auto-resumes after config processing, the first LLDP frame would carry
-   MAC-based Port IDs. Peers see a transient MSAP change when lldpmgrd
-   later reconfigures portidsubtype, causing unnecessary neighbor flaps.
-   Special ports (inband/recirculation/backplane) are excluded to match
-   lldpmgrd behavior which skips these port types. #}
-{% if PORT %}
-{% for port_name in PORT|sort %}
-{% if not port_name.startswith('Ethernet-IB') and not port_name.startswith('Ethernet-Rec') and not port_name.startswith('Ethernet-BP') %}
-{% set port_alias = PORT[port_name].alias|default('') %}
-{% if port_alias %}
-configure ports {{ port_name }} lldp portidsubtype local {{ port_alias }}
-{% else %}
-configure ports {{ port_name }} lldp portidsubtype local {{ port_name }}
-{% endif %}
-{% endif %}
-{% endfor %}
-{% endif %}
+{# Use ifname globally to avoid MAC-as-Port-ID; lldpmgrd sets alias per port later. #}
+configure lldp portidsubtype ifname
 {# pause lldpd operations until all interfaces are well configured, resume command will run in lldpmgrd #}
 pause

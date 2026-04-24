@@ -1,0 +1,105 @@
+--- a/src/Linux/mod_sonic.c
++++ b/src/Linux/mod_sonic.c
+@@ -146,6 +146,10 @@
+     char *sflow_agent;
+     UTHash *collectors;
+     UTArray *newCollectors;
++    bool reqLagRefresh:1;
++    bool reqSflowRefresh:1;
++    bool reqCollectorRefresh:1;
++    bool collectorsNeedSync:1;
+     EVEvent *configStartEvent;
+     EVEvent *configEvent;
+     EVEvent *configEndEvent;
+@@ -1011,7 +1015,10 @@
+       }
+     }
+     // there may be more to map
+-    mapPorts(mod);
++    // Note: do not call mapPorts() here - we are inside a Redis
++    // callback and redisAsyncCommand() cannot be called from within
++    // callbacks (libhiredis 1.2.0 asserts REDIS_IN_CALLBACK).
++    // The evt_tick state machine will call mapPorts() on next tick.
+   }
+ 
+   static void db_getIfIndexMap(EVMod *mod, HSPSonicPort *prt) {
+@@ -1201,7 +1208,8 @@
+       }
+     }
+     // we may still have a batch of new ports to discover
+-    discoverNewPorts(mod);
++    // Note: do not call discoverNewPorts() here - deferred to evt_tick
++    // to avoid redisAsyncCommand() from within Redis callback.
+   }
+ 
+   static void db_getPortState(EVMod *mod, HSPSonicPort *prt) {
+@@ -1509,10 +1517,12 @@
+       }
+     }
+   COLLECTOR_INFO_DONE:
+-    if(discoverNewCollectors(mod) == NO) {
+-      // got them all, now sync
+-      myDebug(1, "sonic : no more newCollectors - syncConfig");
+-      syncConfig(mod);
++    // Note: do not call discoverNewCollectors() here - deferred to evt_tick
++    // to avoid redisAsyncCommand() from within Redis callback.
++    // Mark that syncConfig is needed when all collectors are discovered.
++    {
++      HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
++      mdata->collectorsNeedSync = YES;
+     }
+   }
+ 
+@@ -1675,18 +1685,24 @@
+ #endif
+ 
+   static void dbEvt_lagOp(EVMod *mod, char *memberStr, char *op) {
++    HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
+     myDebug(1, "sonic dbEvt_lagOp: %s (%s)", memberStr, op);
+-    db_getLagInfo(mod);
++    // Defer to evt_tick - cannot call redisAsyncCommand from within callback
++    mdata->reqLagRefresh = YES;
+   }
+ 
+   static void dbEvt_sflowOp(EVMod *mod, char *key, char *op) {
++    HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
+     myDebug(1, "sonic dbEvt_sflowOp: %s (%s)", key, op);
+-    db_getsFlowGlobal(mod);
++    // Defer to evt_tick - cannot call redisAsyncCommand from within callback
++    mdata->reqSflowRefresh = YES;
+   }
+ 
+   static void dbEvt_sflowCollectorOp(EVMod *mod, char *key, char *op) {
++    HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
+     myDebug(1, "sonic dbEvt_sflowCollectorOp: %s (%s)", key, op);
+-    db_getCollectorNames(mod);
++    // Defer to evt_tick - cannot call redisAsyncCommand from within callback
++    mdata->reqCollectorRefresh = YES;
+   }
+ 
+   static void dbEvt_subscribeCB(redisAsyncContext *ctx, void *magic, void *req_magic)
+@@ -1924,7 +1940,23 @@
+       if(!discoverNewPorts(mod))
+ 	mapPorts(mod);
+       syncSwitchPorts(mod);
+-      discoverNewCollectors(mod);
++      if(!discoverNewCollectors(mod) && mdata->collectorsNeedSync) {
++	mdata->collectorsNeedSync = NO;
++	syncConfig(mod);
++      }
++      // process deferred dbEvt refresh requests
++      if(mdata->reqLagRefresh) {
++	mdata->reqLagRefresh = NO;
++	db_getLagInfo(mod);
++      }
++      if(mdata->reqSflowRefresh) {
++	mdata->reqSflowRefresh = NO;
++	db_getsFlowGlobal(mod);
++      }
++      if(mdata->reqCollectorRefresh) {
++	mdata->reqCollectorRefresh = NO;
++	db_getCollectorNames(mod);
++      }
+       break;
+     }
+ 
