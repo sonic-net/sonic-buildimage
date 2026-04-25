@@ -17,7 +17,7 @@ RUN apt-get update   && \
     apt-get install -y  \
         iproute2        \
 {% if enable_frr_tcmalloc == "y" %}
-        libgoogle-perftools4t64 \
+        libgoogle-perftools4 \
 {% endif %}
         logrotate
 
