@@ -80,7 +80,7 @@ libprotobuf-c1==1.4.1-1+b1
 libprotoc32==3.21.12-3
 libsaivs==1.0.0
 libsodium-dev==1.0.18-1+deb12u1
-libssl3==3.0.18-1~deb12u2
+libssl3==3.0.19-1~deb12u2
 libteam-utils==1.31-1
 libtirpc-dev==1.3.3+ds-1
 libunwind8==1.6.2-3
@@ -93,10 +93,10 @@ logrotate==3.21.0-1
 lsof==4.95.0-1
 ndisc6==1.0.5-1+b2
 netbase==6.4
-openssh-client==1:9.2p1-2+deb12u7
-openssh-server==1:9.2p1-2+deb12u7
-openssh-sftp-server==1:9.2p1-2+deb12u7
-openssl==3.0.18-1~deb12u2
+openssh-client==1:9.2p1-2+deb12u9
+openssh-server==1:9.2p1-2+deb12u9
+openssh-sftp-server==1:9.2p1-2+deb12u9
+openssl==3.0.19-1~deb12u2
 pinentry-curses==1.2.1-1
 pkgconf==1.8.1-1
 protobuf-c-compiler==1.4.1-1+b1
