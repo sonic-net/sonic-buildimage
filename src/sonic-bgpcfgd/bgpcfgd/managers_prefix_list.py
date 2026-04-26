@@ -38,7 +38,7 @@ class PrefixListMgr(Manager):
             self.templates[cfg["del_template"]] = common_objs['tf'].from_file(cfg["del_template"] + ".conf.j2")
         super(PrefixListMgr, self).__init__(
             common_objs,
-            [("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost")],
+            [],
             db,
             table,
         )
@@ -58,9 +58,6 @@ class PrefixListMgr(Manager):
             log_warn("PrefixListMgr:: Prefix type '%s' is not supported" % prefix_type)
             return False
 
-        if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
-            log_warn("PrefixListMgr:: DEVICE_METADATA not available yet")
-            return False
         metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
         try:
             device_type = metadata["type"]
@@ -102,8 +99,6 @@ class PrefixListMgr(Manager):
             data["prefix"] = str(prefix.cidr)
             data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
-            if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
-                return False
             if self.generate_prefix_list_config(prefix_type, data, add=True):
                 log_info("PrefixListMgr:: %s %s configuration generated" % (prefix_type, data["prefix"]))
                 self.directory.put(self.db_name, self.table_name, key, data)

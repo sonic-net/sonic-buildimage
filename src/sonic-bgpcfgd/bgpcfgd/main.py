@@ -120,7 +120,6 @@ def do_work():
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     device_metadata = config_db.get_table("DEVICE_METADATA")
-    managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
     # Enable AsPath Manager for UpperSpineRouter/UpstreamLC
     is_upstream_lc = ("localhost" in device_metadata and "type" in device_metadata["localhost"] and "subtype" in device_metadata["localhost"] and
                       device_metadata["localhost"]["type"] == "SpineRouter" and device_metadata["localhost"]["subtype"] == "UpstreamLC")
@@ -129,6 +128,8 @@ def do_work():
     if is_upstream_lc or is_upper_spine_router:
         managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
         log_notice("AsPath Manager is enabled for %s" % device_metadata["localhost"]["type"])
+
+    managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
