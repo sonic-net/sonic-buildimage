@@ -38,7 +38,7 @@ class PrefixListMgr(Manager):
             self.templates[cfg["del_template"]] = common_objs['tf'].from_file(cfg["del_template"] + ".conf.j2")
         super(PrefixListMgr, self).__init__(
             common_objs,
-            [],
+            [("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost")],
             db,
             table,
         )
