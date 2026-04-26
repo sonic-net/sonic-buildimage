@@ -47,6 +47,12 @@ module sonic-device_metadata {
                     }
                     description "asic_id is unique identifier of the asic used by SAI for initialization.";
                 }
+                
+                leaf p4_profile {
+                    type string {
+                        pattern "(x[1-6]|y[1-5])_profile";
+                    }
+                }
 
                 leaf default_bgp_status {
                     type enumeration {
