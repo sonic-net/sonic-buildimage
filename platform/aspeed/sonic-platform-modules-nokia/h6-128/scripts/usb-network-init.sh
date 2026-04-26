@@ -135,7 +135,7 @@ import ipaddress
 try:
     with open('${BMC_CONFIG}') as f:
         data = json.load(f)
-    bmc_ip = data.get('bmc_if_addr', '')
+    bmc_ip = data.get('bmc_addr', '')
     netmask = data.get('bmc_net_mask', '')
     if bmc_ip and netmask:
         interface = ipaddress.IPv4Interface(f'{bmc_ip}/{netmask}')
