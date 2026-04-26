@@ -96,7 +96,7 @@ def test_unsupported_prefix_type(mocked_log_warn):
 def test_anchor_prefix_wrong_device(mocked_log_warn):
     m = constructor_with_constants({})
     set_handler_test(m, "ANCHOR_PREFIX|192.168.0.0/24", {})
-    mocked_log_warn.assert_called_with("PrefixListMgr:: Device type ToRRouter/ not supported for ANCHOR_PREFIX")
+    mocked_log_warn.assert_called_with("PrefixListMgr:: Device type ToRRouter not supported for ANCHOR_PREFIX")
 
 @patch('bgpcfgd.managers_prefix_list.log_debug')
 def test_suppress_prefix_ipv4(mocked_log_debug):

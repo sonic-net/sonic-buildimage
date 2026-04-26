@@ -58,6 +58,9 @@ class PrefixListMgr(Manager):
             log_warn("PrefixListMgr:: Prefix type '%s' is not supported" % prefix_type)
             return False
 
+        if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
+            log_warn("PrefixListMgr:: DEVICE_METADATA not available yet")
+            return False
         metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
         try:
             device_type = metadata["type"]
@@ -68,7 +71,8 @@ class PrefixListMgr(Manager):
             return False
 
         if not self._is_device_allowed(device_type, device_subtype, type_cfg["allowed_devices"]):
-            log_warn("PrefixListMgr:: Device type %s/%s not supported for %s" % (device_type, device_subtype, prefix_type))
+            device_desc = "%s/%s" % (device_type, device_subtype) if device_subtype else device_type
+            log_warn("PrefixListMgr:: Device type %s not supported for %s" % (device_desc, prefix_type))
             return False
 
         data["bgp_asn"] = bgp_asn

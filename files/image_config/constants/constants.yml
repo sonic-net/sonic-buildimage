@@ -76,6 +76,3 @@ constants:
       SUPPRESS_PREFIX:
         ipv4_name: "SUPPRESS_IPV4_PREFIX"
         ipv6_name: "SUPPRESS_IPV6_PREFIX"
-      ANCHOR_PREFIX:
-        ipv4_name: "ANCHOR_CONTRIBUTING_ROUTES"
-        ipv6_name: "ANCHOR_CONTRIBUTING_ROUTES"
