@@ -142,6 +142,17 @@ def test_suppress_prefix_constants_override(mocked_log_debug):
     assert "SUPPRESS_IPV4_PREFIX" not in push_call
 
 @patch('bgpcfgd.managers_prefix_list.log_debug')
+def test_suppress_prefix_constants_override_ipv6(mocked_log_debug):
+    constants = {"bgp": {"prefix_list": {"SUPPRESS_PREFIX": {
+        "ipv4_name": "CUSTOM_IPV4_PREFIX",
+        "ipv6_name": "CUSTOM_IPV6_PREFIX"}}}}
+    m = constructor_with_constants(constants)
+    set_handler_test(m, "SUPPRESS_PREFIX|fc00::/64", {})
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "CUSTOM_IPV6_PREFIX" in push_call
+    assert "SUPPRESS_IPV6_PREFIX" not in push_call
+
+@patch('bgpcfgd.managers_prefix_list.log_debug')
 def test_suppress_prefix_no_constants_fallback(mocked_log_debug):
     m = constructor_with_constants({})
     set_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24", {})
