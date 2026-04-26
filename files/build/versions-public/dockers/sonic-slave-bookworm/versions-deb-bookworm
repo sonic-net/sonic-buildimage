@@ -111,7 +111,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:29.4.0-1~debian.12~bookworm
+docker-ce-rootless-extras==5:29.4.1-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -176,7 +176,7 @@ gir1.2-gdkpixbuf-2.0==2.42.10+dfsg-1+deb12u4
 gir1.2-glib-2.0==1.74.0-3
 gir1.2-gtk-3.0==3.24.38-2~deb12u3
 gir1.2-harfbuzz-0.0==6.0.0+dfsg-3
-gir1.2-packagekitglib-1.0==1.2.6-5
+gir1.2-packagekitglib-1.0==1.2.6-5+deb12u1
 gir1.2-pango-1.0==1.50.12+ds-1
 git==1:2.39.5-0+deb12u3
 git-buildpackage==0.9.30
@@ -1066,7 +1066,7 @@ libostyle1c2==1.4devel1-22
 libpackage-deprecationmanager-perl==0.18-1
 libpackage-stash-perl==0.40-1
 libpackage-stash-xs-perl==0.30-1+b1
-libpackagekit-glib2-18==1.2.6-5
+libpackagekit-glib2-18==1.2.6-5+deb12u1
 libpadwalker-perl==2.5-1+b3
 libpam-cap==1:2.66-4+deb12u2+b2
 libpam-systemd==252.39-1~deb12u1
@@ -1635,7 +1635,7 @@ module-assistant==0.11.11
 mokutil==0.6.0-2
 mpi-default-bin==1.14
 mpi-default-dev==1.14
-mupdf-tools==1.21.1+ds2-1+b4
+mupdf-tools==1.21.1+ds2-1+deb12u1
 mysql-common==5.8+1.1.0
 ncurses-term==6.4-4
 net-tools==2.10-0.1+deb12u2
@@ -1668,8 +1668,8 @@ openssh-sftp-server==1:9.2p1-2+deb12u9
 openssl==3.0.19-1~deb12u2
 os-prober==1.81
 ovmf==2022.11-6+deb12u2
-packagekit==1.2.6-5
-packagekit-tools==1.2.6-5
+packagekit==1.2.6-5+deb12u1
+packagekit-tools==1.2.6-5+deb12u1
 pahole==1.24-4.1
 pandoc==2.17.1.1-2~deb12u1
 pandoc-data==2.17.1.1-2~deb12u1
