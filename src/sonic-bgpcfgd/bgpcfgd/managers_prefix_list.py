@@ -102,6 +102,8 @@ class PrefixListMgr(Manager):
             data["prefix"] = str(prefix.cidr)
             data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
+            if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
+                return False
             if self.generate_prefix_list_config(prefix_type, data, add=True):
                 log_info("PrefixListMgr:: %s %s configuration generated" % (prefix_type, data["prefix"]))
                 self.directory.put(self.db_name, self.table_name, key, data)
