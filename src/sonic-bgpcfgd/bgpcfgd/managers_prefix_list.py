@@ -74,7 +74,9 @@ class PrefixListMgr(Manager):
         data["bgp_asn"] = bgp_asn
         data["device_type"] = device_type
         data["device_subtype"] = device_subtype
-        data["prefix_list_name"] = type_cfg["prefix_list_name"](data["ipv"])
+        pl_overrides = self.constants.get("bgp", {}).get("prefix_list", {}).get(prefix_type, {})
+        name_key = "ipv4_name" if data["ipv"] == "ip" else "ipv6_name"
+        data["prefix_list_name"] = pl_overrides.get(name_key, type_cfg["prefix_list_name"](data["ipv"]))
 
         template_key = type_cfg["add_template"] if add else type_cfg["del_template"]
         cmd = "\n" + self.templates[template_key].render(data=data)
