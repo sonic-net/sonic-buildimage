@@ -43,10 +43,6 @@ if echo "$COMPATIBLE" | grep -q "nexthop,nexthop-b27-r0"; then
     PLATFORM="arm64-nexthop_b27-r0"
     MACHINE="aspeed_ast2700"
     log "Detected NextHop B27 BMC platform"
-elif echo "$MODEL" | grep -qi "AST2700-A1 Spc6"; then
-    PLATFORM="arm64-aspeed_nvidia_ast2700_a1_bmc-r0"
-    MACHINE="aspeed_ast2700"
-    log "Detected NVIDIA SPC6 BMC platform"
 elif echo "$COMPATIBLE" | grep -q "aspeed,ast2700-evb"; then
     PLATFORM="arm64-aspeed_ast2700_evb-r0"
     MACHINE="aspeed_ast2700"
