@@ -31,6 +31,7 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #define WB_UCD9081_RAIL1H               (0x00)    /* Channel 1 voltage address, high 8 bits */
 #define WB_UCD9081_RAIL1L               (0x01)    /* Channel 1 voltage address, low 8 bits */
@@ -283,7 +284,11 @@ static struct attribute *ucd9081_hwmon_attrs[] = {
 };
 ATTRIBUTE_GROUPS(ucd9081_hwmon);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int ucd9081_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int ucd9081_probe(struct i2c_client *client)
+#endif
 {
     int ret;
     struct ucd9081_data *data;
@@ -315,7 +320,11 @@ static int ucd9081_probe(struct i2c_client *client, const struct i2c_device_id *
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int ucd9081_remove(struct i2c_client *client)
+#else
 static void ucd9081_remove(struct i2c_client *client)
+#endif
 {
     struct ucd9081_data *data;
 
@@ -323,7 +332,11 @@ static void ucd9081_remove(struct i2c_client *client)
     dev_info(&client->dev, "ucd9081 do remove\n");
 
     hwmon_device_unregister(data->hwmon_dev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static const struct i2c_device_id ucd9081_id[] = {

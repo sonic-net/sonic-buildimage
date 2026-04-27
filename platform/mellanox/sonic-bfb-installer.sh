@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -226,7 +226,20 @@ run_dpuctl_reset() {
     if [[ "$use_verbose" == true ]]; then
         reset_cmd="$reset_cmd -v"
     fi
-    eval $reset_cmd
+    local start_time
+    start_time=$(date +%s)
+    eval $reset_cmd &
+    local pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        local elapsed=$(($(date +%s) - start_time))
+        printf "\r%s: Reboot: %d seconds elapsed" "$dpu" "$elapsed"
+        sleep 5
+    done
+    wait $pid
+    local end_time
+    end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    printf "\r%s: Reboot: %d seconds elapsed in total\n" "$dpu" "$elapsed"
 }
 
 # Function to reset DPU using reboot helper or fallback to dpuctl
@@ -270,6 +283,46 @@ monitor_installation() {
     printf "\n"
 }
 
+# Transition wait timeout: 13 minutes (from transition_start_time)
+readonly DPU_TRANSITION_WAIT_TIMEOUT_SECS=780
+
+# Wait for CHASSIS_MODULE_TABLE transition_in_progress to clear (up to 13 min from
+# transition_start_time), then check DPU state and power on if state is 0.
+wait_for_module_transition_and_ensure_dpu_powered() {
+    local -r dpu=$1
+    local dpu_upper="${dpu^^}"
+    local module_key="CHASSIS_MODULE_TABLE|${dpu_upper}"
+    local transition_in_progress
+    local transition_start_time
+    local current_time
+    local elapsed
+
+    transition_in_progress=$(sonic-db-cli STATE_DB HGET "$module_key" "transition_in_progress" 2>/dev/null)
+    if [[ "$transition_in_progress" == "True" ]]; then
+        transition_start_time=$(sonic-db-cli STATE_DB HGET "$module_key" "transition_start_time" 2>/dev/null)
+        if [[ -z "$transition_start_time" ]]; then
+            transition_start_time=$(date +%s)
+        fi
+        log_info "$dpu: Waiting for module transition to complete (timeout 13 minutes from transition_start_time)"
+        while true; do
+            sleep 2
+            log_info "$dpu: Checking module transition status... "
+            transition_in_progress=$(sonic-db-cli STATE_DB HGET "$module_key" "transition_in_progress" 2>/dev/null)
+            if [[ "$transition_in_progress" != "True" ]]; then
+                log_info "$dpu: Module transition flag cleared"
+                break
+            fi
+            current_time=$(date +%s)
+            elapsed=$((current_time - transition_start_time))
+            if [[ $elapsed -ge $DPU_TRANSITION_WAIT_TIMEOUT_SECS ]]; then
+                log_info "$dpu: Transition wait timeout (13 minutes) reached, proceeding"
+                break
+            fi
+        done
+    fi
+
+}
+
 # Function to start rshim daemon
 start_rshim_daemon() {
     local -r rid=$1
@@ -305,7 +358,10 @@ bfb_install_call() {
     local -r rid=${rshim#rshim}
     local -r result_file=$(mktemp "${WORK_DIR}/result_file.XXXXX")
     local -r timeout_secs=1200
-    
+
+    # Wait for CHASSIS_MODULE_TABLE transition_in_progress to clear (if set), then ensure DPU is powered on
+    wait_for_module_transition_and_ensure_dpu_powered "$dpu"
+
     # Get PCI bus info for the DPU
     local pci_bus=$(detect_bfsoc_pcie "$dpu")
     if [ -z "$pci_bus" ]; then
@@ -328,11 +384,20 @@ bfb_install_call() {
     fi
     remove_cx_pci_device "$rshim" "$dpu"
 
-    # Construct bfb-install command
-    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim"
+    # Create config file with NPU time for DPU time synchronization
+    local config_file
+    config_file=$(mktemp "${WORK_DIR}/bf_cfg.XXXXX") || {
+        log_error "$rid: Failed to create temporary config file in ${WORK_DIR}"
+        return 1
+    }
+    trap "rm -f '$config_file'; stop_rshim_daemon $rid" EXIT
     if [ -n "$appendix" ]; then
-        cmd="$cmd -c $appendix"
+        cat "$appendix" > "$config_file"
     fi
+    echo "NPU_TIME=$(date +%s)" >> "$config_file"
+
+    # Construct bfb-install command
+    local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim -c $config_file"
     log_info "Installing bfb image on DPU connected to $rshim using $cmd"
 
     # Run installation with progress monitoring
@@ -400,7 +465,7 @@ extract_bfb() {
             exit 1
         fi
         
-        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | grep "$(basename "$bfb_file")" | head -n 1)
+        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | head -n 1)
         if [ -z "$extracted_bfb" ]; then
             log_error "No BFB file found in tar archive"
             exit 1

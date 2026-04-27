@@ -216,6 +216,24 @@ DEVICE_DATA = {
                 "comex_amb": False
             }
         }
+    },
+    'x86_64-nvidia_sn6810_ld-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn6810_ld_simx-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
     }
 }
 
@@ -465,3 +483,9 @@ class DeviceDataManager:
     @utils.read_only_cache()
     def is_multi_asic_platform(cls):
         return cls.get_asic_count() > 1
+
+    @classmethod
+    @utils.read_only_cache()
+    def is_spc1(cls):
+        platform_name = cls.get_platform_name()
+        return platform_name in ('x86_64-mlnx_msn2700-r0', 'x86_64-mlnx_msn2700a1-r0')

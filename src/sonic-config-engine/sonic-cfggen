@@ -93,7 +93,10 @@ def prefix_attr(attr, value):
             prefix = netaddr.IPNetwork(str(value))
         except:
             return None
-    return str(getattr(prefix, attr))
+    result = getattr(prefix, attr)
+    if result is None:
+        return None
+    return str(result)
 
 def unique_name(l):
     name_list = []
@@ -315,6 +318,14 @@ def _get_jinja2_env(paths):
         except jinja2.exceptions.TemplateNotFound:
             return False
     env.globals['template_exists'] = template_exists
+
+    # Expose is_smartswitch flag into Jinja globals
+    try:
+        smartswitch_flag = device_info.is_smartswitch()
+    except Exception as e:
+        smartswitch_flag = False
+        sys.stderr.write("sonic-cfggen: is_smartswitch() detection failed: {}\n".format(e))
+    env.globals['is_smartswitch'] = smartswitch_flag
 
     return env
 

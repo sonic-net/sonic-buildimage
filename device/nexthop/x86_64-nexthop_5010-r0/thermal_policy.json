@@ -91,9 +91,9 @@
                     },
                     "pid_domains": {
                         "asic": {
-                            "KP": 10,
+                            "KP": 5,
                             "KI": 0.1,
-                            "KD": 5
+                            "KD": 2
                         },
                         "main": {
                             "KP": 5,

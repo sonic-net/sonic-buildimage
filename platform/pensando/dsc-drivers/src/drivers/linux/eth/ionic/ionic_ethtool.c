@@ -1073,10 +1073,10 @@ static u32 ionic_get_rxfh_key_size(struct net_device *netdev)
 }
 
 #ifdef HAVE_RXFH_HASHFUNC
-static int ionic_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,
+static int ionic_get_rxfh_legacy(struct net_device *netdev, u32 *indir, u8 *key,
 			  u8 *hfunc)
 #else
-static int ionic_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
+static int ionic_get_rxfh_legacy(struct net_device *netdev, u32 *indir, u8 *key)
 #endif
 {
 	struct ionic_lif *lif = netdev_priv(netdev);
@@ -1099,11 +1099,33 @@ static int ionic_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	return 0;
 }
 
+static int ionic_get_rxfh(struct net_device *netdev,
+			  struct ethtool_rxfh_param *rxfh)
+{
 #ifdef HAVE_RXFH_HASHFUNC
-static int ionic_set_rxfh(struct net_device *netdev, const u32 *indir,
+	u8 hfunc;
+	int ret;
+
+	ret = ionic_get_rxfh_legacy(netdev,
+				    rxfh->indir,
+				    rxfh->key,
+				    &hfunc);
+	if (!ret)
+		rxfh->hfunc = hfunc;
+
+	return ret;
+#else
+	return ionic_get_rxfh_legacy(netdev,
+				     rxfh->indir,
+				     rxfh->key);
+#endif
+}
+
+#ifdef HAVE_RXFH_HASHFUNC
+static int ionic_set_rxfh_legacy(struct net_device *netdev, const u32 *indir,
 			  const u8 *key, const u8 hfunc)
 #else
-static int ionic_set_rxfh(struct net_device *netdev, const u32 *indir,
+static int ionic_set_rxfh_legacy(struct net_device *netdev, const u32 *indir,
 			  const u8 *key)
 #endif
 {
@@ -1115,6 +1137,22 @@ static int ionic_set_rxfh(struct net_device *netdev, const u32 *indir,
 #endif
 
 	return ionic_lif_rss_config(lif, lif->rss_types, key, indir);
+}
+
+static int ionic_set_rxfh(struct net_device *netdev,
+			  struct ethtool_rxfh_param *rxfh,
+			  struct netlink_ext_ack *extack)
+{
+#ifdef HAVE_RXFH_HASHFUNC
+	return ionic_set_rxfh_legacy(netdev,
+				     rxfh->indir,
+				     rxfh->key,
+				     rxfh->hfunc);
+#else
+	return ionic_set_rxfh_legacy(netdev,
+				     rxfh->indir,
+				     rxfh->key);
+#endif
 }
 
 static int ionic_set_tunable(struct net_device *dev,
@@ -1224,26 +1262,27 @@ static int ionic_get_module_eeprom(struct net_device *netdev,
 
 #if IS_ENABLED(CONFIG_PTP_1588_CLOCK)
 static int ionic_get_ts_info(struct net_device *netdev,
-			     struct ethtool_ts_info *info)
+			     struct kernel_ethtool_ts_info *info)
 {
 	struct ionic_lif *lif = netdev_priv(netdev);
 	struct ionic *ionic = lif->ionic;
 	__le64 mask;
 
+	/* Fallback to generic ethtool handler if no PHC */
 	if (!lif->phc || !lif->phc->ptp)
 		return ethtool_op_get_ts_info(netdev, info);
 
 	info->phc_index = ptp_clock_index(lif->phc->ptp);
 
-	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
-				SOF_TIMESTAMPING_RX_SOFTWARE |
-				SOF_TIMESTAMPING_SOFTWARE |
-				SOF_TIMESTAMPING_TX_HARDWARE |
-				SOF_TIMESTAMPING_RX_HARDWARE |
-				SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->so_timestamping =
+		SOF_TIMESTAMPING_TX_SOFTWARE |
+		SOF_TIMESTAMPING_RX_SOFTWARE |
+		SOF_TIMESTAMPING_SOFTWARE |
+		SOF_TIMESTAMPING_TX_HARDWARE |
+		SOF_TIMESTAMPING_RX_HARDWARE |
+		SOF_TIMESTAMPING_RAW_HARDWARE;
 
-	/* tx modes */
-
+	/* TX timestamp modes */
 	info->tx_types = BIT(HWTSTAMP_TX_OFF) |
 			 BIT(HWTSTAMP_TX_ON);
 
@@ -1257,8 +1296,7 @@ static int ionic_get_ts_info(struct net_device *netdev,
 		info->tx_types |= BIT(HWTSTAMP_TX_ONESTEP_P2P);
 #endif
 
-	/* rx filters */
-
+	/* RX timestamp filters */
 	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) |
 			   BIT(HWTSTAMP_FILTER_ALL);
 
@@ -1318,7 +1356,7 @@ static int ionic_get_ts_info(struct net_device *netdev,
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_PTP_1588_CLOCK */
 
 static int ionic_nway_reset(struct net_device *netdev)
 {
@@ -1413,3 +1451,4 @@ void ionic_ethtool_set_ops(struct net_device *netdev)
 {
 	netdev->ethtool_ops = &ionic_ethtool_ops;
 }
+

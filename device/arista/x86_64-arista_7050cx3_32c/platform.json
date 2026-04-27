@@ -9,10 +9,10 @@
                 "name": "Scd(addr=0000:00:18.7)"
             },
             {
-                "name": "Scd(addr=0000:02:00.0)"
+                "name": "PuffinPrimeSysCpld(addr=9-0023)"
             },
             {
-                "name": "PuffinPrimeSysCpld(addr=9-0023)"
+                "name": "Scd(addr=0000:02:00.0)"
             }
         ],
         "fans": [],
