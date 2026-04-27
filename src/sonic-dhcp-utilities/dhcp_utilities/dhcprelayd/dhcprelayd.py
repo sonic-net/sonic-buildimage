@@ -274,7 +274,10 @@ class DhcpRelayd(object):
             cmds = re.findall(r"\[program:((isc-dhcpv4-relay|dhcpmon)-.+)\]\ncommand=(.+)", content)
             for cmd in cmds:
                 key = "dhcpmon:{}".format(cmd[0]) if "dhcpmon" in cmd[0] else cmd[0]
-                res[key] = cmd[2].replace("%%", "%").split(" ")
+                command_str = cmd[2].replace("%%", "%")
+                if key.startswith("isc-dhcpv4-relay"):
+                    command_str = re.sub(r"^ip vrf exec \S+\s*", "", command_str)
+                res[key] = command_str.split(" ")
         return res
 
     def _start_dhcrelay_process(self, new_dhcp_interfaces, dhcp_server_ip, force_kill):
