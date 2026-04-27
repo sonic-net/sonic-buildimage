@@ -175,15 +175,16 @@ jobs:
             curl -f -L -o target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb "https://github.com/sreeiyer-1/sonic-alpine/releases/download/latest-builds/lucius-libsai_1.0-3_amd64.deb"
 
             echo "=== PROOF: EXTRACTING MAKE VARIABLES ==="
-            make -p -n $BUILD_OPTIONS target/sonic-alpinevs.img.gz > make_database.txt 2>/dev/null || true
+            make -p -n -f slave.mk target/sonic-alpinevs.img.gz > make_database.txt 2>/dev/null || true
 
             echo "=== DUMPING ALL CACHE_MODE VARIABLES ==="
             # This will show us every single cache mode variable Make actually registered
-            grep "CACHE_MODE" make_database.txt | grep -v "^#" | sort
+            grep "CACHE_MODE" make_database.txt | grep -v "^#" | sort || true
 
             echo "=== DUMPING ANYTHING RELATED TO LEMMINGSAI ==="
             # This will show us what Make actually parsed from lemmingsai.mk and lemmingsai.dep
             grep -i "lemming" make_database.txt || true 
+            grep -i "lucius" make_database.txt || true 
             grep -i "cache" make_database.txt || true 
 
             echo "New add ends"
@@ -192,21 +193,24 @@ jobs:
             [ -f target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb ] && touch target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb
 
             echo "=== VERIFYING DOWNLOAD-2 ==="
-            echo "Old cache method $SONIC_DPKG_CACHE_METHOD"
-            echo "Old cache path $SONIC_DPKG_CACHE_SOURCE"
+            echo "Old cache methods"
+            echo $SONIC_DPKG_CACHE_METHOD
+            echo $SONIC_DPKG_CACHE_SOURCE
             ls -lh target/debs/bookworm/
 
             # export SONIC_DPKG_CACHE_METHOD=rwcache
             export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
 
-            # make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+            echo "New cache methods"
+            echo $SONIC_DPKG_CACHE_METHOD
+            echo $SONIC_DPKG_CACHE_SOURCE
+
+            make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
 
             echo "=== VERIFYING DOWNLOAD-3 ==="
             ls -lh target/debs/bookworm/
             ls -lh target/debs/trixie/
             ls -lh target/
-            ls -lh /nfs
-            ls -lh /nfs/dpkg_cache
             ls -lh /nfs/dpkg_cache/alpinevs
           else
             if [ $(dbg_image) == yes ]; then
