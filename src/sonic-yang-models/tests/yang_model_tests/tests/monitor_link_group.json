@@ -86,17 +86,17 @@
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_PATTERN": {
-        "desc": "Invalid startup-delay with non-numeric characters",
+        "desc": "Invalid link-up-delay with non-numeric characters",
         "eStrKey": "Pattern",
         "eStr": [
-            "startup-delay"
+            "link-up-delay"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_NEGATIVE": {
-        "desc": "Invalid startup-delay with negative number",
+        "desc": "Invalid link-up-delay with negative number",
         "eStrKey": "Pattern",
         "eStr": [
-            "startup-delay"
+            "link-up-delay"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_PATTERN": {
