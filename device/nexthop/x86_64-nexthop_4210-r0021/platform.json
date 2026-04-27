@@ -3867,6 +3867,9 @@
                 "name": "NVMe"
             },
             {
+                "name": "ASIC_PCIE"
+            },
+            {
                 "name": "PSU1"
             },
             {
@@ -3883,6 +3886,9 @@
             },
             {
                 "name": "DPM2"
+            },
+            {
+                "name": "DPM3"
             },
             {
                 "name": "DCDC1"
