@@ -62,10 +62,9 @@ class PrefixListMgr(Manager):
             return False
 
         if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
-            log_warn("PrefixListMgr:: DEVICE_METADATA not available yet")
+            log_info("PrefixListMgr:: Device metadata is not ready yet")
             return False
-
-        metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
+        metadata = self.directory.get_path("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost")
         try:
             device_type = metadata["type"]
             device_subtype = metadata.get("subtype", "")
