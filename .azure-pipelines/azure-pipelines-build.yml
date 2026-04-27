@@ -174,6 +174,9 @@ jobs:
             mkdir -p target/debs/bookworm
             curl -f -L -o target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb "https://github.com/sreeiyer-1/sonic-alpine/releases/download/latest-builds/lucius-libsai_1.0-3_amd64.deb"
 
+            echo "=== Patching rules.mk to read lemmingsai.dep ==="
+            echo "include \$(PLATFORM_PATH)/lemmingsai.dep" >> platform/alpinevs/rules.mk
+
             echo "=== PROOF: EXTRACTING MAKE VARIABLES ==="
             make -p -n -f slave.mk target/sonic-alpinevs.img.gz > make_database.txt 2>/dev/null || true
 
@@ -193,17 +196,10 @@ jobs:
             [ -f target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb ] && touch target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb
 
             echo "=== VERIFYING DOWNLOAD-2 ==="
-            echo "Old cache methods"
-            echo $SONIC_DPKG_CACHE_METHOD
-            echo $SONIC_DPKG_CACHE_SOURCE
             ls -lh target/debs/bookworm/
 
             # export SONIC_DPKG_CACHE_METHOD=rwcache
             export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
-
-            echo "New cache methods"
-            echo $SONIC_DPKG_CACHE_METHOD
-            echo $SONIC_DPKG_CACHE_SOURCE
 
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
 
