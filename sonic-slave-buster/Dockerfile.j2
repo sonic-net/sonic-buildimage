@@ -146,6 +146,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libcmocka-dev \
         libprotobuf-c-dev \
         protobuf-c-compiler \
+        librtr-dev \
+        libssh-dev \
 {%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
