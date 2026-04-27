@@ -1925,12 +1925,18 @@ def select_mmu_profiles(profile, platform, hwsku):
     path = os.path.join(new_path, platform, hwsku)
 
     dir_path = os.path.join(path, profile)
+    platform_path = os.path.dirname(path)
     if os.path.exists(dir_path):
         for file_item in files_to_copy:
             file_in_dir = os.path.join(dir_path, file_item)
+            base_file = os.path.join(path, file_item)
             if os.path.isfile(file_in_dir):
-                base_file = os.path.join(path, file_item)
                 exec_cmd(["sudo", "cp", file_in_dir, base_file])
+            elif file_item == 'pg_profile_lookup.ini' and not os.path.isfile(base_file):
+                platform_file = os.path.join(platform_path, file_item)
+                base_file = os.path.join(platform_path, file_item)
+                if os.path.isfile(platform_file):
+                    exec_cmd(["sudo", "cp", platform_file, base_file])
 
 def address_type(address):
     # encode and decode to unicode, because when address is bytes type, ip_network will throw AddressValueError
