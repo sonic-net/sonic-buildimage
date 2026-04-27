@@ -162,6 +162,9 @@ INCLUDE_SYSTEM_GNMI = y
 # INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
 INCLUDE_SYSTEM_BMP = y
 
+# INCLUDE_FRR_RPKI - build frr-rpki-rtrlib package for BGP RPKI prefix validation support
+INCLUDE_FRR_RPKI ?= y
+
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
 INCLUDE_SYSTEM_EVENTD = y
 
