@@ -193,7 +193,7 @@ jobs:
             echo "=== VERIFYING DOWNLOAD-2 ==="
             ls -lh target/debs/bookworm/
 
-            export SONIC_DPKG_CACHE_METHOD=rwcache
+            export SONIC_DPKG_CACHE_METHOD=rcache
             export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
 
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
@@ -202,6 +202,9 @@ jobs:
             ls -lh target/debs/bookworm/
             ls -lh target/debs/trixie/
             ls -lh target/
+            ls -lh /nfs
+            ls -lh /nfs/dpkg_cache
+            ls -lh /nfs/dpkg_cache/alpinevs
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
