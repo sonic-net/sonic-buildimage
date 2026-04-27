@@ -38,7 +38,10 @@ class PrefixListMgr(Manager):
             self.templates[cfg["del_template"]] = common_objs['tf'].from_file(cfg["del_template"] + ".conf.j2")
         super(PrefixListMgr, self).__init__(
             common_objs,
-            [],
+            [
+                ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),
+                ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
+            ],
             db,
             table,
         )
@@ -56,6 +59,10 @@ class PrefixListMgr(Manager):
         type_cfg = PREFIX_TYPE_CONFIG.get(prefix_type)
         if type_cfg is None:
             log_warn("PrefixListMgr:: Prefix type '%s' is not supported" % prefix_type)
+            return False
+
+        if not self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost"):
+            log_warn("PrefixListMgr:: DEVICE_METADATA not available yet")
             return False
 
         metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
