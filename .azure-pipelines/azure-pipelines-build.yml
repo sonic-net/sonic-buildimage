@@ -58,6 +58,9 @@ jobs:
             dbg_image: yes
             asan_image: yes
 
+        - name: alpinevs
+          timeoutInMinutes: 1440
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -165,6 +168,40 @@ jobs:
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
+          elif [ $(GROUP_NAME) == alpinevs ]; then
+
+            echo "=== Downloading Pre-built Deb ==="
+            mkdir -p target/debs/bookworm
+            curl -f -L -o target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb "https://github.com/sreeiyer-1/sonic-alpine/releases/download/latest-builds/lucius-libsai_1.0-3_amd64.deb"
+
+            echo "=== PROOF: EXTRACTING MAKE VARIABLES ==="
+            make -p -n $BUILD_OPTIONS target/sonic-alpinevs.img.gz > make_database.txt 2>/dev/null || true
+
+            echo "=== DUMPING ALL CACHE_MODE VARIABLES ==="
+            # This will show us every single cache mode variable Make actually registered
+            grep "CACHE_MODE" make_database.txt | grep -v "^#" | sort
+
+            echo "=== DUMPING ANYTHING RELATED TO LEMMINGSAI ==="
+            # This will show us what Make actually parsed from lemmingsai.mk and lemmingsai.dep
+            grep -i "lemming" make_database.txt || true 
+
+            echo "New add ends"
+
+            echo "=== Touch the deb file ==="
+            [ -f target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb ] && touch target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb
+
+            echo "=== VERIFYING DOWNLOAD-2 ==="
+            ls -lh target/debs/bookworm/
+
+            export SONIC_DPKG_CACHE_METHOD=rwcache
+            export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
+
+            make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+
+            echo "=== VERIFYING DOWNLOAD-3 ==="
+            ls -lh target/debs/bookworm/
+            ls -lh target/debs/trixie/
+            ls -lh target/
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
