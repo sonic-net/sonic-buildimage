@@ -267,15 +267,19 @@ class FirmwareManagerBase(Process):
         result = self._run_command(cmd, env=env, capture_output=True, text=True)
 
         output = result.stdout or ''
+        error_output = result.stderr or ''
+        stderr_suffix = f", stderr={error_output}" if error_output else ""
 
         if result.returncode != 0:
-            raise FirmwareManagerError(f"Query returned non-zero exit code: {output}")
+            raise FirmwareManagerError(
+                f"Query returned non-zero exit code: stdout={output}{stderr_suffix}")
 
         # Extract XML block from potentially verbose debug output
         xml_start = output.find('<Devices>')
         xml_end = output.find('</Devices>')
         if xml_start < 0 or xml_end < 0:
-            raise FirmwareManagerError(f"No XML device data found in query output: {output}")
+            raise FirmwareManagerError(
+                f"No XML device data found in query output: stdout={output}{stderr_suffix}")
 
         xml_str = output[xml_start:xml_end + len('</Devices>')]
         root = ET.fromstring(xml_str)
@@ -283,7 +287,8 @@ class FirmwareManagerBase(Process):
         psid = root.find('.//Device').get('psid')
 
         if not current_version or current_version == '--' or not psid:
-            raise FirmwareManagerError(f"Version or PSID not found in response: {output}")
+            raise FirmwareManagerError(
+                f"Version or PSID not found in response: stdout={output}{stderr_suffix}")
 
         available_version = self._get_available_firmware_version(psid)
         return current_version, available_version
