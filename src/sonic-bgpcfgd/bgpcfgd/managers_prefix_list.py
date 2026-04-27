@@ -65,6 +65,11 @@ class PrefixListMgr(Manager):
             log_info("PrefixListMgr:: Device metadata is not ready yet")
             return False
         metadata = self.directory.get_path("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost")
+        # bgp_asn is required for all prefix types: ANCHOR_PREFIX templates use it
+        # directly (router bgp <asn>), and while SUPPRESS_PREFIX templates don't
+        # reference it today, prefix-list operations are inherently BGP features —
+        # any device managing prefix lists will be running BGP with an ASN configured.
+        # Requiring bgp_asn upfront keeps templates free to use it when expanded.
         try:
             device_type = metadata["type"]
             device_subtype = metadata.get("subtype", "")
