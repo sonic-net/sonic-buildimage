@@ -1087,7 +1087,7 @@ static void emc2305_get_config(struct i2c_client *client)
 
 }
 
-static int emc2305_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int emc2305_probe(struct i2c_client *client)
 {
     struct emc2305_data *data;
     int status;
