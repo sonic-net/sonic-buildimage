@@ -37,6 +37,10 @@ module sonic-monitor-link-group {
 
                 key "group_name";
 
+                must "not(uplinks[. = current()/downlinks])" {
+                    error-message "An interface cannot be configured as both uplink and downlink in the same group";
+                }
+
                 leaf group_name {
                     type string {
                         length "1..128" {
