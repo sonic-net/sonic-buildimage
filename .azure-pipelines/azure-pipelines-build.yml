@@ -193,7 +193,7 @@ jobs:
             echo "=== VERIFYING DOWNLOAD-2 ==="
             ls -lh target/debs/bookworm/
 
-            export SONIC_DPKG_CACHE_METHOD=rcache
+            export SONIC_DPKG_CACHE_METHOD=rwcache
             export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
 
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
