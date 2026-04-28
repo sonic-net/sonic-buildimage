@@ -61,7 +61,6 @@ override_dh_auto_install:
 	set -e
 	(for mod in $(MODULE_DIRS); do \
 		pkg_name=$(PACKAGE_PRE_NAME)-$${mod}; \
-		dh_installdirs -p$${pkg_name} etc/obmc-console/; \
 		dh_installdirs -p$${pkg_name} usr/local/bin/; \
 		dh_installdirs -p$${pkg_name} etc/modules-load.d/; \
 		if [ -f $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/Makefile ]; then \
