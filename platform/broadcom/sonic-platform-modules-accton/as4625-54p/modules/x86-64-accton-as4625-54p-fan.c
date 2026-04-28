@@ -187,19 +187,20 @@ static int as4625_fan_write_value(u8 reg, u8 value)
 static u32 reg_val_to_duty_cycle(u8 reg_val)
 {
 	reg_val &= FAN_DUTY_CYCLE_REG_MASK;
-	return (u32)(reg_val+1) * 625 / 100;
+    if (reg_val < 4)
+        return ((u32)(reg_val) * 625 + 50) / 100;
+    else
+        return ((u32)(reg_val+1) * 625 + 50) / 100;
 }
 
 static u8 duty_cycle_to_reg_val(u8 duty_cycle)
 {
-    if (duty_cycle == 0) {
-        return 0;
-    }
-	else if (duty_cycle > FAN_MAX_DUTY_CYCLE) {
-		duty_cycle = FAN_MAX_DUTY_CYCLE;
-	}
-
-    return ((u32)duty_cycle * 100 / 625) - 1;
+    if (duty_cycle <= 21)
+        return (((u32)duty_cycle * 100 + 312) / 625);
+    else if(duty_cycle <= 29)
+        return (duty_cycle <= 25) ? 3 : 4;
+    else
+        return (((u32)duty_cycle * 100 + 312) / 625) - 1;
 }
 
 static u32 reg_val_to_speed_rpm(u8 reg_val)
