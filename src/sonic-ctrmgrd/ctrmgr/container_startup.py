@@ -173,7 +173,6 @@ def update_state(state_db, feature, owner=None, version=None):
             CURRENT_OWNER: owner,
             DOCKER_ID: get_docker_id() if owner != "local" else feature,
             UPD_TIMESTAMP: str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-            "hello": "world",
             VERSION: version
             }
 

@@ -25,7 +25,7 @@ module sonic-buffer-queue {
         "SONiC";
 
     description
-        "SONIC BUFFER QUEUE";
+        "Egress queue buffer configuration per port.";
 
     revision 2021-07-01 {
         description
@@ -36,7 +36,11 @@ module sonic-buffer-queue {
 
         container BUFFER_QUEUE {
 
+            description "Configures buffer profiles for egress queues on ports.";
+
             list BUFFER_QUEUE_LIST {
+
+                description "Buffer queue entry for a non-VOQ port.";
                 when "not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) or
                     (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type!='voq')";
 
@@ -46,6 +50,7 @@ module sonic-buffer-queue {
                     type leafref {
                         path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
+                    description "Port on which the egress queue buffer is configured.";
                 }
 
                 leaf qindex {
@@ -55,7 +60,7 @@ module sonic-buffer-queue {
                             error-app-tag qindex-invalid;
                         }
                     }
-                    description "Egress Queue Index for a port";
+                    description "Egress queue index or range (e.g. 0-3) on the port.";
                 }
 
                 leaf profile {
@@ -63,11 +68,13 @@ module sonic-buffer-queue {
                     type leafref {
                         path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
                     }
-                    description "Buffer Profile associated with Priority Queue for a port";
+                    description "Buffer profile applied to this egress queue.";
                 }
 
             }
             list VOQ_BUFFER_QUEUE_LIST {
+
+                description "Buffer queue entry for a VOQ chassis port.";
                 when "boolean(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) and
                     (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq')";
 
@@ -75,18 +82,19 @@ module sonic-buffer-queue {
 
                 leaf hostname {
                     type stypes:hostname;
+                    description "VOQ chassis hostname owning this port.";
                 }
 
                 leaf asic_name {
                     type stypes:asic_name;
+                    description "ASIC instance name within the VOQ chassis.";
                 }
 
                 leaf port {
                     type string {
                         length 1..128;
                     }
-
-                    description "port name.";
+                    description "Port name on the VOQ chassis linecard.";
                 }
 
                 leaf qindex {
@@ -96,7 +104,7 @@ module sonic-buffer-queue {
                             error-app-tag qindex-invalid;
                         }
                     }
-                    description "Egress Queue Index for a port";
+                    description "Egress queue index or range (e.g. 0-3) on the port.";
                 }
 
                 leaf profile {
@@ -104,7 +112,7 @@ module sonic-buffer-queue {
                     type leafref {
                         path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
                     }
-                    description "Buffer Profile associated with Priority Queue for a port";
+                    description "Buffer profile applied to this egress queue.";
                 }
 
             }

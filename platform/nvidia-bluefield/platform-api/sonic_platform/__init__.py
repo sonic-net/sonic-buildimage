@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,4 +15,5 @@
 # limitations under the License.
 #
 __all__ = ["platform", "chassis"]
-from sonic_platform import *
+from . import platform
+from . import chassis

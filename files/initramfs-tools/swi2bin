@@ -1,0 +1,159 @@
+#!/bin/sh -e
+# This hook is the 2nd stage of the swi2bin installation
+
+PREREQS=""
+
+prereqs() { echo "$PREREQS"; }
+
+case $1 in
+  prereqs)
+  prereqs
+    exit 0
+    ;;
+esac
+
+perform_swi2bin=false
+verbose=false
+
+for x in $(cat /proc/cmdline); do
+    case "$x" in
+        arista.swi2bin=verbose)
+            perform_swi2bin=true
+            verbose=true
+            ;;
+        arista.swi2bin|arista.swi2bin=*)
+            perform_swi2bin=true
+            ;;
+   esac
+done
+
+if ! $perform_swi2bin; then
+    exit 0
+fi
+
+if $verbose; then
+    set -x
+fi
+
+log() {
+   echo "[+] $@"
+}
+
+is_bin_signed() {
+   test "$(tail -n 1 "$1")" = "-----END CMS-----"
+}
+
+log "Entering initrd phase of installation"
+
+nosname=SONiC-OS
+image_name="$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')"
+
+bin_signed=false
+if is_bin_signed "$rootmnt/host/$image_name/sonic.bin"; then
+   bin_signed=true
+fi
+
+log "Mounting root filesystem"
+rootdir=/install-root
+installtmp=/tmp/install
+rwdir="$installtmp/rw"
+workdir="$installtmp/workdir"
+
+mkdir -p "$rootdir"
+mkdir -p "$installtmp"
+
+mount -t tmpfs none "$installtmp"
+mkdir -p "$rwdir"
+mkdir -p "$workdir"
+
+mount -n -o "lowerdir=$rootmnt,upperdir=$rwdir,workdir=$workdir" -t overlay root-overlay "$rootdir"
+mount -o bind "$rootmnt/host" "$rootdir/host"
+mount -t proc proc "$rootdir/proc"
+mount -t devtmpfs udev "$rootdir/dev"
+mount -t sysfs sysfs "$rootdir/sys"
+
+log "Installing grub"
+espdev="$(blkid --label ESP)"
+blkdev="/dev/$(basename "$(readlink -f "/sys/class/block/$(basename "$espdev")/..")")"
+esppartnum="$(echo "$espdev" | grep -Eo '[0-9]+$')"
+
+mkdir -p "$rootdir/boot"
+mount -o bind "$rootmnt/host/$image_name/boot" "$rootdir/boot"
+mkdir -p "$rootdir/boot/efi"
+mount "$espdev" "$rootdir/boot/efi"
+
+# ensure grub folder exists
+mkdir -p "$rootdir/host/grub"
+
+# mounting efivarfs which is necessary for efitools to work
+mount -t efivarfs efivarfs "$rootdir/sys/firmware/efi/efivars"
+
+# installing grub packages from platform.tar.gz
+chroot "$rootdir" sh -c "dpkg -i /host/$image_name/platform/grub/*"
+
+# install grub-efi on /boot/efi/SONiC-OS and configuration on /host/grub/
+chroot "$rootdir" grub-install \
+   --target=x86_64-efi \
+   --boot-directory=/host \
+   --efi-directory=/boot/efi \
+   --bootloader-id=$nosname
+
+if $bin_signed; then
+   log "Installing signed shim/grub/mm"
+
+   # installing signed grub, shim, mm and other efi tools
+   mkdir -p "$rootdir/boot/efi/EFI/$nosname"
+   cp "$rootdir/host/$image_name/boot/"*.efi "$rootdir/boot/efi/EFI/$nosname"
+
+   # creating new EFI boot entry
+   chroot "$rootdir" efibootmgr \
+      --create \
+      --quiet \
+      --label "$nosname" \
+      --disk "$blkdev" \
+      --part "$esppartnum" \
+      --loader "/EFI/$nosname/shimx64.efi"
+fi
+
+# FIXME: populate fake entry in grub.cfg to allow the installer to find the /host
+#        partition
+grubentry="SONiC-OS-$(echo "$image_name" | cut -c7-)"
+cat > "$rootdir/host/grub/grub.cfg" <<EOF
+menuentry '$grubentry' {
+   # root=$ROOT rw
+}
+EOF
+
+log "Running SONiC installer"
+
+chroot "$rootdir" bash "/host/$image_name/sonic.bin"
+
+# FIXME: remove fake grub entry
+sed -i "/^menuentry .$grubentry./,/}/d" "$rootdir/host/grub/grub.cfg"
+
+sync
+
+log "Cleaning up behind installer"
+
+# unmounting chroot paths
+umount "$rootdir/sys/firmware/efi/efivars"
+umount "$rootdir/boot/efi"
+umount "$rootdir/boot"
+umount "$rootdir/sys"
+umount "$rootdir/dev"
+umount "$rootdir/proc"
+umount "$rootdir/host"
+umount "$rootdir"
+
+# unmounting other paths
+mkdir -p /tmp/host
+mount -o move "$rootmnt/host" /tmp/host
+umount "$rootmnt"
+rm -rf "/tmp/host/$image_name"
+umount /tmp/host
+
+log "Done installing, rebooting..."
+
+sync
+
+echo b > /proc/sysrq-trigger

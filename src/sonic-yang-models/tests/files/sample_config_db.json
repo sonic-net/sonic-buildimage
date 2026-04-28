@@ -1588,6 +1588,10 @@
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
+            "HA_SET": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
             "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
@@ -2504,6 +2508,12 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
+            }
+        },
         "VNET_ROUTE_TUNNEL" : {
             "vnet1|10.0.0.0/24" : {
                 "endpoint": "192.168.1.1,192.168.1.2",
@@ -3099,22 +3109,22 @@
             "vdpu0": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu0"]
+                "main_dpu_ids": "dpu0"
             },
             "vdpu1": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu1"]
+                "main_dpu_ids": "dpu1"
             },
             "vdpu2": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu2"]
+                "main_dpu_ids": "dpu2"
             },
             "vdpu3": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu3"]
+                "main_dpu_ids": "dpu3"
             }
         },
         "DASH_HA_GLOBAL_CONFIG": {
