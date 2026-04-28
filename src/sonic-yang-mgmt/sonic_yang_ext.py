@@ -60,6 +60,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         print_log_enabled: bool
         yangFiles: List[str]
         confDbYangMap: Dict[str, Any]
+        _yJsonCache: Optional[List[Dict[str, Any]]]
         jIn: Dict[str, Any]
         xlateJson: Dict[str, Any]
         revXlateJson: Dict[str, Any]
@@ -80,6 +81,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
     def loadYangModel(self):
 
         try:
+            # Invalidate any cached YIN-shape view from a previous load.
+            self._yJsonCache = None
             # get all files
             self.yangFiles = glob(self.yang_dir +"/*.yang")
             # load yang modules
