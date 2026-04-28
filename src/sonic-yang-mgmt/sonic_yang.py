@@ -32,8 +32,6 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         self.confDbYangMap: Dict[str, Any] = dict()
         # map of backlinks dict()[]
         self.backlinkMap: Optional[Dict[str, List[str]]] = None
-        # JSON format of yang model [similar to pyang conversion]
-        self.yJson: List[Any] = list()
         # config DB json input, will be cropped as yang models
         self.jIn: Dict[str, Any] = dict()
         # YANG JSON, this is traslated from config DB json
@@ -42,9 +40,6 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         self.revXlateJson: Dict[str, Any] = dict()
         # below dict store the input config tables which have no YANG models
         self.tablesWithOutYang: Dict[str, Any] = dict()
-        # below dict will store preProcessed yang objects, which may be needed by
-        # all yang modules, such as grouping.
-        self.preProcessedYang: Dict[str, Any] = dict()
         # Lazy caching for must counts
         self.mustCache: Dict[Tuple[Any, bool], int] = dict()
         # Lazy caching for configdb to xpath
