@@ -1,0 +1,35 @@
+#!/bin/sh
+# BusyBox udhcpc handler: apply lease (address + default route). Bundled as /sbin/udhcpc.script
+# because minimal initramfs has no /usr/share/udhcpc/default.script.
+
+case "$1" in
+deconfig)
+    if command -v ip >/dev/null 2>&1; then
+        ip -4 addr flush dev "$interface" 2>/dev/null || true
+    else
+        ifconfig "$interface" 0.0.0.0 2>/dev/null || true
+    fi
+    ;;
+renew|bound)
+    [ -n "$interface" ] && [ -n "$ip" ] || exit 1
+    if command -v ip >/dev/null 2>&1 && [ -n "$mask" ]; then
+        ip -4 addr flush dev "$interface" 2>/dev/null || true
+        ip -4 addr add "$ip/$mask" dev "$interface" || exit 1
+        ip link set "$interface" up 2>/dev/null || true
+    elif [ -n "$subnet" ]; then
+        ifconfig "$interface" "$ip" netmask "$subnet" up || exit 1
+    else
+        exit 1
+    fi
+    if [ -n "$router" ]; then
+        for gw in $router; do
+            if command -v ip >/dev/null 2>&1; then
+                ip -4 route add default via "$gw" dev "$interface" 2>/dev/null && break
+            else
+                route add default gw "$gw" dev "$interface" 2>/dev/null && break
+            fi
+        done
+    fi
+    ;;
+esac
+exit 0

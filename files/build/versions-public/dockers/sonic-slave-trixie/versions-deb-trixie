@@ -122,7 +122,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.4.0-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.4.1-1~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -1111,7 +1111,7 @@ libmro-compat-perl==0.15-2
 libmtdev1t64==1.1.7-1
 libmujs3==1.3.6-1
 libmunge2==0.5.16-1.1~deb13u1
-libmupdf25.1==1.25.1+ds1-6
+libmupdf25.1==1.25.1+ds1-6+deb13u1
 libmysofa1==1.3.3+dfsg-1
 libnamespace-autoclean-perl==0.31-1
 libnamespace-clean-perl==0.27-2
@@ -1145,8 +1145,8 @@ libnghttp2-14==1.64.0-1.1
 libnghttp2-dev==1.64.0-1.1
 libnghttp3-9==1.8.0-1
 libnghttp3-dev==1.8.0-1
-libngtcp2-16==1.11.0-1
-libngtcp2-crypto-gnutls8==1.11.0-1
+libngtcp2-16==1.11.0-1+deb13u1
+libngtcp2-crypto-gnutls8==1.11.0-1+deb13u1
 libnl-3-200==3.7.0-2
 libnl-3-dev==3.7.0-2
 libnl-genl-3-200==3.7.0-2
@@ -1440,7 +1440,6 @@ libssh-4==0.11.2-1+deb13u1
 libssh2-1-dev==1.11.1-1
 libssh2-1t64==1.11.1-1
 libssl-dev==3.5.5-1~deb13u2
-libssl3t64==3.5.5-1~deb13u2
 libstdc++-14-dev==14.2.0-19
 libstdc++6-armhf-cross==14.2.0-19cross1
 libstemmer0d==2.2.0-4+b2
@@ -1797,7 +1796,7 @@ mokutil==0.7.2-1
 mpi-default-bin==1.18
 mpi-default-dev==1.18
 mtools==4.0.48-1
-mupdf-tools==1.25.1+ds1-6
+mupdf-tools==1.25.1+ds1-6+deb13u1
 mysql-common==5.8+1.1.1
 native-architecture==0.2.6
 ncurses-term==6.5+20250216-2
@@ -1833,7 +1832,6 @@ openssh-client==1:10.0p1-7+deb13u2
 openssh-server==1:10.0p1-7+deb13u2
 openssh-sftp-server==1:10.0p1-7+deb13u2
 openssl==3.5.5-1~deb13u2
-openssl-provider-legacy==3.5.5-1~deb13u2
 os-prober==1.83
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
@@ -2029,8 +2027,8 @@ python3-paramiko==3.5.1-3
 python3-parse==1.20.2-1
 python3-parso==0.8.4-1
 python3-pexpect==4.9-3
-python3-pil==11.1.0-5+deb13u1
-python3-pil.imagetk==11.1.0-5+deb13u1
+python3-pil==11.1.0-5+deb13u2
+python3-pil.imagetk==11.1.0-5+deb13u2
 python3-pip==25.1.1+dfsg-1
 python3-pip-whl==25.1.1+dfsg-1
 python3-pkg-resources==78.1.1-0.1
