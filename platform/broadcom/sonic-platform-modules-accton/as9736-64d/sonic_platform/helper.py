@@ -174,6 +174,19 @@ class APIHelper():
 
         return intf_name_by_index
 
+    def get_platform(self):
+        platform = None
+
+        try:
+            with open(MACHINE_CONF_FILE, 'r') as file:
+                for line in file:
+                    if 'onie_platform=' in line:
+                        platform = line.strip().split('=')[1]
+                        break
+        except (IOError, OSError):
+            pass
+
+        return platform
 
 class FileLock:
     """
