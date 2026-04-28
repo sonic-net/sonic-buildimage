@@ -12,7 +12,16 @@
         "desc": "Add dhcpv4 relay with link-select option enabled."
     },
     "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_DISCARD": {
-        "desc": "Add dhcpv4 relay with minimum config."
+        "desc": "Add dhcpv4 relay with agent_relay_mode set to discard."
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_APPEND": {
+        "desc": "Add dhcpv4 relay with agent_relay_mode set to append."
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_REPLACE": {
+        "desc": "Add dhcpv4 relay with agent_relay_mode set to replace."
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_FORWARD": {
+        "desc": "Add dhcpv4 relay with agent_relay_mode set to forward."
     },
     "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
         "desc": "Add dhcpv4 relay with valid max_hop_cnt."
