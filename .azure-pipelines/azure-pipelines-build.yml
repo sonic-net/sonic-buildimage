@@ -177,6 +177,11 @@ jobs:
             echo "=== Patching rules.mk to read lemmingsai.dep ==="
             echo "include \$(PLATFORM_PATH)/lemmingsai.dep" >> platform/alpinevs/rules.mk
 
+            echo "=== Patching lemmingsai.dep to stop Dependency Explosion ==="
+            # This forces the git ls-files command to strictly scope to the source folder
+            # preventing it from hashing uninitialized Arista/Broadcom submodules
+            sed -i 's/git ls-files $(SPATH)/cd $(SPATH) \&\& git ls-files/g' platform/alpinevs/lemmingsai.dep
+
             echo "=== EXTRACTING MAKE VARIABLES ==="
             make -p -n -f slave.mk target/sonic-alpinevs.img.gz > make_database.txt 2>/dev/null || true
 
