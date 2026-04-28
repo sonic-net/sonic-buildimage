@@ -108,7 +108,7 @@
 
 {% if DEVICE_METADATA
   and DEVICE_METADATA['localhost']
-  and DEVICE_METADATA['localhost'].type in ('LeafRouter, 'ToRRouter')
+  and DEVICE_METADATA['localhost'].type in ('LeafRouter', 'ToRRouter')
   and DEVICE_NEIGHBOR
   and DEVICE_NEIGHBOR_METADATA %}
 {%- macro generate_queue_buffers(ports) %}
