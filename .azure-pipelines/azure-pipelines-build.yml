@@ -189,15 +189,13 @@ jobs:
             grep -i "lemmingsai" make_database.txt || true
             grep -i "lucius" make_database.txt || true
 
-            echo "New add ends"
-
             echo "=== Touch the deb file ==="
             [ -f target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb ] && touch target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb
 
             echo "=== VERIFYING DOWNLOAD-2 ==="
             ls -lh target/debs/bookworm/
 
-            # export SONIC_DPKG_CACHE_METHOD=rwcache
+            export SONIC_DPKG_CACHE_METHOD=rwcache
             export SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/alpinevs
 
             make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
