@@ -114,32 +114,64 @@ module sonic-acl {
                             type stypes:mac-addr-and-mask;
 						}
 					}
-					case ip4_prefix {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
-						leaf SRC_IP {
+				case ip4_prefix {
+					when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
+					leaf SRC_IP {
+						type union {
 							type inet:ipv4-prefix;
-						}
-
-						leaf DST_IP {
-							type inet:ipv4-prefix;
-						}
-
-						leaf INNER_SRC_IP {
-							description "Source IP prefix for inner packet";
-							type inet:ipv4-prefix;
+							type inet:ipv4-address;
 						}
 					}
 
-					case ip6_prefix {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
-						leaf SRC_IPV6 {
-							type inet:ipv6-prefix;
-						}
+					leaf SRC_IP_MASK {
+						description "Optional non-contiguous IPv4 mask for SRC_IP. When present, SRC_IP must be a plain host address (no prefix-length notation).";
+						type inet:ipv4-address;
+					}
 
-						leaf DST_IPV6 {
-							type inet:ipv6-prefix;
+					leaf DST_IP {
+						type union {
+							type inet:ipv4-prefix;
+							type inet:ipv4-address;
 						}
 					}
+
+					leaf DST_IP_MASK {
+						description "Optional non-contiguous IPv4 mask for DST_IP. When present, DST_IP must be a plain host address (no prefix-length notation).";
+						type inet:ipv4-address;
+					}
+
+					leaf INNER_SRC_IP {
+						description "Source IP prefix for inner packet";
+						type inet:ipv4-prefix;
+					}
+				}
+
+				case ip6_prefix {
+					when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
+					leaf SRC_IPV6 {
+						type union {
+							type inet:ipv6-prefix;
+							type inet:ipv6-address;
+						}
+					}
+
+					leaf SRC_IPV6_MASK {
+						description "Optional non-contiguous IPv6 mask for SRC_IPV6. When present, SRC_IPV6 must be a plain host address (no prefix-length notation).";
+						type inet:ipv6-address;
+					}
+
+					leaf DST_IPV6 {
+						type union {
+							type inet:ipv6-prefix;
+							type inet:ipv6-address;
+						}
+					}
+
+					leaf DST_IPV6_MASK {
+						description "Optional non-contiguous IPv6 mask for DST_IPV6. When present, DST_IPV6 must be a plain host address (no prefix-length notation).";
+						type inet:ipv6-address;
+					}
+				}
 				}
 
 				leaf IN_PORTS {
