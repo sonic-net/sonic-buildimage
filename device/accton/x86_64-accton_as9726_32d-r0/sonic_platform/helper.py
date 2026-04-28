@@ -166,6 +166,16 @@ class APIHelper():
 
         return intf_name_by_index
 
+    def get_platform(self):
+        platform = None
+
+        with open(MACHINE_CONF_FILE, 'r') as file:
+            for line in file:
+                if 'onie_platform=' in line:
+                    platform = line.strip().split('=')[1]
+                    break
+
+        return platform
 
 class FileLock:
     """
