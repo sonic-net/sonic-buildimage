@@ -96,6 +96,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_32D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H6_64_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H6_128_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X1B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X4_PLATFORM_MODULE) \
