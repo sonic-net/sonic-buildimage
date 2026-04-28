@@ -1449,9 +1449,9 @@
                 "2x400G[200G]": ["etp64a", "etp64b"],
                 "4x200G[100G]": ["etp64a", "etp64b", "etp64c", "etp64d"],
                 "8x100G[50G]": ["etp64a", "etp64b", "etp64c", "etp64d", "etp64e", "etp64f", "etp64g", "etp64h"],
-                "4x100G(4)+1x400G(4)": ["etp64a","etp64b","etp64c","etp64d","etp64e"],
-                "1x400G(4)+4x100G(4)": ["etp64a","etp64b","etp64c","etp64d","etp64e"]
-        }
+                "4x100G(4)+1x400G(4)": ["etp64a", "etp64b", "etp64c", "etp64d", "etp64e"],
+                "1x400G(4)+4x100G(4)": ["etp64a", "etp64b", "etp64c", "etp64d", "etp64e"]
+            }
         },
         "Ethernet512": {
             "index": "65",
