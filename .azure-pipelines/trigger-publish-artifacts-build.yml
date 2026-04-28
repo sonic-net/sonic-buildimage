@@ -48,12 +48,7 @@ steps:
         "project": "$(System.TeamProject)",
         "branchName":"$(Build.SourceBranchName)"},
       artifactContext: {"artifactName":"${{ parameters.artifactName }}",
-        "artifactPatterns":"**/*.bin\n
-              **/*.swi\n
-              **/*.raw\n
-              **/*.img.gz\n
-              **/*-rpc.gz\n
-              **/*.deb"},
+        "artifactPatterns":"**/*.bin\n**/*.swi\n**/*.raw\n**/*.img.gz\n**/*-rpc.gz\n**/*.deb"},
       publishContext: {"publishPrefix":"${{ parameters.publishPrefix }}",
         "keepArtifactName":false,
         "dockerImagePatterns":"target/*-rpc.gz",
