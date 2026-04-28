@@ -35,17 +35,17 @@
         "QUEUE1_DOWNLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE2_DOWNLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE3_DOWNLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE4_DOWNLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
@@ -70,17 +70,17 @@
         "QUEUE1_UPLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE2_UPLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE3_UPLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
             "size": "1778",
-            "dynamic_th": "-7"
+            "dynamic_th": "3"
         },
         "QUEUE4_UPLINK_LOSSY_PROFILE": {
             "pool": "egress_lossy_pool",
@@ -108,7 +108,7 @@
 
 {% if DEVICE_METADATA
   and DEVICE_METADATA['localhost']
-  and DEVICE_METADATA['localhost'].type == "LeafRouter"
+  and DEVICE_METADATA['localhost'].type in ('LeafRouter', 'ToRRouter')
   and DEVICE_NEIGHBOR
   and DEVICE_NEIGHBOR_METADATA %}
 {%- macro generate_queue_buffers(ports) %}
