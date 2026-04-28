@@ -311,7 +311,7 @@ def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id
                     except ValueError:
                         continue
                 index = tokens[titles.index('index')]
-                system_port_data['system_port_id'] = 8 * (int(index) - 1) + 1
+                system_port_data['system_port_id'] = int(index)
                 system_port_name = hostname + "|" + asic_name + "|" + name
                 ports[system_port_name] = system_port_data
 

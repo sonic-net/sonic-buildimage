@@ -329,8 +329,8 @@ def _get_jinja2_env(paths):
 
     return env
 
-def _get_voq_config(asic_name, asic_id):
-    max_cores = device_info. get_num_asic_cores()
+def _get_voq_config(asic_name, asic_id, hostname):
+    max_cores = device_info.get_num_asic_cores()
     switch_id = 0
     if asic_id is not None:
        switch_id = int(asic_id)
@@ -342,6 +342,7 @@ def _get_voq_config(asic_name, asic_id):
                        'switch_id': switch_id,
                        'switch_type': 'voq',
                        'max_cores': max_cores,
+                       'hostname': hostname,
                        'asic_name': asic_name
                    }
                }}
@@ -429,7 +430,7 @@ def main():
                     hostname = f.read().strip()
             except Exception:
                 pass
-            deep_update(data, _get_voq_config(asic_name, asic_id))
+            deep_update(data, _get_voq_config(asic_name, asic_id, hostname))
             system_ports = get_system_port_config(hwsku, hostname, asic_name)
             deep_update(data, {'SYSTEM_PORT': system_ports})
 
