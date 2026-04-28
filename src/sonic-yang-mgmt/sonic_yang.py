@@ -40,6 +40,11 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         self.revXlateJson: Dict[str, Any] = dict()
         # below dict store the input config tables which have no YANG models
         self.tablesWithOutYang: Dict[str, Any] = dict()
+        # Lazy YIN-shape view of the loaded modules, rebuilt on demand from the
+        # compiled SNode tree the first time a backward-compat consumer reads
+        # `self.yJson`. None means "not yet built"; the loader resets this back
+        # to None whenever the schema set changes. See _build_yjson_compat().
+        self._yJsonCache: Optional[List[Dict[str, Any]]] = None
         # Lazy caching for must counts
         self.mustCache: Dict[Tuple[Any, bool], int] = dict()
         # Lazy caching for configdb to xpath
@@ -61,6 +66,115 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         if self.ctx:
             self.ctx.destroy()
             self.ctx = None  # type: ignore[assignment]
+
+    @property
+    def yJson(self) -> List[Dict[str, Any]]:
+        """Backward-compat YIN-shape dict tree of all loaded modules.
+
+        Returned shape mirrors the xmltodict output that earlier versions of
+        sonic-yang-mgmt produced from `module.print_mem("yin")`: a list of
+        per-module dicts, each `{'module': {'@name': ..., 'container': ...}}`,
+        with single children rendered as a dict and multiple as a list.
+
+        Built on demand from the **compiled** schema tree, so `uses`,
+        `grouping`, `augment` and `deviation` are already resolved by libyang3
+        — there's no manual inlining and no parsed-tree access. Cached after
+        first build; the cache is invalidated when the schema set changes via
+        `loadYangModel()`.
+
+        This exists solely for external consumers (e.g. sonic-utilities's
+        sonic_cli_gen) that still walk the YIN dict shape. Internal code
+        should walk SNode iteration instead.
+        """
+        if self._yJsonCache is None:
+            self._yJsonCache = self._build_yjson_compat()
+        return self._yJsonCache
+
+    def _build_yjson_compat(self) -> List[Dict[str, Any]]:
+        result: List[Dict[str, Any]] = []
+        for module_name in self.yangFiles:
+            m = self.ctx.get_module(module_name)
+            if m is None:
+                continue
+            module_dict: Dict[str, Any] = {'@name': m.name()}
+            self._yjson_add_subtree(m, module_dict)
+            result.append({'module': module_dict})
+        return result
+
+    def _yjson_add_subtree(self, parent_snode: Any, parent_dict: Dict[str, Any]) -> None:
+        """Add the children of `parent_snode` (a Module or SNode) to
+        `parent_dict`, grouping them by YIN keyword. iter_children with
+        with_choice=True yields direct leaves and choice nodes separately so
+        the choice/case structure is preserved (the consumer expects to find
+        leaves both directly and under `choice/case/leaf`).
+        """
+        groups: Dict[str, List[Dict[str, Any]]] = {}
+        for child in parent_snode.children(with_choice=True):
+            yin_key, yin_dict = self._yjson_node(child)
+            if yin_key is None:
+                continue
+            groups.setdefault(yin_key, []).append(yin_dict)
+        for key, values in groups.items():
+            parent_dict[key] = values[0] if len(values) == 1 else values
+
+    def _yjson_node(self, snode: Any) -> Tuple[Optional[str], Dict[str, Any]]:
+        d: Dict[str, Any] = {'@name': snode.name()}
+        desc = snode.description()
+        if desc is not None:
+            d['description'] = {'text': desc}
+        if snode.mandatory():
+            d['mandatory'] = {'@value': 'true'}
+
+        if isinstance(snode, ly.SLeaf):
+            d['type'] = self._yjson_type(snode.type())
+            default = snode.default()
+            if default is not None:
+                d['default'] = {'@value': str(default)}
+            return 'leaf', d
+        if isinstance(snode, ly.SLeafList):
+            d['type'] = self._yjson_type(snode.type())
+            return 'leaf-list', d
+        if isinstance(snode, ly.SList):
+            keys = [k.name() for k in snode.keys()]
+            if keys:
+                d['key'] = {'@value': ' '.join(keys)}
+            self._yjson_add_subtree(snode, d)
+            return 'list', d
+        if isinstance(snode, ly.SContainer):
+            self._yjson_add_subtree(snode, d)
+            return 'container', d
+        if isinstance(snode, ly.SChoice):
+            cases: List[Dict[str, Any]] = []
+            for case in snode.children(with_case=True, types=(ly.SNode.CASE,)):
+                case_dict: Dict[str, Any] = {'@name': case.name()}
+                case_desc = case.description()
+                if case_desc is not None:
+                    case_dict['description'] = {'text': case_desc}
+                self._yjson_add_subtree(case, case_dict)
+                cases.append(case_dict)
+            if cases:
+                d['case'] = cases[0] if len(cases) == 1 else cases
+            return 'choice', d
+        # Anything else (rpc, action, notification, anyxml/anydata) — skip;
+        # legacy yJson consumers don't read those branches.
+        return None, d
+
+    def _yjson_type(self, type_obj: Any) -> Dict[str, Any]:
+        # Prefer the typedef-aware name (e.g. "stypes:hwsku") so consumers
+        # that text-match on prefixed type names continue to work; fall back
+        # to basename for built-ins.
+        name = type_obj.name() or type_obj.basename()
+        d: Dict[str, Any] = {'@name': name}
+        base = type_obj.basename()
+        if base == 'leafref':
+            path = type_obj.leafref_path()
+            if path:
+                d['path'] = {'@value': path}
+        elif base == 'union':
+            members = [self._yjson_type(t) for t in type_obj.union_types()]
+            if members:
+                d['type'] = members[0] if len(members) == 1 else members
+        return d
 
     def sysLog(self, debug=syslog.LOG_INFO, msg=None, doPrint=False):
         # log debug only if enabled
