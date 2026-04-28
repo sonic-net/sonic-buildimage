@@ -201,8 +201,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _load_schema_module(self, yang_file):
         try:
-            with open(yang_file, 'r') as f:
-                return self.ctx.parse_module_file(f, "yang")
+            # Use libyang's own FILEPATH mode rather than opening the file in
+            # Python and passing a file object. This matches the libyang1
+            # behaviour (parse_module_path(path)) and, equally important,
+            # keeps tests that mock builtins.open working — libyang reads the
+            # file via its own C runtime, so a mocked open() is irrelevant.
+            return self.ctx.parse_module(yang_file, ly.IOType.FILEPATH, "yang")
         except Exception as e:
             self.sysLog(msg="Failed to load yang module file: " + yang_file, debug=syslog.LOG_ERR, doPrint=True)
             self.fail(e)
@@ -239,8 +243,13 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _load_data_file(self, data_file):
        try:
-           with open(data_file, 'r') as f:
-               data_node = self.ctx.parse_data_file(f, "json", no_state=True, strict=True, json_string_datatypes=True)
+           # Use libyang's FILEPATH mode so libyang reads the file itself —
+           # avoids passing a Python file object whose fileno() may not exist
+           # (e.g. when builtins.open is mocked in tests).
+           data_node = self.ctx.parse_data("json", in_type=ly.IOType.FILEPATH,
+                                           in_data=str(data_file),
+                                           no_state=True, strict=True,
+                                           json_string_datatypes=True)
        except Exception as e:
            self.sysLog(msg="Failed to load data file: " + str(data_file), debug=syslog.LOG_ERR, doPrint=True)
            self.fail(e)
@@ -526,13 +535,17 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
             raise Exception('no root initialized')
 
         try:
-            #source data node
-            with open(str(data_file), 'r') as f:
-                source_node = self.ctx.parse_data_file(f, "json", no_state=True, strict=True, json_string_datatypes=True)
-                if source_node is None:
-                    raise Exception("Failed to parse data file: " + str(data_file))
-                #merge
-                self.root.merge(source_node, destruct=True, with_siblings=True)
+            # See _load_data_file: use FILEPATH mode so libyang reads the file
+            # via its own runtime; avoids issues with mocked builtins.open in
+            # tests and lets libyang handle encoding/EOL details.
+            source_node = self.ctx.parse_data("json", in_type=ly.IOType.FILEPATH,
+                                              in_data=str(data_file),
+                                              no_state=True, strict=True,
+                                              json_string_datatypes=True)
+            if source_node is None:
+                raise Exception("Failed to parse data file: " + str(data_file))
+            # merge
+            self.root.merge(source_node, destruct=True, with_siblings=True)
         except Exception as e:
             self.fail(e)
 
