@@ -250,6 +250,20 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 value = value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])])
             for v in value:
                 vValue.append(_yangConvert(v))
+            # SONiC YANG models that allow "logically empty" leaf-lists declare
+            # `default ""` (e.g. ACL_TABLE.ports) so libyang accepts the empty
+            # representation by auto-applying the default. libyang3, unlike
+            # libyang1, silently drops an explicit `[]` instead of substituting
+            # the default — which lets generic_config_updater's patch sorter
+            # accept moves like `remove /ports/0` that strand the configdb
+            # field as `[]`. Reject those here so the sorter falls back to
+            # removing the whole field (matching the libyang1 behaviour the
+            # patch_sorter_test_success fixtures were generated against).
+            if len(vValue) == 0 and list(leaf.defaults()):
+                raise Exception(
+                    "Empty leaf-list at {}: schema declares a default; "
+                    "remove the field instead of leaving it empty".format(
+                        '/'.join(self.elementPath)))
         else:
             vValue = _yangConvert(value)
 
