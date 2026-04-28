@@ -1485,7 +1485,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x9", "dev_addr":"0x76", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x2c0"},
+            "dev_attr": { "gpio_base":"0x3c0"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1765,7 +1765,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x76", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x200"},
+            "dev_attr": { "gpio_base":"0x300"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1793,7 +1793,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x77", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x210"},
+            "dev_attr": { "gpio_base":"0x310"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1821,7 +1821,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x74", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x220"},
+            "dev_attr": { "gpio_base":"0x320"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1849,7 +1849,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x75", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x230"},
+            "dev_attr": { "gpio_base":"0x330"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1877,7 +1877,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x76", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x240"},
+            "dev_attr": { "gpio_base":"0x340"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1905,7 +1905,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x77", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x250"},
+            "dev_attr": { "gpio_base":"0x350"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -1933,7 +1933,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x40", "dev_addr":"0x74", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x260"},
+            "dev_attr": { "gpio_base":"0x360"},
             "ports":
             [
                 {"port_num":0, "direction":"out", "value":"0", "edge":"", "active_low":"0"},
@@ -1961,7 +1961,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x40", "dev_addr":"0x77", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x270"},
+            "dev_attr": { "gpio_base":"0x370"},
             "ports":
             [
                 {"port_num":0, "direction":"out", "value":"0", "edge":"", "active_low":"0"},
@@ -1989,7 +1989,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x41", "dev_addr":"0x74", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x280"},
+            "dev_attr": { "gpio_base":"0x380"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -2017,7 +2017,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x41", "dev_addr":"0x75", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x290"},
+            "dev_attr": { "gpio_base":"0x390"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -2045,7 +2045,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x41", "dev_addr":"0x76", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x2a0"},
+            "dev_attr": { "gpio_base":"0x3a0"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -2073,7 +2073,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x41", "dev_addr":"0x77", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x2b0"},
+            "dev_attr": { "gpio_base":"0x3b0"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":"0"},
@@ -4568,7 +4568,7 @@
             "attr_list": [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x75", "attr_devtype":"gpio", "attr_devname":"GPIO_QSFP_PRN_INT_RSN_SEL2", "attr_offset":"0xb" },
                 { "attr_name":"xcvr_intr_status", "attr_devaddr":"0x75", "attr_devtype":"gpio", "attr_devname":"GPIO_QSFP_PRN_INT_RSN_SEL2", "attr_offset":"0xa" },
-                { "attr_name":"xcvr_reset", "attr_devaddr":"0x75", "attr_devtype":"gpio", "attr_devname":"GPIO_QSFP_PRN_INT_RSN_SEL2", "attr_offset":"0x4" },
+                { "attr_name":"xcvr_reset", "attr_devaddr":"0x75", "attr_devtype":"gpio", "attr_devname":"GPIO_QSFP_PRN_INT_RSN_SEL2", "attr_offset":"0x5" },
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x74", "attr_devtype":"gpio", "attr_devname":"GPIO_QSFP_LP1", "attr_offset":"0x6" }
             ]
         }
