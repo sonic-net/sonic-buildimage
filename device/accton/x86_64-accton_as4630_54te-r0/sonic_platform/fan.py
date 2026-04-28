@@ -15,10 +15,12 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-PSU_FAN_MAX_RPM = 26688
-
-TARGET_SPEED_PATH = "/tmp/fan_target_speed"
 SPEED_TOLERANCE = 20
+TARGET_SPEED_PATH = "/tmp/fan_target_speed"
+HOST_FAN_TOLERANCE_FILE = "/usr/share/sonic/device/{}/tolerance_flag"
+PMON_FAN_TOLERANCE_FILE = "/usr/share/sonic/platform/tolerance_flag"
+
+PSU_FAN_MAX_RPM = 26688
 CPLD_I2C_PATH = "/sys/bus/i2c/devices/3-0060/fan"
 I2C_PATH ="/sys/bus/i2c/devices/{}-00{}/"
 PSU_HWMON_I2C_MAPPING = {
@@ -43,25 +45,26 @@ PSU_CPLD_I2C_MAPPING = {
     },
 }
 
-FAN_TARGET_SPEED_TABLE = {
-    0:   { "target_speed": 0     }, # percentage <--> target_rpm
-    6:   { "target_speed": 0     },
-    12:  { "target_speed": 681   },
-    18:  { "target_speed": 1477  },
-    25:  { "target_speed": 2386  },
-    31:  { "target_speed": 3636  },
-    37:  { "target_speed": 4431  },
-    43:  { "target_speed": 5340  },
-    50:  { "target_speed": 6250  },
-    56:  { "target_speed": 7159  },
-    62:  { "target_speed": 8068  },
-    68:  { "target_speed": 9090  },
-    75:  { "target_speed": 10227 },
-    81:  { "target_speed": 11363 },
-    87:  { "target_speed": 12500 },
-    93:  { "target_speed": 13409 },
-    100: { "target_speed": 13863 }
-}
+FAN_TARGET_SPEED_TABLE = [
+    # percentage <--> target_rpm
+    [  0,    0],
+    [  6,    0],
+    [ 12,  681],
+    [ 18, 1477],
+    [ 25, 2386],
+    [ 31, 3636],
+    [ 37, 4431],
+    [ 43, 5340],
+    [ 50, 6250],
+    [ 56, 7159],
+    [ 62, 8068],
+    [ 68, 9090],
+    [ 75, 10227],
+    [ 81, 11363],
+    [ 87, 12500],
+    [ 93, 13409],
+    [100, 13863],
+]
 
 class Fan(FanBase):
     """Platform-specific Fan class"""
@@ -73,6 +76,7 @@ class Fan(FanBase):
         self.is_psu_fan = is_psu_fan
         self.is_host = self._api_helper.is_host()
 
+        # sysfs path
         if self.is_psu_fan:
             self.psu_index = psu_index
             self.psu_i2c_num = PSU_HWMON_I2C_MAPPING[self.psu_index]['num']
@@ -84,8 +88,37 @@ class Fan(FanBase):
             self.psu_i2c_addr = PSU_CPLD_I2C_MAPPING[self.psu_index]['addr']
             self.psu_cpld_path = I2C_PATH.format(self.psu_i2c_num, self.psu_i2c_addr)
 
+        # tolerance path
+        self.tolerance_flag = PMON_FAN_TOLERANCE_FILE
+        if self.is_host:
+            self.tolerance_flag = HOST_FAN_TOLERANCE_FILE.format(self._api_helper.get_platform())
+
         FanBase.__init__(self)
 
+    def _find_key_range(self, input_num, table):
+
+        for i in range(len(table)-1):
+            lower = table[i]
+            upper = table[i+1]
+
+            if lower[0] <= input_num <= upper[0]:
+                return lower, upper
+
+        return None, None
+
+    def _get_interpolation(self, xt, y):
+        """
+            Based on the input number, retrieves the nearest lower and higher values to interpolated
+            Returns:
+                A float, the interpolated value based on the table.
+            Note:
+                The function uses linear interpolation: x = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
+        """
+        lower_bound, upper_bound = self._find_key_range(xt, FAN_TARGET_SPEED_TABLE)
+        x0, y0 = lower_bound
+        x1, y1= upper_bound
+        # Linear interpolation formula: x = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
+        return x0 + (y - y0) * (x1 - x0) / (y1 - y0)
 
     def get_direction(self):
         """
@@ -144,19 +177,13 @@ class Fan(FanBase):
             else:
                 return 0
         elif self.get_presence():
-            fan_target = self._api_helper.read_txt_file("{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage'))
             fan_input  = self._api_helper.read_txt_file("{}{}{}".format(CPLD_I2C_PATH, self.fan_index+1, '_input')) #rpm
 
-            if fan_input is None or fan_target is None:
-                return 0
-            # When set low_speed, then speed is 0
-            if FAN_TARGET_SPEED_TABLE[int(fan_target)]["target_speed"] == 0 or int(fan_input) == 0:
-                return 0
+            if (fan_input is not None):
+                target_speed = self.get_target_speed()
+                speed = self._get_interpolation(target_speed, int(fan_input))
 
-            speed = int(fan_target) * ( int(fan_input) / FAN_TARGET_SPEED_TABLE[int(fan_target)]["target_speed"] )
-
-        if speed > 100:
-            speed = 100
+        speed = max(0, min(speed, 100))
 
         return int(speed)
 
@@ -191,6 +218,29 @@ class Fan(FanBase):
                 return 0
         return int(speed)
 
+    def set_tolerance_mode(self, mode):
+        """
+        Set the fan tolerance mode using a flag file.
+        Args:
+            mode:
+                - "off":  tolerance off      → create flag file
+                - "on": tolerance activate   → delete flag file
+        Returns:
+            bool: True if the operation succeeded, False otherwise.
+        """
+        try:
+            if mode == "off":
+                open(self.tolerance_flag, "a").close()
+            elif mode == "on":
+                if os.path.exists(self.tolerance_flag):
+                    os.remove(self.tolerance_flag)
+            else:
+                return False
+            return True
+
+        except OSError:
+            return False
+
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -198,6 +248,9 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed which is
                  considered tolerable
         """
+        if (not self.is_psu_fan) and (os.path.exists(self.tolerance_flag)):
+            raise NotImplementedError
+
         if os.path.isfile(TARGET_SPEED_PATH):
             target_speed  = self._api_helper.read_txt_file("{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage'))
             set_speed_val = self._api_helper.read_txt_file(TARGET_SPEED_PATH)
