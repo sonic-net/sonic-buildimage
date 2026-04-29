@@ -93,7 +93,22 @@
                         ],
                         "object_counters": [
                             "IF_IN_OCTETS",
-                            "OUT_CURR_OCCUPANCY_BYTES"
+                            "IF_IN_UCAST_PKTS",
+                            "IF_IN_DISCARDS",
+                            "IF_IN_ERRORS",
+                            "IN_CURR_OCCUPANCY_BYTES",
+                            "IF_OUT_OCTETS",
+                            "IF_OUT_DISCARDS",
+                            "IF_OUT_ERRORS",
+                            "IF_OUT_UCAST_PKTS",
+                            "OUT_CURR_OCCUPANCY_BYTES",
+                            "TRIM_PACKETS",
+                            "PAUSE_RX_PKTS",
+                            "PAUSE_TX_PKTS",
+                            "PFC_0_RX_PKTS",
+                            "PFC_7_RX_PKTS",
+                            "PFC_0_TX_PKTS",
+                            "PFC_7_TX_PKTS"
                         ]
                     },
                     {
@@ -103,8 +118,12 @@
                             "egress_lossless_pool"
                         ],
                         "object_counters": [
+                            "DROPPED_PACKETS",
+                            "CURR_OCCUPANCY_BYTES",
                             "WATERMARK_BYTES",
-                            "XOFF_ROOM_WATERMARK_BYTES"
+                            "XOFF_ROOM_WATERMARK_BYTES",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS"
                         ]
                     },
                     {
@@ -116,7 +135,14 @@
                         ],
                         "object_counters": [
                             "PACKETS",
-                            "WRED_ECN_MARKED_PACKETS"
+                            "BYTES",
+                            "DROPPED_PACKETS",
+                            "CURR_OCCUPANCY_BYTES",
+                            "WATERMARK_BYTES",
+                            "WRED_ECN_MARKED_PACKETS",
+                            "TRIM_PACKETS",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS"
                         ]
                     },
                     {
@@ -127,8 +153,17 @@
                             "Ethernet4|3"
                         ],
                         "object_counters": [
+                            "PACKETS",
+                            "BYTES",
                             "CURR_OCCUPANCY_BYTES",
-                            "XOFF_ROOM_WATERMARK_BYTES"
+                            "WATERMARK_BYTES",
+                            "XOFF_ROOM_CURR_OCCUPANCY_BYTES",
+                            "XOFF_ROOM_WATERMARK_BYTES",
+                            "DROPPED_PACKETS",
+                            "CURR_OCCUPANCY_CELLS",
+                            "WATERMARK_CELLS",
+                            "XOFF_ROOM_CURR_OCCUPANCY_CELLS",
+                            "XOFF_ROOM_WATERMARK_CELLS"
                         ]
                     },
                     {
@@ -188,6 +223,49 @@
                         "object_counters": [
                             "IF_IN_OCTETS",
                             "OUT_CURR_OCCUPANCY_BYTES"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_PFC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0",
+                        "speed": 25000
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "4",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_pfc",
+                        "stream_state": "enabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_pfc",
+                        "group_name": "PORT",
+                        "object_names": [
+                            "Ethernet0"
+                        ],
+                        "object_counters": [
+                            "PFC_8_TX_PKTS"
                         ]
                     }
                 ]

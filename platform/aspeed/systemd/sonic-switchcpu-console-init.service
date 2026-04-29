@@ -1,0 +1,17 @@
+[Unit]
+Description=Aspeed Switch CPU Console Initialization
+Documentation=https://github.com/sonic-net/sonic-buildimage
+After=database.service sonic-platform-init.service config-setup.service
+Requires=database.service
+PartOf=sonic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sonic-switchcpu-console-init.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target sonic.target
+

@@ -1,0 +1,17 @@
+[Unit]
+Description=RestAPI container
+Requires=updategraph.service
+After=updategraph.service
+BindsTo=sonic.target
+After=sonic.target
+Before=ntp-config.service
+
+[Service]
+User=admin
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+ExecStop=/usr/bin/restapi.sh stop
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

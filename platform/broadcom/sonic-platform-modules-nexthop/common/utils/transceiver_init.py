@@ -2,7 +2,7 @@
 
 """
 Transceiver initialization script
-This script deasserts reset and disables low power mode for all transceivers specified in pddf-device.json
+This script deasserts reset and enables low power mode for all transceivers specified in pddf-device.json
 """
 
 import sys
@@ -52,11 +52,11 @@ def is_xcvr_control_available(xcvr_list):
 
 
 def init_xcvrs(xcvr_list):
-    """Initialize transceivers by deasserting reset and disabling low power mode"""
+    """Initialize transceivers by deasserting reset and enabling low power mode"""
     status = True
 
     log_info(
-        f"Deasserting reset and disabling low power mode for {len(xcvr_list)} transceivers."
+        f"Deasserting reset and enabling low power mode for {len(xcvr_list)} transceivers."
     )
 
     for xcvr in xcvr_list:
@@ -73,12 +73,12 @@ def init_xcvrs(xcvr_list):
             status = False
             continue
 
-        # Disable low power mode (write 0)
+        # Enable low power mode (write 1)
         try:
             with open(f"/sys/bus/i2c/devices/{bus}-{addr}/xcvr_lpmode", "w") as f:
-                f.write("0")
+                f.write("1")
         except Exception:
-            log_error(f"Failed to disable {name} xcvr low power mode for bus {bus}.")
+            log_error(f"Failed to enable {name} xcvr low power mode for bus {bus}.")
             status = False
             continue
 

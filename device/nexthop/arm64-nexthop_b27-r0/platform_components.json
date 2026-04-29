@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "NH-B27-BMC": {
+            "component": {
+                "BMC": {},
+                "BIOS": {}
+            }
+        }
+    }
+}

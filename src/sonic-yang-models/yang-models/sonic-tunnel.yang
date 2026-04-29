@@ -11,18 +11,6 @@ module sonic-tunnel {
 		prefix ps;
 	}
 
-	import sonic-dscp-tc-map {
-		prefix dtm;
-	}
-
-	import sonic-tc-priority-group-map {
-		prefix tpgm;
-	}
-
-	import sonic-tc-queue-map {
-		prefix tqm;
-	}
-
 	organization
 		"SONiC";
 
@@ -51,7 +39,7 @@ module sonic-tunnel {
 				}
 
 				leaf dscp_mode {
-					description "DSCP mode";
+					description "DSCP handling mode for tunneled packets (uniform copies outer, pipe preserves inner).";
 					type string {
 						pattern "uniform|pipe";
 					}
@@ -70,50 +58,50 @@ module sonic-tunnel {
 				}
 
 				leaf ecn_mode {
-					description "ECN mode";
+					description "ECN handling mode for decapsulated packets.";
 					type string {
 						pattern "copy_from_outer|standard";
 					}
 				}
 
 				leaf encap_ecn_mode {
-					description "Encap ECN mode";
+					description "ECN marking mode for encapsulated packets.";
 					type string {
 						pattern "standard";
 					}
 				}
 
 				leaf ttl_mode {
-					description "TTL mode";
+					description "TTL handling mode for tunneled packets (uniform copies outer, pipe preserves inner).";
 					type string {
 						pattern "uniform|pipe";
 					}
 				}
 
 				leaf tunnel_type {
-					description "Tunnel type";
+					description "Encapsulation type for the tunnel.";
 					type string {
 						pattern "IPINIP";
 					}
 				}
 
 				leaf decap_dscp_to_tc_map {
-					description "Decap DSCP to TC map";
+					description "Name of the DSCP-to-traffic-class map applied on decapsulation.";
 					type string;
 				}
 
 				leaf decap_tc_to_pg_map {
-					description "Decap TC to PG map";
+					description "Name of the traffic-class-to-priority-group map applied on decapsulation.";
 					type string;
 				}
 
 				leaf encap_tc_to_dscp_map {
-					description "Encap TC to DSCP map";
+					description "Name of the traffic-class-to-DSCP map applied on encapsulation.";
 					type string;
 				}
 
 				leaf encap_tc_to_queue_map {
-					description "Encap TC to Queue map";
+					description "Name of the traffic-class-to-queue map applied on encapsulation.";
 					type string;
 				}
 			}

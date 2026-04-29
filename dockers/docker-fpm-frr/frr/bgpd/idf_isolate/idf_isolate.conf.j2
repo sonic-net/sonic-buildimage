@@ -9,12 +9,15 @@ route-map CHECK_IDF_ISOLATION permit 3
     set community {{ constants.bgp.traffic_shift_community }}
 {# #}
 {%- if isolation_status == "isolated_withdraw_all" -%}
-    route-map CHECK_IDF_ISOLATION deny 4
-    route-map CHECK_IDF_ISOLATION permit 10
-        no set community no-export additive{# Added to clean up state, in case of transition from isolated_no_export (not expected) #}
+
+route-map CHECK_IDF_ISOLATION deny 4
+route-map CHECK_IDF_ISOLATION permit 10
+    no set community no-export additive
+
 {%- elif isolation_status == "isolated_no_export" -%}
-    route-map CHECK_IDF_ISOLATION permit 10
-        set community no-export additive
-    no route-map CHECK_IDF_ISOLATION deny 4{# Added to clean up state, in case of transition from isolated_withdraw_all (not expected) #}
+
+no route-map CHECK_IDF_ISOLATION deny 4
+route-map CHECK_IDF_ISOLATION permit 10
+    set community no-export additive
 {# #}
 {%- endif -%}

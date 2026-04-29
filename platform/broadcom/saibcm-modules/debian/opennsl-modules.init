@@ -49,12 +49,13 @@ function load_kernel_modules()
         modprobe linux_ngbde
         modprobe linux_ngknet rx_buffer_size=$rx_buffer_size
         modprobe linux_ngknetcb
+        modprobe linux_bcmgenl
     else
         modprobe linux-kernel-bde dmasize=$dmasize maxpayload=128 debug=4 dma_debug=1 usemsi=$usemsi
         modprobe linux-user-bde
         modprobe psample
 
-        modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100
+        modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100 use_napi=$use_napi
         modprobe linux-knet-cb
         modprobe linux_ngbde
     fi
@@ -63,6 +64,7 @@ function load_kernel_modules()
 function remove_kernel_modules()
 {
     if [[ $is_ltsw_chip -eq 1 ]]; then
+        rmmod linux_bcmgenl
         rmmod linux_ngknetcb
         rmmod linux_ngknet
         rmmod linux_ngbde
@@ -92,6 +94,7 @@ function load_platform_env()
     # Set the default configuration for dmasize and usemsi parameters
     dmasize=32M
     usemsi=0
+    use_napi=0
     is_ltsw_chip=0
     rx_buffer_size=9216
 

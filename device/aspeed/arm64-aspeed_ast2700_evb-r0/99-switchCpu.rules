@@ -1,0 +1,4 @@
+# Aspeed AST2700 EVB: Dummy placeholder for switch CPU console
+# The EVB does not have a physical switch CPU console connection
+# This file exists to prevent errors in sonic-platform-init.sh
+
