@@ -120,7 +120,7 @@ module sonic-vlan-sub-interface {
 
                 leaf ip-prefix {
                     description "IPv4 or IPv6 address with prefix length assigned to the sub-interface";
-                    type stypes:sonic-ip-prefix;
+                    type stypes:sonic-ip-address-with-prefix;
                 }
             }
         }

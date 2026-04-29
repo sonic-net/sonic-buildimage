@@ -7,10 +7,6 @@ module sonic-bgp-sentinel {
         prefix inet;
     }
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     organization
         "SONiC";
 
@@ -49,7 +45,7 @@ module sonic-bgp-sentinel {
                 }
 
                 leaf-list ip_range {
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     ordered-by user;
                     description "A range of addresses";
                 }

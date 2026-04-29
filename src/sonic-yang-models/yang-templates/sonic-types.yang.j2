@@ -23,8 +23,36 @@ module sonic-types {
         }
     }
 
-    typedef sonic-ip4-prefix {
-        description "IPv4 prefix in CIDR notation";
+    /*
+     * The sonic-ip*-address-with-prefix typedefs intentionally do NOT use
+     * inet:ipv4-prefix / inet:ipv6-prefix / inet:ip-prefix. Those IETF types
+     * are canonicalized by libyang (host bits zeroed; IPv6 lowercased and
+     * RFC 5952 compressed) on store, which would silently rewrite values
+     * such as "10.0.0.1/31" to "10.0.0.0/31". SONiC stores the configured
+     * interface address (host bits set) plus prefix length together in a
+     * single CONFIG_DB key, so canonicalization would lose the host bits.
+     * These typedefs reuse the IETF patterns for validation but, being
+     * plain strings, preserve the literal value. Use these for fields that
+     * carry an interface address with a prefix length; use inet:ip-prefix
+     * (or its v4/v6 siblings) for true network prefixes (routes, ACL
+     * matches, prefix lists) where canonical form is desirable.
+     *
+     * RFC 9911 (2025-12-22) introduced inet:ipv4-address-and-prefix,
+     * inet:ipv6-address-and-prefix, and inet:ip-address-and-prefix in
+     * ietf-inet-types -- patterns byte-for-byte identical to the typedefs
+     * below and explicitly defined as preserving host bits. Those would
+     * be the natural replacement, but SONiC currently builds against
+     * libyang 1.0.73, which bundles ietf-inet-types@2013-07-15 (RFC 6991)
+     * and so does not know those types. Once the libyang3 migration in
+     * src/libyang3-py3 lands (libyang3 ships ietf-inet-types@2025-12-22),
+     * revisit this and consider replacing these typedefs with the IETF
+     * address-and-prefix types. Verify first that libyang3's plugin for
+     * ipv6-address-and-prefix does not lowercase / RFC-5952-compress
+     * IPv6 -- the type description references canonical form, but the
+     * intent of the type is host-bit preservation.
+     */
+    typedef sonic-ip4-address-with-prefix {
+        description "IPv4 address with prefix length, host bits preserved (no canonicalization)";
         type string {
             pattern
              '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
@@ -33,8 +61,8 @@ module sonic-types {
         }
     }
 
-    typedef sonic-ip6-prefix {
-        description "IPv6 prefix in CIDR notation";
+    typedef sonic-ip6-address-with-prefix {
+        description "IPv6 address with prefix length, host bits and case preserved (no canonicalization)";
         type string {
             pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
                  + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
@@ -47,11 +75,11 @@ module sonic-types {
         }
     }
 
-    typedef sonic-ip-prefix {
-      description "IPv4 or IPv6 prefix in CIDR notation";
+    typedef sonic-ip-address-with-prefix {
+      description "IPv4 or IPv6 address with prefix length, host bits preserved (no canonicalization)";
       type union {
-        type sonic-ip4-prefix;
-        type sonic-ip6-prefix;
+        type sonic-ip4-address-with-prefix;
+        type sonic-ip6-address-with-prefix;
       }
     }
 

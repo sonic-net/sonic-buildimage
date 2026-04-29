@@ -3176,7 +3176,7 @@
         },
         "PREFIX_LIST": {
             "ANCHOR_PREFIX|10.0.0.0/8" : {},
-            "ANCHOR_PREFIX|FC00::/48" : {}
+            "ANCHOR_PREFIX|fc00::/48" : {}
         },
         "DEBUG_COUNTER": {
             "DEBUG_4": {

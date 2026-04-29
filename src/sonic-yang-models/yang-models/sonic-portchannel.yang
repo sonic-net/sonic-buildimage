@@ -232,7 +232,7 @@ module sonic-portchannel {
                 leaf ip_prefix {
                     description "IPv4 or IPv6 address with prefix length assigned to the PortChannel interface";
                     /* key elements are mandatory by default */
-                    type stypes:sonic-ip-prefix;
+                    type stypes:sonic-ip-address-with-prefix;
                 }
             } /* end of list PORTCHANNEL_INTERFACE_IPPREFIX_LIST */
 
