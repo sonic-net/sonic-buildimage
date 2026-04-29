@@ -94,4 +94,7 @@ class Dcdc(object):
         return round(float(value), 3)
 
     def get_position_in_parent(self):
+        """
+        Retrieves the index of this DCDC device in its parent device.
+        """
         return self.index
