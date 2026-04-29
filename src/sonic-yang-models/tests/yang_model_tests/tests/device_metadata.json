@@ -111,6 +111,9 @@
     "DEVICE_METADATA_TYPE_NETWORK_BMC_PATTERN": {
         "desc": "DEVICE_METADATA value as NetworkBmc for Type field"
     },
+    "DEVICE_METADATA_TYPE_MSEE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MseeRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
     },

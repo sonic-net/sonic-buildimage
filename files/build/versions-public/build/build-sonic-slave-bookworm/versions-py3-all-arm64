@@ -1,5 +1,5 @@
 bitarray==2.8.1
-certifi==2026.2.25
+certifi==2026.4.22
 cffi==2.0.0
 pyyaml==6.0.3
 requests==2.33.1
