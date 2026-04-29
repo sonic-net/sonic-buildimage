@@ -108,7 +108,7 @@
 
 {% if DEVICE_METADATA
   and DEVICE_METADATA['localhost']
-  and DEVICE_METADATA['localhost'].type in ('LeafRouter', 'ToRRouter', 'BackendLeafRouter', 'BackendToRRouter')
+  and DEVICE_METADATA['localhost'].type in ('LeafRouter', 'ToRRouter', 'BackEndLeafRouter', 'BackEndToRRouter')
   and DEVICE_NEIGHBOR
   and DEVICE_NEIGHBOR_METADATA %}
 {%- macro generate_queue_buffers(ports) %}
@@ -117,7 +117,7 @@
         {% if DEVICE_NEIGHBOR[port]
           and DEVICE_NEIGHBOR[port].name
           and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name]
-          and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type in ('LeafRouter', 'ToRRouter', 'BackendLeafRouter', 'BackendToRRouter') %}
+          and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type in ('LeafRouter', 'ToRRouter', 'BackEndLeafRouter', 'BackEndToRRouter') %}
             "{{ port }}|0": {
                 "profile": "queue0_uplink_lossy_profile"
             },
