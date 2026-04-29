@@ -103,7 +103,7 @@ RUN apt-get update          \
         quilt               \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go toolchain for building grpcurl and gnoic from source
+# Install Go toolchain for building grpcurl and gnmic from source
 # to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN GO_ARCH=armv6l \
@@ -410,20 +410,6 @@ RUN cd gnxi \
 
 # Deactivating a virtualenv.
 # ENV PATH="$BACKUP_OF_PATH"
-
-# Build gnoic from source with patched Go and golang.org/x/* deps
-# upgraded to latest to address current and future golang.org/x/* CVEs.
-RUN git clone https://github.com/karimra/gnoic.git \
-    && cd gnoic \
-    && git checkout 27bc5a6 \
-    && go get google.golang.org/grpc@v1.79.3 \
-    && go get github.com/go-viper/mapstructure/v2@v2.4.0 \
-    && go get github.com/go-jose/go-jose/v4@latest \
-    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
-    && go mod tidy \
-    && go build -o /usr/local/bin/gnoic . \
-    && cd .. \
-    && rm -rf gnoic /root/go/pkg/mod /root/.cache/go-build
 
 # Build gnmic from source with upgraded deps to address known CVEs
 COPY gocloud-patches/ /tmp/gocloud-patches/
