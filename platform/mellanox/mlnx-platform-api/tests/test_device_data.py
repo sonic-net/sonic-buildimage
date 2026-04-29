@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,7 @@ class TestDeviceData:
     def test_get_bios_component(self):
         assert DeviceDataManager.get_bios_component() is not None
 
-    @mock.patch('sonic_py_common.device_info.get_paths_to_platform_and_hwsku_dirs', mock.MagicMock(return_value=('', '/tmp')))
+    @mock.patch('sonic_platform.utils.get_path_to_hwsku_directory', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
     def test_is_module_host_management_mode(self, mock_read):
         mock_read.return_value = {}
@@ -70,20 +70,6 @@ class TestDeviceData:
             }
         }
         assert DeviceDataManager.get_sfp_count() == 3
-
-    @mock.patch('sonic_platform.device_data.time.sleep', mock.MagicMock())
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=3))
-    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', mock.MagicMock(return_value=1))
-    @mock.patch('sonic_platform.device_data.os.path.exists')
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
-    def test_wait_platform_ready(self, mock_is_indep, mock_exists):
-        mock_exists.return_value = True
-        mock_is_indep.return_value = True
-        assert DeviceDataManager.wait_platform_ready()
-        mock_is_indep.return_value = False
-        assert DeviceDataManager.wait_platform_ready()
-        mock_exists.return_value = False
-        assert not DeviceDataManager.wait_platform_ready()
 
     @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.load_json_file')

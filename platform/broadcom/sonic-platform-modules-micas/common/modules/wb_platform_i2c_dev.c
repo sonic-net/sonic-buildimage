@@ -29,6 +29,7 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/export.h>
+#include <linux/version.h>
 
 #include "wb_platform_i2c_dev.h"
 
@@ -721,7 +722,11 @@ static int platform_i2c_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int platform_i2c_dev_remove(struct platform_device *pdev)
+#else
+static void platform_i2c_dev_remove(struct platform_device *pdev)
+#endif
 {
     int i;
 
@@ -731,8 +736,9 @@ static int platform_i2c_dev_remove(struct platform_device *pdev)
             i2c_dev_arry[i] = NULL;
         }
     }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static const struct of_device_id platform_i2c_dev_of_match[] = {

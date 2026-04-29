@@ -24,7 +24,7 @@ clean:
 
 # Install the binary
 install: build
-	cargo install --path .
+	cargo install --locked --path .
 
 # Run linting
 lint:

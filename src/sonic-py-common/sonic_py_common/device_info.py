@@ -21,6 +21,8 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
+BMC_DATA_FILE = 'bmc.json'
+BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -37,6 +39,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
+EXPECTED_ASIC_LIST_FILENAME = "platform_expected_asic_list.conf"
 CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
@@ -859,7 +862,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell-prestera'):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -979,6 +982,35 @@ def is_warm_restart_enabled(container_name):
     return wr_enable_state
 
 
+def get_bmc_data():
+    json_file = None
+    try:
+        platform_path = get_path_to_platform_dir()
+        json_file = os.path.join(platform_path, BMC_DATA_FILE)
+        if os.path.exists(json_file):
+            with open(json_file, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
+
+
+def get_bmc_build_config():
+    """
+    Get BMC build-time configuration
+    
+    Returns:
+        A dictionary containing the BMC build configuration, or empty dict if not available
+    """
+    try:
+        if os.path.exists(BMC_BUILD_CONFIG_FILE):
+            with open(BMC_BUILD_CONFIG_FILE, "r") as f:
+                return json.load(f)
+        return None
+    except Exception:
+        return None
+
+
 # Check if System fast reboot is enabled.
 def is_fast_reboot_enabled():
     state_db = SonicV2Connector(host='127.0.0.1')
@@ -1066,3 +1098,53 @@ def get_dpu_list():
         return list(dpu_info)
 
     return []
+
+def get_expected_asic_list_file_path():
+    """
+    Retrieves the path to the ASIC configuration file on the device
+
+    Returns:
+        A string containing the path to the ASIC configuration file on success,
+        None on failure
+    """
+    def asic_list_path_candidates():
+        yield os.path.join(CONTAINER_PLATFORM_PATH, EXPECTED_ASIC_LIST_FILENAME)
+
+        # Note: this function is critical for is_multi_asic() and SonicDBConfig initializing
+        #   No explicit reading ConfigDB
+        platform = get_platform(config_db=None)
+        if platform:
+            yield os.path.join(HOST_DEVICE_PATH, platform, EXPECTED_ASIC_LIST_FILENAME)
+
+    for asic_list_file_path in asic_list_path_candidates():
+        if os.path.isfile(asic_list_file_path):
+            return asic_list_file_path
+
+    return None
+
+def get_expected_asic_list():
+    """
+    @summary: This function returns list of asic IDs for all NPUs expected to be up on Supervisor
+              based on fabric present. The list is read from EXPECTED_ASIC_LIST_FILENAME provided
+              by platform.
+
+    @return: List of asic ID integers
+             e.g., [0, 1, 4, 5, 8, 9, 10, 11, 12, 13]
+    """
+    asic_list = []
+
+    asic_list_file = get_expected_asic_list_file_path()
+
+    try:
+        if asic_list_file is not None and os.path.exists(asic_list_file):
+            with open(asic_list_file, 'r') as file:
+                asic_list = yaml.safe_load(file)
+
+        # Ensure it's a list
+        if not isinstance(asic_list, list):
+            asic_list = []
+
+    except (yaml.YAMLError, IOError, TypeError, ValueError):
+        asic_list = []
+
+    return asic_list

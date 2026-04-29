@@ -21,7 +21,7 @@ module sonic-syslog {
         prefix feature;
     }
 
-    description "Syslog YANG Module for SONiC OS: remote syslog logging";
+    description "Remote syslog server and logging configuration YANG module for SONiC OS.";
 
     revision 2022-04-18 {
         description "Initial revision.";
@@ -74,7 +74,7 @@ module sonic-syslog {
     }
 
     typedef rsyslog-severity {
-        description "The protocol to send logs to remote server";
+        description "Minimum syslog severity level for log forwarding.";
         type enumeration {
             enum none;
             enum debug;
@@ -91,10 +91,10 @@ module sonic-syslog {
 
         container SYSLOG_SERVER {
 
-            description "SYSLOG_SERVER part of config_db.json";
+            description "Remote syslog server destination configuration.";
 
             list SYSLOG_SERVER_LIST {
-
+                description "A remote syslog server entry identified by address.";
                 key "server_address";
 
                 leaf server_address {
@@ -133,7 +133,9 @@ module sonic-syslog {
 
                 leaf filter_regex {
                     description "Filter regex";
-                    type string;
+                    type string {
+                        pattern '[^\n\r]+';
+                    }
                 }
 
                 leaf protocol {
@@ -153,15 +155,18 @@ module sonic-syslog {
 
         container SYSLOG_CONFIG {
 
-            description "SYSLOG_CONFIG part of config_db.json";
+            description "Global syslog daemon configuration.";
 
             container GLOBAL {
+                description "Global syslog rate limiting, format, and severity settings.";
                 leaf rate_limit_interval {
                     type syslog-rate-limit-interval;
+                    description "Rate limiting interval in seconds for syslog messages.";
                 }
 
                 leaf rate_limit_burst {
                     type syslog-rate-limit-burst;
+                    description "Maximum burst of syslog messages allowed per rate limit interval.";
                 }
 
                 leaf format {
@@ -179,6 +184,7 @@ module sonic-syslog {
                 leaf severity {
                     type rsyslog-severity;
                     default notice;
+                    description "Minimum severity level for local syslog messages.";
                 }
 
             }
@@ -188,10 +194,10 @@ module sonic-syslog {
 
         container SYSLOG_CONFIG_FEATURE {
 
-            description "SYSLOG_CONFIG_FEATURE part of config_db.json";
+            description "Per-service syslog rate limiting configuration.";
 
             list SYSLOG_CONFIG_FEATURE_LIST {
-
+                description "Per-service syslog rate limit entry.";
                 key "service";
 
                 leaf service {
@@ -203,10 +209,12 @@ module sonic-syslog {
 
                 leaf rate_limit_interval {
                     type syslog-rate-limit-interval;
+                    description "Per-service rate limiting interval in seconds.";
                 }
 
                 leaf rate_limit_burst {
                     type syslog-rate-limit-burst;
+                    description "Per-service maximum burst of syslog messages per interval.";
                 }
             }
             /* end of list SYSLOG_CONFIG_FEATURE_LIST */

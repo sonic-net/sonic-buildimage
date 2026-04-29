@@ -6,12 +6,15 @@ This module provides functions to extract information from PDDF configuration
 """
 
 import json
+import os
 import re
 
 from dataclasses import dataclass
 from enum import Enum
+from sonic_py_common import device_info
 
 PDDF_DEVICE_JSON_PATH = "/usr/share/sonic/platform/pddf/pddf-device.json"
+PD_PLUGIN_JSON_PATH = "/usr/share/sonic/platform/pddf/pd-plugin.json"
 
 
 class FpgaDeviceName(str, Enum):
@@ -28,6 +31,33 @@ class FpgaDevAttrs:
 def load_pddf_device_config():
     """Load and parse pddf-device.json configuration. Raises exception on error."""
     with open(PDDF_DEVICE_JSON_PATH, "r") as f:
+        config = json.load(f)
+    return config
+
+
+def load_pd_plugin_config() -> dict:
+    """Load and parse pd-plugin.json configuration. Raises exception on error."""
+    with open(PD_PLUGIN_JSON_PATH, "r") as f:
+        config = json.load(f)
+    return config
+
+
+def load_platform_json() -> dict:
+    """
+    Load and parse platform.json configuration file.
+
+    Returns:
+        Dictionary containing the platform.json configuration.
+
+    Raises:
+        FileNotFoundError: If platform.json file does not exist.
+        json.JSONDecodeError: If the file contains invalid JSON.
+        Exception: For other file reading errors.
+    """
+    platform_path = device_info.get_path_to_platform_dir()
+    platform_json_file = os.path.join(platform_path, device_info.PLATFORM_JSON_FILE)
+
+    with open(platform_json_file, 'r') as f:
         config = json.load(f)
     return config
 

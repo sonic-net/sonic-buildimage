@@ -103,8 +103,8 @@ class SyslogHandler:
     TMP_SYSLOG_CONF_PATH = '/tmp/rsyslog.conf'
 
     # Regular expressions to extract value from rsyslog.conf
-    INTERVAL_PATTERN = '.*SystemLogRateLimitInterval\s+(\d+).*'
-    BURST_PATTERN = '.*SystemLogRateLimitBurst\s+(\d+).*'
+    INTERVAL_PATTERN = r'.*SysSock.RateLimit.Interval="(\d+)".*'
+    BURST_PATTERN = r'.*SysSock.RateLimit.Burst="(\d+)".*'
 
     def __init__(self):
         self.current_interval, self.current_burst = self.parse_syslog_conf()

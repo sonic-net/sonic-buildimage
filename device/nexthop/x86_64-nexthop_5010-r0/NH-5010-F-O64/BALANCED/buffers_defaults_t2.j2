@@ -11,7 +11,12 @@
         'regionalhub_upperspinerouter': '120000m',
         'aznghub_upperspinerouter'    : '120000m',
         'regionalhub_spinerouter': '120000m',
-        'aznghub_spinerouter'    : '120000m'
+        'aznghub_spinerouter'    : '120000m',
+        'lowerregionalhub_upperspinerouter'    : '120000m',
+        'lowerregionalhub_spinerouter'    : '120000m',
+        'lowerregionalhub_fabricregionalhub' : '50m',
+        'upperregionalhub_lowerregionalhub' : '50m',
+        'upperregionalhub_regionalwanaggregator' : '50m'
         }
 -%}
 
@@ -25,17 +30,17 @@
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
         "ingress_lossless_pool": {
-            "size": "56441610000",
+            "size": "25766440000",
             "type": "both",
             "mode": "dynamic",
-            "xoff": "2822080500"
+            "xoff": "5301600256"
         }
     },
     "BUFFER_PROFILE": {
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-	    "xon_offset": "0",
+            "xon_offset": "0",
             "dynamic_th":"0"
         },
         "egress_lossless_profile": {
@@ -46,7 +51,7 @@
         "egress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"-4"
+            "dynamic_th":"-6"
         }
     },
 {%- endmacro %}
