@@ -15918,6 +15918,261 @@
       ]
     }
   },
+  "PORT_LED_129": {
+    "dev_info": {
+      "device_type": "LED",
+      "device_name": "PORT_LED"
+    },
+    "dev_attr": {
+      "index": "128"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "yellow",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "13:10",
+          "descr": "yellow",
+          "value": "0x1",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "green",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "13:10",
+          "descr": "green",
+          "value": "0x2",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "off",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "13:10",
+          "descr": "off",
+          "value": "0x0",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        }
+      ]
+    }
+  },
+  "SYS_LED": {
+    "dev_info": {
+      "device_type": "LED",
+      "device_name": "SYS_LED"
+    },
+    "dev_attr": {
+      "index": "0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "green",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "b:8",
+          "descr": "green",
+          "value": "0x2",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "green_blink",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "b:8",
+          "descr": "green_blink",
+          "value": "0x6",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "red",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "b:8",
+          "descr": "red",
+          "value": "0x1",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "amber",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "b:8",
+          "descr": "amber",
+          "value": "0x3",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "off",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "b:8",
+          "descr": "off",
+          "value": "0x0",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        }
+      ]
+    }
+  },
+  "LOC_LED": {
+    "dev_info": {
+      "device_type": "LED",
+      "device_name": "LOC_LED"
+    },
+    "dev_attr": {
+      "index": "0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "blue_blink",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "CPUCARD_FPGA",
+          "bits": "13:10",
+          "descr": "blue_blink",
+          "value": "0x5",
+          "swpld_addr": "0x48",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "blue",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "CPUCARD_FPGA",
+          "bits": "13:10",
+          "descr": "blue",
+          "value": "0x1",
+          "swpld_addr": "0x48",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "off",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "CPUCARD_FPGA",
+          "bits": "13:10",
+          "descr": "off",
+          "value": "0x0",
+          "swpld_addr": "0x48",
+          "swpld_addr_offset": "0x0"
+        }
+      ]
+    }
+  },
+  "FAN_LED": {
+    "dev_info": {
+      "device_type": "LED",
+      "device_name": "FAN_LED"
+    },
+    "dev_attr": {
+      "index": "0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "green",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "7:4",
+          "descr": "green",
+          "value": "0x2",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "red",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "7:4",
+          "descr": "red",
+          "value": "0x1",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "amber",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "7:4",
+          "descr": "amber",
+          "value": "0x3",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "off",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "7:4",
+          "descr": "off",
+          "value": "0x0",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        }
+      ]
+    }
+  },
+  "PSU_LED": {
+    "dev_info": {
+      "device_type": "LED",
+      "device_name": "PSU_LED"
+    },
+    "dev_attr": {
+      "index": "0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "green",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "3:0",
+          "descr": "green",
+          "value": "0x2",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "red",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "3:0",
+          "descr": "red",
+          "value": "0x1",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "amber",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "3:0",
+          "descr": "amber",
+          "value": "0x3",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        },
+        {
+          "attr_name": "off",
+          "attr_devtype": "multifpgapci",
+          "attr_devname": "SWITCHCARD_FPGA0",
+          "bits": "3:0",
+          "descr": "off",
+          "value": "0x0",
+          "swpld_addr": "0x9c",
+          "swpld_addr_offset": "0x0"
+        }
+      ]
+    }
+  },
   "FANTRAY1_LED": {
     "dev_info": {
       "device_type": "LED",
