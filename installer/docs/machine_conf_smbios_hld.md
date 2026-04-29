@@ -1,7 +1,7 @@
 # HLD - Populating machine.conf via UEFI SMBIOS
 
 ## 1. Scope
-This document describes the High-Level Design for populating the `/host/machine.conf` file in SONIE using UEFI SMBIOS tables. This mechanism provides a standardized way to identify hardware platforms without relying on hardcoded configurations or external database lookups during early boot or installation. Additionally, it provides a recovery mechanism to reconstruct `/host/machine.conf` in SONiC if the file becomes missing or corrupted.
+This document describes the High-Level Design for a recovery mechanism using UEFI SMBIOS tables to dynamically reconstruct the `/host/machine.conf` file. This recovery process has direct applications in both SONiC (if the configuration becomes missing or corrupted) and SONIE (to populate a bare recovery environment out-of-the-box). By using UEFI SMBIOS tables, the system provides a standardized, platform-agnostic way to reconstruct hardware configurations without relying on external database lookups or hardcoded files.
 
 ## 2. Definitions/Abbreviations
 *   **SMBIOS**: System Management BIOS
@@ -293,11 +293,12 @@ MachineConfPluginFactory.register_plugin("vs", VsMachineConfPlugin)
 ### 5.3 Integration Point
 The population mechanism can run in two primary modes:
 
+#### 5.3.1 During OS Installation (Recovery OS Mode)
 In environments where ONIE is present (traditional ONIE installations), discovery via SMBIOS is unnecessary. ONIE already supplies the relevant platform identifiers via the environment (e.g., `$onie_platform`) or through `/etc/machine.conf`.
 
 Discovery via SMBIOS during installation is only used if installation is launched from a generic/bare recovery environment (like SONIE) where ONIE is not running.
 
-#### 5.4.2 During OS Boot
+#### 5.3.2 During OS Boot
 A script (e.g., `populate_machine_conf.py`) runs early in the boot sequence via systemd to ensure `/host/machine.conf` exists:
 
 ```python
