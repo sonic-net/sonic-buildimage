@@ -10,7 +10,6 @@ https://github.com/FreeRADIUS/pam_radius.git==d17fc655f0007728b67d0d25c0ca20b604
 https://github.com/fullstorydev/grpcurl.git==d00c28104be4b06f4dd887196ccfc57b054aa069
 https://github.com/google/gnxi.git==987664c754f18c0b9ea39b2de86317c14c226d5b
 https://github.com/jeroennijhof/pam_tacplus.git==b839c440e33c36eced9dcbc287fcfe6237c4c4ce
-https://github.com/karimra/gnoic.git==27bc5a65d391d07c903f6cd0a05b73219657e00d
 https://github.com/Mellanox/libpsample.git==62bb27d9a49424e45191eee81df7ce0d8c74e774
 https://github.com/openconfig/gnmic.git==883b7f9ab0d486f9dc9272a1018070d7f23197b7
 https://github.com/openconfig/oc-pyang.git==a116b53b1c1a149bc9a5d42dc26f3d0ab797846a
