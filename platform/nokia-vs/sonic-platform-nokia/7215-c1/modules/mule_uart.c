@@ -633,6 +633,9 @@ static int mule_fill_h2c_frame(struct mule_dev *mdev)
 
     memset(h2cf,0,sizeof(struct h2c_frame));
 
+    txfifo = ((u64)mule_reg_read(mdev->membase, MULE_UART_TX_FIFO1) << 32) |
+        mule_reg_read(mdev->membase, MULE_UART_TX_FIFO0);
+
     for (i = 0; i < MULE_MAXPORTS; i++)
     {
         struct uart_port *port = &mdev->p[i].port;
@@ -654,9 +657,6 @@ static int mule_fill_h2c_frame(struct mule_dev *mdev)
         kflen = kfifo_len(&tport->xmit_fifo);
         len = MIN(kflen, MULE_FIFO_LEN);
         if (len) {
-            txfifo = ((u64)mule_reg_read(mdev->membase, MULE_UART_TX_FIFO1) << 32) |
-                mule_reg_read(mdev->membase, MULE_UART_TX_FIFO0);
-
             if (txfifo & (u64)(1UL << i)) {
                 unsigned char *px;
                 unsigned blen;
@@ -669,11 +669,12 @@ static int mule_fill_h2c_frame(struct mule_dev *mdev)
                     h2cf->ports[i].valid |= (1 << j);
                 }
                 uart_xmit_advance(port, blen);
+                if ((kflen - blen) < WAKEUP_CHARS) {
+                    uart_write_wakeup(port);
+                }
                 uart_port_unlock(port);
 
                 ready = 1;
-                if ((kflen - len) < WAKEUP_CHARS)
-                    uart_write_wakeup(port);
             }
         }
     }
@@ -936,6 +937,9 @@ static int op_startup(struct uart_port *port)
 
     mule_reg_write(port->membase, MULE_UART_FIFO_CTRL_WO,
         MULE_FCR_RXWM(3) | MULE_FCR_RXRST | MULE_FCR_TXRST);
+
+    mdev->p[port->line].msr = mule_reg_read(port->membase,MULE_UART_MSR_RW);
+
     mule_uart_mode_set(mdev, port, 1);
 
     return 0;
@@ -953,6 +957,7 @@ static void op_shutdown(struct uart_port *port)
     }
     spin_unlock(&mdev->lock_ap);
 
+    mdev->p[port->line].start_tx = 0;
     mule_uart_mode_set(mdev, port, 0);
 
     val = mule_reg_read(port->membase,MULE_UART_LCR_RW);
