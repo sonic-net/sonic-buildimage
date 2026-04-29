@@ -66,7 +66,7 @@ module sonic-dash {
 
                 leaf-list address_spaces {
                      description "IP prefixes belonging to this virtual network.";
-                     type stypes:sonic-ip-prefix;
+                     type inet:ip-prefix;
                      ordered-by user;
                 }
 
@@ -296,13 +296,13 @@ module sonic-dash {
 
                 leaf-list src_addr {
                     description "Source IP prefixes to match.";
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     ordered-by user;
                 }
 
                 leaf-list dst_addr {
                     description "Destination IP prefixes to match.";
-                    type stypes:sonic-ip-prefix;
+                    type inet:ip-prefix;
                     ordered-by user;
                 }
 
@@ -412,7 +412,7 @@ module sonic-dash {
 
                 leaf prefix {
                      description "Destination IP prefix for LPM lookup.";
-                     type stypes:sonic-ip-prefix;
+                     type inet:ip-prefix;
                 }
 
                 leaf action_type {
