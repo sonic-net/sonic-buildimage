@@ -2167,7 +2167,7 @@ class BGPConfigDaemon:
         if 'docker_routing_config_mode' in db_entry:
             self.config_mode = db_entry['docker_routing_config_mode']
         else:
-            self.config_mode = "separated"
+            self.config_mode = "unified"
         if 'use_template_render_for_restore' in db_entry:
             self.use_template_render_for_restore = db_entry['use_template_render_for_restore']
         else:
