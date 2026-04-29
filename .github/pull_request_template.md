@@ -69,3 +69,4 @@ Link should point to correct section on https://github.com/Azure/sonic-buildimag
 
 #### A picture of a cute animal (not mandatory but encouraged)
 
+#### External PR 
