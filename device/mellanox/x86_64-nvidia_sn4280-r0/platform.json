@@ -701,5 +701,7 @@
             "bus_info": "0000:02:00.0"
         }
     },
-    "dpu_halt_services_timeout": 180
+    "dpu_halt_services_timeout": 180,
+    "dpu_shutdown_timeout": 240
+
 }
