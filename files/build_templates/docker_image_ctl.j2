@@ -133,6 +133,12 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
+{%- elif docker_container_name == "dhcp_server" %}
+    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
+    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
+    # Restrict to docker0 interface to minimize security impact.
+    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
+        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
 {%- else %}
     : # nothing
 {%- endif %}
@@ -307,24 +313,30 @@ function postStartAction()
             fi
         fi
 
-        if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
-            # this is first boot to a new image, config-setup execution is pending.
-            # for warmboot case, DB is loaded but migration is still pending
-            # For firstbboot/fast/cold reboot case, DB contains nothing at this point
-            # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
-            # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
-        else
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
-            # this is not a first time boot to a new image. Datbase container starts w/ old pre-existing config
-            if [[ -x /usr/local/bin/db_migrator.py ]]; then
-                # Migrate the DB to the latest schema version if needed
-                if [ -z "$DEV" ]; then
-                    /usr/local/bin/db_migrator.py -o migrate
+        # DPU database instances must not touch the host CONFIG_DB_INITIALIZED flag.
+        # Only the main NPU database instance should manage this key to avoid a race
+        # where DPU instances overwrite CONFIG_DB_INITIALIZED back to 0 after
+        # config-setup has already set it to 1, causing swss startup to fail.
+        if [[ "$DATABASE_TYPE" != "dpudb" ]]; then
+            if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
+                # this is first boot to a new image, config-setup execution is pending.
+                # for warmboot case, DB is loaded but migration is still pending
+                # For first boot/fast/cold reboot case, DB contains nothing at this point
+                # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
+                # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+            else
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                # this is not a first time boot to a new image. Database container starts w/ old pre-existing config
+                if [[ -x /usr/local/bin/db_migrator.py ]]; then
+                    # Migrate the DB to the latest schema version if needed
+                    if [ -z "$DEV" ]; then
+                        /usr/local/bin/db_migrator.py -o migrate
+                    fi
                 fi
+                # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
             fi
-            # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
@@ -627,7 +639,12 @@ start() {
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
+{%- if docker_container_name == "redfish" %}
+        # redfish uses bridge networking with port mapping (-p 443:18080)
+        NET="bridge"
+{%- else %}
         NET="host"
+{%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -780,6 +797,9 @@ start() {
 {%- if docker_container_name == "bgp" %}
         -v /etc/sonic/frr/$DEV:/etc/frr:rw \
 {%- endif %}
+{%- if docker_container_name == "dash-ha" %}
+        -v /var/log/dash-ha:/var/log/dash-ha:rw \
+{%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
@@ -853,7 +873,9 @@ stop() {
     if [ -z "$container_id" ]; then
         echo "container stop $DOCKERNAME - No such container: $DOCKERNAME"
     else
-    {%- if docker_container_name == "teamd" %}
+    {%- if stop_time is defined and stop_time != '' %}
+        /usr/local/bin/container stop -t {{ stop_time }} $DOCKERNAME
+    {%- elif docker_container_name == "teamd" %}
         # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
         /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
@@ -862,6 +884,10 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
+{%- if docker_container_name == "dhcp_server" %}
+    # Remove syslog iptables exception added during start
+    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
+{%- endif %}
     {%- endif %}
 }
 
