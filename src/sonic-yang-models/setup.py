@@ -282,7 +282,7 @@ setup(
     ],
     tests_require = [
         'pytest',
-        'ijson==3.2.3'
+        'ijson>=3.2.3'
     ],
     setup_requires = [
         'pytest-runner',
@@ -291,7 +291,7 @@ setup(
     extras_require = {
         "testing": [
             'pytest',
-            'ijson==3.2.3'
+            'ijson>=3.2.3'
         ],
     },
     include_package_data=True,
