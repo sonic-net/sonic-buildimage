@@ -101,7 +101,7 @@ stages:
 
 - stage: Publish
   dependsOn: Test
-  condition: and(succeeded(), in(dependencies.Test.result, 'Succeeded'))
+  condition: and(not(canceled()), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
   jobs:
   - job: PublishAsLatest
     pool: sonicso1ES-amd64
