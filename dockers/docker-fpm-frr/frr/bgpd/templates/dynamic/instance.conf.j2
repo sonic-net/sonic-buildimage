@@ -28,7 +28,10 @@
 {% endif %}
 !
 {% if 'bfd' in bgp_session and bgp_session['bfd'] == 'true' %}
-{%   if 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
+{%   if 'bfd_profile' in bgp_session %}
+  neighbor {{ bgp_session['name'] }} bfd
+  neighbor {{ bgp_session['name'] }} bfd profile {{ bgp_session['bfd_profile'] }}
+{%   elif 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
   neighbor {{ bgp_session['name'] }} bfd {{ bgp_session['bfd_detect_multiplier'] }} {{ bgp_session['bfd_min_rx'] }} {{ bgp_session['bfd_min_tx'] }}
 {%   else %}
   neighbor {{ bgp_session['name'] }} bfd

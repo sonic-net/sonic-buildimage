@@ -354,3 +354,94 @@ def test_bgp_neighbor_bfd_custom_timers():
 def test_bgp_peer_group_bfd_custom_timers():
     """Test BGP peer group with BFD custom timer parameters (SET and DELETE)"""
     data_set_del_test(bgp_peer_group_bfd_timers_data)
+
+
+# BGP neighbor / peer-group with BFD profile binding (unified mode).
+#
+# bfd_profile triggers two separate vtysh invocations:
+#   1. neighbor X bfd                    (enable BFD)
+#   2. neighbor X bfd profile <name>     (apply profile)
+# matching the priority order rendered by
+# templates/bgpd/bgpd.conf.db.nbr_or_peer.j2 and the separated-mode
+# fixtures in sonic-bgpcfgd/tests/data/general/instance.conf/{param,result}_bfd_profile.*
+
+def hdl_bfd_profile_cmd(is_del, cmd_list, chk_data):
+    """Validator for the two-step bfd + bfd-profile emission.
+    chk_data is a tuple (peer_or_pg_name, profile_name).
+
+    g_run_command is called with shell=False (a list of args:
+    ['vtysh', '-c', '<vtysh cmd>', '-c', '<vtysh cmd>', ...]). The last
+    ``-c <cmd>`` pair is the leaf vtysh command; that's the one we want
+    to assert against."""
+    peer, profile = chk_data
+    bfd_calls = []
+    for cmd in cmd_list:
+        # cmd is a list when shell=False, a string when shell=True.
+        if isinstance(cmd, list):
+            last = None
+            for i, arg in enumerate(cmd):
+                if arg == '-c' and i + 1 < len(cmd):
+                    last = cmd[i + 1]
+            if last is None:
+                continue
+        else:
+            matches = re.findall(r"-c\s+'([^']+)'\s*", cmd)
+            if not matches:
+                continue
+            last = matches[-1]
+        if 'neighbor %s bfd' % peer in last:
+            bfd_calls.append(last)
+
+    if is_del:
+        assert len(bfd_calls) >= 1, "no bfd-related vtysh on delete: %s" % cmd_list
+        # Last bfd-related call should be `no neighbor X bfd` (collapse)
+        assert bfd_calls[-1] == 'no neighbor %s bfd' % peer, bfd_calls[-1]
+        return
+
+    # Set: expect exactly the two-step emission
+    assert len(bfd_calls) == 2, \
+        "expected 2 bfd-related vtysh calls, got %d: %s" % (len(bfd_calls), bfd_calls)
+    assert bfd_calls[0] == 'neighbor %s bfd' % peer, bfd_calls[0]
+    assert bfd_calls[1] == 'neighbor %s bfd profile %s' % (peer, profile), bfd_calls[1]
+
+bgp_neighbor_bfd_profile_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  True, None, None, None, None),
+    # BGP neighbor with bfd=true and bfd_profile — emits two-step bfd + bfd profile
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.2.2.1',
+                  {'bfd': 'true', 'bfd_profile': 'fast-failover'},
+                  hdl_bfd_profile_cmd, False, None,
+                  ('10.2.2.1', 'fast-failover')),
+    # bfd_profile takes precedence over inline custom timers
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.2.2.2',
+                  {'bfd': 'true', 'bfd_profile': 'fast-failover',
+                   'bfd_detect_multiplier': '5', 'bfd_min_rx': '500', 'bfd_min_tx': '500'},
+                  hdl_bfd_profile_cmd, False, None,
+                  ('10.2.2.2', 'fast-failover')),
+]
+
+bgp_peer_group_bfd_profile_data = [
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  True, None, None, None, None),
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|TEST_PG_PROFILE',
+                  {'bfd': 'true', 'bfd_profile': 'slow-stable'},
+                  hdl_bfd_profile_cmd, False, None,
+                  ('TEST_PG_PROFILE', 'slow-stable')),
+]
+
+def test_bgp_neighbor_bfd_profile():
+    """Test BGP neighbor with bfd_profile binding.
+
+    Mirrors the separated-mode test fixtures in
+    sonic-bgpcfgd/tests/data/general/instance.conf/{param,result}_bfd_profile.*
+    so that both routing-config modes are covered."""
+    data_set_del_test(bgp_neighbor_bfd_profile_data)
+
+def test_bgp_peer_group_bfd_profile():
+    """Test BGP peer group with bfd_profile binding."""
+    data_set_del_test(bgp_peer_group_bfd_profile_data)

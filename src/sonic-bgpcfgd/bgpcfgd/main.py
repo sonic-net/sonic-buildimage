@@ -27,6 +27,7 @@ from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
+from .managers_bfd_profile import BfdProfileMgr, BFD_PROFILE_TABLE_NAME
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
@@ -81,6 +82,8 @@ def do_work():
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LAG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_VOQ_INBAND_INTERFACE_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_VLAN_SUB_INTF_TABLE_NAME),
+        # BFD Profile Manager (must be before Peer Managers so profiles exist first)
+        BfdProfileMgr(common_objs, "CONFIG_DB", BFD_PROFILE_TABLE_NAME),
         # State DB managers
         ZebraSetSrc(common_objs, "STATE_DB", swsscommon.STATE_INTERFACE_TABLE_NAME),
         # Peer Managers

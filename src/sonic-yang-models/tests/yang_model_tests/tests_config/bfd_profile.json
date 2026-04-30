@@ -1,0 +1,225 @@
+{
+    "BFD_PROFILE_VALID": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "fast-failover",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100",
+                        "echo_interval": "100",
+                        "echo_mode": true,
+                        "passive_mode": false,
+                        "minimum_ttl": "253"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_NAME_WITH_QUOTE": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "fast'failover",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_NAME_WITH_SPACE": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "fast failover",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_RECEIVE_INTERVAL_TOO_LOW": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "too-fast",
+                        "detect_multiplier": "3",
+                        "receive_interval": "5",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_TRANSMIT_INTERVAL_TOO_HIGH": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "too-slow",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "70000"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_DETECT_MULTIPLIER_TOO_LOW": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "single-loss",
+                        "detect_multiplier": "1",
+                        "receive_interval": "100",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_MINIMUM_TTL_TOO_HIGH": {
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "ttl-overflow",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100",
+                        "minimum_ttl": "255"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_BIND_VALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "fast-failover",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "neighbor": "10.0.0.1",
+                        "asn": 65002,
+                        "bfd_profile": "fast-failover"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_BIND_GHOST_REJECTED": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "neighbor": "10.0.0.1",
+                        "asn": 65002,
+                        "bfd_profile": "ghost-profile"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_BIND_VALID_PEER_GROUP": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bfd-profile:sonic-bfd-profile": {
+            "sonic-bfd-profile:BFD_PROFILE": {
+                "BFD_PROFILE_LIST": [
+                    {
+                        "name": "fast-failover",
+                        "detect_multiplier": "3",
+                        "receive_interval": "100",
+                        "transmit_interval": "100"
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-peergroup:sonic-bgp-peergroup": {
+            "sonic-bgp-peergroup:BGP_PEER_GROUP": {
+                "BGP_PEER_GROUP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "peer_group_name": "PG_FAST_BFD",
+                        "asn": 65002,
+                        "bfd_profile": "fast-failover"
+                    }
+                ]
+            }
+        }
+    },
+    "BFD_PROFILE_BIND_GHOST_REJECTED_PEER_GROUP": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-peergroup:sonic-bgp-peergroup": {
+            "sonic-bgp-peergroup:BGP_PEER_GROUP": {
+                "BGP_PEER_GROUP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "peer_group_name": "PG_FAST_BFD",
+                        "asn": 65002,
+                        "bfd_profile": "ghost-profile"
+                    }
+                ]
+            }
+        }
+    }
+}

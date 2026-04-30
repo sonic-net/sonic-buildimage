@@ -1832,6 +1832,16 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BFD_PROFILE": {
+            "fast-failover": {
+                "detect_multiplier": "3",
+                "receive_interval": "100",
+                "transmit_interval": "100",
+                "echo_mode": "true",
+                "passive_mode": "false",
+                "minimum_ttl": "253"
+            }
+        },
         "BGP_AGGREGATE_ADDRESS": {
             "192.168.0.0/24": {
                 "bbr-required": "true",
