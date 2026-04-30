@@ -86,13 +86,19 @@ trap on_error ERR
 
 echo "Installing SONiC"
 
+efi_vars=${DISK%.img}_vars.fd
+
+cp /usr/share/OVMF/OVMF_VARS_4M.fd $efi_vars
+
 /usr/bin/kvm -m $MEM \
+    -machine "q35,smm=on" \
     -name "onie" \
     -boot "order=cd,once=d" -cdrom "$ONIE_RECOVERY_ISO" \
-    -device e1000,netdev=onienet \
-    -netdev user,id=onienet,hostfwd=:0.0.0.0:3041-:22 \
-    -vnc 0.0.0.0:0 \
-    -vga std \
+    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
+    -drive if=pflash,format=raw,file=$efi_vars \
+    -device virtio-net,netdev=onienet \
+    -netdev user,id=onienet \
+    -nographic \
     -drive file=$DISK,media=disk,if=virtio,index=0 \
     -drive file=$INSTALLER_DISK,if=virtio,index=1 \
     -serial telnet:127.0.0.1:$KVM_PORT,server > $kvm_log 2>&1 &
@@ -116,11 +122,13 @@ kill $kvm_pid
 echo "Booting up SONiC"
 
 /usr/bin/kvm -m $MEM \
+    -machine "q35,smm=on" \
     -name "onie" \
-    -device e1000,netdev=onienet \
+    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
+    -drive if=pflash,format=raw,file=$efi_vars \
+    -device virtio-net,netdev=onienet \
     -netdev user,id=onienet,hostfwd=:0.0.0.0:3041-:22 \
-    -vnc 0.0.0.0:0 \
-    -vga std \
+    -nographic \
     -snapshot \
     -drive file=$DISK,media=disk,if=virtio,index=0 \
     -serial telnet:127.0.0.1:$KVM_PORT,server > $kvm_log 2>&1 &
