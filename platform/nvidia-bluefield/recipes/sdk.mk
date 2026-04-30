@@ -213,15 +213,6 @@ export RXPCOMPILER_DERIVED_DEBS
 SDK_DEBS += $(RXPCOMPILER) $(RXPCOMPILER_DERIVED_DEBS)
 SDK_SRC_TARGETS += $(RXPCOMPILER)
 
-# GRPC and derived packages
-
-LIBGRPC_VER := $(call get_sdk_package_version_full,"grpc")
-
-LIBGRPC_DEV = libgrpc-dev_$(LIBGRPC_VER)_arm64.deb
-$(LIBGRPC_DEV)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/grpc
-
-export LIBGRPC_DEV LIBGRPC_VER
-
 # DOCA and derived packages
 
 DOCA_VERSION := $(call get_sdk_package_version_full,"doca")
