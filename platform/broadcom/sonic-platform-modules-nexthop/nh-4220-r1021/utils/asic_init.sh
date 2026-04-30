@@ -4,8 +4,10 @@
 
 LOCKFD=200
 LOCKFILE="/var/run/nexthop-asic-init.lock"
-FPGA_BDF=$(setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0')
-ASIC_BDF=$(setpci -s 00:01.2 0x19.b | xargs printf '%s:00.0')
+ASIC_BRIDGE="00:02.1"
+FPGA_BRIDGE="00:01.4"
+FPGA_BDF=$(setpci -s $FPGA_BRIDGE 0x19.b | xargs printf '0000:%s:00.0')
+ASIC_BDF=$(setpci -s $ASIC_BRIDGE 0x19.b | xargs printf '%s:00.0')
 LOG_PRIO="user.info"
 LOG_ERR="user.err"
 
@@ -172,12 +174,12 @@ for attempt in {0..2}; do
     logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
 
     logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
-    setpci -s "00:01.2" 0x160.l=$(setpci -s "00:01.2" 0x160.l)
+    # setpci -s "$ASIC_BRIDGE" 0x160.l=$(setpci -s "$ASIC_BRIDGE" 0x160.l)
 
     # Enable CommClk use
-    setpci -s 01:00.0 0xbc.w=0x40
-    setpci -s 0:1.2 0x68.w=0x40
-    setpci -s 0:1.2 0x68.w=0x60
+    # setpci -s "$ASIC_BDF" 0xbc.w=0x40
+    # setpci -s "$ASIC_BRIDGE" 0x68.w=0x40
+    # setpci -s "$ASIC_BRIDGE" 0x68.w=0x60
 
     if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
       logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
