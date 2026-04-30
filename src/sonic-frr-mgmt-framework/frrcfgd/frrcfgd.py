@@ -104,6 +104,7 @@ class BgpdClientMgr(threading.Thread):
             'BFD_PEER': ['bfdd'],
             'BFD_PEER_SINGLE_HOP': ['bfdd'],
             'BFD_PEER_MULTI_HOP': ['bfdd'],
+            'BFD_PROFILE': ['bfdd'],
             'IP_SLA': ['iptrackd'],
             'OSPFV2_ROUTER': ['ospfd'],
             'OSPFV2_ROUTER_AREA': ['ospfd'],
@@ -1505,9 +1506,12 @@ def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
 
 def hdl_bfd_timers(daemon, cmd_str, op, st_idx, args, data):
     """
-    Handler for BGP neighbor/peer-group BFD with optional custom timer parameters.
-    Generates 'neighbor X bfd' if no timers are present, or
-    'neighbor X bfd <multiplier> <rx> <tx>' if all three timer parameters are present.
+    Handler for BGP neighbor/peer-group BFD configuration.
+
+    Precedence (matches bgpcfgd Jinja templates):
+      1. bfd_profile  -> 'neighbor X bfd' + 'neighbor X bfd profile <name>'
+      2. all three legacy timer fields -> 'neighbor X bfd <m> <rx> <tx>'
+      3. otherwise -> 'neighbor X bfd' (bare enable)
     """
     if op == CachedDataWithOp.OP_DELETE:
         # For delete, just use 'no neighbor X bfd'
@@ -1518,6 +1522,22 @@ def hdl_bfd_timers(daemon, cmd_str, op, st_idx, args, data):
     # Check if BFD is enabled
     if args[st_idx] != 'true':
         return None
+
+    # bfd_profile takes priority over the legacy per-peer timer fields. FRR
+    # treats 'neighbor X bfd profile <name>' and 'neighbor X bfd' as separate
+    # commands; the bare enable is required because older FRR versions reject
+    # the profile command if BFD is not already enabled on the neighbor.
+    bfd_profile = args[st_idx + 4] if len(args) > st_idx + 4 else None
+    if bfd_profile:
+        enable_args = [CommandArgument(daemon, True, args[0]),
+                       CommandArgument(daemon, True, 'bfd')]
+        enable_cmd = '{no:no-prefix}neighbor {} {}'.format(
+            *enable_args, no=CommandArgument(daemon, True))
+        profile_args = [CommandArgument(daemon, True, args[0]),
+                        CommandArgument(daemon, True, bfd_profile)]
+        profile_cmd = '{no:no-prefix}neighbor {} bfd profile {}'.format(
+            *profile_args, no=CommandArgument(daemon, True))
+        return [enable_cmd, profile_cmd]
 
     # Check if all three timer parameters are present and non-empty
     if (len(args) > st_idx + 3 and
@@ -1918,7 +1938,7 @@ class BGPConfigDaemon:
                    ('enforce_first_as',                     '{no:no-prefix}neighbor {} enforce-first-as', ['true', 'false']),
                    ('solo_peer',                            '{no:no-prefix}neighbor {} solo', ['true', 'false']),
                    ('ttl_security_hops',                    '{no:no-prefix}neighbor {} ttl-security hops {}'),
-                   (['bfd', '+bfd_detect_multiplier', '+bfd_min_rx', '+bfd_min_tx'], '{no:no-prefix}neighbor {} bfd {} {} {}', hdl_bfd_timers),
+                   (['bfd', '++bfd_detect_multiplier', '++bfd_min_rx', '++bfd_min_tx', '++bfd_profile'], '{no:no-prefix}neighbor {} bfd {} {} {}', hdl_bfd_timers),
                    ('bfd_check_ctrl_plane_failure',         '{no:no-prefix}neighbor {} bfd check-control-plane-failure', ['true', 'false']),
                    ('capability_dynamic',                   '{no:no-prefix}neighbor {} capability dynamic', ['true', 'false']),
                    ('dont_negotiate_capability',            '{no:no-prefix}neighbor {} dont-capability-negotiate', ['true', 'false']),
@@ -2311,6 +2331,10 @@ class BGPConfigDaemon:
             if 'vni' in entry:
                 self.vrf_vni_map[key] = entry['vni']
 
+        # BFD_PROFILE name -> last-applied data dict, for diff-based cleanup
+        # of fields removed across updates (mirrors bgpcfgd BfdProfileMgr).
+        self._bfd_profile_state = {}
+
         # VRF ==> ip_prefix ==> nexthop list
         self.static_route_list = {}
         sroute_table = self.config_db.get_table('STATIC_ROUTE')
@@ -2347,6 +2371,7 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
+            ('BFD_PROFILE', self.bfd_profile_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
             ('TAG_SET', self.bgp_table_handler_common),
@@ -2447,6 +2472,61 @@ class BGPConfigDaemon:
                 elif param == 'admin_status' and data[param] == 'down':
                     command += ['-c', 'shutdown']
             self.__run_command(table, command)
+
+    # CONFIG_DB BFD_PROFILE field name -> FRR command name (numeric values).
+    _BFD_PROFILE_NUMERIC = {
+        'detect_multiplier':  'detect-multiplier',
+        'receive_interval':   'receive-interval',
+        'transmit_interval':  'transmit-interval',
+        'echo_interval':      'echo-interval',
+        'minimum_ttl':        'minimum-ttl',
+    }
+    # CONFIG_DB BFD_PROFILE field name -> FRR command name (boolean values).
+    _BFD_PROFILE_BOOLEAN = {
+        'echo_mode':    'echo-mode',
+        'passive_mode': 'passive-mode',
+    }
+
+    def bfd_profile_handler(self, table, key, data):
+        """Handler for CONFIG_DB BFD_PROFILE table.
+
+        Pushes 'bfd / profile <name> / ...' commands to FRR via vtysh.
+        Mirrors bgpcfgd's BfdProfileMgr semantics so 'separated' and
+        'unified' routing modes produce the same FRR config.
+        """
+        syslog.syslog(syslog.LOG_INFO,
+            '[bgp cfgd](bfd_profile) value for {} changed to {}'.format(key, data))
+
+        if not data:
+            # delete
+            command = "vtysh -c 'configure terminal' -c 'bfd' -c 'no profile {}'".format(key)
+            if self.__run_command(table, command):
+                self._bfd_profile_state.pop(key, None)
+            return
+
+        # create/update — single vtysh invocation
+        prev = self._bfd_profile_state.get(key, {})
+        command = "vtysh -c 'configure terminal' -c 'bfd' -c 'profile {}'".format(key)
+        # Clear fields present in the previous update but absent now, otherwise
+        # FRR retains stale values for fields the operator removed.
+        for db_field, frr_cmd in self._BFD_PROFILE_NUMERIC.items():
+            if db_field in prev and db_field not in data:
+                command += " -c 'no {}'".format(frr_cmd)
+        for db_field, frr_cmd in self._BFD_PROFILE_BOOLEAN.items():
+            if db_field in prev and db_field not in data:
+                command += " -c 'no {}'".format(frr_cmd)
+        for db_field, frr_cmd in self._BFD_PROFILE_NUMERIC.items():
+            if db_field in data:
+                command += " -c '{} {}'".format(frr_cmd, data[db_field])
+        for db_field, frr_cmd in self._BFD_PROFILE_BOOLEAN.items():
+            if db_field in data:
+                if str(data[db_field]).lower() == 'true':
+                    command += " -c '{}'".format(frr_cmd)
+                else:
+                    command += " -c 'no {}'".format(frr_cmd)
+        command += " -c 'exit'"
+        if self.__run_command(table, command):
+            self._bfd_profile_state[key] = dict(data)
 
     def vrf_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrf) value for {} changed to {}'.format(key, data))

@@ -7,7 +7,10 @@
   neighbor {{ neighbor_addr }} timers connect 10
 !
 {% if 'bfd' in bgp_session and bgp_session['bfd'] == 'true' %}
-{%   if 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
+{%   if 'bfd_profile' in bgp_session %}
+  neighbor {{ neighbor_addr }} bfd
+  neighbor {{ neighbor_addr }} bfd profile {{ bgp_session['bfd_profile'] }}
+{%   elif 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
   neighbor {{ neighbor_addr }} bfd {{ bgp_session['bfd_detect_multiplier'] }} {{ bgp_session['bfd_min_rx'] }} {{ bgp_session['bfd_min_tx'] }}
 {%   else %}
   neighbor {{ neighbor_addr }} bfd
