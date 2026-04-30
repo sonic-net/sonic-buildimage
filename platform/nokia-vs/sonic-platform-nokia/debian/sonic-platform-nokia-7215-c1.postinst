@@ -21,6 +21,7 @@ set -e
 case "$1" in
     configure)
         chmod a+x /usr/local/bin/nokia-7215-init.sh
+        chmod a+x /usr/local/bin/nokia-7215-postinit.sh
         depmod -a
         systemctl restart kmod
         systemctl enable nokia-7215init.service
@@ -30,6 +31,8 @@ case "$1" in
         systemctl enable cpu_wdt.service
         systemctl start cpu_wdt.service
 
+        systemctl enable nokia-7215-postinit.service
+        systemctl start --no-block nokia-7215-postinit.service
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
