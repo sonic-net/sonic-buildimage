@@ -1,14 +1,5 @@
 # sonic-bmcctld (SONiC BMC control daemon) Debian package
 
-# SONIC_BMCCTLD_PY2 package
-
-SONIC_BMCCTLD_PY2 = sonic_bmcctld-1.0-py2-none-any.whl
-$(SONIC_BMCCTLD_PY2)_SRC_PATH = $(SRC_PATH)/sonic-platform-daemons/sonic-bmcctld
-$(SONIC_BMCCTLD_PY2)_DEPENDS = $(SONIC_PY_COMMON_PY2) $(SONIC_PLATFORM_COMMON_PY2)
-$(SONIC_BMCCTLD_PY2)_DEBS_DEPENDS = $(LIBSWSSCOMMON) $(PYTHON_SWSSCOMMON)
-$(SONIC_BMCCTLD_PY2)_PYTHON_VERSION = 2
-SONIC_PYTHON_WHEELS += $(SONIC_BMCCTLD_PY2)
-
 # SONIC_BMCCTLD_PY3 package
 
 SONIC_BMCCTLD_PY3 = sonic_bmcctld-1.0-py3-none-any.whl

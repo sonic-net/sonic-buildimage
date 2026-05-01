@@ -697,15 +697,8 @@ def is_dpu():
     return False
 
 
-def is_switch_host():
-    """
-    Check if this system is the Switch-Host (the main switching ASIC host,
-    as opposed to the Switch BMC).  Reads the 'switch_host' key from
-    platform_env.conf.
-
-    Returns:
-        True if switch_host=1 is present in platform_env.conf, False otherwise.
-    """
+def is_platform_env_key_present(key):
+    """Return True if <key>=1 is set in platform_env.conf, False otherwise."""
     platform_env_conf_file_path = get_platform_env_conf_file_path()
     if platform_env_conf_file_path is None:
         return False
@@ -714,31 +707,19 @@ def is_switch_host():
             tokens = line.split('=')
             if len(tokens) < 2:
                 continue
-            if tokens[0].lower() == 'switch_host':
+            if tokens[0].lower() == key:
                 return tokens[1].strip() == '1'
     return False
+
+
+def is_switch_host():
+    """Return True if this system is the Switch-Host (switch_host=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_host')
 
 
 def is_switch_bmc():
-    """
-    Check if this system is the Switch BMC (the Baseboard Management
-    Controller running SONiC).  Reads the 'switch_bmc' key from
-    platform_env.conf.
-
-    Returns:
-        True if switch_bmc=1 is present in platform_env.conf, False otherwise.
-    """
-    platform_env_conf_file_path = get_platform_env_conf_file_path()
-    if platform_env_conf_file_path is None:
-        return False
-    with open(platform_env_conf_file_path) as platform_env_conf_file:
-        for line in platform_env_conf_file:
-            tokens = line.split('=')
-            if len(tokens) < 2:
-                continue
-            if tokens[0].lower() == 'switch_bmc':
-                return tokens[1].strip() == '1'
-    return False
+    """Return True if this system is the Switch BMC (switch_bmc=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_bmc')
 
 
 
