@@ -36,6 +36,10 @@ const GNMI_BASE_CMD: &str = "gnmi_get"; // assumed in PATH
 const SHOW_API_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SHOW_API_PROBE_ENABLED";
 // optional: set to "true" to enable serial number probing
 const SERIALNUMBER_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED";
+// optional: set to "true" to enable OTHERS osversion/build probing
+const OTHERS_OSVERSION_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_OTHERS_OSVERSION_PROBE_ENABLED";
+// optional: set to "true" to make `FEATURE|telemetry.state=disabled` return 500 instead of 200/SKIPPED
+const FAIL_ON_FEATURE_DISABLED_ENV_VAR: &str = "TELEMETRY_WATCHDOG_FAIL_ON_FEATURE_DISABLED";
 const TARGET_NAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_TARGET_NAME";
 const CA_CRT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CA_CRT";
 const SERVER_CRT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERVER_CRT";
@@ -343,6 +347,20 @@ fn is_cert_probe_enabled() -> bool {
     }
 }
 
+fn is_others_osversion_probe_enabled() -> bool {
+    match env::var(OTHERS_OSVERSION_PROBE_ENV_VAR) {
+        Ok(v) if v.eq_ignore_ascii_case("true") => true,
+        _ => false, // default disabled
+    }
+}
+
+fn is_fail_on_feature_disabled_enabled() -> bool {
+    match env::var(FAIL_ON_FEATURE_DISABLED_ENV_VAR) {
+        Ok(v) if v.eq_ignore_ascii_case("true") => true,
+        _ => false, // default disabled (preserves prior pass-when-disabled behavior)
+    }
+}
+
 fn get_gnmi_port() -> u16 {
     match redis_hget("TELEMETRY|gnmi", "port") {
         Some(p) => p.parse::<u16>().unwrap_or_else(|_| {
@@ -411,6 +429,9 @@ fn main() {
 
                     if !telemetry_enabled {
                         check_port_result = "SKIPPED: feature disabled".to_string();
+                        if is_fail_on_feature_disabled_enabled() {
+                            http_status = "HTTP/1.1 500 Internal Server Error";
+                        }
                     } else {
                         check_port_result = check_telemetry_port();
                         if !check_port_result.starts_with("OK") { http_status = "HTTP/1.1 500 Internal Server Error"; }
@@ -469,6 +490,14 @@ fn main() {
                                 cmd_results.push(res_sn);
                             }
 
+                            // Check OTHERS osversion/build (lightweight reachability probe)
+                            if is_others_osversion_probe_enabled() {
+                                let xpath_osv = "osversion/build";
+                                let res_osv = run_gnmi_for_xpath(&xpath_osv, port, &sec_cfg, &target_name, timeout, "OTHERS");
+                                if !res_osv.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_osv);
+                            }
+
                             // Check SHOW API xpaths
                             if is_show_api_probe_enabled() {
                                 let (xpaths, xpath_load_errors) = load_xpath_list();
@@ -505,5 +534,77 @@ fn main() {
             }
             Err(e) => eprintln!("Error accepting connection: {}", e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn with_env<F: FnOnce()>(key: &str, value: Option<&str>, f: F) {
+        let prior = env::var(key).ok();
+        match value {
+            Some(v) => env::set_var(key, v),
+            None => env::remove_var(key),
+        }
+        f();
+        match prior {
+            Some(v) => env::set_var(key, v),
+            None => env::remove_var(key),
+        }
+    }
+
+    #[test]
+    fn others_osversion_probe_defaults_off() {
+        with_env(OTHERS_OSVERSION_PROBE_ENV_VAR, None, || {
+            assert!(!is_others_osversion_probe_enabled());
+        });
+    }
+
+    #[test]
+    fn others_osversion_probe_true_variants() {
+        with_env(OTHERS_OSVERSION_PROBE_ENV_VAR, Some("true"), || {
+            assert!(is_others_osversion_probe_enabled());
+        });
+        with_env(OTHERS_OSVERSION_PROBE_ENV_VAR, Some("TRUE"), || {
+            assert!(is_others_osversion_probe_enabled());
+        });
+    }
+
+    #[test]
+    fn others_osversion_probe_false_or_garbage() {
+        with_env(OTHERS_OSVERSION_PROBE_ENV_VAR, Some("false"), || {
+            assert!(!is_others_osversion_probe_enabled());
+        });
+        with_env(OTHERS_OSVERSION_PROBE_ENV_VAR, Some("yes"), || {
+            assert!(!is_others_osversion_probe_enabled());
+        });
+    }
+
+    #[test]
+    fn fail_on_feature_disabled_defaults_off() {
+        with_env(FAIL_ON_FEATURE_DISABLED_ENV_VAR, None, || {
+            assert!(!is_fail_on_feature_disabled_enabled());
+        });
+    }
+
+    #[test]
+    fn fail_on_feature_disabled_true_variants() {
+        with_env(FAIL_ON_FEATURE_DISABLED_ENV_VAR, Some("true"), || {
+            assert!(is_fail_on_feature_disabled_enabled());
+        });
+        with_env(FAIL_ON_FEATURE_DISABLED_ENV_VAR, Some("TRUE"), || {
+            assert!(is_fail_on_feature_disabled_enabled());
+        });
+    }
+
+    #[test]
+    fn fail_on_feature_disabled_false_or_garbage() {
+        with_env(FAIL_ON_FEATURE_DISABLED_ENV_VAR, Some("false"), || {
+            assert!(!is_fail_on_feature_disabled_enabled());
+        });
+        with_env(FAIL_ON_FEATURE_DISABLED_ENV_VAR, Some("yes"), || {
+            assert!(!is_fail_on_feature_disabled_enabled());
+        });
     }
 }
