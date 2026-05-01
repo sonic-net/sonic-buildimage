@@ -83,6 +83,7 @@ class BgpdClientMgr(threading.Thread):
             'PREFIX_SET': ['bgpd'],
             'COMMUNITY_SET': ['bgpd'],
             'EXTENDED_COMMUNITY_SET': ['bgpd'],
+            'LARGE_COMMUNITY_SET': ['bgpd'],
             'ROUTE_MAP': ['zebra', 'bgpd', 'ospfd'],
             'PREFIX': ['zebra', 'bgpd', 'ospfd', 'pimd'],
             'BGP_PEER_GROUP': ['bgpd'],
@@ -418,6 +419,13 @@ def hdl_set_extcomm(daemon, cmd_str, op, st_idx, args, is_inline):
             syslog.syslog(syslog.LOG_ERR, 'extended community set %s not found or configured' % args[0])
             return None
         com_list = com_set.mbr_list
+
+    # Special handling for 'none' keyword
+    if len(com_list) == 1 and com_list[0] == 'none':
+        if op == CachedDataWithOp.OP_DELETE:
+            return []
+        return ['set extcommunity none']
+
     rt_cnt = soo_cnt = 0
     for comm in com_list:
         if comm.startswith(CommunityList.RT_TYPE_MARK):
@@ -456,6 +464,35 @@ def hdl_set_pim_hello_parms (daemon, cmd_str, op, st_idx, args, data):
     if op == CachedDataWithOp.OP_DELETE:
         args = ('',)
     return get_command_cmn(daemon, cmd_str, op, st_idx, args, data)
+
+def hdl_set_community_additive(daemon, cmd_str, op, st_idx, args, data):
+    # args[0] is a dict like {0: (community_value, changed), 1: (additive_flag, changed)}
+    community_dict = args[0]
+
+    # Extract only the community value (index 0) for command generation
+    # community_dict[0] is a tuple (value, changed_flag), we need just the value
+    if 0 in community_dict:
+        community_value = community_dict[0][0]
+        cmd_list = get_command_cmn(daemon, cmd_str, op, st_idx, (community_value,), data)
+    else:
+        cmd_list = get_command_cmn(daemon, cmd_str, op, st_idx, ('',), data)
+
+    if op == CachedDataWithOp.OP_DELETE or not cmd_list:
+        return cmd_list
+
+    # Check if additive flag is set to 'true'
+    if 1 not in community_dict or community_dict[1][0] != 'true':
+        return cmd_list
+
+    # Append ' additive' to set community/large-community commands
+    modified_cmd_list = []
+    for cmd_item in cmd_list:
+        cmd, flag = (cmd_item, None) if not isinstance(cmd_item, tuple) else cmd_item
+        if not cmd.startswith('no ') and cmd.startswith('set ') and ('community' in cmd or 'large-community' in cmd):
+            cmd = cmd + ' additive'
+        modified_cmd_list.append((cmd, flag) if flag is not None else cmd)
+
+    return modified_cmd_list
 
 def handle_rmap_set_metric(daemon, cmd_str, op, st_idx, args, data):
     cmd_list = []
@@ -776,11 +813,13 @@ class CommandArgument(object):
         self.tolower = False
     def to_str(self):
         if type(self.value) is list or type(self.value) is tuple:
-            ret_val = ' '.join([v for v in self.value])
+            ret_val = ' '.join(self.value)
         elif type(self.value) is dict:
-            id_list = self.value.keys()
-            id_list.sort()
-            ret_val = ' '.join([self.value[i][0] for i in id_list])
+            # self.value[i] is a tuple (data, changed_flag), extract data and convert to string
+            ret_val = ' '.join(
+                ' '.join(val) if type(val) is list else str(val)
+                for val in (self.value[i][0] for i in sorted(self.value.keys()))
+            )
         else:
             ret_val = str(self.value)
         if self.tolower:
@@ -978,24 +1017,50 @@ def hdl_com_set(daemon, cmd_str, op, st_idx, args, extended):
     set_type = args[1][0][0].lower()
     arg_str = '{} {}'.format(set_type, com_name)
     cmd_list = []
-    com_set_list = daemon.comm_set_list if not extended else daemon.extcomm_set_list
+
+    # Determine which community list to use (standard, extended, or large)
+    if hasattr(extended, '__iter__'):
+        is_extended = extended[0] if len(extended) > 0 else False
+        is_large = extended[1] if len(extended) > 1 else False
+    elif isinstance(extended, bool):
+        is_extended = extended
+        is_large = False
+    else:
+        is_extended = False
+        is_large = False
+
+    if is_large:
+        com_set_list = daemon.large_comm_set_list
+    elif is_extended:
+        com_set_list = daemon.extcomm_set_list
+    else:
+        com_set_list = daemon.comm_set_list
+
     if com_name in com_set_list and com_set_list[com_name].is_configurable():
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, arg_str), no = CommandArgument(daemon, False)))
     if op != CachedDataWithOp.OP_DELETE:
         match_action = args[1][1][0].lower()
         member_list = args[1][2][0]
+
+        # Extract action field (permit/deny) - default to 'permit' if not provided
+        action = 'permit'
+        if len(args[1]) > 3 and 3 in args[1] and len(args[1][3]) > 0:
+            action = args[1][3][0].lower()
+        elif com_name in com_set_list:
+            action = com_set_list[com_name].action
+
         if match_action == 'all':
-            if extended and set_type == 'standard':
-                mbr_str = '{} permit {:ext-com-list}'.format(arg_str, CommandArgument(daemon, True, member_list))
+            if is_extended and set_type == 'standard':
+                mbr_str = '{} {} {:ext-com-list}'.format(arg_str, action, CommandArgument(daemon, True, member_list))
             else:
-                mbr_str = '{} permit {}'.format(arg_str, ' '.join(member_list))
+                mbr_str = '{} {} {}'.format(arg_str, action, ' '.join(member_list))
             cmd_list.append(cmd_str.format(CommandArgument(daemon, True, mbr_str), no = CommandArgument(daemon, True)))
         elif match_action == 'any':
             for member in member_list:
-                if extended and set_type == 'standard':
-                    mbr_str = '{} permit {:ext-com-list}'.format(arg_str, CommandArgument(daemon, True, member))
+                if is_extended and set_type == 'standard':
+                    mbr_str = '{} {} {:ext-com-list}'.format(arg_str, action, CommandArgument(daemon, True, member))
                 else:
-                    mbr_str = '{} permit {}'.format(arg_str, member)
+                    mbr_str = '{} {} {}'.format(arg_str, action, member)
                 cmd_list.append(cmd_str.format(CommandArgument(daemon, True, mbr_str), no = CommandArgument(daemon, True)))
     return cmd_list
 
@@ -1564,11 +1629,13 @@ class CommunityList:
     MATCH_ANY = 1
     RT_TYPE_MARK = 'route-target:'
     SOO_TYPE_MARK = 'route-origin:'
-    def __init__(self, name, extended):
+    def __init__(self, name, extended, large=False):
         self.name = name
         self.is_ext = extended
+        self.is_large = large
         self.match_action = None
         self.is_std = None
+        self.action = 'permit'  # Default action
         self.mbr_list = []
     def is_configurable(self):
         return (self.match_action is not None and self.is_std is not None and
@@ -1587,6 +1654,11 @@ class CommunityList:
                 self.is_std = None
             else:
                 self.is_std = (val.lower() == 'standard')
+        elif name == 'action':
+            if val is None:
+                self.action = 'permit'
+            else:
+                self.action = val.lower()
         elif name == 'community_member':
             self.mbr_list = []
             if val is not None:
@@ -1942,10 +2014,12 @@ class BGPConfigDaemon:
                          ('set_med',                        '{no:no-prefix}set metric {}'),
                          (('set_asn', '+set_repeat_asn'),   '[bgpd]{no:no-prefix}set as-path prepend {:repeat}', hdl_set_asn),
                          ('set_asn_list',                   '[bgpd]{no:no-prefix}set as-path prepend {:asn_list}', hdl_set_asn_list),
-                         ('set_community_inline',           '[bgpd]{no:no-prefix}set community {}'),
-                         ('set_community_ref',              '[bgpd]{no:no-prefix}set community {:com-ref}'),
+                         (('set_community_inline', '+set_community_additive'), '[bgpd]{no:no-prefix}set community {}', hdl_set_community_additive),
+                         (('set_community_ref', '+set_community_additive'), '[bgpd]{no:no-prefix}set community {:com-ref}', hdl_set_community_additive),
                          ('set_ext_community_inline',       '[bgpd]{no:no-prefix}set extcommunity {:ext-com-list}', hdl_set_extcomm, True),
-                         ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False)
+                         ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False),
+                         (('set_large_community_inline', '+set_community_additive'), '[bgpd]{no:no-prefix}set large-community {}', hdl_set_community_additive),
+                         (('set_large_community_ref', '+set_community_additive'), '[bgpd]{no:no-prefix}set large-community {}', hdl_set_community_additive)
     ]
 
     bfd_peer_shop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),
@@ -1964,8 +2038,9 @@ class BGPConfigDaemon:
 
     listen_prefix_key_map = [('peer_group', '{no:no-prefix}bgp listen range {} peer-group {}')]
 
-    community_set_key_map = [(('set_type', 'match_action', 'community_member'), '{no:no-prefix}bgp community-list {}', hdl_com_set, False)]
-    extcommunity_set_key_map = [(('set_type', 'match_action', 'community_member'), '{no:no-prefix}bgp extcommunity-list {}', hdl_com_set, True)]
+    community_set_key_map = [(('set_type', 'match_action', 'community_member', '++action'), '{no:no-prefix}bgp community-list {}', hdl_com_set, False)]
+    extcommunity_set_key_map = [(('set_type', 'match_action', 'community_member', '++action'), '{no:no-prefix}bgp extcommunity-list {}', hdl_com_set, (True, False))]
+    large_community_set_key_map = [(('set_type', 'match_action', 'community_member', '++action'), '{no:no-prefix}bgp large-community-list {}', hdl_com_set, (False, True))]
 
     aspath_set_key_map = [('as_path_set_member', '{no:no-prefix}bgp as-path access-list {}', hdl_aspath_set)]
 
@@ -2106,6 +2181,7 @@ class BGPConfigDaemon:
                       'ROUTE_MAP':                      route_map_key_map,
                       'COMMUNITY_SET':                  community_set_key_map,
                       'EXTENDED_COMMUNITY_SET':         extcommunity_set_key_map,
+                      'LARGE_COMMUNITY_SET':            large_community_set_key_map,
                       'AS_PATH_SET':                    aspath_set_key_map,
                       'ROUTE_REDISTRIBUTE':             route_redist_key_map,
                       'BGP_GLOBALS_AF_AGGREGATE_ADDR':  af_aggregate_key_map,
@@ -2207,16 +2283,23 @@ class BGPConfigDaemon:
         comm_table = self.config_db.get_table('COMMUNITY_SET')
         for key, entry in comm_table.items():
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Community %s' % key)
-            self.comm_set_list[key] = CommunityList(key, False)
+            self.comm_set_list[key] = CommunityList(key, False, False)
             for k, v in entry.items():
                 self.comm_set_list[key].db_data_to_attr(k, v)
         self.extcomm_set_list = {}
         extcomm_table = self.config_db.get_table('EXTENDED_COMMUNITY_SET')
         for key, entry in extcomm_table.items():
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Extended_Community %s' % key)
-            self.extcomm_set_list[key] = CommunityList(key, True)
+            self.extcomm_set_list[key] = CommunityList(key, True, False)
             for k, v in entry.items():
                 self.extcomm_set_list[key].db_data_to_attr(k, v)
+        self.large_comm_set_list = {}
+        large_comm_table = self.config_db.get_table('LARGE_COMMUNITY_SET')
+        for key, entry in large_comm_table.items():
+            syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Large_Community %s' % key)
+            self.large_comm_set_list[key] = CommunityList(key, False, True)
+            for k, v in entry.items():
+                self.large_comm_set_list[key].db_data_to_attr(k, v)
         self.prefix_set_list = {}
         pfx_set_table = self.config_db.get_table('PREFIX_SET')
         for key, entry in pfx_set_table.items():
@@ -2292,6 +2375,7 @@ class BGPConfigDaemon:
             ('PREFIX', self.bgp_table_handler_common),
             ('COMMUNITY_SET', self.comm_set_handler),
             ('EXTENDED_COMMUNITY_SET', self.comm_set_handler),
+            ('LARGE_COMMUNITY_SET', self.comm_set_handler),
             ('ROUTE_MAP', self.bgp_table_handler_common),
             ('BGP_PEER_GROUP', self.bgp_neighbor_handler),
             ('BGP_NEIGHBOR', self.bgp_neighbor_handler),
@@ -2790,6 +2874,11 @@ class BGPConfigDaemon:
                                 syslog.syslog(syslog.LOG_ERR, 'failed to create peer-group %s for VRF %s' % (key, vrf))
                                 continue
                             self.bgp_peer_group[vrf][key] = BGPPeerGroup(vrf)
+                            # add attributes to be applied when peer-group is created for the first time
+                            for dkey, dval in data.items():
+                                if isinstance(dval, CachedDataWithOp) and dval.op == CachedDataWithOp.OP_NONE:
+                                    syslog.syslog(syslog.LOG_DEBUG, 'Force apply attribute %s for new peer-group %s' % (dkey, key))
+                                    dval.op = CachedDataWithOp.OP_ADD
                     elif not self.__peer_is_ip(key):
                         if key not in self.bgp_intf_nbr.setdefault(vrf, set()):
                             command = "vtysh -c 'configure terminal' -c 'router bgp {} vrf {}' ".format(local_asn, vrf)
@@ -2860,18 +2949,26 @@ class BGPConfigDaemon:
                 if not key_map.run_command(self, table, data, cmd_prefix, nbr):
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP neighbor AF config command')
                     continue
-            elif table == 'COMMUNITY_SET' or table == 'EXTENDED_COMMUNITY_SET':
+            elif table == 'COMMUNITY_SET' or table == 'EXTENDED_COMMUNITY_SET' or table == 'LARGE_COMMUNITY_SET':
                 comm_set_name = prefix
                 syslog.syslog(syslog.LOG_INFO, 'Set community set {} for table {}'.format(comm_set_name, table))
                 cmd_prefix = ['configure terminal']
                 if not key_map.run_command(self, table, data, cmd_prefix, comm_set_name):
                     syslog.syslog(syslog.LOG_ERR, 'failed running BGP community config command')
                     continue
-                extended = (table != 'COMMUNITY_SET')
-                comm_set = (self.comm_set_list if not extended else self.extcomm_set_list).setdefault(comm_set_name,
-                    CommunityList(comm_set_name, extended))
+                extended = (table == 'EXTENDED_COMMUNITY_SET')
+                large = (table == 'LARGE_COMMUNITY_SET')
+                if large:
+                    comm_set = self.large_comm_set_list.setdefault(comm_set_name,
+                        CommunityList(comm_set_name, False, True))
+                else:
+                    comm_set = (self.comm_set_list if not extended else self.extcomm_set_list).setdefault(comm_set_name,
+                        CommunityList(comm_set_name, extended, False))
                 if del_table:
-                    del((self.comm_set_list if not extended else self.extcomm_set_list)[comm_set_name])
+                    if large:
+                        del(self.large_comm_set_list[comm_set_name])
+                    else:
+                        del((self.comm_set_list if not extended else self.extcomm_set_list)[comm_set_name])
                 else:
                     for dkey, dval in data.items():
                         if dval.op == CachedDataWithOp.OP_DELETE:
