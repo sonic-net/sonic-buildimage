@@ -782,7 +782,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-    -v /host/bmc:/host/bmc:rw \
+    $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
