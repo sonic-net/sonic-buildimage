@@ -256,6 +256,18 @@
             }
         }
     },
+    "SYSLOG_SERVER_FILTER_REGEX_NEWLINE_NEG_TEST" : {
+        "sonic-syslog:sonic-syslog": {
+            "sonic-syslog:SYSLOG_SERVER": {
+                "SYSLOG_SERVER_LIST": [
+                    {
+                        "server_address": "1.2.3.4",
+                        "filter_regex": "^expeliarmus.*\nruleset(name=injected)"
+                    }
+                ]
+            }
+        }
+    },
     "SYSLOG_CONFIG_FEATURE_INVALID_SERVICE_NAME": {
         "sonic-syslog:sonic-syslog": {
             "sonic-syslog:SYSLOG_CONFIG_FEATURE": {

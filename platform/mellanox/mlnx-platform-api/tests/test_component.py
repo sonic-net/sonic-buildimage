@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +53,7 @@ from sonic_platform_base.component_base import FW_AUTO_INSTALLED,      \
 
 class TestComponent:
     @mock.patch('sonic_platform.chassis.utils.is_host')
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.DeviceDataManager.get_cpld_component_list', mock.MagicMock(return_value=[]))
     def test_chassis_component(self, mock_is_host):
         mock_is_host.return_value = False
@@ -207,14 +209,17 @@ class TestComponent:
         with pytest.raises(RuntimeError):
             c.get_firmware_version()
 
+    @mock.patch('sonic_platform.component.ComponentCPLD._is_spc1_asic')
     @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
     @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
     @mock.patch('sonic_platform.component.subprocess.check_call')
     @mock.patch('sonic_platform.component.MPFAManager.get_path')
     @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
+    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value=None)
     @mock.patch('sonic_platform.component.os.path.exists')
-    def test_cpld_component(self, mock_exists, mock_get_meta_data, mock_get_path, mock_check_call):
+    def test_cpld_component(self, mock_exists, mock_get_bmc, mock_get_meta_data, mock_get_path, mock_check_call, mock_is_spc1):
         c = ComponentCPLD(1)
+        mock_is_spc1.return_value = True
         c._read_generic_file = mock.MagicMock(side_effect=[None, '1', None])
         assert c.get_firmware_version() == 'CPLD000000_REV0100'
 
@@ -239,6 +244,9 @@ class TestComponent:
         assert not c._install_firmware('')
         c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value='some dev')
         assert c._install_firmware('')
+        mock_check_call.assert_called_once_with(
+            ['cpldupdate', '--dev', 'some dev', '--print-progress', ''],
+            universal_newlines=True)
         mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
         assert not c._install_firmware('')
 
@@ -280,6 +288,68 @@ class TestComponent:
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_ERR_UNKNOWN
         c.install_firmware = mock.MagicMock(return_value=True)
         assert c.auto_update_firmware('', 'cold') == FW_AUTO_SCHEDULED
+
+    @mock.patch('sonic_platform.component.utils.write_file')
+    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
+    @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
+    @mock.patch('sonic_platform.component.MPFAManager.get_path')
+    @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
+    def test_cpld_update_firmware_bmc_mpfa_triggers_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+        c = ComponentCPLD(1)
+        c._install_firmware = mock.MagicMock(return_value=True)
+        mock_meta_data = mock.MagicMock()
+        mock_meta_data.has_option = mock.MagicMock(return_value=True)
+        mock_meta_data.get = mock.MagicMock(return_value='burn')
+        mock_get_meta_data.return_value = mock_meta_data
+        mock_get_path.return_value = '/tmp'
+
+        c.update_firmware('a.mpfa')
+
+        c._install_firmware.assert_called_once_with('/tmp/burn')
+        mock_write.assert_called_once_with(ComponentCPLD.AUX_PWR_CYCLE_FILE, '1', raise_exception=True)
+
+    @mock.patch('sonic_platform.component.utils.write_file')
+    @mock.patch('sonic_platform.component.device_info.get_bmc_data', return_value={'bmc_addr': 'x'})
+    @mock.patch('sonic_platform.component.MPFAManager.cleanup', mock.MagicMock())
+    @mock.patch('sonic_platform.component.MPFAManager.extract', mock.MagicMock())
+    @mock.patch('sonic_platform.component.MPFAManager.get_path')
+    @mock.patch('sonic_platform.component.MPFAManager.get_metadata')
+    def test_cpld_update_firmware_bmc_mpfa_burn_fail_skips_aux_power_cycle(self, mock_get_meta_data, mock_get_path, mock_get_bmc, mock_write):
+        c = ComponentCPLD(1)
+        c._install_firmware = mock.MagicMock(return_value=False)
+        mock_meta_data = mock.MagicMock()
+        mock_meta_data.has_option = mock.MagicMock(return_value=True)
+        mock_meta_data.get = mock.MagicMock(return_value='burn')
+        mock_get_meta_data.return_value = mock_meta_data
+        mock_get_path.return_value = '/tmp'
+
+        c.update_firmware('a.mpfa')
+
+        c._install_firmware.assert_called_once_with('/tmp/burn')
+        mock_write.assert_not_called()
+
+
+    @mock.patch('sonic_platform.component.ComponentCPLD._is_spc1_asic')
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    def test_cpld_component_install_non_spc1(self, mock_check_call, mock_is_spc1):
+        """Non-SPC1 CPLD component install: GPIO cpldupdate path, no MST device."""
+        c = ComponentCPLD(1)
+        mock_is_spc1.return_value = False
+        c._check_file_validity = mock.MagicMock(return_value=True)
+        c._ComponentCPLD__get_mst_device = mock.MagicMock(return_value=None)
+        install_path = '/tmp/test_cpld.vme'
+
+        assert c._install_firmware(install_path)
+        c._ComponentCPLD__get_mst_device.assert_not_called()
+        mock_check_call.assert_called_once_with(
+            ['cpldupdate', '--gpio', '--print-progress', install_path],
+            universal_newlines=True)
+
+        mock_check_call.reset_mock()
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
+        assert not c._install_firmware(install_path)
+        c._ComponentCPLD__get_mst_device.assert_not_called()
 
     @mock.patch('sonic_platform.component.ComponentCPLD._read_generic_file', mock.MagicMock(return_value='3'))
     def test_cpld_get_component_list(self):

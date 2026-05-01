@@ -80,6 +80,11 @@ RUN pip3 install \
          pyroute2==0.7.2 \
          netifaces==0.11.0
 
+# For sonic-host-services/dbus-python builds: these packages are required to
+# build dbus-python source archives (dbus-python-*.tar.gz), and avoid
+# "BackendUnavailable: Cannot import 'mesonpy'" during pip install with no build isolation.
+RUN pip3 install meson-python meson ninja patchelf
+
 {% if docker_sonic_vs_debs.strip() -%}
 # Copy built Debian packages
 {{ copy_files("debs/", docker_sonic_vs_debs.split(' '), "/debs/") }}
@@ -113,6 +118,8 @@ RUN apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsyste
 RUN apt-get clean -y
 RUN apt-get autoclean -y
 RUN apt-get autoremove -y
+# Remove temporary sonic-host-services/dbus-python build backend tools
+RUN pip3 uninstall -y meson-python meson ninja patchelf
 RUN rm -rf /debs ~/.cache
 
 RUN sed -ri 's/^# save ""$/save ""/g;                    \
@@ -167,6 +174,9 @@ COPY ["frr/zebra.conf", "/etc/frr/"]
 
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
+
+# Create /zmq_swss directory for ZMQ IPC sockets
+RUN mkdir -p /zmq_swss
 
 FROM $BASE
 

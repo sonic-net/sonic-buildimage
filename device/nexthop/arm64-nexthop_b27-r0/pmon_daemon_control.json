@@ -3,9 +3,10 @@
     "skip_ledd": true,
     "skip_xcvrd": true,
     "skip_psud": true,
-    "skip_syseepromd": true,
+    "skip_syseepromd": false,
     "skip_pcied": true,
     "skip_chassisd": true,
+    "skip_chassis_db_init": false,
     "skip_fancontrol": true,
     "include_sensormond": false,
     "thermalctld": {

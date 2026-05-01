@@ -9,7 +9,7 @@ module sonic-logger{
         prefix stypes;
     }
 
-    description "Logger Table yang Module for SONiC";
+    description "Per-component log verbosity and output configuration YANG module for SONiC OS.";
 
     typedef swss_loglevel {
         type enumeration {
@@ -39,14 +39,15 @@ module sonic-logger{
 
         container LOGGER {
 
-            description "Logger table in config_db.json";
+            description "Per-component logging configuration.";
 
             list LOGGER_LIST {
 
                 key "name";
+                description "A logger entry keyed by component name.";
 
                 leaf name {
-                    description "Component name in LOGGER table (example for component: orchagent, Syncd, SAI components).";
+                    description "Name of the SONiC component (e.g. orchagent, syncd, SAI modules).";
                     type string;
                 }
 
@@ -66,11 +67,12 @@ module sonic-logger{
                         enum STDERR;
                     }
                     default SYSLOG;
+                    description "Destination for log output (SYSLOG, STDOUT, or STDERR).";
                 }
 
                 leaf require_manual_refresh {
                     type stypes:boolean_type;
-                    description "When updating the log level, will refresh configuration via SIGHUP sent to the process.";
+                    description "When true, log level changes require a SIGHUP to the process to take effect.";
                 }
             }/* end of list LOGGER_LIST */
         }/* end of LOGGER container */

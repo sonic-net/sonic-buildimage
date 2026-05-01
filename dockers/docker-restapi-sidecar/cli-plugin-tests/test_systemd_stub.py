@@ -193,6 +193,10 @@ def ss(tmp_path, monkeypatch):
     # Now import systemd_stub after all patches are in place
     ss = importlib.import_module("systemd_stub")
 
+    # Reset the one-shot cleanup flag so each test starts fresh
+    ss._stale_unit_cleaned = False
+    monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
+
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {})
 
@@ -207,13 +211,11 @@ def test_sync_no_change_fast_path(ss):
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"same"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"same"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"same"
-    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"same"
     
     # Put same files on host
     host_fs["/usr/bin/restapi.sh"] = b"same"
     host_fs["/bin/container_checker"] = b"same"
     host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"same"
-    host_fs["/lib/systemd/system/restapi.service"] = b"same"
 
     ok = ss.ensure_sync()
     assert ok is True
@@ -232,13 +234,11 @@ def test_sync_updates_and_post_actions(ss):
     container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
     container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
-    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = b"NEW-SERVICE"
     
     # Put old files on host
     host_fs["/usr/bin/restapi.sh"] = b"OLD"
     host_fs["/bin/container_checker"] = b"OLD"
     host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"OLD"
-    host_fs["/lib/systemd/system/restapi.service"] = b"OLD"
 
     ss.POST_COPY_ACTIONS["/bin/container_checker"] = [
         ["sudo", "systemctl", "daemon-reload"],
@@ -415,7 +415,6 @@ def test_post_copy_actions_match_sync_items(monkeypatch, tmp_path):
         "/usr/bin/restapi.sh",
         "/bin/container_checker",
         "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh",
-        "/lib/systemd/system/restapi.service",
     }
     
     # Verify all POST_COPY_ACTIONS keys are in expected sync destinations
@@ -581,36 +580,111 @@ def test_per_branch_files_with_v1_flag(monkeypatch, tmp_path, branch, is_v1_enab
     assert ss.IS_V1_ENABLED == is_v1_enabled
 
 
-def test_restapi_service_uses_per_branch_file(ss):
-    """Test that restapi.service sync uses the per-branch service file"""
-    systemd_stub, container_fs, host_fs, commands, config_db = ss
 
-    # Prepare container unit content and host old content (branch 202311 from fixture)
-    container_restapi_service_path = "/usr/share/sonic/systemd_scripts/restapi.service_202311"
-    container_fs[container_restapi_service_path] = b"UNIT-NEW-PER-BRANCH"
-    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"DUMMY"
-    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"DUMMY"
-    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"DUMMY"
-    
-    host_fs[systemd_stub.HOST_RESTAPI_SERVICE] = b"UNIT-OLD"
-    host_fs["/usr/bin/restapi.sh"] = b"DUMMY"
-    host_fs["/bin/container_checker"] = b"DUMMY"
-    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"DUMMY"
+# ─────────────────────────── Tests for stale restapi.service cleanup ───────────────────────────
 
-    # Add post actions for restapi.service
-    systemd_stub.POST_COPY_ACTIONS[systemd_stub.HOST_RESTAPI_SERVICE] = [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "restapi"],
-    ]
+STALE_UNIT = b"""[Unit]
+Description=RestAPI container
 
-    ok = systemd_stub.ensure_sync()
-    assert ok is True
-    assert host_fs[systemd_stub.HOST_RESTAPI_SERVICE] == b"UNIT-NEW-PER-BRANCH"
+[Service]
+User=root
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+"""
 
-    # Verify systemctl actions were invoked
+CLEAN_UNIT = b"""[Unit]
+Description=RestAPI container
+
+[Service]
+User=admin
+ExecStartPre=/usr/bin/restapi.sh start
+ExecStart=/usr/bin/restapi.sh wait
+"""
+
+
+def test_cleanup_stale_unit_restores_from_packed_file(ss):
+    """When host restapi.service has User=root, cleanup overwrites it with the packed clean file."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # Host file should now be the clean version
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+    # daemon-reload and restart should follow
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
     assert ("sudo", "systemctl", "restart", "restapi") in post_cmds
+
+
+def test_cleanup_skips_when_user_admin(ss):
+    """When host restapi.service already has User=admin, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # No write should have occurred
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_skips_when_file_missing(ss):
+    """When host restapi.service doesn't exist, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_runs_only_once(ss):
+    """The cleanup is a one-shot; second call should be a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+
+    # Revert host to stale to prove second call is a no-op
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    # Should still be stale because the flag prevented re-run
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == STALE_UNIT
+
+def test_cleanup_retries_after_transient_read_failure(ss):
+    """When host_read_bytes fails transiently, cleanup retries on the next call."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+    # First call: host file missing (transient failure)
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+    assert ss_mod._stale_unit_cleaned is False  # flag NOT set; will retry
+
+    # Second call: host file now present with stale content
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == CLEAN_UNIT
+    assert ss_mod._stale_unit_cleaned is True
+
+
+def test_cleanup_disabled_by_env(ss, monkeypatch):
+    """When STALE_UNIT_CLEANUP_ENABLED=false, cleanup is skipped entirely."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "_STALE_UNIT_CLEANUP_ENABLED", False)
+    host_fs[ss_mod._HOST_RESTAPI_SERVICE] = STALE_UNIT
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.service_202311"] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    # File should NOT be overwritten
+    assert host_fs[ss_mod._HOST_RESTAPI_SERVICE] == STALE_UNIT
+    # Flag set so it won't retry
+    assert ss_mod._stale_unit_cleaned is True
 
 
 # ─────────────────────────── Tests for _resolve_branch ───────────────────────────

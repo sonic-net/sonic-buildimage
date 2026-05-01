@@ -406,3 +406,23 @@ class TestChassis:
             chassis.get_dpu_id('ABC')
         DeviceDataManager.get_platform_dpus_data = orig_dpus_data
         DeviceDataManager.get_dpu_count = orig_dpu_count
+
+    @mock.patch('sonic_platform.chassis.utils.is_host', mock.MagicMock(return_value=True))
+    def test_initialize_components_bmc(self):
+        chassis = Chassis()
+        chassis._component_list = []
+
+        with mock.patch.object(DeviceDataManager, 'is_platform_with_bmc', return_value=True), \
+             mock.patch.object(DeviceDataManager, 'get_bios_component', return_value=MagicMock()), \
+             mock.patch.object(DeviceDataManager, 'get_cpld_component_list', return_value=[]), \
+             mock.patch('sonic_platform.chassis.Chassis.initialize_bmc') as mock_init_bmc:
+            chassis.initialize_components()
+            mock_init_bmc.assert_called_once()
+
+        chassis._component_list = []
+        with mock.patch.object(DeviceDataManager, 'is_platform_with_bmc', return_value=False), \
+             mock.patch.object(DeviceDataManager, 'get_bios_component', return_value=MagicMock()), \
+             mock.patch.object(DeviceDataManager, 'get_cpld_component_list', return_value=[]), \
+             mock.patch('sonic_platform.chassis.Chassis.initialize_bmc') as mock_init_bmc:
+            chassis.initialize_components()
+            mock_init_bmc.assert_not_called()
