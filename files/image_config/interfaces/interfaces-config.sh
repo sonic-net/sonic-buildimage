@@ -70,6 +70,20 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf \
     -t /usr/share/sonic/templates/dhclient.conf.j2,/etc/dhcp/dhclient.conf \
 "
+
+# On BMC platform if a bmc.json exists (platform-specific takes priority over global), pass it
+# to sonic-cfggen via -j so interfaces.j2 can render the BMC interface
+PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+BMC_JSON=""
+if [[ -n "$PLATFORM" && -f "/usr/share/sonic/device/$PLATFORM/bmc.json" ]]; then
+    BMC_JSON="/usr/share/sonic/device/$PLATFORM/bmc.json"
+elif [[ -f "/etc/sonic/bmc.json" ]]; then
+    BMC_JSON="/etc/sonic/bmc.json"
+fi
+if [[ -n "$BMC_JSON" ]]; then
+    CFGGEN_PARAMS="$CFGGEN_PARAMS -j $BMC_JSON"
+fi
+
 sonic-cfggen $CFGGEN_PARAMS
 
 [[ -f /var/run/dhclient.eth0.pid ]] && kill `cat /var/run/dhclient.eth0.pid` && rm -f /var/run/dhclient.eth0.pid

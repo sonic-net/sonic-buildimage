@@ -31,7 +31,7 @@ stderr_syslog=true
 dependent_startup=true
 
 
-{% if IS_SWITCH_BMC %}
+{% if IS_SWITCH_BMC == 1 %}
 [program:bmcctld]
 command=/usr/local/bin/bmcctld
 priority=2
