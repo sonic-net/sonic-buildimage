@@ -104,5 +104,7 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
     fi
 done
 
+ip neigh replace 0.0.0.0 dev lo lladdr 00:00:00:00:00:00 nud permanent
+
 # Clean-up created files
 rm -f /tmp/ztp_input.json /tmp/ztp_port_data.json
