@@ -1,0 +1,11 @@
+Source: quicktrace
+Maintainer: Arista <support@arista.com>
+Section: devel
+Priority: optional
+Build-Depends:
+Standards-Version: 1.0.0
+
+Package: quicktrace
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains quicktrace from https://github.com/aristanetworks/quicktrace-public
