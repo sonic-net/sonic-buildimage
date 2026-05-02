@@ -425,4 +425,12 @@ if [ -f /var/log/fsck.log.gz ]; then
     rm -f /var/log/fsck.log.gz
 fi
 
+# Restore config_db.json if present in /host/old_config 
+if [ ! -f /etc/sonic/config_db.json ] && [ -f /host/old_config/config_db.json ]; then
+    echo "[rc.local] Restoring config_db.json from /host/old_config/"
+    cp /host/old_config/config_db.json /etc/sonic/config_db.json
+    chown root:root /etc/sonic/config_db.json
+    chmod 644 /etc/sonic/config_db.json
+fi
+
 exit 0
