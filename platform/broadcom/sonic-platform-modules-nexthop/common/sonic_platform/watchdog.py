@@ -15,7 +15,7 @@ _logger = syslogger.SysLogger(_SYSLOG_IDENTIFIER)
 # Watchdog punching is paused if file is present
 _WATCHDOG_PAUSE_FILE_PATH = Path("/var/lock/pddf-locks/watchdog.pause")
 # How long the watchdog is armed for by the watchdog.timer
-_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 360
+_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 300
 
 
 def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
