@@ -92,6 +92,49 @@ stages:
   - name: BUILD_BRANCH
     value: $(Build.SourceBranchName)
   jobs:
+  - job: trivy_scan
+    displayName: "Trivy vulnerability scan (docker-sonic-mgmt)"
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 30
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - download: current
+      artifact: docker-sonic-mgmt
+      displayName: "Download docker-sonic-mgmt artifact"
+    - script: |
+        set -ex
+        # Pin version to avoid GitHub API rate limit failures on CI agents
+        TRIVY_VERSION="0.70.0"
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b ~/.local/bin "v${TRIVY_VERSION}"
+        export PATH="$HOME/.local/bin:$PATH"
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -ex
+        export PATH="$HOME/.local/bin:$PATH"
+        ~/.local/bin/trivy image \
+          --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 \
+          --format table \
+          --no-progress \
+          --timeout 15m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+        echo ""
+        echo "=== Trivy Scan Summary (docker-sonic-mgmt) ==="
+        grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt || echo "No HIGH/CRITICAL unfixed findings."
+      displayName: "Trivy scan docker-sonic-mgmt"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+      continueOnError: true
+
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         CHECKOUT_SONIC_MGMT: true

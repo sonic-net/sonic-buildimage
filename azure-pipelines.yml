@@ -214,3 +214,49 @@ stages:
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       PTF_MODIFIED: $(PTF_MODIFIED)
+
+  # Trivy scan for docker-ptf — informational, runs in parallel with KVM tests
+  - job: trivy_scan
+    displayName: "Trivy vulnerability scan (docker-ptf)"
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 60
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifact: sonic-buildimage.vs
+      displayName: "Download sonic-buildimage.vs artifact"
+    - script: |
+        set -ex
+        # Pin version to avoid GitHub API rate limit failures on CI agents
+        TRIVY_VERSION="0.70.0"
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b ~/.local/bin "v${TRIVY_VERSION}"
+        export PATH="$HOME/.local/bin:$PATH"
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -ex
+        export PATH="$HOME/.local/bin:$PATH"
+        # docker-ptf.gz is ~1.3GB; scan takes 15-20 min on CI agents
+        ~/.local/bin/trivy image \
+          --input $(Pipeline.Workspace)/target/docker-ptf.gz \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 \
+          --format table \
+          --no-progress \
+          --timeout 30m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
+        echo ""
+        echo "=== Trivy Scan Summary (docker-ptf) ==="
+        grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-ptf.txt || echo "No HIGH/CRITICAL unfixed findings."
+      displayName: "Trivy scan docker-ptf"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+      continueOnError: true
