@@ -538,6 +538,60 @@
             }
         }
     },
+    "VLAN_SUB_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "ipv6_use_link_local_only": "enable"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_SUB_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "ipv6_use_link_local_only": "true"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
     "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_VLAN_CHECK_MUST_CONDITION_FALSE_TEST": {
         "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
             "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
