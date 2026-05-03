@@ -239,7 +239,7 @@ stages:
         trivy --version
       displayName: "Install Trivy"
     - script: |
-        set -ex
+        set -x
         export PATH="$HOME/.local/bin:$PATH"
         # docker-ptf.gz is ~1.3GB; scan takes 15-20 min on CI agents
         ~/.local/bin/trivy image \
@@ -251,9 +251,11 @@ stages:
           --no-progress \
           --timeout 30m \
           --output $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
+        TRIVY_EXIT=$?
         echo ""
         echo "=== Trivy Scan Summary (docker-ptf) ==="
         grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-ptf.txt || echo "No HIGH/CRITICAL unfixed findings."
+        exit $TRIVY_EXIT
       displayName: "Trivy scan docker-ptf"
     - publish: $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
       artifact: trivy-scan-results

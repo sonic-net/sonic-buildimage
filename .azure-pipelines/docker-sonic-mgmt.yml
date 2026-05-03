@@ -114,7 +114,7 @@ stages:
         trivy --version
       displayName: "Install Trivy"
     - script: |
-        set -ex
+        set -x
         export PATH="$HOME/.local/bin:$PATH"
         ~/.local/bin/trivy image \
           --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
@@ -125,9 +125,11 @@ stages:
           --no-progress \
           --timeout 15m \
           --output $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+        TRIVY_EXIT=$?
         echo ""
         echo "=== Trivy Scan Summary (docker-sonic-mgmt) ==="
         grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt || echo "No HIGH/CRITICAL unfixed findings."
+        exit $TRIVY_EXIT
       displayName: "Trivy scan docker-sonic-mgmt"
     - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
       artifact: trivy-scan-results
