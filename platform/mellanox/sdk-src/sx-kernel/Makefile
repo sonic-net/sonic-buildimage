@@ -2,36 +2,26 @@
 SHELL = /bin/bash
 
 MAIN_TARGET = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
-DERIVED_TARGETS = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
-PACKAGE_NAME = sx_kernel
 
-MLNX_SX_KERNEL_GITHUB_URL_BASE = $(MLNX_SDK_DRIVERS_GITHUB_URL)/archive/refs/heads
+PACKAGE_NAME = sys_sdk
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	# get sources
+        # get sources
+	rm -rf $(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION)
 
-	if [ ! -z "$(MLNX_SDK_SOURCE_BASE_URL)" ]; then
-		rm -rf sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION)
-		wget -c $(MLNX_SDK_SOURCE_BASE_URL)/$(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz -O - | tar -xz
-		pushd sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION)
-	else
-		rm -rf Spectrum-SDK-Drivers-$(MLNX_SDK_VERSION)
-		wget -c $(MLNX_SX_KERNEL_GITHUB_URL_BASE)/$(MLNX_SDK_VERSION).zip
-		unzip $(MLNX_SDK_VERSION).zip
-		rm -rf $(MLNX_SDK_VERSION).zip
+	wget -c $(MLNX_SDK_SOURCE_BASE_URL)/$(PACKAGE_NAME)-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz -O - | tar -xz
 
-		pushd Spectrum-SDK-Drivers-$(MLNX_SDK_VERSION)
-		ln -s ./sx_scripts/Makefile ./Makefile
-		ln -s ./sx_scripts/makefile ./makefile
-		ln -s ./sx_scripts/configure ./configure
-	fi
+        # build kernel-only package for host installation
+	rm -rf builds/cmake
 
-	# build
+	cmake -B builds/cmake -DCMAKE_SYSTEM_VERSION=$(shell ls -t /lib/modules |head -1) -DSKIP_DEPMOD_IN_INSTALL_PHASE=on -DKERNEL_ONLY=ON -DCMAKE_PROJECT_VERSION=$(MLNX_SDK_DEB_VERSION)
 
-	debuild -e KVERSION=$(KVERSION) -e KSRC_EXT=/lib/modules/$(KVERSION)/source/ -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
+	cmake --build builds/cmake -j$(SONIC_CONFIG_MAKE_JOBS)
 
-	popd
+	cd builds/cmake
 
-	mv $(DERIVED_TARGETS) $* $(DEST)/
+	cpack -G DEB
 
-$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
+	mv sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb $*
+
+	mv $* $(DEST)/

@@ -46,39 +46,33 @@ MLNX_SDK_DBG_DEBS += $(SYSSDK_DBGSYM)
 
 SYSSDK = sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 $(SYSSDK)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sys-sdk
-$(SYSSDK)_DEPENDS += $(LIBNL3_DEV) $(LIBNL_GENL3_DEV)
+$(SYSSDK)_DEPENDS += $(LIBNL3_DEV) $(LIBNL_GENL3_DEV) $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 $(SYSSDK)_RDEPENDS += $(LIBNL3) $(LIBNL_GENL3)
 SYSSDK_DEV = sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH)-dev.deb
 $(eval $(call add_derived_package,$(SYSSDK),$(SYSSDK_DEV)))
+SX_KERNEL = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(SYSSDK),$(SX_KERNEL)))
 SYSSDK_DBGSYM = sys-sdk_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH)-dbgsym.ddeb
 ifeq ($(SDK_FROM_SRC),y)
 $(eval $(call add_derived_package,$(SYSSDK),$(SYSSDK_DBGSYM)))
 endif
 
 
-#packages that are required for runtime only
-
-SX_KERNEL = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
-$(SX_KERNEL)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
-$(SX_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sx-kernel
-SX_KERNEL_DEV = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
-$(eval $(call add_derived_package,$(SX_KERNEL),$(SX_KERNEL_DEV)))
-
 define make_url
 	$(1)_URL = $(MLNX_SDK_ASSETS_URL)/$(1)
 
 endef
 
-$(eval $(foreach deb,$(MLNX_SDK_DEBS) $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API),$(call make_url,$(deb))))
+$(eval $(foreach deb,$(MLNX_SDK_DEBS) $(MLNX_SDK_RDEBS),$(call make_url,$(deb))))
 
 SONIC_MAKE_DEBS += $(SX_KERNEL)
 
 ifeq ($(SDK_FROM_SRC), y)
-SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
+SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS)
 else
-SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
+SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS)
 endif
 
-mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API) $(SX_KERNEL))
+mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(SX_KERNEL))
 
 SONIC_PHONY_TARGETS += mlnx-sdk-packages
