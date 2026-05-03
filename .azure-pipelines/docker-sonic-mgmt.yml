@@ -120,7 +120,7 @@ stages:
           --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
-          --exit-code 0 \
+          --exit-code 1 \
           --format table \
           --no-progress \
           --timeout 15m \

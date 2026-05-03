@@ -246,7 +246,7 @@ stages:
           --input $(Pipeline.Workspace)/target/docker-ptf.gz \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
-          --exit-code 0 \
+          --exit-code 1 \
           --format table \
           --no-progress \
           --timeout 30m \
