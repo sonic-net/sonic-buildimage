@@ -66,6 +66,13 @@ function startplatform() {
             export FAST_BOOT=1
         fi
 
+        if [[ x"$WARM_BOOT" != x"true" ]]; then
+            if [[ x"$(/bin/systemctl is-active pmon)" == x"active" ]]; then
+                /bin/systemctl stop pmon
+                debug "pmon is active while syncd starting, stop it first (single-ASIC)"
+            fi
+        fi
+
         # Clear container's temporary directory before starting
         rm -rf /tmp/nv-syncd-shared/$DEV/* 2>/dev/null
 
@@ -146,6 +153,12 @@ function stopplatform1() {
     if [[ x$sonic_asic_platform == x"mellanox" ]]; then
         local mlx_dev=$(get_mellanox_dev)
         echo "health_check_trigger del_dev 1" > $mlx_dev
+    fi
+
+    if [[ x$sonic_asic_platform == x"mellanox" ]] && [[ x$TYPE == x"cold" ]]; then
+        debug "Stopping pmon service ahead of syncd..."
+        /bin/systemctl stop pmon
+        debug "Stopped pmon service"
     fi
 
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then
