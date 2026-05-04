@@ -86,10 +86,6 @@ elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE
         "
     fi
     sonic-cfggen $CFGGEN_PARAMS
-    if [ $? -ne 0 ]; then
-        logger -t docker-fpm-frr -p user.error "Failed to generate unified FRR configuration"
-        exit 1
-    fi
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
           /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
