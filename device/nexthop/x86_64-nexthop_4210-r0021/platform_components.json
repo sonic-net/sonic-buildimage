@@ -1,0 +1,33 @@
+{
+    "chassis": {
+        "NH-4210-F": {
+            "component": {
+                "CPUCARD_FPGA": {},
+                "SWITCHCARD_FPGA0": {},
+                "SWITCHCARD_FPGA1": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {},
+                "PSU1": {},
+                "PSU2": {},
+                "PSU3": {},
+                "PSU4": {},
+                "DPM1": {},
+                "DPM2": {},
+                "DCDC1": {},
+                "DCDC2": {},
+                "DCDC3": {},
+                "DCDC4": {},
+                "DCDC5": {},
+                "DCDC6": {},
+                "DCDC7": {},
+                "DCDC8": {},
+                "DCDC9": {},
+                "DCDC10": {},
+                "DCDC11": {},
+                "DCDC12": {}
+            }
+        }
+    }
+}
