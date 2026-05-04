@@ -14,6 +14,26 @@
 SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
 FIRST_BOOT_FILE="/host/image-${SONIC_VERSION}/platform/firsttime"
 
+
+# Move sonic-environment to /etc/sonic
+# During cold-reboot, remove the cached sonic-environment file to force regeneration
+# from current configuration (fixes issue #22452)
+if [ -f /proc/cmdline ]; then
+    BOOT_TYPE_CMDLINE=$(cat /proc/cmdline | grep -oE 'SONIC_BOOT_TYPE=[a-z-]+' 2>/dev/null || true)
+    BOOT_TYPE=${BOOT_TYPE_CMDLINE#SONIC_BOOT_TYPE=}
+else
+    BOOT_TYPE=""
+fi
+
+# If this is a cold boot (no SONIC_BOOT_TYPE or explicitly cold), remove cached sonic-environment
+# to force regeneration from config_db.json with updated HWSKU and other values
+if [ -z "$BOOT_TYPE" ] || [ "$BOOT_TYPE" = "cold" ]; then
+    if [ -f /etc/sonic/sonic-environment ]; then
+        echo "Cold boot detected. Removing cached /etc/sonic/sonic-environment to force regeneration" 1>&2
+        rm -f /etc/sonic/sonic-environment
+    fi
+fi
+
 # Move sonic-environment to /etc/sonic
 SONIC_CONFIG_DIR="/host/image-${SONIC_VERSION}/sonic-config"
 SONIC_ENV_FILE=${SONIC_CONFIG_DIR}/sonic-environment
