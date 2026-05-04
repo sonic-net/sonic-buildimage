@@ -12,7 +12,6 @@ $(SONIC_BGPCFGD)_DEPENDS += $(SONIC_CONFIG_ENGINE_PY3) \
                             $(SONIC_YANG_MODELS_PY3)
 $(SONIC_BGPCFGD)_DEBS_DEPENDS += $(LIBYANG) \
                                  $(LIBYANG_CPP) \
-                                 $(LIBYANG_PY3) \
                                  $(LIBYANG3) \
                                  $(LIBYANG3_PY3) \
                                  $(PYTHON3_SWSSCOMMON)

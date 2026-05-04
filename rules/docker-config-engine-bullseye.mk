@@ -6,7 +6,6 @@ $(DOCKER_CONFIG_ENGINE_BULLSEYE)_PATH = $(DOCKERS_PATH)/docker-config-engine-bul
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(LIBYANG) \
                                           $(LIBYANG_CPP) \
-                                          $(LIBYANG_PY3) \
                                           $(LIBYANG3) \
                                           $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \

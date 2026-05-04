@@ -14,7 +14,6 @@ $(SONIC_UTILITIES_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                   $(SONIC_YANG_MODELS_PY3)
 $(SONIC_UTILITIES_PY3)_DEBS_DEPENDS = $(LIBYANG) \
                                       $(LIBYANG_CPP) \
-                                      $(LIBYANG_PY3) \
                                       $(LIBYANG3) \
                                       $(LIBYANG3_PY3) \
                                       $(LIBSWSSCOMMON) \
