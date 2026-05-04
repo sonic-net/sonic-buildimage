@@ -168,10 +168,7 @@ module sonic-vlan {
 
 				leaf ip-prefix {
 					description "IP address and prefix length assigned to the VLAN interface";
-					type union {
-						type stypes:sonic-ip4-prefix;
-						type stypes:sonic-ip6-prefix;
-					}
+					type stypes:sonic-ip-address-with-prefix;
 				}
 
 				leaf scope {

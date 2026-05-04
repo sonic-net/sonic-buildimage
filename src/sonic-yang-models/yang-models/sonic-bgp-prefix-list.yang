@@ -6,6 +6,10 @@ module sonic-bgp-prefix-list {
     namespace "http://github.com/sonic-net/sonic-bgp-prefix-list";
     prefix bgppl;
 
+    import ietf-inet-types {
+        prefix inet;
+    }
+
     import sonic-types {
         prefix stypes;
     }
@@ -38,10 +42,7 @@ module sonic-bgp-prefix-list {
                 }
 
                 leaf ip-prefix {
-                    type union {
-                        type stypes:sonic-ip4-prefix;
-                        type stypes:sonic-ip6-prefix;
-                    }
+                    type inet:ip-prefix;
                     description "IPv4 or IPv6 prefix in CIDR notation.";
                 }
 
