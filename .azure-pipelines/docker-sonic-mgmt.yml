@@ -106,17 +106,14 @@ stages:
       displayName: "Download docker-sonic-mgmt artifact"
     - script: |
         set -ex
-        # Pin version to avoid GitHub API rate limit failures on CI agents
         TRIVY_VERSION="0.70.0"
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-          | sh -s -- -b ~/.local/bin "v${TRIVY_VERSION}"
-        export PATH="$HOME/.local/bin:$PATH"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
         trivy --version
       displayName: "Install Trivy"
     - script: |
         set -x
-        export PATH="$HOME/.local/bin:$PATH"
-        ~/.local/bin/trivy image \
+        trivy image \
           --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
@@ -127,8 +124,8 @@ stages:
           --output $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
         TRIVY_EXIT=$?
         echo ""
-        echo "=== Trivy Scan Summary (docker-sonic-mgmt) ==="
-        grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt || echo "No HIGH/CRITICAL unfixed findings."
+        echo "=== Trivy Scan Results (docker-sonic-mgmt) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
         exit $TRIVY_EXIT
       displayName: "Trivy scan docker-sonic-mgmt"
     - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt

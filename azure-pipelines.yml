@@ -228,21 +228,19 @@ stages:
     - task: DownloadPipelineArtifact@2
       inputs:
         artifact: sonic-buildimage.vs
-      displayName: "Download sonic-buildimage.vs artifact"
+        itemPattern: "target/docker-ptf.gz"
+      displayName: "Download docker-ptf artifact"
     - script: |
         set -ex
-        # Pin version to avoid GitHub API rate limit failures on CI agents
         TRIVY_VERSION="0.70.0"
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-          | sh -s -- -b ~/.local/bin "v${TRIVY_VERSION}"
-        export PATH="$HOME/.local/bin:$PATH"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
         trivy --version
       displayName: "Install Trivy"
     - script: |
         set -x
-        export PATH="$HOME/.local/bin:$PATH"
         # docker-ptf.gz is ~1.3GB; scan takes 15-20 min on CI agents
-        ~/.local/bin/trivy image \
+        trivy image \
           --input $(Pipeline.Workspace)/target/docker-ptf.gz \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
@@ -253,8 +251,8 @@ stages:
           --output $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
         TRIVY_EXIT=$?
         echo ""
-        echo "=== Trivy Scan Summary (docker-ptf) ==="
-        grep "^Total:" $(Build.ArtifactStagingDirectory)/trivy-ptf.txt || echo "No HIGH/CRITICAL unfixed findings."
+        echo "=== Trivy Scan Results (docker-ptf) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
         exit $TRIVY_EXIT
       displayName: "Trivy scan docker-ptf"
     - publish: $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
