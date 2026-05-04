@@ -1,0 +1,45 @@
+module sonic-teamd {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-teamd";
+    prefix teamd;
+
+    organization "SONiC";
+    contact "SONiC";
+    description "TEAMD global configuration for SONiC";
+
+    revision 2025-05-06 {
+        description "Support multi-process and unified-process operation modes";
+    }
+
+    container sonic-teamd {
+        container TEAMD {
+            description "TEAMD section of config_db.json";
+
+            container GLOBAL {
+                description "Global TEAMD configuration section";
+
+                leaf mode {
+                    description "TEAMD operation mode (multi-process or unified-process)";
+                    type enumeration {
+                        enum multi-process {
+                            description "Traditional multi-process mode (one teamd per PortChannel)";
+                        }
+                        enum unified-process {
+                            description "Unified single-process mode (one teamd manages all PortChannels)";
+                        }
+                    }
+                    default "multi-process";
+                    must "true()" {
+                        description
+                          "WARNING: Changing the mode requires a Docker restart
+                           for the changes to take effect.";
+                    }
+                }
+            }
+            /* end of GLOBAL */
+        }
+        /* end of TEAMD */
+    }
+    /* end of sonic-teamd */
+}
