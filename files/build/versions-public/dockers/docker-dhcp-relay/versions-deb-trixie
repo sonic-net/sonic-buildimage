@@ -80,7 +80,7 @@ libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libunwind8==1.8.1-0.1
 libyang-cpp-dbgsym==1.0.73
-linux-libc-dev==6.12.74-2
+linux-libc-dev==6.12.85-1
 lsof==4.99.4+dfsg-2
 make==4.4.1-2
 openssh-client==1:10.0p1-7+fips

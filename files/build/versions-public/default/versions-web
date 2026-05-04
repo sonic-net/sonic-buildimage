@@ -18,7 +18,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.1
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-9.dsc==6c5963a76f240936f3ebb3a4b89a6955
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==967f8387a3a4ba50e6f4b6ea943eaa36
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
-http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==17ffd0e7b5cf6d51446d2e6e2223e20e
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==2b4dac1d807ab28e20a6b97effad0dcb
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.debian.tar.xz==ea65186950c67556dc215007c8b5d77a
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.dsc==2cdce6d80506e66985e68649f129ca3e
@@ -49,8 +49,8 @@ https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/aristanetworks/sonic-firmware/raw/24716c4e03f223d8e18afff786ac427f6ac77fe0/phy/phy-credo_1.0_amd64.deb==14e233cd68bc5db22eb8c9e177242851
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
 https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==2dc74b7ad6bdd6b6b08f6802d14fc1fd
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==94415d08ed2f86a49375f25a7f2f9cca
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==bf259781802f31e42aa6a31a7f61c218
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==57a281cf2fc7855753556637f93b1616
 https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58fbc11625336846cea7420
 https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh==2e8b2fb7d799d83acf895e20bd1966aa
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13868-bookworm/mlxbf-bootctl_2.1_arm64.deb==74254c1e2ff1adcd1f89f50bf17797cc

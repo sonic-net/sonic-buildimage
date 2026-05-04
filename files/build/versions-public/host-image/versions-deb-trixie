@@ -63,6 +63,7 @@ fontconfig-config==2.15.0-2.3
 fonts-dejavu-core==2.37-8
 fonts-dejavu-mono==2.37-8
 freeipmi-common==1.6.15-1
+freeipmi-tools==1.6.15-1
 gcc==4:14.2.0-1
 gcc-14==14.2.0-19
 gcc-14-aarch64-linux-gnu==14.2.0-19
@@ -80,7 +81,7 @@ grub2-common==2.06-13+deb13u1
 haveged==1.9.19-12
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
-hw-management==1.mlnx.7.0050.3002
+hw-management==1.mlnx.7.0050.3005
 i2c-tools==4.4-2
 ifmetric==0.3-5+b1
 ifupdown2==3.0.0-1
@@ -180,6 +181,8 @@ libiio0==0.26-2
 libiniparser4==4.2.6-1
 libip4tc2==1.8.11-2
 libip6tc2==1.8.11-2
+libipmiconsole2==1.6.15-1
+libipmidetect0==1.6.15-1
 libisl23==0.27-1
 libitm1==14.2.0-19
 libjansson4==2.14-2+b3
@@ -326,8 +329,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.74-2
-linux-perf==6.12.74-2
+linux-libc-dev==6.12.85-1
+linux-perf==6.12.85-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u2
 logrotate==3.22.0-1+b2
