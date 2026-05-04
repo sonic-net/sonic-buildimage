@@ -1,0 +1,131 @@
+{
+    "MONITOR_LINK_GROUP_VALID": {
+        "desc": "Valid monitor link group configuration with uplinks and downlinks arrays"
+    },
+    "MONITOR_LINK_GROUP_MINIMAL": {
+        "desc": "Minimal valid monitor link group configuration with defaults"
+    },
+    "MONITOR_LINK_GROUP_COMPREHENSIVE": {
+        "desc": "Comprehensive monitor link group configuration with all fields"
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_PATTERN": {
+        "desc": "Invalid group name with special characters (@, !, spaces)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "group_name"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_LENGTH": {
+        "desc": "Group name exceeding maximum length of 128 characters",
+        "eStrKey": "Length",
+        "eStr": [
+            "group_name"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_GROUP_NAME_EMPTY": {
+        "desc": "Empty group name violating minimum length of 1",
+        "eStrKey": "Length",
+        "eStr": [
+            "group_name"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PATTERN": {
+        "desc": "Invalid uplink interface pattern (not Ethernet or PortChannel)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "uplinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_ETHERNET_RANGE": {
+        "desc": "Invalid Ethernet interface number (out of range)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "uplinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PORTCHANNEL_FORMAT": {
+        "desc": "Invalid PortChannel format (missing number)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "uplinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PATTERN": {
+        "desc": "Invalid downlink interface pattern (not Ethernet or PortChannel)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "downlinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_ETHERNET_RANGE": {
+        "desc": "Invalid Ethernet interface number (out of range)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "downlinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PORTCHANNEL_FORMAT": {
+        "desc": "Invalid PortChannel format (missing number)",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "downlinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_DESCRIPTION_LENGTH_MAX": {
+        "desc": "Description exceeding maximum length of 255 characters",
+        "eStrKey": "Length",
+        "eStr": [
+            "description"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_DESCRIPTION_LENGTH_MIN": {
+        "desc": "Empty description violating minimum length of 1",
+        "eStrKey": "Length",
+        "eStr": [
+            "description"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_PATTERN": {
+        "desc": "Invalid link-up-delay with non-numeric characters",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "link-up-delay"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_NEGATIVE": {
+        "desc": "Invalid link-up-delay with negative number",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "link-up-delay"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_PATTERN": {
+        "desc": "Invalid min-uplinks with non-numeric characters",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "min-uplinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_NEGATIVE": {
+        "desc": "Invalid min-uplinks with negative number",
+        "eStrKey": "Pattern",
+        "eStr": [
+            "min-uplinks"
+        ]
+    },
+    "MONITOR_LINK_GROUP_VALID_ETHERNET_RANGES": {
+        "desc": "Valid configuration testing various Ethernet interface ranges"
+    },
+    "MONITOR_LINK_GROUP_VALID_PORTCHANNEL_RANGES": {
+        "desc": "Valid configuration testing various PortChannel interface ranges"
+    },
+    "MONITOR_LINK_GROUP_VALID_MIXED_INTERFACES": {
+        "desc": "Valid configuration with mixed Ethernet and PortChannel interfaces"
+    },
+    "MONITOR_LINK_GROUP_VALID_NUMERIC_EDGE_CASES": {
+        "desc": "Valid configuration testing numeric field edge cases (0, large numbers)"
+    },
+    "MONITOR_LINK_GROUP_VALID_DESCRIPTION_EDGE_CASES": {
+        "desc": "Valid configuration testing description length edge cases"
+    }
+}

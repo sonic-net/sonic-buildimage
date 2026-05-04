@@ -217,6 +217,7 @@ yang_files = [
     'sonic-xcvrd-log.yang',
     'sonic-ztp.yang',
     'sonic-fast-linkup.yang',
+    'sonic-monitor-link-group.yang',
 ]
 
 class my_build_py(build_py):

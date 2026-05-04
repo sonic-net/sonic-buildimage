@@ -3246,6 +3246,28 @@
                 "guard_time": "2",
                 "ber_threshold": "12"
             }
+        },
+        "MONITOR_LINK_GROUP": {
+            "critical_links": {
+                "description": "Critical uplink and downlink monitoring group",
+                "uplinks": ["Ethernet0", "Ethernet4", "Ethernet8", "PortChannel100"],
+                "downlinks": ["Ethernet12", "Ethernet16", "PortChannel200"],
+                "min-uplinks": "3",
+                "link-up-delay": "5"
+            },
+            "backup_links": {
+                "description": "Backup link monitoring group",
+                "uplinks": ["Ethernet20", "Ethernet24"],
+                "downlinks": ["Ethernet28", "Ethernet32"],
+                "min-uplinks": "2",
+                "link-up-delay": "10"
+            },
+            "edge_links": {
+                "description": "Edge link monitoring group with minimal configuration",
+                "uplinks": ["Ethernet36"],
+                "downlinks": ["Ethernet40"],
+                "min-uplinks": "1"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
