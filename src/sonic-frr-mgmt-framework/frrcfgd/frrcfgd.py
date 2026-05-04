@@ -1868,6 +1868,7 @@ class BGPConfigDaemon:
                    ('conn_retry',                           '{no:no-prefix}neighbor {} timers connect {}'),
                    ('min_adv_interval',                     '{no:no-prefix}neighbor {} advertisement-interval {}'),
                    ('passive_mode',                         '{no:no-prefix}neighbor {} passive', ['true', 'false']),
+                   ('v6only',                               '{no:no-prefix}neighbor {} interface v6only', ['true', 'false']),
                    ('capability_ext_nexthop',               '{no:no-prefix}neighbor {} capability extended-nexthop', ['true', 'false']),
                    ('disable_ebgp_connected_route_check',   '{no:no-prefix}neighbor {} disable-connected-check', ['true', 'false']),
                    ('enforce_first_as',                     '{no:no-prefix}neighbor {} enforce-first-as', ['true', 'false']),
