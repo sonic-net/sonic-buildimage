@@ -34,7 +34,7 @@
         {
             "i2c":
             {
-                "valmap": { "F2B":"EXHAUST", "B2F":"INTAKE" } 
+                "valmap": { "F2B":"exhaust", "B2F":"intake" }
             }
         },
 
@@ -47,7 +47,7 @@
         {
             "i2c":
             {
-                "valmap": {"1":"EXHAUST", "0":"INTAKE"} 
+                "valmap": {"1":"exhaust", "0":"intake"}
             }
         },
 
@@ -61,7 +61,7 @@
 		
         "duty_cycle_to_pwm": "lambda dc: ((dc*100)/625 -1)",
 
-        "pwm_to_duty_cycle": "lambda pwm: (((pwm+1)*625+75)/100)"
+        "pwm_to_duty_cycle": "lambda pwm: (((pwm+1)*625)/100)"
     }
 
 }
