@@ -312,8 +312,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.74-2
-linux-perf==6.12.74-2
+linux-libc-dev==6.12.85-1
+linux-perf==6.12.85-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u2
 logrotate==3.22.0-1+b2
@@ -437,7 +437,7 @@ sqlite3==3.46.1-7+deb13u1
 squashfs-tools==1:4.6.1-1+b1
 ssh==1:10.0p1-7+fips
 sudo==1.9.16p2-3+deb13u1
-sx-kernel==1.mlnx.4.8.3418
+sx-kernel==1.mlnx.4.8.3430
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-7
 syslog-counter==1.0.0
