@@ -16,8 +16,9 @@ LIBSAIREDIS_DEV = $(LIBSAIREDIS_NAME)-dev_$(LIBSAIREDIS_VERSION)_$(CONFIGURED_AR
 $(eval $(call add_derived_package,$(LIBSAIREDIS),$(LIBSAIREDIS_DEV)))
 
 LIBSAIVS = libsaivs_$(LIBSAIREDIS_VERSION)_$(CONFIGURED_ARCH).deb
-$(eval $(call add_derived_package,$(LIBSAIREDIS),$(LIBSAIVS)))
 $(LIBSAIVS)_DEPENDS += $(LIBSAIMETADATA)
+$(LIBSAIVS)_RDEPENDS += $(LIBSAIMETADATA)
+$(eval $(call add_derived_package,$(LIBSAIREDIS),$(LIBSAIVS)))
 
 LIBSAIVS_DEV = libsaivs-dev_$(LIBSAIREDIS_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(LIBSAIREDIS),$(LIBSAIVS_DEV)))
