@@ -1882,6 +1882,7 @@
         "BGP_DEVICE_GLOBAL": {
             "STATE": {
                 "tsa_enabled": "false",
+                "chassis_tsa_supported": "false",
                 "wcmp_enabled": "false",
                 "idf_isolation_state": "unisolated"
             }

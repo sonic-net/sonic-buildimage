@@ -12,6 +12,10 @@ module sonic-bgp-device-global {
     description
         "SONIC Device-specific BGP global data";
 
+    revision 2026-04-28 {
+        description "Add chassis_tsa_supported to select CHASSIS_APP_DB vs per-linecard TSA orchestration";
+    }
+
     revision 2024-01-28 {
         description "Add Weighted ECMP using BGP link bandwidth";
     }
@@ -35,6 +39,15 @@ module sonic-bgp-device-global {
                     default "false";
                     description
                     "When set to true, Traffic is shifted away (TSA), i.e, BGP routes are not advertised to neighboring routers";
+                }
+
+                leaf chassis_tsa_supported {
+                    type boolean;
+                    default "false";
+                    description
+                    "When true, chassis-wide TSA state is synchronized using CHASSIS_APP_DB on the supervisor.
+                     When false (default), CHASSIS_APP_DB is not used for TSA; the supervisor applies CONFIG_DB locally and
+                     should push TSA/TSB to linecards out-of-band (for example via rexec).";
                 }
 
                 leaf wcmp_enabled {
