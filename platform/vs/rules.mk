@@ -7,6 +7,7 @@ include $(PLATFORM_PATH)/docker-ptf.mk
 include $(PLATFORM_PATH)/docker-ptf-sai.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/platform-modules-vs.mk
+include $(PLATFORM_PATH)/sonic-stel-ko.mk
 include $(PLATFORM_PATH)/one-image.mk
 include $(PLATFORM_PATH)/onie.mk
 include $(PLATFORM_PATH)/kvm-image.mk
