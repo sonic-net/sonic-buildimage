@@ -19,8 +19,21 @@
 Setup script for Mellanox Firmware Manager package.
 """
 
-from setuptools import setup, find_packages
+import os
+from setuptools import setup
 import sys
+
+
+platform = os.environ.get("CONFIGURED_PLATFORM", None)
+platform = platform.lower() if platform else platform
+if platform is None:
+    sys.stderr.write("CONFIGURED_PLATFORM environment variable is not set")
+    sys.exit(1)
+if not platform in ("mellanox", "nvidia-bluefield"):
+    sys.stderr.write(f"Invalid CONFIGURED_PLATFORM: \"{platform}\". Expected \"mellanox\" or \"nvidia-bluefield\".")
+    sys.exit(1)
+is_bluefield = platform == "nvidia-bluefield"
+
 
 setup(
     name="mellanox-platform-utils",
@@ -29,7 +42,11 @@ setup(
     author_email="oivantsiv@nvidia.com",
     description="Platform utilities package for Mellanox ASICs",
     url="https://github.com/sonic-net/sonic-buildimage",
-    packages=["mellanox_component_versions", "mellanox_fw_manager"],
+    packages=[
+        *([] if is_bluefield else ["mellanox_bfb_installer"]),
+        "mellanox_component_versions",
+        "mellanox_fw_manager",
+    ],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -41,7 +58,7 @@ setup(
         "Topic :: System :: Hardware",
         "Topic :: System :: Systems Administration",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.10",
     install_requires=[
         "tabulate",
         "click>=7.0",
@@ -58,6 +75,7 @@ setup(
         "console_scripts": [
             "mlnx-fw-manager=mellanox_fw_manager.main:main",
             "get_component_versions.py=mellanox_component_versions.main:main",
+            *([] if is_bluefield else ["sonic-bfb-installer=mellanox_bfb_installer.main:main"]),
         ],
     },
     include_package_data=True,

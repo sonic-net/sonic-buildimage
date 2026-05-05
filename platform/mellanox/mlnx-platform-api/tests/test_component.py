@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ from sonic_platform_base.component_base import FW_AUTO_INSTALLED,      \
 
 class TestComponent:
     @mock.patch('sonic_platform.chassis.utils.is_host')
+    @mock.patch('sonic_platform.chassis.DeviceDataManager.is_platform_with_bmc', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.DeviceDataManager.get_cpld_component_list', mock.MagicMock(return_value=[]))
     def test_chassis_component(self, mock_is_host):
         mock_is_host.return_value = False

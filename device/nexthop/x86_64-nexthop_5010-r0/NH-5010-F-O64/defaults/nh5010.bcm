@@ -2276,3 +2276,4 @@ macsec_fips_enable=1
 xflow_macsec_secure_chan_to_num_secure_assoc=4
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
+sai_ecmp_group_members_increment=8

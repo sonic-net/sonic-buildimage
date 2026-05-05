@@ -1,0 +1,16 @@
+[Unit]
+Description=Aspeed USB Network Gadget udev Rules Initialization
+Documentation=https://github.com/sonic-net/sonic-buildimage
+After=local-fs.target
+Before=usb-network-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sonic-usb-network-udev-init.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

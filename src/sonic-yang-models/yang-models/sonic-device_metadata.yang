@@ -19,6 +19,10 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-04-10 {
+        description "Added async_swss_rec field to control async swss recorder.";
+    }
+
     revision 2021-02-27 {
         description "Added frr_mgmt_framework_config field to handle BGP
             config DB schema events to configure FRR protocols.";
@@ -108,7 +112,7 @@ module sonic-device_metadata {
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|MiniTs|LeafTs|SpineTs|CoreTs|ConsoleServer|TerminalServer|SonicHost|SmartSwitchDPU|FilterLeaf|NetworkBmc|not-provisioned|LowerRegionalHub|FabricRegionalHub|UpperRegionalHub";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|LowerMgmtAggregator|UpperMgmtAggregator|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|MiniTs|LeafTs|SpineTs|CoreTs|ConsoleServer|TerminalServer|SonicHost|SmartSwitchDPU|FilterLeaf|NetworkBmc|MseeRouter|not-provisioned|LowerRegionalHub|FabricRegionalHub|UpperRegionalHub";
                     }
                     description "Device role type (e.g., ToRRouter, LeafRouter, SpineRouter).";
                 }
@@ -246,6 +250,15 @@ module sonic-device_metadata {
                     must "((current() = 'disabled') or (current() = 'enabled' and ../synchronous_mode = 'enable'))" {
                         error-message "ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature";
                     }
+                }
+
+                leaf async_swss_rec {
+                    description "Enable asynchronous swss.rec recording in orchagent.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
                 }
                 leaf rack_mgmt_map {
                     type string {

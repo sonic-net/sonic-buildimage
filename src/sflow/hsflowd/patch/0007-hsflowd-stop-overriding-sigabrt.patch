@@ -1,0 +1,16 @@
+--- a/src/Linux/hsflowd.c
++++ b/src/Linux/hsflowd.c
+@@ -1844,14 +1844,9 @@
+     sa.sa_sigaction = signal_handler;
+     sigemptyset(&sa.sa_mask);
+     sigaction(SIGTERM, &sa, NULL);
+     sigaction(SIGINT, &sa, NULL);
+-    sigaction(SIGSEGV, &sa, NULL);
+-    sigaction(SIGILL, &sa, NULL);
+-    sigaction(SIGBUS, &sa, NULL);
+-    sigaction(SIGXFSZ, &sa, NULL);
+-    sigaction(SIGABRT, &sa, NULL);
+     sigaction(SIGUSR1, &sa, NULL);
+     sigaction(SIGUSR2, &sa, NULL);
+     sigaction(SIGHUP, &sa, NULL);
+     // TODO: SIGPIPE? SIGCHLD?

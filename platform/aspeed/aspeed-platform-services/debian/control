@@ -1,0 +1,21 @@
+Source: aspeed-platform-services
+Section: misc
+Priority: optional
+Maintainer: SONiC Team <sonic-dev@lists.sonic-net.org>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 3.9.6
+
+Package: aspeed-platform-services
+Architecture: all
+Depends: ${misc:Depends}
+Description: Aspeed platform services for SONiC
+ This package provides platform-specific services for Aspeed-based BMC platforms:
+  - Machine configuration initialization
+  - Platform initialization
+  - Switch CPU console initialization
+  - U-Boot environment initialization
+  - Watchdog keepalive daemon
+ .
+ The watchdog keepalive daemon keeps the hardware watchdog armed and sends
+ periodic keepalive signals to prevent system resets.
+
