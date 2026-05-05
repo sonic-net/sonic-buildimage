@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Nothing to build
+
+override_dh_auto_install:
+	# Install scripts
+	install -d $(CURDIR)/debian/aspeed-platform-services/usr/bin
+	install -m 0755 $(CURDIR)/scripts/*.sh $(CURDIR)/debian/aspeed-platform-services/usr/bin/
+	
+	# Install systemd service files
+	install -d $(CURDIR)/debian/aspeed-platform-services/lib/systemd/system
+	install -m 0644 $(CURDIR)/systemd/*.service $(CURDIR)/debian/aspeed-platform-services/lib/systemd/system/
+
+override_dh_installsystemd:
+	dh_installsystemd --name=sonic-machine-conf-init sonic-machine-conf-init.service
+	dh_installsystemd --name=sonic-platform-init sonic-platform-init.service
+	dh_installsystemd --name=sonic-switchcpu-console-init sonic-switchcpu-console-init.service
+	dh_installsystemd --name=sonic-uboot-env-init sonic-uboot-env-init.service
+	dh_installsystemd --name=watchdog-keepalive watchdog-keepalive.service
+

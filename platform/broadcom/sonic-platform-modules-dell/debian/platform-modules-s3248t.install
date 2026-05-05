@@ -1,0 +1,14 @@
+s3248t/scripts/s3248t_platform.sh usr/local/bin
+s3248t/scripts/mux_controller.sh usr/local/bin
+s3248t/scripts/platform_sensors.py usr/local/bin
+s3248t/scripts/sensors usr/bin
+s3248t/scripts/portiocfg.py usr/local/bin
+s3248t/systemd/platform-modules-s3248t.service etc/systemd/system
+s3248t/systemd/mux-ctrl.service etc/systemd/system
+s3248t/cfg/s3248t-modules.conf etc/modules-load.d
+common/dell_i2c_utils.sh usr/local/bin
+s3248t/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_s3248t-r0
+common/platform_reboot usr/share/sonic/device/x86_64-dell_s3248t-r0
+common/fw-updater /usr/local/bin
+common/onie_mode_set usr/local/bin
+s3248t/scripts/platform-modules-s3248t.sh usr/bin/ext/service/
