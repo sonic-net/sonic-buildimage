@@ -20,7 +20,6 @@ class sensor(devicebase):
     __ValueConfig = None
     __Flag = None
     __Unit = None
-    __format = None
     __read_times = None
 
     __Min_config = None
@@ -69,14 +68,6 @@ class sensor(devicebase):
         self.__Unit = val
 
     @property
-    def format(self):
-        return self.__format
-
-    @format.setter
-    def format(self, val):
-        self.__format = val
-
-    @property
     def read_times(self):
         return self.__read_times
 
@@ -114,17 +105,19 @@ class sensor(devicebase):
             return True, val_list[int((len(val_list) - 1) / 2)]
         return False, None
 
+    def _scale(self, val):
+        """Apply divisor/multiplier scaling to a raw sensor value."""
+        if self.divisor is not None:
+            return round(float(val) / self.divisor * self.multiplier, 3)
+        return round(float(val), 3)
+
     @property
     def Value(self):
         try:
             ret, val = self.get_median(self.ValueConfig, self.read_times)
             if ret is False or val is None:
                 return None
-            if self.format is None:
-                self.__Value = int(val)
-            else:
-                self.__Value = eval(self.format % val)
-            self.__Value = round(float(self.__Value), 3)
+            self.__Value = self._scale(val)
         except Exception as e:
             return None
         return self.__Value
@@ -136,11 +129,7 @@ class sensor(devicebase):
     @property
     def Min(self):
         try:
-            if self.format is None:
-                self.__Min = self.Min_config
-            else:
-                self.__Min = eval(self.format % self.Min_config)
-            self.__Min = round(float(self.__Min), 3)
+            self.__Min = round(float(self._scale(self.Min_config)), 3)
         except Exception as e:
             return None
         return self.__Min
@@ -152,11 +141,7 @@ class sensor(devicebase):
     @property
     def Max(self):
         try:
-            if self.format is None:
-                self.__Max = self.Max_config
-            else:
-                self.__Max = eval(self.format % self.Max_config)
-            self.__Max = round(float(self.__Max), 3)
+            self.__Max = round(float(self._scale(self.Max_config)), 3)
         except Exception as e:
             return None
         return self.__Max
@@ -168,10 +153,7 @@ class sensor(devicebase):
     @property
     def Low(self):
         try:
-            if self.format is None:
-                self.__Low = self.Low_config
-            else:
-                self.__Low = eval(self.format % self.Low_config)
+            self.__Low = self._scale(self.Low_config)
         except Exception as e:
             return None
         return self.__Low
@@ -183,10 +165,7 @@ class sensor(devicebase):
     @property
     def High(self):
         try:
-            if self.format is None:
-                self.__High = self.High_config
-            else:
-                self.__High = eval(self.format % self.High_config)
+            self.__High = self._scale(self.High_config)
         except Exception as e:
             return None
         return self.__High
@@ -203,7 +182,8 @@ class sensor(devicebase):
         self.Low_config = conf.get("Low", None)
         self.High_config = conf.get("High", None)
         self.Unit = conf.get('Unit', None)
-        self.format = conf.get('format', None)
+        self.divisor = conf.get('divisor', None)
+        self.multiplier = conf.get('multiplier', 1.0)
         self.read_times = conf.get('read_times', 1)
 
     def __str__(self):
@@ -212,9 +192,10 @@ class sensor(devicebase):
             "Min :          %s \n" \
             "Max : %s \n" \
             "Unit  : %s \n" \
-            "format:       : %s \n"
+            "divisor:      : %s \n" \
+            "multiplier:   : %s \n"
 
         tmpstr = formatstr % (self.ValueConfig, self.Min,
                               self.Max, self.Unit,
-                              self.format)
+                              self.divisor, self.multiplier)
         return tmpstr
