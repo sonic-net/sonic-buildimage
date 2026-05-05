@@ -1,0 +1,257 @@
+# Core=0
+INTeRrupt ENAble id=2249 p=0
+INTeRrupt ENAble id=2250 p=0
+INTeRrupt ENAble id=2251 p=0
+INTeRrupt ENAble id=2252 p=0
+INTeRrupt ENAble id=2253 p=0
+INTeRrupt ENAble id=2254 p=0
+INTeRrupt ENAble id=2255 p=0
+INTeRrupt ENAble id=2256 p=0
+INTeRrupt ENAble id=2257 p=0
+INTeRrupt ENAble id=2258 p=0
+INTeRrupt ENAble id=2259 p=0
+INTeRrupt ENAble id=2260 p=0
+INTeRrupt ENAble id=2261 p=0
+INTeRrupt ENAble id=2262 p=0
+INTeRrupt ENAble id=2263 p=0
+
+INTeRrupt ENAble id=540 p=0
+INTeRrupt ENAble id=541 p=0
+INTeRrupt ENAble id=542 p=0
+INTeRrupt ENAble id=543 p=0
+INTeRrupt ENAble id=544 p=0
+INTeRrupt ENAble id=545 p=0
+INTeRrupt ENAble id=546 p=0
+
+INTeRrupt ENAble id=1529 p=0
+
+# Core=1
+INTeRrupt ENAble id=2249 p=1
+INTeRrupt ENAble id=2250 p=1
+INTeRrupt ENAble id=2251 p=1
+INTeRrupt ENAble id=2252 p=1
+INTeRrupt ENAble id=2253 p=1
+INTeRrupt ENAble id=2254 p=1
+INTeRrupt ENAble id=2255 p=1
+INTeRrupt ENAble id=2256 p=1
+INTeRrupt ENAble id=2257 p=1
+INTeRrupt ENAble id=2258 p=1
+INTeRrupt ENAble id=2259 p=1
+INTeRrupt ENAble id=2260 p=1
+INTeRrupt ENAble id=2261 p=1
+INTeRrupt ENAble id=2262 p=1
+INTeRrupt ENAble id=2263 p=1
+
+
+INTeRrupt ENAble id=541 p=1
+INTeRrupt ENAble id=542 p=1
+INTeRrupt ENAble id=543 p=1
+INTeRrupt ENAble id=544 p=1
+INTeRrupt ENAble id=545 p=1
+INTeRrupt ENAble id=546 p=1
+
+INTeRrupt ENAble id=1529 p=1
+
+
+# Core=2
+INTeRrupt ENAble id=2249 p=2
+INTeRrupt ENAble id=2250 p=2
+INTeRrupt ENAble id=2251 p=2
+INTeRrupt ENAble id=2252 p=2
+INTeRrupt ENAble id=2253 p=2
+INTeRrupt ENAble id=2254 p=2
+INTeRrupt ENAble id=2255 p=2
+INTeRrupt ENAble id=2256 p=2
+INTeRrupt ENAble id=2257 p=2
+INTeRrupt ENAble id=2258 p=2
+INTeRrupt ENAble id=2259 p=2
+INTeRrupt ENAble id=2260 p=2
+INTeRrupt ENAble id=2261 p=2
+INTeRrupt ENAble id=2262 p=2
+INTeRrupt ENAble id=2263 p=2
+
+
+INTeRrupt ENAble id=541 p=2
+INTeRrupt ENAble id=542 p=2
+INTeRrupt ENAble id=543 p=2
+INTeRrupt ENAble id=544 p=2
+INTeRrupt ENAble id=545 p=2
+INTeRrupt ENAble id=546 p=2
+
+INTeRrupt ENAble id=1529 p=2
+
+
+# Core=3
+INTeRrupt ENAble id=2249 p=3
+INTeRrupt ENAble id=2250 p=3
+INTeRrupt ENAble id=2251 p=3
+INTeRrupt ENAble id=2252 p=3
+INTeRrupt ENAble id=2253 p=3
+INTeRrupt ENAble id=2254 p=3
+INTeRrupt ENAble id=2255 p=3
+INTeRrupt ENAble id=2256 p=3
+INTeRrupt ENAble id=2257 p=3
+INTeRrupt ENAble id=2258 p=3
+INTeRrupt ENAble id=2259 p=3
+INTeRrupt ENAble id=2260 p=3
+INTeRrupt ENAble id=2261 p=3
+INTeRrupt ENAble id=2262 p=3
+INTeRrupt ENAble id=2263 p=3
+
+
+INTeRrupt ENAble id=541 p=3
+INTeRrupt ENAble id=542 p=3
+INTeRrupt ENAble id=543 p=3
+INTeRrupt ENAble id=544 p=3
+INTeRrupt ENAble id=545 p=3
+INTeRrupt ENAble id=546 p=3
+
+INTeRrupt ENAble id=1529 p=3
+
+
+# Core=4
+INTeRrupt ENAble id=2249 p=4
+INTeRrupt ENAble id=2250 p=4
+INTeRrupt ENAble id=2251 p=4
+INTeRrupt ENAble id=2252 p=4
+INTeRrupt ENAble id=2253 p=4
+INTeRrupt ENAble id=2254 p=4
+INTeRrupt ENAble id=2255 p=4
+INTeRrupt ENAble id=2256 p=4
+INTeRrupt ENAble id=2257 p=4
+INTeRrupt ENAble id=2258 p=4
+INTeRrupt ENAble id=2259 p=4
+INTeRrupt ENAble id=2260 p=4
+INTeRrupt ENAble id=2261 p=4
+INTeRrupt ENAble id=2262 p=4
+INTeRrupt ENAble id=2263 p=4
+
+
+INTeRrupt ENAble id=541 p=4
+INTeRrupt ENAble id=542 p=4
+INTeRrupt ENAble id=543 p=4
+INTeRrupt ENAble id=544 p=4
+INTeRrupt ENAble id=545 p=4
+INTeRrupt ENAble id=546 p=4
+
+INTeRrupt ENAble id=1529 p=4
+
+
+# Core=5
+INTeRrupt ENAble id=2249 p=5
+INTeRrupt ENAble id=2250 p=5
+INTeRrupt ENAble id=2251 p=5
+INTeRrupt ENAble id=2252 p=5
+INTeRrupt ENAble id=2253 p=5
+INTeRrupt ENAble id=2254 p=5
+INTeRrupt ENAble id=2255 p=5
+INTeRrupt ENAble id=2256 p=5
+INTeRrupt ENAble id=2257 p=5
+INTeRrupt ENAble id=2258 p=5
+INTeRrupt ENAble id=2259 p=5
+INTeRrupt ENAble id=2260 p=5
+INTeRrupt ENAble id=2261 p=5
+INTeRrupt ENAble id=2262 p=5
+INTeRrupt ENAble id=2263 p=5
+
+
+INTeRrupt ENAble id=541 p=5
+INTeRrupt ENAble id=542 p=5
+INTeRrupt ENAble id=543 p=5
+INTeRrupt ENAble id=544 p=5
+INTeRrupt ENAble id=545 p=5
+INTeRrupt ENAble id=546 p=5
+
+INTeRrupt ENAble id=1529 p=5
+
+
+# Core=6
+INTeRrupt ENAble id=2249 p=6
+INTeRrupt ENAble id=2250 p=6
+INTeRrupt ENAble id=2251 p=6
+INTeRrupt ENAble id=2252 p=6
+INTeRrupt ENAble id=2253 p=6
+INTeRrupt ENAble id=2254 p=6
+INTeRrupt ENAble id=2255 p=6
+INTeRrupt ENAble id=2256 p=6
+INTeRrupt ENAble id=2257 p=6
+INTeRrupt ENAble id=2258 p=6
+INTeRrupt ENAble id=2259 p=6
+INTeRrupt ENAble id=2260 p=6
+INTeRrupt ENAble id=2261 p=6
+INTeRrupt ENAble id=2262 p=6
+INTeRrupt ENAble id=2263 p=6
+
+
+INTeRrupt ENAble id=541 p=6
+INTeRrupt ENAble id=542 p=6
+INTeRrupt ENAble id=543 p=6
+INTeRrupt ENAble id=544 p=6
+INTeRrupt ENAble id=545 p=6
+INTeRrupt ENAble id=546 p=6
+
+INTeRrupt ENAble id=1529 p=6
+
+
+# Core=7
+INTeRrupt ENAble id=2249 p=7
+INTeRrupt ENAble id=2250 p=7
+INTeRrupt ENAble id=2251 p=7
+INTeRrupt ENAble id=2252 p=7
+INTeRrupt ENAble id=2253 p=7
+INTeRrupt ENAble id=2254 p=7
+INTeRrupt ENAble id=2255 p=7
+INTeRrupt ENAble id=2256 p=7
+INTeRrupt ENAble id=2257 p=7
+INTeRrupt ENAble id=2258 p=7
+INTeRrupt ENAble id=2259 p=7
+INTeRrupt ENAble id=2260 p=7
+INTeRrupt ENAble id=2261 p=7
+INTeRrupt ENAble id=2262 p=7
+INTeRrupt ENAble id=2263 p=7
+
+INTeRrupt ENAble id=541 p=7
+INTeRrupt ENAble id=542 p=7
+INTeRrupt ENAble id=543 p=7
+INTeRrupt ENAble id=544 p=7
+INTeRrupt ENAble id=545 p=7
+INTeRrupt ENAble id=546 p=7
+
+INTeRrupt ENAble id=1529 p=7
+
+# NBU has 32 cores
+INTeRrupt ENAble id=2036 p=0
+INTeRrupt ENAble id=2036 p=1
+INTeRrupt ENAble id=2036 p=2
+INTeRrupt ENAble id=2036 p=3
+INTeRrupt ENAble id=2036 p=4
+INTeRrupt ENAble id=2036 p=5
+INTeRrupt ENAble id=2036 p=6
+INTeRrupt ENAble id=2036 p=7
+INTeRrupt ENAble id=2036 p=8
+INTeRrupt ENAble id=2036 p=9
+INTeRrupt ENAble id=2036 p=10
+INTeRrupt ENAble id=2036 p=11
+INTeRrupt ENAble id=2036 p=12
+INTeRrupt ENAble id=2036 p=13
+INTeRrupt ENAble id=2036 p=14
+INTeRrupt ENAble id=2036 p=15
+INTeRrupt ENAble id=2036 p=16
+INTeRrupt ENAble id=2036 p=17
+INTeRrupt ENAble id=2036 p=18
+INTeRrupt ENAble id=2036 p=19
+INTeRrupt ENAble id=2036 p=20
+INTeRrupt ENAble id=2036 p=21
+INTeRrupt ENAble id=2036 p=22
+INTeRrupt ENAble id=2036 p=23
+INTeRrupt ENAble id=2036 p=24
+INTeRrupt ENAble id=2036 p=25
+INTeRrupt ENAble id=2036 p=26
+INTeRrupt ENAble id=2036 p=27
+INTeRrupt ENAble id=2036 p=28
+INTeRrupt ENAble id=2036 p=29
+INTeRrupt ENAble id=2036 p=30
+INTeRrupt ENAble id=2036 p=31
+
+debug intr error
+
