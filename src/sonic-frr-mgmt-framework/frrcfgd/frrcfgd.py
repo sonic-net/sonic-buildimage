@@ -120,7 +120,8 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'SRV6_GLOBAL': ['zebra']
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -2335,6 +2336,7 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('SRV6_GLOBAL', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2766,6 +2768,25 @@ class BGPConfigDaemon:
                         continue
                     if not self.__run_command(table, cmd):
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 SRV6_MY_SIDS config command')
+                        continue
+            elif table == 'SRV6_GLOBAL':
+                if key != 'default':
+                    syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_GLOBAL table: {}. Only "default" is allowed.'.format(key))
+                    continue
+                if not del_table:
+                    if 'encap_source_address' in data:
+                        encap_source_address = data['encap_source_address']
+                        cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'encapsulation' "
+                        cmd += " -c 'source-address {}' ".format(encap_source_address.data)
+                        if not self.__run_command(table, cmd):
+                            syslog.syslog(syslog.LOG_ERR, 'failed running SRV6_GLOBAL encap source-address config command {}'.format(cmd))
+                            continue
+                else:
+                    # Delete case - remove source-address
+                    cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'encapsulation' "
+                    cmd += " -c 'no source-address' "
+                    if not self.__run_command(table, cmd):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running SRV6_GLOBAL delete encap source-address command {}'.format(cmd))
                         continue
 
             elif table == 'BGP_GLOBALS_AF':

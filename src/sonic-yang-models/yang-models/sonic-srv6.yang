@@ -19,6 +19,11 @@ module sonic-srv6 {
 			"Initial revision.";
 	}
 
+    revision 2026-03-09 {
+        description
+            "Add SRV6_GLOBAL table for global SRv6 configuration including encapsulation source address.";
+    }
+
     container sonic-srv6 {
 
         container SRV6_MY_LOCATORS {
@@ -138,6 +143,27 @@ module sonic-srv6 {
                         enum uniform;
                         enum pipe;
                     }
+                }
+            }
+        }
+
+        container SRV6_GLOBAL {
+            description "Global SRv6 configuration parameters";
+
+            list SRV6_GLOBAL_LIST {
+                max-elements 1;
+                key "name";
+
+                leaf name {
+                    type string {
+                        pattern "default";
+                    }
+                    description "Global configuration key (must be 'default')";
+                }
+
+                leaf encap_source_address {
+                    type inet:ipv6-address;
+                    description "Global IPv6 source address for SRv6 encapsulation";
                 }
             }
         }
