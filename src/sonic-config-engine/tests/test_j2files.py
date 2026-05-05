@@ -925,6 +925,16 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ntp_conf_static_mgmt_intf(self):
+        """Verify bindacqaddress is rendered when MGMT_INTERFACE has a static IP."""
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
+        config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces_static_mgmt.json")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony_static_mgmt.conf")
+
+        argument = ['-j', config_db_ntp_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
+
     def test_ntp_smartswitch_conf(self):
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_smartswitch_interfaces.json")
