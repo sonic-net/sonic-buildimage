@@ -43,6 +43,8 @@ messages = [
 # DHCP_RELAY Config Table
 DHCP_RELAY = 'DHCP_RELAY'
 VLAN = "VLAN"
+PORT = "PORT"
+INTERFACE = "INTERFACE"
 DHCPV4_RELAY_TABLE = 'DHCPV4_RELAY'
 DHCPV6_SERVERS = "dhcpv6_servers"
 DHCPV4_SERVERS = "dhcp_servers"
@@ -345,25 +347,46 @@ def get_dhcpv4_relay_data_with_header(table_data, entry_names, dhcp_server_enabl
     return tabulate(vlan_relay, tablefmt='grid', stralign='right', headers=headers) + '\n'
 
 
-def get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled=False):
-    vlan_relay = {}
-    vlans = table_data.keys()
-    for vlan in vlans:
-        vlan_data = table_data.get(vlan)
-        dhcp_relay_data = vlan_data.get(entry_name)
+def get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled=False, port_table_data=None):
+    interface_relay = {}
+
+    # Add VLAN/DHCP_RELAY data
+    for interface_name, interface_data in table_data.items():
+        dhcp_relay_data = interface_data.get(entry_name)
         if dhcp_relay_data is None or len(dhcp_relay_data) == 0:
             continue
 
-        vlan_relay[vlan] = []
+        interface_relay[interface_name] = []
         if dhcp_server_enabled:
-            vlan_relay[vlan].append("N/A")
+            interface_relay[interface_name].append("N/A")
         else:
             for address in dhcp_relay_data:
-                vlan_relay[vlan].append(address)
+                interface_relay[interface_name].append(address)
 
-    dhcp_relay_vlan_keys = vlan_relay.keys()
-    relay_address_list = ["\n".join(vlan_relay[key]) for key in dhcp_relay_vlan_keys]
-    data = {"Interface": dhcp_relay_vlan_keys, "DHCP Relay Address": relay_address_list}
+    # Add PORT data for physical interfaces
+    if port_table_data is not None:
+        # Use the same entry_name for PORT table (it's already 'dhcp_servers' or 'dhcpv6_servers')
+        server_key = entry_name
+
+        for port_name, port_data in port_table_data.items():
+            if server_key not in port_data or not port_data[server_key]:
+                continue
+
+            if dhcp_server_enabled:
+                continue
+
+            dhcp_servers = port_data.get(server_key, [])
+            interface_relay[port_name] = []
+            if isinstance(dhcp_servers, list):
+                for address in dhcp_servers:
+                    interface_relay[port_name].append(address)
+            else:
+                # Handle case where it's stored as a string
+                interface_relay[port_name].append(dhcp_servers)
+
+    interface_keys = interface_relay.keys()
+    relay_address_list = ["\n".join(interface_relay[key]) for key in interface_keys]
+    data = {"Interface": interface_keys, "DHCP Relay Address": relay_address_list}
     return tabulate(data, tablefmt='grid', stralign='right', headers='keys') + '\n'
 
 
@@ -392,7 +415,10 @@ def get_dhcp_relay(table_name, entry_name, with_header):
         if table_name == DHCPV4_RELAY_TABLE:
             output = get_dhcpv4_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
         else:
-            output = get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
+            # Get PORT table for physical interfaces
+            port_table_data = config_db.get_table(PORT)
+            output = get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled,
+                                                      port_table_data=port_table_data)
         print(output)
     else:
         vlans = config_db.get_keys(table_name)

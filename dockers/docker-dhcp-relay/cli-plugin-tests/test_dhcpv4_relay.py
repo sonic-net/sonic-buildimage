@@ -104,7 +104,7 @@ class TestConfigDhcpv4Relay(object):
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["del"], ["Vlan300"], obj=db)
             assert result.exit_code != 0
-            assert "Error: DHCPv4 relay configuration not found for Vlan Vlan300" in result.output
+            assert "Error: DHCPv4 relay configuration not found for Vlan300" in result.output
             assert mock_run_command.call_count == 0
 
         db.cfgdb.set_entry.reset_mock()
@@ -122,7 +122,7 @@ class TestConfigDhcpv4Relay(object):
                 obj=db
             )
             assert result.exit_code != 0
-            assert "Error: Vlan Vlan786 does not exist in the configDB" in result.output
+            assert "Error: Interface Vlan786 does not exist in the configDB" in result.output
             assert mock_run_command.call_count == 0
 
         db.cfgdb.set_entry.reset_mock()
@@ -585,5 +585,51 @@ class TestConfigDhcpv4Relay(object):
             assert result.exit_code == 0
             assert result.output == config_dhcpv4_relay_del_output
             assert mock_run_command.call_count == 0
+
+        db.cfgdb.set_entry.reset_mock()
+
+    def test_config_dhcpv4_relay_routed_port_interface(self, mock_cfgdb):
+        """Validating DHCPv4 relay configuration on routed Ethernet interfaces (INTERFACE table only)"""
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+
+        # Test adding DHCP relay on Ethernet12 which is only in INTERFACE table (routed port)
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"],
+                                   ["--dhcpv4-servers", "10.10.10.10", "Ethernet12"], obj=db)
+            print(result.output)
+            assert result.exit_code == 0
+            assert "Added DHCPv4 Servers as 10.10.10.10 to Ethernet12" in result.output
+            assert mock_run_command.call_count == 0
+
+        # Verify the relay entry was written correctly
+        entry = db.cfgdb.get_entry("DHCPV4_RELAY", "Ethernet12")
+        assert entry["dhcpv4_servers"] == ["10.10.10.10"]
+
+        # Test updating DHCP relay on routed port
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["update"],
+                                   ["--dhcpv4-servers", "20.20.20.20", "Ethernet12"], obj=db)
+            print(result.output)
+            assert result.exit_code == 0
+            assert "Updated DHCPv4 Servers as 20.20.20.20 to Ethernet12" in result.output
+            assert mock_run_command.call_count == 0
+
+        # Verify the relay entry was updated correctly
+        entry = db.cfgdb.get_entry("DHCPV4_RELAY", "Ethernet12")
+        assert entry["dhcpv4_servers"] == ["10.10.10.10", "20.20.20.20"]
+
+        # Test deleting DHCP relay on routed port
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["del"], ["Ethernet12"], obj=db)
+            print(result.output)
+            assert result.exit_code == 0
+            assert "Removed DHCPv4 relay configuration for Ethernet12" in result.output
+            assert mock_run_command.call_count == 0
+
+        # Verify the relay entry was removed
+        entry = db.cfgdb.get_entry("DHCPV4_RELAY", "Ethernet12")
+        assert entry == {}
 
         db.cfgdb.set_entry.reset_mock()
