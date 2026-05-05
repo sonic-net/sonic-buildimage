@@ -32,6 +32,14 @@ get_pmon_device_mounts() {
     local devregex='i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*'
     local devpathregex="$(echo "$devregex" | sed -E 's#(^|\|)#\1/dev/#g')"
     for device in $(find /dev/ -maxdepth 1 | grep -E "$devpathregex"); do
+        # only skip removable block device;
+        if [ -b "$device" ]; then
+            rm_flag=$(lsblk -dn -o RM "$device" 2>/dev/null | tr -d '[:space:]')
+            if [ "$rm_flag" = "1" ]; then
+                continue
+            fi
+        fi
+
         if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
             echo "--device=$device"
         else
