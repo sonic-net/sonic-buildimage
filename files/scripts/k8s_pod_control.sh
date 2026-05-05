@@ -47,12 +47,6 @@ pods_on_node() {
     2>/dev/null || true
 }
 
-pod_names_on_node() {
-  docker ps -a "${DOCKER_FILTERS[@]}" \
-    --format '{{index .Labels "io.kubernetes.pod.name"}}' \
-    2>/dev/null || true
-}
-
 restart_containers() {
   mapfile -t cids < <(container_ids_on_node)
   if (( ${#cids[@]} == 0 )); then

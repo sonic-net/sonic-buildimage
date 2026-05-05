@@ -169,23 +169,6 @@ result="$(pods_on_node)"
 assert_eq "no match returns empty" "" "$result"
 
 echo ""
-echo "=== pod_names_on_node ==="
-
-set_filters_for "telemetry"
-result="$(pod_names_on_node)"
-assert_eq "returns pod name only" \
-  "ds-leafrouter-telemetry-zgmsl" "$result"
-
-set_filters_for "multi"
-result="$(pod_names_on_node)"
-line_count=$(printf '%s\n' "$result" | grep -c .)
-assert_eq "returns multiple pod names" "2" "$line_count"
-
-set_filters_for "nonexistent"
-result="$(pod_names_on_node)"
-assert_eq "no match returns empty" "" "$result"
-
-echo ""
 echo "=== restart_containers ==="
 
 set_filters_for "telemetry"
