@@ -119,7 +119,8 @@ class SfpUtil(SfpUtilBase):
             self.port_to_eeprom_mapping[x] = eeprom_path.format(
                 self.port_to_i2c_mapping[x][0],
                 self.port_to_i2c_mapping[x][1])
-
+        self.port_to_eeprom_mapping[33] = "/sys/bus/i2c/devices/i2c-11/11-0050/eeprom"
+        self.port_to_eeprom_mapping[34] = "/sys/bus/i2c/devices/i2c-12/12-0050/eeprom"
         SfpUtilBase.__init__(self)
 
     def __del__(self):
