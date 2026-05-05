@@ -10,8 +10,15 @@ if [ "$BUFFER_CALCULATION_MODE" == "dynamic" ]; then
         BUFFERMGRD_ZERO_PROFILE_ARGS=" -z /etc/sonic/zero_profiles.json"
     fi
 else
-    # Should we use the fallback MAC in case it is not found in Device.Metadata
-    BUFFERMGRD_ARGS="-l /usr/share/sonic/hwsku/pg_profile_lookup.ini"
+    # Look for pg_profile_lookup.ini in HWSKU directory first,
+    # then fall back to the platform-level shared copy.
+    if [ -f /usr/share/sonic/hwsku/pg_profile_lookup.ini ]; then
+        BUFFERMGRD_ARGS="-l /usr/share/sonic/hwsku/pg_profile_lookup.ini"
+    elif [ -f /usr/share/sonic/platform/pg_profile_lookup.ini ]; then
+        BUFFERMGRD_ARGS="-l /usr/share/sonic/platform/pg_profile_lookup.ini"
+    else
+        BUFFERMGRD_ARGS="-l /usr/share/sonic/hwsku/pg_profile_lookup.ini"
+    fi
 fi
 
 exec /usr/bin/buffermgrd ${BUFFERMGRD_ARGS} ${BUFFERMGRD_ZERO_PROFILE_ARGS}
