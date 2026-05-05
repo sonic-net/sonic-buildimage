@@ -884,6 +884,19 @@ fi
 ## copy blacklist file
 sudo cp $IMAGE_CONFIGS/platform/linux_kernel_bde.conf $FILESYSTEM_ROOT/etc/modprobe.d/
 
+# Marvell AMD64 blacklist with Kontron/kemld modules wich lead to
+# - occasional i2c SMBUS and KEMPLD bus enumeration swap with further PMON failure
+# - I2c-mux collision and bus-stuck on a Marvell device
+if [[ "$CONFIGURED_PLATFORM" == "marvell-prestera" && "$CONFIGURED_ARCH" == "amd64" ]]; then
+FILE="$FILESYSTEM_ROOT/etc/modprobe.d/50-kempld.conf"
+sudo mkdir -p "$(dirname "$FILE")"
+grep -q kempld_core "$FILE" 2>/dev/null || sudo tee -a "$FILE" > /dev/null <<'EOF'
+blacklist kempld_core
+blacklist gpio_kempld
+blacklist i2c_kempld
+EOF
+fi
+
 # Enable psample drivers to support sFlow on vs
 {% if sonic_asic_platform == "vs" %}
 sudo tee -a $FILESYSTEM_ROOT/etc/modules-load.d/modules.conf > /dev/null <<EOF
