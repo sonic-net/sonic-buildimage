@@ -1,7 +1,7 @@
 # docker image for marvell-teralynx syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = mrvl-teralynx
-include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MRVL_TERALYNX_LIBSAI) $(MRVL_TERALYNX_SHELL)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(LIBOR_TOOLS)
