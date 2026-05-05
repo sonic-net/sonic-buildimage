@@ -122,11 +122,14 @@ set_reproducible_mirrors()
         expression2="\,^#*deb.*$BUILD_SNAPSHOT_URL,! s,^#\s*(#*deb),\1,"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
+    # Move debian.sources out of sources.list.d/ to avoid APT warnings about invalid filename extension
+    # APT only recognizes files with .list or .sources extensions in sources.list.d/
+    # Using /etc/apt/ (root-owned directory) instead of /tmp for security
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
-        $SUDO mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.back
+        $SUDO mv /etc/apt/sources.list.d/debian.sources /etc/apt/debian.sources.disabled
     fi
-    if [[ "$1" == "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources.back ]; then
-        $SUDO mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
+    if [[ "$1" == "-d" ]] && [ -f /etc/apt/debian.sources.disabled ]; then
+        $SUDO mv /etc/apt/debian.sources.disabled /etc/apt/sources.list.d/debian.sources
     fi
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
