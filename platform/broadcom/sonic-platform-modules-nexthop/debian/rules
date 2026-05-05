@@ -42,7 +42,6 @@ override_dh_auto_build:
 		set -e; \
 		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
 			$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
-			./sign-modules.sh $(MOD_SRC_DIR)/$${mod}/modules; \
 		fi; \
 	done)
 	python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
