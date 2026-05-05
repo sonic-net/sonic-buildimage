@@ -2280,4 +2280,3 @@ sai_ecmp_group_members_increment=8
 
 #Disable hardware PFC watchdog
 sai_pfc_dlr_init_capability=0
-
