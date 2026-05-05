@@ -103,7 +103,7 @@ RUN apt-get update          \
         quilt               \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go toolchain for building grpcurl and gnoic from source
+# Install Go toolchain for building grpcurl and gnmic from source
 # to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN GO_ARCH=armv6l \
@@ -334,7 +334,6 @@ RUN pip3 install Flask   \
     && pip3 install pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
     && pip3 install python-libpcap \
-    && pip3 install enum34 \
     && pip3 install grpcio \
     && pip3 install six \
     && pip3 install itsdangerous \
@@ -360,7 +359,8 @@ RUN set -e; \
 {% endif %}
 
 # Ensure setuptools >= 70.0.0 to address GHSA-cx63-2mw6-8hw5
-RUN pip3 install "setuptools>=70.0.0"
+# Upgrade lxml to address GHSA-vfmq-68hx-4jfw
+RUN pip3 install "setuptools>=70.0.0" "lxml>=5.3.2"
 
 ## Adjust sshd settings
 RUN mkdir /var/run/sshd \
@@ -411,42 +411,6 @@ RUN cd gnxi \
 # Deactivating a virtualenv.
 # ENV PATH="$BACKUP_OF_PATH"
 
-# Build gnoic from source with patched Go and golang.org/x/* deps
-# upgraded to latest to address current and future golang.org/x/* CVEs.
-RUN git clone https://github.com/karimra/gnoic.git \
-    && cd gnoic \
-    && git checkout 27bc5a6 \
-    && go get google.golang.org/grpc@v1.79.3 \
-    && go get github.com/go-viper/mapstructure/v2@v2.4.0 \
-    && go get github.com/go-jose/go-jose/v4@latest \
-    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
-    && go mod tidy \
-    && go build -o /usr/local/bin/gnoic . \
-    && cd .. \
-    && rm -rf gnoic /root/go/pkg/mod /root/.cache/go-build
-
-# Build gnmic from source with upgraded deps to address known CVEs
-COPY gocloud-patches/ /tmp/gocloud-patches/
-RUN GNMIC_VERSION=v0.43.0 \
-    && git clone --depth 1 --branch "${GNMIC_VERSION}" https://github.com/openconfig/gnmic.git /tmp/gnmic \
-    && cd /tmp/gnmic \
-    && go get google.golang.org/grpc@v1.79.3 \
-    && go get github.com/cloudflare/circl@v1.6.3 \
-    && go get github.com/go-git/go-git/v5@latest \
-    && go get github.com/nats-io/nats-server/v2@latest \
-    && go get go.opentelemetry.io/otel/sdk@latest \
-    && go get github.com/docker/docker@latest \
-    && go get github.com/go-jose/go-jose/v4@latest \
-    && go get github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@latest github.com/aws/aws-sdk-go-v2/service/s3@latest github.com/aws/aws-sdk-go-v2/feature/s3/manager@latest \
-    && go get golang.org/x/crypto@latest golang.org/x/net@latest golang.org/x/text@latest golang.org/x/sys@latest golang.org/x/oauth2@latest \
-    && go get gocloud.dev@v0.25.1-0.20220408200107-09b10f7359f7 \
-    && go mod tidy \
-    && GOCLOUD_DIR="$(go list -m -f '{{ '{{' }}.Dir{{ '}}' }}' gocloud.dev)" \
-    && chmod -R +w "$GOCLOUD_DIR" \
-    && patch --forward -d "$GOCLOUD_DIR" -p1 < /tmp/gocloud-patches/0001-fix-aws-sdk-go-v2-pointer-api-changes.patch \
-    && go build -o /usr/local/bin/gnmic . \
-    && chmod +x /usr/local/bin/gnmic \
-    && rm -rf /tmp/gnmic /tmp/gocloud-patches /root/go/pkg/mod /root/.cache/go-build
 
 # Remove Go toolchain to reduce image size
 RUN rm -rf /usr/local/go "$(go env GOPATH 2>/dev/null || echo $HOME/go)"
@@ -488,6 +452,15 @@ RUN echo "/root/env-python3/lib/python3.11/site-packages" > /usr/lib/python3/dis
     echo "/root/env-python3/lib/python3.11/site-packages" > /usr/lib/python3.11/dist-packages/virtualenv.pth
 
 RUN echo "PYTHONPATH=/root/env-python3/lib/python3.11/site-packages" >> /etc/environment
+
+# Final system-level security upgrade: ensure every Debian package is at its
+# latest patched version. This must run AFTER all apt-get install / dpkg -i
+# steps so nothing slips through.
+# Covers OpenSSL, openssh, libpng, gdk-pixbuf, inetutils, tiff CVEs.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get dist-upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY ["*.ini", "/etc/ptf/"]
 EXPOSE 22 8009

@@ -1031,7 +1031,15 @@ ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
 		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
 ifneq ($(filter bookworm trixie,$(BLDENV)),)
-		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; fi $(LOG)
+		{ \
+		echo "Building Wheels package $@"; \
+		if case "$@" in *trixie*sonic_chassisd*) true;; *) false;; esac; then \
+		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
+		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
+		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
 		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi

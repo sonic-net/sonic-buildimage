@@ -133,11 +133,21 @@ class Chassis(ChassisBase):
             return (self.REBOOT_CAUSE_POWER_LOSS, "Power Over Voltage")
         
         if bootstatus & WDIOF_CARDRESET:
-            # CARDRESET typically indicates a normal reboot/reset
-            # This is not a hardware fault, so return NON_HARDWARE
-            # The determine-reboot-cause service will use the software
-            # reboot cause from /host/reboot-cause/reboot-cause.txt
-            return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+            # CARDRESET can indicate either:
+            # 1. Watchdog timeout reset (no software reboot cause file)
+            # 2. Normal software reboot (software reboot cause file exists)
+            # Check if software reboot cause exists
+            try:
+                with open('/host/reboot-cause/reboot-cause.txt', 'r') as f:
+                    software_cause = f.read().strip()
+                    if software_cause and not software_cause.startswith('Unknown'):
+                        # Software initiated reboot
+                        return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+            except (IOError, OSError):
+                pass
+
+            # No software reboot cause found - assume watchdog timeout
+            return (self.REBOOT_CAUSE_WATCHDOG, "Watchdog timeout reset")
         
         if bootstatus & (WDIOF_EXTERN1 | WDIOF_EXTERN2):
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"External Reset (bootstatus=0x{bootstatus:x})")
