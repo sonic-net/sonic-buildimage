@@ -187,6 +187,12 @@ module sonic-syslog {
                     description "Minimum severity level for local syslog messages.";
                 }
 
+                leaf preserve_fqdn {
+                    type boolean;
+                    description "Enable syslog to preserve FQDN in remote messages.";
+                    default "false";
+                }
+
             }
             /* end of list SYSLOG_CONFIG_LIST */
         }
