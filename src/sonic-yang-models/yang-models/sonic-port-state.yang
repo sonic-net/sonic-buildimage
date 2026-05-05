@@ -1,0 +1,145 @@
+module sonic-port-state {
+
+	yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-port-state";
+	prefix port-state;
+
+	import sonic-types {
+		prefix stypes;
+	}
+
+	import sonic-extension {
+		prefix ext;
+	}
+
+	description "PORT_TABLE STATE_DB yang Module for SONiC OS";
+
+	revision 2024-02-24 {
+		description "First Revision";
+	}
+
+	typedef port-state-type {
+		type enumeration {
+			enum ok;
+		}
+	}
+
+	typedef host-tx-ready-type {
+		type enumeration {
+			enum true;
+			enum false;
+		}
+	}
+
+	typedef link-training-status-type {
+		type string {
+			length 0..64;
+		}
+	}
+
+	container sonic-port-state {
+
+		ext:db-name "STATE_DB";
+
+		container PORT_TABLE {
+
+			description "PORT_TABLE part of state_db";
+
+			list PORT_TABLE_LIST {
+
+				key "ifname";
+
+				leaf ifname {
+					type string {
+						length 1..128;
+					}
+				}
+
+				leaf oper_status {
+					type stypes:oper-status;
+					description "Operational status of the port";
+				}
+
+				leaf state {
+					type port-state-type;
+					description "Port creation state";
+				}
+
+				leaf admin_status {
+					type stypes:admin_status;
+					description "Administrative status of the port";
+				}
+
+				leaf speed {
+					type string {
+						length 0..16;
+						pattern "[0-9]+|N/A";
+					}
+					description "Current operational speed in Mbps";
+				}
+
+				leaf mtu {
+					type uint16 {
+						range 68..9216;
+					}
+					description "Maximum transmission unit size";
+				}
+
+				leaf fec {
+					type string {
+						length 0..32;
+						pattern "rs|fc|none|auto|N/A";
+					}
+					description "Current FEC mode of the port";
+				}
+
+				leaf supported_speeds {
+					type string {
+						length 0..256;
+					}
+					description "Comma-separated list of supported speeds in Mbps";
+				}
+
+				leaf supported_fecs {
+					type string {
+						length 0..256;
+					}
+					description "Comma-separated list of supported FEC modes";
+				}
+
+				leaf host_tx_ready {
+					type host-tx-ready-type;
+					description "Host transmit path ready status";
+				}
+
+				leaf link_training_status {
+					type link-training-status-type;
+					description "Link training status";
+				}
+
+				leaf rmt_adv_speeds {
+					type string {
+						length 0..256;
+					}
+					description "Remote advertised speeds from link partner";
+				}
+
+				leaf netdev_oper_status {
+					type stypes:oper-status;
+					description "Network device operational status";
+				}
+
+				leaf phy_ctrl_unreliable_los {
+					type stypes:boolean_type;
+					description "PHY control unreliable LOS detection";
+				}
+
+			} /* end of list PORT_TABLE_LIST */
+
+		} /* end of container PORT_TABLE */
+
+	} /* end of container sonic-port-state */
+
+} /* end of module sonic-port-state */
+

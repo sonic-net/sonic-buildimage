@@ -170,6 +170,7 @@ yang_files = [
     'sonic-pfcwd.yang',
     'sonic-policer.yang',
     'sonic-port-qos-map.yang',
+    'sonic-port-state.yang',
     'sonic-port.yang',
     'sonic-portchannel.yang',
     'sonic-queue.yang',
