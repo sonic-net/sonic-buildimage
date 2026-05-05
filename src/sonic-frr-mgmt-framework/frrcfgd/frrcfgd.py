@@ -3638,7 +3638,7 @@ class BGPConfigDaemon:
                             self.__ospf_apply_config(data, rmapoper, metricoper, metrictypeoper, alwaysoper, acclistoper)
                 else:
                     if (direction == "IMPORT"):
-                        command = ""
+                        command = []
                         if (protocol == "DEFAULT_ROUTE"):
                             command = ['vtysh', '-c', 'configure terminal',
                                        '-c', 'router ospf vrf {}'.format(vrf),
@@ -3648,7 +3648,7 @@ class BGPConfigDaemon:
                                        '-c', 'router ospf vrf {}'.format(vrf),
                                        '-c', 'no redistribute {}'.format(protocol.lower())]
 
-                        if (command != ""):
+                        if command:
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete default-info/redistribute {}'.format(protocol.lower()))
                                 continue
