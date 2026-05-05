@@ -3138,8 +3138,7 @@ bcm_device:
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 0
             #srv6:0x10 ipinip:0x2
-            sai_tunnel_support : 0x12
-
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 32768
             #enable port queue drop stats
@@ -3168,14 +3167,14 @@ device:
 ...
 ---
 device:
-        '*':
-                TM_THD_CONFIG:
-                    MIRROR_ON_DROP_RESERVATION: 0
-                    SKIP_BUFFER_RESERVATION: 1
-                    THRESHOLD_MODE: LOSSY_AND_LOSSLESS
-                    
-                TM_SCHEDULER_CONFIG:
-                        NUM_MC_Q: NUM_MC_Q_4
+    '*':
+        TM_THD_CONFIG:
+            MIRROR_ON_DROP_RESERVATION: 0
+            SKIP_BUFFER_RESERVATION: 1
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_4
 ...
 ---
 device:

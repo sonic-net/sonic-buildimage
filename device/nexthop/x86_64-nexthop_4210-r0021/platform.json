@@ -3,27 +3,27 @@
         "Ethernet0": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port1"
+                    "etp1"
                 ],
                 "2x400G": [
-                    "Port1/1",
-                    "Port1/2"
+                    "etp1a",
+                    "etp1b"
                 ],
                 "4x200G": [
-                    "Port1/1",
-                    "Port1/2",
-                    "Port1/3",
-                    "Port1/4"
+                    "etp1a",
+                    "etp1b",
+                    "etp1c",
+                    "etp1d"
                 ],
                 "8x100G": [
-                    "Port1/1",
-                    "Port1/2",
-                    "Port1/3",
-                    "Port1/4",
-                    "Port1/5",
-                    "Port1/6",
-                    "Port1/7",
-                    "Port1/8"
+                    "etp1a",
+                    "etp1b",
+                    "etp1c",
+                    "etp1d",
+                    "etp1e",
+                    "etp1f",
+                    "etp1g",
+                    "etp1h"
                 ]
             },
             "index": "1,1,1,1,1,1,1,1",
@@ -32,27 +32,27 @@
         "Ethernet8": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port2"
+                    "etp2"
                 ],
                 "2x400G": [
-                    "Port2/1",
-                    "Port2/2"
+                    "etp2a",
+                    "etp2b"
                 ],
                 "4x200G": [
-                    "Port2/1",
-                    "Port2/2",
-                    "Port2/3",
-                    "Port2/4"
+                    "etp2a",
+                    "etp2b",
+                    "etp2c",
+                    "etp2d"
                 ],
                 "8x100G": [
-                    "Port2/1",
-                    "Port2/2",
-                    "Port2/3",
-                    "Port2/4",
-                    "Port2/5",
-                    "Port2/6",
-                    "Port2/7",
-                    "Port2/8"
+                    "etp2a",
+                    "etp2b",
+                    "etp2c",
+                    "etp2d",
+                    "etp2e",
+                    "etp2f",
+                    "etp2g",
+                    "etp2h"
                 ]
             },
             "index": "2,2,2,2,2,2,2,2",
@@ -61,27 +61,27 @@
         "Ethernet16": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port3"
+                    "etp3"
                 ],
                 "2x400G": [
-                    "Port3/1",
-                    "Port3/2"
+                    "etp3a",
+                    "etp3b"
                 ],
                 "4x200G": [
-                    "Port3/1",
-                    "Port3/2",
-                    "Port3/3",
-                    "Port3/4"
+                    "etp3a",
+                    "etp3b",
+                    "etp3c",
+                    "etp3d"
                 ],
                 "8x100G": [
-                    "Port3/1",
-                    "Port3/2",
-                    "Port3/3",
-                    "Port3/4",
-                    "Port3/5",
-                    "Port3/6",
-                    "Port3/7",
-                    "Port3/8"
+                    "etp3a",
+                    "etp3b",
+                    "etp3c",
+                    "etp3d",
+                    "etp3e",
+                    "etp3f",
+                    "etp3g",
+                    "etp3h"
                 ]
             },
             "index": "3,3,3,3,3,3,3,3",
@@ -90,27 +90,27 @@
         "Ethernet24": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port4"
+                    "etp4"
                 ],
                 "2x400G": [
-                    "Port4/1",
-                    "Port4/2"
+                    "etp4a",
+                    "etp4b"
                 ],
                 "4x200G": [
-                    "Port4/1",
-                    "Port4/2",
-                    "Port4/3",
-                    "Port4/4"
+                    "etp4a",
+                    "etp4b",
+                    "etp4c",
+                    "etp4d"
                 ],
                 "8x100G": [
-                    "Port4/1",
-                    "Port4/2",
-                    "Port4/3",
-                    "Port4/4",
-                    "Port4/5",
-                    "Port4/6",
-                    "Port4/7",
-                    "Port4/8"
+                    "etp4a",
+                    "etp4b",
+                    "etp4c",
+                    "etp4d",
+                    "etp4e",
+                    "etp4f",
+                    "etp4g",
+                    "etp4h"
                 ]
             },
             "index": "4,4,4,4,4,4,4,4",
@@ -119,27 +119,27 @@
         "Ethernet32": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port5"
+                    "etp5"
                 ],
                 "2x400G": [
-                    "Port5/1",
-                    "Port5/2"
+                    "etp5a",
+                    "etp5b"
                 ],
                 "4x200G": [
-                    "Port5/1",
-                    "Port5/2",
-                    "Port5/3",
-                    "Port5/4"
+                    "etp5a",
+                    "etp5b",
+                    "etp5c",
+                    "etp5d"
                 ],
                 "8x100G": [
-                    "Port5/1",
-                    "Port5/2",
-                    "Port5/3",
-                    "Port5/4",
-                    "Port5/5",
-                    "Port5/6",
-                    "Port5/7",
-                    "Port5/8"
+                    "etp5a",
+                    "etp5b",
+                    "etp5c",
+                    "etp5d",
+                    "etp5e",
+                    "etp5f",
+                    "etp5g",
+                    "etp5h"
                 ]
             },
             "index": "5,5,5,5,5,5,5,5",
@@ -148,27 +148,27 @@
         "Ethernet40": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port6"
+                    "etp6"
                 ],
                 "2x400G": [
-                    "Port6/1",
-                    "Port6/2"
+                    "etp6a",
+                    "etp6b"
                 ],
                 "4x200G": [
-                    "Port6/1",
-                    "Port6/2",
-                    "Port6/3",
-                    "Port6/4"
+                    "etp6a",
+                    "etp6b",
+                    "etp6c",
+                    "etp6d"
                 ],
                 "8x100G": [
-                    "Port6/1",
-                    "Port6/2",
-                    "Port6/3",
-                    "Port6/4",
-                    "Port6/5",
-                    "Port6/6",
-                    "Port6/7",
-                    "Port6/8"
+                    "etp6a",
+                    "etp6b",
+                    "etp6c",
+                    "etp6d",
+                    "etp6e",
+                    "etp6f",
+                    "etp6g",
+                    "etp6h"
                 ]
             },
             "index": "6,6,6,6,6,6,6,6",
@@ -177,27 +177,27 @@
         "Ethernet48": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port7"
+                    "etp7"
                 ],
                 "2x400G": [
-                    "Port7/1",
-                    "Port7/2"
+                    "etp7a",
+                    "etp7b"
                 ],
                 "4x200G": [
-                    "Port7/1",
-                    "Port7/2",
-                    "Port7/3",
-                    "Port7/4"
+                    "etp7a",
+                    "etp7b",
+                    "etp7c",
+                    "etp7d"
                 ],
                 "8x100G": [
-                    "Port7/1",
-                    "Port7/2",
-                    "Port7/3",
-                    "Port7/4",
-                    "Port7/5",
-                    "Port7/6",
-                    "Port7/7",
-                    "Port7/8"
+                    "etp7a",
+                    "etp7b",
+                    "etp7c",
+                    "etp7d",
+                    "etp7e",
+                    "etp7f",
+                    "etp7g",
+                    "etp7h"
                 ]
             },
             "index": "7,7,7,7,7,7,7,7",
@@ -206,27 +206,27 @@
         "Ethernet56": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port8"
+                    "etp8"
                 ],
                 "2x400G": [
-                    "Port8/1",
-                    "Port8/2"
+                    "etp8a",
+                    "etp8b"
                 ],
                 "4x200G": [
-                    "Port8/1",
-                    "Port8/2",
-                    "Port8/3",
-                    "Port8/4"
+                    "etp8a",
+                    "etp8b",
+                    "etp8c",
+                    "etp8d"
                 ],
                 "8x100G": [
-                    "Port8/1",
-                    "Port8/2",
-                    "Port8/3",
-                    "Port8/4",
-                    "Port8/5",
-                    "Port8/6",
-                    "Port8/7",
-                    "Port8/8"
+                    "etp8a",
+                    "etp8b",
+                    "etp8c",
+                    "etp8d",
+                    "etp8e",
+                    "etp8f",
+                    "etp8g",
+                    "etp8h"
                 ]
             },
             "index": "8,8,8,8,8,8,8,8",
@@ -235,27 +235,27 @@
         "Ethernet64": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port9"
+                    "etp9"
                 ],
                 "2x400G": [
-                    "Port9/1",
-                    "Port9/2"
+                    "etp9a",
+                    "etp9b"
                 ],
                 "4x200G": [
-                    "Port9/1",
-                    "Port9/2",
-                    "Port9/3",
-                    "Port9/4"
+                    "etp9a",
+                    "etp9b",
+                    "etp9c",
+                    "etp9d"
                 ],
                 "8x100G": [
-                    "Port9/1",
-                    "Port9/2",
-                    "Port9/3",
-                    "Port9/4",
-                    "Port9/5",
-                    "Port9/6",
-                    "Port9/7",
-                    "Port9/8"
+                    "etp9a",
+                    "etp9b",
+                    "etp9c",
+                    "etp9d",
+                    "etp9e",
+                    "etp9f",
+                    "etp9g",
+                    "etp9h"
                 ]
             },
             "index": "9,9,9,9,9,9,9,9",
@@ -264,27 +264,27 @@
         "Ethernet72": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port10"
+                    "etp10"
                 ],
                 "2x400G": [
-                    "Port10/1",
-                    "Port10/2"
+                    "etp10a",
+                    "etp10b"
                 ],
                 "4x200G": [
-                    "Port10/1",
-                    "Port10/2",
-                    "Port10/3",
-                    "Port10/4"
+                    "etp10a",
+                    "etp10b",
+                    "etp10c",
+                    "etp10d"
                 ],
                 "8x100G": [
-                    "Port10/1",
-                    "Port10/2",
-                    "Port10/3",
-                    "Port10/4",
-                    "Port10/5",
-                    "Port10/6",
-                    "Port10/7",
-                    "Port10/8"
+                    "etp10a",
+                    "etp10b",
+                    "etp10c",
+                    "etp10d",
+                    "etp10e",
+                    "etp10f",
+                    "etp10g",
+                    "etp10h"
                 ]
             },
             "index": "10,10,10,10,10,10,10,10",
@@ -293,27 +293,27 @@
         "Ethernet80": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port11"
+                    "etp11"
                 ],
                 "2x400G": [
-                    "Port11/1",
-                    "Port11/2"
+                    "etp11a",
+                    "etp11b"
                 ],
                 "4x200G": [
-                    "Port11/1",
-                    "Port11/2",
-                    "Port11/3",
-                    "Port11/4"
+                    "etp11a",
+                    "etp11b",
+                    "etp11c",
+                    "etp11d"
                 ],
                 "8x100G": [
-                    "Port11/1",
-                    "Port11/2",
-                    "Port11/3",
-                    "Port11/4",
-                    "Port11/5",
-                    "Port11/6",
-                    "Port11/7",
-                    "Port11/8"
+                    "etp11a",
+                    "etp11b",
+                    "etp11c",
+                    "etp11d",
+                    "etp11e",
+                    "etp11f",
+                    "etp11g",
+                    "etp11h"
                 ]
             },
             "index": "11,11,11,11,11,11,11,11",
@@ -322,27 +322,27 @@
         "Ethernet88": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port12"
+                    "etp12"
                 ],
                 "2x400G": [
-                    "Port12/1",
-                    "Port12/2"
+                    "etp12a",
+                    "etp12b"
                 ],
                 "4x200G": [
-                    "Port12/1",
-                    "Port12/2",
-                    "Port12/3",
-                    "Port12/4"
+                    "etp12a",
+                    "etp12b",
+                    "etp12c",
+                    "etp12d"
                 ],
                 "8x100G": [
-                    "Port12/1",
-                    "Port12/2",
-                    "Port12/3",
-                    "Port12/4",
-                    "Port12/5",
-                    "Port12/6",
-                    "Port12/7",
-                    "Port12/8"
+                    "etp12a",
+                    "etp12b",
+                    "etp12c",
+                    "etp12d",
+                    "etp12e",
+                    "etp12f",
+                    "etp12g",
+                    "etp12h"
                 ]
             },
             "index": "12,12,12,12,12,12,12,12",
@@ -351,27 +351,27 @@
         "Ethernet96": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port13"
+                    "etp13"
                 ],
                 "2x400G": [
-                    "Port13/1",
-                    "Port13/2"
+                    "etp13a",
+                    "etp13b"
                 ],
                 "4x200G": [
-                    "Port13/1",
-                    "Port13/2",
-                    "Port13/3",
-                    "Port13/4"
+                    "etp13a",
+                    "etp13b",
+                    "etp13c",
+                    "etp13d"
                 ],
                 "8x100G": [
-                    "Port13/1",
-                    "Port13/2",
-                    "Port13/3",
-                    "Port13/4",
-                    "Port13/5",
-                    "Port13/6",
-                    "Port13/7",
-                    "Port13/8"
+                    "etp13a",
+                    "etp13b",
+                    "etp13c",
+                    "etp13d",
+                    "etp13e",
+                    "etp13f",
+                    "etp13g",
+                    "etp13h"
                 ]
             },
             "index": "13,13,13,13,13,13,13,13",
@@ -380,27 +380,27 @@
         "Ethernet104": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port14"
+                    "etp14"
                 ],
                 "2x400G": [
-                    "Port14/1",
-                    "Port14/2"
+                    "etp14a",
+                    "etp14b"
                 ],
                 "4x200G": [
-                    "Port14/1",
-                    "Port14/2",
-                    "Port14/3",
-                    "Port14/4"
+                    "etp14a",
+                    "etp14b",
+                    "etp14c",
+                    "etp14d"
                 ],
                 "8x100G": [
-                    "Port14/1",
-                    "Port14/2",
-                    "Port14/3",
-                    "Port14/4",
-                    "Port14/5",
-                    "Port14/6",
-                    "Port14/7",
-                    "Port14/8"
+                    "etp14a",
+                    "etp14b",
+                    "etp14c",
+                    "etp14d",
+                    "etp14e",
+                    "etp14f",
+                    "etp14g",
+                    "etp14h"
                 ]
             },
             "index": "14,14,14,14,14,14,14,14",
@@ -409,27 +409,27 @@
         "Ethernet112": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port15"
+                    "etp15"
                 ],
                 "2x400G": [
-                    "Port15/1",
-                    "Port15/2"
+                    "etp15a",
+                    "etp15b"
                 ],
                 "4x200G": [
-                    "Port15/1",
-                    "Port15/2",
-                    "Port15/3",
-                    "Port15/4"
+                    "etp15a",
+                    "etp15b",
+                    "etp15c",
+                    "etp15d"
                 ],
                 "8x100G": [
-                    "Port15/1",
-                    "Port15/2",
-                    "Port15/3",
-                    "Port15/4",
-                    "Port15/5",
-                    "Port15/6",
-                    "Port15/7",
-                    "Port15/8"
+                    "etp15a",
+                    "etp15b",
+                    "etp15c",
+                    "etp15d",
+                    "etp15e",
+                    "etp15f",
+                    "etp15g",
+                    "etp15h"
                 ]
             },
             "index": "15,15,15,15,15,15,15,15",
@@ -438,27 +438,27 @@
         "Ethernet120": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port16"
+                    "etp16"
                 ],
                 "2x400G": [
-                    "Port16/1",
-                    "Port16/2"
+                    "etp16a",
+                    "etp16b"
                 ],
                 "4x200G": [
-                    "Port16/1",
-                    "Port16/2",
-                    "Port16/3",
-                    "Port16/4"
+                    "etp16a",
+                    "etp16b",
+                    "etp16c",
+                    "etp16d"
                 ],
                 "8x100G": [
-                    "Port16/1",
-                    "Port16/2",
-                    "Port16/3",
-                    "Port16/4",
-                    "Port16/5",
-                    "Port16/6",
-                    "Port16/7",
-                    "Port16/8"
+                    "etp16a",
+                    "etp16b",
+                    "etp16c",
+                    "etp16d",
+                    "etp16e",
+                    "etp16f",
+                    "etp16g",
+                    "etp16h"
                 ]
             },
             "index": "16,16,16,16,16,16,16,16",
@@ -467,27 +467,27 @@
         "Ethernet128": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port17"
+                    "etp17"
                 ],
                 "2x400G": [
-                    "Port17/1",
-                    "Port17/2"
+                    "etp17a",
+                    "etp17b"
                 ],
                 "4x200G": [
-                    "Port17/1",
-                    "Port17/2",
-                    "Port17/3",
-                    "Port17/4"
+                    "etp17a",
+                    "etp17b",
+                    "etp17c",
+                    "etp17d"
                 ],
                 "8x100G": [
-                    "Port17/1",
-                    "Port17/2",
-                    "Port17/3",
-                    "Port17/4",
-                    "Port17/5",
-                    "Port17/6",
-                    "Port17/7",
-                    "Port17/8"
+                    "etp17a",
+                    "etp17b",
+                    "etp17c",
+                    "etp17d",
+                    "etp17e",
+                    "etp17f",
+                    "etp17g",
+                    "etp17h"
                 ]
             },
             "index": "17,17,17,17,17,17,17,17",
@@ -496,27 +496,27 @@
         "Ethernet136": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port18"
+                    "etp18"
                 ],
                 "2x400G": [
-                    "Port18/1",
-                    "Port18/2"
+                    "etp18a",
+                    "etp18b"
                 ],
                 "4x200G": [
-                    "Port18/1",
-                    "Port18/2",
-                    "Port18/3",
-                    "Port18/4"
+                    "etp18a",
+                    "etp18b",
+                    "etp18c",
+                    "etp18d"
                 ],
                 "8x100G": [
-                    "Port18/1",
-                    "Port18/2",
-                    "Port18/3",
-                    "Port18/4",
-                    "Port18/5",
-                    "Port18/6",
-                    "Port18/7",
-                    "Port18/8"
+                    "etp18a",
+                    "etp18b",
+                    "etp18c",
+                    "etp18d",
+                    "etp18e",
+                    "etp18f",
+                    "etp18g",
+                    "etp18h"
                 ]
             },
             "index": "18,18,18,18,18,18,18,18",
@@ -525,27 +525,27 @@
         "Ethernet144": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port19"
+                    "etp19"
                 ],
                 "2x400G": [
-                    "Port19/1",
-                    "Port19/2"
+                    "etp19a",
+                    "etp19b"
                 ],
                 "4x200G": [
-                    "Port19/1",
-                    "Port19/2",
-                    "Port19/3",
-                    "Port19/4"
+                    "etp19a",
+                    "etp19b",
+                    "etp19c",
+                    "etp19d"
                 ],
                 "8x100G": [
-                    "Port19/1",
-                    "Port19/2",
-                    "Port19/3",
-                    "Port19/4",
-                    "Port19/5",
-                    "Port19/6",
-                    "Port19/7",
-                    "Port19/8"
+                    "etp19a",
+                    "etp19b",
+                    "etp19c",
+                    "etp19d",
+                    "etp19e",
+                    "etp19f",
+                    "etp19g",
+                    "etp19h"
                 ]
             },
             "index": "19,19,19,19,19,19,19,19",
@@ -554,27 +554,27 @@
         "Ethernet152": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port20"
+                    "etp20"
                 ],
                 "2x400G": [
-                    "Port20/1",
-                    "Port20/2"
+                    "etp20a",
+                    "etp20b"
                 ],
                 "4x200G": [
-                    "Port20/1",
-                    "Port20/2",
-                    "Port20/3",
-                    "Port20/4"
+                    "etp20a",
+                    "etp20b",
+                    "etp20c",
+                    "etp20d"
                 ],
                 "8x100G": [
-                    "Port20/1",
-                    "Port20/2",
-                    "Port20/3",
-                    "Port20/4",
-                    "Port20/5",
-                    "Port20/6",
-                    "Port20/7",
-                    "Port20/8"
+                    "etp20a",
+                    "etp20b",
+                    "etp20c",
+                    "etp20d",
+                    "etp20e",
+                    "etp20f",
+                    "etp20g",
+                    "etp20h"
                 ]
             },
             "index": "20,20,20,20,20,20,20,20",
@@ -583,27 +583,27 @@
         "Ethernet160": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port21"
+                    "etp21"
                 ],
                 "2x400G": [
-                    "Port21/1",
-                    "Port21/2"
+                    "etp21a",
+                    "etp21b"
                 ],
                 "4x200G": [
-                    "Port21/1",
-                    "Port21/2",
-                    "Port21/3",
-                    "Port21/4"
+                    "etp21a",
+                    "etp21b",
+                    "etp21c",
+                    "etp21d"
                 ],
                 "8x100G": [
-                    "Port21/1",
-                    "Port21/2",
-                    "Port21/3",
-                    "Port21/4",
-                    "Port21/5",
-                    "Port21/6",
-                    "Port21/7",
-                    "Port21/8"
+                    "etp21a",
+                    "etp21b",
+                    "etp21c",
+                    "etp21d",
+                    "etp21e",
+                    "etp21f",
+                    "etp21g",
+                    "etp21h"
                 ]
             },
             "index": "21,21,21,21,21,21,21,21",
@@ -612,27 +612,27 @@
         "Ethernet168": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port22"
+                    "etp22"
                 ],
                 "2x400G": [
-                    "Port22/1",
-                    "Port22/2"
+                    "etp22a",
+                    "etp22b"
                 ],
                 "4x200G": [
-                    "Port22/1",
-                    "Port22/2",
-                    "Port22/3",
-                    "Port22/4"
+                    "etp22a",
+                    "etp22b",
+                    "etp22c",
+                    "etp22d"
                 ],
                 "8x100G": [
-                    "Port22/1",
-                    "Port22/2",
-                    "Port22/3",
-                    "Port22/4",
-                    "Port22/5",
-                    "Port22/6",
-                    "Port22/7",
-                    "Port22/8"
+                    "etp22a",
+                    "etp22b",
+                    "etp22c",
+                    "etp22d",
+                    "etp22e",
+                    "etp22f",
+                    "etp22g",
+                    "etp22h"
                 ]
             },
             "index": "22,22,22,22,22,22,22,22",
@@ -641,27 +641,27 @@
         "Ethernet176": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port23"
+                    "etp23"
                 ],
                 "2x400G": [
-                    "Port23/1",
-                    "Port23/2"
+                    "etp23a",
+                    "etp23b"
                 ],
                 "4x200G": [
-                    "Port23/1",
-                    "Port23/2",
-                    "Port23/3",
-                    "Port23/4"
+                    "etp23a",
+                    "etp23b",
+                    "etp23c",
+                    "etp23d"
                 ],
                 "8x100G": [
-                    "Port23/1",
-                    "Port23/2",
-                    "Port23/3",
-                    "Port23/4",
-                    "Port23/5",
-                    "Port23/6",
-                    "Port23/7",
-                    "Port23/8"
+                    "etp23a",
+                    "etp23b",
+                    "etp23c",
+                    "etp23d",
+                    "etp23e",
+                    "etp23f",
+                    "etp23g",
+                    "etp23h"
                 ]
             },
             "index": "23,23,23,23,23,23,23,23",
@@ -670,27 +670,27 @@
         "Ethernet184": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port24"
+                    "etp24"
                 ],
                 "2x400G": [
-                    "Port24/1",
-                    "Port24/2"
+                    "etp24a",
+                    "etp24b"
                 ],
                 "4x200G": [
-                    "Port24/1",
-                    "Port24/2",
-                    "Port24/3",
-                    "Port24/4"
+                    "etp24a",
+                    "etp24b",
+                    "etp24c",
+                    "etp24d"
                 ],
                 "8x100G": [
-                    "Port24/1",
-                    "Port24/2",
-                    "Port24/3",
-                    "Port24/4",
-                    "Port24/5",
-                    "Port24/6",
-                    "Port24/7",
-                    "Port24/8"
+                    "etp24a",
+                    "etp24b",
+                    "etp24c",
+                    "etp24d",
+                    "etp24e",
+                    "etp24f",
+                    "etp24g",
+                    "etp24h"
                 ]
             },
             "index": "24,24,24,24,24,24,24,24",
@@ -699,27 +699,27 @@
         "Ethernet192": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port25"
+                    "etp25"
                 ],
                 "2x400G": [
-                    "Port25/1",
-                    "Port25/2"
+                    "etp25a",
+                    "etp25b"
                 ],
                 "4x200G": [
-                    "Port25/1",
-                    "Port25/2",
-                    "Port25/3",
-                    "Port25/4"
+                    "etp25a",
+                    "etp25b",
+                    "etp25c",
+                    "etp25d"
                 ],
                 "8x100G": [
-                    "Port25/1",
-                    "Port25/2",
-                    "Port25/3",
-                    "Port25/4",
-                    "Port25/5",
-                    "Port25/6",
-                    "Port25/7",
-                    "Port25/8"
+                    "etp25a",
+                    "etp25b",
+                    "etp25c",
+                    "etp25d",
+                    "etp25e",
+                    "etp25f",
+                    "etp25g",
+                    "etp25h"
                 ]
             },
             "index": "25,25,25,25,25,25,25,25",
@@ -728,27 +728,27 @@
         "Ethernet200": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port26"
+                    "etp26"
                 ],
                 "2x400G": [
-                    "Port26/1",
-                    "Port26/2"
+                    "etp26a",
+                    "etp26b"
                 ],
                 "4x200G": [
-                    "Port26/1",
-                    "Port26/2",
-                    "Port26/3",
-                    "Port26/4"
+                    "etp26a",
+                    "etp26b",
+                    "etp26c",
+                    "etp26d"
                 ],
                 "8x100G": [
-                    "Port26/1",
-                    "Port26/2",
-                    "Port26/3",
-                    "Port26/4",
-                    "Port26/5",
-                    "Port26/6",
-                    "Port26/7",
-                    "Port26/8"
+                    "etp26a",
+                    "etp26b",
+                    "etp26c",
+                    "etp26d",
+                    "etp26e",
+                    "etp26f",
+                    "etp26g",
+                    "etp26h"
                 ]
             },
             "index": "26,26,26,26,26,26,26,26",
@@ -757,27 +757,27 @@
         "Ethernet208": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port27"
+                    "etp27"
                 ],
                 "2x400G": [
-                    "Port27/1",
-                    "Port27/2"
+                    "etp27a",
+                    "etp27b"
                 ],
                 "4x200G": [
-                    "Port27/1",
-                    "Port27/2",
-                    "Port27/3",
-                    "Port27/4"
+                    "etp27a",
+                    "etp27b",
+                    "etp27c",
+                    "etp27d"
                 ],
                 "8x100G": [
-                    "Port27/1",
-                    "Port27/2",
-                    "Port27/3",
-                    "Port27/4",
-                    "Port27/5",
-                    "Port27/6",
-                    "Port27/7",
-                    "Port27/8"
+                    "etp27a",
+                    "etp27b",
+                    "etp27c",
+                    "etp27d",
+                    "etp27e",
+                    "etp27f",
+                    "etp27g",
+                    "etp27h"
                 ]
             },
             "index": "27,27,27,27,27,27,27,27",
@@ -786,27 +786,27 @@
         "Ethernet216": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port28"
+                    "etp28"
                 ],
                 "2x400G": [
-                    "Port28/1",
-                    "Port28/2"
+                    "etp28a",
+                    "etp28b"
                 ],
                 "4x200G": [
-                    "Port28/1",
-                    "Port28/2",
-                    "Port28/3",
-                    "Port28/4"
+                    "etp28a",
+                    "etp28b",
+                    "etp28c",
+                    "etp28d"
                 ],
                 "8x100G": [
-                    "Port28/1",
-                    "Port28/2",
-                    "Port28/3",
-                    "Port28/4",
-                    "Port28/5",
-                    "Port28/6",
-                    "Port28/7",
-                    "Port28/8"
+                    "etp28a",
+                    "etp28b",
+                    "etp28c",
+                    "etp28d",
+                    "etp28e",
+                    "etp28f",
+                    "etp28g",
+                    "etp28h"
                 ]
             },
             "index": "28,28,28,28,28,28,28,28",
@@ -815,27 +815,27 @@
         "Ethernet224": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port29"
+                    "etp29"
                 ],
                 "2x400G": [
-                    "Port29/1",
-                    "Port29/2"
+                    "etp29a",
+                    "etp29b"
                 ],
                 "4x200G": [
-                    "Port29/1",
-                    "Port29/2",
-                    "Port29/3",
-                    "Port29/4"
+                    "etp29a",
+                    "etp29b",
+                    "etp29c",
+                    "etp29d"
                 ],
                 "8x100G": [
-                    "Port29/1",
-                    "Port29/2",
-                    "Port29/3",
-                    "Port29/4",
-                    "Port29/5",
-                    "Port29/6",
-                    "Port29/7",
-                    "Port29/8"
+                    "etp29a",
+                    "etp29b",
+                    "etp29c",
+                    "etp29d",
+                    "etp29e",
+                    "etp29f",
+                    "etp29g",
+                    "etp29h"
                 ]
             },
             "index": "29,29,29,29,29,29,29,29",
@@ -844,27 +844,27 @@
         "Ethernet232": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port30"
+                    "etp30"
                 ],
                 "2x400G": [
-                    "Port30/1",
-                    "Port30/2"
+                    "etp30a",
+                    "etp30b"
                 ],
                 "4x200G": [
-                    "Port30/1",
-                    "Port30/2",
-                    "Port30/3",
-                    "Port30/4"
+                    "etp30a",
+                    "etp30b",
+                    "etp30c",
+                    "etp30d"
                 ],
                 "8x100G": [
-                    "Port30/1",
-                    "Port30/2",
-                    "Port30/3",
-                    "Port30/4",
-                    "Port30/5",
-                    "Port30/6",
-                    "Port30/7",
-                    "Port30/8"
+                    "etp30a",
+                    "etp30b",
+                    "etp30c",
+                    "etp30d",
+                    "etp30e",
+                    "etp30f",
+                    "etp30g",
+                    "etp30h"
                 ]
             },
             "index": "30,30,30,30,30,30,30,30",
@@ -873,27 +873,27 @@
         "Ethernet240": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port31"
+                    "etp31"
                 ],
                 "2x400G": [
-                    "Port31/1",
-                    "Port31/2"
+                    "etp31a",
+                    "etp31b"
                 ],
                 "4x200G": [
-                    "Port31/1",
-                    "Port31/2",
-                    "Port31/3",
-                    "Port31/4"
+                    "etp31a",
+                    "etp31b",
+                    "etp31c",
+                    "etp31d"
                 ],
                 "8x100G": [
-                    "Port31/1",
-                    "Port31/2",
-                    "Port31/3",
-                    "Port31/4",
-                    "Port31/5",
-                    "Port31/6",
-                    "Port31/7",
-                    "Port31/8"
+                    "etp31a",
+                    "etp31b",
+                    "etp31c",
+                    "etp31d",
+                    "etp31e",
+                    "etp31f",
+                    "etp31g",
+                    "etp31h"
                 ]
             },
             "index": "31,31,31,31,31,31,31,31",
@@ -902,27 +902,27 @@
         "Ethernet248": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port32"
+                    "etp32"
                 ],
                 "2x400G": [
-                    "Port32/1",
-                    "Port32/2"
+                    "etp32a",
+                    "etp32b"
                 ],
                 "4x200G": [
-                    "Port32/1",
-                    "Port32/2",
-                    "Port32/3",
-                    "Port32/4"
+                    "etp32a",
+                    "etp32b",
+                    "etp32c",
+                    "etp32d"
                 ],
                 "8x100G": [
-                    "Port32/1",
-                    "Port32/2",
-                    "Port32/3",
-                    "Port32/4",
-                    "Port32/5",
-                    "Port32/6",
-                    "Port32/7",
-                    "Port32/8"
+                    "etp32a",
+                    "etp32b",
+                    "etp32c",
+                    "etp32d",
+                    "etp32e",
+                    "etp32f",
+                    "etp32g",
+                    "etp32h"
                 ]
             },
             "index": "32,32,32,32,32,32,32,32",
@@ -931,27 +931,27 @@
         "Ethernet256": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port33"
+                    "etp33"
                 ],
                 "2x400G": [
-                    "Port33/1",
-                    "Port33/2"
+                    "etp33a",
+                    "etp33b"
                 ],
                 "4x200G": [
-                    "Port33/1",
-                    "Port33/2",
-                    "Port33/3",
-                    "Port33/4"
+                    "etp33a",
+                    "etp33b",
+                    "etp33c",
+                    "etp33d"
                 ],
                 "8x100G": [
-                    "Port33/1",
-                    "Port33/2",
-                    "Port33/3",
-                    "Port33/4",
-                    "Port33/5",
-                    "Port33/6",
-                    "Port33/7",
-                    "Port33/8"
+                    "etp33a",
+                    "etp33b",
+                    "etp33c",
+                    "etp33d",
+                    "etp33e",
+                    "etp33f",
+                    "etp33g",
+                    "etp33h"
                 ]
             },
             "index": "33,33,33,33,33,33,33,33",
@@ -960,27 +960,27 @@
         "Ethernet264": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port34"
+                    "etp34"
                 ],
                 "2x400G": [
-                    "Port34/1",
-                    "Port34/2"
+                    "etp34a",
+                    "etp34b"
                 ],
                 "4x200G": [
-                    "Port34/1",
-                    "Port34/2",
-                    "Port34/3",
-                    "Port34/4"
+                    "etp34a",
+                    "etp34b",
+                    "etp34c",
+                    "etp34d"
                 ],
                 "8x100G": [
-                    "Port34/1",
-                    "Port34/2",
-                    "Port34/3",
-                    "Port34/4",
-                    "Port34/5",
-                    "Port34/6",
-                    "Port34/7",
-                    "Port34/8"
+                    "etp34a",
+                    "etp34b",
+                    "etp34c",
+                    "etp34d",
+                    "etp34e",
+                    "etp34f",
+                    "etp34g",
+                    "etp34h"
                 ]
             },
             "index": "34,34,34,34,34,34,34,34",
@@ -989,27 +989,27 @@
         "Ethernet272": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port35"
+                    "etp35"
                 ],
                 "2x400G": [
-                    "Port35/1",
-                    "Port35/2"
+                    "etp35a",
+                    "etp35b"
                 ],
                 "4x200G": [
-                    "Port35/1",
-                    "Port35/2",
-                    "Port35/3",
-                    "Port35/4"
+                    "etp35a",
+                    "etp35b",
+                    "etp35c",
+                    "etp35d"
                 ],
                 "8x100G": [
-                    "Port35/1",
-                    "Port35/2",
-                    "Port35/3",
-                    "Port35/4",
-                    "Port35/5",
-                    "Port35/6",
-                    "Port35/7",
-                    "Port35/8"
+                    "etp35a",
+                    "etp35b",
+                    "etp35c",
+                    "etp35d",
+                    "etp35e",
+                    "etp35f",
+                    "etp35g",
+                    "etp35h"
                 ]
             },
             "index": "35,35,35,35,35,35,35,35",
@@ -1018,27 +1018,27 @@
         "Ethernet280": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port36"
+                    "etp36"
                 ],
                 "2x400G": [
-                    "Port36/1",
-                    "Port36/2"
+                    "etp36a",
+                    "etp36b"
                 ],
                 "4x200G": [
-                    "Port36/1",
-                    "Port36/2",
-                    "Port36/3",
-                    "Port36/4"
+                    "etp36a",
+                    "etp36b",
+                    "etp36c",
+                    "etp36d"
                 ],
                 "8x100G": [
-                    "Port36/1",
-                    "Port36/2",
-                    "Port36/3",
-                    "Port36/4",
-                    "Port36/5",
-                    "Port36/6",
-                    "Port36/7",
-                    "Port36/8"
+                    "etp36a",
+                    "etp36b",
+                    "etp36c",
+                    "etp36d",
+                    "etp36e",
+                    "etp36f",
+                    "etp36g",
+                    "etp36h"
                 ]
             },
             "index": "36,36,36,36,36,36,36,36",
@@ -1047,27 +1047,27 @@
         "Ethernet288": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port37"
+                    "etp37"
                 ],
                 "2x400G": [
-                    "Port37/1",
-                    "Port37/2"
+                    "etp37a",
+                    "etp37b"
                 ],
                 "4x200G": [
-                    "Port37/1",
-                    "Port37/2",
-                    "Port37/3",
-                    "Port37/4"
+                    "etp37a",
+                    "etp37b",
+                    "etp37c",
+                    "etp37d"
                 ],
                 "8x100G": [
-                    "Port37/1",
-                    "Port37/2",
-                    "Port37/3",
-                    "Port37/4",
-                    "Port37/5",
-                    "Port37/6",
-                    "Port37/7",
-                    "Port37/8"
+                    "etp37a",
+                    "etp37b",
+                    "etp37c",
+                    "etp37d",
+                    "etp37e",
+                    "etp37f",
+                    "etp37g",
+                    "etp37h"
                 ]
             },
             "index": "37,37,37,37,37,37,37,37",
@@ -1076,27 +1076,27 @@
         "Ethernet296": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port38"
+                    "etp38"
                 ],
                 "2x400G": [
-                    "Port38/1",
-                    "Port38/2"
+                    "etp38a",
+                    "etp38b"
                 ],
                 "4x200G": [
-                    "Port38/1",
-                    "Port38/2",
-                    "Port38/3",
-                    "Port38/4"
+                    "etp38a",
+                    "etp38b",
+                    "etp38c",
+                    "etp38d"
                 ],
                 "8x100G": [
-                    "Port38/1",
-                    "Port38/2",
-                    "Port38/3",
-                    "Port38/4",
-                    "Port38/5",
-                    "Port38/6",
-                    "Port38/7",
-                    "Port38/8"
+                    "etp38a",
+                    "etp38b",
+                    "etp38c",
+                    "etp38d",
+                    "etp38e",
+                    "etp38f",
+                    "etp38g",
+                    "etp38h"
                 ]
             },
             "index": "38,38,38,38,38,38,38,38",
@@ -1105,27 +1105,27 @@
         "Ethernet304": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port39"
+                    "etp39"
                 ],
                 "2x400G": [
-                    "Port39/1",
-                    "Port39/2"
+                    "etp39a",
+                    "etp39b"
                 ],
                 "4x200G": [
-                    "Port39/1",
-                    "Port39/2",
-                    "Port39/3",
-                    "Port39/4"
+                    "etp39a",
+                    "etp39b",
+                    "etp39c",
+                    "etp39d"
                 ],
                 "8x100G": [
-                    "Port39/1",
-                    "Port39/2",
-                    "Port39/3",
-                    "Port39/4",
-                    "Port39/5",
-                    "Port39/6",
-                    "Port39/7",
-                    "Port39/8"
+                    "etp39a",
+                    "etp39b",
+                    "etp39c",
+                    "etp39d",
+                    "etp39e",
+                    "etp39f",
+                    "etp39g",
+                    "etp39h"
                 ]
             },
             "index": "39,39,39,39,39,39,39,39",
@@ -1134,27 +1134,27 @@
         "Ethernet312": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port40"
+                    "etp40"
                 ],
                 "2x400G": [
-                    "Port40/1",
-                    "Port40/2"
+                    "etp40a",
+                    "etp40b"
                 ],
                 "4x200G": [
-                    "Port40/1",
-                    "Port40/2",
-                    "Port40/3",
-                    "Port40/4"
+                    "etp40a",
+                    "etp40b",
+                    "etp40c",
+                    "etp40d"
                 ],
                 "8x100G": [
-                    "Port40/1",
-                    "Port40/2",
-                    "Port40/3",
-                    "Port40/4",
-                    "Port40/5",
-                    "Port40/6",
-                    "Port40/7",
-                    "Port40/8"
+                    "etp40a",
+                    "etp40b",
+                    "etp40c",
+                    "etp40d",
+                    "etp40e",
+                    "etp40f",
+                    "etp40g",
+                    "etp40h"
                 ]
             },
             "index": "40,40,40,40,40,40,40,40",
@@ -1163,27 +1163,27 @@
         "Ethernet320": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port41"
+                    "etp41"
                 ],
                 "2x400G": [
-                    "Port41/1",
-                    "Port41/2"
+                    "etp41a",
+                    "etp41b"
                 ],
                 "4x200G": [
-                    "Port41/1",
-                    "Port41/2",
-                    "Port41/3",
-                    "Port41/4"
+                    "etp41a",
+                    "etp41b",
+                    "etp41c",
+                    "etp41d"
                 ],
                 "8x100G": [
-                    "Port41/1",
-                    "Port41/2",
-                    "Port41/3",
-                    "Port41/4",
-                    "Port41/5",
-                    "Port41/6",
-                    "Port41/7",
-                    "Port41/8"
+                    "etp41a",
+                    "etp41b",
+                    "etp41c",
+                    "etp41d",
+                    "etp41e",
+                    "etp41f",
+                    "etp41g",
+                    "etp41h"
                 ]
             },
             "index": "41,41,41,41,41,41,41,41",
@@ -1192,27 +1192,27 @@
         "Ethernet328": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port42"
+                    "etp42"
                 ],
                 "2x400G": [
-                    "Port42/1",
-                    "Port42/2"
+                    "etp42a",
+                    "etp42b"
                 ],
                 "4x200G": [
-                    "Port42/1",
-                    "Port42/2",
-                    "Port42/3",
-                    "Port42/4"
+                    "etp42a",
+                    "etp42b",
+                    "etp42c",
+                    "etp42d"
                 ],
                 "8x100G": [
-                    "Port42/1",
-                    "Port42/2",
-                    "Port42/3",
-                    "Port42/4",
-                    "Port42/5",
-                    "Port42/6",
-                    "Port42/7",
-                    "Port42/8"
+                    "etp42a",
+                    "etp42b",
+                    "etp42c",
+                    "etp42d",
+                    "etp42e",
+                    "etp42f",
+                    "etp42g",
+                    "etp42h"
                 ]
             },
             "index": "42,42,42,42,42,42,42,42",
@@ -1221,27 +1221,27 @@
         "Ethernet336": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port43"
+                    "etp43"
                 ],
                 "2x400G": [
-                    "Port43/1",
-                    "Port43/2"
+                    "etp43a",
+                    "etp43b"
                 ],
                 "4x200G": [
-                    "Port43/1",
-                    "Port43/2",
-                    "Port43/3",
-                    "Port43/4"
+                    "etp43a",
+                    "etp43b",
+                    "etp43c",
+                    "etp43d"
                 ],
                 "8x100G": [
-                    "Port43/1",
-                    "Port43/2",
-                    "Port43/3",
-                    "Port43/4",
-                    "Port43/5",
-                    "Port43/6",
-                    "Port43/7",
-                    "Port43/8"
+                    "etp43a",
+                    "etp43b",
+                    "etp43c",
+                    "etp43d",
+                    "etp43e",
+                    "etp43f",
+                    "etp43g",
+                    "etp43h"
                 ]
             },
             "index": "43,43,43,43,43,43,43,43",
@@ -1250,27 +1250,27 @@
         "Ethernet344": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port44"
+                    "etp44"
                 ],
                 "2x400G": [
-                    "Port44/1",
-                    "Port44/2"
+                    "etp44a",
+                    "etp44b"
                 ],
                 "4x200G": [
-                    "Port44/1",
-                    "Port44/2",
-                    "Port44/3",
-                    "Port44/4"
+                    "etp44a",
+                    "etp44b",
+                    "etp44c",
+                    "etp44d"
                 ],
                 "8x100G": [
-                    "Port44/1",
-                    "Port44/2",
-                    "Port44/3",
-                    "Port44/4",
-                    "Port44/5",
-                    "Port44/6",
-                    "Port44/7",
-                    "Port44/8"
+                    "etp44a",
+                    "etp44b",
+                    "etp44c",
+                    "etp44d",
+                    "etp44e",
+                    "etp44f",
+                    "etp44g",
+                    "etp44h"
                 ]
             },
             "index": "44,44,44,44,44,44,44,44",
@@ -1279,27 +1279,27 @@
         "Ethernet352": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port45"
+                    "etp45"
                 ],
                 "2x400G": [
-                    "Port45/1",
-                    "Port45/2"
+                    "etp45a",
+                    "etp45b"
                 ],
                 "4x200G": [
-                    "Port45/1",
-                    "Port45/2",
-                    "Port45/3",
-                    "Port45/4"
+                    "etp45a",
+                    "etp45b",
+                    "etp45c",
+                    "etp45d"
                 ],
                 "8x100G": [
-                    "Port45/1",
-                    "Port45/2",
-                    "Port45/3",
-                    "Port45/4",
-                    "Port45/5",
-                    "Port45/6",
-                    "Port45/7",
-                    "Port45/8"
+                    "etp45a",
+                    "etp45b",
+                    "etp45c",
+                    "etp45d",
+                    "etp45e",
+                    "etp45f",
+                    "etp45g",
+                    "etp45h"
                 ]
             },
             "index": "45,45,45,45,45,45,45,45",
@@ -1308,27 +1308,27 @@
         "Ethernet360": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port46"
+                    "etp46"
                 ],
                 "2x400G": [
-                    "Port46/1",
-                    "Port46/2"
+                    "etp46a",
+                    "etp46b"
                 ],
                 "4x200G": [
-                    "Port46/1",
-                    "Port46/2",
-                    "Port46/3",
-                    "Port46/4"
+                    "etp46a",
+                    "etp46b",
+                    "etp46c",
+                    "etp46d"
                 ],
                 "8x100G": [
-                    "Port46/1",
-                    "Port46/2",
-                    "Port46/3",
-                    "Port46/4",
-                    "Port46/5",
-                    "Port46/6",
-                    "Port46/7",
-                    "Port46/8"
+                    "etp46a",
+                    "etp46b",
+                    "etp46c",
+                    "etp46d",
+                    "etp46e",
+                    "etp46f",
+                    "etp46g",
+                    "etp46h"
                 ]
             },
             "index": "46,46,46,46,46,46,46,46",
@@ -1337,27 +1337,27 @@
         "Ethernet368": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port47"
+                    "etp47"
                 ],
                 "2x400G": [
-                    "Port47/1",
-                    "Port47/2"
+                    "etp47a",
+                    "etp47b"
                 ],
                 "4x200G": [
-                    "Port47/1",
-                    "Port47/2",
-                    "Port47/3",
-                    "Port47/4"
+                    "etp47a",
+                    "etp47b",
+                    "etp47c",
+                    "etp47d"
                 ],
                 "8x100G": [
-                    "Port47/1",
-                    "Port47/2",
-                    "Port47/3",
-                    "Port47/4",
-                    "Port47/5",
-                    "Port47/6",
-                    "Port47/7",
-                    "Port47/8"
+                    "etp47a",
+                    "etp47b",
+                    "etp47c",
+                    "etp47d",
+                    "etp47e",
+                    "etp47f",
+                    "etp47g",
+                    "etp47h"
                 ]
             },
             "index": "47,47,47,47,47,47,47,47",
@@ -1366,27 +1366,27 @@
         "Ethernet376": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port48"
+                    "etp48"
                 ],
                 "2x400G": [
-                    "Port48/1",
-                    "Port48/2"
+                    "etp48a",
+                    "etp48b"
                 ],
                 "4x200G": [
-                    "Port48/1",
-                    "Port48/2",
-                    "Port48/3",
-                    "Port48/4"
+                    "etp48a",
+                    "etp48b",
+                    "etp48c",
+                    "etp48d"
                 ],
                 "8x100G": [
-                    "Port48/1",
-                    "Port48/2",
-                    "Port48/3",
-                    "Port48/4",
-                    "Port48/5",
-                    "Port48/6",
-                    "Port48/7",
-                    "Port48/8"
+                    "etp48a",
+                    "etp48b",
+                    "etp48c",
+                    "etp48d",
+                    "etp48e",
+                    "etp48f",
+                    "etp48g",
+                    "etp48h"
                 ]
             },
             "index": "48,48,48,48,48,48,48,48",
@@ -1395,27 +1395,27 @@
         "Ethernet384": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port49"
+                    "etp49"
                 ],
                 "2x400G": [
-                    "Port49/1",
-                    "Port49/2"
+                    "etp49a",
+                    "etp49b"
                 ],
                 "4x200G": [
-                    "Port49/1",
-                    "Port49/2",
-                    "Port49/3",
-                    "Port49/4"
+                    "etp49a",
+                    "etp49b",
+                    "etp49c",
+                    "etp49d"
                 ],
                 "8x100G": [
-                    "Port49/1",
-                    "Port49/2",
-                    "Port49/3",
-                    "Port49/4",
-                    "Port49/5",
-                    "Port49/6",
-                    "Port49/7",
-                    "Port49/8"
+                    "etp49a",
+                    "etp49b",
+                    "etp49c",
+                    "etp49d",
+                    "etp49e",
+                    "etp49f",
+                    "etp49g",
+                    "etp49h"
                 ]
             },
             "index": "49,49,49,49,49,49,49,49",
@@ -1424,27 +1424,27 @@
         "Ethernet392": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port50"
+                    "etp50"
                 ],
                 "2x400G": [
-                    "Port50/1",
-                    "Port50/2"
+                    "etp50a",
+                    "etp50b"
                 ],
                 "4x200G": [
-                    "Port50/1",
-                    "Port50/2",
-                    "Port50/3",
-                    "Port50/4"
+                    "etp50a",
+                    "etp50b",
+                    "etp50c",
+                    "etp50d"
                 ],
                 "8x100G": [
-                    "Port50/1",
-                    "Port50/2",
-                    "Port50/3",
-                    "Port50/4",
-                    "Port50/5",
-                    "Port50/6",
-                    "Port50/7",
-                    "Port50/8"
+                    "etp50a",
+                    "etp50b",
+                    "etp50c",
+                    "etp50d",
+                    "etp50e",
+                    "etp50f",
+                    "etp50g",
+                    "etp50h"
                 ]
             },
             "index": "50,50,50,50,50,50,50,50",
@@ -1453,27 +1453,27 @@
         "Ethernet400": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port51"
+                    "etp51"
                 ],
                 "2x400G": [
-                    "Port51/1",
-                    "Port51/2"
+                    "etp51a",
+                    "etp51b"
                 ],
                 "4x200G": [
-                    "Port51/1",
-                    "Port51/2",
-                    "Port51/3",
-                    "Port51/4"
+                    "etp51a",
+                    "etp51b",
+                    "etp51c",
+                    "etp51d"
                 ],
                 "8x100G": [
-                    "Port51/1",
-                    "Port51/2",
-                    "Port51/3",
-                    "Port51/4",
-                    "Port51/5",
-                    "Port51/6",
-                    "Port51/7",
-                    "Port51/8"
+                    "etp51a",
+                    "etp51b",
+                    "etp51c",
+                    "etp51d",
+                    "etp51e",
+                    "etp51f",
+                    "etp51g",
+                    "etp51h"
                 ]
             },
             "index": "51,51,51,51,51,51,51,51",
@@ -1482,27 +1482,27 @@
         "Ethernet408": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port52"
+                    "etp52"
                 ],
                 "2x400G": [
-                    "Port52/1",
-                    "Port52/2"
+                    "etp52a",
+                    "etp52b"
                 ],
                 "4x200G": [
-                    "Port52/1",
-                    "Port52/2",
-                    "Port52/3",
-                    "Port52/4"
+                    "etp52a",
+                    "etp52b",
+                    "etp52c",
+                    "etp52d"
                 ],
                 "8x100G": [
-                    "Port52/1",
-                    "Port52/2",
-                    "Port52/3",
-                    "Port52/4",
-                    "Port52/5",
-                    "Port52/6",
-                    "Port52/7",
-                    "Port52/8"
+                    "etp52a",
+                    "etp52b",
+                    "etp52c",
+                    "etp52d",
+                    "etp52e",
+                    "etp52f",
+                    "etp52g",
+                    "etp52h"
                 ]
             },
             "index": "52,52,52,52,52,52,52,52",
@@ -1511,27 +1511,27 @@
         "Ethernet416": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port53"
+                    "etp53"
                 ],
                 "2x400G": [
-                    "Port53/1",
-                    "Port53/2"
+                    "etp53a",
+                    "etp53b"
                 ],
                 "4x200G": [
-                    "Port53/1",
-                    "Port53/2",
-                    "Port53/3",
-                    "Port53/4"
+                    "etp53a",
+                    "etp53b",
+                    "etp53c",
+                    "etp53d"
                 ],
                 "8x100G": [
-                    "Port53/1",
-                    "Port53/2",
-                    "Port53/3",
-                    "Port53/4",
-                    "Port53/5",
-                    "Port53/6",
-                    "Port53/7",
-                    "Port53/8"
+                    "etp53a",
+                    "etp53b",
+                    "etp53c",
+                    "etp53d",
+                    "etp53e",
+                    "etp53f",
+                    "etp53g",
+                    "etp53h"
                 ]
             },
             "index": "53,53,53,53,53,53,53,53",
@@ -1540,27 +1540,27 @@
         "Ethernet424": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port54"
+                    "etp54"
                 ],
                 "2x400G": [
-                    "Port54/1",
-                    "Port54/2"
+                    "etp54a",
+                    "etp54b"
                 ],
                 "4x200G": [
-                    "Port54/1",
-                    "Port54/2",
-                    "Port54/3",
-                    "Port54/4"
+                    "etp54a",
+                    "etp54b",
+                    "etp54c",
+                    "etp54d"
                 ],
                 "8x100G": [
-                    "Port54/1",
-                    "Port54/2",
-                    "Port54/3",
-                    "Port54/4",
-                    "Port54/5",
-                    "Port54/6",
-                    "Port54/7",
-                    "Port54/8"
+                    "etp54a",
+                    "etp54b",
+                    "etp54c",
+                    "etp54d",
+                    "etp54e",
+                    "etp54f",
+                    "etp54g",
+                    "etp54h"
                 ]
             },
             "index": "54,54,54,54,54,54,54,54",
@@ -1569,27 +1569,27 @@
         "Ethernet432": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port55"
+                    "etp55"
                 ],
                 "2x400G": [
-                    "Port55/1",
-                    "Port55/2"
+                    "etp55a",
+                    "etp55b"
                 ],
                 "4x200G": [
-                    "Port55/1",
-                    "Port55/2",
-                    "Port55/3",
-                    "Port55/4"
+                    "etp55a",
+                    "etp55b",
+                    "etp55c",
+                    "etp55d"
                 ],
                 "8x100G": [
-                    "Port55/1",
-                    "Port55/2",
-                    "Port55/3",
-                    "Port55/4",
-                    "Port55/5",
-                    "Port55/6",
-                    "Port55/7",
-                    "Port55/8"
+                    "etp55a",
+                    "etp55b",
+                    "etp55c",
+                    "etp55d",
+                    "etp55e",
+                    "etp55f",
+                    "etp55g",
+                    "etp55h"
                 ]
             },
             "index": "55,55,55,55,55,55,55,55",
@@ -1598,27 +1598,27 @@
         "Ethernet440": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port56"
+                    "etp56"
                 ],
                 "2x400G": [
-                    "Port56/1",
-                    "Port56/2"
+                    "etp56a",
+                    "etp56b"
                 ],
                 "4x200G": [
-                    "Port56/1",
-                    "Port56/2",
-                    "Port56/3",
-                    "Port56/4"
+                    "etp56a",
+                    "etp56b",
+                    "etp56c",
+                    "etp56d"
                 ],
                 "8x100G": [
-                    "Port56/1",
-                    "Port56/2",
-                    "Port56/3",
-                    "Port56/4",
-                    "Port56/5",
-                    "Port56/6",
-                    "Port56/7",
-                    "Port56/8"
+                    "etp56a",
+                    "etp56b",
+                    "etp56c",
+                    "etp56d",
+                    "etp56e",
+                    "etp56f",
+                    "etp56g",
+                    "etp56h"
                 ]
             },
             "index": "56,56,56,56,56,56,56,56",
@@ -1627,27 +1627,27 @@
         "Ethernet448": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port57"
+                    "etp57"
                 ],
                 "2x400G": [
-                    "Port57/1",
-                    "Port57/2"
+                    "etp57a",
+                    "etp57b"
                 ],
                 "4x200G": [
-                    "Port57/1",
-                    "Port57/2",
-                    "Port57/3",
-                    "Port57/4"
+                    "etp57a",
+                    "etp57b",
+                    "etp57c",
+                    "etp57d"
                 ],
                 "8x100G": [
-                    "Port57/1",
-                    "Port57/2",
-                    "Port57/3",
-                    "Port57/4",
-                    "Port57/5",
-                    "Port57/6",
-                    "Port57/7",
-                    "Port57/8"
+                    "etp57a",
+                    "etp57b",
+                    "etp57c",
+                    "etp57d",
+                    "etp57e",
+                    "etp57f",
+                    "etp57g",
+                    "etp57h"
                 ]
             },
             "index": "57,57,57,57,57,57,57,57",
@@ -1656,27 +1656,27 @@
         "Ethernet456": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port58"
+                    "etp58"
                 ],
                 "2x400G": [
-                    "Port58/1",
-                    "Port58/2"
+                    "etp58a",
+                    "etp58b"
                 ],
                 "4x200G": [
-                    "Port58/1",
-                    "Port58/2",
-                    "Port58/3",
-                    "Port58/4"
+                    "etp58a",
+                    "etp58b",
+                    "etp58c",
+                    "etp58d"
                 ],
                 "8x100G": [
-                    "Port58/1",
-                    "Port58/2",
-                    "Port58/3",
-                    "Port58/4",
-                    "Port58/5",
-                    "Port58/6",
-                    "Port58/7",
-                    "Port58/8"
+                    "etp58a",
+                    "etp58b",
+                    "etp58c",
+                    "etp58d",
+                    "etp58e",
+                    "etp58f",
+                    "etp58g",
+                    "etp58h"
                 ]
             },
             "index": "58,58,58,58,58,58,58,58",
@@ -1685,27 +1685,27 @@
         "Ethernet464": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port59"
+                    "etp59"
                 ],
                 "2x400G": [
-                    "Port59/1",
-                    "Port59/2"
+                    "etp59a",
+                    "etp59b"
                 ],
                 "4x200G": [
-                    "Port59/1",
-                    "Port59/2",
-                    "Port59/3",
-                    "Port59/4"
+                    "etp59a",
+                    "etp59b",
+                    "etp59c",
+                    "etp59d"
                 ],
                 "8x100G": [
-                    "Port59/1",
-                    "Port59/2",
-                    "Port59/3",
-                    "Port59/4",
-                    "Port59/5",
-                    "Port59/6",
-                    "Port59/7",
-                    "Port59/8"
+                    "etp59a",
+                    "etp59b",
+                    "etp59c",
+                    "etp59d",
+                    "etp59e",
+                    "etp59f",
+                    "etp59g",
+                    "etp59h"
                 ]
             },
             "index": "59,59,59,59,59,59,59,59",
@@ -1714,27 +1714,27 @@
         "Ethernet472": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port60"
+                    "etp60"
                 ],
                 "2x400G": [
-                    "Port60/1",
-                    "Port60/2"
+                    "etp60a",
+                    "etp60b"
                 ],
                 "4x200G": [
-                    "Port60/1",
-                    "Port60/2",
-                    "Port60/3",
-                    "Port60/4"
+                    "etp60a",
+                    "etp60b",
+                    "etp60c",
+                    "etp60d"
                 ],
                 "8x100G": [
-                    "Port60/1",
-                    "Port60/2",
-                    "Port60/3",
-                    "Port60/4",
-                    "Port60/5",
-                    "Port60/6",
-                    "Port60/7",
-                    "Port60/8"
+                    "etp60a",
+                    "etp60b",
+                    "etp60c",
+                    "etp60d",
+                    "etp60e",
+                    "etp60f",
+                    "etp60g",
+                    "etp60h"
                 ]
             },
             "index": "60,60,60,60,60,60,60,60",
@@ -1743,27 +1743,27 @@
         "Ethernet480": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port61"
+                    "etp61"
                 ],
                 "2x400G": [
-                    "Port61/1",
-                    "Port61/2"
+                    "etp61a",
+                    "etp61b"
                 ],
                 "4x200G": [
-                    "Port61/1",
-                    "Port61/2",
-                    "Port61/3",
-                    "Port61/4"
+                    "etp61a",
+                    "etp61b",
+                    "etp61c",
+                    "etp61d"
                 ],
                 "8x100G": [
-                    "Port61/1",
-                    "Port61/2",
-                    "Port61/3",
-                    "Port61/4",
-                    "Port61/5",
-                    "Port61/6",
-                    "Port61/7",
-                    "Port61/8"
+                    "etp61a",
+                    "etp61b",
+                    "etp61c",
+                    "etp61d",
+                    "etp61e",
+                    "etp61f",
+                    "etp61g",
+                    "etp61h"
                 ]
             },
             "index": "61,61,61,61,61,61,61,61",
@@ -1772,27 +1772,27 @@
         "Ethernet488": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port62"
+                    "etp62"
                 ],
                 "2x400G": [
-                    "Port62/1",
-                    "Port62/2"
+                    "etp62a",
+                    "etp62b"
                 ],
                 "4x200G": [
-                    "Port62/1",
-                    "Port62/2",
-                    "Port62/3",
-                    "Port62/4"
+                    "etp62a",
+                    "etp62b",
+                    "etp62c",
+                    "etp62d"
                 ],
                 "8x100G": [
-                    "Port62/1",
-                    "Port62/2",
-                    "Port62/3",
-                    "Port62/4",
-                    "Port62/5",
-                    "Port62/6",
-                    "Port62/7",
-                    "Port62/8"
+                    "etp62a",
+                    "etp62b",
+                    "etp62c",
+                    "etp62d",
+                    "etp62e",
+                    "etp62f",
+                    "etp62g",
+                    "etp62h"
                 ]
             },
             "index": "62,62,62,62,62,62,62,62",
@@ -1801,27 +1801,27 @@
         "Ethernet496": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port63"
+                    "etp63"
                 ],
                 "2x400G": [
-                    "Port63/1",
-                    "Port63/2"
+                    "etp63a",
+                    "etp63b"
                 ],
                 "4x200G": [
-                    "Port63/1",
-                    "Port63/2",
-                    "Port63/3",
-                    "Port63/4"
+                    "etp63a",
+                    "etp63b",
+                    "etp63c",
+                    "etp63d"
                 ],
                 "8x100G": [
-                    "Port63/1",
-                    "Port63/2",
-                    "Port63/3",
-                    "Port63/4",
-                    "Port63/5",
-                    "Port63/6",
-                    "Port63/7",
-                    "Port63/8"
+                    "etp63a",
+                    "etp63b",
+                    "etp63c",
+                    "etp63d",
+                    "etp63e",
+                    "etp63f",
+                    "etp63g",
+                    "etp63h"
                 ]
             },
             "index": "63,63,63,63,63,63,63,63",
@@ -1830,27 +1830,27 @@
         "Ethernet504": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port64"
+                    "etp64"
                 ],
                 "2x400G": [
-                    "Port64/1",
-                    "Port64/2"
+                    "etp64a",
+                    "etp64b"
                 ],
                 "4x200G": [
-                    "Port64/1",
-                    "Port64/2",
-                    "Port64/3",
-                    "Port64/4"
+                    "etp64a",
+                    "etp64b",
+                    "etp64c",
+                    "etp64d"
                 ],
                 "8x100G": [
-                    "Port64/1",
-                    "Port64/2",
-                    "Port64/3",
-                    "Port64/4",
-                    "Port64/5",
-                    "Port64/6",
-                    "Port64/7",
-                    "Port64/8"
+                    "etp64a",
+                    "etp64b",
+                    "etp64c",
+                    "etp64d",
+                    "etp64e",
+                    "etp64f",
+                    "etp64g",
+                    "etp64h"
                 ]
             },
             "index": "64,64,64,64,64,64,64,64",
@@ -1859,27 +1859,27 @@
         "Ethernet512": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port65"
+                    "etp65"
                 ],
                 "2x400G": [
-                    "Port65/1",
-                    "Port65/2"
+                    "etp65a",
+                    "etp65b"
                 ],
                 "4x200G": [
-                    "Port65/1",
-                    "Port65/2",
-                    "Port65/3",
-                    "Port65/4"
+                    "etp65a",
+                    "etp65b",
+                    "etp65c",
+                    "etp65d"
                 ],
                 "8x100G": [
-                    "Port65/1",
-                    "Port65/2",
-                    "Port65/3",
-                    "Port65/4",
-                    "Port65/5",
-                    "Port65/6",
-                    "Port65/7",
-                    "Port65/8"
+                    "etp65a",
+                    "etp65b",
+                    "etp65c",
+                    "etp65d",
+                    "etp65e",
+                    "etp65f",
+                    "etp65g",
+                    "etp65h"
                 ]
             },
             "index": "65,65,65,65,65,65,65,65",
@@ -1888,27 +1888,27 @@
         "Ethernet520": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port66"
+                    "etp66"
                 ],
                 "2x400G": [
-                    "Port66/1",
-                    "Port66/2"
+                    "etp66a",
+                    "etp66b"
                 ],
                 "4x200G": [
-                    "Port66/1",
-                    "Port66/2",
-                    "Port66/3",
-                    "Port66/4"
+                    "etp66a",
+                    "etp66b",
+                    "etp66c",
+                    "etp66d"
                 ],
                 "8x100G": [
-                    "Port66/1",
-                    "Port66/2",
-                    "Port66/3",
-                    "Port66/4",
-                    "Port66/5",
-                    "Port66/6",
-                    "Port66/7",
-                    "Port66/8"
+                    "etp66a",
+                    "etp66b",
+                    "etp66c",
+                    "etp66d",
+                    "etp66e",
+                    "etp66f",
+                    "etp66g",
+                    "etp66h"
                 ]
             },
             "index": "66,66,66,66,66,66,66,66",
@@ -1917,27 +1917,27 @@
         "Ethernet528": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port67"
+                    "etp67"
                 ],
                 "2x400G": [
-                    "Port67/1",
-                    "Port67/2"
+                    "etp67a",
+                    "etp67b"
                 ],
                 "4x200G": [
-                    "Port67/1",
-                    "Port67/2",
-                    "Port67/3",
-                    "Port67/4"
+                    "etp67a",
+                    "etp67b",
+                    "etp67c",
+                    "etp67d"
                 ],
                 "8x100G": [
-                    "Port67/1",
-                    "Port67/2",
-                    "Port67/3",
-                    "Port67/4",
-                    "Port67/5",
-                    "Port67/6",
-                    "Port67/7",
-                    "Port67/8"
+                    "etp67a",
+                    "etp67b",
+                    "etp67c",
+                    "etp67d",
+                    "etp67e",
+                    "etp67f",
+                    "etp67g",
+                    "etp67h"
                 ]
             },
             "index": "67,67,67,67,67,67,67,67",
@@ -1946,27 +1946,27 @@
         "Ethernet536": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port68"
+                    "etp68"
                 ],
                 "2x400G": [
-                    "Port68/1",
-                    "Port68/2"
+                    "etp68a",
+                    "etp68b"
                 ],
                 "4x200G": [
-                    "Port68/1",
-                    "Port68/2",
-                    "Port68/3",
-                    "Port68/4"
+                    "etp68a",
+                    "etp68b",
+                    "etp68c",
+                    "etp68d"
                 ],
                 "8x100G": [
-                    "Port68/1",
-                    "Port68/2",
-                    "Port68/3",
-                    "Port68/4",
-                    "Port68/5",
-                    "Port68/6",
-                    "Port68/7",
-                    "Port68/8"
+                    "etp68a",
+                    "etp68b",
+                    "etp68c",
+                    "etp68d",
+                    "etp68e",
+                    "etp68f",
+                    "etp68g",
+                    "etp68h"
                 ]
             },
             "index": "68,68,68,68,68,68,68,68",
@@ -1975,27 +1975,27 @@
         "Ethernet544": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port69"
+                    "etp69"
                 ],
                 "2x400G": [
-                    "Port69/1",
-                    "Port69/2"
+                    "etp69a",
+                    "etp69b"
                 ],
                 "4x200G": [
-                    "Port69/1",
-                    "Port69/2",
-                    "Port69/3",
-                    "Port69/4"
+                    "etp69a",
+                    "etp69b",
+                    "etp69c",
+                    "etp69d"
                 ],
                 "8x100G": [
-                    "Port69/1",
-                    "Port69/2",
-                    "Port69/3",
-                    "Port69/4",
-                    "Port69/5",
-                    "Port69/6",
-                    "Port69/7",
-                    "Port69/8"
+                    "etp69a",
+                    "etp69b",
+                    "etp69c",
+                    "etp69d",
+                    "etp69e",
+                    "etp69f",
+                    "etp69g",
+                    "etp69h"
                 ]
             },
             "index": "69,69,69,69,69,69,69,69",
@@ -2004,27 +2004,27 @@
         "Ethernet552": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port70"
+                    "etp70"
                 ],
                 "2x400G": [
-                    "Port70/1",
-                    "Port70/2"
+                    "etp70a",
+                    "etp70b"
                 ],
                 "4x200G": [
-                    "Port70/1",
-                    "Port70/2",
-                    "Port70/3",
-                    "Port70/4"
+                    "etp70a",
+                    "etp70b",
+                    "etp70c",
+                    "etp70d"
                 ],
                 "8x100G": [
-                    "Port70/1",
-                    "Port70/2",
-                    "Port70/3",
-                    "Port70/4",
-                    "Port70/5",
-                    "Port70/6",
-                    "Port70/7",
-                    "Port70/8"
+                    "etp70a",
+                    "etp70b",
+                    "etp70c",
+                    "etp70d",
+                    "etp70e",
+                    "etp70f",
+                    "etp70g",
+                    "etp70h"
                 ]
             },
             "index": "70,70,70,70,70,70,70,70",
@@ -2033,27 +2033,27 @@
         "Ethernet560": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port71"
+                    "etp71"
                 ],
                 "2x400G": [
-                    "Port71/1",
-                    "Port71/2"
+                    "etp71a",
+                    "etp71b"
                 ],
                 "4x200G": [
-                    "Port71/1",
-                    "Port71/2",
-                    "Port71/3",
-                    "Port71/4"
+                    "etp71a",
+                    "etp71b",
+                    "etp71c",
+                    "etp71d"
                 ],
                 "8x100G": [
-                    "Port71/1",
-                    "Port71/2",
-                    "Port71/3",
-                    "Port71/4",
-                    "Port71/5",
-                    "Port71/6",
-                    "Port71/7",
-                    "Port71/8"
+                    "etp71a",
+                    "etp71b",
+                    "etp71c",
+                    "etp71d",
+                    "etp71e",
+                    "etp71f",
+                    "etp71g",
+                    "etp71h"
                 ]
             },
             "index": "71,71,71,71,71,71,71,71",
@@ -2062,27 +2062,27 @@
         "Ethernet568": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port72"
+                    "etp72"
                 ],
                 "2x400G": [
-                    "Port72/1",
-                    "Port72/2"
+                    "etp72a",
+                    "etp72b"
                 ],
                 "4x200G": [
-                    "Port72/1",
-                    "Port72/2",
-                    "Port72/3",
-                    "Port72/4"
+                    "etp72a",
+                    "etp72b",
+                    "etp72c",
+                    "etp72d"
                 ],
                 "8x100G": [
-                    "Port72/1",
-                    "Port72/2",
-                    "Port72/3",
-                    "Port72/4",
-                    "Port72/5",
-                    "Port72/6",
-                    "Port72/7",
-                    "Port72/8"
+                    "etp72a",
+                    "etp72b",
+                    "etp72c",
+                    "etp72d",
+                    "etp72e",
+                    "etp72f",
+                    "etp72g",
+                    "etp72h"
                 ]
             },
             "index": "72,72,72,72,72,72,72,72",
@@ -2091,27 +2091,27 @@
         "Ethernet576": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port73"
+                    "etp73"
                 ],
                 "2x400G": [
-                    "Port73/1",
-                    "Port73/2"
+                    "etp73a",
+                    "etp73b"
                 ],
                 "4x200G": [
-                    "Port73/1",
-                    "Port73/2",
-                    "Port73/3",
-                    "Port73/4"
+                    "etp73a",
+                    "etp73b",
+                    "etp73c",
+                    "etp73d"
                 ],
                 "8x100G": [
-                    "Port73/1",
-                    "Port73/2",
-                    "Port73/3",
-                    "Port73/4",
-                    "Port73/5",
-                    "Port73/6",
-                    "Port73/7",
-                    "Port73/8"
+                    "etp73a",
+                    "etp73b",
+                    "etp73c",
+                    "etp73d",
+                    "etp73e",
+                    "etp73f",
+                    "etp73g",
+                    "etp73h"
                 ]
             },
             "index": "73,73,73,73,73,73,73,73",
@@ -2120,27 +2120,27 @@
         "Ethernet584": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port74"
+                    "etp74"
                 ],
                 "2x400G": [
-                    "Port74/1",
-                    "Port74/2"
+                    "etp74a",
+                    "etp74b"
                 ],
                 "4x200G": [
-                    "Port74/1",
-                    "Port74/2",
-                    "Port74/3",
-                    "Port74/4"
+                    "etp74a",
+                    "etp74b",
+                    "etp74c",
+                    "etp74d"
                 ],
                 "8x100G": [
-                    "Port74/1",
-                    "Port74/2",
-                    "Port74/3",
-                    "Port74/4",
-                    "Port74/5",
-                    "Port74/6",
-                    "Port74/7",
-                    "Port74/8"
+                    "etp74a",
+                    "etp74b",
+                    "etp74c",
+                    "etp74d",
+                    "etp74e",
+                    "etp74f",
+                    "etp74g",
+                    "etp74h"
                 ]
             },
             "index": "74,74,74,74,74,74,74,74",
@@ -2149,27 +2149,27 @@
         "Ethernet592": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port75"
+                    "etp75"
                 ],
                 "2x400G": [
-                    "Port75/1",
-                    "Port75/2"
+                    "etp75a",
+                    "etp75b"
                 ],
                 "4x200G": [
-                    "Port75/1",
-                    "Port75/2",
-                    "Port75/3",
-                    "Port75/4"
+                    "etp75a",
+                    "etp75b",
+                    "etp75c",
+                    "etp75d"
                 ],
                 "8x100G": [
-                    "Port75/1",
-                    "Port75/2",
-                    "Port75/3",
-                    "Port75/4",
-                    "Port75/5",
-                    "Port75/6",
-                    "Port75/7",
-                    "Port75/8"
+                    "etp75a",
+                    "etp75b",
+                    "etp75c",
+                    "etp75d",
+                    "etp75e",
+                    "etp75f",
+                    "etp75g",
+                    "etp75h"
                 ]
             },
             "index": "75,75,75,75,75,75,75,75",
@@ -2178,27 +2178,27 @@
         "Ethernet600": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port76"
+                    "etp76"
                 ],
                 "2x400G": [
-                    "Port76/1",
-                    "Port76/2"
+                    "etp76a",
+                    "etp76b"
                 ],
                 "4x200G": [
-                    "Port76/1",
-                    "Port76/2",
-                    "Port76/3",
-                    "Port76/4"
+                    "etp76a",
+                    "etp76b",
+                    "etp76c",
+                    "etp76d"
                 ],
                 "8x100G": [
-                    "Port76/1",
-                    "Port76/2",
-                    "Port76/3",
-                    "Port76/4",
-                    "Port76/5",
-                    "Port76/6",
-                    "Port76/7",
-                    "Port76/8"
+                    "etp76a",
+                    "etp76b",
+                    "etp76c",
+                    "etp76d",
+                    "etp76e",
+                    "etp76f",
+                    "etp76g",
+                    "etp76h"
                 ]
             },
             "index": "76,76,76,76,76,76,76,76",
@@ -2207,27 +2207,27 @@
         "Ethernet608": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port77"
+                    "etp77"
                 ],
                 "2x400G": [
-                    "Port77/1",
-                    "Port77/2"
+                    "etp77a",
+                    "etp77b"
                 ],
                 "4x200G": [
-                    "Port77/1",
-                    "Port77/2",
-                    "Port77/3",
-                    "Port77/4"
+                    "etp77a",
+                    "etp77b",
+                    "etp77c",
+                    "etp77d"
                 ],
                 "8x100G": [
-                    "Port77/1",
-                    "Port77/2",
-                    "Port77/3",
-                    "Port77/4",
-                    "Port77/5",
-                    "Port77/6",
-                    "Port77/7",
-                    "Port77/8"
+                    "etp77a",
+                    "etp77b",
+                    "etp77c",
+                    "etp77d",
+                    "etp77e",
+                    "etp77f",
+                    "etp77g",
+                    "etp77h"
                 ]
             },
             "index": "77,77,77,77,77,77,77,77",
@@ -2236,27 +2236,27 @@
         "Ethernet616": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port78"
+                    "etp78"
                 ],
                 "2x400G": [
-                    "Port78/1",
-                    "Port78/2"
+                    "etp78a",
+                    "etp78b"
                 ],
                 "4x200G": [
-                    "Port78/1",
-                    "Port78/2",
-                    "Port78/3",
-                    "Port78/4"
+                    "etp78a",
+                    "etp78b",
+                    "etp78c",
+                    "etp78d"
                 ],
                 "8x100G": [
-                    "Port78/1",
-                    "Port78/2",
-                    "Port78/3",
-                    "Port78/4",
-                    "Port78/5",
-                    "Port78/6",
-                    "Port78/7",
-                    "Port78/8"
+                    "etp78a",
+                    "etp78b",
+                    "etp78c",
+                    "etp78d",
+                    "etp78e",
+                    "etp78f",
+                    "etp78g",
+                    "etp78h"
                 ]
             },
             "index": "78,78,78,78,78,78,78,78",
@@ -2265,27 +2265,27 @@
         "Ethernet624": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port79"
+                    "etp79"
                 ],
                 "2x400G": [
-                    "Port79/1",
-                    "Port79/2"
+                    "etp79a",
+                    "etp79b"
                 ],
                 "4x200G": [
-                    "Port79/1",
-                    "Port79/2",
-                    "Port79/3",
-                    "Port79/4"
+                    "etp79a",
+                    "etp79b",
+                    "etp79c",
+                    "etp79d"
                 ],
                 "8x100G": [
-                    "Port79/1",
-                    "Port79/2",
-                    "Port79/3",
-                    "Port79/4",
-                    "Port79/5",
-                    "Port79/6",
-                    "Port79/7",
-                    "Port79/8"
+                    "etp79a",
+                    "etp79b",
+                    "etp79c",
+                    "etp79d",
+                    "etp79e",
+                    "etp79f",
+                    "etp79g",
+                    "etp79h"
                 ]
             },
             "index": "79,79,79,79,79,79,79,79",
@@ -2294,27 +2294,27 @@
         "Ethernet632": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port80"
+                    "etp80"
                 ],
                 "2x400G": [
-                    "Port80/1",
-                    "Port80/2"
+                    "etp80a",
+                    "etp80b"
                 ],
                 "4x200G": [
-                    "Port80/1",
-                    "Port80/2",
-                    "Port80/3",
-                    "Port80/4"
+                    "etp80a",
+                    "etp80b",
+                    "etp80c",
+                    "etp80d"
                 ],
                 "8x100G": [
-                    "Port80/1",
-                    "Port80/2",
-                    "Port80/3",
-                    "Port80/4",
-                    "Port80/5",
-                    "Port80/6",
-                    "Port80/7",
-                    "Port80/8"
+                    "etp80a",
+                    "etp80b",
+                    "etp80c",
+                    "etp80d",
+                    "etp80e",
+                    "etp80f",
+                    "etp80g",
+                    "etp80h"
                 ]
             },
             "index": "80,80,80,80,80,80,80,80",
@@ -2323,27 +2323,27 @@
         "Ethernet640": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port81"
+                    "etp81"
                 ],
                 "2x400G": [
-                    "Port81/1",
-                    "Port81/2"
+                    "etp81a",
+                    "etp81b"
                 ],
                 "4x200G": [
-                    "Port81/1",
-                    "Port81/2",
-                    "Port81/3",
-                    "Port81/4"
+                    "etp81a",
+                    "etp81b",
+                    "etp81c",
+                    "etp81d"
                 ],
                 "8x100G": [
-                    "Port81/1",
-                    "Port81/2",
-                    "Port81/3",
-                    "Port81/4",
-                    "Port81/5",
-                    "Port81/6",
-                    "Port81/7",
-                    "Port81/8"
+                    "etp81a",
+                    "etp81b",
+                    "etp81c",
+                    "etp81d",
+                    "etp81e",
+                    "etp81f",
+                    "etp81g",
+                    "etp81h"
                 ]
             },
             "index": "81,81,81,81,81,81,81,81",
@@ -2352,27 +2352,27 @@
         "Ethernet648": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port82"
+                    "etp82"
                 ],
                 "2x400G": [
-                    "Port82/1",
-                    "Port82/2"
+                    "etp82a",
+                    "etp82b"
                 ],
                 "4x200G": [
-                    "Port82/1",
-                    "Port82/2",
-                    "Port82/3",
-                    "Port82/4"
+                    "etp82a",
+                    "etp82b",
+                    "etp82c",
+                    "etp82d"
                 ],
                 "8x100G": [
-                    "Port82/1",
-                    "Port82/2",
-                    "Port82/3",
-                    "Port82/4",
-                    "Port82/5",
-                    "Port82/6",
-                    "Port82/7",
-                    "Port82/8"
+                    "etp82a",
+                    "etp82b",
+                    "etp82c",
+                    "etp82d",
+                    "etp82e",
+                    "etp82f",
+                    "etp82g",
+                    "etp82h"
                 ]
             },
             "index": "82,82,82,82,82,82,82,82",
@@ -2381,27 +2381,27 @@
         "Ethernet656": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port83"
+                    "etp83"
                 ],
                 "2x400G": [
-                    "Port83/1",
-                    "Port83/2"
+                    "etp83a",
+                    "etp83b"
                 ],
                 "4x200G": [
-                    "Port83/1",
-                    "Port83/2",
-                    "Port83/3",
-                    "Port83/4"
+                    "etp83a",
+                    "etp83b",
+                    "etp83c",
+                    "etp83d"
                 ],
                 "8x100G": [
-                    "Port83/1",
-                    "Port83/2",
-                    "Port83/3",
-                    "Port83/4",
-                    "Port83/5",
-                    "Port83/6",
-                    "Port83/7",
-                    "Port83/8"
+                    "etp83a",
+                    "etp83b",
+                    "etp83c",
+                    "etp83d",
+                    "etp83e",
+                    "etp83f",
+                    "etp83g",
+                    "etp83h"
                 ]
             },
             "index": "83,83,83,83,83,83,83,83",
@@ -2410,27 +2410,27 @@
         "Ethernet664": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port84"
+                    "etp84"
                 ],
                 "2x400G": [
-                    "Port84/1",
-                    "Port84/2"
+                    "etp84a",
+                    "etp84b"
                 ],
                 "4x200G": [
-                    "Port84/1",
-                    "Port84/2",
-                    "Port84/3",
-                    "Port84/4"
+                    "etp84a",
+                    "etp84b",
+                    "etp84c",
+                    "etp84d"
                 ],
                 "8x100G": [
-                    "Port84/1",
-                    "Port84/2",
-                    "Port84/3",
-                    "Port84/4",
-                    "Port84/5",
-                    "Port84/6",
-                    "Port84/7",
-                    "Port84/8"
+                    "etp84a",
+                    "etp84b",
+                    "etp84c",
+                    "etp84d",
+                    "etp84e",
+                    "etp84f",
+                    "etp84g",
+                    "etp84h"
                 ]
             },
             "index": "84,84,84,84,84,84,84,84",
@@ -2439,27 +2439,27 @@
         "Ethernet672": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port85"
+                    "etp85"
                 ],
                 "2x400G": [
-                    "Port85/1",
-                    "Port85/2"
+                    "etp85a",
+                    "etp85b"
                 ],
                 "4x200G": [
-                    "Port85/1",
-                    "Port85/2",
-                    "Port85/3",
-                    "Port85/4"
+                    "etp85a",
+                    "etp85b",
+                    "etp85c",
+                    "etp85d"
                 ],
                 "8x100G": [
-                    "Port85/1",
-                    "Port85/2",
-                    "Port85/3",
-                    "Port85/4",
-                    "Port85/5",
-                    "Port85/6",
-                    "Port85/7",
-                    "Port85/8"
+                    "etp85a",
+                    "etp85b",
+                    "etp85c",
+                    "etp85d",
+                    "etp85e",
+                    "etp85f",
+                    "etp85g",
+                    "etp85h"
                 ]
             },
             "index": "85,85,85,85,85,85,85,85",
@@ -2468,27 +2468,27 @@
         "Ethernet680": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port86"
+                    "etp86"
                 ],
                 "2x400G": [
-                    "Port86/1",
-                    "Port86/2"
+                    "etp86a",
+                    "etp86b"
                 ],
                 "4x200G": [
-                    "Port86/1",
-                    "Port86/2",
-                    "Port86/3",
-                    "Port86/4"
+                    "etp86a",
+                    "etp86b",
+                    "etp86c",
+                    "etp86d"
                 ],
                 "8x100G": [
-                    "Port86/1",
-                    "Port86/2",
-                    "Port86/3",
-                    "Port86/4",
-                    "Port86/5",
-                    "Port86/6",
-                    "Port86/7",
-                    "Port86/8"
+                    "etp86a",
+                    "etp86b",
+                    "etp86c",
+                    "etp86d",
+                    "etp86e",
+                    "etp86f",
+                    "etp86g",
+                    "etp86h"
                 ]
             },
             "index": "86,86,86,86,86,86,86,86",
@@ -2497,27 +2497,27 @@
         "Ethernet688": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port87"
+                    "etp87"
                 ],
                 "2x400G": [
-                    "Port87/1",
-                    "Port87/2"
+                    "etp87a",
+                    "etp87b"
                 ],
                 "4x200G": [
-                    "Port87/1",
-                    "Port87/2",
-                    "Port87/3",
-                    "Port87/4"
+                    "etp87a",
+                    "etp87b",
+                    "etp87c",
+                    "etp87d"
                 ],
                 "8x100G": [
-                    "Port87/1",
-                    "Port87/2",
-                    "Port87/3",
-                    "Port87/4",
-                    "Port87/5",
-                    "Port87/6",
-                    "Port87/7",
-                    "Port87/8"
+                    "etp87a",
+                    "etp87b",
+                    "etp87c",
+                    "etp87d",
+                    "etp87e",
+                    "etp87f",
+                    "etp87g",
+                    "etp87h"
                 ]
             },
             "index": "87,87,87,87,87,87,87,87",
@@ -2526,27 +2526,27 @@
         "Ethernet696": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port88"
+                    "etp88"
                 ],
                 "2x400G": [
-                    "Port88/1",
-                    "Port88/2"
+                    "etp88a",
+                    "etp88b"
                 ],
                 "4x200G": [
-                    "Port88/1",
-                    "Port88/2",
-                    "Port88/3",
-                    "Port88/4"
+                    "etp88a",
+                    "etp88b",
+                    "etp88c",
+                    "etp88d"
                 ],
                 "8x100G": [
-                    "Port88/1",
-                    "Port88/2",
-                    "Port88/3",
-                    "Port88/4",
-                    "Port88/5",
-                    "Port88/6",
-                    "Port88/7",
-                    "Port88/8"
+                    "etp88a",
+                    "etp88b",
+                    "etp88c",
+                    "etp88d",
+                    "etp88e",
+                    "etp88f",
+                    "etp88g",
+                    "etp88h"
                 ]
             },
             "index": "88,88,88,88,88,88,88,88",
@@ -2555,27 +2555,27 @@
         "Ethernet704": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port89"
+                    "etp89"
                 ],
                 "2x400G": [
-                    "Port89/1",
-                    "Port89/2"
+                    "etp89a",
+                    "etp89b"
                 ],
                 "4x200G": [
-                    "Port89/1",
-                    "Port89/2",
-                    "Port89/3",
-                    "Port89/4"
+                    "etp89a",
+                    "etp89b",
+                    "etp89c",
+                    "etp89d"
                 ],
                 "8x100G": [
-                    "Port89/1",
-                    "Port89/2",
-                    "Port89/3",
-                    "Port89/4",
-                    "Port89/5",
-                    "Port89/6",
-                    "Port89/7",
-                    "Port89/8"
+                    "etp89a",
+                    "etp89b",
+                    "etp89c",
+                    "etp89d",
+                    "etp89e",
+                    "etp89f",
+                    "etp89g",
+                    "etp89h"
                 ]
             },
             "index": "89,89,89,89,89,89,89,89",
@@ -2584,27 +2584,27 @@
         "Ethernet712": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port90"
+                    "etp90"
                 ],
                 "2x400G": [
-                    "Port90/1",
-                    "Port90/2"
+                    "etp90a",
+                    "etp90b"
                 ],
                 "4x200G": [
-                    "Port90/1",
-                    "Port90/2",
-                    "Port90/3",
-                    "Port90/4"
+                    "etp90a",
+                    "etp90b",
+                    "etp90c",
+                    "etp90d"
                 ],
                 "8x100G": [
-                    "Port90/1",
-                    "Port90/2",
-                    "Port90/3",
-                    "Port90/4",
-                    "Port90/5",
-                    "Port90/6",
-                    "Port90/7",
-                    "Port90/8"
+                    "etp90a",
+                    "etp90b",
+                    "etp90c",
+                    "etp90d",
+                    "etp90e",
+                    "etp90f",
+                    "etp90g",
+                    "etp90h"
                 ]
             },
             "index": "90,90,90,90,90,90,90,90",
@@ -2613,27 +2613,27 @@
         "Ethernet720": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port91"
+                    "etp91"
                 ],
                 "2x400G": [
-                    "Port91/1",
-                    "Port91/2"
+                    "etp91a",
+                    "etp91b"
                 ],
                 "4x200G": [
-                    "Port91/1",
-                    "Port91/2",
-                    "Port91/3",
-                    "Port91/4"
+                    "etp91a",
+                    "etp91b",
+                    "etp91c",
+                    "etp91d"
                 ],
                 "8x100G": [
-                    "Port91/1",
-                    "Port91/2",
-                    "Port91/3",
-                    "Port91/4",
-                    "Port91/5",
-                    "Port91/6",
-                    "Port91/7",
-                    "Port91/8"
+                    "etp91a",
+                    "etp91b",
+                    "etp91c",
+                    "etp91d",
+                    "etp91e",
+                    "etp91f",
+                    "etp91g",
+                    "etp91h"
                 ]
             },
             "index": "91,91,91,91,91,91,91,91",
@@ -2642,27 +2642,27 @@
         "Ethernet728": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port92"
+                    "etp92"
                 ],
                 "2x400G": [
-                    "Port92/1",
-                    "Port92/2"
+                    "etp92a",
+                    "etp92b"
                 ],
                 "4x200G": [
-                    "Port92/1",
-                    "Port92/2",
-                    "Port92/3",
-                    "Port92/4"
+                    "etp92a",
+                    "etp92b",
+                    "etp92c",
+                    "etp92d"
                 ],
                 "8x100G": [
-                    "Port92/1",
-                    "Port92/2",
-                    "Port92/3",
-                    "Port92/4",
-                    "Port92/5",
-                    "Port92/6",
-                    "Port92/7",
-                    "Port92/8"
+                    "etp92a",
+                    "etp92b",
+                    "etp92c",
+                    "etp92d",
+                    "etp92e",
+                    "etp92f",
+                    "etp92g",
+                    "etp92h"
                 ]
             },
             "index": "92,92,92,92,92,92,92,92",
@@ -2671,27 +2671,27 @@
         "Ethernet736": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port93"
+                    "etp93"
                 ],
                 "2x400G": [
-                    "Port93/1",
-                    "Port93/2"
+                    "etp93a",
+                    "etp93b"
                 ],
                 "4x200G": [
-                    "Port93/1",
-                    "Port93/2",
-                    "Port93/3",
-                    "Port93/4"
+                    "etp93a",
+                    "etp93b",
+                    "etp93c",
+                    "etp93d"
                 ],
                 "8x100G": [
-                    "Port93/1",
-                    "Port93/2",
-                    "Port93/3",
-                    "Port93/4",
-                    "Port93/5",
-                    "Port93/6",
-                    "Port93/7",
-                    "Port93/8"
+                    "etp93a",
+                    "etp93b",
+                    "etp93c",
+                    "etp93d",
+                    "etp93e",
+                    "etp93f",
+                    "etp93g",
+                    "etp93h"
                 ]
             },
             "index": "93,93,93,93,93,93,93,93",
@@ -2700,27 +2700,27 @@
         "Ethernet744": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port94"
+                    "etp94"
                 ],
                 "2x400G": [
-                    "Port94/1",
-                    "Port94/2"
+                    "etp94a",
+                    "etp94b"
                 ],
                 "4x200G": [
-                    "Port94/1",
-                    "Port94/2",
-                    "Port94/3",
-                    "Port94/4"
+                    "etp94a",
+                    "etp94b",
+                    "etp94c",
+                    "etp94d"
                 ],
                 "8x100G": [
-                    "Port94/1",
-                    "Port94/2",
-                    "Port94/3",
-                    "Port94/4",
-                    "Port94/5",
-                    "Port94/6",
-                    "Port94/7",
-                    "Port94/8"
+                    "etp94a",
+                    "etp94b",
+                    "etp94c",
+                    "etp94d",
+                    "etp94e",
+                    "etp94f",
+                    "etp94g",
+                    "etp94h"
                 ]
             },
             "index": "94,94,94,94,94,94,94,94",
@@ -2729,27 +2729,27 @@
         "Ethernet752": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port95"
+                    "etp95"
                 ],
                 "2x400G": [
-                    "Port95/1",
-                    "Port95/2"
+                    "etp95a",
+                    "etp95b"
                 ],
                 "4x200G": [
-                    "Port95/1",
-                    "Port95/2",
-                    "Port95/3",
-                    "Port95/4"
+                    "etp95a",
+                    "etp95b",
+                    "etp95c",
+                    "etp95d"
                 ],
                 "8x100G": [
-                    "Port95/1",
-                    "Port95/2",
-                    "Port95/3",
-                    "Port95/4",
-                    "Port95/5",
-                    "Port95/6",
-                    "Port95/7",
-                    "Port95/8"
+                    "etp95a",
+                    "etp95b",
+                    "etp95c",
+                    "etp95d",
+                    "etp95e",
+                    "etp95f",
+                    "etp95g",
+                    "etp95h"
                 ]
             },
             "index": "95,95,95,95,95,95,95,95",
@@ -2758,27 +2758,27 @@
         "Ethernet760": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port96"
+                    "etp96"
                 ],
                 "2x400G": [
-                    "Port96/1",
-                    "Port96/2"
+                    "etp96a",
+                    "etp96b"
                 ],
                 "4x200G": [
-                    "Port96/1",
-                    "Port96/2",
-                    "Port96/3",
-                    "Port96/4"
+                    "etp96a",
+                    "etp96b",
+                    "etp96c",
+                    "etp96d"
                 ],
                 "8x100G": [
-                    "Port96/1",
-                    "Port96/2",
-                    "Port96/3",
-                    "Port96/4",
-                    "Port96/5",
-                    "Port96/6",
-                    "Port96/7",
-                    "Port96/8"
+                    "etp96a",
+                    "etp96b",
+                    "etp96c",
+                    "etp96d",
+                    "etp96e",
+                    "etp96f",
+                    "etp96g",
+                    "etp96h"
                 ]
             },
             "index": "96,96,96,96,96,96,96,96",
@@ -2787,27 +2787,27 @@
         "Ethernet768": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port97"
+                    "etp97"
                 ],
                 "2x400G": [
-                    "Port97/1",
-                    "Port97/2"
+                    "etp97a",
+                    "etp97b"
                 ],
                 "4x200G": [
-                    "Port97/1",
-                    "Port97/2",
-                    "Port97/3",
-                    "Port97/4"
+                    "etp97a",
+                    "etp97b",
+                    "etp97c",
+                    "etp97d"
                 ],
                 "8x100G": [
-                    "Port97/1",
-                    "Port97/2",
-                    "Port97/3",
-                    "Port97/4",
-                    "Port97/5",
-                    "Port97/6",
-                    "Port97/7",
-                    "Port97/8"
+                    "etp97a",
+                    "etp97b",
+                    "etp97c",
+                    "etp97d",
+                    "etp97e",
+                    "etp97f",
+                    "etp97g",
+                    "etp97h"
                 ]
             },
             "index": "97,97,97,97,97,97,97,97",
@@ -2816,27 +2816,27 @@
         "Ethernet776": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port98"
+                    "etp98"
                 ],
                 "2x400G": [
-                    "Port98/1",
-                    "Port98/2"
+                    "etp98a",
+                    "etp98b"
                 ],
                 "4x200G": [
-                    "Port98/1",
-                    "Port98/2",
-                    "Port98/3",
-                    "Port98/4"
+                    "etp98a",
+                    "etp98b",
+                    "etp98c",
+                    "etp98d"
                 ],
                 "8x100G": [
-                    "Port98/1",
-                    "Port98/2",
-                    "Port98/3",
-                    "Port98/4",
-                    "Port98/5",
-                    "Port98/6",
-                    "Port98/7",
-                    "Port98/8"
+                    "etp98a",
+                    "etp98b",
+                    "etp98c",
+                    "etp98d",
+                    "etp98e",
+                    "etp98f",
+                    "etp98g",
+                    "etp98h"
                 ]
             },
             "index": "98,98,98,98,98,98,98,98",
@@ -2845,27 +2845,27 @@
         "Ethernet784": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port99"
+                    "etp99"
                 ],
                 "2x400G": [
-                    "Port99/1",
-                    "Port99/2"
+                    "etp99a",
+                    "etp99b"
                 ],
                 "4x200G": [
-                    "Port99/1",
-                    "Port99/2",
-                    "Port99/3",
-                    "Port99/4"
+                    "etp99a",
+                    "etp99b",
+                    "etp99c",
+                    "etp99d"
                 ],
                 "8x100G": [
-                    "Port99/1",
-                    "Port99/2",
-                    "Port99/3",
-                    "Port99/4",
-                    "Port99/5",
-                    "Port99/6",
-                    "Port99/7",
-                    "Port99/8"
+                    "etp99a",
+                    "etp99b",
+                    "etp99c",
+                    "etp99d",
+                    "etp99e",
+                    "etp99f",
+                    "etp99g",
+                    "etp99h"
                 ]
             },
             "index": "99,99,99,99,99,99,99,99",
@@ -2874,27 +2874,27 @@
         "Ethernet792": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port100"
+                    "etp100"
                 ],
                 "2x400G": [
-                    "Port100/1",
-                    "Port100/2"
+                    "etp100a",
+                    "etp100b"
                 ],
                 "4x200G": [
-                    "Port100/1",
-                    "Port100/2",
-                    "Port100/3",
-                    "Port100/4"
+                    "etp100a",
+                    "etp100b",
+                    "etp100c",
+                    "etp100d"
                 ],
                 "8x100G": [
-                    "Port100/1",
-                    "Port100/2",
-                    "Port100/3",
-                    "Port100/4",
-                    "Port100/5",
-                    "Port100/6",
-                    "Port100/7",
-                    "Port100/8"
+                    "etp100a",
+                    "etp100b",
+                    "etp100c",
+                    "etp100d",
+                    "etp100e",
+                    "etp100f",
+                    "etp100g",
+                    "etp100h"
                 ]
             },
             "index": "100,100,100,100,100,100,100,100",
@@ -2903,27 +2903,27 @@
         "Ethernet800": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port101"
+                    "etp101"
                 ],
                 "2x400G": [
-                    "Port101/1",
-                    "Port101/2"
+                    "etp101a",
+                    "etp101b"
                 ],
                 "4x200G": [
-                    "Port101/1",
-                    "Port101/2",
-                    "Port101/3",
-                    "Port101/4"
+                    "etp101a",
+                    "etp101b",
+                    "etp101c",
+                    "etp101d"
                 ],
                 "8x100G": [
-                    "Port101/1",
-                    "Port101/2",
-                    "Port101/3",
-                    "Port101/4",
-                    "Port101/5",
-                    "Port101/6",
-                    "Port101/7",
-                    "Port101/8"
+                    "etp101a",
+                    "etp101b",
+                    "etp101c",
+                    "etp101d",
+                    "etp101e",
+                    "etp101f",
+                    "etp101g",
+                    "etp101h"
                 ]
             },
             "index": "101,101,101,101,101,101,101,101",
@@ -2932,27 +2932,27 @@
         "Ethernet808": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port102"
+                    "etp102"
                 ],
                 "2x400G": [
-                    "Port102/1",
-                    "Port102/2"
+                    "etp102a",
+                    "etp102b"
                 ],
                 "4x200G": [
-                    "Port102/1",
-                    "Port102/2",
-                    "Port102/3",
-                    "Port102/4"
+                    "etp102a",
+                    "etp102b",
+                    "etp102c",
+                    "etp102d"
                 ],
                 "8x100G": [
-                    "Port102/1",
-                    "Port102/2",
-                    "Port102/3",
-                    "Port102/4",
-                    "Port102/5",
-                    "Port102/6",
-                    "Port102/7",
-                    "Port102/8"
+                    "etp102a",
+                    "etp102b",
+                    "etp102c",
+                    "etp102d",
+                    "etp102e",
+                    "etp102f",
+                    "etp102g",
+                    "etp102h"
                 ]
             },
             "index": "102,102,102,102,102,102,102,102",
@@ -2961,27 +2961,27 @@
         "Ethernet816": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port103"
+                    "etp103"
                 ],
                 "2x400G": [
-                    "Port103/1",
-                    "Port103/2"
+                    "etp103a",
+                    "etp103b"
                 ],
                 "4x200G": [
-                    "Port103/1",
-                    "Port103/2",
-                    "Port103/3",
-                    "Port103/4"
+                    "etp103a",
+                    "etp103b",
+                    "etp103c",
+                    "etp103d"
                 ],
                 "8x100G": [
-                    "Port103/1",
-                    "Port103/2",
-                    "Port103/3",
-                    "Port103/4",
-                    "Port103/5",
-                    "Port103/6",
-                    "Port103/7",
-                    "Port103/8"
+                    "etp103a",
+                    "etp103b",
+                    "etp103c",
+                    "etp103d",
+                    "etp103e",
+                    "etp103f",
+                    "etp103g",
+                    "etp103h"
                 ]
             },
             "index": "103,103,103,103,103,103,103,103",
@@ -2990,27 +2990,27 @@
         "Ethernet824": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port104"
+                    "etp104"
                 ],
                 "2x400G": [
-                    "Port104/1",
-                    "Port104/2"
+                    "etp104a",
+                    "etp104b"
                 ],
                 "4x200G": [
-                    "Port104/1",
-                    "Port104/2",
-                    "Port104/3",
-                    "Port104/4"
+                    "etp104a",
+                    "etp104b",
+                    "etp104c",
+                    "etp104d"
                 ],
                 "8x100G": [
-                    "Port104/1",
-                    "Port104/2",
-                    "Port104/3",
-                    "Port104/4",
-                    "Port104/5",
-                    "Port104/6",
-                    "Port104/7",
-                    "Port104/8"
+                    "etp104a",
+                    "etp104b",
+                    "etp104c",
+                    "etp104d",
+                    "etp104e",
+                    "etp104f",
+                    "etp104g",
+                    "etp104h"
                 ]
             },
             "index": "104,104,104,104,104,104,104,104",
@@ -3019,27 +3019,27 @@
         "Ethernet832": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port105"
+                    "etp105"
                 ],
                 "2x400G": [
-                    "Port105/1",
-                    "Port105/2"
+                    "etp105a",
+                    "etp105b"
                 ],
                 "4x200G": [
-                    "Port105/1",
-                    "Port105/2",
-                    "Port105/3",
-                    "Port105/4"
+                    "etp105a",
+                    "etp105b",
+                    "etp105c",
+                    "etp105d"
                 ],
                 "8x100G": [
-                    "Port105/1",
-                    "Port105/2",
-                    "Port105/3",
-                    "Port105/4",
-                    "Port105/5",
-                    "Port105/6",
-                    "Port105/7",
-                    "Port105/8"
+                    "etp105a",
+                    "etp105b",
+                    "etp105c",
+                    "etp105d",
+                    "etp105e",
+                    "etp105f",
+                    "etp105g",
+                    "etp105h"
                 ]
             },
             "index": "105,105,105,105,105,105,105,105",
@@ -3048,27 +3048,27 @@
         "Ethernet840": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port106"
+                    "etp106"
                 ],
                 "2x400G": [
-                    "Port106/1",
-                    "Port106/2"
+                    "etp106a",
+                    "etp106b"
                 ],
                 "4x200G": [
-                    "Port106/1",
-                    "Port106/2",
-                    "Port106/3",
-                    "Port106/4"
+                    "etp106a",
+                    "etp106b",
+                    "etp106c",
+                    "etp106d"
                 ],
                 "8x100G": [
-                    "Port106/1",
-                    "Port106/2",
-                    "Port106/3",
-                    "Port106/4",
-                    "Port106/5",
-                    "Port106/6",
-                    "Port106/7",
-                    "Port106/8"
+                    "etp106a",
+                    "etp106b",
+                    "etp106c",
+                    "etp106d",
+                    "etp106e",
+                    "etp106f",
+                    "etp106g",
+                    "etp106h"
                 ]
             },
             "index": "106,106,106,106,106,106,106,106",
@@ -3077,27 +3077,27 @@
         "Ethernet848": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port107"
+                    "etp107"
                 ],
                 "2x400G": [
-                    "Port107/1",
-                    "Port107/2"
+                    "etp107a",
+                    "etp107b"
                 ],
                 "4x200G": [
-                    "Port107/1",
-                    "Port107/2",
-                    "Port107/3",
-                    "Port107/4"
+                    "etp107a",
+                    "etp107b",
+                    "etp107c",
+                    "etp107d"
                 ],
                 "8x100G": [
-                    "Port107/1",
-                    "Port107/2",
-                    "Port107/3",
-                    "Port107/4",
-                    "Port107/5",
-                    "Port107/6",
-                    "Port107/7",
-                    "Port107/8"
+                    "etp107a",
+                    "etp107b",
+                    "etp107c",
+                    "etp107d",
+                    "etp107e",
+                    "etp107f",
+                    "etp107g",
+                    "etp107h"
                 ]
             },
             "index": "107,107,107,107,107,107,107,107",
@@ -3106,27 +3106,27 @@
         "Ethernet856": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port108"
+                    "etp108"
                 ],
                 "2x400G": [
-                    "Port108/1",
-                    "Port108/2"
+                    "etp108a",
+                    "etp108b"
                 ],
                 "4x200G": [
-                    "Port108/1",
-                    "Port108/2",
-                    "Port108/3",
-                    "Port108/4"
+                    "etp108a",
+                    "etp108b",
+                    "etp108c",
+                    "etp108d"
                 ],
                 "8x100G": [
-                    "Port108/1",
-                    "Port108/2",
-                    "Port108/3",
-                    "Port108/4",
-                    "Port108/5",
-                    "Port108/6",
-                    "Port108/7",
-                    "Port108/8"
+                    "etp108a",
+                    "etp108b",
+                    "etp108c",
+                    "etp108d",
+                    "etp108e",
+                    "etp108f",
+                    "etp108g",
+                    "etp108h"
                 ]
             },
             "index": "108,108,108,108,108,108,108,108",
@@ -3135,27 +3135,27 @@
         "Ethernet864": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port109"
+                    "etp109"
                 ],
                 "2x400G": [
-                    "Port109/1",
-                    "Port109/2"
+                    "etp109a",
+                    "etp109b"
                 ],
                 "4x200G": [
-                    "Port109/1",
-                    "Port109/2",
-                    "Port109/3",
-                    "Port109/4"
+                    "etp109a",
+                    "etp109b",
+                    "etp109c",
+                    "etp109d"
                 ],
                 "8x100G": [
-                    "Port109/1",
-                    "Port109/2",
-                    "Port109/3",
-                    "Port109/4",
-                    "Port109/5",
-                    "Port109/6",
-                    "Port109/7",
-                    "Port109/8"
+                    "etp109a",
+                    "etp109b",
+                    "etp109c",
+                    "etp109d",
+                    "etp109e",
+                    "etp109f",
+                    "etp109g",
+                    "etp109h"
                 ]
             },
             "index": "109,109,109,109,109,109,109,109",
@@ -3164,27 +3164,27 @@
         "Ethernet872": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port110"
+                    "etp110"
                 ],
                 "2x400G": [
-                    "Port110/1",
-                    "Port110/2"
+                    "etp110a",
+                    "etp110b"
                 ],
                 "4x200G": [
-                    "Port110/1",
-                    "Port110/2",
-                    "Port110/3",
-                    "Port110/4"
+                    "etp110a",
+                    "etp110b",
+                    "etp110c",
+                    "etp110d"
                 ],
                 "8x100G": [
-                    "Port110/1",
-                    "Port110/2",
-                    "Port110/3",
-                    "Port110/4",
-                    "Port110/5",
-                    "Port110/6",
-                    "Port110/7",
-                    "Port110/8"
+                    "etp110a",
+                    "etp110b",
+                    "etp110c",
+                    "etp110d",
+                    "etp110e",
+                    "etp110f",
+                    "etp110g",
+                    "etp110h"
                 ]
             },
             "index": "110,110,110,110,110,110,110,110",
@@ -3193,27 +3193,27 @@
         "Ethernet880": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port111"
+                    "etp111"
                 ],
                 "2x400G": [
-                    "Port111/1",
-                    "Port111/2"
+                    "etp111a",
+                    "etp111b"
                 ],
                 "4x200G": [
-                    "Port111/1",
-                    "Port111/2",
-                    "Port111/3",
-                    "Port111/4"
+                    "etp111a",
+                    "etp111b",
+                    "etp111c",
+                    "etp111d"
                 ],
                 "8x100G": [
-                    "Port111/1",
-                    "Port111/2",
-                    "Port111/3",
-                    "Port111/4",
-                    "Port111/5",
-                    "Port111/6",
-                    "Port111/7",
-                    "Port111/8"
+                    "etp111a",
+                    "etp111b",
+                    "etp111c",
+                    "etp111d",
+                    "etp111e",
+                    "etp111f",
+                    "etp111g",
+                    "etp111h"
                 ]
             },
             "index": "111,111,111,111,111,111,111,111",
@@ -3222,27 +3222,27 @@
         "Ethernet888": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port112"
+                    "etp112"
                 ],
                 "2x400G": [
-                    "Port112/1",
-                    "Port112/2"
+                    "etp112a",
+                    "etp112b"
                 ],
                 "4x200G": [
-                    "Port112/1",
-                    "Port112/2",
-                    "Port112/3",
-                    "Port112/4"
+                    "etp112a",
+                    "etp112b",
+                    "etp112c",
+                    "etp112d"
                 ],
                 "8x100G": [
-                    "Port112/1",
-                    "Port112/2",
-                    "Port112/3",
-                    "Port112/4",
-                    "Port112/5",
-                    "Port112/6",
-                    "Port112/7",
-                    "Port112/8"
+                    "etp112a",
+                    "etp112b",
+                    "etp112c",
+                    "etp112d",
+                    "etp112e",
+                    "etp112f",
+                    "etp112g",
+                    "etp112h"
                 ]
             },
             "index": "112,112,112,112,112,112,112,112",
@@ -3251,27 +3251,27 @@
         "Ethernet896": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port113"
+                    "etp113"
                 ],
                 "2x400G": [
-                    "Port113/1",
-                    "Port113/2"
+                    "etp113a",
+                    "etp113b"
                 ],
                 "4x200G": [
-                    "Port113/1",
-                    "Port113/2",
-                    "Port113/3",
-                    "Port113/4"
+                    "etp113a",
+                    "etp113b",
+                    "etp113c",
+                    "etp113d"
                 ],
                 "8x100G": [
-                    "Port113/1",
-                    "Port113/2",
-                    "Port113/3",
-                    "Port113/4",
-                    "Port113/5",
-                    "Port113/6",
-                    "Port113/7",
-                    "Port113/8"
+                    "etp113a",
+                    "etp113b",
+                    "etp113c",
+                    "etp113d",
+                    "etp113e",
+                    "etp113f",
+                    "etp113g",
+                    "etp113h"
                 ]
             },
             "index": "113,113,113,113,113,113,113,113",
@@ -3280,27 +3280,27 @@
         "Ethernet904": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port114"
+                    "etp114"
                 ],
                 "2x400G": [
-                    "Port114/1",
-                    "Port114/2"
+                    "etp114a",
+                    "etp114b"
                 ],
                 "4x200G": [
-                    "Port114/1",
-                    "Port114/2",
-                    "Port114/3",
-                    "Port114/4"
+                    "etp114a",
+                    "etp114b",
+                    "etp114c",
+                    "etp114d"
                 ],
                 "8x100G": [
-                    "Port114/1",
-                    "Port114/2",
-                    "Port114/3",
-                    "Port114/4",
-                    "Port114/5",
-                    "Port114/6",
-                    "Port114/7",
-                    "Port114/8"
+                    "etp114a",
+                    "etp114b",
+                    "etp114c",
+                    "etp114d",
+                    "etp114e",
+                    "etp114f",
+                    "etp114g",
+                    "etp114h"
                 ]
             },
             "index": "114,114,114,114,114,114,114,114",
@@ -3309,27 +3309,27 @@
         "Ethernet912": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port115"
+                    "etp115"
                 ],
                 "2x400G": [
-                    "Port115/1",
-                    "Port115/2"
+                    "etp115a",
+                    "etp115b"
                 ],
                 "4x200G": [
-                    "Port115/1",
-                    "Port115/2",
-                    "Port115/3",
-                    "Port115/4"
+                    "etp115a",
+                    "etp115b",
+                    "etp115c",
+                    "etp115d"
                 ],
                 "8x100G": [
-                    "Port115/1",
-                    "Port115/2",
-                    "Port115/3",
-                    "Port115/4",
-                    "Port115/5",
-                    "Port115/6",
-                    "Port115/7",
-                    "Port115/8"
+                    "etp115a",
+                    "etp115b",
+                    "etp115c",
+                    "etp115d",
+                    "etp115e",
+                    "etp115f",
+                    "etp115g",
+                    "etp115h"
                 ]
             },
             "index": "115,115,115,115,115,115,115,115",
@@ -3338,27 +3338,27 @@
         "Ethernet920": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port116"
+                    "etp116"
                 ],
                 "2x400G": [
-                    "Port116/1",
-                    "Port116/2"
+                    "etp116a",
+                    "etp116b"
                 ],
                 "4x200G": [
-                    "Port116/1",
-                    "Port116/2",
-                    "Port116/3",
-                    "Port116/4"
+                    "etp116a",
+                    "etp116b",
+                    "etp116c",
+                    "etp116d"
                 ],
                 "8x100G": [
-                    "Port116/1",
-                    "Port116/2",
-                    "Port116/3",
-                    "Port116/4",
-                    "Port116/5",
-                    "Port116/6",
-                    "Port116/7",
-                    "Port116/8"
+                    "etp116a",
+                    "etp116b",
+                    "etp116c",
+                    "etp116d",
+                    "etp116e",
+                    "etp116f",
+                    "etp116g",
+                    "etp116h"
                 ]
             },
             "index": "116,116,116,116,116,116,116,116",
@@ -3367,27 +3367,27 @@
         "Ethernet928": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port117"
+                    "etp117"
                 ],
                 "2x400G": [
-                    "Port117/1",
-                    "Port117/2"
+                    "etp117a",
+                    "etp117b"
                 ],
                 "4x200G": [
-                    "Port117/1",
-                    "Port117/2",
-                    "Port117/3",
-                    "Port117/4"
+                    "etp117a",
+                    "etp117b",
+                    "etp117c",
+                    "etp117d"
                 ],
                 "8x100G": [
-                    "Port117/1",
-                    "Port117/2",
-                    "Port117/3",
-                    "Port117/4",
-                    "Port117/5",
-                    "Port117/6",
-                    "Port117/7",
-                    "Port117/8"
+                    "etp117a",
+                    "etp117b",
+                    "etp117c",
+                    "etp117d",
+                    "etp117e",
+                    "etp117f",
+                    "etp117g",
+                    "etp117h"
                 ]
             },
             "index": "117,117,117,117,117,117,117,117",
@@ -3396,27 +3396,27 @@
         "Ethernet936": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port118"
+                    "etp118"
                 ],
                 "2x400G": [
-                    "Port118/1",
-                    "Port118/2"
+                    "etp118a",
+                    "etp118b"
                 ],
                 "4x200G": [
-                    "Port118/1",
-                    "Port118/2",
-                    "Port118/3",
-                    "Port118/4"
+                    "etp118a",
+                    "etp118b",
+                    "etp118c",
+                    "etp118d"
                 ],
                 "8x100G": [
-                    "Port118/1",
-                    "Port118/2",
-                    "Port118/3",
-                    "Port118/4",
-                    "Port118/5",
-                    "Port118/6",
-                    "Port118/7",
-                    "Port118/8"
+                    "etp118a",
+                    "etp118b",
+                    "etp118c",
+                    "etp118d",
+                    "etp118e",
+                    "etp118f",
+                    "etp118g",
+                    "etp118h"
                 ]
             },
             "index": "118,118,118,118,118,118,118,118",
@@ -3425,27 +3425,27 @@
         "Ethernet944": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port119"
+                    "etp119"
                 ],
                 "2x400G": [
-                    "Port119/1",
-                    "Port119/2"
+                    "etp119a",
+                    "etp119b"
                 ],
                 "4x200G": [
-                    "Port119/1",
-                    "Port119/2",
-                    "Port119/3",
-                    "Port119/4"
+                    "etp119a",
+                    "etp119b",
+                    "etp119c",
+                    "etp119d"
                 ],
                 "8x100G": [
-                    "Port119/1",
-                    "Port119/2",
-                    "Port119/3",
-                    "Port119/4",
-                    "Port119/5",
-                    "Port119/6",
-                    "Port119/7",
-                    "Port119/8"
+                    "etp119a",
+                    "etp119b",
+                    "etp119c",
+                    "etp119d",
+                    "etp119e",
+                    "etp119f",
+                    "etp119g",
+                    "etp119h"
                 ]
             },
             "index": "119,119,119,119,119,119,119,119",
@@ -3454,27 +3454,27 @@
         "Ethernet952": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port120"
+                    "etp120"
                 ],
                 "2x400G": [
-                    "Port120/1",
-                    "Port120/2"
+                    "etp120a",
+                    "etp120b"
                 ],
                 "4x200G": [
-                    "Port120/1",
-                    "Port120/2",
-                    "Port120/3",
-                    "Port120/4"
+                    "etp120a",
+                    "etp120b",
+                    "etp120c",
+                    "etp120d"
                 ],
                 "8x100G": [
-                    "Port120/1",
-                    "Port120/2",
-                    "Port120/3",
-                    "Port120/4",
-                    "Port120/5",
-                    "Port120/6",
-                    "Port120/7",
-                    "Port120/8"
+                    "etp120a",
+                    "etp120b",
+                    "etp120c",
+                    "etp120d",
+                    "etp120e",
+                    "etp120f",
+                    "etp120g",
+                    "etp120h"
                 ]
             },
             "index": "120,120,120,120,120,120,120,120",
@@ -3483,27 +3483,27 @@
         "Ethernet960": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port121"
+                    "etp121"
                 ],
                 "2x400G": [
-                    "Port121/1",
-                    "Port121/2"
+                    "etp121a",
+                    "etp121b"
                 ],
                 "4x200G": [
-                    "Port121/1",
-                    "Port121/2",
-                    "Port121/3",
-                    "Port121/4"
+                    "etp121a",
+                    "etp121b",
+                    "etp121c",
+                    "etp121d"
                 ],
                 "8x100G": [
-                    "Port121/1",
-                    "Port121/2",
-                    "Port121/3",
-                    "Port121/4",
-                    "Port121/5",
-                    "Port121/6",
-                    "Port121/7",
-                    "Port121/8"
+                    "etp121a",
+                    "etp121b",
+                    "etp121c",
+                    "etp121d",
+                    "etp121e",
+                    "etp121f",
+                    "etp121g",
+                    "etp121h"
                 ]
             },
             "index": "121,121,121,121,121,121,121,121",
@@ -3512,27 +3512,27 @@
         "Ethernet968": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port122"
+                    "etp122"
                 ],
                 "2x400G": [
-                    "Port122/1",
-                    "Port122/2"
+                    "etp122a",
+                    "etp122b"
                 ],
                 "4x200G": [
-                    "Port122/1",
-                    "Port122/2",
-                    "Port122/3",
-                    "Port122/4"
+                    "etp122a",
+                    "etp122b",
+                    "etp122c",
+                    "etp122d"
                 ],
                 "8x100G": [
-                    "Port122/1",
-                    "Port122/2",
-                    "Port122/3",
-                    "Port122/4",
-                    "Port122/5",
-                    "Port122/6",
-                    "Port122/7",
-                    "Port122/8"
+                    "etp122a",
+                    "etp122b",
+                    "etp122c",
+                    "etp122d",
+                    "etp122e",
+                    "etp122f",
+                    "etp122g",
+                    "etp122h"
                 ]
             },
             "index": "122,122,122,122,122,122,122,122",
@@ -3541,27 +3541,27 @@
         "Ethernet976": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port123"
+                    "etp123"
                 ],
                 "2x400G": [
-                    "Port123/1",
-                    "Port123/2"
+                    "etp123a",
+                    "etp123b"
                 ],
                 "4x200G": [
-                    "Port123/1",
-                    "Port123/2",
-                    "Port123/3",
-                    "Port123/4"
+                    "etp123a",
+                    "etp123b",
+                    "etp123c",
+                    "etp123d"
                 ],
                 "8x100G": [
-                    "Port123/1",
-                    "Port123/2",
-                    "Port123/3",
-                    "Port123/4",
-                    "Port123/5",
-                    "Port123/6",
-                    "Port123/7",
-                    "Port123/8"
+                    "etp123a",
+                    "etp123b",
+                    "etp123c",
+                    "etp123d",
+                    "etp123e",
+                    "etp123f",
+                    "etp123g",
+                    "etp123h"
                 ]
             },
             "index": "123,123,123,123,123,123,123,123",
@@ -3570,27 +3570,27 @@
         "Ethernet984": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port124"
+                    "etp124"
                 ],
                 "2x400G": [
-                    "Port124/1",
-                    "Port124/2"
+                    "etp124a",
+                    "etp124b"
                 ],
                 "4x200G": [
-                    "Port124/1",
-                    "Port124/2",
-                    "Port124/3",
-                    "Port124/4"
+                    "etp124a",
+                    "etp124b",
+                    "etp124c",
+                    "etp124d"
                 ],
                 "8x100G": [
-                    "Port124/1",
-                    "Port124/2",
-                    "Port124/3",
-                    "Port124/4",
-                    "Port124/5",
-                    "Port124/6",
-                    "Port124/7",
-                    "Port124/8"
+                    "etp124a",
+                    "etp124b",
+                    "etp124c",
+                    "etp124d",
+                    "etp124e",
+                    "etp124f",
+                    "etp124g",
+                    "etp124h"
                 ]
             },
             "index": "124,124,124,124,124,124,124,124",
@@ -3599,27 +3599,27 @@
         "Ethernet992": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port125"
+                    "etp125"
                 ],
                 "2x400G": [
-                    "Port125/1",
-                    "Port125/2"
+                    "etp125a",
+                    "etp125b"
                 ],
                 "4x200G": [
-                    "Port125/1",
-                    "Port125/2",
-                    "Port125/3",
-                    "Port125/4"
+                    "etp125a",
+                    "etp125b",
+                    "etp125c",
+                    "etp125d"
                 ],
                 "8x100G": [
-                    "Port125/1",
-                    "Port125/2",
-                    "Port125/3",
-                    "Port125/4",
-                    "Port125/5",
-                    "Port125/6",
-                    "Port125/7",
-                    "Port125/8"
+                    "etp125a",
+                    "etp125b",
+                    "etp125c",
+                    "etp125d",
+                    "etp125e",
+                    "etp125f",
+                    "etp125g",
+                    "etp125h"
                 ]
             },
             "index": "125,125,125,125,125,125,125,125",
@@ -3628,27 +3628,27 @@
         "Ethernet1000": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port126"
+                    "etp126"
                 ],
                 "2x400G": [
-                    "Port126/1",
-                    "Port126/2"
+                    "etp126a",
+                    "etp126b"
                 ],
                 "4x200G": [
-                    "Port126/1",
-                    "Port126/2",
-                    "Port126/3",
-                    "Port126/4"
+                    "etp126a",
+                    "etp126b",
+                    "etp126c",
+                    "etp126d"
                 ],
                 "8x100G": [
-                    "Port126/1",
-                    "Port126/2",
-                    "Port126/3",
-                    "Port126/4",
-                    "Port126/5",
-                    "Port126/6",
-                    "Port126/7",
-                    "Port126/8"
+                    "etp126a",
+                    "etp126b",
+                    "etp126c",
+                    "etp126d",
+                    "etp126e",
+                    "etp126f",
+                    "etp126g",
+                    "etp126h"
                 ]
             },
             "index": "126,126,126,126,126,126,126,126",
@@ -3657,27 +3657,27 @@
         "Ethernet1008": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port127"
+                    "etp127"
                 ],
                 "2x400G": [
-                    "Port127/1",
-                    "Port127/2"
+                    "etp127a",
+                    "etp127b"
                 ],
                 "4x200G": [
-                    "Port127/1",
-                    "Port127/2",
-                    "Port127/3",
-                    "Port127/4"
+                    "etp127a",
+                    "etp127b",
+                    "etp127c",
+                    "etp127d"
                 ],
                 "8x100G": [
-                    "Port127/1",
-                    "Port127/2",
-                    "Port127/3",
-                    "Port127/4",
-                    "Port127/5",
-                    "Port127/6",
-                    "Port127/7",
-                    "Port127/8"
+                    "etp127a",
+                    "etp127b",
+                    "etp127c",
+                    "etp127d",
+                    "etp127e",
+                    "etp127f",
+                    "etp127g",
+                    "etp127h"
                 ]
             },
             "index": "127,127,127,127,127,127,127,127",
@@ -3686,27 +3686,27 @@
         "Ethernet1016": {
             "breakout_modes": {
                 "1x800G": [
-                    "Port128"
+                    "etp128"
                 ],
                 "2x400G": [
-                    "Port128/1",
-                    "Port128/2"
+                    "etp128a",
+                    "etp128b"
                 ],
                 "4x200G": [
-                    "Port128/1",
-                    "Port128/2",
-                    "Port128/3",
-                    "Port128/4"
+                    "etp128a",
+                    "etp128b",
+                    "etp128c",
+                    "etp128d"
                 ],
                 "8x100G": [
-                    "Port128/1",
-                    "Port128/2",
-                    "Port128/3",
-                    "Port128/4",
-                    "Port128/5",
-                    "Port128/6",
-                    "Port128/7",
-                    "Port128/8"
+                    "etp128a",
+                    "etp128b",
+                    "etp128c",
+                    "etp128d",
+                    "etp128e",
+                    "etp128f",
+                    "etp128g",
+                    "etp128h"
                 ]
             },
             "index": "128,128,128,128,128,128,128,128",
@@ -3715,17 +3715,17 @@
         "Ethernet1024": {
             "breakout_modes": {
                 "1x100G": [
-                    "Port129"
+                    "etp129"
                 ],
                 "2x50G": [
-                    "Port129/1",
-                    "Port129/2"
+                    "etp129a",
+                    "etp129b"
                 ],
                 "4x25G": [
-                    "Port129/1",
-                    "Port129/2",
-                    "Port129/3",
-                    "Port129/4"
+                    "etp129a",
+                    "etp129b",
+                    "etp129c",
+                    "etp129d"
                 ]
             },
             "index": "129,129,129,129",
