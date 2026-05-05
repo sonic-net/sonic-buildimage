@@ -59,6 +59,7 @@ DPU_NAME_PREFIX = "dpu"
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
+_platform_cache = None
 
 def get_localhost_info(field, config_db=None):
     try:
@@ -116,6 +117,8 @@ def get_platform(**kwargs):
         A string containing the device's platform identifier
     """
 
+    global _platform_cache
+
     # If we are running in a virtual switch Docker container, the environment
     # variable 'PLATFORM' will be defined and will contain the platform
     # identifier.
@@ -123,15 +126,21 @@ def get_platform(**kwargs):
     if platform_env:
         return platform_env
 
+    # Return cached platform value if already resolved from machine.conf
+    if _platform_cache is not None:
+        return _platform_cache
+
     # If 'PLATFORM' env variable is not defined, we try to read the platform
     # identifier from machine.conf. This is critical for sonic-config-engine,
     # because it is responsible for populating this value in Config DB.
     machine_info = get_machine_info()
     if machine_info:
         if 'onie_platform' in machine_info:
-            return machine_info['onie_platform']
+            _platform_cache = machine_info['onie_platform']
+            return _platform_cache
         elif 'aboot_platform' in machine_info:
-            return machine_info['aboot_platform']
+            _platform_cache = machine_info['aboot_platform']
+            return _platform_cache
 
     # If we fail to read from machine.conf, we may be running inside a Docker
     # container in SONiC, where the /host directory is not mounted. In this
