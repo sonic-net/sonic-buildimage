@@ -132,6 +132,8 @@ class Chassis(ChassisBase):
         # Mapping from SFP index to ASIC ID
         self._asic_id_map = None
 
+        self._num_npus = device_info.get_num_npus()
+
         self.liquid_cooling = None
 
         Chassis.chassis_instance = self
@@ -153,14 +155,14 @@ class Chassis(ChassisBase):
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
         return self._RJ45_port_list
 
     @property
     def cpo_port_list(self):
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         return self._cpo_port_list
 
@@ -364,11 +366,11 @@ class Chassis(ChassisBase):
         """
         num_sfps = 0
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
-        
+
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         
         num_sfps = DeviceDataManager.get_sfp_count()
