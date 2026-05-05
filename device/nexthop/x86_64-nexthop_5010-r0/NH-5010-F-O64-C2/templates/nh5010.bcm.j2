@@ -1453,6 +1453,70 @@ serdes_tx_taps_{{ pcfg.logical_port }}.BCM8887X=mode:NRZ,pre:0,main:63,post:0
 
 
 # ----------------------------------------------------------------------------------------------------
+#     core_32
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
+# ----------------------------------------------------------------------------------------------------
+ucode_port_257.BCM8887X=CGE64:core_2.33
+tm_port_header_type_out_257.BCM8887X=ETH
+
+# core 32 lane256
+lane_to_serdes_map_nif_lane256.BCM8887X=rx257:tx257
+phy_rx_polarity_flip_phy256.BCM8887X=0
+phy_tx_polarity_flip_phy256.BCM8887X=0
+
+# core 32 lane257
+lane_to_serdes_map_nif_lane257.BCM8887X=rx256:tx256
+phy_rx_polarity_flip_phy257.BCM8887X=0
+phy_tx_polarity_flip_phy257.BCM8887X=1
+
+# core 32 lane258
+lane_to_serdes_map_nif_lane258.BCM8887X=rx258:tx258
+phy_rx_polarity_flip_phy258.BCM8887X=1
+phy_tx_polarity_flip_phy258.BCM8887X=0
+
+# core 32 lane259
+lane_to_serdes_map_nif_lane259.BCM8887X=rx259:tx259
+phy_rx_polarity_flip_phy259.BCM8887X=0
+phy_tx_polarity_flip_phy259.BCM8887X=0
+
+
+# ----------------------------------------------------------------------------------------------------
+#     core_33
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
+# ----------------------------------------------------------------------------------------------------
+ucode_port_261.BCM8887X=CGE65:core_6.33
+tm_port_header_type_out_261.BCM8887X=ETH
+
+# core 33 lane260
+lane_to_serdes_map_nif_lane260.BCM8887X=rx260:tx260
+phy_rx_polarity_flip_phy260.BCM8887X=0
+phy_tx_polarity_flip_phy260.BCM8887X=0
+
+# core 33 lane261
+lane_to_serdes_map_nif_lane261.BCM8887X=rx261:tx261
+phy_rx_polarity_flip_phy261.BCM8887X=0
+phy_tx_polarity_flip_phy261.BCM8887X=1
+
+# core 33 lane262
+lane_to_serdes_map_nif_lane262.BCM8887X=rx262:tx262
+phy_rx_polarity_flip_phy262.BCM8887X=0
+phy_tx_polarity_flip_phy262.BCM8887X=0
+
+# core 33 lane263
+lane_to_serdes_map_nif_lane263.BCM8887X=rx263:tx263
+phy_rx_polarity_flip_phy263.BCM8887X=0
+phy_tx_polarity_flip_phy263.BCM8887X=0
+
+
+# ----------------------------------------------------------------------------------------------------
 #     Static Properties
 # ----------------------------------------------------------------------------------------------------
 
@@ -1622,6 +1686,14 @@ ucode_port_339.BCM8887X_ADAPTER=OAMP:core_7.239
 
 #OAMP
 oamp_dual_mode.BCM8887X=1
+appl_param_sys_port332=0:332:0:232:10000:
+appl_param_sys_port333=0:333:1:233:10000:
+appl_param_sys_port334=0:334:2:234:10000:
+appl_param_sys_port335=0:335:3:235:10000:
+appl_param_sys_port336=0:336:4:236:10000:
+appl_param_sys_port337=0:337:5:237:10000:
+appl_param_sys_port338=0:338:6:238:10000:
+appl_param_sys_port339=0:339:7:239:10000:
 
 sai_disable_srcmacqedstmac_ctrl=1
 sai_instru_stat_accum_enable=1
@@ -1837,3 +1909,9 @@ macsec_fips_enable=1
 xflow_macsec_secure_chan_to_num_secure_assoc=4
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
+
+#Tunnel support for SRv6
+sai_tunnel_support=0x10
+
+#Disable hardware PFC watchdog
+sai_pfc_dlr_init_capability=0
