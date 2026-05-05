@@ -38,11 +38,16 @@ def enable_counters():
     db = swsscommon.ConfigDBConnector()
     db.connect()
     dpu_counters = ["ENI","DASH_METER"]
+    rif_counters = ["RIF", "RIF_RATES"]
 
     platform_info = device_info.get_platform_info(db)
     if platform_info.get('switch_type') == 'dpu':
         for key in dpu_counters:
             enable_counter_group(db, key)
+
+    # Enable RIF counters for L3 router interface counters
+    for key in rif_counters:
+        enable_counter_group(db, key)
 
     enable_rates()
 
