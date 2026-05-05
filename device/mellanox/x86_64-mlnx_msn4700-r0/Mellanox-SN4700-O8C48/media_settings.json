@@ -675,6 +675,76 @@
                     }
                 }
             },
+            "AOI-ALQA9N\\d{2}ADLA1675":{
+                "speed:200GAUI-4":{
+                    "pre2":{
+                        "lane0":"0x00000000",
+                        "lane1":"0x00000000",
+                        "lane2":"0x00000000",
+                        "lane3":"0x00000000"
+                    },
+                    "pre1":{
+                        "lane0":"0xfffffffc",
+                        "lane1":"0xfffffffc",
+                        "lane2":"0xfffffffc",
+                        "lane3":"0xfffffffc"
+                    },
+                    "main":{
+                        "lane0":"0x0000002a",
+                        "lane1":"0x0000002a",
+                        "lane2":"0x0000002a",
+                        "lane3":"0x0000002a"
+                    },
+                    "post1":{
+                        "lane0":"0x00000004",
+                        "lane1":"0x00000004",
+                        "lane2":"0x00000004",
+                        "lane3":"0x00000004"
+                    },
+                    "ob_alev_out":{
+                        "lane0":"0x0000000f",
+                        "lane1":"0x0000000f",
+                        "lane2":"0x0000000f",
+                        "lane3":"0x0000000f"
+                    },
+                    "idriver":{
+                        "lane0":"0x0000003c",
+                        "lane1":"0x0000003c",
+                        "lane2":"0x0000003c",
+                        "lane3":"0x0000003c"
+                    },
+                    "ob_m2lp":{
+                        "lane0":"0x00000004",
+                        "lane1":"0x00000004",
+                        "lane2":"0x00000004",
+                        "lane3":"0x00000004"
+                    },
+                    "obplev":{
+                        "lane0":"0x00000069",
+                        "lane1":"0x00000069",
+                        "lane2":"0x00000069",
+                        "lane3":"0x00000069"
+                    },
+                    "obnlev":{
+                        "lane0":"0x0000005f",
+                        "lane1":"0x0000005f",
+                        "lane2":"0x0000005f",
+                        "lane3":"0x0000005f"
+                    },
+                    "regn_bfm1p":{
+                        "lane0":"0x0000001e",
+                        "lane1":"0x0000001e",
+                        "lane2":"0x0000001e",
+                        "lane3":"0x0000001e"
+                    },
+                    "regn_bfm1n":{
+                        "lane0":"0x000000aa",
+                        "lane1":"0x000000aa",
+                        "lane2":"0x000000aa",
+                        "lane3":"0x000000aa"
+                    }
+                }
+            },
             "QSFP-DD-sm_media_interface":{
                 "speed:100GAUI-2":{
                     "pre2":{
