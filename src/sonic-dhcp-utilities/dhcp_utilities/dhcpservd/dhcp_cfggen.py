@@ -163,7 +163,7 @@ class DhcpServCfgGenerator(object):
         return output
 
     def _parse_vlan(self, vlan_interface, vlan_member):
-        vlan_interfaces = self._get_vlan_ipv4_interface(vlan_interface.keys())
+        vlan_interfaces = self._get_vlan_ipv4_interface(vlan_interface)
         vlan_members = set(vlan_member.keys())
         return vlan_interfaces, vlan_members
 
@@ -281,15 +281,16 @@ class DhcpServCfgGenerator(object):
         port_ipv4 = self.db_connector.get_config_db_table(DHCP_SERVER_IPV4_PORT)
         return dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4
 
-    def _get_vlan_ipv4_interface(self, vlan_interface_keys):
+    def _get_vlan_ipv4_interface(self, vlan_interface):
         """
-        Get ipv4 info of vlans
+        Get ipv4 info of vlans, excluding secondary IPs.
         Args:
-            vlan_interface_keys: Keys of vlan_interfaces, sample:
-                [
-                    "Vlan1000|192.168.0.1/21",
-                    "Vlan1000|fc02:1000::1/64"
-                ]
+            vlan_interface: Dict of vlan_interface table entries {key: fields_dict}, sample:
+                {
+                    "Vlan1000|192.168.0.1/21": {},
+                    "Vlan1000|192.169.0.1/22": {"secondary": "true"},
+                    "Vlan1000|fc02:1000::1/64": {}
+                }
         Returns:
             Vlans infomation, sample:
                 {
@@ -300,10 +301,13 @@ class DhcpServCfgGenerator(object):
                 }
         """
         ret = {}
-        for key in vlan_interface_keys:
+        for key, entry in vlan_interface.items():
             splits = key.split("|")
             # Skip with no ip address
             if len(splits) != 2:
+                continue
+            # Secondary IPs do not define a DHCP subnet; exclude them
+            if entry.get("secondary") == "true":
                 continue
             network = ipaddress.ip_network(UNICODE_TYPE(splits[1]), False)
             # Skip ipv6
