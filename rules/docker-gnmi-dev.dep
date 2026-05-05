@@ -1,0 +1,9 @@
+
+DPATH       := $($(DOCKER_GNMI_DEV)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-gnmi-dev.mk rules/docker-gnmi-dev.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_GNMI_DEV)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_GNMI_DEV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_GNMI_DEV)_DEP_FILES   := $(DEP_FILES)
