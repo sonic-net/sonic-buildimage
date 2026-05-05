@@ -141,6 +141,14 @@ load   12 10 5
 #
 # Note: disabled snmp traps due to side effect of causing snmpd to listen on all ports (0.0.0.0)
 #
+# Set v1trapaddress to avoid the expensive net-snmp get_myaddr() ioctl
+# enumeration on every trap. The agent_addr field is only used in SNMPv1
+# TRAP PDUs; v2c/v3 does not have this field.
+# When a v1 trap receiver is configured, let snmpd resolve the real address.
+{% if not (SNMP_TRAP_CONFIG and SNMP_TRAP_CONFIG['v1TrapDest']) %}
+v1trapaddress 169.254.0.1
+{% endif %}
+#
 #   send SNMPv1  traps
 {% if SNMP_TRAP_CONFIG and SNMP_TRAP_CONFIG['v1TrapDest'] %}
 {% set v1SnmpTrapIp = SNMP_TRAP_CONFIG['v1TrapDest']['DestIp'] %}
