@@ -1353,3 +1353,4 @@ sai_disable_srcmacqedstmac_ctrl=1
 trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
 sai_tc_based_queue_stats_enable=0
+sai_ecmp_group_members_increment=8

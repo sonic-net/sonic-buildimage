@@ -2,16 +2,17 @@
 
 psu_fan_airflow = {
     "intake": ['CRPS3000CL', 'ECDL3000123'],
-    "exhaust": []
+    "exhaust": ['CRPS3000CLR'],
 }
 
 fanairflow = {
     "intake": ['FAN80-02-F'],
-    "exhaust": [],
+    "exhaust": ['FAN80-02-R'],
 }
 
 psu_display_name = {
     "PA3000I-F": ['CRPS3000CL', 'ECDL3000123'],
+    "PA3000I-R": ['CRPS3000CLR']
 }
 
 psutypedecode = {
@@ -119,6 +120,7 @@ devices = {
                 "Max": {
                     "ECDL3000123": threshold.PSU_FAN_SPEED_MAX,
                     "CRPS3000CL": threshold.PSU_A_FAN_SPEED_MAX,
+                    "CRPS3000CLR": threshold.PSU_A_FAN_SPEED_MAX,
                 },
                 "Unit": Unit.Speed
             },
@@ -208,6 +210,7 @@ devices = {
                 "Max": {
                     "ECDL3000123": threshold.PSU_FAN_SPEED_MAX,
                     "CRPS3000CL": threshold.PSU_A_FAN_SPEED_MAX,
+                    "CRPS3000CLR": threshold.PSU_A_FAN_SPEED_MAX,
                 },
                 "Unit": Unit.Speed
             },
@@ -445,7 +448,7 @@ devices = {
             "present": {"loc": "/sys/s3ip/fan/fan1/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
-            "led": {"loc": "/dev/cpld10", "offset":0xd0, "len": 1,  "way":"devfile"},
+            "led": {"bus": 50, "addr": 0x0d, "offset":0xd0, "len": 1,  "way":"i2c"},
             "led_attrs": {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
@@ -454,7 +457,7 @@ devices = {
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x90, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x90, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan1/motor1/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan1/motor1/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -468,7 +471,7 @@ devices = {
                 },
                 "Rotor2_config": {
                     "name": "Rotor2",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x90, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x90, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan1/motor2/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan1/motor2/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -489,7 +492,7 @@ devices = {
             "present": {"loc": "/sys/s3ip/fan/fan2/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
-            "led": {"loc": "/dev/cpld10", "offset":0xd1, "len": 1,  "way":"devfile"},
+            "led": {"bus": 50, "addr": 0x0d, "offset":0xd1, "len": 1,  "way":"i2c"},
             "led_attrs": {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
@@ -498,7 +501,7 @@ devices = {
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x91, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x91, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan2/motor1/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan2/motor1/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -512,7 +515,7 @@ devices = {
                 },
                 "Rotor2_config": {
                     "name": "Rotor2",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x91, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x91, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan2/motor2/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan2/motor2/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -533,7 +536,7 @@ devices = {
             "present": {"loc": "/sys/s3ip/fan/fan3/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
-            "led": {"loc": "/dev/cpld10", "offset":0xd2, "len": 1,  "way":"devfile"},
+            "led": {"bus": 50, "addr": 0x0d, "offset":0xd2, "len": 1,  "way":"i2c"},
             "led_attrs": {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
@@ -542,7 +545,7 @@ devices = {
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x92, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x92, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan3/motor1/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan3/motor1/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -556,7 +559,7 @@ devices = {
                 },
                 "Rotor2_config": {
                     "name": "Rotor2",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x92, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x92, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan3/motor2/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan3/motor2/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -577,7 +580,7 @@ devices = {
             "present": {"loc": "/sys/s3ip/fan/fan4/present", "way": "sysfs", "mask": 0x01, "okval": 1},
             "SpeedMin": threshold.FAN_SPEED_MIN,
             "SpeedMax": threshold.FRONT_FAN_SPEED_MAX,
-            "led": {"loc": "/dev/cpld10", "offset":0xd3, "len": 1,  "way":"devfile"},
+            "led": {"bus": 50, "addr": 0x0d, "offset":0xd3, "len": 1,  "way":"i2c"},
             "led_attrs": {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
@@ -586,7 +589,7 @@ devices = {
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x93, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x93, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan4/motor1/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan4/motor1/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,
@@ -600,7 +603,7 @@ devices = {
                 },
                 "Rotor2_config": {
                     "name": "Rotor2",
-                    "Set_speed": {"loc": "/dev/cpld10", "offset":0x93, "len": 1,  "way":"devfile"},
+                    "Set_speed": {"bus": 50, "addr": 0x0d, "offset":0x93, "len": 1,  "way":"i2c"},
                     "Running": {"loc": "/sys/s3ip/fan/fan4/motor2/status", "way": "sysfs", "mask": 0x01, "is_runing": 1},
                     "HwAlarm": {"loc": "/sys/s3ip/fan/fan4/motor2/status", "way": "sysfs", "mask": 0x01, "no_alarm": 1},
                     "SpeedMin": threshold.FAN_SPEED_MIN,

@@ -147,3 +147,6 @@
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
 	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "src/sonic-redfish"]
+	path = src/sonic-redfish
+	url = https://github.com/sonic-net/sonic-redfish
