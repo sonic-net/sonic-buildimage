@@ -102,6 +102,26 @@ class TestDeviceInfo(object):
             result = device_info.get_platform()
             assert result == "x86_64-mlnx_msn2700-r0"
 
+    @mock.patch("os.path.isdir")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_path_to_platform_dir_platform_none(self, mock_get_platform, mock_isdir):
+        # When get_platform() returns None and CONTAINER_PLATFORM_PATH doesn't exist,
+        # OSError should be raised (not TypeError) - this is the bug fix for
+        # TypeError: expected str, bytes or os.PathLike object, not NoneType
+        mock_get_platform.return_value = None
+        mock_isdir.return_value = False
+        with pytest.raises(OSError):
+            device_info.get_path_to_platform_dir()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_path_to_platform_dir_container_path(self, mock_get_platform, mock_isdir):
+        # When CONTAINER_PLATFORM_PATH exists, it should be returned even if platform is None
+        mock_get_platform.return_value = None
+        mock_isdir.return_value = True
+        result = device_info.get_path_to_platform_dir()
+        assert result == device_info.CONTAINER_PLATFORM_PATH
+
     def test_get_chassis_info(self):
         with mock.patch("sonic_py_common.device_info.SonicV2Connector", new=SonicV2Connector):
             result = device_info.get_chassis_info()
