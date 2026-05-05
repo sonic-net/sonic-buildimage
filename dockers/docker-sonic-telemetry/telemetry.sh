@@ -137,7 +137,7 @@ else
         exit $INCORRECT_TELEMETRY_VALUE
     fi
 fi
-TELEMETRY_ARGS+=" -gnmi_native_write=false"
+TELEMETRY_ARGS+=" -gnmi_native_write=true"
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
