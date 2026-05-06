@@ -508,6 +508,47 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
 
     return None
 
+def get_path_to_system_port_config_file(hwsku=None, asic=None):
+    """
+    Retrieves the path to the device's port configuration file that has system port info
+    Args:
+        hwsku: a string, it is allowed to be passed in args because when loading the
+              initial configuration on the device, the HwSKU is not yet present in ConfigDB.
+        asic: a string , asic argument should be passed on multi-ASIC devices only,
+              it should be omitted on single-ASIC platforms.
+    Returns:
+        A string containing the path the the device's system port configuration file
+    """
+
+    """
+    This platform check is performed to make sure we return a None
+    in case of unit-tests within sonic-cfggen where platform is not expected to be
+    present because tests are not run on actual Hardware/Container.
+    TODO: refactor sonic-cfggen such that we can remove this check
+    """
+
+    platform = get_platform()
+    if not platform:
+        return None
+
+    if hwsku:
+        platform_path = get_path_to_platform_dir()
+        hwsku_path = os.path.join(platform_path, hwsku)
+    else:
+        (_, hwsku_path) = get_paths_to_platform_and_hwsku_dirs()
+
+    # Check for 'port_config.ini' file presence
+    port_configs = None
+    if asic:
+       port_configs = os.path.join(hwsku_path, asic, PORT_CONFIG_FILE)
+    else:
+        port_configs = os.path.join(hwsku_path, PORT_CONFIG_FILE)
+
+    if not os.path.isfile(port_configs):
+        port_configs = None
+
+    return port_configs
+
 def get_sonic_version_info():
     if not os.path.isfile(SONIC_VERSION_YAML_PATH):
         return None
@@ -731,6 +772,42 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Check if this platform needs to generate voq configs.
+def is_generate_voq():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+
+    # platform_env.conf file not present for platform
+    if platform_env_conf_file_path is None:
+        return False
+
+    # Else open the file check for keyword - macsec_enabled -
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'generate_system_port_config':
+                val = tokens[1].strip()
+                if val == '1':
+                    return True
+
+    return False
+
+# Get voq cofig data - number of cores
+def get_num_asic_cores():
+    num_cores = 0
+    asic_conf_file_path = get_asic_conf_file_path()
+    if asic_conf_file_path is None:
+        return num_cores
+
+    with open(asic_conf_file_path) as asic_conf_file:
+        for line in asic_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'num_cores':
+                num_cores = tokens[1].strip()
+        return int(num_cores)
 
 def get_device_runtime_metadata():
     chassis_metadata = {}

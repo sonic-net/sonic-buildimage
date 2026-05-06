@@ -32,7 +32,7 @@ from collections import OrderedDict
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
 from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
-from portconfig import get_port_config, get_breakout_mode
+from portconfig import get_port_config, get_breakout_mode, get_system_port_config
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic, get_asic_sub_role
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
@@ -329,6 +329,26 @@ def _get_jinja2_env(paths):
 
     return env
 
+def _get_voq_config(asic_name, asic_id, hostname):
+    max_cores = device_info.get_num_asic_cores()
+    switch_id = 0
+    if asic_id is not None:
+       switch_id = int(asic_id)
+    if asic_name is None:
+        asic_name = "Asic0"
+
+    metadata =  {'DEVICE_METADATA': {
+                   'localhost': {
+                       'switch_id': switch_id,
+                       'switch_type': 'voq',
+                       'max_cores': max_cores,
+                       'hostname': hostname,
+                       'asic_name': asic_name
+                   }
+               }}
+
+    return metadata
+
 def main():
     parser=argparse.ArgumentParser(description="Render configuration file from minigraph data and jinja2 template.")
     group = parser.add_mutually_exclusive_group()
@@ -402,6 +422,17 @@ def main():
         brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
         if  brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
+
+        if device_info.is_generate_voq():
+            hostname = ""
+            try:
+                with open('/etc/hostname', 'r') as f:
+                    hostname = f.read().strip()
+            except Exception:
+                pass
+            deep_update(data, _get_voq_config(asic_name, asic_id, hostname))
+            system_ports = get_system_port_config(hwsku, hostname, asic_name)
+            deep_update(data, {'SYSTEM_PORT': system_ports})
 
     _process_json(args, data)
 

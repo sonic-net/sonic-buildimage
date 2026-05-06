@@ -211,6 +211,36 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
     else:
         return parse_port_config_file(port_config_file)
 
+def get_system_port_config(hwsku=None, hostname=None, asic_name=None):
+    config_db = db_connect_configdb(asic_name)
+    # If available, Read from CONFIG DB first
+    if config_db is not None:
+        port_data = config_db.get_table("SYSTEM_PORT")
+        if bool(port_data):
+            port_data_str_keys = {
+                f"{k[0]}|{k[1]}|{k[2]}" if isinstance(k, tuple) else k: v
+                for k, v in port_data.items()
+            }
+            sys_ports = ast.literal_eval(json.dumps(port_data_str_keys))
+            return sys_ports
+
+    asic_id = None
+    if asic_name is not None:
+        asic_id = str(get_asic_id_from_name(asic_name))
+
+    port_config_file = device_info.get_path_to_system_port_config_file(hwsku, asic_id)
+
+    if not port_config_file:
+        return {}
+
+    if asic_name is None:
+        asic_name = "Asic0"
+        asic_id = "0"
+
+    system_ports = parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id)
+
+    return system_ports
+
 def parse_port_config_file(port_config_file):
     ports = {}
     port_alias_map = {}
@@ -245,6 +275,57 @@ def parse_port_config_file(port_config_file):
             if 'asic_port_name' in data:
                 port_alias_asic_map[data['alias']] = data['asic_port_name'].strip()
     return (ports, port_alias_map, port_alias_asic_map)
+
+def parse_system_port_config_file(port_config_file, hostname, asic_name, asic_id):
+    ports = {}
+    files = [port_config_file]
+    for file in files:
+        with open(file) as data:
+            titles = ['name', 'speed', 'index', 'core_id', 'core_port_id', 'num_voq']
+            for line in data:
+                if line.startswith('#'):
+                    if "name" in line:
+                        titles = line.strip('#').split()
+                    continue
+
+                tokens = line.split()
+                if len(tokens) < 2:
+                    continue
+
+                name_index = titles.index('name')
+                name = tokens[name_index]
+                # Build a filtered and renamed dictionary
+                field_map = {
+                    'speed': 'speed',
+                    'core_id': 'core_index',
+                    'core_port_id': 'core_port_index',
+                    'num_voq': 'num_voq',
+                }
+
+                system_port_data = {}
+                system_port_data['switch_id'] = asic_id
+                for original_key, new_key in field_map.items():
+                    try:
+                        idx = titles.index(original_key)
+                        system_port_data[new_key] = tokens[idx]
+                    except ValueError:
+                        continue
+                index = tokens[titles.index('index')]
+                system_port_data['system_port_id'] = int(index)
+                system_port_name = hostname + "|" + asic_name + "|" + name
+                ports[system_port_name] = system_port_data
+
+    # add system port for CPU
+    ports[hostname + "|" + asic_name + "|Cpu0"] = {
+            "core_index": "0",
+            "core_port_index": "0",
+            "num_voq": "8",
+            "speed": "10000",
+            "switch_id": asic_id,
+            "system_port_id": "0"
+    }
+
+    return ports
 
 class BreakoutCfg(object):
 
