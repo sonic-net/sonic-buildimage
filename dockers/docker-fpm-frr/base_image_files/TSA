@@ -36,15 +36,10 @@ if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggr
   or config reload on all linecards"
     exit 0
   else
-    if [[ $current_tsa_state  == true ]]; then
-      echo "Chassis is already in Maintenance"
-      logger -t TSA -p user.info "Chassis is already in Maintenance"
-    else
-      sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
-      echo "Chassis Mode: Normal -> Maintenance"
-      logger -t TSA -p user.info "Chassis Mode: Normal -> Maintenance"
-      rexec all -c "sudo TSA chassis" || logger -t TSA -p user.warning "rexec TSA to linecards failed (exit $?)"
-    fi
+    sonic-cfggen -a "$CONFIG_DB_TSA_STATE_UPDATE" -w
+    echo "Chassis Mode: Normal -> Maintenance"
+    logger -t TSA -p user.info "Chassis Mode: Normal -> Maintenance"
+    rexec all -c "sudo TSA chassis" || logger -t TSA -p user.warning "rexec TSA to linecards failed (exit $?)"
     echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
   or config reload on all linecards"
     exit 0
