@@ -43,6 +43,10 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2026-04-17 {
+		description "Add IPv6 Neighbor Discovery / Router Advertisement leaves to VLAN_INTERFACE_LIST";
+	}
+
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
 	}
@@ -145,6 +149,30 @@ module sonic-vlan {
 				leaf loopback_action {
 					description "Packet action when a packet ingress and gets routed on the same IP interface";
 					type stypes:loopback_action;
+				}
+
+				leaf nd_suppress_ra {
+					description "Suppress IPv6 Router Advertisements on the VLAN interface";
+					type boolean;
+				}
+
+				leaf nd_managed_config_flag {
+					description "Set M-flag in RAs directing hosts to obtain IPv6 addresses via DHCPv6";
+					type boolean;
+				}
+
+				leaf nd_other_config_flag {
+					description "Set O-flag in RAs directing hosts to obtain non-address configuration via DHCPv6";
+					type boolean;
+				}
+
+				leaf nd_ra_interval {
+					description "Interval between unsolicited IPv6 Router Advertisements, in seconds";
+					type uint32 {
+						range "1..1800" {
+							error-message "Invalid IPv6 ND RA interval (expected range: 1..1800 seconds)";
+						}
+					}
 				}
 			}
 			/* end of VLAN_INTERFACE_LIST */

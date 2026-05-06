@@ -1,0 +1,148 @@
+{
+    "VLAN_INTERFACE_ND_SUPPRESS_RA_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_suppress_ra": "false" }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_SUPPRESS_RA_INVALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_suppress_ra": "maybe" }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_MANAGED_CONFIG_FLAG_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_managed_config_flag": "true" }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_MANAGED_CONFIG_FLAG_INVALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_managed_config_flag": "enable" }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_OTHER_CONFIG_FLAG_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_other_config_flag": "false" }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_OTHER_CONFIG_FLAG_INVALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_other_config_flag": 1 }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_VALID": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_ra_interval": 30 }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_INVALID_RANGE_HIGH": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_ra_interval": 99999 }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_RA_INTERVAL_INVALID_RANGE_LOW": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan100", "vlanid": 100 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    { "name": "Vlan100", "nd_ra_interval": 0 }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_ND_ALL_FLAGS_COMBINED": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    { "name": "Vlan815", "vlanid": 815 }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan815",
+                        "nd_suppress_ra": "false",
+                        "nd_managed_config_flag": "true",
+                        "nd_other_config_flag": "false",
+                        "nd_ra_interval": 30
+                    }
+                ]
+            }
+        }
+    }
+}

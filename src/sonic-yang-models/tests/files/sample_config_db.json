@@ -159,7 +159,11 @@
                 "nat_zone": "0",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
-                "mac_addr": "02:ab:cd:ef:12:34"
+                "mac_addr": "02:ab:cd:ef:12:34",
+                "nd_suppress_ra": "false",
+                "nd_managed_config_flag": "true",
+                "nd_other_config_flag": "false",
+                "nd_ra_interval": "30"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {

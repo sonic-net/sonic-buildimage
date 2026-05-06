@@ -120,7 +120,8 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'VLAN_INTERFACE': ['mgmtd']
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -1261,6 +1262,53 @@ def handle_igmp_if_enable(daemon, cmd_str, op, st_idx, args, data):
     syslog.syslog(syslog.LOG_INFO, 'handle_igmp_if_enable param {}, cmd_list {}'.format(param_value, cmd_list))
     return cmd_list
 
+def _hdl_nd_bool(daemon, cmd_str, op, st_idx, args, data, default_on):
+    """Translate a boolean IPv6 ND/RA ConfigDB field to a vtysh command.
+
+    cmd_str contains a ``{no:no-prefix}`` token; CommandArgument(daemon, True)
+    renders it as an empty string (command enabled), and CommandArgument(daemon,
+    False) renders it as the literal ``no `` (command disabled).
+
+    On DELETE we restore the FRR default for this flag so the interface is left
+    in the same state as if the ConfigDB entry had never existed. ``default_on``
+    is True for flags whose FRR default is "enabled" (e.g. suppress-ra), and
+    False for flags whose FRR default is "disabled" (e.g. managed-config-flag).
+    """
+    if len(args) != 1:
+        return None
+
+    value = str(args[st_idx]).lower()
+    if value == 'true':
+        flag_on = True
+    elif value == 'false':
+        flag_on = False
+    else:
+        syslog.syslog(syslog.LOG_ERR,
+                      '_hdl_nd_bool: unexpected value {!r} for cmd {!r}'.format(
+                          value, cmd_str))
+        return None
+
+    if op == CachedDataWithOp.OP_DELETE:
+        flag_on = default_on
+
+    return [cmd_str.format(no=CommandArgument(daemon, flag_on))]
+
+
+def hdl_nd_flag_default_off(daemon, cmd_str, op, st_idx, args, data):
+    """Handle a boolean IPv6 ND flag whose FRR default is "disabled"
+    (e.g. managed-config-flag, other-config-flag). On DELETE we emit
+    ``no <cmd>`` so the interface reverts to the FRR default."""
+    return _hdl_nd_bool(daemon, cmd_str, op, st_idx, args, data, default_on=False)
+
+
+def hdl_nd_flag_default_on(daemon, cmd_str, op, st_idx, args, data):
+    """Handle a boolean IPv6 ND flag whose FRR default is "enabled"
+    (e.g. suppress-ra, which FRR enables by default on non-P2P interfaces).
+    On DELETE we emit the bare command (no ``no`` prefix) so the interface
+    reverts to the FRR default."""
+    return _hdl_nd_bool(daemon, cmd_str, op, st_idx, args, data, default_on=True)
+
+
 def handle_ip_sla_common(daemon, cmd_str, op, st_idx, args, data):
     cmd_list = []
 
@@ -2080,6 +2128,18 @@ class BGPConfigDaemon:
                              ('last-member-query-count', 'ip igmp last-member-query-count {}', handle_igmp_if_common),
                              ('last-member-query-interval', 'ip igmp last-member-query-interval {}', handle_igmp_if_common),
                            ]
+    # VLAN_INTERFACE IPv6 Neighbor Discovery / Router Advertisement parameters.
+    # Only three interface-level ND flags + one RA interval are handled here.
+    # Each flag uses the default-aware handler variant so that a ConfigDB DELETE
+    # restores FRR's per-flag default (suppress-ra defaults to ON; managed- and
+    # other-config-flag default to OFF).
+    vlan_intf_nd_key_map = [
+        ('nd_suppress_ra',         '{no:no-prefix}ipv6 nd suppress-ra',         hdl_nd_flag_default_on),
+        ('nd_managed_config_flag', '{no:no-prefix}ipv6 nd managed-config-flag', hdl_nd_flag_default_off),
+        ('nd_other_config_flag',   '{no:no-prefix}ipv6 nd other-config-flag',   hdl_nd_flag_default_off),
+        ('nd_ra_interval',         '{no:no-prefix}ipv6 nd ra-interval {}'),
+    ]
+
     ip_sla_key_map = [
                              ('sla_id', '{no:no-prefix}ip sla {}'),
                              ('frequency', 'frequency {}', handle_ip_sla_common),
@@ -2131,6 +2191,7 @@ class BGPConfigDaemon:
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
                       'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
+                      'VLAN_INTERFACE':                 vlan_intf_nd_key_map,
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2332,6 +2393,7 @@ class BGPConfigDaemon:
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
+            ('VLAN_INTERFACE', self.bgp_table_handler_common),
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
@@ -3852,6 +3914,26 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
 
+
+
+            elif table == 'VLAN_INTERFACE':
+                # VLAN_INTERFACE has two key shapes in ConfigDB:
+                #   VLAN_INTERFACE|VlanX                   - interface-level (ND fields live here)
+                #   VLAN_INTERFACE|VlanX|<ip-prefix>       - address assignment (no ND fields)
+                # We only process the interface-level entries. __update_bgp
+                # splits key on '|' once, so for the 2-part form `key` will be
+                # non-empty (the ip-prefix); skip those.
+                if key:
+                    continue
+                ifname = prefix
+                syslog.syslog(syslog.LOG_INFO,
+                              'VLAN_INTERFACE ND update for interface {}'.format(ifname))
+                cmd_prefix = ['configure terminal',
+                              'interface {}'.format(ifname)]
+                if not key_map.run_command(self, table, data, cmd_prefix):
+                    syslog.syslog(syslog.LOG_ERR,
+                                  'failed running VLAN_INTERFACE ND config command for {}'.format(ifname))
+                    continue
 
     def __add_op_to_data(self, table_key, data, comb_attr_list):
         cached_data = self.table_data_cache.setdefault(table_key, {})
