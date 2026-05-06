@@ -1968,9 +1968,9 @@ index 069e20cdc39a..eba019bed0d5 100644
  			static_zebra_srv6_sid_uninstall(sid);
 -			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
 -		}
- 	}
- 
- 	listnode_delete(srv6_locators, locator);
+
+ 		sid->locator = NULL;
+ 		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
 @@ -1437,8 +1435,6 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
  		 */
  		static_zebra_srv6_sid_install(sid);
