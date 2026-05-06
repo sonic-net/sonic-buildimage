@@ -57,7 +57,7 @@ elif [ -n "$X509" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 else
-    TELEMETRY_ARGS+=" --noTLS --bind_address 127.0.0.1"
+    TELEMETRY_ARGS+=" --noTLS"
 fi
 
 # If no configuration entry exists for TELEMETRY, create one default port
