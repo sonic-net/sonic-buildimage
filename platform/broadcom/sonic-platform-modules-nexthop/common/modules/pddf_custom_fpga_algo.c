@@ -110,6 +110,7 @@ enum {
 #define XIIC_I2C_TIMEOUT	(msecs_to_jiffies(1000))
 
 struct fpgalogic_i2c {
+    struct i2c_adapter *adap;
     void __iomem *base;
     u32 reg_shift;
     u32 reg_io_width;
@@ -581,6 +582,7 @@ static int adap_data_init(struct i2c_adapter *adap, int index)
     fpgalogic_i2c[i2c_ch_index].base = i2c_data.ch_base_addr +
                           index * i2c_data.ch_size;
     mutex_init(&fpgalogic_i2c[i2c_ch_index].lock);
+    fpgalogic_i2c[i2c_ch_index].adap = adap;
     fpgai2c_init(&fpgalogic_i2c[i2c_ch_index]);
 
     adap->algo_data = &fpgalogic_i2c[i2c_ch_index];
