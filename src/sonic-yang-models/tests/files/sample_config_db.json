@@ -2007,6 +2007,11 @@
             "default|connected|bgp|ipv4": {
             }
         },
+        "FIB_ROUTE_FILTER": {
+            "default|IPv4|bgp": {
+                "route_map": "map1"
+            }
+        },
         "PREFIX_SET": {
             "prefix1": {
             },

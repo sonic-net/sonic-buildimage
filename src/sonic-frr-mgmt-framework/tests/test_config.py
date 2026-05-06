@@ -307,3 +307,265 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+
+def _make_frf_daemon(run_cmd, initial_table=None):
+    """Helper: build a BGPConfigDaemon and seed fib_route_filter_state
+    from initial_table (a dict of key -> {'route_map': ...}), then reset
+    run_cmd so the caller sees only the vtysh it triggers.
+
+    The daemon's own __init__ runs against a mocked config_db that returns
+    empty tables, so the state dict starts empty; we reseed it afterwards
+    to simulate pre-existing rows without touching the init path.
+    """
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+
+    initial_table = initial_table or {}
+    daemon.fib_route_filter_state = {}
+    for k, v in initial_table.items():
+        norm_key = '|'.join(k) if isinstance(k, tuple) else str(k)
+        rm = v.get('route_map') if isinstance(v, dict) else None
+        if rm:
+            daemon.fib_route_filter_state[norm_key] = rm
+    run_cmd.reset_mock()
+    return daemon
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_set_default_vrf_ipv4(run_cmd):
+    """SET on default VRF, ipv4, bgp emits 'ip protocol bgp route-map <NAME>'."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_FROM_BGP'})
+    assert run_cmd.call_count == 1
+    cmd = run_cmd.call_args[0][1]
+    assert "configure terminal" in cmd
+    assert "ip protocol bgp route-map RM_FROM_BGP" in cmd
+    assert "vrf " not in cmd  # default VRF: no 'vrf …' wrapping in the vtysh
+    assert daemon.fib_route_filter_state['default|IPv4|bgp'] == 'RM_FROM_BGP'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_set_default_vrf_ipv6_ospf6(run_cmd):
+    """IPv6 renders the 'ipv6' keyword instead of 'ip'."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv6|ospf6', {'route_map': 'RM_V6'})
+    cmd = run_cmd.call_args[0][1]
+    assert "ipv6 protocol ospf6 route-map RM_V6" in cmd
+    assert "ip protocol" not in cmd  # should NOT emit ipv4 form
+    assert daemon.fib_route_filter_state['default|IPv6|ospf6'] == 'RM_V6'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_set_named_vrf_wraps_in_vrf_block(run_cmd):
+    """Non-default VRF wraps the line in 'vrf <N> / ... / exit-vrf'."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'Vrf_red|IPv4|static', {'route_map': 'RM_STATIC'})
+    cmd = run_cmd.call_args[0][1]
+    assert "vrf Vrf_red" in cmd
+    assert "ip protocol static route-map RM_STATIC" in cmd
+    assert "exit-vrf" in cmd
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_set_with_tuple_key(run_cmd):
+    """swsscommon may deliver compound keys as tuples; handler must accept both."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', ('default', 'IPv4', 'connected'),
+        {'route_map': 'RM_CONN'})
+    cmd = run_cmd.call_args[0][1]
+    assert "ip protocol connected route-map RM_CONN" in cmd
+    assert daemon.fib_route_filter_state['default|IPv4|connected'] == 'RM_CONN'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_idempotent_set_skipped(run_cmd):
+    """Applying the same route-map twice must emit vtysh only once."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    assert run_cmd.call_count == 1
+    run_cmd.reset_mock()
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_update_route_map(run_cmd):
+    """Updating to a different route-map emits a fresh binding."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    run_cmd.reset_mock()
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_B'})
+    assert run_cmd.call_count == 1
+    cmd = run_cmd.call_args[0][1]
+    assert "ip protocol bgp route-map RM_B" in cmd
+    assert "RM_A" not in cmd
+    assert daemon.fib_route_filter_state['default|IPv4|bgp'] == 'RM_B'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_delete_emits_no_form(run_cmd):
+    """Deletion emits 'no ip protocol <PROTO> route-map <NAME>' using stored RM."""
+    daemon = _make_frf_daemon(
+        run_cmd,
+        initial_table={('default', 'IPv4', 'bgp'): {'route_map': 'RM_FROM_BGP'}},
+    )
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', None)
+    assert run_cmd.call_count == 1
+    cmd = run_cmd.call_args[0][1]
+    assert "no ip protocol bgp route-map RM_FROM_BGP" in cmd
+    assert 'default|IPv4|bgp' not in daemon.fib_route_filter_state
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_delete_named_vrf(run_cmd):
+    """Deletion of a named-VRF row wraps the 'no' in 'vrf <N> / exit-vrf'."""
+    daemon = _make_frf_daemon(
+        run_cmd,
+        initial_table={('Vrf_red', 'IPv4', 'static'): {'route_map': 'RM_STATIC'}},
+    )
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'Vrf_red|IPv4|static', None)
+    cmd = run_cmd.call_args[0][1]
+    assert "vrf Vrf_red" in cmd
+    assert "no ip protocol static route-map RM_STATIC" in cmd
+    assert "exit-vrf" in cmd
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_delete_untracked_is_noop(run_cmd):
+    """Delete on a key never set is a silent noop — no vtysh push."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', None)
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_malformed_key_is_ignored(run_cmd):
+    """Keys with the wrong number of components must be rejected without a push."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|ipv4', {'route_map': 'RM'})
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_unsupported_afi_is_ignored(run_cmd):
+    """addr_family outside IPv4/IPv6 must not produce a vtysh command."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPvX|bgp', {'route_map': 'RM'})
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_missing_route_map_is_ignored(run_cmd):
+    """A SET with no route_map field is rejected — YANG should have blocked
+    this, but the daemon must not push a broken vtysh command if it slips through."""
+    daemon = _make_frf_daemon(run_cmd)
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {})
+    assert run_cmd.call_count == 0
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_registered_in_table_handler_list(run_cmd):
+    """Sanity check: FIB_ROUTE_FILTER is wired into table_handler_list so
+    CONFIG_DB subscription routes to our handler."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    run_cmd.return_value = True
+    daemon = BGPConfigDaemon()
+    mapped = dict(daemon.table_handler_list)
+    assert 'FIB_ROUTE_FILTER' in mapped
+    assert mapped['FIB_ROUTE_FILTER'] == daemon.fib_route_filter_handler
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_set_state_not_updated_on_failure(run_cmd):
+    """If vtysh fails, the handler must NOT record the new route-map in
+    fib_route_filter_state — otherwise a retry would be silently
+    short-circuited by the idempotent `prev_rm == route_map` check."""
+    daemon = _make_frf_daemon(run_cmd)
+    run_cmd.return_value = False  # simulate transient FRR failure
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    assert run_cmd.call_count == 1  # command was attempted
+    assert 'default|IPv4|bgp' not in daemon.fib_route_filter_state
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_failed_set_is_retryable(run_cmd):
+    """After a failed SET, a retry with the same data must re-emit the vtysh
+    (not be short-circuited as 'already applied'), and a successful retry
+    must then advance state."""
+    daemon = _make_frf_daemon(run_cmd)
+    # First attempt fails.
+    run_cmd.return_value = False
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    assert 'default|IPv4|bgp' not in daemon.fib_route_filter_state
+    # Retry succeeds.
+    run_cmd.return_value = True
+    run_cmd.reset_mock()
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_A'})
+    assert run_cmd.call_count == 1  # not skipped as idempotent
+    assert daemon.fib_route_filter_state['default|IPv4|bgp'] == 'RM_A'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_delete_state_not_updated_on_failure(run_cmd):
+    """If the `no ... route-map` vtysh fails, state must still reflect the
+    old route-map so a retry can emit the same 'no' form."""
+    daemon = _make_frf_daemon(
+        run_cmd,
+        initial_table={('default', 'IPv4', 'bgp'): {'route_map': 'RM_A'}},
+    )
+    run_cmd.return_value = False
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', None)
+    assert run_cmd.call_count == 1
+    # State still shows RM_A so retry can emit `no ... route-map RM_A`.
+    assert daemon.fib_route_filter_state['default|IPv4|bgp'] == 'RM_A'
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
+def test_frf_update_failure_preserves_prior_route_map(run_cmd):
+    """If an update from RM_A -> RM_B fails, state must still show RM_A
+    (matching what zebra actually has), not RM_B."""
+    daemon = _make_frf_daemon(
+        run_cmd,
+        initial_table={('default', 'IPv4', 'bgp'): {'route_map': 'RM_A'}},
+    )
+    run_cmd.return_value = False
+    daemon.fib_route_filter_handler(
+        'FIB_ROUTE_FILTER', 'default|IPv4|bgp', {'route_map': 'RM_B'})
+    assert daemon.fib_route_filter_state['default|IPv4|bgp'] == 'RM_A'
