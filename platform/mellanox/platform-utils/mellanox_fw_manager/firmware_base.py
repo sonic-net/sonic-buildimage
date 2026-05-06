@@ -320,17 +320,14 @@ class FirmwareManagerBase(Process):
                 error_str = str(e)
 
                 if 'rc = 523' in error_str:
-                    self.logger.info(
-                        f"ASIC not ready for {self.pci_id} "
-                        f"(rc=523): {error_str} "
-                        f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
-                    )
+                    prefix = f"ASIC not ready for {self.pci_id} (rc=523)"
                 else:
-                    self.logger.info(
-                        f"Unable to get firmware versions for {self.pci_id} "
-                        f"(attempt {attempt}): {error_str} "
-                        f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
-                    )
+                    prefix = f"Unable to get firmware versions for {self.pci_id} (attempt {attempt})"
+
+                self.logger.info(
+                    f"{prefix}: {error_str} "
+                    f"(retrying in {sleep_time:.0f}s, {remaining:.0f}s remaining)"
+                )
 
                 time.sleep(sleep_time)
                 delay = min(delay * 2, max_delay)
