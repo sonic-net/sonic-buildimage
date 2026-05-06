@@ -1171,12 +1171,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
 sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
-# Install dpu-udev-manager script
-sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.sh $FILESYSTEM_ROOT/usr/bin/dpu-udev-manager.sh
+# Install udev-manager script (platform.json-driven net interface naming)
+sudo install -m 755 platform/mellanox/udev-manager/udev-manager.sh $FILESYSTEM_ROOT/usr/bin/udev-manager.sh
 
-# Install dpu-udev-manager service
-sudo install -m 644 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu-udev-manager
+# Install udev-manager service
+sudo install -m 644 platform/mellanox/udev-manager/udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable udev-manager
 
 {% endif %}
 
