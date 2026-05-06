@@ -76,6 +76,10 @@
     "SYSLOG_SERVER_FILTER_REGEX": {
         "desc": "Valid filter regex"
     },
+    "SYSLOG_SERVER_FILTER_REGEX_NEWLINE_NEG_TEST": {
+        "desc": "Filter regex with newline character should be rejected",
+        "eStrKey": "Pattern"
+    },
     "SYSLOG_SERVER_PROTOCOL": {
         "desc": "Valid syslog server protocol"
     },

@@ -161,9 +161,6 @@ fi
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
 
-## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
-
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
 sudo cp files/initramfs-tools/arista-convertfs $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/arista-convertfs
@@ -365,6 +362,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     locales                 \
     cgroup-tools            \
     ipmitool                \
+    freeipmi-tools          \
     ndisc6                  \
     conntrack               \
     python3                 \
@@ -817,33 +815,6 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             fi
 
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
-        fi
-    fi
-
-    # Install platform-level scripts and services for aspeed platform
-    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing platform scripts and services for aspeed..."
-
-        # Copy all scripts from platform/aspeed/scripts/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
-            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
-                if [ -f "$script" ]; then
-                    echo "Installing $(basename $script)..."
-                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
-                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
-                fi
-            done
-        fi
-
-        # Copy all systemd services from platform/aspeed/systemd/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
-            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
-                if [ -f "$service" ]; then
-                    echo "Installing and enabling $(basename $service)..."
-                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
-                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
-                fi
-            done
         fi
     fi
 fi

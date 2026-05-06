@@ -46,6 +46,7 @@
 #define WARM_REBOOT 1
 
 #define MCLAG_ERROR -1
+#define MCLAG_ERROR_INVALID_TLV -2
 
 struct CSM;
 

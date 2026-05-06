@@ -133,7 +133,9 @@ module sonic-syslog {
 
                 leaf filter_regex {
                     description "Filter regex";
-                    type string;
+                    type string {
+                        pattern '[^\n\r]+';
+                    }
                 }
 
                 leaf protocol {

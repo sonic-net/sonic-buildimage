@@ -57,8 +57,6 @@ rdma-core==2601.0.1-1
 rxp-compiler==22.05.1
 sdn-appliance==1.5-1mlnx1
 sonic-bmp==0.1
-sonic-mgmt-common==1.0.0
-sonic-mgmt-common-codegen==1.0.0
 stp==1.0.0
-sys-sdk-dev==1.mlnx.4.8.3412
-sys-sdk-main==1.mlnx.4.8.3412
+sys-sdk-dev==1.mlnx.4.8.3430
+sys-sdk-main==1.mlnx.4.8.3430

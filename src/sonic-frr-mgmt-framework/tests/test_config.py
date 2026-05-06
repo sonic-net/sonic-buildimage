@@ -53,11 +53,11 @@ class CmdMapTestInfo:
         return copy.deepcopy(cls.data_buf[test.table_name][test.key])
     @staticmethod
     def compose_vtysh_cmd(cmd_list, negtive = False):
-        cmdline = 'vtysh'
+        result = ['vtysh']
         for cmd in cmd_list:
             cmd = cmd.format('no ' if negtive else '')
-            cmdline += " -c '%s'" % cmd
-        return cmdline
+            result += ['-c', cmd]
+        return result
     def check_running_cmd(self, mock, is_del):
         if is_del:
             vtysh_cmd = self.vtysh_cmd if self.vtysh_neg_cmd is None else self.vtysh_neg_cmd
@@ -82,7 +82,9 @@ def hdl_confed_peers_cmd(is_del, cmd_list, chk_data):
     if is_del:
         chk_data = list(reversed(chk_data))
     for idx, cmd in enumerate(cmd_list):
-        last_cmd = re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
+        # cmd is now a list: ['vtysh', '-c', ..., '-c', last_cmd]
+        # Extract last -c value
+        last_cmd = cmd[-1] if isinstance(cmd, list) else re.findall(r"-c\s+'([^']+)'\s*", cmd)[-1]
         neg_cmd = False
         if last_cmd.startswith('no '):
             neg_cmd = True
@@ -1030,3 +1032,40 @@ def test_bmp_target_deletion_triggers_default_target(run_cmd):
     assert 'bmp stats interval 1000' in all_commands
     assert 'bmp monitor ipv4 unicast pre-policy' in all_commands
     assert 'bmp monitor ipv6 unicast pre-policy' in all_commands
+    
+    
+def test_bgp_neighbor_description_injection(run_cmd):
+    """Regression test: shell metacharacters in BGP_NEIGHBOR description must be
+    passed as a literal vtysh argument, not interpreted by a shell."""
+    from frrcfgd.frrcfgd import BGPConfigDaemon
+    daemon = BGPConfigDaemon()
+
+    # Seed BGP_GLOBALS to set local ASN (reuse existing test data)
+    globals_seed = bgp_globals_data[0]  # local_asn = 100
+    CmdMapTestInfo.add_test_data(globals_seed)
+    bgp_globals_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_GLOBALS'][0]
+    bgp_globals_hdlr('BGP_GLOBALS', globals_seed.key, CmdMapTestInfo.get_test_data(globals_seed))
+
+    # Now test BGP_NEIGHBOR description with injection payload
+    injection_payload = "'; id #"
+    run_cmd.reset_mock()
+    nbr_test = CmdMapTestInfo(
+        'BGP_NEIGHBOR', 'default|10.0.0.1',
+        {'name': injection_payload},
+        conf_bgp_cmd('default', 100) + [
+            'neighbor 10.0.0.1 description {}'.format(injection_payload)
+        ]
+    )
+    CmdMapTestInfo.add_test_data(nbr_test)
+    nbr_hdlr = [h for t, h in daemon.table_handler_list if t == 'BGP_NEIGHBOR'][0]
+    nbr_hdlr('BGP_NEIGHBOR', nbr_test.key, CmdMapTestInfo.get_test_data(nbr_test))
+
+    # Verify g_run_command was called with a list (shell=False path)
+    assert run_cmd.called, "g_run_command was not called for BGP_NEIGHBOR description"
+    for call in run_cmd.call_args_list:
+        cmd = call[0][1]
+        assert isinstance(cmd, list), \
+            "command must be a list (shell=False), got string: {}".format(cmd)
+        if any('description' in arg for arg in cmd):
+            assert any(injection_payload in arg for arg in cmd), \
+                "injection payload not found as literal arg: {}".format(cmd)

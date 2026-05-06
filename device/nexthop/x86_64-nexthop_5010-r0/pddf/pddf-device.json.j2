@@ -8,7 +8,7 @@
     "num_asic_temps": 52,
     "num_voltage_sensors": 82,
     "num_current_sensors": 20,
-    "num_components": 20,
+    "num_components": 36,
     "nexthop_thermal_xcvr_setpoint_margin" : 8,
     "nexthop_thermal_xcvr_setpoint_override" : null,
     "nexthop_thermal_xcvr_pid_domain": "main",
@@ -659,6 +659,486 @@
       {
         "attr_name": "update",
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DCDC10 {}"
+      }
+    ]
+  },
+  "COMPONENT21": {
+    "comp_attr": {
+      "name": "PHY0",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY0"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY0 {}"
+      }
+    ]
+  },
+  "COMPONENT22": {
+    "comp_attr": {
+      "name": "PHY1",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY1"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY1 {}"
+      }
+    ]
+  },
+  "COMPONENT23": {
+    "comp_attr": {
+      "name": "PHY2",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY2"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY2 {}"
+      }
+    ]
+  },
+  "COMPONENT24": {
+    "comp_attr": {
+      "name": "PHY3",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY3"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY3 {}"
+      }
+    ]
+  },
+  "COMPONENT25": {
+    "comp_attr": {
+      "name": "PHY4",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY4"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY4 {}"
+      }
+    ]
+  },
+  "COMPONENT26": {
+    "comp_attr": {
+      "name": "PHY5",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY5"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY5 {}"
+      }
+    ]
+  },
+  "COMPONENT27": {
+    "comp_attr": {
+      "name": "PHY6",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY6"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY6 {}"
+      }
+    ]
+  },
+  "COMPONENT28": {
+    "comp_attr": {
+      "name": "PHY7",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY7"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY7 {}"
+      }
+    ]
+  },
+  "COMPONENT29": {
+    "comp_attr": {
+      "name": "PHY8",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY8"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY8 {}"
+      }
+    ]
+  },
+  "COMPONENT30": {
+    "comp_attr": {
+      "name": "PHY9",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY9"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY9 {}"
+      }
+    ]
+  },
+  "COMPONENT31": {
+    "comp_attr": {
+      "name": "PHY10",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY10"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY10 {}"
+      }
+    ]
+  },
+  "COMPONENT32": {
+    "comp_attr": {
+      "name": "PHY11",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY11"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY11 {}"
+      }
+    ]
+  },
+  "COMPONENT33": {
+    "comp_attr": {
+      "name": "PHY12",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY12"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY12 {}"
+      }
+    ]
+  },
+  "COMPONENT34": {
+    "comp_attr": {
+      "name": "PHY13",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY13"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY13 {}"
+      }
+    ]
+  },
+  "COMPONENT35": {
+    "comp_attr": {
+      "name": "PHY14",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY14"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY14 {}"
+      }
+    ]
+  },
+  "COMPONENT36": {
+    "comp_attr": {
+      "name": "PHY15",
+      "type": "gearbox",
+      "description": "Agera Gearbox",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "agera_version PHY15"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PHY15 {}"
       }
     ]
   },

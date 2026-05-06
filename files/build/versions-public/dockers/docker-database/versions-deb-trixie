@@ -14,8 +14,8 @@ libgpm2==1.20.7-11+b2
 libipt2==2.1.2-1
 libjson-c5==0.18+ds-1
 libmpfr6==4.2.2-1
-libngtcp2-16==1.11.0-1
-libngtcp2-crypto-gnutls8==1.11.0-1
+libngtcp2-16==1.11.0-1+deb13u1
+libngtcp2-crypto-gnutls8==1.11.0-1+deb13u1
 libprotobuf32t64==3.21.12-11
 libsource-highlight-common==3.1.9-4.3
 libsource-highlight4t64==3.1.9-4.3+b1

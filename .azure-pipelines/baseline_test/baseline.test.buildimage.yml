@@ -47,7 +47,7 @@ parameters:
 
   - name: INCLUDE_JOBS
     type: string
-    default: "all"
+    default: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dualtor_job,dpu_job,t1_multi_asic_job"
 
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml

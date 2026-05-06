@@ -43,7 +43,7 @@ monitor = {
             "pwm_min": 0x80,
             "pwm_max": 0xff,
             "Kp": 1.5,
-            "Ki": 1,
+            "Ki": 0.3,
             "Kd": 0.3,
             "target": 90,
             "value": [None, None, None],
@@ -90,13 +90,15 @@ monitor = {
         "SWITCH_TEMP": {"name": "SWITCH_TEMP", "warning": 100, "critical": 105, "invalid": -100000, "error": -99999},
         "INLET_TEMP": {"name": "INLET_TEMP", "warning": 50, "critical": 55, "fix": -2},
         "OUTLET_TEMP": {"name": "OUTLET_TEMP", "warning": 70, "critical": 75},
-        "CPU_TEMP": {"name": "CPU_TEMP", "warning": 90, "critical": 95},
-        "MOS_TEMP": {"name": "MOS_TEMP", "warning": 100, "critical": 125},
+        "CPU_TEMP": {"name": "CPU_TEMP", "warning": 95, "critical": 100},
+        "MOS_TEMP": {"name": "MOS_TEMP", "warning": 115, "critical": 125},
         "BOARD_TEMP": {"name": "BOARD_TEMP", "warning": 95, "critical": 100},
         "SFF_TEMP": {"name": "SFF_TEMP", "warning": 999, "critical": 1000, "ignore_threshold": 1, "invalid": -10000, "error": -9999},
     },
 
     "fancontrol_para": {
+        "fan_air_flow_monitor":1,
+        "psu_air_flow_monitor":1,
         "interval": 5,
         "max_pwm": 0xff,
         "min_pwm": 0x80,
@@ -149,6 +151,10 @@ monitor = {
         "board_fan_led": [
             {"led_name": "FRONT_FAN_LED"},
         ],
+        "fan_air_flow_monitor":1,
+        "psu_air_flow_monitor":1,
+        "psu_air_flow_amber_num":1,
+        "fan_air_flow_amber_num":1,
     },
 
     "otp_reboot_judge_file": {

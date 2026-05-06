@@ -607,5 +607,85 @@ class Test_SonicYang(object):
 
         return
 
+    def test_loaddata_quiet_suppresses_syslog_on_success(self, sonic_yang_data, monkeypatch):
+        # With quiet=True, the informational "Try to load Data" sysLog
+        # call must not be emitted. Exception path is covered below.
+        # monkeypatch.setattr cleanly reverts the instance-level override
+        # on teardown so state does not leak across tests.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+
+        syc.loadData(jIn, quiet=True)
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert not any('Try to load Data' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Try to load Data' sysLog: {}".format(msgs)
+        assert not any('Data Loading Failed' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Data Loading Failed' sysLog: {}".format(msgs)
+
+        return
+
+    def test_loaddata_quiet_suppresses_syslog_on_failure(self, sonic_yang_data, monkeypatch):
+        # With quiet=True, the LOG_ERR "Data Loading Failed" sysLog call
+        # must not be emitted even when parse_data_mem raises. The
+        # SonicYangException must still be raised so the caller sees the
+        # failure. monkeypatch.setattr cleanly reverts on teardown.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+
+        def _boom(*a, **kw):
+            raise RuntimeError('forced parse failure')
+
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+        monkeypatch.setattr(syc.ctx, 'parse_data_mem', _boom)
+
+        raised = False
+        try:
+            syc.loadData(jIn, quiet=True)
+        except sy.SonicYangException:
+            raised = True
+        assert raised, "SonicYangException must still be raised even when quiet=True"
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert not any('Data Loading Failed' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Data Loading Failed' sysLog on failure: {}".format(msgs)
+
+        return
+
+    def test_loaddata_default_logs_syslog_on_success(self, sonic_yang_data, monkeypatch):
+        # Default (quiet=False) preserves existing behavior: the
+        # "Try to load Data" sysLog call must be emitted on success.
+        # monkeypatch.setattr cleanly reverts on teardown.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+
+        syc.loadData(jIn)
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert any('Try to load Data' in str(m) for m in msgs), \
+            "default quiet=False must log 'Try to load Data': {}".format(msgs)
+
+        return
+
     def teardown_class(self):
         pass
