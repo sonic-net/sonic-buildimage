@@ -5,10 +5,6 @@ module sonic-heartbeat {
     namespace "http://github.com/sonic-net/sonic-heartbeat";
     prefix heartbeat;
 
-    import ietf-inet-types {
-        prefix inet;
-    }
-
     organization
         "SONiC";
 
@@ -24,7 +20,7 @@ module sonic-heartbeat {
     container sonic-heartbeat {
 
         container HEARTBEAT {
-            description "HEARTBEAT config TABLE part of config_db.json";
+            description "Heartbeat monitoring configuration for system processes";
 
             list HEARTBEAT_LIST {
                 key "name";

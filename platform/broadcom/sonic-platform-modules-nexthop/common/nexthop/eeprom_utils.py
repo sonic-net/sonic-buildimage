@@ -389,6 +389,16 @@ def complete_available_eeproms(ctx, args, incomplete):
     return [eeprom for eeprom in eeproms if eeprom.startswith(incomplete)]
 
 
+def click_argument_eeprom_path():
+    "Returns a click.argument with shell autocomplete to hint available EEPROM paths on the system."
+    # click version 8.0 renamed `autocompletion` to `shell_complete`.
+    # This is to support both old versions and new versions.
+    if hasattr(click.Parameter, "shell_complete"):
+        return click.argument("eeprom_path", shell_complete=complete_available_eeproms)
+    else:
+        return click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+
+
 def decode_eeprom(eeprom_path: str):
     eeprom_class = Eeprom(eeprom_path, start=0, status="", ro=True)
     eeprom = eeprom_class.read_eeprom()
@@ -477,7 +487,7 @@ def cli_list():
 
 
 @cli.command("decode")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 def decode(eeprom_path):
     check_root_privileges()
     decode_eeprom(eeprom_path)
@@ -492,7 +502,7 @@ def decode_all():
 
 
 @cli.command("program")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 @click.option("--product-name", default=None)
 @click.option("--part-num", default=None)
 @click.option("--serial-num", default=None)
@@ -547,7 +557,7 @@ def program(
 
 
 @cli.command("clear")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 def clear(eeprom_path):
     check_root_privileges()
     clear_eeprom(eeprom_path)

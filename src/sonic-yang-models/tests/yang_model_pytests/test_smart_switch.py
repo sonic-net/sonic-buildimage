@@ -415,7 +415,7 @@ class TestSmartSwitch:
                             "vdpu_id": "vdpu0",
                             "profile": "none",
                             "tier": "none",
-                            "main_dpu_ids": ["str-8102-t1-dpu0"]
+                            "main_dpu_ids": "str-8102-t1-dpu0"
                         }
                     ]
                 }
@@ -454,7 +454,7 @@ class TestSmartSwitch:
                     "global": {
                         "vnet_name": "Vnet55",
                         "cp_data_channel_port": 11234,
-                        "dp_channel_port": 11235,
+                        "dp_channel_dst_port": 11235,
                         "dp_channel_src_port_min": 11236,
                         "dp_channel_src_port_max": 11237,
                         "dp_channel_probe_interval_ms": 500,
@@ -466,3 +466,205 @@ class TestSmartSwitch:
             }
         }
         yang_model.load_data(data)
+
+    def test_dash_ha_global_config_dpu_vnet(self, yang_model):
+        """Test dpu_vnet leafref to VNET_LIST"""
+        data = {
+            "sonic-vxlan:sonic-vxlan": {
+                "sonic-vxlan:VXLAN_TUNNEL": {
+                    "VXLAN_TUNNEL_LIST": [
+                        {
+                            "name": "vtep1",
+                            "src_ip": "1.2.3.4"
+                        }
+                    ]
+                }
+            },
+            "sonic-vnet:sonic-vnet": {
+                "sonic-vnet:VNET": {
+                    "VNET_LIST": [
+                        {
+                            "name": "Vnet100",
+                            "vxlan_tunnel": "vtep1",
+                            "vni": 9000,
+                            "scope": "default",
+                            "advertise_prefix": True,
+                            "overlay_dmac": "22:33:44:55:66:77"
+                        }
+                    ]
+                }
+            },
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
+                    "global": {
+                        "dpu_vnet": "Vnet100",
+                        "cp_data_channel_port": 11234
+                    }
+                }
+            }
+        }
+        yang_model.load_data(data)
+
+    def test_dash_ha_global_config_dpu_vnet_invalid(self, yang_model):
+        """Test dpu_vnet with non-existent VNET reference"""
+        data = {
+            "sonic-vxlan:sonic-vxlan": {
+                "sonic-vxlan:VXLAN_TUNNEL": {
+                    "VXLAN_TUNNEL_LIST": [
+                        {
+                            "name": "vtep1",
+                            "src_ip": "1.2.3.4"
+                        }
+                    ]
+                }
+            },
+            "sonic-vnet:sonic-vnet": {
+                "sonic-vnet:VNET": {
+                    "VNET_LIST": [
+                        {
+                            "name": "Vnet100",
+                            "vxlan_tunnel": "vtep1",
+                            "vni": 8000,
+                            "scope": "default",
+                            "advertise_prefix": True,
+                            "overlay_dmac": "22:33:44:55:66:77"
+                        }
+                    ]
+                }
+            },
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
+                    "global": {
+                        "dpu_vnet": "NonExistentVnet",
+                        "cp_data_channel_port": 11234
+                    }
+                }
+            }
+        }
+        yang_model.load_data(data, 'Invalid leafref value "NonExistentVnet"')
+
+    def test_dash_ha_global_config_dpu_vlan(self, yang_model):
+        """Test dpu_vlan string field"""
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
+                    "global": {
+                        "dpu_vlan": "Vlan100",
+                        "cp_data_channel_port": 11234
+                    }
+                }
+            }
+        }
+        yang_model.load_data(data)
+
+    @pytest.mark.parametrize(
+        "dpu_name, error_message", [
+            ("dpu0", None),
+            ("dpu_0", 'Unsatisfied pattern'),
+            ("dpu0-1", 'Unsatisfied pattern'),
+            ("xyz", 'Unsatisfied pattern')]
+        )
+    def test_dpus_name_pattern(self, yang_model, dpu_name, error_message):
+        """Test that DPUS dpu_name pattern does not allow underscores or other invalid formats"""
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPUS": {
+                    "DPUS_LIST": [
+                        {
+                            "dpu_name": dpu_name,
+                            "midplane_interface": "dpu0"
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "dpu_name, error_message", [
+            ("str-8102-t1-dpu0", None),
+            ("str_8102_t1_dpu0", None),
+            ("dpu_0", None),
+            ("str-8102-t1-dpu0a", 'Unsatisfied pattern')]
+        )
+    def test_dpu_name_underscore(self, yang_model, dpu_name, error_message):
+        """Test that DPU dpu_name pattern allows underscores"""
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": dpu_name,
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "dpu_name, error_message", [
+            ("str-8102-t1-dpu0", None),
+            ("str_8102_t1_dpu0", None),
+            ("dpu_0", None),
+            ("!invalid", 'Unsatisfied pattern')]
+        )
+    def test_remote_dpu_name_underscore(self, yang_model, dpu_name, error_message):
+        """Test that REMOTE_DPU dpu_name pattern allows underscores"""
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:REMOTE_DPU": {
+                    "REMOTE_DPU_LIST": [
+                        {
+                            "dpu_name": dpu_name,
+                            "type": "xyz",
+                            "pa_ipv4": "192.168.1.4",
+                            "pa_ipv6": "2001:db8::4",
+                            "npu_ipv4": "192.168.1.5",
+                            "npu_ipv6": "2001:db8::5",
+                            "dpu_id": "0",
+                            "swbus_port": 23606
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "main_dpu_id, error_message", [
+            ("str-8102-t1-dpu0", None),
+            ("str_8102_t1_dpu0", None),
+            ("dpu_0", None),
+            ("dpu0,dpu1", None),
+            ("str-8102-t1-dpu0,str_8102_t1_dpu1", None),
+            ("!invalid", 'Unsatisfied pattern')]
+        )
+    def test_vdpu_main_dpu_ids_underscore(self, yang_model, main_dpu_id, error_message):
+        """Test that VDPU main_dpu_ids pattern allows underscores and comma-separated values"""
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:VDPU": {
+                    "VDPU_LIST": [
+                        {
+                            "vdpu_id": "vdpu0",
+                            "profile": "none",
+                            "tier": "none",
+                            "main_dpu_ids": main_dpu_id
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)

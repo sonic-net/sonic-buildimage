@@ -11,11 +11,14 @@ DERIVED_TARGETS = libthrift-dev_$(THRIFT_VERSION)_$(CONFIGURED_ARCH).deb \
 		  thrift-compiler_$(THRIFT_VERSION)_$(CONFIGURED_ARCH).deb
 
 THRIFT_LINK_PRE = https://archive.apache.org/dist/thrift
+# SHA256 of thrift-THRIFT_VERSION.tar.gz — update when changing THRIFT_VERSION
+THRIFT_SHA256 = 13da5e1cd9c8a3bb89778c0337cc57eb0c29b08f3090b41cf6ab78594b410ca5
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf thrift-$(THRIFT_VERSION)
 
 	wget -O "thrift_$(THRIFT_VERSION).tar.gz" "$(THRIFT_LINK_PRE)/$(THRIFT_VERSION)/thrift-$(THRIFT_VERSION).tar.gz"
+	echo "$(THRIFT_SHA256)  thrift_$(THRIFT_VERSION).tar.gz" | sha256sum -c -
 
 	tar -xvzf ./thrift_$(THRIFT_VERSION).tar.gz
 	if [ -f thrift.patch/series ]; then pushd thrift-$(THRIFT_VERSION) && QUILT_PATCHES=../thrift.patch quilt push -a; [ -d .pc ] && rm -rf .pc; popd; fi

@@ -86,7 +86,8 @@
         ],
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "Ambient Fan Side Temp"
@@ -701,5 +702,7 @@
             "bus_info": "0000:02:00.0"
         }
     },
-    "dpu_halt_services_timeout": 180
+    "dpu_halt_services_timeout": 180,
+    "dpu_shutdown_timeout": 240
+
 }

@@ -9,10 +9,6 @@ module sonic-device_neighbor {
         prefix inet;
     }
 
-    import sonic-extension {
-        prefix ext;
-    }
-
     import sonic-port {
         prefix port;
         revision-date 2019-07-01;
@@ -28,41 +24,47 @@ module sonic-device_neighbor {
 
         container DEVICE_NEIGHBOR {
 
-            description "DEVICE_NEIGHBOR part of config_db.json";
+            description "Directly connected neighbor devices with hostname and port mapping";
 
             list DEVICE_NEIGHBOR_LIST {
 
                 key "peer_name";
 
                 leaf peer_name {
+                    description "Key identifying the neighbor device entry";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf name {
+                    description "Hostname of the neighbor device";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf mgmt_addr {
+                    description "Management IP address of the neighbor device";
                     type inet:ip-address;
                 }
 
                 leaf local_port {
+                    description "Local port connected to the neighbor device";
                     type leafref {
                         path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
                     }
                 }
 
                 leaf port {
+                    description "Port on the neighbor device connected to the local port";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf type {
+                    description "Type of the neighbor device";
                     type string {
                         length 1..255;
                     }

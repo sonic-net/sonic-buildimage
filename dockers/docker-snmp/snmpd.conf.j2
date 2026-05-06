@@ -86,12 +86,12 @@ CreateUser {{ user }} {{ SNMP_USER[user]['SNMP_USER_AUTH_TYPE'] }} {{ SNMP_USER[
 #  See snmpd.conf(5) for more details
 
 {% if SNMP is defined and SNMP.LOCATION is defined %}
-sysLocation    {{ SNMP.LOCATION.Location }}
+sysLocation    {{ SNMP.LOCATION.Location | replace('\n', ' ') }}
 {% else %}
 sysLocation    public
 {% endif %}
 {% if SNMP is defined and SNMP.CONTACT is defined %}
-sysContact     {{ SNMP.CONTACT.keys() | first }} {{ SNMP.CONTACT.values() | first }}
+sysContact     {{ SNMP.CONTACT.keys() | first | replace('\n', ' ') }} {{ SNMP.CONTACT.values() | first | replace('\n', ' ') }}
 {% else %}
 sysContact     Azure Cloud Switch vteam <linuxnetdev@microsoft.com>
 {% endif %}

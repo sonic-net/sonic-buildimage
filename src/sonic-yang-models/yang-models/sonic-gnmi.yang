@@ -25,9 +25,10 @@ module sonic-gnmi {
 
         container GNMI {
 
-            description "GNMI TABLE part of config_db.json";
+            description "gRPC Network Management Interface server configuration.";
 
             container certs {
+                description "TLS certificate paths for the gNMI server.";
 
                 leaf ca_crt {
                     type string {
@@ -53,6 +54,7 @@ module sonic-gnmi {
             }
 
             container gnmi {
+                description "gNMI server operational settings.";
 
                 leaf client_auth {
                     type boolean;

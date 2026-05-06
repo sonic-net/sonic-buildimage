@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+#
+# chassis.py
+#
+# Chassis implementation for NextHop B27 BMC
+#
+
+try:
+    from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform.thermal import Thermal
+    from sonic_platform.watchdog import Watchdog
+    from sonic_platform.eeprom import Eeprom
+    from sonic_platform.switch_host_module import SwitchHostModule
+except ImportError as e:
+    raise ImportError(str(e) + " - required module not found")
+
+
+# Watchdog bootstatus file paths for AST2700
+WATCHDOG0_BOOTSTATUS_PATH = "/sys/devices/platform/soc@14000000/14c37000.watchdog/watchdog/watchdog0/bootstatus"
+WATCHDOG1_BOOTSTATUS_PATH = "/sys/devices/platform/soc@14000000/14c37080.watchdog/watchdog/watchdog1/bootstatus"
+
+# Watchdog bootstatus bit flags (from Linux kernel watchdog.h)
+WDIOF_OVERHEAT = 0x0001      # Reset due to CPU overheat
+WDIOF_FANFAULT = 0x0002      # Fan failed
+WDIOF_EXTERN1 = 0x0004       # External relay 1
+WDIOF_EXTERN2 = 0x0008       # External relay 2
+WDIOF_POWERUNDER = 0x0010    # Power bad/power fault
+WDIOF_CARDRESET = 0x0020     # Card previously reset the CPU (normal reboot)
+WDIOF_POWEROVER = 0x0040     # Power over voltage
+
+class Chassis(ChassisBase):
+    """
+    Platform-specific Chassis class for NextHop B27 BMC
+
+    Hardware Configuration (from nexthop-b27-r0.dts):
+    - 0 PWM fans (all fan controllers disabled in DTS)
+    - 0 TACH inputs (all disabled in DTS)
+    - ADC controllers disabled (ADC0 and ADC1 both disabled)
+    - 2 Watchdog timers (wdt0, wdt1)
+    - BCM53134 managed switch with DSA configuration
+
+    Supports multiple card revisions with runtime detection.
+    """
+
+    # NextHop has NO fans - all fan/PWM/TACH controllers are disabled in DTS
+    NUM_FANS = 0
+
+    # NextHop has ADC controllers disabled - thermal sensors may not be available
+    # We'll check at runtime which sensors actually exist
+    NUM_THERMAL_SENSORS = 16  # Keep same as base, but filter in __init__
+
+    def __init__(self):
+        """
+        Initialize NextHop chassis with hardware-specific configuration
+        """
+        super().__init__()
+
+        # Initialize watchdog (same as base class)
+        self._watchdog = Watchdog()
+
+        # Initialize eeprom
+        self._eeprom = Eeprom()
+
+        # Initialize Switch Host Module (x86 CPU managed by BMC)
+        self._module_list = []
+        switch_host = SwitchHostModule(module_index=0)
+        self._module_list.append(switch_host)
+
+        # NextHop has NO fans - create empty lists
+        self._fan_list = []
+        self._fan_drawer_list = []
+
+        # For thermal sensors, only add those that actually exist
+        # ADC controllers are disabled in DTS, so most/all may not be present
+        self._thermal_list = []
+        for i in range(self.NUM_THERMAL_SENSORS):
+            thermal = Thermal(i)
+            # Only add thermal sensor if it's actually present in hardware
+            if thermal.get_presence():
+                self._thermal_list.append(thermal)
+
+    def is_bmc(self):
+        return True
+
+    def _read_watchdog_bootstatus(self, path):
+        """
+        Read watchdog bootstatus value from sysfs
+
+        Args:
+            path: Path to the bootstatus file
+            
+        Returns:
+            Integer value of bootstatus, or 0 if file doesn't exist or can't be read
+        """
+        try:
+            with open(path, 'r') as f:
+                value = f.read().strip()
+                return int(value)
+        except (IOError, OSError, ValueError):
+            return 0
+    
+    def get_reboot_cause(self):
+        """
+        Retrieves the cause of the previous reboot
+
+        This method reads the watchdog bootstatus register to determine
+        the hardware reboot cause. The AST2700 based B27 has two watchdog timers,
+        and we check watchdog0 for the reboot cause.
+
+        Returns:
+            A tuple (string, string) where the first element is a string
+            containing the cause of the previous reboot. This string must be
+            one of the predefined strings in ChassisBase. If the first string
+            is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
+            to pass a description of the reboot cause.
+            
+        Reboot cause mapping:
+            - WDIOF_OVERHEAT (0x01): Thermal overload
+            - WDIOF_FANFAULT (0x02): Insufficient fan speed
+            - WDIOF_POWERUNDER (0x10): Power loss
+            - WDIOF_POWEROVER (0x40): Power over voltage
+            - WDIOF_CARDRESET (0x20): Normal reboot/reset
+            - Other bits: Hardware other
+            - No bits set: Non-hardware (software reboot)
+        """
+        # Read watchdog0 bootstatus
+        bootstatus = self._read_watchdog_bootstatus(WATCHDOG0_BOOTSTATUS_PATH)
+
+        # Map bootstatus bits to reboot causes
+        # Check in order of priority (most specific first)
+
+        if bootstatus & WDIOF_OVERHEAT:
+            return (self.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU, "CPU Overheat")
+
+        if bootstatus & WDIOF_FANFAULT:
+            return (self.REBOOT_CAUSE_INSUFFICIENT_FAN_SPEED, "Fan Fault")
+
+        if bootstatus & WDIOF_POWERUNDER:
+            return (self.REBOOT_CAUSE_POWER_LOSS, "Power Under Voltage")
+
+        if bootstatus & WDIOF_POWEROVER:
+            return (self.REBOOT_CAUSE_POWER_LOSS, "Power Over Voltage")
+
+        if bootstatus & WDIOF_CARDRESET:
+            # CARDRESET can indicate either:
+            # 1. Watchdog timeout reset (no software reboot cause file)
+            # 2. Normal software reboot (software reboot cause file exists)
+            # Check if software reboot cause exists
+            try:
+                with open('/host/reboot-cause/reboot-cause.txt', 'r') as f:
+                    software_cause = f.read().strip()
+                    if software_cause and not software_cause.startswith('Unknown'):
+                        # Software initiated reboot
+                        return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+            except (IOError, OSError):
+                pass
+
+            # No software reboot cause found - assume watchdog timeout
+            return (self.REBOOT_CAUSE_WATCHDOG, "Watchdog timeout reset")
+
+        if bootstatus & (WDIOF_EXTERN1 | WDIOF_EXTERN2):
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"External Reset (bootstatus=0x{bootstatus:x})")
+
+        # If no specific bits are set, or only unknown bits are set
+        if bootstatus == 0:
+            # No hardware reboot cause detected
+            return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+        else:
+            # Unknown bootstatus bits
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, f"Unknown (bootstatus=0x{bootstatus:x})")
+
+    def get_all_modules(self):
+        """
+        Retrieves all modules available on this chassis
+
+        Returns:
+            A list of Module objects representing all modules on the chassis
+        """
+        return self._module_list
+    
+    def get_name(self):
+        """
+        Retrieves the name of the chassis
+
+        Returns:
+            String containing the name of the chassis
+        """
+        return "Nexthop BMC Card"
+    
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the chassis
+
+        Returns:
+            String containing the model number of the chassis
+        """
+        return self._eeprom.modelstr()
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+        Returns:
+            string: Label Revision value of device
+        """
+        return self._eeprom.label_revision_str()
+
+    def get_serial_number(self):
+        """
+        Returns the BMC card's serial number from BMC EEPROM
+
+        Returns:
+            string: BMC serial number from BMC EEPROM (i2c-4)
+        """
+        if self._eeprom:
+            try:
+                e = self._eeprom.read_eeprom()
+                bmc_sn = self._eeprom.serial_number_str(e)
+                return bmc_sn if bmc_sn else "N/A"
+            except Exception:
+                pass
+        return "N/A"
+    
+    def get_serial(self):
+        """
+        Retrieves the serial number of the chassis
+
+        Returns:
+            String containing the serial number of the chassis
+        """
+        return self.get_serial_number()
+
+    def get_switch_host_serial(self):
+        """
+        Returns the switch/host system serial number (from switch card EEPROM).
+        This is the primary system/chassis identifier.
+
+        Returns:
+            string: System serial number from switch card EEPROM (i2c-10)
+                    On a failure return "N/A"
+        """
+        switch_host = self._module_list[0]
+        return switch_host.get_serial()
+
+    def get_watchdog(self):
+        """
+        Retrieves the hardware watchdog device on this chassis
+
+        Returns:
+            An object derived from WatchdogBase representing the hardware
+            watchdog device
+        """
+        return self._watchdog
+
+    def get_num_thermals(self):
+        """
+        Retrieves the number of thermal sensors available on this chassis
+
+        Returns:
+            An integer, the number of thermal sensors available on this chassis
+        """
+        return len(self._thermal_list)
+
+    def get_all_thermals(self):
+        """
+        Retrieves all thermal sensors available on this chassis
+
+        Returns:
+            A list of objects derived from ThermalBase representing all thermal
+            sensors available on this chassis
+        """
+        return self._thermal_list
+
+    def get_thermal(self, index):
+        """
+        Retrieves thermal sensor represented by (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the thermal sensor to retrieve
+
+        Returns:
+            An object derived from ThermalBase representing the specified thermal
+            sensor, or None if index is out of range
+        """
+        if index < 0 or index >= len(self._thermal_list):
+            return None
+        return self._thermal_list[index]
+
+    def get_num_fans(self):
+        """
+        Retrieves the number of fans available on this chassis
+
+        Returns:
+            An integer, the number of fans available on this chassis
+        """
+        return len(self._fan_list)
+
+    def get_all_fans(self):
+        """
+        Retrieves all fan modules available on this chassis
+
+        Returns:
+            A list of objects derived from FanBase representing all fan
+            modules available on this chassis
+        """
+        return self._fan_list
+
+    def get_fan(self, index):
+        """
+        Retrieves fan module represented by (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the fan module to retrieve
+
+        Returns:
+            An object derived from FanBase representing the specified fan
+            module, or None if index is out of range
+        """
+        if index < 0 or index >= len(self._fan_list):
+            return None
+        return self._fan_list[index]
+

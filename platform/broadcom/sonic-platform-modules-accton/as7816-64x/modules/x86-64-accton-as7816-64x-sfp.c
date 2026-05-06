@@ -31,6 +31,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #define DRIVER_NAME 	"as7816_64x_sfp" /* Platform dependent */
 
@@ -1418,11 +1419,18 @@ exit:
 }
 
 /* Platform dependent +++ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int sfp_device_probe(struct i2c_client *client,
 			const struct i2c_device_id *dev_id)
+#else
+static int sfp_device_probe(struct i2c_client *client)
+#endif
 {
 	int ret = 0;
 	struct sfp_port_data *data = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+	const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
 	if (client->addr != SFP_EEPROM_A0_I2C_ADDR) {
 		return -ENODEV;

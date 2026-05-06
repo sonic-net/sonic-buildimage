@@ -102,16 +102,18 @@ function getBootType()
 function preStartAction()
 {
 {%- if docker_container_name == "database" %}
-    WARM_DIR=/host/warmboot
+    WARM_DIR=/host/warmboot$DEV
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
         if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
-            # Load redis content from /host/warmboot/dump.rdb
+            # Load redis content from /host/warmboot$DEV/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
+                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            fi
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -131,6 +133,12 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
+{%- elif docker_container_name == "dhcp_server" %}
+    # dhcp_server is the only bridge-mode container. caclmgrd's catch-all DROP
+    # on the INPUT chain blocks its syslog (UDP 514) to host rsyslog.
+    # Restrict to docker0 interface to minimize security impact.
+    iptables -C INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || \
+        iptables -I INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog"
 {%- else %}
     : # nothing
 {%- endif %}
@@ -188,8 +196,9 @@ function postStartAction()
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     if [[ -f $CHASSISDB_CONF && $DATABASE_TYPE != "dpudb" ]]; then
-        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())')
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())')
+        echo "${DOCKERNAME} slot_id=${slot_id} supervisor_slot_id=${supervisor_slot_id}"
     fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -304,24 +313,30 @@ function postStartAction()
             fi
         fi
 
-        if [ -e /tmp/pending_config_migration ] || [ -e /tmp/pending_config_initialization ]; then
-            # this is first boot to a new image, config-setup execution is pending.
-            # for warmboot case, DB is loaded but migration is still pending
-            # For firstbboot/fast/cold reboot case, DB contains nothing at this point
-            # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
-            # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
-        else
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
-            # this is not a first time boot to a new image. Datbase container starts w/ old pre-existing config
-            if [[ -x /usr/local/bin/db_migrator.py ]]; then
-                # Migrate the DB to the latest schema version if needed
-                if [ -z "$DEV" ]; then
-                    /usr/local/bin/db_migrator.py -o migrate
+        # DPU database instances must not touch the host CONFIG_DB_INITIALIZED flag.
+        # Only the main NPU database instance should manage this key to avoid a race
+        # where DPU instances overwrite CONFIG_DB_INITIALIZED back to 0 after
+        # config-setup has already set it to 1, causing swss startup to fail.
+        if [[ "$DATABASE_TYPE" != "dpudb" ]]; then
+            if [ -e /etc/sonic/pending_config_migration ] || [ -e /etc/sonic/pending_config_initialization ]; then
+                # this is first boot to a new image, config-setup execution is pending.
+                # for warmboot case, DB is loaded but migration is still pending
+                # For first boot/fast/cold reboot case, DB contains nothing at this point
+                # unset CONFIG_DB_INITIALIZED to indicate pending config load and migration
+                # This flag will be set to "1" after DB migration/initialization is completed as part of config-setup
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+            else
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "0"
+                # this is not a first time boot to a new image. Database container starts w/ old pre-existing config
+                if [[ -x /usr/local/bin/db_migrator.py ]]; then
+                    # Migrate the DB to the latest schema version if needed
+                    if [ -z "$DEV" ]; then
+                        /usr/local/bin/db_migrator.py -o migrate
+                    fi
                 fi
+                # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
+                $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
             fi
-            # set CONFIG_DB_INITIALIZED to indicate end of config load and migration
-            $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
@@ -479,20 +494,39 @@ start() {
     if [ "$DEV" ]; then
         MOUNTPATH="$MOUNTPATH/$DEV"
     fi
+        HWSKU_MOUNT_MODE="ro"
+        {%- if docker_container_name == "swss" %}
+        if [ -f "$MOUNTPATH/hwsku-init" ]; then
+            HWSKU_MOUNT_MODE="rw"
+        fi
+        {%- endif %}
     {%- endif %}
 
     {%- if docker_container_name == "swss" %}
     # Insert "create_only_config_db_buffers" attribute
+    CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=false
+
+    PLATFORM_FOLDER="/usr/share/sonic/device/$PLATFORM"
+    if [ -d "$PLATFORM_FOLDER" ]; then
+        if [ -f "$PLATFORM_FOLDER/create_only_config_db_buffers.json" ]; then
+            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
+        fi
+    fi
+
     HWSKU_FOLDER="/usr/share/sonic/device/$PLATFORM/$HWSKU"
     if [ -d "$HWSKU_FOLDER" ]; then
-        CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
-        if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+        if [ -f "$HWSKU_FOLDER/create_only_config_db_buffers.json" ]; then
+            CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND=true
         fi
+
         SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
         if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
+    fi
+
+    if [ "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON_FOUND" = true ]; then
+        $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
     fi
     {%- endif %}
 
@@ -600,13 +634,17 @@ start() {
     fi
     {%- elif docker_container_name == "dash-ha" %}
     REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
-    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
     {%- else %}
     REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
-    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" || "$DEV" == *"dpu"* ]]; then
+{%- if docker_container_name == "redfish" %}
+        # redfish uses bridge networking with port mapping (-p 443:18080)
+        NET="bridge"
+{%- else %}
         NET="host"
+{%- endif %}
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -616,7 +654,9 @@ start() {
         # The below logic extracts the base DIR's where database_config.json's for various namespaces exist.
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
-        {%- if docker_container_name != "database" %}
+        {%- if docker_container_name == "dash-ha" %}
+        REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+        {%- elif docker_container_name != "database" %}
 
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
@@ -634,6 +674,7 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
+            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -676,6 +717,7 @@ start() {
 {%- if docker_container_name == "syncd" %}
     if [[ $DEV != "" ]]; then
         mkdir -p /dev/shm/asic$DEV
+        mkdir -p /var/log/sdk_dbg/$DEV
         ASIC_MNT="-v /dev/sxdevs/sxcdev$(($DEV+1)):/dev/sxdevs/sxcdev:rw \
             -v /dev/sxdevs/bfdcdev$(($DEV+1)):/dev/sxdevs/bfdcdev:rw \
             -v /dev/shm/asic$DEV:/dev/shm/:rw"
@@ -692,6 +734,7 @@ start() {
 {%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+        -v /host/warmboot$DEV:/var/warmboot \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
 {%- endif %}
@@ -707,7 +750,7 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
-        -v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
+        -v /var/log/sdk_dbg/$DEV:/var/log/sdk_dbg:rw \
         -v mlnx_sdk_socket$DEV:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/$DEV:/tmp \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
@@ -754,11 +797,14 @@ start() {
 {%- if docker_container_name == "bgp" %}
         -v /etc/sonic/frr/$DEV:/etc/frr:rw \
 {%- endif %}
+{%- if docker_container_name == "dash-ha" %}
+        -v /var/log/dash-ha:/var/log/dash-ha:rw \
+{%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
-        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
+        -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:$HWSKU_MOUNT_MODE \
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
@@ -827,7 +873,9 @@ stop() {
     if [ -z "$container_id" ]; then
         echo "container stop $DOCKERNAME - No such container: $DOCKERNAME"
     else
-    {%- if docker_container_name == "teamd" %}
+    {%- if stop_time is defined and stop_time != '' %}
+        /usr/local/bin/container stop -t {{ stop_time }} $DOCKERNAME
+    {%- elif docker_container_name == "teamd" %}
         # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
         /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
@@ -836,6 +884,10 @@ stop() {
         /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
     fi
+{%- if docker_container_name == "dhcp_server" %}
+    # Remove syslog iptables exception added during start
+    iptables -D INPUT -i docker0 -p udp --dport 514 -j ACCEPT -m comment --comment "dhcp_server_syslog" 2>/dev/null || true
+{%- endif %}
     {%- endif %}
 }
 
@@ -862,6 +914,10 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
+fi
+
+if [[ "$IS_BMC_DEVICE" == "true" ]]; then
+    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}

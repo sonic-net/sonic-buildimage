@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-02-25-1.11" profile="Askpp" sid="69bab25d-d8f6-4bfe-baf5-bdcb26c08ff6">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-11-13-1.13" profile="Askpp" sid="f9db2e1c-87f8-4477-a6b4-201e87aaadf5">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>

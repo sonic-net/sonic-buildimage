@@ -1,29 +1,61 @@
-INTeRrupt ENAble id=2209
-INTeRrupt ENAble id=2210
-INTeRrupt ENAble id=2211
-INTeRrupt ENAble id=2212
-INTeRrupt ENAble id=2213
-INTeRrupt ENAble id=2214
-INTeRrupt ENAble id=2215
-INTeRrupt ENAble id=2216
-INTeRrupt ENAble id=2217
-INTeRrupt ENAble id=2218
-INTeRrupt ENAble id=2219
-INTeRrupt ENAble id=2220
-INTeRrupt ENAble id=2221
-INTeRrupt ENAble id=2222
-INTeRrupt ENAble id=2223
-INTeRrupt ENAble id=2224
-INTeRrupt ENAble id=2225
-INTeRrupt ENAble id=2226
+#core 0
+INTeRrupt ENAble id=2209 p=0
+INTeRrupt ENAble id=2210 p=0
+INTeRrupt ENAble id=2211 p=0
+INTeRrupt ENAble id=2212 p=0
+INTeRrupt ENAble id=2213 p=0
+INTeRrupt ENAble id=2214 p=0
+INTeRrupt ENAble id=2215 p=0
+INTeRrupt ENAble id=2216 p=0
+INTeRrupt ENAble id=2217 p=0
+INTeRrupt ENAble id=2218 p=0
+INTeRrupt ENAble id=2219 p=0
+INTeRrupt ENAble id=2220 p=0
+INTeRrupt ENAble id=2221 p=0
+INTeRrupt ENAble id=2222 p=0
+INTeRrupt ENAble id=2223 p=0
+INTeRrupt ENAble id=2224 p=0
+INTeRrupt ENAble id=2225 p=0
+INTeRrupt ENAble id=2226 p=0
 
-INTeRrupt ENAble id=482
-INTeRrupt ENAble id=483
-INTeRrupt ENAble id=484
-INTeRrupt ENAble id=485
-INTeRrupt ENAble id=486
-INTeRrupt ENAble id=487
-INTeRrupt ENAble id=488
+INTeRrupt ENAble id=482 p=0
+INTeRrupt ENAble id=483 p=0
+INTeRrupt ENAble id=484 p=0
+INTeRrupt ENAble id=485 p=0
+INTeRrupt ENAble id=486 p=0
+INTeRrupt ENAble id=487 p=0
+INTeRrupt ENAble id=488 p=0
 
-INTeRrupt ENAble id=1597
+INTeRrupt ENAble id=1597 p=0
+
+#core 1
+INTeRrupt ENAble id=2209 p=1
+INTeRrupt ENAble id=2210 p=1
+INTeRrupt ENAble id=2211 p=1
+INTeRrupt ENAble id=2212 p=1
+INTeRrupt ENAble id=2213 p=1
+INTeRrupt ENAble id=2214 p=1
+INTeRrupt ENAble id=2215 p=1
+INTeRrupt ENAble id=2216 p=1
+INTeRrupt ENAble id=2217 p=1
+INTeRrupt ENAble id=2218 p=1
+INTeRrupt ENAble id=2219 p=1
+INTeRrupt ENAble id=2220 p=1
+INTeRrupt ENAble id=2221 p=1
+INTeRrupt ENAble id=2222 p=1
+INTeRrupt ENAble id=2223 p=1
+INTeRrupt ENAble id=2224 p=1
+INTeRrupt ENAble id=2225 p=1
+INTeRrupt ENAble id=2226 p=1
+
+INTeRrupt ENAble id=482 p=1
+INTeRrupt ENAble id=483 p=1
+INTeRrupt ENAble id=484 p=1
+INTeRrupt ENAble id=485 p=1
+INTeRrupt ENAble id=486 p=1
+INTeRrupt ENAble id=487 p=1
+INTeRrupt ENAble id=488 p=1
+
+INTeRrupt ENAble id=1597 p=1
+
 debug intr error

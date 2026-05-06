@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -32,6 +32,8 @@ COPY ["radvd.conf.j2", "wait_for_link.sh.j2", "docker-router-advertiser.supervis
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
+
+ARG image_version
 
 {{ rsync_from_builder_stage() }}
 

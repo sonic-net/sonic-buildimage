@@ -181,12 +181,20 @@ clear_sticky_bits
 # Switchcard revision is in Komodo FPGA register 0x44 bottom 4 bits
 switchcard_revision=$(($(komodo_fpga_read 0x44) & 0xF))
 
-# Take the asic out of reset
-fpga_write 0x8 0x112
+# Q3D_RESET_RELEASE=0
+fpga write32 "$FPGA_BDF" 0x8 0x0 --bits "10:10"
+sleep 0.001
+
+# DP_PWR_ON_DRV=0
+fpga write32 "$FPGA_BDF" 0x90 0x0 --bits "4:4"
 sleep 2
-fpga_write 0x8 0x102
+
+# DP_PWR_ON_DRV=1
+fpga write32 "$FPGA_BDF" 0x90 0x1 --bits "4:4"
 sleep 0.2
-fpga_write 0x8 0x502
+
+# Q3D_RESET_RELEASE=1
+fpga write32 "$FPGA_BDF" 0x8 0x1 --bits "10:10"
 
 enable_phy
 

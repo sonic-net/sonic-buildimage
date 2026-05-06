@@ -12,33 +12,20 @@ DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp40-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+		  libnetsnmptrapd40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
 
 SNMPD_MAKE_JOBS_NUM = $(SONIC_CONFIG_MAKE_JOBS)
-else
-DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmptrapd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmpd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmp-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp30_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp30-dbg_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
-SNMPD_MAKE_JOBS_NUM = 1
 endif
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf net-snmp-$(SNMPD_VERSION)
 
 	# download debian net-snmp
-	dget -u https://packages.trafficmanager.net/public/debian/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
+	dget -u $(BUILD_PUBLIC_URL)/debian/pool/main/n/net-snmp/net-snmp_$(SNMPD_VERSION_FULL).dsc
 
 	pushd net-snmp-$(SNMPD_VERSION)
 	git init

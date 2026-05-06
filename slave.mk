@@ -30,6 +30,7 @@ DOCKERS_PATH = dockers
 BLDENV := $(shell lsb_release -cs)
 DEBS_PATH = $(TARGET_PATH)/debs/$(BLDENV)
 FILES_PATH = $(TARGET_PATH)/files/$(BLDENV)
+PHONY_PATH = $(TARGET_PATH)/phony/$(BLDENV)
 PYTHON_DEBS_PATH = $(TARGET_PATH)/python-debs/$(BLDENV)
 PYTHON_WHEELS_PATH = $(TARGET_PATH)/python-wheels/$(BLDENV)
 PROJECT_ROOT := $(shell pwd)
@@ -43,8 +44,11 @@ BULLSEYE_DEBS_PATH = $(TARGET_PATH)/debs/bullseye
 BULLSEYE_FILES_PATH = $(TARGET_PATH)/files/bullseye
 BOOKWORM_DEBS_PATH = $(TARGET_PATH)/debs/bookworm
 BOOKWORM_FILES_PATH = $(TARGET_PATH)/files/bookworm
+BOOKWORM_PHONY_PATH = $(TARGET_PATH)/phony/bookworm
 TRIXIE_DEBS_PATH = $(TARGET_PATH)/debs/trixie
 TRIXIE_FILES_PATH = $(TARGET_PATH)/files/trixie
+TRIXIE_PHONY_PATH = $(TARGET_PATH)/phony/trixie
+
 DBG_IMAGE_MARK = dbg
 DBG_SRC_ARCHIVE_FILE = $(TARGET_PATH)/sonic_src.tar.gz
 BUILD_WORKDIR = /sonic
@@ -78,7 +82,7 @@ ENABLE_PY2_MODULES = y
 endif
 
 # Python version for PTF image
-PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),mixed)
+PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),py3)
 
 export BUILD_NUMBER
 export BUILD_TIMESTAMP
@@ -95,6 +99,8 @@ export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
 export MIRROR_SNAPSHOT
+export BUILD_PUBLIC_URL
+export BUILD_SNAPSHOT_URL
 export SONIC_OS_VERSION
 export FILES_PATH
 export PROJECT_ROOT
@@ -128,7 +134,9 @@ configure :
 	$(Q)mkdir -p $(BUSTER_FILES_PATH)
 	$(Q)mkdir -p $(BULLSEYE_FILES_PATH)
 	$(Q)mkdir -p $(BOOKWORM_FILES_PATH)
+	$(Q)mkdir -p $(BOOKWORM_PHONY_PATH)
 	$(Q)mkdir -p $(TRIXIE_FILES_PATH)
+	$(Q)mkdir -p $(TRIXIE_PHONY_PATH)
 	$(Q)mkdir -p $(PYTHON_DEBS_PATH)
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
@@ -154,7 +162,7 @@ include $(RULES_PATH)/config
 ###############################################################################
 ## Version control related exports
 ###############################################################################
-export PACKAGE_URL_PREFIX
+export BUILD_PACKAGES_URL
 export TRUSTED_GPG_URLS
 export SONIC_VERSION_CONTROL_COMPONENTS
 DEFAULT_CONTAINER_REGISTRY := $(SONIC_DEFAULT_CONTAINER_REGISTRY)
@@ -311,6 +319,19 @@ ifeq ($(SONIC_PROFILING_ON),y)
 DEB_BUILD_OPTIONS_GENERIC := nostrip noopt
 endif
 
+# ccache configuration — prepend /usr/lib/ccache to PATH so that gcc/g++/cc/c++
+# calls are intercepted by ccache symlinks. Cache is stored under target/ccache/
+# and persists across builds for near-instant recompilation of unchanged files.
+CCACHE_ENV =
+ifeq ($(SONIC_CONFIG_USE_CCACHE),y)
+ifeq ($(shell command -v ccache >/dev/null 2>&1 || echo notfound),notfound)
+$(error SONIC_CONFIG_USE_CCACHE=y but 'ccache' is not installed in the build environment)
+endif
+CCACHE_DIR := $(abspath $(TARGET_PATH)/ccache/$(BLDENV))
+CCACHE_ENV = PATH=/usr/lib/ccache:$$PATH CCACHE_DIR=$(CCACHE_DIR) CCACHE_BASEDIR=$(BUILD_WORKDIR) CCACHE_COMPILERCHECK=content CCACHE_UMASK=022
+$(shell mkdir -p $(CCACHE_DIR))
+endif
+
 ifeq ($(SONIC_BUILD_JOBS),)
 override SONIC_BUILD_JOBS := $(SONIC_CONFIG_BUILD_JOBS)
 endif
@@ -333,6 +354,11 @@ endif
 
 MAKEFLAGS += -j $(SONIC_BUILD_JOBS)
 export SONIC_CONFIG_MAKE_JOBS
+
+# When SONIC_CONFIG_USE_DOCKER_CACHE is enabled, allow Docker layer caching
+ifneq ($(strip $(SONIC_CONFIG_USE_DOCKER_CACHE)),y)
+DOCKER_NO_CACHE_FLAG = --no-cache
+endif
 
 ifeq ($(CONFIGURED_PLATFORM),vs)
 export BUILD_MULTIASIC_KVM
@@ -417,7 +443,8 @@ $(info "SONIC_CONFIG_PRINT_DEPENDENCIES" : "$(SONIC_CONFIG_PRINT_DEPENDENCIES)")
 $(info "SONIC_BUILD_JOBS"                : "$(SONIC_BUILD_JOBS)")
 $(info "SONIC_CONFIG_MAKE_JOBS"          : "$(SONIC_CONFIG_MAKE_JOBS)")
 $(info "USE_NATIVE_DOCKERD_FOR_BUILD"    : "$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)")
-$(info "SONIC_USE_DOCKER_BUILDKIT"       : "$(SONIC_USE_DOCKER_BUILDKIT)")
+$(info "USE_DOCKER_CACHE"               : "$(SONIC_CONFIG_USE_DOCKER_CACHE)")
+$(info "SONIC_CONFIG_USE_CCACHE"         : "$(SONIC_CONFIG_USE_CCACHE)")
 $(info "USERNAME"                        : "$(USERNAME)")
 $(info "PASSWORD"                        : "$(PASSWORD)")
 $(info "CHANGE_DEFAULT_PASSWORD"         : "$(CHANGE_DEFAULT_PASSWORD)")
@@ -476,6 +503,8 @@ $(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
 $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
 $(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
+$(info "INCLUDE_SNMP"                    : "$(INCLUDE_SNMP)")
+$(info "INCLUDE_LLDP"                    : "$(INCLUDE_LLDP)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
@@ -516,11 +545,12 @@ $(eval $(rfs_target)_MACHINE=$($(1)_MACHINE))
 $(eval SONIC_RFS_TARGETS+=$(rfs_target))
 
 $(if $($(1)_DEPENDENT_MACHINE),\
-	$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$($(1)_DEPENDENT_MACHINE)))
-	$(eval $(dependent_rfs_target)_INSTALLER=$(1))
-	$(eval $(dependent_rfs_target)_MACHINE=$($(1)_DEPENDENT_MACHINE))
-	$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
-	$(eval $(rfs_target)_DEPENDENT_RFS=$(dependent_rfs_target)))
+	$(foreach dep,$($(1)_DEPENDENT_MACHINE),\
+		$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$(dep)))
+		$(eval $(dependent_rfs_target)_INSTALLER=$(1))
+		$(eval $(dependent_rfs_target)_MACHINE=$(dep))
+		$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
+		$(eval $(rfs_target)_DEPENDENT_RFS+=$(dependent_rfs_target))))
 endef
 
 $(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
@@ -537,7 +567,7 @@ include Makefile.cache
 
 ###############################################################################
 ## Generic rules section
-## All rules must go after includes for propper targets expansion
+## All rules must go after includes for proper targets expansion
 ###############################################################################
 
 export kernel_procure_method=$(KERNEL_PROCURE_METHOD)
@@ -708,8 +738,9 @@ SONIC_TARGET_LIST += $(addprefix $(FILES_PATH)/, $(SONIC_ONLINE_FILES))
 #     SOME_NEW_FILE = some_new_deb.deb
 #     $(SOME_NEW_FILE)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_FILE)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
+#     $(SOME_NEW_FILE)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_MAKE_FILES += $(SOME_NEW_FILE)
-$(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
+$(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
 			$(call dpkg_depend,$(FILES_PATH)/%.dep)
 	$(HEADER)
@@ -740,6 +771,33 @@ $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $
 
 SONIC_TARGET_LIST += $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES))
 
+
+# Phony build target
+#
+# Can be used to enforce strict build order in dependencies that cannot otherwise
+# be done.
+#
+# Does not actually use .PHONY but instead a file.  This is to prevent unnecessary
+# rebuilds of things like containers which would otherwise think a change occurred.
+#
+# Also omitted is dpkg_depend() since this is not a cacheable item.
+#
+# Add new phony:
+#     SOME_PHONY = some_phony
+#     $(SOME_PHONY)_DEPENDS = $(SOME_DEB) ...
+#     $(SOME_PHONY)_WHEEL_DEPENDS = $(SOME_WHEEL) ...
+#     SONIC_PHONIES += $(SOME_PHONY)
+$(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES)) : $(PHONY_PATH)/% : .platform \
+			$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
+			$$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) \
+			$$(addprefix $(FILES_PATH)/,$$($$*_FILES))
+	$(HEADER)
+	touch $@
+	$(FOOTER)
+
+SONIC_TARGET_LIST += $(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES))
+
+
 ###############################################################################
 ## Debian package related targets
 ###############################################################################
@@ -751,11 +809,13 @@ SONIC_TARGET_LIST += $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES))
 #     SOME_NEW_DEB = some_new_deb.deb
 #     $(SOME_NEW_DEB)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
+#     $(SOME_NEW_DEB)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_MAKE_DEBS += $(SOME_NEW_DEB)
 $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
 			$$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
+			$$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(DEBS_PATH)/%.dep)
 	$(HEADER)
 
@@ -771,7 +831,7 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
 		# Build project and take package
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
-		DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
+		$(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
@@ -787,15 +847,18 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 
 SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS))
 
+
 # Build project with dpkg-buildpackage
 # Add new package for build:
 #     SOME_NEW_DEB = some_new_deb.deb
 #     $(SOME_NEW_DEB)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
+#     $(SOME_NEW_DEB)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_DPKG_DEBS += $(SOME_NEW_DEB)
 $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
 			$$(addprefix $(FILES_PATH)/,$$($$*_AFTER_FILES)) \
+			$$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(DEBS_PATH)/%.dep )
 	$(HEADER)
 
@@ -814,8 +877,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f ./autogen.sh ]; then ./autogen.sh $(LOG); fi
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(if $($*_DPKG_TARGET),
-			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
-			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
+			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
 		# Clean up
@@ -873,27 +936,25 @@ SONIC_INSTALL_DEBS = $(addsuffix -install,$(addprefix $(DEBS_PATH)/, \
 			$(SONIC_PYTHON_STDEB_DEBS) \
 			$(SONIC_DERIVED_DEBS) \
 			$(SONIC_EXTRA_DEBS)))
-$(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $(DEBS_PATH)/$$*
+$(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) $(DEBS_PATH)/$$*
 	$(HEADER)
 	[ -f $(DEBS_PATH)/$* ] || { echo $(DEBS_PATH)/$* does not exist $(LOG) && false $(LOG) }
-	for i in {1..360}; do
-		# wait for conflicted packages to be uninstalled
-		$(foreach deb, $($*_CONFLICT_DEBS), \
-			{ while dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) | grep "^Version: $(word 2, $(subst _, ,$(basename $(deb))))" &> /dev/null; do echo "waiting for $(deb) to be uninstalled" $(LOG); sleep 1; done } )
-		# put a lock here because dpkg does not allow installing packages in parallel
-		if mkdir $(DEBS_PATH)/dpkg_lock &> /dev/null; then
+	# wait for conflicted packages to be uninstalled
+	$(foreach deb, $($*_CONFLICT_DEBS), \
+		{ while dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) | grep "^Version: $(word 2, $(subst _, ,$(basename $(deb))))" &> /dev/null; do echo "waiting for $(deb) to be uninstalled" $(LOG); sleep 1; done } )
+	# Use flock for serialized dpkg install — eliminates polling overhead from the
+	# previous mkdir/sleep-10 lock. Waiters block in the kernel until the lock is
+	# released, so there is zero wasted time between consecutive installs.
 ifneq ($(CROSS_BUILD_ENVIRON),y)
-			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
+	flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG)
 else
-			# Relocate debian packages python libraries to the cross python virtual env location
-			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
-			rm -rf tmp && mkdir tmp && dpkg -x $(DEBS_PATH)/$* tmp && (sudo cp -rf tmp/usr/lib/python2*/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON2)/python2*/site-packages/ 2>/dev/null || true) && \
-			(sudo cp -rf tmp/usr/lib/python3/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON3)/python3.*/site-packages/ 2>/dev/null || true) && \
-			rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
+	flock $(DEBS_PATH)/dpkg_lock.lk bash -c '\
+		sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
+		rm -rf tmp && mkdir tmp && dpkg -x $(DEBS_PATH)/$* tmp && \
+		(sudo cp -rf tmp/usr/lib/python2*/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON2)/python2*/site-packages/ 2>/dev/null || true) && \
+		(sudo cp -rf tmp/usr/lib/python3/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON3)/python3.*/site-packages/ 2>/dev/null || true) \
+	'
 endif
-		fi
-		sleep 10
-	done
 	$(FOOTER)
 
 
@@ -906,11 +967,13 @@ endif
 #     SOME_NEW_DEB = some_new_deb.deb
 #     $(SOME_NEW_DEB)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
+#     $(SOME_NEW_DEB)_PHONIES += $(SOME_PHONY_NAME)
 #     SONIC_PYTHON_STDEB_DEBS += $(SOME_NEW_DEB)
 $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS)) : $(PYTHON_DEBS_PATH)/% : .platform \
 		$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEBS_DEPENDS))) \
 		$$(addsuffix -install,$$(addprefix $(PYTHON_DEBS_PATH)/,$$($$*_DEPENDS))) \
 		$$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) \
+		$$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 		$(call dpkg_depend,$(PYTHON_DEBS_PATH)/%.dep)
 
 	$(HEADER)
@@ -948,8 +1011,9 @@ SONIC_TARGET_LIST += $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS
 #     $(SOME_NEW_WHL)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_WHL)_PYTHON_VERSION = 2 (or 3)
 #     $(SOME_NEW_WHL)_DEPENDS = $(SOME_OTHER_WHL1) $(SOME_OTHER_WHL2) ...
+#     $(SOME_NEW_WHL)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_PYTHON_WHEELS += $(SOME_NEW_WHL)
-$(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) \
+$(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) $$(addprefix $(PHONY_PATH)/,$$($$*_PHONIES)) \
 			$(call dpkg_depend,$(PYTHON_WHEELS_PATH)/%.dep) \
 			$$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEBS_DEPENDS)))
 	$(HEADER)
@@ -967,7 +1031,15 @@ ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
 		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
 ifneq ($(filter bookworm trixie,$(BLDENV)),)
-		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; fi $(LOG)
+		{ \
+		echo "Building Wheels package $@"; \
+		if case "$@" in *trixie*sonic_chassisd*) true;; *) false;; esac; then \
+		    echo "Skipping tests for sonic_chassisd on trixie ($@)"; \
+		elif [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then \
+		    pip$($*_PYTHON_VERSION) install ".[testing]" && \
+		    pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && \
+		    timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; \
+		fi; } $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
 		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
@@ -1003,17 +1075,18 @@ SONIC_INSTALL_WHEELS = $(addsuffix -install, $(addprefix $(PYTHON_WHEELS_PATH)/,
 $(SONIC_INSTALL_WHEELS) : $(PYTHON_WHEELS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_DEPENDS))) $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEBS_DEPENDS))) $(PYTHON_WHEELS_PATH)/$$*
 	$(HEADER)
 	[ -f $(PYTHON_WHEELS_PATH)/$* ] || { echo $(PYTHON_WHEELS_PATH)/$* does not exist $(LOG) && exit 1; }
-	# put a lock here to avoid race conditions
-	while true; do
-	if mkdir $(PYTHON_WHEELS_PATH)/pip_lock &> /dev/null; then
+	# Use flock for serialized pip install — eliminates busy-wait polling from the
+	# previous mkdir lock. Waiters block in the kernel until the lock is released.
 ifneq ($(CROSS_BUILD_ENVIRON),y)
-	{ sudo -E SKIP_BUILD_HOOK=Y pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG) && rm -d $(PYTHON_WHEELS_PATH)/pip_lock && break; } || { rm -d $(PYTHON_WHEELS_PATH)/pip_lock && exit 1 ; }
+	flock $(PYTHON_WHEELS_PATH)/pip_lock.lk sudo -E SKIP_BUILD_HOOK=Y pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG)
 else
-	# Link python script and data expected location to the cross python virtual env istallation locations
-	{ PATH=$(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION)):${PATH} sudo -E $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG) && $(if $(findstring $(SONIC_CONFIG_ENGINE_PY3),$*),(sudo ln -s $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/sonic-cfggen /usr/local/bin/sonic-cfggen 2>/dev/null || true), true ) && $(if $(findstring $(SONIC_YANG_MODELS_PY3),$*),(sudo ln -s $(VIRTENV_BASE_CROSS_PYTHON3)/yang-models /usr/local/yang-models 2>/dev/null || true), true ) && rm -d $(PYTHON_WHEELS_PATH)/pip_lock && break; } || { rm -d $(PYTHON_WHEELS_PATH)/pip_lock && exit 1 ; }
+	# Link python script and data expected location to the cross python virtual env installation locations
+	flock $(PYTHON_WHEELS_PATH)/pip_lock.lk bash -c '\
+		PATH=$(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION)):$${PATH} sudo -E $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/pip$($*_PYTHON_VERSION) install $(PYTHON_WHEELS_PATH)/$* $(LOG) && \
+		$(if $(findstring $(SONIC_CONFIG_ENGINE_PY3),$*),(sudo ln -s $(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION))/sonic-cfggen /usr/local/bin/sonic-cfggen 2>/dev/null || true), true ) && \
+		$(if $(findstring $(SONIC_YANG_MODELS_PY3),$*),(sudo ln -s $(VIRTENV_BASE_CROSS_PYTHON3)/yang-models /usr/local/yang-models 2>/dev/null || true), true ) \
+	'
 endif
-	fi
-	done
 	$(FOOTER)
 
 ###############################################################################
@@ -1041,7 +1114,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build --no-cache \
+	docker build $(DOCKER_NO_CACHE_FLAG) \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1193,7 +1266,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_PACKAGES)))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_APT_PACKAGES)))\n" | awk '!a[$$0]++'))
 		if [ -d $($*.gz_PATH)/cli-plugin-tests/ ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pushd $($*.gz_PATH)/cli-plugin-tests; PATH=$(VIRTENV_BIN_CROSS_PYTHON$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION)):${PATH} PYTHONPATH=$(shell realpath $($*.gz_PATH)):${PYTHONPATH} pytest-$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION) -v $(LOG); popd; fi
-		# Label docker image with componenets versions
+		# Label docker image with components versions
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_labels=$(foreach component,\
 			$(call expand,$($*.gz_DEPENDS),RDEPENDS) \
 			$(call expand,$($*.gz_PYTHON_DEBS)) \
@@ -1203,14 +1276,14 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		j2 $($*.gz_PATH)/Dockerfile.j2 > $($*.gz_PATH)/Dockerfile
 		$(call generate_manifest,$*)
 		# Prepare docker build info
-		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build --no-cache \
+		docker build $(DOCKER_NO_CACHE_FLAG) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1250,6 +1323,7 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES))
 # Targets for building docker debug images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz : .platform docker-start \
 		$$(addprefix $(TARGET_PATH)/,$$($$*.gz_AFTER)) \
+		$$(addprefix $(TARGET_PATH)/,$$($$*-$(DBG_IMAGE_MARK).gz_AFTER)) \
 		$$(addprefix $$($$*.gz_DEBS_PATH)/,$$($$*.gz_DBG_DEPENDS)) \
 		$$(addsuffix -load,$$(addprefix $(TARGET_PATH)/,$$*.gz)) \
 		$(call dpkg_depend,$(TARGET_PATH)/%-$(DBG_IMAGE_MARK).gz.dep)
@@ -1272,7 +1346,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		j2 $($*.gz_PATH)/Dockerfile-dbg.j2 > $($*.gz_PATH)/Dockerfile-dbg
 		$(call generate_manifest,$*,dbg)
 		# Prepare docker build info
-		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -1280,7 +1354,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build \
-			--no-cache \
+			$(DOCKER_NO_CACHE_FLAG) \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1301,6 +1375,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		$(call docker-image-save,$*-$(DBG_IMAGE_MARK),$@)
 
 		# Clean up
+		@echo "Removing docker image $(DOCKER_IMAGE_REF)" $(LOG)
 		docker rmi -f $(DOCKER_IMAGE_REF) &> /dev/null || true
 		if [ -f $($*.gz_PATH).patch/series ]; then pushd $($*.gz_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 
@@ -1377,7 +1452,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($(installer)_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
-		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
@@ -1409,6 +1484,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(LINUX_KBUILD) \
                 $(SONIC_DEVICE_DATA) \
                 $(IFUPDOWN2) \
+                $(MAKEDUMPFILE) \
                 $(KDUMP_TOOLS) \
                 $(LIBPAM_RADIUS) \
                 $(LIBNSS_RADIUS) \
@@ -1452,7 +1528,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MGMT_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SYSTEM_HEALTH)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_HOST_SERVICES_PY3)) \
-        $$(addprefix $(TARGET_PATH)/,$$($$*_RFS_DEPENDS))
+        $$(addprefix $(TARGET_PATH)/,$$($$*_RFS_DEPENDS)) \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(LINUX_KBUILD)-install)
 
 	$(HEADER)
 	# Pass initramfs and linux kernel explicitly. They are used for all platforms
@@ -1486,6 +1563,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
+	export include_snmp="$(INCLUDE_SNMP)"
+	export include_lldp="$(INCLUDE_LLDP)"
 	export include_sflow="$(INCLUDE_SFLOW)"
 	export enable_auto_tech_support="$(ENABLE_AUTO_TECH_SUPPORT)"
 	export enable_asan="$(ENABLE_ASAN)"
@@ -1643,7 +1722,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
-		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+		BUILD_PACKAGES_URL=$(BUILD_PACKAGES_URL) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
@@ -1657,9 +1736,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
 		MASTER_UI_METRIC_VERSION=$(MASTER_UI_METRIC_VERSION) \
 		MASTER_UI_DASH_VERSION=$(MASTER_UI_DASH_VERSION) \
-		MASTER_MDM_VERSION=$(MASTER_MDM_VERSION) \
-		MASTER_MDS_VERSION=$(MASTER_MDS_VERSION) \
-		MASTER_FLUENTD_VERSION=$(MASTER_FLUENTD_VERSION) \
 			./build_debian.sh $(LOG)
 
 		USERNAME="$(USERNAME)" \
@@ -1715,6 +1791,9 @@ SONIC_CLEAN_FILES = $(addsuffix -clean,$(addprefix $(FILES_PATH)/, \
 		   $(SONIC_COPY_FILES) \
 		   $(SONIC_MAKE_FILES)))
 
+SONIC_CLEAN_PHONIES = $(addsuffix -clean,$(addprefix $(PHONY_PATH)/, \
+		   $(SONIC_PHONIES)))
+
 $(SONIC_CLEAN_DEBS) :: $(DEBS_PATH)/%-clean : .platform $$(addsuffix -clean,$$(addprefix $(DEBS_PATH)/,$$($$*_MAIN_DEB)))
 	$(Q)# remove derived or extra targets if main one is removed, because we treat them
 	$(Q)# as part of one package
@@ -1722,6 +1801,9 @@ $(SONIC_CLEAN_DEBS) :: $(DEBS_PATH)/%-clean : .platform $$(addsuffix -clean,$$(a
 
 $(SONIC_CLEAN_FILES) :: $(FILES_PATH)/%-clean : .platform
 	$(Q)rm -f $(FILES_PATH)/$*
+
+$(SONIC_CLEAN_PHONIES) :: $(PHONY_PATH)/%-clean : .platform
+	$(Q)rm -f $(PHONY_PATH)/$*
 
 SONIC_CLEAN_TARGETS += $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
 		       $(SONIC_DOCKER_IMAGES) \
@@ -1751,7 +1833,38 @@ clean-versions :: .platform
 vclean:: .platform
 	@sudo rm -rf target/vcache/* target/baseimage*
 
-clean :: .platform clean-logs clean-versions $$(SONIC_CLEAN_DEBS) $$(SONIC_CLEAN_FILES) $$(SONIC_CLEAN_TARGETS) $$(SONIC_CLEAN_STDEB_DEBS) $$(SONIC_CLEAN_WHEELS)
+clean-docker :: .platform
+	@echo "=== Cleaning stale Docker build artifacts ==="
+	@# Remove old sonic-slave images (keep only the current tag)
+	@for img in sonic-slave-bookworm sonic-slave-trixie \
+	            sonic-slave-bookworm-$(USERNAME) sonic-slave-trixie-$(USERNAME) \
+	            tmp-sonic-slave-bookworm tmp-sonic-slave-trixie; do \
+		current_id=$$(docker images --format '{{.ID}}' $$img:$(SLAVE_TAG) 2>/dev/null); \
+		for old_id in $$(docker images --format '{{.ID}} {{.Repository}}:{{.Tag}}' $$img 2>/dev/null | \
+			grep -v "$$current_id" | awk '{print $$2}'); do \
+			echo "Removing old image: $$old_id"; \
+			docker rmi -f $$old_id 2>/dev/null || true; \
+		done; \
+	done
+	@# Remove dangling images
+	@dangling=$$(docker images -q --filter 'dangling=true' 2>/dev/null); \
+	if [ -n "$$dangling" ]; then \
+		echo "Removing $$(echo $$dangling | wc -w) dangling images..."; \
+		docker rmi -f $$dangling 2>/dev/null || true; \
+	fi
+	@# Remove stopped build containers
+	@stopped=$$(docker ps -aq --filter 'status=exited' --filter 'name=sonic' 2>/dev/null); \
+	if [ -n "$$stopped" ]; then \
+		echo "Removing $$(echo $$stopped | wc -w) stopped containers..."; \
+		docker rm $$stopped 2>/dev/null || true; \
+	fi
+	@# Prune build cache
+	@echo "Pruning Docker build cache..."
+	@docker builder prune -f 2>/dev/null || true
+	@echo "=== Docker cleanup complete ==="
+	@docker system df 2>/dev/null || true
+
+clean :: .platform clean-logs clean-versions $$(SONIC_CLEAN_DEBS) $$(SONIC_CLEAN_FILES) $$(SONIC_CLEAN_PHONIES) $$(SONIC_CLEAN_TARGETS) $$(SONIC_CLEAN_STDEB_DEBS) $$(SONIC_CLEAN_WHEELS)
 
 ###############################################################################
 ## all
@@ -1778,7 +1891,23 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
 ## Standard targets
 ###############################################################################
 
-.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure
+###############################################################################
+## ccache targets
+###############################################################################
+ccache-stats :
+ifeq ($(SONIC_CONFIG_USE_CCACHE),y)
+	CCACHE_DIR=$(CCACHE_DIR) ccache -s
+else
+	@echo "ccache is not enabled. Set SONIC_CONFIG_USE_CCACHE=y in rules/config.user"
+endif
+
+ccache-clear :
+	rm -rf $(TARGET_PATH)/ccache
+	@echo "ccache cleared"
+
+.PHONY : ccache-stats ccache-clear
+
+.PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_PHONIES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure build-report
 
 .INTERMEDIATE : $(SONIC_INSTALL_DEBS) $(SONIC_INSTALL_WHEELS) $(DOCKER_LOAD_TARGETS) docker-start .platform
 

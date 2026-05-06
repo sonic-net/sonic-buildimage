@@ -39,6 +39,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
+EXPECTED_ASIC_LIST_FILENAME = "platform_expected_asic_list.conf"
 CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
@@ -50,6 +51,7 @@ CHASSIS_INFO_CARD_NUM_FIELD = 'module_num'
 CHASSIS_INFO_SERIAL_FIELD = 'serial'
 CHASSIS_INFO_MODEL_FIELD = 'model'
 CHASSIS_INFO_REV_FIELD = 'revision'
+CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD = 'switch_host_serial'
 
 # DPU constants
 DPU_NAME_PREFIX = "dpu"
@@ -584,6 +586,7 @@ def get_chassis_info():
         chassis_info_dict['serial'] = db.get(db.STATE_DB, table, CHASSIS_INFO_SERIAL_FIELD)
         chassis_info_dict['model'] = db.get(db.STATE_DB, table, CHASSIS_INFO_MODEL_FIELD)
         chassis_info_dict['revision'] = db.get(db.STATE_DB, table, CHASSIS_INFO_REV_FIELD)
+        chassis_info_dict['switch_host_serial'] = db.get(db.STATE_DB, table, CHASSIS_INFO_SWITCH_HOST_SERIAL_FIELD)
     except Exception:
         pass
 
@@ -861,7 +864,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell-prestera'):
+    elif (version_info['asic_type'] in ['marvell-prestera', 'nokia-vs']):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -1097,3 +1100,53 @@ def get_dpu_list():
         return list(dpu_info)
 
     return []
+
+def get_expected_asic_list_file_path():
+    """
+    Retrieves the path to the ASIC configuration file on the device
+
+    Returns:
+        A string containing the path to the ASIC configuration file on success,
+        None on failure
+    """
+    def asic_list_path_candidates():
+        yield os.path.join(CONTAINER_PLATFORM_PATH, EXPECTED_ASIC_LIST_FILENAME)
+
+        # Note: this function is critical for is_multi_asic() and SonicDBConfig initializing
+        #   No explicit reading ConfigDB
+        platform = get_platform(config_db=None)
+        if platform:
+            yield os.path.join(HOST_DEVICE_PATH, platform, EXPECTED_ASIC_LIST_FILENAME)
+
+    for asic_list_file_path in asic_list_path_candidates():
+        if os.path.isfile(asic_list_file_path):
+            return asic_list_file_path
+
+    return None
+
+def get_expected_asic_list():
+    """
+    @summary: This function returns list of asic IDs for all NPUs expected to be up on Supervisor
+              based on fabric present. The list is read from EXPECTED_ASIC_LIST_FILENAME provided
+              by platform.
+
+    @return: List of asic ID integers
+             e.g., [0, 1, 4, 5, 8, 9, 10, 11, 12, 13]
+    """
+    asic_list = []
+
+    asic_list_file = get_expected_asic_list_file_path()
+
+    try:
+        if asic_list_file is not None and os.path.exists(asic_list_file):
+            with open(asic_list_file, 'r') as file:
+                asic_list = yaml.safe_load(file)
+
+        # Ensure it's a list
+        if not isinstance(asic_list, list):
+            asic_list = []
+
+    except (yaml.YAMLError, IOError, TypeError, ValueError):
+        asic_list = []
+
+    return asic_list

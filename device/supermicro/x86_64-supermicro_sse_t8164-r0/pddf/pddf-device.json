@@ -1067,7 +1067,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x61", "dev_addr":"0x77", "dev_type":"pca9539"},
-            "dev_attr": { "gpio_base":"0x200"},
+            "dev_attr": { "gpio_base":"0x300"},
             "ports":
             [
                 {"port_num":0, "direction":"in", "value":"", "edge":"", "active_low":""},

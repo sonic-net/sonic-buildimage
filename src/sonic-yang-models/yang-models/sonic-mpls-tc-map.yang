@@ -28,14 +28,16 @@ module sonic-mpls-tc-map {
 
         container MPLS_TC_TO_TC_MAP {
 
-            description "MPLS_TC_TO_TC_MAP part of config_db.json";
+            description "Maps MPLS TC bits to traffic class for QoS classification of MPLS traffic.";
 
             list MPLS_TC_TO_TC_MAP_LIST {
 
                 key "name";
 
+                description "A named MPLS TC to traffic class map.";
+
                 leaf name {
-                    description "Name of MPLS TC Mpping List";
+                    description "Name of the MPLS TC to TC map.";
                     type string {
                         pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})';
                         length 1..32 {
@@ -45,9 +47,11 @@ module sonic-mpls-tc-map {
                     }
                 }
 
-                list MPLS_TC_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+                list MPLS_TC_TO_TC_MAP {
 
                     key "mpls";
+
+                    description "Single mapping entry from an MPLS TC value to a traffic class.";
 
                     leaf mpls {
                         description "MPLS TC Value";

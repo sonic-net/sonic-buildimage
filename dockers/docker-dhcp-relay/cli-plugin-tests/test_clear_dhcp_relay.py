@@ -80,27 +80,35 @@ def test_is_vlan_interface_valid(patch_import_module, test_param_result):
                                 .format(act_res, vlan_interface, test_param_result[1]))
 
 
-@pytest.mark.parametrize("direction, type, keys, db_dhcp_type, paused_vlans", [
+@pytest.mark.parametrize("direction, type, keys, db_dhcp_type, paused_vlans, prefix, supported_types", [
+    # v4 test cases
     (None, None, ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                             "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover"]), set(["Vlan100"])),
+                             "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover"]), set(["Vlan100"]),
+     "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
     ("RX", "Offer", ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                                "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover", "Offer"]), set(["Vlan100"])),
-    ("TX", "Ack", ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                              "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover", "Offer"]), set(["Vlan100"])),
-    ("TX", "Ack", ["DHCPV4_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV4_COUNTER_TABLE_Vlan100",
-                              "DHCPV4_COUNTER_TABLE_Vlan1000"], None, set(["Vlan100"]))
+                                "DHCPV4_COUNTER_TABLE_Vlan1000"], set(["Discover", "Offer"]), set(["Vlan100"]),
+     "DHCPV4_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCP_TYPE"),
+    # v6 test cases
+    (None, None, ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE_Vlan100",
+                             "DHCPV6_COUNTER_TABLE_Vlan1000"], set(["Solicit"]), set(["Vlan100"]),
+     "DHCPV6_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCPV6_TYPE"),
+    ("TX", "Reply", ["DHCPV6_COUNTER_TABLE:Vlan100:Ethernet1", "DHCPV6_COUNTER_TABLE_Vlan100",
+                              "DHCPV6_COUNTER_TABLE_Vlan1000"], set(["Solicit", "Reply"]), set(["Vlan100"]),
+     "DHCPV6_COUNTER_TABLE_PREFIX", "SUPPORTED_DHCPV6_TYPE"),
 ])
-def test_clear_dhcpv4_db_counters(patch_import_module, direction, type, keys,
-                                  db_dhcp_type, paused_vlans):
+def test_clear_dhcpmon_db_counters(patch_import_module, direction, type, keys,
+                                  db_dhcp_type, paused_vlans, prefix, supported_types):
     clear_dhcp_relay = patch_import_module
     mock_db = MagicMock()
+    table_prefix = getattr(clear_dhcp_relay, prefix)
+    sup_types = getattr(clear_dhcp_relay, supported_types)
     directions = [direction] if direction else clear_dhcp_relay.SUPPORTED_DIR
-    types = [type] if type else clear_dhcp_relay.SUPPORTED_DHCP_TYPE
+    types = [type] if type else sup_types
     mock_db.keys.return_value = keys
     count_obj = {}
     if db_dhcp_type is not None:
         for current_type in db_dhcp_type:
-            if current_type not in clear_dhcp_relay.SUPPORTED_DHCP_TYPE:
+            if current_type not in sup_types:
                 continue
             # Set it to non zero before clearing
             count_obj[current_type] = "1"
@@ -108,7 +116,14 @@ def test_clear_dhcpv4_db_counters(patch_import_module, direction, type, keys,
     else:
         mock_db.get.return_value = None
     with patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=True):
-        clear_dhcp_relay.clear_dhcpv4_db_counters(mock_db, direction, type, paused_vlans)
+        clear_dhcp_relay.clear_dhcpmon_db_counters(
+            mock_db,
+            direction,
+            type,
+            paused_vlans,
+            table_prefix,
+            sup_types
+        )
         calls = []
         for vlan_interface in paused_vlans:
             for key in keys:
@@ -182,10 +197,20 @@ def test_clear_dhcp_relay_ipv6_counters(patch_import_module, interface):
     clear_dhcp_relay = patch_import_module
     runner = CliRunner()
     args = ["--interface={}".format(interface)] if interface else []
-    with patch.object(clear_dhcp_relay, "clear_dhcp_relay_ipv6_counter") as mock_clear:
+    with patch.object(clear_dhcp_relay, "clear_dhcpmon_counters") as mock_clear:
         result = runner.invoke(clear_dhcp_relay.dhcp_relay.commands["ipv6"].commands["counters"], args)
         assert result.exit_code == 0
-        mock_clear.assert_called_once_with(interface)
+        mock_clear.assert_called_once()
+        args_passed = mock_clear.call_args
+        # interface is the 2nd positional arg (after db)
+        assert args_passed[0][1] == (interface if interface else "")
+        # Verify v6-specific constants are passed
+        kwargs = args_passed[1]
+        assert kwargs["lock_file_path"] == clear_dhcp_relay.DHCPMON_CLEAR_COUNTER_LOCK_FILE
+        assert kwargs["state_table"] == clear_dhcp_relay.DHCPV6_COUNTER_UPDATE_STATE_TABLE
+        assert kwargs["counter_table_prefix"] == clear_dhcp_relay.DHCPV6_COUNTER_TABLE_PREFIX
+        assert kwargs["supported_types"] == clear_dhcp_relay.SUPPORTED_DHCPV6_TYPE
+        assert kwargs["version_label"] == "DHCPv6"
 
 
 def test_clear_dhcp_relay_ipv4_counters_no_root(patch_import_module):
@@ -197,7 +222,7 @@ def test_clear_dhcp_relay_ipv4_counters_no_root(patch_import_module):
         mock_get_ctx.return_value = mock_ctx
         result = runner.invoke(clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"])
         assert result.exit_code == 0
-        mock_ctx.fail.assert_called_once_with("Clear DHCPv4 counter need to be run with sudo permission")
+        mock_ctx.fail.assert_called_once_with("Clearing DHCPv4 counters requires sudo privileges")
 
 
 def test_clear_dhcp_relay_ipv4_counters_locked(patch_import_module):
@@ -207,14 +232,19 @@ def test_clear_dhcp_relay_ipv4_counters_locked(patch_import_module):
          patch.object(clear_dhcp_relay, "open"), \
          patch.object(fcntl, "flock", side_effect=BlockingIOError) as mock_flock, \
          patch.object(clear_dhcp_relay, "notify_dhcpmon_processes"), \
-         patch.object(clear_dhcp_relay, "clear_dhcpv4_db_counters"), \
+         patch.object(clear_dhcp_relay, "clear_dhcpmon_db_counters"), \
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
         mock_get_ctx.return_value = mock_ctx
         result = runner.invoke(clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"])
         assert result.exit_code != 0
-        mock_ctx.fail.assert_called_once_with("Cannot lock {}".format(clear_dhcp_relay.DHCPV4_CLEAR_COUNTER_LOCK_FILE) + 
-                                              ", seems another user is clearing DHCPv4 relay counter simultaneous")
+        lock_file = clear_dhcp_relay.DHCPMON_CLEAR_COUNTER_LOCK_FILE
+        expected_msg = (
+            "Cannot lock {}; another user is already clearing"
+            " DHCPv4 relay counters simultaneously"
+            .format(lock_file)
+        )
+        mock_ctx.fail.assert_called_once_with(expected_msg)
         mock_flock.assert_has_calls([
             call(ANY, fcntl.LOCK_EX | fcntl.LOCK_NB),
             call(ANY, fcntl.LOCK_UN)
@@ -229,7 +259,10 @@ def test_clear_dhcp_relay_ipv4_counters_vlan_invalid(patch_import_module):
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
         mock_get_ctx.return_value = mock_ctx
-        result = runner.invoke(clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"], "--interface=Vlan1000")
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp_relay.commands["ipv4"].commands["counters"],
+            "--interface=Vlan1000"
+        )
         assert result.exit_code == 0
         mock_ctx.fail.assert_called_once_with("Vlan1000 doesn't exist")
 
@@ -254,10 +287,10 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
          patch.object(fcntl, "flock") as mock_flock, \
          patch.object(clear_dhcp_relay, "notify_dhcpmon_processes", return_value=set()) as mock_notify, \
          patch.object(clear_dhcp_relay, "get_paused_vlans", return_value=paused_vlans), \
-         patch.object(clear_dhcp_relay, "clear_dhcpv4_db_counters") as mock_clear, \
+         patch.object(clear_dhcp_relay, "clear_dhcpmon_db_counters") as mock_clear, \
          patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=True), \
-         patch.object(clear_dhcp_relay, "get_failed_vlans", return_value=failed_vlans), \
-         patch.object(clear_dhcp_relay, "clear_writing_state_db_flag") as mock_clear_writing_state_db_flag, \
+         patch.object(clear_dhcp_relay, "get_failed_vlans_for_table", return_value=failed_vlans), \
+         patch.object(clear_dhcp_relay, "clear_state_db_flags") as mock_clear_state_db_flags, \
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
         mock_get_ctx.return_value = mock_ctx
@@ -271,12 +304,15 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
             call(interface, signal.SIGUSR1),
             call(interface, signal.SIGUSR2)
         ])
-        mock_clear.assert_called_once_with(ANY, dir, type, paused_vlans)
+        mock_clear.assert_called_once()
+        clear_args = mock_clear.call_args[0]
+        assert len(clear_args) >= 4
+        assert clear_args[1:4] == (dir, type, paused_vlans)
         if failed_vlans:
             mock_ctx.fail.assert_called_once()
-        mock_clear_writing_state_db_flag.assert_has_calls([
-            call(ANY),
-            call(ANY)
+        mock_clear_state_db_flags.assert_has_calls([
+            call(ANY, ANY),
+            call(ANY, ANY)
         ])
 
 
@@ -285,7 +321,11 @@ def test_get_failed_vlans(patch_import_module, mock_get_result):
     clear_dhcp_relay = patch_import_module
     mock_db = MagicMock()
     mock_db.get.return_value = mock_get_result
-    failed_vlans = clear_dhcp_relay.get_failed_vlans(mock_db, set(["Vlan1000", "Vlan2000"]))
+    failed_vlans = clear_dhcp_relay.get_failed_vlans_for_table(
+        mock_db,
+        clear_dhcp_relay.DHCPV4_COUNTER_UPDATE_STATE_TABLE,
+        set(["Vlan1000", "Vlan2000"])
+    )
     if mock_get_result == "done":
         assert failed_vlans == {}
     else:
@@ -297,7 +337,10 @@ def test_clear_writing_state_db_flag(patch_import_module):
     mock_db = MagicMock()
     keys = ["key1", "key2", "key3"]
     mock_db.keys.return_value = keys
-    clear_dhcp_relay.clear_writing_state_db_flag(mock_db)
+    clear_dhcp_relay.clear_state_db_flags(
+        mock_db,
+        clear_dhcp_relay.DHCPV4_COUNTER_UPDATE_STATE_TABLE
+    )
     mock_db.delete.assert_has_calls([call(ANY, key) for key in keys])
 
 
@@ -337,8 +380,174 @@ def test_dhcp4relay_clear_vlan_counters_command(patch_import_module):
     runner = CliRunner()
     # Patch the actual clear function to verify call
     with patch.object(clear_dhcp_relay, "clear_dhcp_relay_ipv4_vlan_counter") as mock_clear:
-        result = runner.invoke(clear_dhcp_relay.dhcp4relay_clear.commands['dhcp4relay-vlan-counters'], ['-d', 'TX', 'Vlan1000'])
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp4relay_clear.commands['dhcp4relay-vlan-counters'],
+            ['-d', 'TX', 'Vlan1000']
+        )
         assert result.exit_code == 0
+
+
+
+# ======================================================================
+# DHCPv6 dhcpmon clear counter command tests
+# (mirrors v4 tests above with v6 constants)
+# ======================================================================
+
+def test_clear_dhcp_relay_ipv6_counters_no_root(patch_import_module):
+    clear_dhcp_relay = patch_import_module
+    runner = CliRunner()
+    with patch.object(os, "geteuid", return_value=1), \
+         patch.object(click, "get_current_context") as mock_get_ctx:
+        mock_ctx = MagicMock()
+        mock_get_ctx.return_value = mock_ctx
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp_relay
+            .commands["ipv6"].commands["counters"]
+        )
+        assert result.exit_code == 0
+        mock_ctx.fail.assert_called_once_with(
+            "Clearing DHCPv6 counters requires"
+            " sudo privileges"
+        )
+
+
+def test_clear_dhcp_relay_ipv6_counters_locked(patch_import_module):
+    clear_dhcp_relay = patch_import_module
+    runner = CliRunner()
+    with patch.object(os, "geteuid", return_value=0), \
+         patch.object(clear_dhcp_relay, "open"), \
+         patch.object(
+             fcntl, "flock", side_effect=BlockingIOError
+         ) as mock_flock, \
+         patch.object(
+             clear_dhcp_relay, "notify_dhcpmon_processes"
+         ), \
+         patch.object(
+             clear_dhcp_relay, "clear_dhcpmon_db_counters"
+         ), \
+         patch.object(
+             click, "get_current_context"
+         ) as mock_get_ctx:
+        mock_ctx = MagicMock()
+        mock_get_ctx.return_value = mock_ctx
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp_relay
+            .commands["ipv6"].commands["counters"]
+        )
+        assert result.exit_code != 0
+        lock_file = clear_dhcp_relay.DHCPMON_CLEAR_COUNTER_LOCK_FILE
+        expected_msg = (
+            "Cannot lock {}; another user is already clearing"
+            " DHCPv6 relay counters simultaneously"
+            .format(lock_file)
+        )
+        mock_ctx.fail.assert_called_once_with(expected_msg)
+        mock_flock.assert_has_calls([
+            call(ANY, fcntl.LOCK_EX | fcntl.LOCK_NB),
+            call(ANY, fcntl.LOCK_UN)
+        ])
+
+
+def test_clear_dhcp_relay_ipv6_counters_vlan_invalid(
+    patch_import_module
+):
+    clear_dhcp_relay = patch_import_module
+    runner = CliRunner()
+    with patch.object(os, "geteuid", return_value=0), \
+         patch.object(
+             clear_dhcp_relay, "is_vlan_interface_valid",
+             return_value=False
+         ), \
+         patch.object(
+             click, "get_current_context"
+         ) as mock_get_ctx:
+        mock_ctx = MagicMock()
+        mock_get_ctx.return_value = mock_ctx
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp_relay
+            .commands["ipv6"].commands["counters"],
+            "--interface=Vlan1000"
+        )
+        assert result.exit_code == 0
+        mock_ctx.fail.assert_called_once_with(
+            "Vlan1000 doesn't exist"
+        )
+
+
+@pytest.mark.parametrize("interface", ["", "Vlan1000"])
+@pytest.mark.parametrize("dir", [None, "RX", "TX"])
+@pytest.mark.parametrize("type", [None, "Solicit"])
+@pytest.mark.parametrize(
+    "failed_vlans",
+    [{}, {"Vlan1000": set(["RX", "TX"])}]
+)
+def test_clear_dhcp_relay_ipv6_counters_full(
+    patch_import_module, interface, dir, type, failed_vlans
+):
+    clear_dhcp_relay = patch_import_module
+    runner = CliRunner()
+    args = []
+    if interface != "":
+        args.append("--interface={}".format(interface))
+    if dir is not None:
+        args.append("--dir={}".format(dir))
+    if type is not None:
+        args.append("--type={}".format(type))
+    paused_vlans = set()
+    with patch.object(os, "geteuid", return_value=0), \
+         patch.object(clear_dhcp_relay, "open"), \
+         patch.object(fcntl, "flock") as mock_flock, \
+         patch.object(
+             clear_dhcp_relay, "notify_dhcpmon_processes",
+             return_value=set()
+         ) as mock_notify, \
+         patch.object(
+             clear_dhcp_relay, "get_paused_vlans",
+             return_value=paused_vlans
+         ), \
+         patch.object(
+             clear_dhcp_relay, "clear_dhcpmon_db_counters"
+         ) as mock_clear, \
+         patch.object(
+             clear_dhcp_relay, "is_vlan_interface_valid",
+             return_value=True
+         ), \
+         patch.object(
+             clear_dhcp_relay, "get_failed_vlans_for_table",
+             return_value=failed_vlans
+         ), \
+         patch.object(
+             clear_dhcp_relay, "clear_state_db_flags"
+         ) as mock_clear_state_db_flags, \
+         patch.object(
+             click, "get_current_context"
+         ) as mock_get_ctx:
+        mock_ctx = MagicMock()
+        mock_get_ctx.return_value = mock_ctx
+        result = runner.invoke(
+            clear_dhcp_relay.dhcp_relay
+            .commands["ipv6"].commands["counters"],
+            args
+        )
+        assert result.exit_code == 0
+        mock_flock.assert_has_calls([
+            call(ANY, fcntl.LOCK_EX | fcntl.LOCK_NB),
+            call(ANY, fcntl.LOCK_UN)
+        ])
+        mock_notify.assert_has_calls([
+            call(interface, signal.SIGUSR1),
+            call(interface, signal.SIGUSR2)
+        ])
+        mock_clear.assert_called_once()
+        clear_args, clear_kwargs = mock_clear.call_args
+        assert len(clear_args) >= 4
+        assert clear_args[1:4] == (dir, type, paused_vlans)
+        if failed_vlans:
+            mock_ctx.fail.assert_called_once()
+        mock_clear_state_db_flags.assert_has_calls([
+            call(ANY, ANY),
+            call(ANY, ANY)
+        ])
 
 def test_register_adds_dhcp4relay_clear_vlan_counters(patch_import_module):
     clear_dhcp_relay = patch_import_module

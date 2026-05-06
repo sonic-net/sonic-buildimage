@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <root version="2">
-    <name>CSDK-BH</name>
+    <name>blackhawk</name>
     <mode>retimer</mode>
     <phy context_id="1">
         <phy_addr>0</phy_addr>

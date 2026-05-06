@@ -112,5 +112,25 @@
                 }
             }
         }
+    },
+    "BGP_DEVICE_GLOBAL_CONFED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "CONFED": {
+                    "asn": 65100,
+                    "peers": "66000;63000"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_CONFED_INVALID_ASN": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "CONFED": {
+                    "asn": "abc",
+                    "peers": "66000;63000"
+                }
+            }
+        }
     }
 }

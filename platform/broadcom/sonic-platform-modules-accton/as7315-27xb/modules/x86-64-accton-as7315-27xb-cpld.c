@@ -35,6 +35,7 @@
 #include <linux/delay.h>
 #include <linux/list.h>
 #include <linux/printk.h>
+#include <linux/version.h>
 
 
 #define DRV_NAME    "as7315_i2c_cpld"
@@ -834,7 +835,10 @@ static int _add_sysfs_attributes(struct i2c_client *client,
 static int _add_mux_channels(struct i2c_client *client,
                              const struct i2c_device_id *id, struct cpld_data *data)
 {
-    int num, force, class;
+    int num, force;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+    int class;
+#endif
     int status;
     struct i2c_mux_core *muxc;
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
@@ -852,8 +856,12 @@ static int _add_mux_channels(struct i2c_client *client,
     muxc->priv = client;
     for (num = 0; num < chips[model].nchans; num++) {
         force = 0;			  /* dynamic adap number */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
         class = 0;			  /* no class by default */
         status = i2c_mux_add_adapter(muxc, force, num, class);
+#else
+        status = i2c_mux_add_adapter(muxc, force, num);
+#endif
         if (status)
             return status ;
     }
@@ -864,13 +872,20 @@ static int _add_mux_channels(struct i2c_client *client,
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as7315_i2c_cpld_probe(struct i2c_client *client,
                                  const struct i2c_device_id *dev_id)
+#else
+static int as7315_i2c_cpld_probe(struct i2c_client *client)
+#endif
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
     int status;
     struct cpld_data *data = NULL;
     struct device *dev = &client->dev;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE_DATA))
         return -ENODEV;

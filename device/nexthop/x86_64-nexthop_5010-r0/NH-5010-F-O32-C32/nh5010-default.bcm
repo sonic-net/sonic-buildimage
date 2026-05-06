@@ -2056,6 +2056,7 @@ ucode_port_339.BCM8887X_ADAPTER=OAMP:core_7.239
 oamp_dual_mode.BCM8887X=1
 
 sai_disable_srcmacqedstmac_ctrl=1
+sai_instru_stat_accum_enable=1
 
 #RCY ports
 sai_recycle_port_lane_base=300
@@ -2268,3 +2269,4 @@ macsec_fips_enable=1
 xflow_macsec_secure_chan_to_num_secure_assoc=4
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
+sai_ecmp_group_members_increment=8

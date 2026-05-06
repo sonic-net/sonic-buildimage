@@ -511,6 +511,8 @@ write_platform_specific_cmdline() {
     # detect the size of the flash partition from name in Aboot/EOS/SONiC
     local flash_size=$(($(df "$target_path" | tail -1 | tr -s ' ' | cut -f2 -d' ') / 1000))
 
+    cmdline_add nohz=off
+
     if [ "$platform" = "raven" ]; then
         # Assuming sid=Cloverdale
         aboot_machine=arista_7050_qx32
@@ -559,7 +561,6 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_7050cx3_32s
         cmdline_add logs_inram=on
         cmdline_add libata.force=2.00:noncq
-        cmdline_add nohz=off
     fi
     if [ "$sid" = "LodogaPrime" ]; then
         aboot_machine=arista_7050cx3_32c
@@ -729,7 +730,6 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$platform" "hedgehog"; then
         cmdline_add reassign_prefmem
-        cmdline_add nohz=off
         read_system_eeprom
     fi
     if in_array "$platform" "prairieisland"; then

@@ -15,7 +15,9 @@
 
 function debug()
 {
-    /usr/bin/logger $1
+    # Use --id=$$ so all messages from this script share the parent shell's PID,
+    # preventing rsyslog imuxsock ratelimiter memory growth.
+    /usr/bin/logger --id=$$ -- "$1"
     /bin/echo `date` "- $1" >> ${DEBUGLOG}
 }
 
@@ -104,7 +106,7 @@ start() {
 
     lock_service_state_change
 
-    mkdir -p /host/warmboot
+    mkdir -p /host/warmboot$DEV
 
     wait_for_database_service
     check_warm_boot
@@ -113,9 +115,9 @@ start() {
 
     if [[ x"$WARM_BOOT" == x"true" ]]; then
         # Leave a mark for syncd scripts running inside docker.
-        touch /host/warmboot/warm-starting
+        touch /host/warmboot$DEV/warm-starting
     else
-        rm -f /host/warmboot/warm-starting
+        rm -f /host/warmboot$DEV/warm-starting
     fi
 
     startplatform

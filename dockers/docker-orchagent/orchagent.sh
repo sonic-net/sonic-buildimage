@@ -62,6 +62,12 @@ if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
 
+# Enable async swss recorder when explicitly configured
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "async_swss_rec")
+if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-A "
+fi
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
@@ -100,25 +106,15 @@ fi
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
-    mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
     if [[ $midplane_mgmt_state == "UP" ]]; then
         # Enable ZMQ with eth0-midplane interface name
         ORCHAGENT_ARGS+=" -q tcp://eth0-midplane"
-    elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
-        # If eth0-midplane interface does not up, enable ZMQ with eth0 address
-        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}"
     else
         ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
     fi
 else
     # For other platforms, use the default ZMQ address
     ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
-fi
-
-# Add VRF parameter when mgmt-vrf enabled
-MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
-if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
-    ORCHAGENT_ARGS+=" -v mgmt"
 fi
 
 # Enable ring buffer

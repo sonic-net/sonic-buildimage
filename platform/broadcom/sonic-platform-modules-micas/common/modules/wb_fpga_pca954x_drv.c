@@ -372,10 +372,20 @@ static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 /*
  * I2C init/probing/exit functions
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
+static int fpga_i2c_pca954x_probe(struct i2c_client *client)
+#endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *id = i2c_match_id(fpga_pca954x_id, client);
+#endif
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
-    int num, force, class;
+    int num, force;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
+    unsigned int class = 0;
+#endif
     struct pca954x *data;
     int ret = -ENODEV;
     struct device *dev;
@@ -426,6 +436,12 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
             ret = -EINVAL;
             goto exit_free;
         }
+        if (!id) {
+            dev_err(&client->dev, "Failed to match i2c device id.\n");
+            ret = -ENODEV;
+            goto exit_free;
+        }
+        data->type = id->driver_data;
         fpga_pca954x_device = client->dev.platform_data;
         data->fpga_9548_flag = fpga_pca954x_device->fpga_9548_flag;
         data->fpga_9548_reset_flag = fpga_pca954x_device->fpga_9548_reset_flag;
@@ -438,7 +454,7 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
             FPGA_PCA954X_VERBOSE("pca9548_base_nr:%u.\n", data->pca9548_base_nr);
         }
     } else {
-        data->type = id->driver_data;
+        data->type = id ? id->driver_data : 0;
         /* BUS ID */
         ret = of_property_read_u32(dev->of_node, "fpga_9548_flag", &data->fpga_9548_flag);
         if (ret != 0) {
@@ -462,8 +478,6 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
         ret = -EINVAL;
         goto exit_free;
     }
-
-    data->type = id->driver_data;
     data->last_chan = 0;   /* force the first selection */
 
     /* Now create an adapter for each channel */
@@ -473,7 +487,6 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
         } else {
             force = data->pca9548_base_nr + num;
         }
-        class = 0;              /* no class by default */
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,6,7)
         data->virt_adaps[num] =
             i2c_add_mux_adapter(adap, &client->dev, client,
@@ -486,7 +499,11 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
             goto virt_reg_failed;
         }
 #else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
         ret = i2c_mux_add_adapter(muxc, force, num, class);
+#else
+        ret = i2c_mux_add_adapter(muxc, force, num);
+#endif
         if (ret) {
             dev_err(&client->dev, "Failed to register multiplexed adapter %d as bus %d\n",
                 num, force);
@@ -514,7 +531,11 @@ err:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int fpga_i2c_pca954x_remove(struct i2c_client *client)
+#else
 static void fpga_i2c_pca954x_remove(struct i2c_client *client)
+#endif
 {
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,6,7)
     struct pca954x *data = i2c_get_clientdata(client);
@@ -534,7 +555,11 @@ static void fpga_i2c_pca954x_remove(struct i2c_client *client)
     i2c_mux_del_adapters(muxc);
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+    return 0;
+#else
     return;
+#endif
 }
 
 static struct i2c_driver fpga_i2c_pca954x_driver = {

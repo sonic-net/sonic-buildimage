@@ -23,7 +23,12 @@ module sonic-policer {
 
 	container sonic-policer {
 		container POLICER {
+
+			description "Configures traffic policers with committed/peak rates and burst sizes.";
+
 			list POLICER_LIST {
+
+				description "A named policer entry with metering and per-color actions.";
 				key name;
 
 				leaf name {
@@ -34,18 +39,18 @@ module sonic-policer {
 				leaf meter_type {
 					mandatory true;
 					type stypes:meter_type;
-					description "Policer meter type";
+					description "Metering unit (packets or bytes).";
 				}
 
 				leaf mode {
 					mandatory true;
                                         type stypes:policer_mode;
-					description "Policer mode";
+					description "Policer mode: single-rate TCM, two-rate TCM, or storm control.";
 				}
 
   				leaf color {
                                         type stypes:policer_color_source;
-					description "Policer color Source";
+					description "Policer color awareness mode (aware or blind).";
 				}
 
 				leaf cir {
@@ -102,20 +107,20 @@ module sonic-policer {
 				leaf green_packet_action {
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Green action";
+					description "Action for packets classified as green by the policer.";
 				}
 
 				leaf yellow_packet_action {
 					when "((current()/../mode = 'sr_tcm') or (current()/../mode = 'tr_tcm'))";
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Yellow action";
+					description "Action for packets classified as yellow by the policer.";
 				}
 
 				leaf red_packet_action {
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Red action";
+					description "Action for packets classified as red by the policer.";
 				}
 			}
 			/* end of list POLICER_LIST */

@@ -99,6 +99,24 @@ if [ -e /etc/bf.cfg ]; then
 	. /etc/bf.cfg
 fi
 
+if [[ "$NPU_TIME" =~ ^[0-9]+$ ]]; then
+	log "Setting system time from NPU: $NPU_TIME"
+	if date -s "@$NPU_TIME" > /dev/null 2>&1; then
+		log "System time set to: $(date)"
+		if [ -e /dev/rtc0 ]; then
+			if hwclock --systohc --utc > /dev/null 2>&1; then
+				log "Hardware clock synced from system time"
+			else
+				log "WARNING: Failed to sync hardware clock from system time (rc=$?)"
+			fi
+		fi
+	else
+		log "WARNING: Failed to set system time from NPU_TIME=$NPU_TIME (rc=$?)"
+	fi
+else
+	log "Invalid NPU_TIME value '$NPU_TIME'; expected positive integer Unix timestamp. Skipping time update."
+fi
+
 # Flags that can be overwritten by the bf.cfg
 declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
 declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"

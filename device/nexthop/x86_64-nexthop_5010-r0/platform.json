@@ -501,6 +501,93 @@
             },
             {
                 "name": "NVMe"
+            },
+            {
+                "name": "DPM1"
+            },
+            {
+                "name": "DPM2"
+            },
+            {
+                "name": "DPM3"
+            },
+            {
+                "name": "DPM4"
+            },
+            {
+                "name": "DCDC2"
+            },
+            {
+                "name": "DCDC3"
+            },
+            {
+                "name": "DCDC4"
+            },
+            {
+                "name": "DCDC5"
+            },
+            {
+                "name": "DCDC6"
+            },
+            {
+                "name": "DCDC7"
+            },
+            {
+                "name": "DCDC8"
+            },
+            {
+                "name": "DCDC9"
+            },
+            {
+                "name": "DCDC10"
+            },
+            {
+                "name": "PHY0"
+            },
+            {
+                "name": "PHY1"
+            },
+            {
+                "name": "PHY2"
+            },
+            {
+                "name": "PHY3"
+            },
+            {
+                "name": "PHY4"
+            },
+            {
+                "name": "PHY5"
+            },
+            {
+                "name": "PHY6"
+            },
+            {
+                "name": "PHY7"
+            },
+            {
+                "name": "PHY8"
+            },
+            {
+                "name": "PHY9"
+            },
+            {
+                "name": "PHY10"
+            },
+            {
+                "name": "PHY11"
+            },
+            {
+                "name": "PHY12"
+            },
+            {
+                "name": "PHY13"
+            },
+            {
+                "name": "PHY14"
+            },
+            {
+                "name": "PHY15"
             }
         ],
         "fans": [

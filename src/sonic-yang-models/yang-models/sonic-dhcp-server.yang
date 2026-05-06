@@ -10,10 +10,6 @@ module sonic-dhcp-server {
         prefix inet;
     }
 
-    import sonic-port {
-        prefix port;
-    }
-
     organization
         "SONiC";
 
@@ -30,7 +26,7 @@ module sonic-dhcp-server {
 
         container DHCP_SERVER {
 
-            description "DHCP_SERVER part of config_db.json";
+            description "DHCP server IP addresses used for relay forwarding";
 
             list DHCP_SERVER_LIST {
 

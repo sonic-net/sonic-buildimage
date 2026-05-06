@@ -1,10 +1,11 @@
 /*
  * Header file for eventd daemon
  */
-#include "table.h"
-#include "events_service.h"
-#include "events.h"
-#include "events_wrap.h"
+#include <atomic>
+#include <swss/table.h>
+#include <swss/events_service.h>
+#include <swss/events.h>
+#include <swss/events_wrap.h>
 
 #define ARRAY_SIZE(l) (sizeof(l)/sizeof((l)[0]))
 
@@ -38,13 +39,9 @@ class eventd_proxy
 {
     public:
         eventd_proxy(void *ctx) : m_ctx(ctx), m_frontend(NULL), m_backend(NULL),
-            m_capture(NULL) {};
+            m_capture(NULL), m_init_done(false), m_init_result(0) {};
 
         ~eventd_proxy() {
-            zmq_close(m_frontend);
-            zmq_close(m_backend);
-            zmq_close(m_capture);
-
             if (m_thr.joinable())
                 m_thr.join();
         }
@@ -59,6 +56,8 @@ class eventd_proxy
         void *m_backend;
         void *m_capture;
         thread m_thr;
+        std::atomic<bool> m_init_done;
+        std::atomic<int> m_init_result;
 };
 
 
@@ -141,11 +140,11 @@ class stats_collector
 
         void run_writer();
 
-        atomic<bool> m_updated;
+        std::atomic<bool> m_updated;
 
-        counters_t m_lst_counters[COUNTERS_EVENTS_TOTAL];
+        std::atomic<counters_t> m_lst_counters[COUNTERS_EVENTS_TOTAL];
 
-        bool m_shutdown;
+        std::atomic<bool> m_shutdown;
 
         thread m_thr_collector;
         thread m_thr_writer;
@@ -153,11 +152,11 @@ class stats_collector
         shared_ptr<swss::DBConnector> m_counters_db;
         shared_ptr<swss::Table> m_stats_table;
 
-        bool m_pause_heartbeat;
+        std::atomic<bool> m_pause_heartbeat;
 
-        uint64_t m_heartbeats_published;
+        std::atomic<uint64_t> m_heartbeats_published;
 
-        int m_heartbeats_interval_cnt;
+        std::atomic<int> m_heartbeats_interval_cnt;
 };
 
 /*
@@ -234,8 +233,8 @@ class capture_service
         void *m_ctx;
         stats_collector *m_stats_instance;
 
-        bool m_cap_run;
-        capture_control_t m_ctrl;
+        std::atomic<bool> m_cap_run;
+        std::atomic<capture_control_t> m_ctrl;
         thread m_thr;
 
         int m_cache_max;

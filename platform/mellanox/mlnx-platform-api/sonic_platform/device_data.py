@@ -200,11 +200,38 @@ DEVICE_DATA = {
             }
         }
     },
+    'x86_64-nvidia_sn6600_ld-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
+    },
     'x86_64-nvidia_sn4280_simx-r0': {
         'thermal': {
             "capability": {
                 "cpu_pack": False,
                 "comex_amb": False
+            }
+        }
+    },
+    'x86_64-nvidia_sn6810_ld-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn6810_ld_simx-r0': {
+        'thermal': {
+            "capability": {
+                "port_amb": False,
+                "fan_amb": False,
+                "comex_amb": False,
             }
         }
     }
@@ -382,6 +409,16 @@ class DeviceDataManager:
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
 
     @classmethod
+    @utils.read_only_cache()
+    def is_platform_with_bmc(cls):
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        bmc_json_file = os.path.join(platform_path, 'bmc.json')
+        if os.path.exists(bmc_json_file):
+            return True
+        return False
+
+    @classmethod
     def wait_platform_ready(cls):
         """
         Legacy function for backward compatibility
@@ -456,3 +493,9 @@ class DeviceDataManager:
     @utils.read_only_cache()
     def is_multi_asic_platform(cls):
         return cls.get_asic_count() > 1
+
+    @classmethod
+    @utils.read_only_cache()
+    def is_spc1(cls):
+        platform_name = cls.get_platform_name()
+        return platform_name in ('x86_64-mlnx_msn2700-r0', 'x86_64-mlnx_msn2700a1-r0')

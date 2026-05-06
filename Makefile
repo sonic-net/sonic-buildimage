@@ -88,7 +88,7 @@ endif
 
 bullseye:
 	@echo "+++ Making $@ +++"
-ifeq ($(NOBUSTER), 0)
+ifeq ($(NOBULLSEYE), 0)
 	$(MAKE) -f Makefile.work bullseye
 endif
 
@@ -118,13 +118,13 @@ endef
 .PHONY: $(PLATFORM_PATH)
 
 $(PLATFORM_PATH):
-	@echo "+++ Cheking $@ +++"
+	@echo "+++ Checking $@ +++"
 	$(PLATFORM_CHECKOUT_CMD)
 
 configure : $(PLATFORM_PATH)
 	$(call make_work, $@)
 
-clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
+clean showtag docker-cleanup clean-docker sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h

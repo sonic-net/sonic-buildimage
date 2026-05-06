@@ -1,0 +1,13 @@
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 150239a..1d43eb6 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -56,7 +56,7 @@ __version__ = '0.5'
+ _RE_PATH_COMPONENT = re.compile(r'''
+ ^
+ (?P<pname>[^[]+)  # gNMI path name
+-(\[(?P<key>\w+)   # gNMI path key
++(\[(?P<key>\w\D+)   # gNMI path key
+ =
+ (?P<value>.*)    # gNMI path value
+ \])?$

@@ -6,10 +6,6 @@ module sonic-snmp {
   import ietf-inet-types {
       prefix inet;
   }
-  import sonic-vrf {
-    prefix vrf;
-  }
-
   organization
     "SONiC";
 
@@ -17,30 +13,34 @@ module sonic-snmp {
     "SONiC";
 
   description
-    "SONIC SNMP";
+    "Simple Network Management Protocol (SNMP) agent configuration YANG module for SONiC OS.";
 
   revision 2022-05-13 {
     description
       "Initial revision.";
   }
 
-
   container sonic-snmp {
 
     container SNMP {
+      description "SNMP system information (contact and location).";
       container CONTACT {
+        description "SNMP system contact information.";
         leaf Contact {
           type string {
              length "1..255";
+             pattern '[^\n]+';
           }
           description
             "SNMP System Contact.";
         }
       }
       container LOCATION {
+        description "SNMP system physical location.";
         leaf Location {
           type string {
              length "1..255";
+             pattern '[^\n]+';
           }
           description
             "SNMP System Location.";
@@ -50,6 +50,7 @@ module sonic-snmp {
     }
 
     container SNMP_COMMUNITY {
+      description "SNMPv1/v2c community string configuration.";
       list SNMP_COMMUNITY_LIST {
         key name;
         description
@@ -77,6 +78,7 @@ module sonic-snmp {
       }
     }
     container SNMP_USER {
+      description "SNMPv3 user authentication and encryption configuration.";
       list SNMP_USER_LIST {
         key name;
         description
@@ -143,7 +145,7 @@ module sonic-snmp {
                 (current()/../SNMP_USER_TYPE = 'Priv' and (current() = 'DES' or current() = 'AES'))";
           default "";
           description
-            "Specify encrytion type used for user, can be AES or DES";
+            "Encryption type for the user (AES or DES).";
         }
         leaf SNMP_USER_ENCRYPTION_PASSWORD {
           mandatory true;
@@ -163,6 +165,7 @@ module sonic-snmp {
       }
     }
     container SNMP_AGENT_ADDRESS_CONFIG {
+      description "SNMP agent listening address and port configuration.";
       list SNMP_AGENT_ADDRESS_CONFIG_LIST {
         key "agent_ip port vrf_name";
         unique "agent_ip port";

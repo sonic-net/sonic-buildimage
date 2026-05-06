@@ -1,8 +1,6 @@
 bitarray==2.8.1
+certifi==2026.4.22
 cffi==2.0.0
-pexpect==4.9.0
-ptyprocess==0.7.0
-pyroute2==0.9.5
-pyyaml==6.0.1
-urllib3==2.6.2
-wcwidth==0.2.14
+pyyaml==6.0.3
+requests==2.33.1
+urllib3==2.6.3

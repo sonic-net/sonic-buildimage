@@ -31,11 +31,13 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/pci.h>
 #include <linux/preempt.h>
 #include <linux/miscdevice.h>
 #include <linux/uio.h>
 #include <linux/kprobes.h>
+#include <linux/version.h>
 
 #include "wb_indirect_dev.h"
 #define MODULE_NAME "wb-indirect-dev"
@@ -813,7 +815,11 @@ static int wb_indirect_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int wb_indirect_dev_remove(struct platform_device *pdev)
+#else
+static void wb_indirect_dev_remove(struct platform_device *pdev)
+#endif
 {
     int i;
 
@@ -822,11 +828,17 @@ static int wb_indirect_dev_remove(struct platform_device *pdev)
             if (indirect_dev_arry[i]->dev == &pdev->dev) {
                 misc_deregister(&indirect_dev_arry[i]->misc);
                 indirect_dev_arry[i] = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
                 return 0;
+#else
+                return;
+#endif
             }
         }
     }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static const struct of_device_id wb_indirect_dev_driver_of_match[] = {

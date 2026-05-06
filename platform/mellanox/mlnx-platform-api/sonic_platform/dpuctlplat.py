@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 #
 
 """Class Implementation for per DPU functionality"""
+import errno
+import logging
 import os.path
 import time
 import multiprocessing
@@ -34,13 +36,44 @@ try:
 except ImportError as e:
     raise ImportError(str(e)) from e
 
+logger = SysLogger("dpuctl_plat")
+
+def use_logger(new_logger: logging.Logger):
+    """Plug in a logging.Logger instance in place of the SysLogger.
+
+    Do this at the module level so it happens to all instances of DpuCtlPlat, including those
+    created under-the-hood by the module interface.
+    """
+    class LoggerLikeSysLogger:
+        # A class with an API like SysLogger, but wraps a regular logging.Logger instance.
+
+        def __init__(self):
+            self.logger = new_logger
+
+        def log_debug(self, msg):
+            self.logger.debug(msg)
+
+        def log_info(self, msg):
+            self.logger.info(msg)
+
+        def log_error(self, msg):
+            self.logger.error(msg)
+
+        def log_warning(self, msg):
+            self.logger.warning(msg)
+
+        # NOTICE is set up by sonic_py_common.syslogger
+        def log_notice(self, msg):
+            self.logger.log(logging.NOTICE, msg)
+
+    global logger
+    logger = LoggerLikeSysLogger()
+
 HW_BASE = "/var/run/hw-management/"
 EVENT_BASE = os.path.join(HW_BASE, "events/")
 SYSTEM_BASE = os.path.join(HW_BASE, "system/")
 PCI_BASE = "/sys/bus/pci/"
 PCI_DEV_BASE = os.path.join(PCI_BASE, "devices/")
-
-logger = SysLogger()
 
 WAIT_FOR_SHTDN = 120
 WAIT_FOR_DPU_READY = 180
@@ -112,6 +145,7 @@ class DpuCtlPlat():
         def print_with_time(msg):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] {msg}")
+            logger.log_notice(f"{msg}")
 
         if use_print:
             self.logger_info = print_with_time
@@ -260,7 +294,7 @@ class DpuCtlPlat():
             self.log_error(f"Failed power on! Trying Force Power on")
             self._power_off_force()
             time.sleep(1)
-            return self._power_on_force()
+            return self._power_on_force(count=3)
         self.log_info(f"Power on Successful!")
         return True
 
@@ -270,7 +304,8 @@ class DpuCtlPlat():
             for pci_dev_path in self.get_pci_dev_path():
                 remove_path = os.path.join(pci_dev_path, "remove")
                 if os.path.exists(remove_path):
-                    self.write_file(remove_path, OperationType.SET.value)
+                    with self.time_check_context(f"pci remove {pci_dev_path}"):
+                        self.write_file(remove_path, OperationType.SET.value)
             return True
         except Exception as e:
             self.log_error(f"Failed PCI Removal with error {e}")
@@ -279,8 +314,10 @@ class DpuCtlPlat():
     def dpu_pci_scan(self):
         """PCI Scan API"""
         try:
-            pci_scan_path = "/sys/bus/pci/rescan"
-            self.write_file(pci_scan_path, OperationType.SET.value)
+            for pci_dev_path in self.get_pci_dev_path():
+                if not os.path.exists(pci_dev_path):
+                    #Only log error if the device is not found, don't perform explicit ``
+                    self.log_warning(f"PCI device {pci_dev_path} not found")
             return True
         except Exception as e:
             self.log_error(f"Failed to rescan with error {e}")
@@ -411,8 +448,27 @@ class DpuCtlPlat():
             self.log_error(f"Could not obtain status of DPU")
             raise e
 
+    def _log_boot_progress_read_failure(self, msg, attempt):
+        """log_func for utils.read_int_from_file; logs via this DPU's SysLogger."""
+        # utils formats: "Failed to read from file <path> - repr(exc)"
+        enxio = f'({errno.ENXIO},' in msg
+        if enxio and attempt < 2:
+            self.log_warning(
+                f"ENXIO - read unavailable for boot_progress, attempt {attempt + 1} of 3")
+            return
+        self.log_error(msg)
+
     def read_boot_prog(self):
-        return utils.read_int_from_file(self.boot_prog_path, raise_exception=True)
+        for attempt in range(3):
+            try:
+                return utils.read_int_from_file(
+                    self.boot_prog_path,
+                    raise_exception=True,
+                    log_func=lambda m, a=attempt: self._log_boot_progress_read_failure(m, a))
+            except OSError as e:
+                if e.errno != errno.ENXIO or attempt == 2:
+                    raise
+                time.sleep(1)
 
     def read_force_power_path(self):
         return utils.read_int_from_file(self.pwr_f_path, raise_exception=True)

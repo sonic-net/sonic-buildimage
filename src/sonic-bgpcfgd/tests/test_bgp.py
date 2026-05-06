@@ -115,11 +115,13 @@ def test_add_peer_internal():
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-def test_add_peer_internal_no_router_id_no_lo4096():
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_peer_internal_no_router_id_no_lo4096(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, peer_type="internal")
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False return value"
+        mocked_log_info.assert_called_with("Additional loopbacks acquired for peer internal, loopback list ['Loopback0', 'Loopback4096']")
 
 def test_add_peer_internal_router_id():
     for constant in load_constant_files():
@@ -137,11 +139,15 @@ def test_add_peer_router_id():
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-def test_add_peer_without_lo_ipv4():
+@patch('bgpcfgd.managers_bgp.log_info')
+@patch('bgpcfgd.managers_bgp.log_warn')
+def test_add_peer_without_lo_ipv4(mocked_log_warn, mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, with_lo0_ipv4=False)
         res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert not res, "Expect False return value"
+        mocked_log_info.assert_called_with("No additional loopbacks acquired for peer general, loopback list ['Loopback0']")
+        mocked_log_warn.assert_called_with("Loopback0 ipv4 address is not presented yet and bgp_router_id not configured")
 
 def test_add_peer_without_lo_ipv4_router_id():
     for constant in load_constant_files():

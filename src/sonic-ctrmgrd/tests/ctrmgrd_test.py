@@ -401,7 +401,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -411,7 +410,6 @@ labels_test_data = {
                 "xyz": {
                     "xxx": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -421,7 +419,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -429,7 +426,6 @@ labels_test_data = {
         common_test.KUBE_CMD: {
             common_test.KUBE_WR: {
                 "foo": "bar",
-                "hello": "world"
             }
         }
     },
@@ -442,7 +438,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -452,7 +447,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -468,7 +462,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -478,7 +471,6 @@ labels_test_data = {
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
                         "foo": "bar",
-                        "hello": "world"
                     }
                 }
             }
@@ -486,7 +478,6 @@ labels_test_data = {
         common_test.KUBE_CMD: {
             common_test.KUBE_WR: {
                 "foo": "bar",
-                "hello": "world"
             }
         }
     }

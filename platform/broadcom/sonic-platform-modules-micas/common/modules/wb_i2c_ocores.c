@@ -37,6 +37,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/uio.h>
+#include <linux/version.h>
 
 #include "wb_i2c_ocores.h"
 
@@ -1157,7 +1158,11 @@ out:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int ocores_i2c_remove(struct platform_device *pdev)
+#else
+static void ocores_i2c_remove(struct platform_device *pdev)
+#endif
 {
     struct ocores_i2c *i2c = platform_get_drvdata(pdev);
     u8 ctrl = oc_getreg(i2c, OCI2C_CONTROL);
@@ -1168,7 +1173,9 @@ static int ocores_i2c_remove(struct platform_device *pdev)
 
     /* remove adapter & data */
     i2c_del_adapter(&i2c->adap);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct platform_driver ocores_i2c_driver = {

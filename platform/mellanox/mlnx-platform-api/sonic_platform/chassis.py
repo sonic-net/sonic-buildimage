@@ -36,7 +36,6 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
-    from .bmc import BMC
     import re
     import select
     import threading
@@ -50,6 +49,7 @@ RJ45_TYPE = "RJ45"
 
 VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
 REVISION = "REV"
+VPD_DATA_WAIT_TIMEOUT = 60  # Timeout in seconds for waiting for VPD data file
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -564,7 +564,11 @@ class Chassis(ChassisBase):
                 
                 sfp_index, fd, fd_type = self.registered_fds[fileno]
                 s = self._sfp_list[sfp_index]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd_value = int(fd.read().strip())
                 except Exception as e:
@@ -695,7 +699,11 @@ class Chassis(ChassisBase):
                     continue
                 
                 sfp_index, fd = self.registered_fds[fileno]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd.read()
                 except Exception as e:
@@ -922,7 +930,9 @@ class Chassis(ChassisBase):
             self._component_list.extend(DeviceDataManager.get_cpld_component_list())
 
         # Initialize BMC and its components
-        self.initialize_bmc()
+        if DeviceDataManager.is_platform_with_bmc():
+            from .bmc import BMC
+            self.initialize_bmc()
 
     def get_num_components(self):
         """
@@ -1066,7 +1076,10 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
-                return result
+                logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
+                if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
+                    logger.log_error("VPD data file {} not available after timeout".format(filename))
+                    return result
 
             result = utils.read_key_value_file(filename, delimeter=": ")
                 
@@ -1100,6 +1113,7 @@ class Chassis(ChassisBase):
     def initialize_reboot_cause(self):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,

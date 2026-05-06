@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,15 +78,15 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 	pushd $(MFT_NAME)/SDEBS
 
 	# put a lock here because dpkg does not allow installing packages in parallel
-	while true; do
-	if mkdir $(DEST)/dpkg_lock &> /dev/null; then
-	{ sudo dpkg -i $(SRC_DEB) && rm -d $(DEST)/dpkg_lock && break; } || { rm -d $(DEST)/dpkg_lock && exit 1 ; }
-	fi
-	done
+	flock $(DEST)/dpkg_lock.lk sudo dpkg -i $(SRC_DEB)
 
 	popd
 
-	sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+	if [ -d /usr/src/kernel-mft-dkms-$(MFT_VERSION).$(MFT_REVISION) ]; then
+		sudo dkms build kernel-mft-dkms/$(MFT_VERSION).$(MFT_REVISION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+	else
+		sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a $(CONFIGURED_ARCH)
+	fi
 
 	# copy the built modules
 	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/*.ko \

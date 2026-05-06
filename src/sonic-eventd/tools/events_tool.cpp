@@ -1,8 +1,8 @@
 #include <thread>
 #include <iostream>
 #include <stdlib.h>
-#include "events.h"
-#include "events_common.h"
+#include <swss/events.h>
+#include <swss/events_common.h>
 
 /*
  * Sample i/p file contents for send
@@ -77,7 +77,7 @@ t_map_to_str(const Map &m)
     string sep;
 
     _ss << "{";
-    for (const auto elem: m) {
+    for (const auto &elem: m) {
         _ss << sep << "{" << elem.first << "," << elem.second << "}";
         if (sep.empty()) {
             sep = ", ";

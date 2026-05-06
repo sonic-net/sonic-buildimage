@@ -13,12 +13,8 @@ ifeq ($(BLDENV),trixie)
 $(LIBYANG)_DEPENDS += $(LIBPCRE3_DEV) $(LIBPCRE3) $(LIBPCRE16_3) $(LIBPCRE32_3) $(LIBPCRECPP0V5)
 $(LIBYANG)_RDEPENDS += $(LIBPCRE3)
 endif
+$(LIBYANG)_PHONIES += $(LIBYANG3-DEV-DONE)
 $(LIBYANG)_SRC_PATH = $(SRC_PATH)/libyang
-ifeq ($(BLDENV),bookworm)
-# introduce artifical dependency between LIBYANG and FRR
-# make sure LIBYANG is compile after FRR
-$(LIBYANG)_AFTER = $(FRR)
-endif
 SONIC_MAKE_DEBS += $(LIBYANG)
 
 LIBYANG_DEV = libyang-dev_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb

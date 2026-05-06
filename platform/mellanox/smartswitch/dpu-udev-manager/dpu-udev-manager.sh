@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +23,28 @@ declare -r platform_json="/usr/share/sonic/device/$platform/platform.json"
 
 declare -r query='.DPUS | to_entries[] | "\(.key) \(.value.bus_info)"'
 
+# Kill any stale initramfs udevd that survived switch_root.
+# During boot, the initramfs starts systemd-udevd before the overlayfs root is
+# created. If device firmware init is slow (e.g. DPU FW timeout), udevd workers
+# block and the initramfs cannot stop udevd before switch_root. The stale
+# process ends up with a broken root filesystem view (its root still points to
+# the initramfs rootfs, not the overlayfs). Writing udev rules below triggers
+# the stale udevd to access file system for the updated rules which crashes
+# because dir_fd_is_root() triggers assertion failure for a
+# non-chrooted process in systemd.
+kill_stale_udevd() {
+    local sysd_pid
+    sysd_pid=$(systemctl show systemd-udevd -p MainPID --value 2>/dev/null)
+    for pid in $(pgrep -f "systemd-udevd --daemon"); do
+        if [ "$pid" != "$sysd_pid" ]; then
+            logger "dpu-udev-manager: killing stale initramfs udevd PID $pid (systemd udevd is PID $sysd_pid)"
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    done
+}
+
 do_start() {
+    kill_stale_udevd
     jq -r "$query" $platform_json | while read -r dpu bus_info; do
         echo SUBSYSTEM==\"net\", ACTION==\"add\", KERNELS==\"$bus_info\", NAME=\"$dpu\"
     done > $udev_file
