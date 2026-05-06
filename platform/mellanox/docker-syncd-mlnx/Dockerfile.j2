@@ -69,6 +69,7 @@ COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
 COPY ["phcsync.sh", "/usr/bin/"]
+COPY ["phcsync_warm_reboot_gate.py", "/usr/bin/"]
 
 COPY ["files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/rdb-cli
