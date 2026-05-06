@@ -5,7 +5,7 @@ Date: 2025-08-04 23:22:58 -0700
 
 When the teamd daemon initialization completes, if signalling the parent
 process fails, then immediately exit. For SONiC's purposes, if the
-signalling fails, then teamdmgr will assume it to have failed and will
+signalling fails, then teammgrd will assume it to have failed and will
 bring it down anyways. However, if teamd initialization completes, other
 processes may assume that the port channel has been created and begin
 configuration, which will fail and cause issues later.
@@ -31,7 +31,7 @@ index 5220ae2..aa5cf6b 100644
 -	err = teamd_run_loop_run(ctx);
 +	err = daemon_retval_send(0);
 +	if (err) {
-+		teamd_log_err("unable to send response, likely timed out.");
++		teamd_log_err("unable to send response, likely timed out: %s", strerror(errno));
 +	} else {
 +		teamd_log_info(PACKAGE_VERSION" successfully started.");
 +		err = teamd_run_loop_run(ctx);
