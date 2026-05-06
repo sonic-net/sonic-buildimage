@@ -1,0 +1,74 @@
+{
+    "PSU": {
+        "psu_present": {
+            "i2c": {
+                "valmap": {
+                    "0": true,
+                    "1": false
+                }
+            }
+        },
+        "psu_led_color": {
+            "colmap": {
+                "green": "green",
+                "red": "red"
+            }
+        },
+        "psu_power_good": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "psu_fan_dir": {
+            "i2c": {
+                "valmap": {
+                    "AD801M12-2M4": "EXHAUST"
+                }
+            }
+        },
+        "PSU_FAN_MAX_SPEED": "29000"
+    },
+    "FAN": {
+        "direction": {
+            "i2c": {
+                "valmap": {
+                    "1": "INTAKE",
+                    "0": "EXHAUST"
+                }
+            }
+        },
+        "present": {
+            "i2c": {
+                "valmap": {
+                    "0": true,
+                    "1": false
+                }
+            }
+        },
+        "FAN_MAX_RPM_SPEED": {
+            "INTAKE": {
+                "0": "24000",
+                "1": "21000"
+            },
+            "EXHAUST": {
+                "0": "24000",
+                "1": "21000"
+            }
+        },
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm * 100) / 255)",
+        "duty_cycle_to_pwm": "lambda dc: ((dc * 255)/100)"
+    },
+    "XCVR": {
+        "xcvr_present": {
+            "i2c": {
+                "valmap-QSFP28": {
+                    "0": true,
+                    "1": false
+                }
+            }
+        }
+    }
+}
