@@ -509,6 +509,25 @@ def main():
     if args.template_dir:
         paths.append(os.path.abspath(args.template_dir))
 
+    # Add platform-level template paths for Generic HWSKU compatibility
+    if platform and hwsku:
+        # Sanitize platform and hwsku names to prevent path traversal
+        safe_platform = os.path.basename(platform)
+        safe_hwsku = os.path.basename(hwsku)
+        
+        # Add HWSKU-specific template path first (higher priority)
+        hwsku_template_path = os.path.join('/usr/share/sonic/device', safe_platform, safe_hwsku)
+        if os.path.exists(hwsku_template_path):
+            paths.append(hwsku_template_path)
+        
+        # Add platform-level template path as fallback
+        platform_template_path = os.path.join('/usr/share/sonic/device', safe_platform)
+        if os.path.exists(platform_template_path):
+            paths.append(platform_template_path)
+            # Log when using platform-level fallback for templates
+            if not os.path.exists(hwsku_template_path):
+                print("INFO: Using platform-level templates for HWSKU '{}' (Generic HWSKU compatibility)".format(safe_hwsku), file=sys.stderr)
+
     paths.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../files/build_templates')))
 
     if args.template:

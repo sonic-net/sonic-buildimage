@@ -502,6 +502,26 @@ def get_path_to_port_config_file(hwsku=None, asic=None):
     else:
         port_config_candidates.append(os.path.join(hwsku_path, PORT_CONFIG_FILE))
 
+    # Add platform-level fallback when HWSKU-specific files are missing
+    if hwsku and platform_path:
+        # Check if platform-level hwsku.json exists for platform.json validation
+        platform_hwsku_json = os.path.join(platform_path, HWSKU_JSON_FILE)
+        if os.path.isfile(platform_hwsku_json):
+            if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
+                json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
+                platform_data = json.loads(open(json_file).read())
+                interfaces = platform_data.get('interfaces', None)
+                if interfaces is not None and len(interfaces) > 0:
+                    # Only add if not already added above
+                    platform_json_path = os.path.join(platform_path, PLATFORM_JSON_FILE)
+                    if platform_json_path not in port_config_candidates:
+                        port_config_candidates.append(platform_json_path)
+        
+        # Add platform-level port_config.ini as fallback
+        platform_port_config = os.path.join(platform_path, PORT_CONFIG_FILE)
+        if platform_port_config not in port_config_candidates:
+            port_config_candidates.append(platform_port_config)
+
     for candidate in port_config_candidates:
         if os.path.isfile(candidate):
             return candidate
