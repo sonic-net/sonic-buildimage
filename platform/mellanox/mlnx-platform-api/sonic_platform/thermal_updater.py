@@ -149,15 +149,15 @@ class ThermalUpdater:
         logger.log_notice(f'Set hw-management-tc to {"suspend" if suspend else "resume"}')
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
 
-    def get_asic_temp(self, asic_index=0):
+    def get_asic_temp(self, asic_name, asic_index=0):
         if utils.read_int_from_file(f'/var/run/hw-management/config/asic{asic_index+1}_ready') == 0:
             logger.log_warning(f'ASIC {asic_index} is not ready, cannot check asic temprature')
             return None
         try:
-            present, temperature = get_db_table_helper().get_temperature_info_table().hget(asic_index, 'temperature')
+            present, temperature = get_db_table_helper().get_temperature_info_table().hget(asic_name, 'temperature')
             return int(float(temperature) * TEMPERATURE_SCALE) if present else 0
         except Exception as e:
-            logger.log_error(f'Failed to read ASIC {asic_index} temperature - {temperature} - {e}')
+            logger.log_error(f'Failed to read ASIC {asic_name} temperature - {temperature} - {e}')
             return None
 
     def get_asic_temp_warning_threshold(self, asic_index=0):
