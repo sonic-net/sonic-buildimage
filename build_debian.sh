@@ -815,6 +815,12 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             fi
 
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
+
+            ## vmlinuz and initrd are already bundled inside the FIT image, remove standalone copies
+            if [ "$BUILD_FIT_ONLY_BOOT" = "y" ]; then
+                sudo rm -f $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
+                sudo rm -f $FILESYSTEM_ROOT/boot/initrd.img-${LINUX_KERNEL_VERSION}-sonic-${CONFIGURED_ARCH}
+            fi
         fi
     fi
 fi

@@ -1259,6 +1259,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
 		export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 		export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
+		export build_fit_only_boot="$(BUILD_FIT_ONLY_BOOT)"
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_debs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DEPENDS),RDEPENDS))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_pydebs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_PYTHON_DEBS)))\n" | awk '!a[$$0]++'))
@@ -1560,6 +1561,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
 	export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 	export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
+	export build_fit_only_boot="$(BUILD_FIT_ONLY_BOOT)"
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
@@ -1728,6 +1730,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
 		CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
 		BUILD_REDUCE_IMAGE_SIZE=$(BUILD_REDUCE_IMAGE_SIZE) \
+		BUILD_FIT_ONLY_BOOT=$(BUILD_FIT_ONLY_BOOT) \
 		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
 		MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION=$(MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION) \
 		MASTER_PAUSE_VERSION=$(MASTER_PAUSE_VERSION) \
