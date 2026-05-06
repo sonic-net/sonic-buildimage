@@ -104,7 +104,7 @@
 	url = https://github.com/sonic-net/sonic-host-services
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
+	url = https://github.com/yijingyan2/sonic-gnmi.git
 [submodule "src/sonic-bmp"]
 	path = src/sonic-bmp
 	url = https://github.com/sonic-net/sonic-bmp.git
