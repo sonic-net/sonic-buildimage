@@ -271,6 +271,15 @@
                 "PRIORITY": "990000",
                 "IP_TYPE": "IPv4ANY"
             },
+            "V4-ACL-TABLE|Rule_MASK": {
+                "PACKET_ACTION": "FORWARD",
+                "SRC_IP": "10.1.2.3",
+                "SRC_IP_MASK": "255.0.255.0",
+                "DST_IP": "192.168.5.1",
+                "DST_IP_MASK": "255.0.255.0",
+                "PRIORITY": "980000",
+                "IP_TYPE": "IPv4ANY"
+            },
             "V6-ACL-TBLE|DEFAULT_DENY": {
                 "PACKET_ACTION": "DROP",
                 "IP_TYPE": "IPv6ANY",
@@ -324,6 +333,15 @@
                 "SRC_IPV6": "::/0",
                 "PRIORITY": "990000",
                 "DST_IPV6": "::/0"
+            },
+            "V6-ACL-TBLE|Rule_MASK": {
+                "PACKET_ACTION": "FORWARD",
+                "IP_TYPE": "IPv6ANY",
+                "SRC_IPV6": "2001::1",
+                "SRC_IPV6_MASK": "ffff::ffff",
+                "DST_IPV6": "2001:db8::1",
+                "DST_IPV6_MASK": "ffff::ffff",
+                "PRIORITY": "980000"
             },
             "EVERFLOW_DSCP|RULE_1": {
                 "MIRROR_INGRESS_ACTION": "erspan",
