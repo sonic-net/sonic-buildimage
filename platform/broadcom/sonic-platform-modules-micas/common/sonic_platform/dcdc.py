@@ -95,6 +95,6 @@ class Dcdc(object):
 
     def get_position_in_parent(self):
         """
-        Retrieves the index of this DCDC device in its parent device.
+        Retrieves the index of position in its parent device.
         """
         return self.index
