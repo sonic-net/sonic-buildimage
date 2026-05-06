@@ -65,7 +65,7 @@
     {%- endif %}
 {% endfor %}
 {# Generation of IP-in-IP decap entries is disabled for BackEnd device types and devices without storage_device metadata. #}
-{%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
+{%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter', 'BackEndSpineRouter'] -%}
 {% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in backend_device_types and 'storage_device' not in DEVICE_METADATA['localhost'] %}
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
