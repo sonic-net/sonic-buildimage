@@ -102,10 +102,13 @@ function start_polaris()
         # Handle configuration migration (similar to rc.local pattern)
         if [ -d /host/old_config ]; then
             log_msg "First boot detected: migrating old configuration"
-            mv -f /host/old_config /etc/sonic/old_config
-            rm -rf /etc/sonic/old_config/old_config
-            touch /etc/sonic/pending_config_migration
-            log_msg "Configuration migration will be handled by config-setup.service"
+            if mv -f /host/old_config /etc/sonic/old_config; then
+                rm -rf /etc/sonic/old_config/old_config
+                touch /etc/sonic/pending_config_migration
+                log_msg "Configuration migration will be handled by config-setup.service"
+            else
+                log_msg "ERROR: failed to migrate /host/old_config"
+            fi
         else
             log_msg "First boot detected: no old configuration found"
             touch /etc/sonic/pending_config_initialization
@@ -254,4 +257,3 @@ force-reload|restart)
 esac
 
 exit 0
-
