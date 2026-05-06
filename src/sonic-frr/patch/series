@@ -24,3 +24,5 @@
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
 0107-staticd-Fix-SRv6-SID-use-after-free-on-locator-deletion.patch
+0109-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
+0110-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
