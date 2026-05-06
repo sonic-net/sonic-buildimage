@@ -217,6 +217,23 @@ class StaticRouteBfd(object):
 
         return False, ""
 
+    def ifname_from_local_addr(self, local_addr):
+        """
+        Find interface name whose address in LOCAL_INTERFACE_TABLE matches local_addr
+        (same source as BFD session local_addr / BfdOrch local_addr field).
+        """
+        if not local_addr or not str(local_addr).strip():
+            return None
+        want = str(local_addr).strip()
+        for if_name, ip_map in self.local_db[LOCAL_INTERFACE_TABLE].items():
+            if not ip_map:
+                continue
+            for ip in ip_map.values():
+                if ip and ip == want:
+                    return if_name
+        return None
+
+
     def update_bfd_pending(self, if_name):
         del_list=[]
         for k, v in self.local_db[LOCAL_BFD_PENDING_TABLE].items():
@@ -651,7 +668,12 @@ class StaticRouteBfd(object):
 
         nh_key = vrf + "|" + peer_ip
         state = data['state'] if 'state' in data else "DOWN"
-        log_info("bfd seesion %s state %s" %(bfd_key, state))
+        local_addr = bfd_session.get('local_addr', '')
+        ifname_log = self.ifname_from_local_addr(local_addr)
+        if not ifname_log:
+            ifname_log = intf if intf and intf != "default" else "unknown"
+        log_info("bfd session %s ifname %s state %s" % (bfd_key, ifname_log, state))
+
 
         self.local_db[LOCAL_BFD_TABLE][bfd_key]["state"] = state
 
