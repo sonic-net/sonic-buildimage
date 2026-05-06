@@ -264,7 +264,7 @@
       ]
     },
     {
-      "name": "Ethernet8",
+      "name": "Ethernet4",
       "index": 2,
       "phy_id": 1,
       "system_lanes": [
@@ -285,7 +285,7 @@
       ]
     },
     {
-      "name": "Ethernet16",
+      "name": "Ethernet8",
       "index": 3,
       "phy_id": 2,
       "system_lanes": [
@@ -306,7 +306,7 @@
       ]
     },
     {
-      "name": "Ethernet24",
+      "name": "Ethernet12",
       "index": 4,
       "phy_id": 2,
       "system_lanes": [
@@ -327,7 +327,7 @@
       ]
     },
     {
-      "name": "Ethernet32",
+      "name": "Ethernet16",
       "index": 5,
       "phy_id": 3,
       "system_lanes": [
@@ -348,7 +348,7 @@
       ]
     },
     {
-      "name": "Ethernet40",
+      "name": "Ethernet20",
       "index": 6,
       "phy_id": 3,
       "system_lanes": [
@@ -369,7 +369,7 @@
       ]
     },
     {
-      "name": "Ethernet48",
+      "name": "Ethernet24",
       "index": 7,
       "phy_id": 4,
       "system_lanes": [
@@ -390,7 +390,7 @@
       ]
     },
     {
-      "name": "Ethernet56",
+      "name": "Ethernet28",
       "index": 8,
       "phy_id": 4,
       "system_lanes": [
@@ -411,7 +411,7 @@
       ]
     },
     {
-      "name": "Ethernet64",
+      "name": "Ethernet32",
       "index": 9,
       "phy_id": 5,
       "system_lanes": [
@@ -432,7 +432,7 @@
       ]
     },
     {
-      "name": "Ethernet72",
+      "name": "Ethernet36",
       "index": 10,
       "phy_id": 5,
       "system_lanes": [
@@ -453,7 +453,7 @@
       ]
     },
     {
-      "name": "Ethernet80",
+      "name": "Ethernet40",
       "index": 11,
       "phy_id": 7,
       "system_lanes": [
@@ -474,7 +474,7 @@
       ]
     },
     {
-      "name": "Ethernet88",
+      "name": "Ethernet44",
       "index": 12,
       "phy_id": 7,
       "system_lanes": [
@@ -495,7 +495,7 @@
       ]
     },
     {
-      "name": "Ethernet96",
+      "name": "Ethernet48",
       "index": 13,
       "phy_id": 6,
       "system_lanes": [
@@ -516,7 +516,7 @@
       ]
     },
     {
-      "name": "Ethernet104",
+      "name": "Ethernet52",
       "index": 14,
       "phy_id": 6,
       "system_lanes": [
@@ -537,7 +537,7 @@
       ]
     },
     {
-      "name": "Ethernet112",
+      "name": "Ethernet56",
       "index": 15,
       "phy_id": 8,
       "system_lanes": [
@@ -558,7 +558,7 @@
       ]
     },
     {
-      "name": "Ethernet120",
+      "name": "Ethernet60",
       "index": 16,
       "phy_id": 8,
       "system_lanes": [
@@ -579,7 +579,7 @@
       ]
     },
     {
-      "name": "Ethernet256",
+      "name": "Ethernet192",
       "index": 49,
       "phy_id": 9,
       "system_lanes": [
@@ -600,7 +600,7 @@
       ]
     },
     {
-      "name": "Ethernet264",
+      "name": "Ethernet196",
       "index": 50,
       "phy_id": 9,
       "system_lanes": [
@@ -621,7 +621,7 @@
       ]
     },
     {
-      "name": "Ethernet272",
+      "name": "Ethernet200",
       "index": 51,
       "phy_id": 11,
       "system_lanes": [
@@ -642,7 +642,7 @@
       ]
     },
     {
-      "name": "Ethernet280",
+      "name": "Ethernet204",
       "index": 52,
       "phy_id": 11,
       "system_lanes": [
@@ -663,7 +663,7 @@
       ]
     },
     {
-      "name": "Ethernet288",
+      "name": "Ethernet208",
       "index": 53,
       "phy_id": 14,
       "system_lanes": [
@@ -684,7 +684,7 @@
       ]
     },
     {
-      "name": "Ethernet296",
+      "name": "Ethernet212",
       "index": 54,
       "phy_id": 14,
       "system_lanes": [
@@ -705,7 +705,7 @@
       ]
     },
     {
-      "name": "Ethernet304",
+      "name": "Ethernet216",
       "index": 55,
       "phy_id": 10,
       "system_lanes": [
@@ -726,7 +726,7 @@
       ]
     },
     {
-      "name": "Ethernet312",
+      "name": "Ethernet220",
       "index": 56,
       "phy_id": 10,
       "system_lanes": [
@@ -747,7 +747,7 @@
       ]
     },
     {
-      "name": "Ethernet320",
+      "name": "Ethernet224",
       "index": 57,
       "phy_id": 12,
       "system_lanes": [
@@ -768,7 +768,7 @@
       ]
     },
     {
-      "name": "Ethernet328",
+      "name": "Ethernet228",
       "index": 58,
       "phy_id": 12,
       "system_lanes": [
@@ -789,7 +789,7 @@
       ]
     },
     {
-      "name": "Ethernet336",
+      "name": "Ethernet232",
       "index": 59,
       "phy_id": 13,
       "system_lanes": [
@@ -810,7 +810,7 @@
       ]
     },
     {
-      "name": "Ethernet344",
+      "name": "Ethernet236",
       "index": 60,
       "phy_id": 13,
       "system_lanes": [
@@ -831,7 +831,7 @@
       ]
     },
     {
-      "name": "Ethernet352",
+      "name": "Ethernet240",
       "index": 61,
       "phy_id": 15,
       "system_lanes": [
@@ -852,7 +852,7 @@
       ]
     },
     {
-      "name": "Ethernet360",
+      "name": "Ethernet244",
       "index": 62,
       "phy_id": 15,
       "system_lanes": [
@@ -873,7 +873,7 @@
       ]
     },
     {
-      "name": "Ethernet368",
+      "name": "Ethernet248",
       "index": 63,
       "phy_id": 16,
       "system_lanes": [
@@ -894,7 +894,7 @@
       ]
     },
     {
-      "name": "Ethernet376",
+      "name": "Ethernet252",
       "index": 64,
       "phy_id": 16,
       "system_lanes": [
