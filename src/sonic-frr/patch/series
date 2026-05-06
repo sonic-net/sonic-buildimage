@@ -24,3 +24,6 @@
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
 0107-staticd-Fix-SRv6-SID-use-after-free-on-locator-deletion.patch
+0108-lib-build-support-gperftools-tcmalloc-release-free-memory-to-host-OS.patch
+0109-debian-add-pkg.frr.tcmalloc-build-profile.patch
+0110-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
