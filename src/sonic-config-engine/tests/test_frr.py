@@ -79,6 +79,23 @@ class TestCfgGen(TestCase):
         extra_data = {"DEVICE_METADATA": {"localhost": {"subtype": "DualToR"}}}
         self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr_dualtor.conf', extra_data=extra_data))
 
+    def test_zebra_frr_fib_route_filter(self):
+        """FIB_ROUTE_FILTER rows render to `ip|ipv6 protocol <PROTO> route-map <NAME>`,
+        wrapped in `vrf <N> / ... / exit-vrf` for non-default VRFs.
+        addr_family uses sonic-types:ip-family (IPv4/IPv6), rendered into the
+        FRR CLI keyword via the {'IPv4':'ip','IPv6':'ipv6'} lookup at the
+        Jinja template."""
+        # Vrf_red has two rows so the test exercises the per-VRF grouping.
+        extra_data = {
+            "FIB_ROUTE_FILTER": {
+                "default|IPv4|bgp":    {"route_map": "RM_FROM_BGP"},
+                "default|IPv6|ospf6":  {"route_map": "RM_FROM_OSPF6"},
+                "Vrf_red|IPv4|static": {"route_map": "RM_STATIC_V4"},
+                "Vrf_red|IPv4|bgp":    {"route_map": "RM_BGP_RED"},
+            }
+        }
+        self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr_fib_route_filter.conf', extra_data=extra_data))
+
     def test_bgpd_frr_bmp(self):
         extra_data = {"FEATURE": {"frr_bmp": {"state": "enabled"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp.conf', extra_data=extra_data))

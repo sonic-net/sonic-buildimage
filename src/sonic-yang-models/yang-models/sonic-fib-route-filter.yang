@@ -1,0 +1,113 @@
+module sonic-fib-route-filter {
+    namespace "http://github.com/sonic-net/sonic-fib-route-filter";
+    prefix frfilter;
+    yang-version 1.1;
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-route-map {
+        prefix rmap;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description
+        "SONiC YANG for FIB route filtering. Each entry binds a route-map to
+         a (vrf, addr_family, protocol) tuple; the route-map decides which
+         routes from that protocol are installed into the FIB.";
+
+    revision 2026-04-20 {
+        description
+            "Initial revision.";
+    }
+
+    typedef fib-route-filter-protocol {
+        type enumeration {
+            enum any;
+            enum bgp;
+            enum connected;
+            enum eigrp;
+            enum isis;
+            enum kernel;
+            enum nhrp;
+            enum ospf;
+            enum ospf6;
+            enum rip;
+            enum ripng;
+            enum sharp;
+            enum static;
+            enum table;
+        }
+        description
+            "Source protocol whose routes are filtered through the route-map.
+             AFI/protocol compatibility is enforced by a 'must' expression on
+             the enclosing list (e.g. ospf6/ripng are IPv6-only, ospf/rip are
+             IPv4-only).";
+    }
+
+    container sonic-fib-route-filter {
+
+        container FIB_ROUTE_FILTER {
+
+            description
+                "FIB route filter table. Each entry binds a route-map to a
+                 (vrf, addr_family, protocol) tuple.";
+
+            list FIB_ROUTE_FILTER_LIST {
+                key "vrf_name addr_family protocol";
+
+                // eigrp, ospf, and rip are IPv4-only; ospf6 and ripng are
+                // IPv6-only; nhrp is dual-stack. When a new protocol gains
+                // another AFI, extend this expression and the protocol enum
+                // above.
+                must "not(addr_family = 'IPv4' and (protocol = 'ospf6' or protocol = 'ripng')) and "
+                   + "not(addr_family = 'IPv6' and (protocol = 'ospf'  or protocol = 'rip' "
+                   +                            "or protocol = 'eigrp'))" {
+                    error-message
+                        "protocol is not valid for the selected addr_family";
+                }
+
+                leaf vrf_name {
+                    type union {
+                        type string {
+                            pattern "default";
+                        }
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                    }
+                    description
+                        "VRF the filter applies in. Use 'default' for the
+                         global routing table.";
+                }
+
+                leaf addr_family {
+                    type stypes:ip-family;
+                    description
+                        "Address family (IPv4 or IPv6) the filter applies to.";
+                }
+
+                leaf protocol {
+                    type fib-route-filter-protocol;
+                    description
+                        "Source protocol whose routes are filtered through
+                         the route-map.";
+                }
+
+                leaf route_map {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    mandatory true;
+                    description
+                        "Route-map applied to routes from <protocol> to
+                         decide which are installed into the FIB.";
+                }
+            }
+        }
+    }
+}
