@@ -150,3 +150,6 @@
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish
+[submodule "src/iproute2/iproute2"]
+	path = src/iproute2/iproute2
+	url = https://salsa.debian.org/debian/iproute2.git

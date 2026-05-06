@@ -48,7 +48,6 @@ RUN apt update &&            \
         libdbus-1-3          \
         libjansson4          \
 # ip and ifconfig utility missing in docker for arm arch
-        iproute2             \
         net-tools            \
 # for processing/handling json files in bash environment
         jq                   \
@@ -58,8 +57,7 @@ RUN apt update &&            \
         libatomic1
 
 # Security fixes: upgrade vulnerable base packages (S360 scan remediation)
-RUN apt-get update && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
@@ -91,8 +89,13 @@ RUN apt autoremove -y --purge
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_base_bookworm_debs.split(' '), "/debs/") }}
 
+# Refresh apt cache so install_debian_packages can resolve dependencies
+RUN apt-get update
+
 # Install built Debian packages and implicitly install their dependencies
 {{ install_debian_packages(docker_base_bookworm_debs.split(' ')) }}
+
+RUN rm -rf /var/lib/apt/lists/*
 {%- endif %}
 
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
