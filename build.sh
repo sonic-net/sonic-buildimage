@@ -110,8 +110,10 @@ apply_patch_files() {
 
     # Increase timeout for route_check to 500s
     _add_patch src/sonic-utilities ../../route_check_timeout.patch
-    _add_patch src/sonic-utilities ../../console.patch
-    
+
+    #commented ou tfor rebase 05/20 
+    #_add_patch src/sonic-utilities ../../console.patch
+
     # _add_patch src/sonic-swss ../../media_type.patch
     
     # 2/23/2026 commented the following patch fir rebase build
@@ -178,18 +180,29 @@ submodule_prs () {
   _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss c51d864
 
   #https://github.com/sonic-net/sonic-swss/pull/4001
-  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 9fa297a
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 34e8d49
 
   #https://github.com/sonic-net/sonic-swss/pull/3377
   _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 52ed10e
   
+  #https://github.com/sonic-net/sonic-swss/pull/4437
+  _submodule_add src/sonic-swss github-vganesan-nokia-sonic-swss https://github.com/vganesan-nokia/sonic-swss.git 6b839a2^..5086d24
+
   #tmp c1
   _submodule_add src/sonic-sairedis hehuang-nokia https://github.com/hehuang-nokia/sonic-sairedis.git 2e8392a
 
-  #sonic-bmc aspeed
-  #https://github.com/sonic-net/sonic-linux-kernel/pull/553
-  _submodule_add src/sonic-linux-kernel nats-nokia https://github.com/nats-nokia/sonic-linux-kernel.git 1609713
-  
+  #https://github.com/sonic-net/sonic-sairedis/pull/1819
+  _submodule_add src/sonic-sairedis github-nexthop-ai-sonic-sairedis https://github.com/nexthop-ai/sonic-sairedis.git 9136cea
+
+  #https://github.com/sonic-net/sonic-sairedis/pull/1850
+  _submodule_add src/sonic-sairedis github-vpandian-nokia-sonic-sairedis https://github.com/vpandian-nokia/sonic-sairedis.git '96b8877 eeb5410 93059ee'
+
+  #https://github.com/sonic-net/sonic-snmpagent/pull/373
+  _submodule_add src/sonic-snmpagent github-vpandian-nokia-sonic-snmpagent https://github.com/vpandian-nokia/sonic-snmpagent.git 50a662f
+
+  #https://github.com/sonic-net/sonic-utilities/pull/4373
+  _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities.git 93f4f7f
+
   # apply patches
   apply_patch_files
 
