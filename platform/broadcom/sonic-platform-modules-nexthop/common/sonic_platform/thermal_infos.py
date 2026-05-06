@@ -64,10 +64,16 @@ class PsuInfo(ThermalPolicyInfoBase):
     def collect(self, chassis: Chassis):
         self._psus = chassis.get_all_psus()[:]
     
-    def get_thermals(self)->list[Psu]:
-        return self._psus.get_all_thermals()
-    
-    def get_fans(self)->list[Psu]:
-        return self._psus.get_all_fans()
+    def get_thermals(self)->list:
+        thermals = []
+        for psu in self._psus:
+            thermals.extend(psu.get_all_thermals())
+        return thermals
+
+    def get_fans(self)->list:
+        fans = []
+        for psu in self._psus:
+            fans.extend(psu.get_all_fans())
+        return fans
     
     
