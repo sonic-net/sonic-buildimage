@@ -18,7 +18,7 @@ import importlib.machinery
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch, call
-from sonic_py_common import device_info
+from sonic_py_common import device_info, multi_asic
 
 from .mock_connector import MockConnector
 
@@ -1232,3 +1232,126 @@ def test_check_unit_status_multi_dot_unit_name():
     sysmon.check_unit_status('run-user-1000.mount')
     # Normal service name should still work
     sysmon.check_unit_status('mock_snmp.timer')
+
+
+# --- Tests for multi-ASIC sysready fixes (issue #4936496) ---
+
+mock_condition_unmet_props = {
+    'Type': 'notify', 'Result': 'success',
+    'Id': 'mock_smartmon.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'no'
+}
+
+mock_condition_met_inactive_props = {
+    'Type': 'simple', 'Result': 'success',
+    'Id': 'mock_down.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'yes'
+}
+
+mock_masked_props = {
+    'Type': '', 'Result': 'success',
+    'Id': 'mock_bgp.service', 'LoadState': 'masked',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'masked', 'ConditionResult': 'yes'
+}
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_unmet_ok():
+    """Inactive service with ConditionResult=no should be treated as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_smartmon.service')
+    assert result == 'OK'
+    sysmon.post_unit_status.assert_called_once()
+    call_args = sysmon.post_unit_status.call_args[0]
+    assert call_args[1] == 'OK'              # service_status
+    assert call_args[3] == 'condition-unmet'  # fail_reason
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_met_inactive_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_met_inactive_not_ok():
+    """Inactive service with ConditionResult=yes should still be NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_down.service')
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_masked_props))
+def test_get_unit_status_masked_returns_none():
+    """Masked (not-loaded) service should return None from get_unit_status."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_bgp.service')
+    assert result is None
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_bgp.service', 'mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_unit_status', MagicMock(return_value=None))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_masked_cleanup():
+    """When get_unit_status returns None (masked), check_unit_status should:
+       1. Remove the service from dnsrvs_name
+       2. Delete stale ALL_SERVICE_STATUS entry from STATE_DB
+    """
+    sysmon = Sysmonitor()
+    sysmon.dnsrvs_name = {'mock_bgp.service'}
+
+    # Use a real MagicMock for state_db so delete/exists work
+    sysmon.state_db = MagicMock()
+    sysmon.state_db.STATE_DB = 0
+    sysmon.state_db.exists = MagicMock(return_value=1)
+    sysmon.state_db.delete = MagicMock()
+
+    sysmon.check_unit_status('mock_bgp.service')
+
+    assert 'mock_bgp.service' not in sysmon.dnsrvs_name
+    sysmon.state_db.delete.assert_called_once_with(0, 'ALL_SERVICE_STATUS|mock_bgp')
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=True))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+@patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
+def test_get_all_service_list_multi_asic(mock_config_db, mock_run, mock_docker_client):
+    """On multi-ASIC, host-level services with has_global_scope=False should be
+       pruned from the monitored list. Services with has_global_scope=True should remain.
+    """
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'bgp': {
+            'state': 'enabled',
+            'has_global_scope': 'False',
+            'has_per_asic_scope': 'True',
+        },
+        'radv': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'syncd': {
+            'state': 'enabled',
+            'has_global_scope': 'false',   # lowercase — must also be handled
+            'has_per_asic_scope': 'True',
+        },
+        'database': {
+            'state': 'always_enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'True',
+        },
+    }
+    sysmon = Sysmonitor()
+    result = sysmon.get_all_service_list()
+    # Host-level services with has_global_scope=False should be pruned
+    assert 'bgp.service' not in result
+    assert 'syncd.service' not in result
+    # Global-scope services should remain
+    assert 'radv.service' in result
+    assert 'database.service' in result
