@@ -1,0 +1,114 @@
+#ifndef C_NEXTHOPGROUPFULL_H
+#define C_NEXTHOPGROUPFULL_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Manual definitions */
+typedef uint32_t vrf_id_t;
+typedef signed int ifindex_t;
+
+#define MULTIPATH_NUM 514
+#define MAX_NHG_RECURSION 8
+
+union C_g_addr {
+    struct in_addr ipv4;
+    struct in6_addr ipv6;
+};
+
+/* Auto-generated C Enums */
+{%- for enum_name, values in c_enums.items() %}
+enum {{ enum_name }} {
+    {%- for value in values %}
+    C_{{ value | replace(' ', '') }},
+    {%- endfor %}
+};
+
+{%- endfor %}
+
+/* Auto-generated Structs */
+{%- for name, s in structs.items() if name not in special_structs %}
+struct {{ name }} {
+{%- for field in s.fields %}
+{%- if field.flexible_array %}
+    {{ field.c_type }} {{ field.name }}[0];
+{%- elif field.fixed_array %}
+    {{ field.c_type }} {{ field.name }}[{{ field.array_size }}];
+{%- else %}
+    {{ field.c_type }} {{ field.name }};
+{%- endif %}
+{%- endfor %}
+};
+
+{%- endfor %}
+
+/* --- Special Struct: nexthop_srv6 --- */
+struct C_nexthop_srv6 {
+    enum C_seg6local_action_t seg6local_action;
+    struct C_seg6local_context seg6local_ctx;
+    struct in6_addr seg6_src;
+    struct C_seg6_seg_stack *seg6_segs;
+};
+
+/* --- Other C-specific structs (not in schema as objects) --- */
+struct C_seg6_seg_stack {
+{%- for name, s in structs.items() if name == "C_seg6_seg_stack" %}
+    {%- for field in s.fields %}
+    {{ field.c_type }} {{ field.name }}{% if field.flexible_array %}[0]{% endif %};
+    {%- endfor %}
+{%- endfor %}
+};
+
+/* --- Root Struct: C_NextHopGroupFull --- */
+struct C_NextHopGroupFull {
+{%- for field in root_struct.fields if field.position == 1 %}
+    {{ field.c_type }} {{ field.name }};
+{%- endfor %}
+
+{%- for field in root_struct.fields if field.position == 2 and field.name != "ifname" %}
+    {%- if field.flexible_array %}
+    {{ field.c_type }} {{ field.name }}[0];
+    {%- elif field.fixed_array %}
+    {{ field.c_type }} {{ field.name }}[{{ field.array_size }}];
+    {%- else %}
+    {{ field.c_type }} {{ field.name }};
+    {%- endif %}
+{%- endfor %}
+
+    char _hash_begin[0];
+{%- for field in root_struct.fields if field.position == 3 %}
+    {{ field.c_type }} {{ field.name }};
+{%- endfor %}
+    union {
+        union C_g_addr gate;
+        enum C_blackhole_type bh_type;
+    };
+{%- for field in root_struct.fields if field.position == 5 %}
+    {{ field.c_type }} {{ field.name }};
+{%- endfor %}
+    char _hash_end[0];
+{%- for field in root_struct.fields if field.position == 6 and field.name != "ifname" %}
+    {%- if field.flexible_array %}
+    {{ field.c_type }} {{ field.name }}[0];
+    {%- elif field.fixed_array %}
+    {{ field.c_type }} {{ field.name }}[{{ field.array_size }}];
+    {%- elif field.data_prefix %}
+    {{ field.c_type }} {{ field.data_prefix }}{{ field.name }};
+    {%- else %}
+    {{ field.c_type }} {{ field.name }};
+    {%- endif %}
+{%- endfor %}
+};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* C_NEXTHOPGROUPFULL_H */

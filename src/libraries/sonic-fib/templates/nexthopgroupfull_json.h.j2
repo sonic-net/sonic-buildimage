@@ -1,0 +1,224 @@
+// Auto-generated from JSON Schema. DO NOT EDIT.
+#pragma once
+
+#include "nexthopgroupfull.h"
+#include <nlohmann/json.hpp>
+
+#include <string>
+#include <arpa/inet.h> // for inet_ntop / inet_pton
+
+namespace fib {
+
+// --- IP Conversion Helpers ---
+inline std::string ipv4_to_string(const struct in_addr& addr) {
+    char buf[INET_ADDRSTRLEN];
+    return inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN) ? std::string(buf) : "0.0.0.0";
+}
+inline std::string ipv6_to_string(const struct in6_addr& addr) {
+    char buf[INET6_ADDRSTRLEN];
+    return inet_ntop(AF_INET6, &addr, buf, INET6_ADDRSTRLEN) ? std::string(buf) : "::";
+}
+inline bool string_to_ipv4(const std::string& ip, struct in_addr& out) {
+    return inet_pton(AF_INET, ip.c_str(), &out) == 1;
+}
+inline bool string_to_ipv6(const std::string& ip, struct in6_addr& out) {
+    return inet_pton(AF_INET6, ip.c_str(), &out) == 1;
+}
+inline std::string gaddr_to_string(const union g_addr& g, nexthop_types_t type) {
+    if (type == NEXTHOP_TYPE_IPV4 || type == NEXTHOP_TYPE_IPV4_IFINDEX) {
+        return ipv4_to_string(g.ipv4);
+    }
+    return ipv6_to_string(g.ipv6);
+}
+inline bool string_to_gaddr(const std::string& ip, union g_addr& g, nexthop_types_t type) {
+    if (type == NEXTHOP_TYPE_IPV4 || type == NEXTHOP_TYPE_IPV4_IFINDEX) {
+        return string_to_ipv4(ip, g.ipv4);
+    }
+    return string_to_ipv6(ip, g.ipv6);
+}
+
+// --- Enum to_json / from_json ---
+{%- for enum_name, values in enums.items() %}
+inline void to_json(nlohmann::ordered_json& j, const {{ enum_name }}& e) {
+    static const char* names[] = {
+        {%- for v in values %}
+        "{{ v }}",
+        {%- endfor %}
+    };
+    if (static_cast<int>(e) >= 0 && static_cast<int>(e) < static_cast<int>(sizeof(names)/sizeof(names[0]))) {
+        j = names[static_cast<int>(e)];
+    } else {
+        j = "UNKNOWN";
+    }
+}
+inline void from_json(const nlohmann::ordered_json& j, {{ enum_name }}& e) {
+    const std::string s = j;
+    {%- for v in values %}
+    if (s == "{{ v }}") { e = static_cast<{{ enum_name }}>({{ loop.index0 }}); return; }
+    {%- endfor %}
+    e = static_cast<{{ enum_name }}>(0); // default to first (e.g., *_INVALID or *_UNSPEC)
+}
+{%- endfor %}
+
+/* ======== AUTO-GEN each sub structs ======== */
+// Add declaration for each generating func
+
+{%- for struct_name, struct_info in all_structs.items() %}
+{%- if struct_name not in special_structs %}
+
+// --- {{struct_name}} ---
+inline void to_json(nlohmann::ordered_json& j, const {{struct_name}}& obj) {
+    j = nlohmann::ordered_json{
+        {%- for field in struct_info.fields %}
+        {%- if field.name == "nh4" %}
+        {"{{field.name}}", ipv4_to_string(obj.nh4)},
+        {%- elif field.name == "nh6" %}
+        {"{{field.name}}", ipv6_to_string(obj.nh6)},
+        {%- else %}
+        {"{{field.name}}", obj.{{field.name}}},
+        {%- endif %}
+        {%- endfor %}
+    };
+}
+inline void from_json(const nlohmann::ordered_json& j, {{struct_name}}& obj) {
+    {%- for field in struct_info.fields %}
+    {%- if field.name == "nh4" %}
+    std::string nh4_str = j.at("nh4");
+    string_to_ipv4(nh4_str, obj.nh4);
+    {%- elif field.name == "nh6" %}
+    std::string nh6_str = j.at("nh6");
+    string_to_ipv6(nh6_str, obj.nh6);
+    {%- else %}
+    j.at("{{field.name}}").get_to(obj.{{field.name}});
+    {%- endif %}
+    {%- endfor %}
+}
+
+{%- endif %}
+{%- endfor %}
+
+
+// --- seg6_seg_stack ---
+inline void to_json(nlohmann::ordered_json& j, const seg6_seg_stack* stack) {
+    if (!stack) {
+        j = nullptr;
+        return;
+    }
+    nlohmann::ordered_json segs = nlohmann::ordered_json::array();
+    for (int i = 0; i < stack->num_segs; ++i) {
+        segs.push_back(ipv6_to_string(stack->seg[i]));
+    }
+    j = nlohmann::ordered_json{
+        {"encap_behavior", stack->encap_behavior},
+        {"num_segs", stack->num_segs},
+        {"segs", segs}
+    };
+}
+inline void from_json(const nlohmann::ordered_json& j, seg6_seg_stack*& stack) {
+    if (j.is_null()) {
+        stack = nullptr;
+        return;
+    }
+    auto behavior = j.at("encap_behavior").get<srv6_headend_behavior>();
+    auto segs = j.at("segs").get<std::vector<std::string>>();
+    size_t total = sizeof(seg6_seg_stack) + segs.size() * sizeof(in6_addr);
+    stack = static_cast<seg6_seg_stack*>(malloc(total));
+    if (!stack) return;
+    stack->encap_behavior = behavior;
+    stack->num_segs = static_cast<uint8_t>(segs.size());
+    for (size_t i = 0; i < segs.size(); ++i) {
+        string_to_ipv6(segs[i], stack->seg[i]);
+    }
+}
+
+// --- nexthop_srv6 ---
+inline void to_json(nlohmann::ordered_json& j, const nexthop_srv6* srv6) {
+    if (!srv6) {
+        j = nullptr;
+        return;
+    }
+    j = nlohmann::ordered_json{
+        {"seg6local_action", srv6->seg6local_action},
+        {"seg6local_ctx", srv6->seg6local_ctx},
+        {"seg6_src", ipv6_to_string(srv6->seg6_src)},
+        {"seg6_segs", srv6->seg6_segs}
+    };
+}
+inline void from_json(const nlohmann::ordered_json& j, nexthop_srv6*& srv6) {
+    if (j.is_null()) {
+        srv6 = nullptr;
+        return;
+    }
+    srv6 = new nexthop_srv6{};
+    j.at("seg6local_action").get_to(srv6->seg6local_action);
+    j.at("seg6local_ctx").get_to(srv6->seg6local_ctx);
+    j.at("seg6_segs").get_to(srv6->seg6_segs);
+    std::string nh6_str = j.at("seg6_src");
+    string_to_ipv6(nh6_str, srv6->seg6_src);
+}
+
+// --- {{root_struct_name}} ---
+inline void to_json(nlohmann::ordered_json& j, const {{root_struct_name}}& nh) {
+    j = nlohmann::ordered_json{
+        {%- set sorted_fields = root_struct.fields | sort(attribute='position') %}
+        {%- for field in sorted_fields %}
+        {%- if field.name == "bh_type" %}
+        {%- elif field.name == "nh_srv6" %}
+        {%- elif field.name in ["gate", "src", "rmap_src"] %}
+        {"{{ field.name }}", gaddr_to_string(nh.{{ field.name }}, nh.type)},
+        {%- else %}
+        {"{{ field.name }}", nh.{{ field.name }}},
+        {%- endif %}
+        {%- endfor %}
+    };
+
+    // deal with the bh_type
+    if (nh.type == NEXTHOP_TYPE_BLACKHOLE) {
+        j["bh_type"] = nh.bh_type;
+    }
+
+    // deal with the nh_srv6
+    if (nh.nh_srv6) {
+        j["nh_srv6"] = nh.nh_srv6;
+    } else {
+        j["nh_srv6"] = nullptr;
+    }
+}
+inline void from_json(const nlohmann::ordered_json& j, {{ root_struct_name }}& nh) {
+    {%- set sorted_fields = root_struct.fields | sort(attribute='position') %}
+    {%- for field in sorted_fields %}
+    {%- if field.name in ["gate", "src", "rmap_src"] %}
+    std::string {{ field.name }}_str = j.at("{{ field.name }}");
+    string_to_gaddr({{ field.name }}_str, nh.{{ field.name }}, nh.type);
+    {%- elif field.name == "bh_type" %}
+    if (j.contains("bh_type")) {
+        j.at("bh_type").get_to(nh.bh_type);
+    }
+    {%- elif field.name == "nh_srv6" %}
+    if (j.contains("nh_srv6")) {
+        j.at("nh_srv6").get_to(nh.nh_srv6);
+    } else {
+        nh.nh_srv6 = nullptr;
+    }
+    {%- else %}
+    j.at("{{ field.name }}").get_to(nh.{{ field.name }});
+    {%- endif %}
+    {%- endfor %}
+}
+
+// --- Top-level string helpers ---
+inline std::string to_json_string({{ root_struct_name }}& obj) {
+    return nlohmann::ordered_json(obj).dump();
+}
+
+inline bool from_json_string(std::string& json_str, {{ root_struct_name }}& out_obj) {
+    try {
+        auto j = nlohmann::ordered_json::parse(json_str);
+        j.get_to(out_obj);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+} // namespace fib

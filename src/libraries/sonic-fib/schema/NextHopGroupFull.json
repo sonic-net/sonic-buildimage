@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "NextHopGroupFull.json",
+  "title": "NextHopGroupFull",
+  "description": "Full nexthop group representation for serialization",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "position" : 1,
+      "minimum": 0,
+      "default_value" : "0",
+      "description": "Nexthop group ID"
+    },
+    "key": {
+      "type": "integer",
+      "position" : 1,
+      "minimum": 0,
+      "default_value" : "0",
+      "description": "Hash key from Zebra"
+    },
+    "weight": {
+      "type": "integer",
+      "position" : 1,
+      "minimum": 0,
+      "maximum": 255,
+      "default_value" : "0",
+      "description": "Weight for unequal-cost ECMP"
+    },
+    "flags": {
+      "type": "integer",
+      "position" : 1,
+      "minimum": 0,
+      "maximum": 255,
+      "default_value" : "0",
+      "description": "Bit flags (e.g., NEXTHOP_FLAG_ONLINK = 8)"
+    },
+    "nhg_flags": {
+      "type": "integer",
+      "position" : 1,
+      "minimum": 0,
+      "default_value" : "0",
+      "description": "Bit flags for NHG (e.g., NEXTHOP_GROUP_RECEIVED = 1024)"
+    },
+    "ifname": {
+      "type": "string",
+      "position" : 2,
+      "default_value" : "\"\"",
+      "description": "Interface name"
+    },
+    "nh_grp_full_list": {
+      "position" : 2,
+      "type": "array",
+      "items": { "$ref": "#/$defs/nh_grp_full" },
+      "C_len": "(MULTIPATH_NUM * MAX_NHG_RECURSION) + 1"
+    },
+    "depends": {
+      "position" : 2,
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "C_len": "MULTIPATH_NUM + 1"
+    },
+    "dependents": {
+      "position" : 2,
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "C_len": "MULTIPATH_NUM + 1"
+    },
+    "type": {
+      "position" : 3,
+      "default_value" : "NEXTHOP_TYPE_INVALID",
+      "$ref": "#/$defs/nexthop_types_t"
+    },
+    "vrf_id": {
+      "type": "integer",
+      "position" : 3,
+      "minimum": 0,
+      "default_value" : "0",
+      "description": "VRF ID"
+    },
+    "ifindex": {
+      "type": "integer",
+      "position" : 3,
+      "default_value" : "0",
+      "description": "Interface index (can be negative)"
+    },
+    "nh_label_type": {
+      "position" : 3,
+      "default_value" : "ZEBRA_LSP_NONE",
+      "$ref": "#/$defs/lsp_types_t"
+    },
+    "gate": {
+      "position" : 4,
+      "$ref": "#/$defs/ip_address",
+      "description": "Next-hop gateway address (IPv4 or IPv6)"
+    },
+    "bh_type": {
+      "$ref": "#/$defs/blackhole_type",
+      "position" : 4,
+      "description": "Blackhole type (only present if type is BLACKHOLE)"
+    },
+    "src": {
+      "$ref": "#/$defs/ip_address",
+      "position" : 5,
+      "description": "Source address"
+    },
+    "rmap_src": {
+      "$ref": "#/$defs/ip_address",
+      "position" : 5,
+      "description": "Route-map source address"
+    },
+
+    "nh_srv6": {
+      "position" : 6,
+      "default_value" : "nullptr",
+      "data_prefix" : "*",
+      "$ref": "#/$defs/nexthop_srv6" ,
+      "description": "SRv6 information (optional)"
+    }
+  },
+  "required": [
+    "id", "key", "weight", "flags", "ifname",
+    "depends", "dependents",
+    "type", "vrf_id", "ifindex", "nh_label_type",
+    "gate", "src", "rmap_src"
+  ],
+  "additionalProperties": false,
+
+  "$defs": {
+    "nh_grp_full": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "weight": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "num_direct": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["id", "weight", "num_direct"],
+      "additionalProperties": false
+    },
+    "nexthop_types_t": {
+      "type": "string",
+      "enum": [
+        "NEXTHOP_TYPE_INVALID",
+        "NEXTHOP_TYPE_IFINDEX",
+        "NEXTHOP_TYPE_IPV4",
+        "NEXTHOP_TYPE_IPV4_IFINDEX",
+        "NEXTHOP_TYPE_IPV6",
+        "NEXTHOP_TYPE_IPV6_IFINDEX",
+        "NEXTHOP_TYPE_BLACKHOLE"
+      ]
+    },
+    "lsp_types_t": {
+      "type": "string",
+      "enum": [
+        "ZEBRA_LSP_NONE",
+        "ZEBRA_LSP_STATIC",
+        "ZEBRA_LSP_LDP",
+        "ZEBRA_LSP_BGP",
+        "ZEBRA_LSP_OSPF_SR",
+        "ZEBRA_LSP_ISIS_SR",
+        "ZEBRA_LSP_SHARP",
+        "ZEBRA_LSP_SRTE",
+        "ZEBRA_LSP_EVPN"
+      ]
+    },
+    "blackhole_type": {
+      "type": "string",
+      "enum": [
+        "BLACKHOLE_UNSPEC",
+        "BLACKHOLE_NULL",
+        "BLACKHOLE_REJECT",
+        "BLACKHOLE_ADMINPROHIB"
+      ]
+    },
+    "ip_address": {
+      "type": "string",
+      "oneOf": [
+        { "format": "ipv4" },
+        { "format": "ipv6" }
+      ],
+      "description": "IPv4 or IPv6 address in standard string notation"
+    },
+    "seg6local_action_t": {
+      "type": "string",
+      "enum": [
+        "SEG6_LOCAL_ACTION_UNSPEC",
+        "SEG6_LOCAL_ACTION_END",
+        "SEG6_LOCAL_ACTION_END_X",
+        "SEG6_LOCAL_ACTION_END_T",
+        "SEG6_LOCAL_ACTION_END_DX2",
+        "SEG6_LOCAL_ACTION_END_DX6",
+        "SEG6_LOCAL_ACTION_END_DX4",
+        "SEG6_LOCAL_ACTION_END_DT6",
+        "SEG6_LOCAL_ACTION_END_DT4",
+        "SEG6_LOCAL_ACTION_END_B6",
+        "SEG6_LOCAL_ACTION_END_B6_ENCAP",
+        "SEG6_LOCAL_ACTION_END_BM",
+        "SEG6_LOCAL_ACTION_END_S",
+        "SEG6_LOCAL_ACTION_END_AS",
+        "SEG6_LOCAL_ACTION_END_AM",
+        "SEG6_LOCAL_ACTION_END_BPF",
+        "SEG6_LOCAL_ACTION_END_DT46"
+      ]
+    },
+    "seg6local_flavors_info": {
+      "type": "object",
+      "properties": {
+        "flv_ops": { "type": "integer", "minimum": 0 },
+        "lcblock_len": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "lcnode_func_len": { "type": "integer", "minimum": 0, "maximum": 255 }
+      },
+      "required": ["flv_ops", "lcblock_len", "lcnode_func_len"],
+      "additionalProperties": false
+    },
+    "seg6local_context": {
+      "type": "object",
+      "properties": {
+        "nh4": { "$ref": "#/$defs/in_address" },
+        "nh6": { "$ref": "#/$defs/in6_address" },
+        "table": { "type": "integer", "minimum": 0 },
+        "flv": { "$ref": "#/$defs/seg6local_flavors_info" },
+        "block_len": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "node_len": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "function_len": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "argument_len": { "type": "integer", "minimum": 0, "maximum": 255 }
+      },
+      "required": ["nh4", "nh6", "table", "flv", "block_len", "node_len", "function_len", "argument_len"],
+      "additionalProperties": false
+    },
+    "srv6_headend_behavior": {
+      "type": "string",
+      "enum": [
+        "SRV6_HEADEND_BEHAVIOR_H_INSERT",
+        "SRV6_HEADEND_BEHAVIOR_H_ENCAPS",
+        "SRV6_HEADEND_BEHAVIOR_H_ENCAPS_RED",
+        "SRV6_HEADEND_BEHAVIOR_H_ENCAPS_L2",
+        "SRV6_HEADEND_BEHAVIOR_H_ENCAPS_L2_RED"
+      ]
+    },
+    "seg6_seg_stack": {
+      "type": "object",
+      "properties": {
+        "encap_behavior": { "$ref": "#/$defs/srv6_headend_behavior" },
+        "num_segs": { "$ref": "#/$defs/uint8" },
+        "seg": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/in6_address" },
+          "minItems": 0
+        }
+      },
+      "required": ["encap_behavior", "seg"],
+      "additionalProperties": false
+    },
+    "nexthop_srv6": {
+      "type": "object",
+      "properties": {
+        "seg6local_action": { "$ref": "#/$defs/seg6local_action_t" },
+        "seg6local_ctx": { "$ref": "#/$defs/seg6local_context" },
+        "seg6_src": { "$ref": "#/$defs/in6_address" },
+        "seg6_segs": {
+          "anyOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/seg6_seg_stack" }
+          ]
+        }
+      },
+      "required": ["seg6local_action", "seg6local_ctx", "seg6_src", "seg6_segs"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,130 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <netinet/in.h>
+
+namespace fib {
+
+    /* Can't be generated defintions */
+    typedef std::uint32_t vrf_id_t;
+    typedef signed int ifindex_t;
+
+    union g_addr {
+        struct in_addr ipv4;
+        struct in6_addr ipv6;
+    };
+
+    /* Auto generated Enums */
+    {%- for enum_name, values in enums.items() %}
+    enum {{ enum_name }} {
+        {{ values | join(',\n        ') }}
+    };
+    {%- endfor %}
+
+    /* Auto-generated simple structs */
+    {%- for name, s in structs.items() if name not in special_structs %}
+    struct {{ name }} {
+        {%- for field in s.fields %}
+        {{ field.cpp_type }} {{ field.name }};
+        {%- endfor %}
+    };
+    {%- endfor %}
+
+    /* --- Special Struct: nexthop_srv6 --- */
+    struct nexthop_srv6 {
+        enum seg6local_action_t seg6local_action = {};
+        struct seg6local_context seg6local_ctx = {};
+        struct in6_addr seg6_src = {};
+        struct seg6_seg_stack *seg6_segs = nullptr;
+    };
+
+    /* --- Other C-specific structs (not in schema as objects) --- */
+    struct seg6_seg_stack {
+{%- for name, s in structs.items() if name == "seg6_seg_stack" %}
+    {%- for field in s.fields %}
+        {{ field.cpp_type }} {{ field.name }}{%- if field.zeroarray -%}[0]{%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+    };
+
+    /* --- Special Struct: NextHopGroupFull --- */
+    struct NextHopGroupFull {
+{%- for name, s in structs[root_struct_name].items()%}
+    {%- for field in s if field.position == 1 %}
+        {{ field.cpp_type }} {{ field.name }} {% if field.default_value %} = {{field.default_value }} {%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+
+
+{%- for name, s in structs[root_struct_name].items()%}
+    {%- for field in s if field.position == 2 %}
+        {{ field.cpp_type }} {{ field.name }} {% if field.default_value %} = {{field.default_value }} {%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+
+        char _hash_begin[0];
+{%- for name, s in structs[root_struct_name].items()%}
+    {%- for field in s if field.position == 3 %}
+        {{ field.cpp_type }} {{ field.name }} {% if field.default_value %} = {{field.default_value }} {%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+        union {
+            union g_addr gate;
+            enum blackhole_type bh_type;
+        };
+{%- for name, s in structs[root_struct_name].items()%}
+    {%- for field in s if field.position == 5 %}
+        {{ field.cpp_type }} {{ field.name }} {% if field.default_value %} = {{field.default_value }} {%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+        char _hash_end[0];
+{%- for name, s in structs[root_struct_name].items()%}
+    {%- for field in s if field.position == 6 %}
+        {{ field.cpp_type }} {% if field.data_prefix -%} {{field.data_prefix}}{%- endif %}{{ field.name }} {% if field.default_value -%} = {{field.default_value }} {%- endif -%};
+    {%- endfor %}
+{%- endfor %}
+
+        // Add default constructor
+        NextHopGroupFull() = default;
+
+        // Constructors for recursive NH
+        NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in, union g_addr gateway_in, enum nexthop_types_t type_in,
+                         const std::vector<nh_grp_full>& nh_grp_full_list_in,
+                         const std::vector<uint32_t>& depends_in,
+                         const std::vector<uint32_t>& dependents_in);
+
+        // Constructors for ECMP
+        NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, std::uint32_t nhg_flags_in,
+                         const std::vector<nh_grp_full>& nh_grp_full_list_in,
+                         const std::vector<uint32_t>& depends_in,
+                         const std::vector<uint32_t>& dependents_in);
+
+        // Constructors for regular nexthop
+        NextHopGroupFull(std::uint32_t id_in, std::uint32_t key_in, enum nexthop_types_t type_in,
+                         vrf_id_t vrf_id_in, ifindex_t ifindex_in, std::string ifname_in,
+                         const std::vector<uint32_t>& depends_in,
+                         const std::vector<uint32_t>& dependents_in,
+                         enum lsp_types_t label_type_in, enum blackhole_type bh_type_in,
+                         union g_addr gateway_in, union g_addr src_in, union g_addr rmap_src_in,
+                         std::uint8_t weight_in, std::uint8_t flags_in, std::uint32_t nhg_flags_in,
+                         bool has_srv6, bool has_seg6_segs,
+                         const struct nexthop_srv6* nh_srv6_in,
+                         const struct seg6_seg_stack* nh_seg6_segs_in,
+                         const std::vector<struct in6_addr>& nh_segs_in);
+
+        // Copy assignment operator
+        NextHopGroupFull& operator = (const NextHopGroupFull &other);
+
+        // Copy constructor
+        NextHopGroupFull(const NextHopGroupFull& other);
+
+        // operator == and !=
+        bool operator==(const NextHopGroupFull& other) const;
+        bool operator!=(const NextHopGroupFull& other) const;
+
+        ~NextHopGroupFull();
+    };
+
+} // namespace fib
