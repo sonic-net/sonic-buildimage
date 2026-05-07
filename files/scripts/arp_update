@@ -42,14 +42,14 @@ run_arping_with_retry() {
     local ifname="$1"
     local ip="$2"
     run_with_retry_cmd "arping on ${ifname} to ${ip}" \
-        arping -q -w 1 -c 1 -i "$ifname" "$ip" >/dev/null 2>&1
+        arping -q -w 0 -c 1 -i "$ifname" "$ip" >/dev/null 2>&1
 }
 
 run_ndisc6_with_retry() {
     local ifname="$1"
     local ip="$2"
     run_with_retry_cmd "ndisc6 on ${ifname} to ${ip}" \
-        ndisc6 -q -w 1 -1 "$ip" "$ifname" >/dev/null 2>&1
+        ndisc6 -q -w 0 -1 "$ip" "$ifname" >/dev/null 2>&1
 }
 
 while /bin/true; do
@@ -155,8 +155,8 @@ while /bin/true; do
   SUBTYPE=$(sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
   for vlan in $VLAN; do
       # generate a list of arping commands:
-      #   arping -q -w 1 -c 1 -i <VLAN interface> <IP 1>;
-      #   arping -q -w 1 -c 1 -i <VLAN interface> <IP 2>;
+      #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 1>;
+      #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 2>;
       #   ...
       while read -r ip ifname; do
           [ -z "$ip" ] && continue
@@ -168,8 +168,8 @@ while /bin/true; do
       eval $ping6cmd
 
       # generate a list of ndisc6 commands (exclude link-local addrs since it is done above):
-      #   ndisc6 -q -w 1 -1 <IP 1> <VLAN interface>;
-      #   ndisc6 -q -w 1 -1 <IP 2> <VLAN interface>;
+      #   ndisc6 -q -w 0 -1 <IP 1> <VLAN interface>;
+      #   ndisc6 -q -w 0 -1 <IP 2> <VLAN interface>;
       #   ...
       while read -r ip ifname; do
           [ -z "$ip" ] && continue
