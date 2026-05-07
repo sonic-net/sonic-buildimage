@@ -1791,6 +1791,7 @@ class BGPConfigDaemon:
                       ('gr_restart_time',                               '{no:no-prefix}bgp graceful-restart restart-time {}'),
                       ('gr_stale_routes_time',                          '{no:no-prefix}bgp graceful-restart stalepath-time {}'),
                       ('gr_preserve_fw_state',                          '{no:no-prefix}bgp graceful-restart preserve-fw-state', ['true', 'false']),
+                      ('llgr_stale_time',                               '{no:no-prefix}bgp long-lived-graceful-restart stale-time {}'),
                       ('log_nbr_state_changes',                         '{no:no-prefix}bgp log-neighbor-changes', ['true', 'false']),
                       ('rr_cluster_id',                                 '{no:no-prefix}bgp cluster-id {}'),
                       ('rr_allow_out_policy',                           '{no:no-prefix}bgp route-reflector allow-outbound-policy', ['true', 'false']),

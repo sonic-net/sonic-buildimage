@@ -29,6 +29,7 @@ from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
+from .managers_bgp_globals import BgpGlobalsMgr, BGP_GLOBALS_TABLE
 from .managers_as_path import AsPathMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
@@ -107,6 +108,8 @@ def do_work():
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # BGP globals Manager (LLGR and other BGP_GLOBALS knobs)
+        BgpGlobalsMgr(common_objs, "CONFIG_DB", BGP_GLOBALS_TABLE),
     ]
 
     if device_info.is_chassis():
