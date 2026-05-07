@@ -1,0 +1,9 @@
+include $(PLATFORM_PATH)/docker-syncd-mrvl-teralynx.dep
+include $(PLATFORM_PATH)/docker-syncd-mrvl-teralynx-rpc.dep
+include $(PLATFORM_PATH)/docker-saiserver-mrvl-teralynx.dep
+include $(PLATFORM_PATH)/mrvl-teralynx.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep
+include $(PLATFORM_PATH)/or-tools.dep
+include $(PLATFORM_PATH)/platform-modules-wistron.dep
+include $(PLATFORM_PATH)/platform-modules-marvell.dep
+include $(PLATFORM_PATH)/python-saithrift.dep
