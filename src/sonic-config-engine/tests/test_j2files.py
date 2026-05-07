@@ -653,6 +653,10 @@ class TestJ2Files(TestCase):
 
         for file_name in files_to_copy:
             src_file = os.path.join(dir_path, file_name)
+            if file_name == 'pg_profile_lookup.ini' and not os.path.isfile(src_file):
+                platform_path = os.path.dirname(dir_path)
+                platform_src_file = os.path.join(platform_path, file_name)
+                src_file = platform_src_file
             dst_file = os.path.join(self.test_dir, file_name)
 
             if not revert:
