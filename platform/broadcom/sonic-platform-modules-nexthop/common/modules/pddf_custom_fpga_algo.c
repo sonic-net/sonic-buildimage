@@ -110,6 +110,7 @@ enum {
 #define XIIC_I2C_TIMEOUT	(msecs_to_jiffies(1000))
 
 struct fpgalogic_i2c {
+    struct i2c_adapter *adap;
     void __iomem *base;
     u32 reg_shift;
     u32 reg_io_width;
@@ -291,8 +292,8 @@ static int xiic_poll_wait(struct fpgalogic_i2c *i2c)
 				val &=(~tmp);
 				xiic_setreg32(i2c, XIIC_CR_REG_OFFSET, val);
 				xiic_setreg32(i2c, XIIC_IISR_OFFSET, XIIC_INTR_ARB_LOST_MASK);
-				printk("%s: TRANSFER STATUS ERROR, ISR: bit 0x%x happens\n",
-					 __func__, XIIC_INTR_ARB_LOST_MASK);
+				printk("%s: TRANSFER STATUS ERROR on bus %d, ISR: bit 0x%x happens\n",
+					 __func__, i2c->adap->nr, XIIC_INTR_ARB_LOST_MASK);
 			} 
 			if (status & XIIC_INTR_TX_ERROR_MASK) {
 				int sta = 0;
@@ -301,8 +302,8 @@ static int xiic_poll_wait(struct fpgalogic_i2c *i2c)
 				cr = xiic_getreg32(i2c,XIIC_CR_REG_OFFSET);
 				xiic_setreg32(i2c, XIIC_IISR_OFFSET, XIIC_INTR_TX_ERROR_MASK);
 #ifdef DEBUG_KERN
-				printk("%s: TRANSFER STATUS ERROR, ISR: bit 0x%x happens; SR: bit 0x%x; CR: bit 0x%x\n",
-					 __func__, status, sta, cr);
+				printk("%s: TRANSFER STATUS ERROR on bus %d, ISR: bit 0x%x happens; SR: bit 0x%x; CR: bit 0x%x\n",
+					 __func__, i2c->adap->nr, status, sta, cr);
 #endif
 			}
 			/* Soft reset IIC controller. */
@@ -315,8 +316,8 @@ static int xiic_poll_wait(struct fpgalogic_i2c *i2c)
 	}
 #ifdef DEBUG_KERN
 	if (err)
-		printk("%s: STATUS timeout, bit 0x%x did not clear in 50ms\n",
-			 __func__, status);
+		printk("%s: STATUS timeout on bus %d, bit 0x%x did not clear in 50ms\n",
+			 __func__, i2c->adap->nr, status);
 #endif
 	return err;
 }
@@ -581,6 +582,7 @@ static int adap_data_init(struct i2c_adapter *adap, int index)
     fpgalogic_i2c[i2c_ch_index].base = i2c_data.ch_base_addr +
                           index * i2c_data.ch_size;
     mutex_init(&fpgalogic_i2c[i2c_ch_index].lock);
+    fpgalogic_i2c[i2c_ch_index].adap = adap;
     fpgai2c_init(&fpgalogic_i2c[i2c_ch_index]);
 
     adap->algo_data = &fpgalogic_i2c[i2c_ch_index];
