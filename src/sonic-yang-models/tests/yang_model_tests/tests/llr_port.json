@@ -1,0 +1,28 @@
+{
+    "LLR_PORT_VALID_STATIC": {
+        "desc": "Valid LLR_PORT entry with static mode."
+    },
+    "LLR_PORT_VALID_WITH_PROFILE": {
+        "desc": "Valid LLR_PORT entry referencing a user-defined LLR profile."
+    },
+    "LLR_PORT_INVALID_LLR_MODE": {
+        "desc": "Invalid llr_mode value (not in enum).",
+        "eStrKey": "InvalidValue"
+    },
+    "LLR_PORT_INVALID_LLR_LOCAL": {
+        "desc": "Invalid llr_local value (not in admin_mode enum).",
+        "eStrKey": "InvalidValue"
+    },
+    "LLR_PORT_INVALID_LLR_REMOTE": {
+        "desc": "Invalid llr_remote value (not in admin_mode enum).",
+        "eStrKey": "InvalidValue"
+    },
+    "LLR_PORT_INVALID_PORT_REF": {
+        "desc": "Non-existent port leafref.",
+        "eStrKey": "LeafRef"
+    },
+    "LLR_PORT_INVALID_PROFILE_REF": {
+        "desc": "Non-existent LLR profile leafref.",
+        "eStrKey": "LeafRef"
+    }
+}

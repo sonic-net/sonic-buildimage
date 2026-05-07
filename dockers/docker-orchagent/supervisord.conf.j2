@@ -245,6 +245,23 @@ environment=ASAN_OPTIONS="log_path=/var/log/asan/buffermgrd-asan.log{{ asan_extr
 {%- endif %}
 
 {% if is_fabric_asic == 0 %}
+[program:llrmgrd]
+command=/usr/bin/llrmgrd.sh
+priority=12
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/llrmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
 [program:vrfmgrd]
 command=/usr/bin/vrfmgrd
 priority=13

@@ -277,6 +277,19 @@ stderr_syslog=true
 environment=ASAN_OPTIONS="log_path=/var/log/asan/buffermgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
+[program:llrmgrd]
+command=/usr/bin/llrmgrd.sh
+priority=17
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/llrmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
 [program:vrfmgrd]
 command=/usr/bin/vrfmgrd
 priority=18

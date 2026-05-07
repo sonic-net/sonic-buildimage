@@ -166,6 +166,8 @@ supervisorctl start staticd
 
 supervisorctl start buffermgrd
 
+supervisorctl start llrmgrd
+
 supervisorctl start nbrmgrd
 
 supervisorctl start vxlanmgrd
