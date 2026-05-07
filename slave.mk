@@ -51,6 +51,8 @@ TRIXIE_PHONY_PATH = $(TARGET_PATH)/phony/trixie
 
 DBG_IMAGE_MARK = dbg
 DBG_SRC_ARCHIVE_FILE = $(TARGET_PATH)/sonic_src.tar.gz
+SOURCE_ARCHIVE_PATH = $(TARGET_PATH)/sonic-buildimage-source
+ENABLE_SOURCE_ARCHIVE ?= y
 BUILD_WORKDIR = /sonic
 DPKG_ADMINDIR_PATH = $(BUILD_WORKDIR)/dpkg
 SLAVE_DIR ?= sonic-slave-$(BLDENV)
@@ -141,12 +143,14 @@ configure :
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
 	$(Q)mkdir -p $(TARGET_PATH)/vcache
+	$(Q)if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ]; then mkdir -p $(SOURCE_ARCHIVE_PATH); fi
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
 
 distclean : .platform clean
 	$(Q)rm -f .platform
 	$(Q)rm -f .arch
+	$(Q)rm -rf $(SOURCE_ARCHIVE_PATH)
 
 list :
 	$(Q)$(foreach target,$(SONIC_TARGET_LIST),echo $(target);)
@@ -756,6 +760,8 @@ $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES)) : $(FILES_PATH)/% : .platform $
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; popd; fi $(LOG)
 		# Build project and take package
 		make DEST=$(shell pwd)/$(FILES_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(FILES_PATH)/$* $(LOG)
+		# Archive patched source for static analysis (before quilt pop removes patches)
+		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
@@ -811,6 +817,49 @@ SONIC_TARGET_LIST += $(addprefix $(PHONY_PATH)/, $(SONIC_PHONIES))
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
 #     $(SOME_NEW_DEB)_PHONIES = $(SOME_PHONY_NAME) ...
 #     SONIC_MAKE_DEBS += $(SOME_NEW_DEB)
+
+# Archive patched source tree for static analysis.
+# Called after each SONIC_MAKE_DEBS package build, before quilt pop cleanup.
+# Copies the working source directory (with patches applied) to
+# $(SOURCE_ARCHIVE_PATH) so a downstream static analysis job can consume it.
+define ARCHIVE_PATCHED_SOURCE
+	if [ "$(ENABLE_SOURCE_ARCHIVE)" = "y" ] && [ -n "$($1_SRC_PATH)" ]; then \
+		mkdir -p $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH); \
+		rsync -aL --delete \
+			--exclude='.git' \
+			--exclude='*.o' --exclude='*.a' --exclude='*.so' --exclude='*.so.*' \
+			--exclude='*.lo' --exclude='*.la' \
+			--exclude='*.deb' --exclude='*.changes' --exclude='*.buildinfo' --exclude='*.ddeb' \
+			--exclude='*.pyc' --exclude='__pycache__/' --exclude='*.egg-info/' \
+			--exclude='target/debug/' --exclude='target/release/' \
+			--exclude='target/*/build/' --exclude='target/*/deps/' \
+			--exclude='*.rlib' --exclude='*.rmeta' \
+			--exclude='pkg/' \
+			--exclude='build/' \
+			--exclude='_build/' \
+			--exclude='dist/' \
+			--exclude='.tox/' \
+			--exclude='.pytest_cache/' \
+			--exclude='*.egg/' \
+			--exclude='debian/tmp/' \
+			--exclude='debian/.debhelper/' \
+			--exclude='debian/debhelper-build-stamp' \
+			--exclude='debian/files' \
+			--exclude='debian/*.substvars' \
+			--exclude='debian/*.log' \
+			--exclude='debian/*.debhelper' --exclude='debian/*.debhelper.log' \
+			--filter='exclude debian/*/DEBIAN/' \
+			--filter='exclude debian/*/usr/' \
+			--filter='exclude debian/*/lib/' \
+			--filter='exclude debian/*/etc/' \
+			--filter='exclude debian/*/var/' \
+			--exclude='config.log' --exclude='config.status' \
+			--exclude='stamp-h*' --exclude='autom4te.cache/' \
+			--exclude='generated/' \
+			$($1_SRC_PATH)/ $(SOURCE_ARCHIVE_PATH)/$($1_SRC_PATH)/ || true; \
+	fi
+endef
+
 $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
@@ -832,6 +881,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		# Build project and take package
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) make -j$(SONIC_CONFIG_MAKE_JOBS) DEST=$(shell pwd)/$(DEBS_PATH) -C $($*_SRC_PATH) $(shell pwd)/$(DEBS_PATH)/$* $(LOG)
+		# Archive patched source for static analysis (before quilt pop removes patches)
+		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 
@@ -881,6 +932,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 			${$*_BUILD_ENV} $(CCACHE_ENV) DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
+		# Archive patched source for static analysis (before quilt pop removes patches)
+		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
 		# Take built package(s)
@@ -991,6 +1044,8 @@ $(addprefix $(PYTHON_DEBS_PATH)/, $(SONIC_PYTHON_STDEB_DEBS)) : $(PYTHON_DEBS_PA
 		rm -rf deb_dist/* $(LOG)
 		python setup.py --command-packages=stdeb.command bdist_deb $(LOG)
 		popd $(LOG_SIMPLE)
+		# Archive patched source for static analysis (before quilt pop removes patches)
+		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# Clean up
 		if [ -f $($*_SRC_PATH).patch/series ]; then pushd $($*_SRC_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi $(LOG)
 		# Take built package(s)
@@ -1053,6 +1108,8 @@ else
 			python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 		}
 endif
+		# Archive patched source for static analysis (before quilt pop removes patches)
+		$(call ARCHIVE_PATCHED_SOURCE,$*)
 		# clean up
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
