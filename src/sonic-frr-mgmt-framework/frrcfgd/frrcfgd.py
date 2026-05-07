@@ -120,7 +120,8 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
             'SRV6_MY_SOURCE': ['zebra'],
-            'SRV6_MY_SIDS': ['mgmtd']
+            'SRV6_MY_SIDS': ['mgmtd'],
+            'FIB_ROUTE_FILTER': ['mgmtd']
 
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
@@ -2290,6 +2291,17 @@ class BGPConfigDaemon:
                                         nh_attr('ifname'), nh_attr('tag'), nh_attr('distance'),
                                         nh_attr('nexthop-vrf'))
 
+        # FIB_ROUTE_FILTER state: normalized "<vrf>|<afi>|<proto>" key
+        # -> currently applied route_map name. Used to emit `no ip protocol ...
+        # route-map <NAME>` on delete, and to short-circuit idempotent sets.
+        self.fib_route_filter_state = {}
+        frf_table = self.config_db.get_table('FIB_ROUTE_FILTER')
+        for key, entry in frf_table.items():
+            frf_key = '|'.join(key) if isinstance(key, tuple) else str(key)
+            rm = entry.get('route_map') if isinstance(entry, dict) else None
+            if rm:
+                self.fib_route_filter_state[frf_key] = rm
+
         self.table_handler_list = [
             ('VRF', self.vrf_handler),
             ('DEVICE_METADATA', self.metadata_handler),
@@ -2335,6 +2347,7 @@ class BGPConfigDaemon:
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
             ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
+            ('FIB_ROUTE_FILTER', self.fib_route_filter_handler),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -3950,6 +3963,94 @@ class BGPConfigDaemon:
                                                          {'remote-address', 'vrf', 'interface', 'local-address'}])
     def bfd_mhop_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'remote-address', 'vrf', 'local-address'}])
+
+    def fib_route_filter_handler(self, table, key, data):
+        """
+        Translate FIB_ROUTE_FILTER rows to zebra commands.
+
+        CONFIG_DB key: "<vrf>|<addr_family>|<protocol>". Emits:
+            [vrf <vrf>]
+             ip|ipv6 protocol <protocol> route-map <route_map>
+            [exit-vrf]
+        The default VRF renders without the vrf/exit-vrf wrapping.
+
+        Per-key state (self.fib_route_filter_state) lets deletes emit
+        'no ... route-map <NAME>' using the last-applied name, and lets
+        idempotent sets short-circuit.
+        """
+        syslog.syslog(syslog.LOG_INFO,
+                      '[bgp cfgd](fib_route_filter) table={} key={} data={}'.format(table, key, data))
+
+        frf_key = '|'.join(key) if isinstance(key, tuple) else str(key)
+        parts = frf_key.split('|')
+        if len(parts) != 3:
+            syslog.syslog(syslog.LOG_ERR,
+                          'FIB_ROUTE_FILTER: malformed key {} (expected vrf|afi|protocol)'.format(frf_key))
+            return
+
+        # addr_family uses sonic-types:ip-family (values 'IPv4'/'IPv6'); FRR
+        # expects 'ip'/'ipv6' as the CLI keyword. Same mapping used by
+        # bgpd.conf.db.pref_list.j2 and bgpd.conf.db.route_map.j2.
+        entry_vrf, afi, protocol = parts
+        ip_kw = {'IPv4': 'ip', 'IPv6': 'ipv6'}.get(afi)
+        if ip_kw is None:
+            syslog.syslog(syslog.LOG_ERR,
+                          'FIB_ROUTE_FILTER: unsupported addr_family {} in key {}'.format(afi, frf_key))
+            return
+
+        prev_rm = self.fib_route_filter_state.get(frf_key)
+
+        # Decide what command to push, but DON'T mutate state yet — state must
+        # only reflect what FRR has actually accepted. Mutating before the
+        # vtysh succeeds would let a transient failure desync us permanently:
+        # the idempotent `prev_rm == route_map` guard would then silently skip
+        # every retry.
+        is_delete = data is None
+        if is_delete:
+            if prev_rm is None:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'FIB_ROUTE_FILTER: del for untracked key {}; skipping'.format(frf_key))
+                return
+            inner = 'no {} protocol {} route-map {}'.format(ip_kw, protocol, prev_rm)
+            new_rm = None
+        else:
+            route_map = data.get('route_map') if isinstance(data, dict) else None
+            if not route_map:
+                syslog.syslog(syslog.LOG_ERR,
+                              'FIB_ROUTE_FILTER: missing route_map for key {}'.format(frf_key))
+                return
+            if prev_rm == route_map:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'FIB_ROUTE_FILTER: {} already bound to {}; skipping vtysh'.format(frf_key, route_map))
+                return
+            # FRR's `ip|ipv6 protocol X route-map Y` is upsert-style: emitting
+            # the new binding replaces any prior route-map for the same
+            # (vrf, afi, proto). No explicit `no ... route-map <prev>` needed.
+            inner = '{} protocol {} route-map {}'.format(ip_kw, protocol, route_map)
+            new_rm = route_map
+
+        # entry_vrf is the union type (literal "default" or a leafref into
+        # VRF_LIST) and route_map is a leafref into ROUTE_MAP_SET, both
+        # validated by YANG against ^[A-Za-z0-9_][A-Za-z0-9_-]*$-ish
+        # identifiers, so inserting them into the vtysh command string carries
+        # no shell-injection risk. If the schema is ever loosened, this
+        # assumption needs revisiting.
+        if entry_vrf == self.DEFAULT_VRF:
+            command = "vtysh -c 'configure terminal' -c '{}'".format(inner)
+        else:
+            command = ("vtysh -c 'configure terminal' "
+                       "-c 'vrf {}' -c '{}' -c 'exit-vrf'".format(entry_vrf, inner))
+
+        if not self.__run_command(table, command):
+            syslog.syslog(syslog.LOG_ERR,
+                          'FIB_ROUTE_FILTER: failed running vtysh for key {}'.format(frf_key))
+            return
+
+        # Command succeeded — now it's safe to publish the new state.
+        if is_delete:
+            self.fib_route_filter_state.pop(frf_key, None)
+        else:
+            self.fib_route_filter_state[frf_key] = new_rm
 
     def start(self):
         self.subscribe_all()

@@ -24,6 +24,7 @@ fpm address 127.0.0.1
 !
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !
+{% include "zebra/zebra.fib_route_filter.conf.j2" %}
 {% if MGMT_VRF_CONFIG %}
 {% if MGMT_VRF_CONFIG['vrf_global']['mgmtVrfEnabled'] == 'false' %}
 {% include "staticd.db.default_route.conf.j2" %}

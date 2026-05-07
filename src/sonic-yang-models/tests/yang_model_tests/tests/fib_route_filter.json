@@ -1,0 +1,63 @@
+{
+    "FIB_ROUTE_FILTER_VALID": {
+        "desc": "Configure per-protocol route filter with valid (vrf, addr_family, protocol) -> route-map bindings."
+    },
+
+    "FIB_ROUTE_FILTER_VALID_NAMED_VRF": {
+        "desc": "Configure per-protocol route filter under a user-defined VRF."
+    },
+
+    "FIB_ROUTE_FILTER_NON_EXIST_RT_MAP": {
+        "desc": "Referring a non-existent ROUTE_MAP_SET entry.",
+        "eStrKey": "LeafRef"
+    },
+
+    "FIB_ROUTE_FILTER_NON_EXIST_VRF": {
+        "desc": "Referring a non-existent VRF name.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["vrf_name"]
+    },
+
+    "FIB_ROUTE_FILTER_MISSING_RT_MAP": {
+        "desc": "Omitting the mandatory route_map leaf.",
+        "eStrKey": "Mandatory",
+        "eStr": ["route_map"]
+    },
+
+    "FIB_ROUTE_FILTER_INVALID_PROTOCOL": {
+        "desc": "Using a protocol value outside the fib-route-filter-protocol enum.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["protocol"]
+    },
+
+    "FIB_ROUTE_FILTER_INVALID_ADDR_FAMILY": {
+        "desc": "Using an addr_family value outside the IPv4/IPv6 enum.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["addr_family"]
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V4_OSPF6": {
+        "desc": "IPv4 addr_family with ospf6 protocol must fail the must expression.",
+        "eStr": ["protocol is not valid for the selected addr_family"]
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_OSPF": {
+        "desc": "IPv6 addr_family with ospf protocol must fail the must expression.",
+        "eStr": ["protocol is not valid for the selected addr_family"]
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V4_RIPNG": {
+        "desc": "IPv4 addr_family with ripng protocol must fail the must expression.",
+        "eStr": ["protocol is not valid for the selected addr_family"]
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_RIP": {
+        "desc": "IPv6 addr_family with rip protocol must fail the must expression.",
+        "eStr": ["protocol is not valid for the selected addr_family"]
+    },
+
+    "FIB_ROUTE_FILTER_AFI_PROTO_MISMATCH_V6_EIGRP": {
+        "desc": "IPv6 addr_family with eigrp protocol must fail: FRR's EIGRP is IPv4-only.",
+        "eStr": ["protocol is not valid for the selected addr_family"]
+    }
+}
