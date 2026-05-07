@@ -1094,8 +1094,6 @@ fi
 if [ -f iccpd.service ]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable iccpd.service
 fi
-sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /sys || true
-sudo LANG=C chroot $FILESYSTEM_ROOT umount -lf /sys
 {% endif %}
 
 # Copy service scripts (swss, syncd, bgp, teamd, lldp, radv)

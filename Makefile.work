@@ -75,10 +75,19 @@ SHELL = /bin/bash
 USER := $(shell id -un)
 PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
-ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
-DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
+USE_PODMAN ?= n
+ifeq ($(USE_PODMAN), y)
+CONTAINER_DAEMON = sudo podman
+ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
+$(error Native dockerd with podman is not supported at this time.)
+endif
 else
-DOCKER_MACHINE := $(shell docker run --rm debian:trixie uname -m)
+CONTAINER_DAEMON = docker
+endif
+ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
+DOCKER_MACHINE := $(shell $(CONTAINER_DAEMON) run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
+else
+DOCKER_MACHINE := $(shell $(CONTAINER_DAEMON) run --rm debian:trixie uname -m)
 endif
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
@@ -103,6 +112,7 @@ ifeq ($(J2_VER),)
 $(error Please install j2 (sudo pip install jinjanator))
 endif
 
+ifeq ($(USE_PODMAN), n)
 # Check for minimum Docker version on build host
 # Note: Using the greater of CE (17.05.0) and EE (17.06.1) versions that support ARG before FROM
 docker_min := 17.06.1
@@ -111,6 +121,7 @@ docker_ver := $(shell docker info 2>/dev/null | grep -i "server version" | rev |
 docker_is_valid := $(shell if [[ "$(docker_ver)" -lt $(docker_min_ver) ]] ; then echo "0"; else echo "1"; fi)
 ifeq (0,$(docker_is_valid))
 $(error SONiC requires Docker version $(docker_min) or later)
+endif
 endif
 
 # Remove lock file in case previous run was forcefully stopped
@@ -300,7 +311,7 @@ endif
 DOCKER_LOCKFILE_SAVE := $(DOCKER_LOCKDIR)/docker_save.lock
 $(shell mkdir -m 0777 -p $(DOCKER_LOCKDIR))
 $(shell [ -f $(DOCKER_LOCKFILE_SAVE) ] || (touch $(DOCKER_LOCKFILE_SAVE) && chmod 0777 $(DOCKER_LOCKFILE_SAVE)))
-$(shell [ -d $(DOCKER_ROOT) ] && docker run --rm -v $(DOCKER_ROOT)\:/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
+$(shell [ -d $(DOCKER_ROOT) ] && $(CONTAINER_DAEMON) run --rm -v $(DOCKER_ROOT)\:/mount $(DEFAULT_CONTAINER_REGISTRY)debian:bookworm sh -c 'rm -rf /mount/*')
 $(shell mkdir -p $(DOCKER_ROOT))
 
 ifeq ($(DOCKER_BUILDER_MOUNT),)
@@ -337,6 +348,30 @@ else
 DOCKER_PRIVMODE := --privileged
 endif
 
+# TODO: Maybe use subuid of user instead of random 16384 UID and GID?
+ifeq ($(USE_PODMAN), y)
+DOCKER_RUN := sudo podman run --rm=true --privileged --init \
+    -v $(DOCKER_BUILDER_MOUNT) \
+    -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
+    -w $(DOCKER_BUILDER_WORKDIR) \
+    $(SONIC_BUILD_MEMORY_FLAGS) \
+    -e "http_proxy=$(http_proxy)" \
+    -e "https_proxy=$(https_proxy)" \
+    -e "no_proxy=$(no_proxy)" \
+    -e "BUILD_USER=$(USER)" \
+    -e "BUILD_HOSTNAME=$(shell echo $$HOSTNAME)" \
+	--user builder \
+	--uidmap=0:0:65535 \
+	--gidmap=0:0:65535 \
+	--uidmap=+2000:$(shell id -u):1 \
+	--gidmap=+2000:$(shell id -g):1 \
+	--uidmap=+$(shell id -u):16384:1 \
+	--gidmap=+$(shell id -g):16384:1 \
+    -i$(shell { if [ -t 0 ]; then echo t; fi }) \
+	--ulimit nofile=524288:1048576 \
+	--ulimit nproc=-1:-1 \
+    $(SONIC_BUILDER_EXTRA_CMDLINE)
+else
 DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
@@ -348,6 +383,7 @@ DOCKER_RUN := docker run --rm=true $(DOCKER_PRIVMODE) --init \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
     --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
+endif
 
 # Mount the $(DOCKER_ROOT) to /var/lib/docker in the slave container, the overlay fs is not supported as dockerd root folder.
 ifneq ($(filter $(SONIC_SLAVE_DOCKER_DRIVER),overlay overlay2),)
@@ -394,7 +430,11 @@ endif
 # User name and tag for "docker-*" images created by native dockerd mode.
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_USERNAME = $(USER_LC)
+ifeq ($(USE_PODMAN), y)
+DOCKER_USERTAG = $(SLAVE_BASE_TAG)
+else
 DOCKER_USERTAG = $(SLAVE_TAG)
+endif
 else
 DOCKER_USERNAME = sonic
 DOCKER_USERTAG = latest
@@ -473,7 +513,7 @@ ifneq ($(strip $(SONIC_CONFIG_USE_DOCKER_CACHE)),y)
 DOCKER_NO_CACHE_FLAG = --no-cache
 endif
 
-DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
+DOCKER_SLAVE_BASE_BUILD = $(CONTAINER_DAEMON) build $(DOCKER_NO_CACHE_FLAG) \
 		    -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		    --build-arg http_proxy=$(http_proxy) \
 		    --build-arg https_proxy=$(https_proxy) \
@@ -483,7 +523,7 @@ DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
-DOCKER_BASE_PULL = docker pull \
+DOCKER_BASE_PULL = $(CONTAINER_DAEMON) pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
 DOCKER_USER_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
@@ -502,7 +542,7 @@ DOCKER_USER_PULL = docker pull \
 DOCKER_SLAVE_BASE_INSPECT = \
 	{ \
 		echo Checking sonic-slave-base image: $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG); \
-		docker inspect --type image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) &> /dev/null; \
+		$(CONTAINER_DAEMON) inspect --type image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) &> /dev/null; \
 	}
 
 DOCKER_SLAVE_BASE_PULL_REGISTRY = \
@@ -512,7 +552,7 @@ DOCKER_SLAVE_BASE_PULL_REGISTRY = \
 		$(DOCKER_BASE_PULL); \
 	} && \
 	{ \
-		docker tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) && \
+		$(CONTAINER_DAEMON) tag $(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) && \
 		$(COLLECT_DOCKER); \
 	}\
 
@@ -654,7 +694,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
-.PHONY: sonic-slave-build sonic-slave-bash init reset
+.PHONY: sonic-slave-bash init reset
 
 
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
@@ -689,11 +729,19 @@ endif
 endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
+ifeq ($(USE_PODMAN), n)
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
+endif
 
+ifeq ($(USE_PODMAN), y)
+	$(Q)$(DOCKER_RUN) \
+		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
+		bash -c "sudo chown 0:0 /dev/null; $(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+else
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
 		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+endif
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
@@ -712,6 +760,17 @@ endif
 	$(Q)$(OVERLAY_MODULE_CHECK)
 	$(Q)$(SONIC_SLAVE_BASE_BUILD)
 
+ifeq ($(USE_PODMAN), y)
+sonic-slave-bash : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash
+
+sonic-slave-run : sonic-slave-base-build
+	$(Q)$(DOCKER_RUN) $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+
+showtag:
+	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
+else
+.PHONY: sonic-slave-build
 sonic-slave-build : sonic-slave-base-build
 	$(Q)$(SONIC_SLAVE_USER_BUILD)
 
@@ -724,6 +783,7 @@ sonic-slave-run : sonic-slave-build
 showtag:
 	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+endif
 
 init :
 	$(Q)git submodule update --init --recursive

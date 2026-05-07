@@ -42,11 +42,12 @@ prepare_installer_disk()
 
     tmpdir=$(mktemp -d)
 
-    mount -o loop $INSTALLER_DISK $tmpdir
+	sudo chmod 0666 /dev/kvm
+    guestmount -a $INSTALLER_DISK -m /dev/sda $tmpdir
 
     cp $INSTALLER $tmpdir/onie-installer.bin
 
-    umount $tmpdir
+    guestunmount $tmpdir
 }
 
 wait_kvm_ready()

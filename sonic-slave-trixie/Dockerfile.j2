@@ -348,6 +348,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
+        guestmount \
         qemu-kvm \
         libvirt-clients \
         python3-pexpect \
@@ -801,3 +802,16 @@ RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin@0.35.1
 {% with DEBIAN_VERSION='trixie' %}
 {% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
 {% endwith %}
+
+RUN groupadd -f -r -g 2000 builder
+
+RUN useradd builder -l -u 2000 -g 2000 -d /var/builder -m -s /bin/bash
+
+RUN gpasswd -a builder docker
+
+# Config git for stg
+RUN su builder -c "git config --global user.name builder"
+RUN su builder -c "git config --global user.email builder@contoso.com"
+
+# Add user to sudoers
+RUN echo "builder ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
