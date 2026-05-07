@@ -325,6 +325,8 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
 class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     """SFP thermal interface class"""
     THRESHOLDS_CACHE_INTERVAL_SEC = 5
+    TEMP_CACHE_INTERVAL_SEC = 1
+    TEMP_STALE_SEC = 30
     MIN_VALID_SETPOINT = 30.0
     DEFAULT_SETPOINT = 62.0
 
@@ -334,6 +336,9 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._max_temperature = None
         self._threshold_info = {}
         self._threshold_info_time = 0
+        self._intf_name = None
+        self._temp = None
+        self._temp_read_time = 0
         self._invalid_setpoint_logged = False
         self._state_db = None
         ThermalBase.__init__(self)
@@ -380,10 +385,63 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     def is_replaceable(self):
         return True
 
+    def _resolve_intf_name(self):
+        if self._intf_name:
+            return self._intf_name
+        self._intf_name = PortIndexMapper().get_interface_name(
+            self._sfp.get_position_in_parent()
+        )
+        return self._intf_name
+
     def get_temperature(self):
         if not self.get_presence():
+            self._intf_name = None
             return None
-        temp = self._sfp.get_temperature()
+
+        if time.monotonic() - self._temp_read_time < self.TEMP_CACHE_INTERVAL_SEC:
+            self._update_min_max_temp(self._temp)
+            return self._temp
+
+        intf_name = self._resolve_intf_name()
+        if not intf_name:
+            thermal_syslogger.log_warning(
+                f"Failed to get interface name for port {self._sfp.get_position_in_parent()}; "
+                f"temperature will not be available."
+            )
+            return None
+
+        db = self._get_state_db()
+        key = f"TRANSCEIVER_DOM_TEMPERATURE|{intf_name}"
+        data = db.get_all(db.STATE_DB, key) or {}
+
+        temp_str = data.get("temperature")
+        try:
+            temp = float(temp_str) if temp_str not in (None, "", "N/A") else None
+        except (TypeError, ValueError):
+            temp = None
+
+        last_update = data.get("last_update_time")
+        if temp is not None and last_update:
+            try:
+                age = time.time() - time.mktime(time.strptime(last_update, "%a %b %d %H:%M:%S %Y"))
+                if age > self.TEMP_STALE_SEC:
+                    thermal_syslogger.log_warning(
+                        f"Stale TRANSCEIVER_DOM_TEMPERATURE for {intf_name} "
+                        f"(age={age:.0f}s); ignoring"
+                    )
+                    temp = None
+            except ValueError:
+                thermal_syslogger.log_error(
+                    f"Failed to parse last_update_time '{last_update}' for {intf_name}"
+                )
+        elif temp is not None:
+            thermal_syslogger.log_warning(
+                f"TRANSCEIVER_DOM_TEMPERATURE for {intf_name} missing last_update_time; "
+                f"accepting without staleness check"
+            )
+
+        self._temp = temp
+        self._temp_read_time = time.monotonic()
         self._update_min_max_temp(temp)
         return temp
 
