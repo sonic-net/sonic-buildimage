@@ -29,8 +29,8 @@ $(DOCKER_TELEMETRY_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                            $(LIBYANG_PY3)
 
 $(DOCKER_TELEMETRY_SIDECAR)_CONTAINER_NAME = telemetry-sidecar
-$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -t --privileged --pid=host
-$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -t --pid=host
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:ro
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
