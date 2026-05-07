@@ -9,6 +9,10 @@ module sonic-bmp {
         prefix stypes;
     }
 
+    import ietf-inet-types {
+        prefix inet;
+    }
+
     organization
         "SONiC";
 
@@ -17,8 +21,39 @@ module sonic-bmp {
 
     description "BMP YANG Module for SONiC OS";
 
+    revision 2026-01-02 {
+        description "Add BMP collector configuration parameters.";
+    }
+
     revision 2024-03-20 {
         description "First Revision";
+    }
+
+    typedef afi-safi-type {
+        type enumeration {
+            enum ipv4_unicast {
+                description "IPv4 unicast address family.";
+            }
+            enum ipv6_unicast {
+                description "IPv6 unicast address family.";
+            }
+            enum ipv4_multicast {
+                description "IPv4 multicast address family.";
+            }
+            enum ipv6_multicast {
+                description "IPv6 multicast address family.";
+            }
+            enum l2vpn_evpn {
+                description "L2VPN EVPN address family.";
+            }
+            enum ipv4_vpn {
+                description "IPv4 VPN address family.";
+            }
+            enum ipv6_vpn {
+                description "IPv6 VPN address family.";
+            }
+        }
+        description "Combined Address Family Identifier (AFI) and Subsequent Address Family Identifier (SAFI).";
     }
 
     container sonic-bmp {
@@ -26,6 +61,19 @@ module sonic-bmp {
         container BMP {
 
             description "BGP Monitoring Protocol (BMP) table dump configuration.";
+
+            container global {
+                description "Global BMP settings applied across all targets.";
+
+                leaf mirror-buffer-limit {
+                    type uint64 {
+                        range "0..4294967294";
+                    }
+                    units "bytes";
+                    default "4294967214";
+                    description "Maximum memory used for buffered mirroring messages. Applies globally to all targets.";
+                }
+            }
 
             container table {
 
@@ -48,9 +96,130 @@ module sonic-bmp {
                 }
 
             }
-
         }
 
-    }
+        container BMP_TARGET {
 
+            description "BMP monitoring target configuration.";
+
+            list BMP_TARGET_LIST {
+                key "name";
+
+                description "List of BMP monitoring targets.";
+
+                leaf name {
+                    type string {
+                        length "1..64";
+                    }
+                    description "Name of the BMP monitoring target.";
+                }
+
+                leaf mirror {
+                    type boolean;
+                    default false;
+                    description "Enable or disable BMP route mirroring for this target.";
+                }
+
+                leaf stats-interval {
+                    type uint32 {
+                        range "100..86400000";
+                    }
+                    units "milliseconds";
+                    description "Interval between BMP statistics messages sent to the collector.";
+                }
+            }
+        }
+
+        container BMP_TARGET_COLLECTOR {
+
+            description "BMP collector (outgoing session) configuration.";
+
+            list BMP_TARGET_COLLECTOR_LIST {
+                key "target_name ip port";
+
+                description "List of BMP collectors associated with BMP targets.";
+
+                leaf target_name {
+                    type leafref {
+                        path "../../../BMP_TARGET/BMP_TARGET_LIST/name";
+                    }
+                    description "Reference to the BMP target this collector belongs to.";
+                }
+
+                leaf ip {
+                    type inet:ip-address;
+                    description "IP address of the BMP collector.";
+                }
+
+                leaf port {
+                    type inet:port-number;
+                    description "TCP port on which the BMP collector accepts connections.";
+                }
+
+                leaf min-retry {
+                    type uint32 {
+                        range "100..86400000";
+                    }
+                    units "milliseconds";
+                    default 30000;
+                    description "Minimum interval between retries when establishing the BMP session.";
+                }
+
+                leaf max-retry {
+                    type uint32 {
+                        range "100..86400000";
+                    }
+                    units "milliseconds";
+                    default 720000;
+                    description "Maximum interval between retries when establishing the BMP session.";
+                }
+
+                leaf source-interface {
+                    type stypes:interface_name;
+                    description "Interface whose address is used as the source for the outgoing BMP session.";
+                }
+            }
+        }
+
+        container BMP_TARGET_AFI_SAFI {
+
+            description "Per-address-family BMP monitoring configuration.";
+
+            list BMP_TARGET_AFI_SAFI_LIST {
+                key "target_name afi_safi_name";
+
+                description "List of address-family-specific BMP monitoring entries per target.";
+
+                leaf target_name {
+                    type leafref {
+                        path "../../../BMP_TARGET/BMP_TARGET_LIST/name";
+                    }
+                    description "Reference to the BMP target this entry belongs to.";
+                }
+
+                leaf afi_safi_name {
+                    type afi-safi-type;
+                    description "Address family (AFI/SAFI) this monitoring policy applies to.";
+                }
+
+                leaf adj-rib-in-pre {
+                    type boolean;
+                    default false;
+                    description "Enable or disable sending of pre-policy Adj-RIB-In state to the collector.";
+                }
+
+                leaf adj-rib-in-post {
+                    type boolean;
+                    default false;
+                    description "Enable or disable sending of post-policy Adj-RIB-In state to the collector.";
+                }
+
+                leaf loc-rib {
+                    type boolean;
+                    default false;
+                    description "Enable or disable sending of Loc-RIB state to the collector.";
+                }
+            }
+        }
+    }
 }
