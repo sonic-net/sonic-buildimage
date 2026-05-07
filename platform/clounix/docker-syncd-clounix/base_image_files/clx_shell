@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec -it syncd clx_shell "$@"

@@ -1,0 +1,36 @@
+ARG bldver
+
+FROM docker.clounix.com/software/platform/tools/nb-knet/build-env:$bldver
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Add user
+ARG user
+ARG uid
+ARG guid
+ARG hostname
+ARG homedir
+ARG workdir
+
+ENV BUILD_HOSTNAME $hostname
+ENV USER $user
+
+RUN groupadd -f -r -g $guid $user
+
+RUN useradd $user -l -u $uid -g $guid -d $homedir -m -s /bin/bash
+RUN usermod -aG root $user
+
+#Setup dotfiles
+
+# Add user to sudoers
+RUN echo "$user ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
+USER $user
+
+# set environment variables.
+ENV HOME $homedir
+ENV PATH $PATH:/var/$user/.local/bin
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:$workdir/build/usr/lib
+
+# Define default command.
+CMD ["bash"]
