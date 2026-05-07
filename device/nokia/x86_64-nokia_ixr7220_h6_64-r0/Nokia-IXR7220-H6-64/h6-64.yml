@@ -56,6 +56,7 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 8192
             stat_custom_receive0_management_mode: 1
+            sai_pfc_dlr_init_capability: 2
             sai_pkt_trim_queue_index: 4
             # disable DSCP modification for TCs not present in TC_TO_DSCP_MAP
             sai_pkt_dscp_modification_disable: 1
