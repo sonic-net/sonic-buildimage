@@ -32,16 +32,21 @@ def _parse_client_certs() -> List[Dict[str, str]]:
             entries = json.loads(raw)
             if not isinstance(entries, list):
                 raise ValueError("GNMI_CLIENT_CERTS must be a JSON array")
-            normalized: List[Dict[str, str]] = []
+            normalized: list = []
             for e in entries:
                 if not isinstance(e, dict):
                     raise ValueError(f"Each entry must be an object: {e!r}")
                 if "cname" not in e or "role" not in e:
                     raise ValueError(f"Each entry needs 'cname' and 'role': {e}")
                 cname = str(e.get("cname", "")).strip()
-                role = str(e.get("role", "")).strip()
+                role_raw = e.get("role", "")
+                if isinstance(role_raw, list):
+                    role = [str(r).strip() for r in role_raw if str(r).strip()]
+                else:
+                    s = str(role_raw).strip()
+                    role = [s] if s else []
                 if not cname or not role:
-                    raise ValueError(f"'cname' and 'role' must be non-empty strings: {e}")
+                    raise ValueError(f"'cname' and 'role' must be non-empty: {e}")
                 normalized.append({"cname": cname, "role": role})
             return normalized
         except (json.JSONDecodeError, ValueError) as exc:
@@ -51,7 +56,7 @@ def _parse_client_certs() -> List[Dict[str, str]]:
     cname = os.getenv("TELEMETRY_CLIENT_CNAME", "").strip()
     role = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly").strip()
     if cname:
-        return [{"cname": cname, "role": role}]
+        return [{"cname": cname, "role": [role]}]
     return []
 
 
@@ -174,14 +179,42 @@ def _ensure_user_auth_cert() -> None:
             logger.log_error("Failed to set TELEMETRY|gnmi.user_auth=cert")
 
 
-def _ensure_cname_present(cname: str, role: str) -> None:
+def _normalize_role(value) -> List[str]:
+    """Normalize a role value from CONFIG_DB into a canonical List[str].
+
+    Handles:
+      - list (correct format from ConfigDBConnector leaf-list) → as-is
+      - plain string "admin" → ["admin"]
+      - JSON-encoded string '["admin","readonly"]' → ["admin", "readonly"]
+    """
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if not isinstance(value, str) or not value.strip():
+        return []
+    s = value.strip()
+    if s.startswith("["):
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return [s]
+
+
+def _ensure_cname_present(cname: str, role: List[str]) -> None:
     key = f"GNMI_CLIENT_CERT|{cname}"
     entry = db_hgetall(key)
-    if not entry:
-        if db_hset(key, "role", role):
-            logger.log_notice(f"Created {key} with role={role}")
+    stored_role = entry.get("role") if entry else None
+    if entry and isinstance(stored_role, list) and _normalize_role(stored_role) == role:
+        return
+    if db_hset(key, "role", role):
+        if entry:
+            logger.log_notice(f"Updated {key} role={role} (was: {entry.get('role')})")
         else:
-            logger.log_error(f"Failed to create {key}")
+            logger.log_notice(f"Created {key} with role={role}")
+    else:
+        logger.log_error(f"Failed to set {key}")
 
 
 def _ensure_cname_absent(cname: str) -> None:
@@ -265,17 +298,13 @@ def ensure_sync() -> bool:
     _cleanup_stale_service_unit()
     branch_name = _get_branch_name()
 
-    if branch_name in ("202411", "202412", "202505"):
-        # For 202411/202412/202505 branches, use the branch-specific container_checker
-        container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-        # For 202411/202412/202505 branches, use the branch-specific service_checker
-        service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
-    else:
-        # For other branches, use the default container_checker
-        container_checker_src = "/usr/share/sonic/systemd_scripts/container_checker"
-        # For other branches, use the default service_checker
-        service_checker_src = "/usr/share/sonic/systemd_scripts/service_checker.py"
+    if branch_name not in ("202411", "202412", "202505"):
+        logger.log_error(f"Unsupported branch '{branch_name}'; aborting sync to trigger rollback")
+        return False
 
+    # For supported branches, use the branch-specific container_checker and service_checker
+    container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
+    service_checker_src = f"/usr/share/sonic/systemd_scripts/service_checker.py_{branch_name}"
     items: List[SyncItem] = SYNC_ITEMS + [
         SyncItem(container_checker_src, "/bin/container_checker"),
         SyncItem(service_checker_src, HOST_SERVICE_CHECKER),

@@ -189,22 +189,22 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
-    # Mock _get_branch_name to return "master" by default (avoids real file/nsenter I/O)
-    # Use "master" because it falls through to the default (non-branch-specific) path.
-    monkeypatch.setattr(ss, "_get_branch_name", lambda: "master")
+    # Mock _get_branch_name to return "202412" by default (avoids real file/nsenter I/O)
+    # Use "202412" because it is in the supported branch list.
+    monkeypatch.setattr(ss, "_get_branch_name", lambda: "202412")
 
     # Reset the one-shot cleanup flag so each test starts fresh
     ss._stale_unit_cleaned = False
     monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
 
-    # Provide a default container_checker in both filesystems so the auto-appended
+    # Provide the branch-specific container_checker in both filesystems so the auto-appended
     # SyncItem from ensure_sync() is always satisfied and is a no-op.
-    container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"default-checker"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"default-checker"
     host_fs["/bin/container_checker"] = b"default-checker"
 
-    # Provide a default service_checker.py in both filesystems so the auto-appended
+    # Provide the branch-specific service_checker.py in both filesystems so the auto-appended
     # SyncItem from ensure_sync() is always satisfied and is a no-op.
-    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"default-service-checker"
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"default-service-checker"
     host_fs["/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"] = b"default-service-checker"
 
     return ss, container_fs, host_fs, commands, config_db
@@ -425,7 +425,7 @@ def test_reconcile_enables_user_auth_and_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     # Set module-level flags directly (they're read inside reconcile)
     ss.GNMI_VERIFY_ENABLED = True
-    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": ["gnmi_show_readonly"]}]
 
     # Precondition: empty DB
     assert config_db == {}
@@ -434,16 +434,16 @@ def test_reconcile_enables_user_auth_and_cname(ss):
 
     assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
     # CNAME hash must exist with role=gnmi_show_readonly
-    assert config_db.get("GNMI_CLIENT_CERT|fake-infra-ca.test.example.com", {}).get("role") == "gnmi_show_readonly"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-infra-ca.test.example.com", {}).get("role") == ["gnmi_show_readonly"]
 
 
 def test_reconcile_disabled_removes_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     ss.GNMI_VERIFY_ENABLED = False
-    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": ["gnmi_show_readonly"]}]
 
     # Seed an existing entry to be removed
-    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
+    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": ["gnmi_show_readonly"]}
 
     ss.reconcile_config_db_once()
 
@@ -453,15 +453,78 @@ def test_reconcile_multiple_cnames(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     ss.GNMI_VERIFY_ENABLED = True
     ss.GNMI_CLIENT_CERTS = [
-        {"cname": "fake-client.test.example.com", "role": "admin"},
-        {"cname": "fake-server.test.example.com", "role": '["gnmi_show_readonly","admin"]'},
+        {"cname": "fake-client.test.example.com", "role": ["admin"]},
+        {"cname": "fake-server.test.example.com", "role": ["gnmi_show_readonly", "admin"]},
     ]
     assert config_db == {}
     ss.reconcile_config_db_once()
 
     assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
-    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == "admin"
-    assert config_db.get("GNMI_CLIENT_CERT|fake-server.test.example.com", {}).get("role") == '["gnmi_show_readonly","admin"]'
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
+    assert config_db.get("GNMI_CLIENT_CERT|fake-server.test.example.com", {}).get("role") == ["gnmi_show_readonly", "admin"]
+
+def test_reconcile_rewrites_stale_json_string_role(ss):
+    """Reconcile must rewrite a stale JSON-string role into a proper list for YANG compliance."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": ["admin"]},
+    ]
+
+    # Seed a stale entry with old JSON-string format — stored as a string, not a list
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": '["admin"]'}
+
+    ss.reconcile_config_db_once()
+
+    # Must be rewritten as a proper list so YANG leaf-list validation passes
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
+
+def test_reconcile_rewrites_plain_string_role(ss):
+    """Reconcile must rewrite a plain-string role into a list for YANG leaf-list compliance."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": ["gnmi_show_readonly"]},
+    ]
+
+    # Seed entry with old plain-string format (causes YANG 'Duplicated instance' errors)
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    # Must be rewritten as a proper list
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["gnmi_show_readonly"]
+
+def test_reconcile_overwrites_when_role_differs(ss):
+    """Reconcile must overwrite when the stored role differs from the desired one."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": ["admin", "gnmi_show_readonly"]},
+    ]
+
+    # Seed an entry with a different role
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": ["admin"]}
+
+    ss.reconcile_config_db_once()
+
+    # Must be overwritten with the new role list
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin", "gnmi_show_readonly"]
+
+def test_reconcile_skips_when_role_matches(ss):
+    """Reconcile should not rewrite if the role already matches."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": ["admin"]},
+    ]
+
+    # Seed an entry that already matches
+    config_db["GNMI_CLIENT_CERT|fake-client.test.example.com"] = {"role": ["admin"]}
+
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == ["admin"]
 
 # ─────────────────────────── Tests for _parse_client_certs ───────────────────────────
 
@@ -494,15 +557,22 @@ class TestParseClientCerts:
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '[{"cname": "client.gbl", "role": "admin"}]'
         })
-        assert certs == [{"cname": "client.gbl", "role": "admin"}]
+        assert certs == [{"cname": "client.gbl", "role": ["admin"]}]
 
     def test_valid_json_multiple_entries(self):
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '[{"cname": "a.gbl", "role": "admin"}, {"cname": "b.gbl", "role": "readonly"}]'
         })
         assert len(certs) == 2
-        assert certs[0] == {"cname": "a.gbl", "role": "admin"}
-        assert certs[1] == {"cname": "b.gbl", "role": "readonly"}
+        assert certs[0] == {"cname": "a.gbl", "role": ["admin"]}
+        assert certs[1] == {"cname": "b.gbl", "role": ["readonly"]}
+
+    def test_role_as_json_list(self):
+        """role provided as a JSON array should be preserved as a list."""
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "s.gbl", "role": ["gnmi_show_readonly", "admin"]}]'
+        })
+        assert certs == [{"cname": "s.gbl", "role": ["gnmi_show_readonly", "admin"]}]
 
     def test_non_array_json_falls_back_to_legacy(self):
         certs = self._import_with_env({
@@ -510,48 +580,48 @@ class TestParseClientCerts:
             "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
             "GNMI_CLIENT_ROLE": "readonly",
         })
-        assert certs == [{"cname": "legacy.gbl", "role": "readonly"}]
+        assert certs == [{"cname": "legacy.gbl", "role": ["readonly"]}]
 
     def test_invalid_json_falls_back_to_legacy(self):
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": "not-json!",
             "TELEMETRY_CLIENT_CNAME": "fallback.gbl",
         })
-        assert certs == [{"cname": "fallback.gbl", "role": "gnmi_show_readonly"}]
+        assert certs == [{"cname": "fallback.gbl", "role": ["gnmi_show_readonly"]}]
 
     def test_entry_not_dict_falls_back(self):
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '["not-a-dict"]',
             "TELEMETRY_CLIENT_CNAME": "fb.gbl",
         })
-        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
 
     def test_entry_missing_role_falls_back(self):
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '[{"cname": "x.gbl"}]',
             "TELEMETRY_CLIENT_CNAME": "fb.gbl",
         })
-        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
 
     def test_entry_empty_cname_falls_back(self):
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '[{"cname": "  ", "role": "admin"}]',
             "TELEMETRY_CLIENT_CNAME": "fb.gbl",
         })
-        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+        assert certs == [{"cname": "fb.gbl", "role": ["gnmi_show_readonly"]}]
 
     def test_legacy_single_entry(self):
         certs = self._import_with_env({
             "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
             "GNMI_CLIENT_ROLE": "admin",
         })
-        assert certs == [{"cname": "legacy.gbl", "role": "admin"}]
+        assert certs == [{"cname": "legacy.gbl", "role": ["admin"]}]
 
     def test_legacy_default_role(self):
         certs = self._import_with_env({
             "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
         })
-        assert certs == [{"cname": "legacy.gbl", "role": "gnmi_show_readonly"}]
+        assert certs == [{"cname": "legacy.gbl", "role": ["gnmi_show_readonly"]}]
 
     def test_no_env_returns_empty(self):
         certs = self._import_with_env({})
@@ -561,7 +631,7 @@ class TestParseClientCerts:
         certs = self._import_with_env({
             "GNMI_CLIENT_CERTS": '[{"cname": " client.gbl ", "role": " admin "}]'
         })
-        assert certs == [{"cname": "client.gbl", "role": "admin"}]
+        assert certs == [{"cname": "client.gbl", "role": ["admin"]}]
 
 
 # ─────────────────────────── Tests for _get_branch_name ───────────────────────────
@@ -679,22 +749,18 @@ def test_ensure_sync_uses_202411_checker(ss):
     assert host_fs["/bin/container_checker"] == b"checker-202411"
 
 
-def test_ensure_sync_uses_default_checker(ss):
-    """When branch is not 202411, ensure_sync uses the default container_checker."""
+def test_ensure_sync_aborts_for_unsupported_branch(ss):
+    """When branch is not in the supported list, ensure_sync aborts and returns False."""
     ss_mod, container_fs, host_fs, commands, config_db = ss
 
-    # _get_branch_name already returns "202412" from fixture default
+    ss_mod._get_branch_name = lambda: "master"
 
-    # Provide the default checker in the container and a different one on host
-    container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"checker-default"
     host_fs["/bin/container_checker"] = b"old-checker"
 
-    # Clear SYNC_ITEMS to focus only on the container_checker logic
-    ss_mod.SYNC_ITEMS[:] = []
-
     ok = ss_mod.ensure_sync()
-    assert ok is True
-    assert host_fs["/bin/container_checker"] == b"checker-default"
+    assert ok is False
+    # Nothing should be synced
+    assert host_fs["/bin/container_checker"] == b"old-checker"
 
 
 def test_ensure_sync_202411_missing_checker_fails(ss):
@@ -737,21 +803,18 @@ def test_ensure_sync_uses_202411_service_checker(ss):
     assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202411"
 
 
-def test_ensure_sync_uses_default_service_checker(ss):
-    """When branch is not 202411, ensure_sync uses the default service_checker.py."""
+def test_ensure_sync_aborts_service_checker_for_unsupported_branch(ss):
+    """When branch is not in the supported list, ensure_sync aborts without syncing service_checker."""
     ss_mod, container_fs, host_fs, commands, config_db = ss
 
-    # _get_branch_name already returns "202412" from fixture default
+    ss_mod._get_branch_name = lambda: "master"
 
-    # Provide the default service_checker in the container and a different one on host
-    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"service-checker-default"
     host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
 
-    ss_mod.SYNC_ITEMS[:] = []
-
     ok = ss_mod.ensure_sync()
-    assert ok is True
-    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-default"
+    assert ok is False
+    # service_checker should NOT be overwritten
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"old-service-checker"
 
 
 def test_ensure_sync_202411_missing_service_checker_fails(ss):

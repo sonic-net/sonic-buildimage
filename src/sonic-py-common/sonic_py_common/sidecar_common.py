@@ -10,7 +10,7 @@ import hashlib
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Union
 
 from swsscommon.swsscommon import ConfigDBConnector
 from sonic_py_common import logger as log
@@ -121,7 +121,7 @@ def db_hgetall(key: str) -> Dict[str, str]:
         return {}
 
 
-def db_hset(key: str, field: str, value: str) -> bool:
+def db_hset(key: str, field: str, value: Union[str, List[str]]) -> bool:
     """Set a single field value in CONFIG_DB hash."""
     db = _get_config_db()
     if db is None:
