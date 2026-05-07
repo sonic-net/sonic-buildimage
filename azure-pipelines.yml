@@ -262,3 +262,15 @@ stages:
       displayName: "Publish Trivy scan results"
       condition: always()
       continueOnError: true
+
+- stage: TrivyScan
+  displayName: "Trivy Vulnerability Scan (per platform)"
+  dependsOn: Build
+  condition: in(dependencies.Build.result, 'Succeeded', 'SucceededWithIssues', 'Failed')
+  jobs:
+  - template: .azure-pipelines/trivy-scan-platform.yml
+    parameters:
+      platform: broadcom
+  - template: .azure-pipelines/trivy-scan-platform.yml
+    parameters:
+      platform: mellanox

@@ -1,0 +1,148 @@
+# .azure-pipelines/trivy-scan-platform.yml
+#
+# Trivy vulnerability scan for a SONiC platform — covers both:
+# 1. All docker-*.gz container images in the platform artifact
+# 2. Host rootfs extracted from the platform .bin installer
+#
+# Parameterized by platform (e.g. broadcom, mellanox).
+# Runs in a stage that depends on the Build stage.
+#
+# Phase 1: exit-code 1, continueOnError: true (does not block merge)
+
+parameters:
+- name: platform
+  type: string
+  # e.g. broadcom, mellanox
+- name: parallelism
+  type: number
+  default: 4
+  # max concurrent Trivy image scans within this job
+
+jobs:
+- job: trivy_scan_${{ parameters.platform }}
+  displayName: "Trivy scan (${{ parameters.platform }})"
+  pool: sonic-ubuntu-1c
+  continueOnError: true
+  timeoutInMinutes: 120
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 1
+
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      artifact: sonic-buildimage.${{ parameters.platform }}
+    displayName: "Download sonic-buildimage.${{ parameters.platform }} artifact"
+
+  - script: |
+      set -ex
+      TRIVY_VERSION="0.70.0"
+      curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+      sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
+      sudo apt install -y squashfs-tools
+      trivy --version
+      unsquashfs --version
+    displayName: "Install Trivy and squashfs-tools"
+
+  - script: |
+      set -x
+      # Download DB once; all parallel scans reuse it with --skip-db-update
+      trivy image --download-db-only --no-progress
+    displayName: "Download Trivy vulnerability DB"
+
+  - script: |
+      set -x
+      RESULTS_DIR=$(Build.ArtifactStagingDirectory)/trivy-results
+      mkdir -p "$RESULTS_DIR"
+      OVERALL_EXIT=0
+      MAX_PARALLEL=${{ parameters.parallelism }}
+      pids=()
+
+      for img in $(Pipeline.Workspace)/target/docker-*.gz; do
+        [ -f "$img" ] || continue
+        name=$(basename "$img" .gz)
+        outfile="$RESULTS_DIR/${name}.txt"
+        echo "--- Queuing scan: $name ---"
+        trivy image \
+          --input "$img" \
+          --skip-db-update \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --format table \
+          --no-progress \
+          --timeout 15m \
+          --output "$outfile" &
+        pids+=("$!")
+        # Throttle: wait for oldest job when at MAX_PARALLEL
+        while [ ${#pids[@]} -ge $MAX_PARALLEL ]; do
+          wait "${pids[0]}" || OVERALL_EXIT=1
+          pids=("${pids[@]:1}")
+        done
+      done
+
+      # Drain remaining background jobs
+      for pid in "${pids[@]}"; do
+        wait "$pid" || OVERALL_EXIT=1
+      done
+
+      echo ""
+      echo "=== Container Scan Summary (${{ parameters.platform }}) ==="
+      for f in "$RESULTS_DIR"/docker-*.txt; do
+        name=$(basename "$f" .txt)
+        total=$(grep "^Total:" "$f" | head -1 || echo "Clean")
+        echo "  $name: $total"
+      done
+
+      exit $OVERALL_EXIT
+    displayName: "Trivy scan all containers (${{ parameters.platform }}, parallelism=${{ parameters.parallelism }})"
+
+  - script: |
+      set -x
+      BIN=$(Pipeline.Workspace)/target/sonic-${{ parameters.platform }}.bin
+      WORKDIR=$(Agent.TempDirectory)/trivy-rootfs-${{ parameters.platform }}
+      RESULTS=$(Build.ArtifactStagingDirectory)/trivy-results
+
+      mkdir -p "$WORKDIR"
+
+      echo "Extracting installer payload..."
+      PAYLOAD_SIZE=$(grep -a 'payload_image_size=' "$BIN" | head -1 | cut -d= -f2)
+      sed -e '1,/^exit_marker$/d' "$BIN" | head -c "$PAYLOAD_SIZE" \
+        | tar xf - -C "$WORKDIR" installer/fs.zip
+
+      [ -f "$WORKDIR/installer/fs.zip" ] || { echo "ERROR: installer/fs.zip not found — check .bin format for ${{ parameters.platform }}"; exit 1; }
+
+      echo "Extracting fs.squashfs..."
+      python3 -c "
+      import zipfile
+      z = zipfile.ZipFile('$WORKDIR/installer/fs.zip')
+      z.extract('fs.squashfs', '$WORKDIR/')
+      print('extracted')
+      "
+
+      echo "Unsquashing rootfs..."
+      unsquashfs -d "$WORKDIR/rootfs" "$WORKDIR/fs.squashfs"
+
+      echo "Scanning rootfs..."
+      trivy rootfs \
+        "$WORKDIR/rootfs" \
+        --severity HIGH,CRITICAL \
+        --ignore-unfixed \
+        --exit-code 1 \
+        --format table \
+        --no-progress \
+        --timeout 30m \
+        --output "$RESULTS/rootfs-${{ parameters.platform }}.txt"
+      TRIVY_EXIT=$?
+
+      echo ""
+      echo "=== Rootfs Scan Results (${{ parameters.platform }}) ==="
+      cat "$RESULTS/rootfs-${{ parameters.platform }}.txt"
+      exit $TRIVY_EXIT
+    displayName: "Trivy scan rootfs (${{ parameters.platform }})"
+
+  - publish: $(Build.ArtifactStagingDirectory)/trivy-results
+    artifact: trivy-scan-${{ parameters.platform }}
+    displayName: "Publish Trivy scan results (${{ parameters.platform }})"
+    condition: always()
+    continueOnError: true
