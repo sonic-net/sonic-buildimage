@@ -48,5 +48,22 @@ echo "Executing SONIC Organization Extensions"
 ## Place your Organization specific code / scipts here ... 
 
 
+# Install boot-control files
+echo "Installing boot-control files..."
+if [ -d "files/image_config/boot-control" ]; then
+    sudo mkdir -p $FILESYSTEM_ROOT/usr/local/bin
+    sudo cp files/image_config/boot-control/set_sonic_boot.sh $FILESYSTEM_ROOT/usr/local/bin/set_sonic_boot.sh
+    sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/set_sonic_boot.sh
+
+    sudo mkdir -p $FILESYSTEM_ROOT/usr/lib/systemd/system
+    sudo cp files/image_config/boot-control/sonic-boot-next.service $FILESYSTEM_ROOT/usr/lib/systemd/system/sonic-boot-next.service
+    
+    # Enable the service
+    # Note: systemctl enable in chroot might require /proc mounted, which build_debian.sh handles
+    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic-boot-next.service
+else
+    echo "Warning: files/image_config/boot-control not found!"
+fi
+
 echo "SONIC Organization Extensions - Done"
 
