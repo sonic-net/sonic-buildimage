@@ -305,6 +305,7 @@ setup(
     data_files=[
         ('yang-models', ['./yang-models/'+y for y in yang_files]),
         ('cvlyang-models', ['./cvlyang-models/'+y for y in yang_files]),
+        ('platform-yang-templates', glob.glob('./platform-yang-templates/*.j2')),
     ],
     zip_safe=False,
 )

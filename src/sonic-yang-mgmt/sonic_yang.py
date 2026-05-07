@@ -5,6 +5,7 @@ from json import dump
 from glob import glob
 from sonic_yang_ext import SonicYangExtMixin, SonicYangException
 from sonic_yang_path import SonicYangPathMixin
+import os
 
 """
 Yang schema and data tree python APIs based on libyang python
@@ -110,6 +111,13 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _load_schema_modules(self, yang_dir):
         py = glob(yang_dir+"/*.yang")
+        # Load generated platform-specific YANG models
+        generated_yang_dir = "/usr/local/platform-yang-models"
+        if os.path.exists(generated_yang_dir):
+            generated_yang = glob(generated_yang_dir+"/*.yang")
+            py.extend(generated_yang)
+            self.sysLog(msg=f"Loading {len(generated_yang)} platform-specific YANG models from {generated_yang_dir}",
+                        debug=syslog.LOG_INFO)
         for file in py:
             try:
                 self._load_schema_module(file)

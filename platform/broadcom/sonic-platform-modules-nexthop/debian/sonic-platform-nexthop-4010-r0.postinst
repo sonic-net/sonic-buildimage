@@ -1,3 +1,33 @@
+#!/bin/bash
+
+# Generate platform-specific YANG models from templates
+TEMPLATE_DIR="/usr/local/platform-yang-templates"
+OUTPUT_DIR="/usr/local/platform-yang-models"
+# Dynamically determine platform name from the script name.
+SCRIPT_NAME=$(basename "$0")
+PLATFORM_SUFFIX=$(echo "$SCRIPT_NAME" | sed 's/^sonic-platform-//' | sed 's/\.postinst$//')
+PLATFORM_NAME="x86_64-${PLATFORM_SUFFIX}"
+PLATFORM_NAME=$(echo "$PLATFORM_NAME" | sed 's/nexthop-/nexthop_/')
+FEATURE_CAPABILITIES_JSON="/usr/share/sonic/device/${PLATFORM_NAME}/feature_capabilities.json"
+
+# Check if all required components exist
+if [ -d "$TEMPLATE_DIR" ] && [ -f "$FEATURE_CAPABILITIES_JSON" ] && command -v j2 >/dev/null 2>&1; then
+    mkdir -p "$OUTPUT_DIR"
+
+    # Generate YANG files from templates
+    for template in "$TEMPLATE_DIR"/*.yang.j2; do
+        [ -e "$template" ] || continue
+        filename=$(basename "$template" .j2)
+        output_file="$OUTPUT_DIR/$filename"
+
+        if j2 "$template" "$FEATURE_CAPABILITIES_JSON" > "$output_file" 2>/dev/null; then
+            echo "Generated: $output_file"
+        else
+            echo "Warning: Failed to generate $output_file" >&2
+        fi
+    done
+fi
+
 depmod -a
 systemctl enable rename-mgmt-interface.service
 systemctl start rename-mgmt-interface.service
