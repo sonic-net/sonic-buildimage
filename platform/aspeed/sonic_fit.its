@@ -63,6 +63,17 @@
 				algo = "sha256";
 			};
 		};
+		fdt-nokia-h6-128-r0 {
+			description = "Flattened Device Tree blob for Nokia AST2720";
+			data = /incbin/("__DTB_PATH_ASPEED__/nokia-ast2700-h6-128-r0.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
 		fdt-nexthop-b27-r0 {
 			description = "Flattened Device Tree blob for NextHop AST2700";
 			data = /incbin/("__DTB_PATH_ASPEED__/nexthop-b27-r0.dtb");
@@ -94,6 +105,15 @@
 			description = "SONiC for Aspeed AST2700 EVB";
 			kernel = "kernel-1";
 			fdt = "fdt-ast2700-evb";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-nokia-h6-128-r0 {
+			description = "SONiC for Nokia AST2720";
+			kernel = "kernel-1";
+			fdt = "fdt-nokia-h6-128-r0";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";
