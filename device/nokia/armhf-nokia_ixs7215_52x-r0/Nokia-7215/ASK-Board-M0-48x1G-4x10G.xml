@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-09-28-1.13" profile="Askboard" dsig="md5" sid="f310abdc-8815-4e41-9fca-d057d4d1a83b">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2026-02-08-1.14" profile="Askboard" dsig="md5" sid="2ace33cf-0e66-4389-9678-1d7eb2bcecfe">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
