@@ -1,0 +1,41 @@
+From 2f6c3a9c7f1fa4c8f263cc5de763b95f662f5f1a Mon Sep 17 00:00:00 2001
+From: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+Date: Wed, 25 Feb 2026 03:00:25 +0200
+Subject: [PATCH] Fix split script exec scope for newer Python.
+
+Signed-off-by: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+---
+ devtools/public/split_sdk_to_source_components.py | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/devtools/public/split_sdk_to_source_components.py b/devtools/public/split_sdk_to_source_components.py
+index b6e5ec7..e95a64b 100755
+--- a/devtools/public/split_sdk_to_source_components.py
++++ b/devtools/public/split_sdk_to_source_components.py
+@@ -201,17 +201,18 @@ def extract_meson_settings(file_path, file_name, file_type, scan_definitions):
+ 
+     result_mapping = {}
+ 
++    parsed_vars = {}
+     # Load the definitions using exec() - A clear benefit of meson's python-like syntax
+     try:
+-        exec(config_content)
++        exec(config_content, {}, parsed_vars)
+     except Exception as e:
+         logging.error(f"Failed to parse {file_type} \"{file_name}\" - {e}")
+         exit(1)
+ 
+     # Parse the lists of modules
+     for meson_key, key_type, result_name in scan_definitions:
+-        if not meson_key in locals():
++        if meson_key not in parsed_vars:
+             logging.error(f"Failed to find the list of allowed {key_type} for {file_type}: {file_name}")
+             exit(1)
+-        result_mapping[result_name] = locals()[meson_key]
++        result_mapping[result_name] = parsed_vars[meson_key]
+ 
+     return result_mapping
+ 
+-- 
+2.25.1
+
