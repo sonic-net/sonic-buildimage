@@ -28,6 +28,95 @@ PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 #    ;;
 #esac
 
+# IOS-style '?' inline help for SONiC show commands.
+# Pressing ? while typing a show command displays available completions
+# immediately (like Cisco IOS) with descriptions, without inserting the
+# character.  For non-show commands, ? inserts literally as usual.
+# Uses Click's zsh_complete protocol to get help strings alongside values.
+_cli_question_mark() {
+    # Grab the current command line text and cursor position from readline.
+    # READLINE_LINE = full text the user has typed so far
+    # READLINE_POINT = cursor position (character offset from start)
+    local line="$READLINE_LINE" point="$READLINE_POINT"
+
+    # If the command being typed is NOT "show", just insert a literal '?'
+    # at the cursor position and advance the cursor — normal typing behavior.
+    if [[ "${line%% *}" != "show" ]]; then
+        READLINE_LINE="${line:0:point}?${line:point}"
+        ((READLINE_POINT++))
+        return
+    fi
+
+    # --- From here on, the user is typing a "show" command ---
+
+    # Take the text from the start up to the cursor (ignore anything after).
+    # Split it into words, e.g. "show bgp " -> words=("show" "bgp").
+    local partial="${line:0:point}"
+    local -a words
+    read -ra words <<< "$partial"
+    # cword = index of the word being completed (Click needs this).
+    #   - If there's a trailing space, user is starting a NEW word
+    #   - If no trailing space, user is still typing the LAST word
+    local cword=${#words[@]}
+    [[ "$partial" != *" " ]] && ((cword--))
+
+    # Ask Click for completions using the zsh_complete protocol, which
+    # returns 3 lines per completion item:
+    #   line 1: type  ("plain", "dir", or "file")
+    #   line 2: value (the completion text, e.g. "neighbors")
+    #   line 3: help  (description string, or "_" if none)
+    # We pass COMP_WORDS (space-separated) and COMP_CWORD (index) as
+    # environment variables — this is how Click knows what to complete.
+    # Capture comp_words before changing IFS so words join with spaces.
+    local comp_words="${words[*]}"
+    local IFS=$'\n'
+    local -a lines
+    lines=($(COMP_WORDS="$comp_words" COMP_CWORD=$cword \
+             _SHOW_COMPLETE=zsh_complete show 2>/dev/null))
+
+    # Parse the triplets into parallel arrays: names[] and descs[].
+    # Also track the longest name for column alignment.
+    local -a names=() descs=()
+    local i maxlen=0
+    for (( i=0; i < ${#lines[@]}; i+=3 )); do
+        local ctype="${lines[i]}" cvalue="${lines[i+1]}" chelp="${lines[i+2]}"
+        [[ "$ctype" != "plain" && "$ctype" != "dir" && "$ctype" != "file" ]] && continue
+        [[ -z "$cvalue" ]] && continue
+        names+=("$cvalue")
+        [[ "$chelp" == "_" ]] && chelp=""
+        descs+=("$chelp")
+        (( ${#cvalue} > maxlen )) && maxlen=${#cvalue}
+    done
+
+    # Print a header that looks like the current prompt + what the user typed,
+    # e.g. "admin@sonic:~$ show bgp ?"
+    # PS1@P expands the prompt string, then we strip \x01/\x02 markers that
+    # readline uses for color codes — they'd show as garbled characters.
+    local prompt="${PS1@P}"
+    prompt="${prompt//[$'\x01'$'\x02']/}"
+    printf '%s%s?\n' "$prompt" "$partial"
+
+    # Print completions in IOS style: name and description in aligned columns.
+    #   neighbors  LLDP neighbor entries
+    #   table      LLDP neighbor table
+    if (( ${#names[@]} )); then
+        for (( i=0; i < ${#names[@]}; i++ )); do
+            if [[ -n "${descs[i]}" ]]; then
+                printf "  %-${maxlen}s  %s\n" "${names[i]}" "${descs[i]}"
+            else
+                printf "  %s\n" "${names[i]}"
+            fi
+        done
+    else
+        printf '  <CR>      \n'
+        printf '  >         Redirect it to a file\n'
+        printf '  >>        Redirect it to a file in append mode\n'
+        printf '  |         Pipe command output to filter\n'
+    fi
+}
+# Bind the '?' key to call our function instead of inserting the character.
+bind -x '"?": _cli_question_mark'
+
 # enable bash completion in interactive shells
 if ! shopt -oq posix; then
     if [ -f /usr/share/bash-completion/bash_completion ]; then
