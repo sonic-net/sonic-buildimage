@@ -1,7 +1,7 @@
-#
+#!/usr/bin/env python3
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,15 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Mellanox HW Management
+# __init__.py
+#
+# Platform-specific SONiC platform API for NVIDIA Aspeed AST2700 BMC
+#
 
-MLNX_HW_MANAGEMENT_VERSION = 7.0050.3005
-
-export MLNX_HW_MANAGEMENT_VERSION
-
-MLNX_HW_MANAGEMENT = hw-management_1.mlnx.$(MLNX_HW_MANAGEMENT_VERSION)_$(CONFIGURED_ARCH).deb
-$(MLNX_HW_MANAGEMENT)_SRC_PATH = $(PLATFORM_PATH)/hw-management
-$(MLNX_HW_MANAGEMENT)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
-SONIC_MAKE_DEBS += $(MLNX_HW_MANAGEMENT)
-
-MLNX_HW_MANAGEMENT_BMC = hw-management-bmc_1.mlnx.$(MLNX_HW_MANAGEMENT_VERSION)_$(CONFIGURED_ARCH).deb
+try:
+    from sonic_platform.platform import Platform
+    from sonic_platform.chassis import Chassis
+except ImportError as e:
+    raise ImportError(str(e) + " - required module not found")

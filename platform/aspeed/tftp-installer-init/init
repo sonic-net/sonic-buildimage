@@ -139,7 +139,7 @@ iface_has_ipv4() {
 bringup_network() {
     IFACE=eth0
     case "$onie_platform" in
-    arm64-aspeed_nvidia_ast2700_a1_bmc-r0)
+    arm64-aspeed_nvidia_ast2700_bmc-r0)
         # Reload ftgmac100 to ensure the driver is loaded and the interface is up
         rmmod ftgmac100 2>/dev/null || true
         ;;
