@@ -623,7 +623,24 @@ def test_hardware_checker():
             'voltage_max_threshold': '15',
             'power_overload': 'True',
             'power': '101.0'
-        }
+        },
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+        'PSU_INFO|PDB 2': {
+            'presence': 'True',
+            'status': 'False',
+        },
+        'PSU_INFO|PDB 3': {
+            'presence': 'False',
+            'status': 'True',
+        },
     })
 
     MockConnector.data.update({
@@ -721,6 +738,62 @@ def test_hardware_checker():
 
     assert 'liquid_cooling_6' in checker._info
     assert checker._info['liquid_cooling_6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 1' in checker._info
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 2' in checker._info
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'out of power' in checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_MSG]
+
+    assert 'PDB 3' in checker._info
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'missing' in checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_MSG].lower()
+
+
+def test_hardware_checker_pdb_ignore():
+    """PSU_INFO rows are skipped when the key name is listed in ignore_devices."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['PDB 1']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PDB 1' not in checker._info
+
+
+def test_hardware_checker_psu_pdb_ignore_both_skips_psu_check():
+    """When both 'psu' and 'pdb' are in ignore_devices, _check_psu_status returns without entries."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PSU 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['psu', 'pdb']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU 1' not in checker._info
 
 
 def test_config():
