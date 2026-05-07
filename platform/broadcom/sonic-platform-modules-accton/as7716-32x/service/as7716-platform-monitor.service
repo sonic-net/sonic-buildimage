@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7716-32X Platform Monitoring service
-Before=pmon.service
+Before=pmon.service system-health.service
 After=sysinit.target
 DefaultDependencies=no
 
