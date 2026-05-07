@@ -58,6 +58,19 @@
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
+#include <nexthopgroup/c-api/nexthopgroup_capi.h>
+#include <nexthopgroup/c_nexthopgroupfull.h>
+
+/* Global flag set by zebra --nhg-fib command-line option. */
+extern bool zebra_nhg_fib_enabled;
+
+/* FIB log level constants, aligned with fib::LogLevel in nexthopgroup_debug.h */
+enum fib_log_level {
+	FIB_LOG_LEVEL_DEBUG = 0,
+	FIB_LOG_LEVEL_INFO  = 1,
+	FIB_LOG_LEVEL_WARN  = 2,
+	FIB_LOG_LEVEL_ERROR = 3,
+};
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620
@@ -101,6 +114,8 @@ enum custom_nlmsg_types {
 	RTM_DELSRV6VPNROUTE		= 3001,
 	RTM_NEWSIDLIST			= 4000,
 	RTM_DELSIDLIST			= 4001,
+	RTM_NEWNHGFIB			= 5000,
+	RTM_DELNHGFIB			= 5001,
 };
 
 /* Custom Netlink attribute types */
@@ -127,7 +142,7 @@ enum custom_rtattr_encap_srv6 {
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_UNSPEC		= 0,
 	FPM_ROUTE_ENCAP_SRV6_VPN_SID			= 1,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR		= 2,
-	FPM_ROUTE_ENCAP_SRV6_PIC_ID			= 3,
+	FPM_ROUTE_ENCAP_SRV6_NH_RECEIVED_ID		= 3,
 	FPM_ROUTE_ENCAP_SRV6_NH_ID  			= 4,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_NAME		= 5,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_LEN		= 6,
@@ -167,6 +182,10 @@ enum custom_rtattr_srv6_localsid_action {
 	FPM_SRV6_LOCALSID_ACTION_UDT46				= 21,
 };
 
+enum custoem_rtattr_nexthop_group {
+	FPM_NHA_JSON_STR				= 2,
+};
+
 static const char *prov_name = "dplane_fpm_sonic";
 
 static atomic_bool fpm_cleaning_up;
@@ -178,6 +197,8 @@ struct fpm_nl_ctx {
 	bool connecting;
 	bool use_nhg;
 	bool use_route_replace;
+	bool use_nhg_fib;
+	enum fib_log_level fib_log_level;
 	struct sockaddr_storage addr;
 
 	/* data plane buffers. */
@@ -419,6 +440,50 @@ DEFUN(no_fpm_use_nhg, no_fpm_use_nhg_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(fpm_set_fib_log_level, fpm_set_fib_log_level_cmd,
+      "fpm fib-log-level <debug|info|warn|error>",
+      FPM_STR
+      "Set FIB library log level\n"
+      "Debug level (most verbose)\n"
+      "Info level\n"
+      "Warn level\n"
+      "Error level (least verbose)\n")
+{
+	enum fib_log_level level;
+	const char *level_str = argv[2]->text;
+
+	if (strcmp(level_str, "debug") == 0)
+		level = FIB_LOG_LEVEL_DEBUG;
+	else if (strcmp(level_str, "info") == 0)
+		level = FIB_LOG_LEVEL_INFO;
+	else if (strcmp(level_str, "warn") == 0)
+		level = FIB_LOG_LEVEL_WARN;
+	else if (strcmp(level_str, "error") == 0)
+		level = FIB_LOG_LEVEL_ERROR;
+	else {
+		vty_out(vty, "%% Invalid log level: %s\n", level_str);
+		return CMD_WARNING;
+	}
+
+	gfnc->fib_log_level = level;
+	fib_frr_set_log_level((int)level);
+	zlog_info("%s: FIB log level set to %s (%d)", __func__, level_str, (int)level);
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_fpm_set_fib_log_level, no_fpm_set_fib_log_level_cmd,
+      "no fpm fib-log-level [<debug|info|warn|error>]",
+      NO_STR
+      FPM_STR
+      "Set FIB library log level\n"
+      "Log level value\n")
+{
+	gfnc->fib_log_level = FIB_LOG_LEVEL_INFO; /* restore to default: INFO */
+	fib_frr_set_log_level(gfnc->fib_log_level);
+	zlog_info("%s: FIB log level reset to default (INFO)", __func__);
+	return CMD_SUCCESS;
+}
+
 DEFUN(fpm_reset_counters, fpm_reset_counters_cmd,
       "clear fpm counters",
       CLEAR_STR
@@ -577,6 +642,29 @@ DEFUN(fpm_show_counters_json, fpm_show_counters_json_cmd,
 	return CMD_SUCCESS;
 }
 
+static const char *fib_log_level_str(enum fib_log_level level)
+{
+	switch (level) {
+	case FIB_LOG_LEVEL_DEBUG: return "debug";
+	case FIB_LOG_LEVEL_INFO:  return "info";
+	case FIB_LOG_LEVEL_WARN:  return "warn";
+	case FIB_LOG_LEVEL_ERROR: return "error";
+	default:                  return "unknown";
+	}
+}
+
+DEFUN(fpm_show_fib_log_level, fpm_show_fib_log_level_cmd,
+      "show fpm fib-log-level",
+      SHOW_STR
+      FPM_STR
+      "Show current FIB library log level\n")
+{
+	vty_out(vty, "FIB log level: %d (%s)\n",
+		gfnc->fib_log_level,
+		fib_log_level_str(gfnc->fib_log_level));
+	return CMD_SUCCESS;
+}
+
 static int fpm_write_config(struct vty *vty)
 {
 	struct sockaddr_in *sin;
@@ -617,6 +705,12 @@ static int fpm_write_config(struct vty *vty)
 
 	if (!gfnc->use_route_replace) {
 		vty_out(vty, "no fpm use-route-replace\n");
+		written = 1;
+	}
+
+	if (gfnc->fib_log_level != FIB_LOG_LEVEL_INFO) {
+		vty_out(vty, "fpm fib-log-level %s\n",
+			fib_log_level_str(gfnc->fib_log_level));
 		written = 1;
 	}
 
@@ -1104,6 +1198,192 @@ static bool has_srv6_localsid_nexthop(struct zebra_dplane_ctx *ctx)
 }
 
 /**
+ * Construct C_NextHopGroupFull Object for nexthop group
+ * with multiple nexthops based on zebra information.
+ *
+ * @param c_nhg pointer of the object we're going to construct
+ * @param ctx pointer of zebra_dplane_ctx, we get zebra information from it
+ */
+static bool build_c_nexthopgroupfull_multi(struct C_NextHopGroupFull *c_nhg,
+					   struct zebra_dplane_ctx *ctx)
+{
+	memset(c_nhg, 0, sizeof(struct C_NextHopGroupFull));
+	const struct nexthop_group *nhg;
+
+	/* set id */
+	c_nhg->id = dplane_ctx_get_nhe_id(ctx);
+
+	/* set hash value */
+	nhg = dplane_ctx_get_nhe_ng(ctx);
+	uint32_t key = nexthop_group_hash_no_recurse(nhg);
+	c_nhg->key = key;
+
+	/* set nhg_flags */
+	c_nhg->nhg_flags = dplane_ctx_get_nhe_nhg_flags(ctx);
+	bool is_recurisve = false;
+	/*
+	 * For recursive NH, we keep the nexthop information for convergence handling
+	 */
+	if (CHECK_FLAG(c_nhg->nhg_flags, NEXTHOP_GROUP_RECURSIVE)) {
+		const struct nexthop *nh = nhg->nexthop;
+		memcpy(&c_nhg->gate, &nh->gate, sizeof(union g_addr));
+
+		/* set nexthop type */
+		c_nhg->type = nh->type;
+
+		is_recurisve = true;
+	}
+
+	/* set nh_grp_full_list */
+	const struct nh_grp_full *nh_grp_full_list = dplane_ctx_get_nhe_nh_grp_full(ctx);
+	for (uint32_t i = 0; i < dplane_ctx_get_nhe_nh_grp_full_count(ctx); i++) {
+		c_nhg->nh_grp_full_list[i].id = nh_grp_full_list[i].id;
+		c_nhg->nh_grp_full_list[i].weight = nh_grp_full_list[i].weight;
+		c_nhg->nh_grp_full_list[i].num_direct = nh_grp_full_list[i].num_direct;
+	}
+
+	/* set depends list */
+	const uint32_t *depends = dplane_ctx_get_nhe_depends(ctx);
+	for (uint32_t i = 0; i < dplane_ctx_get_nhe_depends_count(ctx); i++) {
+		c_nhg->depends[i] = depends[i];
+	}
+
+	/* set dependents list */
+	const uint32_t *dependents = dplane_ctx_get_nhe_dependents(ctx);
+	for (uint32_t i = 0; i < dplane_ctx_get_nhe_dependents_count(ctx); i++) {
+		c_nhg->dependents[i] = dependents[i];
+	}
+
+	return is_recurisve;
+}
+
+/**
+ * Construct C_NextHopGroupFull Object for nexthop group
+ * with singleton based on zebra information.
+ *
+ * @param c_nhg pointer of the object we're going to construct
+ * @param ctx pointer of zebra_dplane_ctx, we get zebra information from it
+ */
+static void build_c_nexthopgroupfull_singleton(struct C_NextHopGroupFull *c_nhg,
+					   struct zebra_dplane_ctx *ctx)
+{
+	memset(c_nhg, 0, sizeof(struct C_NextHopGroupFull));
+
+	/* set id */
+	c_nhg->id = dplane_ctx_get_nhe_id(ctx);
+
+	/* set hash value */
+	const struct nexthop_group *nhg = dplane_ctx_get_nhe_ng(ctx);
+	uint32_t key = nexthop_group_hash_no_recurse(nhg);
+	c_nhg->key = key;
+
+	/* set nhg_flags */
+	c_nhg->nhg_flags = dplane_ctx_get_nhe_nhg_flags(ctx);
+
+	const struct nexthop *nh = nhg->nexthop;
+	/* set nexthop type */
+	c_nhg->type = nh->type;
+
+	/* set nexthop vrf_id */
+	c_nhg->vrf_id = nh->vrf_id;
+
+	/* set nexthop interface index */
+	c_nhg->ifindex = nh->ifindex;
+
+	/* set nexthop label type, if any */
+	c_nhg->nh_label_type = nh->nh_label_type;
+
+	/* set nexthop bh_type or gateway address based on type */
+	if (c_nhg->type == NEXTHOP_TYPE_BLACKHOLE) {
+		c_nhg->bh_type = nh->bh_type;
+	} else {
+		memcpy(&c_nhg->gate, &nh->gate, sizeof(union g_addr));
+	}
+
+	/* set nexthop src */
+	memcpy(&c_nhg->src, &nh->src, sizeof(union g_addr));
+
+	/* set nexthop rmap src */
+	memcpy(&c_nhg->rmap_src, &nh->rmap_src, sizeof(union g_addr));
+
+	/* set nexthop weight */
+	c_nhg->weight = nh->weight;
+
+	/* set nexthop flags */
+	c_nhg->flags = nh->flags;
+
+	/* set depends list */
+	const uint32_t *depends = dplane_ctx_get_nhe_depends(ctx);
+	for (uint32_t i = 0; i < dplane_ctx_get_nhe_depends_count(ctx); i++) {
+		c_nhg->depends[i] = depends[i];
+	}
+
+	/* set dependents list */
+	const uint32_t *dependents = dplane_ctx_get_nhe_dependents(ctx);
+	for (uint32_t i = 0; i < dplane_ctx_get_nhe_dependents_count(ctx); i++) {
+		c_nhg->dependents[i] = dependents[i];
+	}
+
+	/* set nexthop srv6 information if present */
+	if (nh->nh_srv6 != NULL) {
+		/* Get the default SRv6 context which contains seg6's src IP */
+		struct zebra_srv6 *srv6 = zebra_srv6_get_default();
+
+		c_nhg->nh_srv6 = malloc(sizeof(struct C_nexthop_srv6));
+		if (c_nhg->nh_srv6) {
+			/* field copy from nexthop_srv6 to C_nexthop_srv6 */
+			/* seg6local_action */
+			c_nhg->nh_srv6->seg6local_action =
+				(enum C_seg6local_action_t)nh->nh_srv6->seg6local_action;
+
+			/* seg6local_ctx */
+			memcpy(&c_nhg->nh_srv6->seg6local_ctx, &nh->nh_srv6->seg6local_ctx,
+				sizeof(struct C_seg6local_context));
+
+			/* seg6_src */
+			c_nhg->nh_srv6->seg6_src = srv6->encap_src_addr;
+
+			/* seg6_segs */
+			c_nhg->nh_srv6->seg6_segs = NULL;  // clear the pointer to avoid pointing to old address
+			/* set nexthop_srv6 seg6_segs if present */
+			if (nh->nh_srv6->seg6_segs != NULL) {
+				size_t total_size = sizeof(struct C_seg6_seg_stack) +
+							nh->nh_srv6->seg6_segs->num_segs * sizeof(struct in6_addr);
+				c_nhg->nh_srv6->seg6_segs = malloc(total_size);
+				if (c_nhg->nh_srv6->seg6_segs) {
+					memcpy(c_nhg->nh_srv6->seg6_segs, nh->nh_srv6->seg6_segs, total_size);
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Free C_NextHopGroupFull Object.
+ *
+ * \param[in] c_nhg pointer of C_NextHopGroupFull Object.
+ */
+static void free_c_nexthopgroupfull(struct C_NextHopGroupFull *c_nhg)
+{
+	if (!c_nhg) {
+		return;
+	}
+
+	/* Free srv6 related memory if present */
+	if (c_nhg->nh_srv6) {
+		/* Free seg6_segs if present */
+		if (c_nhg->nh_srv6->seg6_segs) {
+			free(c_nhg->nh_srv6->seg6_segs);
+			c_nhg->nh_srv6->seg6_segs = NULL;
+		}
+
+		/* Free nh_srv6 itself */
+		free(c_nhg->nh_srv6);
+		c_nhg->nh_srv6 = NULL;
+	}
+}
+
+/**
  * Resets the SRv6 routes FPM flags so we send all SRv6 routes again.
  */
 static void fpm_srv6_route_reset(struct event *t)
@@ -1426,8 +1706,8 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	struct nlsock *nl;
 	int bytelen;
 	vrf_id_t vrf_id;
-	uint32_t pic_id = dplane_ctx_get_nhe_id(ctx);
-	uint32_t nhg_id = dplane_ctx_get_pic_nhe_id(ctx);
+	uint32_t nhg_id = dplane_ctx_get_nhe_id(ctx);
+	uint32_t nhg_received_id = dplane_ctx_get_nhe_received_id(ctx);
 	uint32_t table_id;
 
 	struct {
@@ -1506,7 +1786,7 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	if (!nest)
 		return false;
 
-    if (!nl_attr_put32(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_PIC_ID, pic_id)){
+    if (!nl_attr_put32(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_NH_RECEIVED_ID, nhg_received_id)){
 		return 0;
 	}
 
@@ -2383,6 +2663,165 @@ nexthop_done:
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+/**
+ * Next hop packet (full message) encoding helper function.
+ * This function is modified from function netlink_nexthop_msg_encode to
+ * encode the nexthopgroupfull JSON string to fpmsyncd.
+ *
+ * \param[in] cmd netlink command.
+ * \param[in] ctx dataplane context (information snapshot).
+ * \param[out] buf buffer to hold the packet.
+ * \param[in] buflen amount of buffer bytes.
+ * \param[in] fpm whether the message is for fpmsyncd.
+ *
+ * \returns -1 on failure, 0 when the msg doesn't fit entirely in the buffer
+ * otherwise the number of bytes written to buf.
+ */
+static ssize_t netlink_nexthopgroupfull_msg_encode(uint16_t cmd,
+					   const struct zebra_dplane_ctx *ctx,
+					   void *buf, size_t buflen, bool fpm)
+{
+	struct {
+		struct nlmsghdr n;
+		struct nhmsg nhm;
+		char buf[];
+	} *req = buf;
+
+	uint32_t id = dplane_ctx_get_nhe_id(ctx);
+	int type = dplane_ctx_get_nhe_type(ctx);
+	struct nlsock *nl =
+        kernel_netlink_nlsock_lookup(dplane_ctx_get_ns_sock(ctx));
+	char* json_str = NULL;
+	ssize_t ret = -1;
+
+	zlog_err("%s: START encode nhg_id=%u cmd=%s type=%s",
+		 __func__, id, nl_msg_type_to_str(cmd), zebra_route_string(type));
+
+	if (!id) {
+		zlog_err(
+			"%s: Failed trying to update a nexthop group in the kernel that does not have an ID",
+			__func__);
+		return -1;
+	}
+
+	/*
+	 * Nothing to do if the kernel doesn't support nexthop objects or
+	 * we dont want to install this type of NHG, but FPM may possible to
+	 * handle this.
+	 */
+	if (!fpm && !kernel_nexthops_supported()) {
+		if (IS_ZEBRA_DEBUG_KERNEL || IS_ZEBRA_DEBUG_NHG)
+			zlog_debug(
+				"%s: nhg_id %u (%s): kernel nexthops not supported, ignoring",
+				__func__, id, zebra_route_string(type));
+		return 0;
+	}
+
+	if (buflen < sizeof(*req))
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct nhmsg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	if (cmd == RTM_NEWNEXTHOP)
+		req->n.nlmsg_flags |= NLM_F_REPLACE;
+
+	req->n.nlmsg_type = cmd;
+	req->n.nlmsg_pid = nl->snl.nl_pid;
+
+	req->nhm.nh_family = AF_UNSPEC;
+
+	/* Put the nhe ID */
+	if (!nl_attr_put32(&req->n, buflen, NHA_ID, id))
+		return 0;
+
+	if (cmd == RTM_NEWNEXTHOP) {
+		/* Build C_NextHopGroupFull Object */
+		struct C_NextHopGroupFull c_nhg;
+
+		/*
+		 * We also distinguish between a "group" and a singleton similar
+		 * as what is done in netlink_nexthop_msg_encode.
+		 * For each case, we create C_NextHopGroupFull Object,
+		 * then convert it to C++ NextHopGroupFull Object and return its JSON string.
+		 *  multi case would be the following cases
+		 *   1. ctx has multiple paths
+		 *   2. single recursive path
+		 */
+		if (dplane_ctx_get_nhe_nh_grp_full_count(ctx) ||
+		    CHECK_FLAG(dplane_ctx_get_nhe_nhg_flags(ctx), NEXTHOP_GROUP_RECURSIVE)) {
+			/* multi nexthops case */
+			zlog_err("%s: nhg_id=%u multi-nexthop case, count=%u",
+				 __func__, id, dplane_ctx_get_nhe_nh_grp_full_count(ctx));
+
+			bool is_recursive = build_c_nexthopgroupfull_multi(&c_nhg, ctx);
+			json_str = nexthopgroupfull_json_from_c_nhg_multi(&c_nhg, dplane_ctx_get_nhe_nh_grp_full_count(ctx),
+								   dplane_ctx_get_nhe_depends_count(ctx), dplane_ctx_get_nhe_dependents_count(ctx),
+								   is_recursive);
+
+			if (!json_str) {
+				zlog_err(
+					"%s:Failed to convert C_NextHopGroupFull to JSON string in multi-nexthop case",
+					__func__);
+				free_c_nexthopgroupfull(&c_nhg);
+				return -1;
+			}
+		} else {
+			/* singleton case */
+			zlog_err("%s: nhg_id=%u singleton case", __func__, id);
+
+			// Set nh_family of nhm
+			afi_t afi = dplane_ctx_get_nhe_afi(ctx);
+			if (afi == AFI_IP)
+				req->nhm.nh_family = AF_INET;
+			else if (afi == AFI_IP6)
+				req->nhm.nh_family = AF_INET6;
+
+			build_c_nexthopgroupfull_singleton(&c_nhg, ctx);
+			json_str = nexthopgroupfull_json_from_c_nhg_singleton(&c_nhg, dplane_ctx_get_nhe_depends_count(ctx),
+									   dplane_ctx_get_nhe_dependents_count(ctx));
+
+			if (!json_str) {
+				zlog_err(
+					"%s: Failed to convert C_NextHopGroupFull to JSON string in singleton case",
+					__func__);
+				free_c_nexthopgroupfull(&c_nhg);
+				return -1;
+			}
+		}
+
+		/* Encode JSON string as attribute in message */
+		if (!nl_attr_put(&req->n, buflen, FPM_NHA_JSON_STR,
+					json_str, strlen(json_str) + 1)) {
+			zlog_err(
+				"%s: Failed to put nexthop group JSON into netlink message",
+				__func__);
+			goto cleanup;
+		}
+
+		ret = NLMSG_ALIGN(req->n.nlmsg_len);
+
+cleanup:
+		free(json_str);
+		free_c_nexthopgroupfull(&c_nhg);
+
+	} else if (cmd != RTM_DELNEXTHOP) {
+		zlog_err(
+			"%s: Nexthop group kernel update command (%d) does not exist",
+			__func__, cmd);
+		return -1;
+	}
+
+	if (IS_ZEBRA_DEBUG_KERNEL)
+		zlog_debug("%s: %s, id=%u", __func__, nl_msg_type_to_str(cmd), id);
+
+	zlog_err("%s: COMPLETE encode nhg_id=%u ret=%zd", __func__, id, ret);
+
+	return ret;
+}
+
 static ssize_t netlink_sidlist_msg_encode(int cmd,
 					   struct zebra_dplane_ctx *ctx,
 					   uint8_t *data, size_t datalen)
@@ -2571,27 +3010,51 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		break;
 
 	case DPLANE_OP_NH_DELETE:
-		rv = netlink_nexthop_msg_encode(RTM_DELNEXTHOP, ctx, nl_buf,
-						sizeof(nl_buf), true);
-		if (rv <= 0) {
-			zlog_err("%s: netlink_nexthop_msg_encode failed",
-				 __func__);
-			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
-			return 0;
+		if (fnc->use_nhg_fib) {
+			rv = netlink_nexthopgroupfull_msg_encode(RTM_DELNHGFIB, ctx, nl_buf,
+							sizeof(nl_buf), true);
+			if (rv <= 0) {
+				zlog_err("%s: netlink_nexthopgroupfull_msg_encode failed",
+					 __func__);
+				return 0;
+			}
+		} else {
+			rv = netlink_nexthop_msg_encode(RTM_DELNEXTHOP, ctx, nl_buf,
+							sizeof(nl_buf), true);
+			if (rv <= 0) {
+				zlog_err("%s: netlink_nexthop_msg_encode failed",
+					 __func__);
+				return 0;
+			}
 		}
+
+		zlog_err("%s: NHG DELETE id=%u", __func__, dplane_ctx_get_nhe_id(ctx));
 
 		nl_buf_len = (size_t)rv;
 		break;
 	case DPLANE_OP_NH_INSTALL:
 	case DPLANE_OP_NH_UPDATE:
-		rv = netlink_nexthop_msg_encode(RTM_NEWNEXTHOP, ctx, nl_buf,
-						sizeof(nl_buf), true);
-		if (rv <= 0) {
-			zlog_err("%s: netlink_nexthop_msg_encode failed",
-				 __func__);
-			dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_FAILURE);
-			return 0;
+		if (fnc->use_nhg_fib) {
+			rv = netlink_nexthopgroupfull_msg_encode(RTM_NEWNHGFIB, ctx, nl_buf,
+							sizeof(nl_buf), true);
+			if (rv <= 0) {
+				zlog_err("%s: netlink_nexthopgroupfull_msg_encode failed",
+					 __func__);
+				return 0;
+			}
+		} else {
+			rv = netlink_nexthop_msg_encode(RTM_NEWNEXTHOP, ctx, nl_buf,
+							sizeof(nl_buf), true);
+			if (rv <= 0) {
+				zlog_err("%s: netlink_nexthop_msg_encode failed",
+					 __func__);
+				return 0;
+			}
 		}
+
+		zlog_err("%s: NHG %s id=%u", __func__,
+			  op == DPLANE_OP_NH_INSTALL ? "INSTALL" : "UPDATE",
+			  dplane_ctx_get_nhe_id(ctx));
 
 		nl_buf_len = (size_t)rv;
 		break;
@@ -3434,6 +3897,12 @@ static int fpm_nl_new(struct event_loop *tm)
 	int rv;
 
 	gfnc = calloc(1, sizeof(*gfnc));
+	gfnc->fib_log_level = FIB_LOG_LEVEL_INFO; /* Default: INFO */
+	gfnc->use_nhg_fib = zebra_nhg_fib_enabled;
+	if (gfnc->use_nhg_fib)
+		zlog_info("%s: NHG Full encoding enabled via --nhg-fib", __func__);
+	fib_frr_set_log_level(gfnc->fib_log_level);
+	zlog_info("%s: FIB log level initialized to %d (INFO)", __func__, gfnc->fib_log_level);
 	rv = dplane_provider_register(prov_name, DPLANE_PRIO_POSTPROCESS,
 				      DPLANE_PROV_FLAG_THREADED, fpm_nl_start,
 				      fpm_nl_process, fpm_nl_finish, gfnc,
@@ -3446,6 +3915,7 @@ static int fpm_nl_new(struct event_loop *tm)
 	install_element(ENABLE_NODE, &fpm_show_status_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_cmd);
 	install_element(ENABLE_NODE, &fpm_show_counters_json_cmd);
+	install_element(ENABLE_NODE, &fpm_show_fib_log_level_cmd);
 	install_element(ENABLE_NODE, &fpm_reset_counters_cmd);
 	install_element(CONFIG_NODE, &fpm_set_address_cmd);
 	install_element(CONFIG_NODE, &no_fpm_set_address_cmd);
@@ -3453,13 +3923,59 @@ static int fpm_nl_new(struct event_loop *tm)
 	install_element(CONFIG_NODE, &no_fpm_use_nhg_cmd);
 	install_element(CONFIG_NODE, &fpm_use_route_replace_cmd);
 	install_element(CONFIG_NODE, &no_fpm_use_route_replace_cmd);
+	install_element(CONFIG_NODE, &fpm_set_fib_log_level_cmd);
+	install_element(CONFIG_NODE, &no_fpm_set_fib_log_level_cmd);
 
 	return 0;
+}
+
+/*
+ * FRR-compatible callback to forward logs from FIB to FRR's logging system.
+ */
+static void frr_log_forwarder(int level,
+                              const char *file,
+                              int line,
+                              const char *func,
+                              const char *fmt,
+                              va_list args)
+{
+    int current_log_level = fib_frr_get_log_level();
+
+    /*
+     * We would skip logging message if
+     * level is below current log level and debug zebra fpm is not enabled
+     */
+    if (level < current_log_level &&  !IS_ZEBRA_DEBUG_FPM) {
+        return;
+    }
+
+    /*
+     * Direct stderr — FRR convention for FIB path debugging
+     * We can't use FRR's zlog here because no API for forwarding va_list, and
+     * we want to preserve the original log level and formatting as much as possible.
+     */
+    fprintf(stderr, "[ZEBRA:FIB] %s:%d (%s) ", file, line, func);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    vfprintf(stderr, fmt, args_copy);
+    va_end(args_copy);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
+/* Called during FRR daemon initialization */
+static void fib_init_logging(void) {
+    /* Register callback BEFORE any fib_LOG() calls */
+    fib_frr_register_callback(frr_log_forwarder);
+
+    zlog_info("%s : FIB logging callback registered, log level will be applied after configuration load",
+			  __func__);
 }
 
 static int fpm_nl_init(void)
 {
 	hook_register(frr_late_init, fpm_nl_new);
+	fib_init_logging();
 	return 0;
 }
 
