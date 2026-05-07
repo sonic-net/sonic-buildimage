@@ -40,6 +40,11 @@ module sonic-route-map {
     description
         "SONIC Route map YANG";
 
+    revision 2026-04-22 {
+        description
+            "Added set_as_path_replace leaf to support 'set as-path replace' in route-map.";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -331,6 +336,11 @@ module sonic-route-map {
                 leaf set_asn_list{
                     type string;
                     description "Set list of ASN values";
+                }
+
+                leaf set_as_path_replace {
+                    type string;
+                    description "Replace AS in the as-path. Format: '<OLD_ASN> <NEW_ASN>' or 'any <NEW_ASN>'";
                 }
 
                 leaf-list set_community_inline {
