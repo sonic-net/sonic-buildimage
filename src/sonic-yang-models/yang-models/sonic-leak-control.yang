@@ -1,0 +1,117 @@
+module sonic-leak-control {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-leak-control";
+    prefix leak_ctrl;
+
+    description "YANG model for BMC liquid-cooling leak control policy and leak sensor profiles";
+
+    revision 2026-04-16 {
+        description "Initial version";
+    }
+
+    typedef leak-action {
+        type enumeration {
+            enum syslog_only {
+                description "Log the event; no Switch-Host power action taken";
+            }
+            enum graceful_shutdown {
+                description "Issue a graceful shutdown to Switch-Host; force power-off after timeout if unresponsive";
+            }
+            enum power_off {
+                description "Immediately power off Switch-Host via platform API";
+            }
+        }
+        description "Action to take on a leak event";
+    }
+
+    typedef policy-state {
+        type enumeration {
+            enum enabled {
+                description "Leak policy enforcement is enabled";
+            }
+            enum disabled {
+                description "Leak policy enforcement is disabled";
+            }
+        }
+        description "Enable/disable state for a leak policy";
+    }
+
+    container sonic-leak-control {
+
+        container LEAK_CONTROL_POLICY {
+            description "Leak control policy configuration for BMC on liquid-cooled platforms";
+
+            container policy {
+                description "Singleton leak control policy record";
+
+                leaf system_leak_policy {
+                    type policy-state;
+                    default enabled;
+                    description "Enable or disable system leak policy enforcement in BMC";
+                }
+
+                leaf system_critical_leak_action {
+                    type leak-action;
+                    default power_off;
+                    description "Action taken when a critical system leak is detected";
+                }
+
+                leaf system_minor_leak_action {
+                    type leak-action;
+                    default syslog_only;
+                    description "Action taken when a minor system leak is detected";
+                }
+
+                leaf rack_mgr_leak_policy {
+                    type policy-state;
+                    default enabled;
+                    description "Enable or disable rack manager leak policy enforcement in BMC";
+                }
+
+                leaf rack_mgr_critical_alert_action {
+                    type leak-action;
+                    default syslog_only;
+                    description "Action taken when a critical rack manager alert is received";
+                }
+
+                leaf rack_mgr_minor_alert_action {
+                    type leak-action;
+                    default syslog_only;
+                    description "Action taken when a minor rack manager alert is received";
+                }
+            }
+        } /* end of container LEAK_CONTROL_POLICY */
+
+        container LEAK_PROFILE {
+            description "Leak sensor profile configuration per sensor type";
+
+            list LEAK_PROFILE_LIST {
+                key "sensor_type";
+                description "Tunable parameters per leak sensor type (e.g., rope, flex_pcb, spot)";
+
+                leaf sensor_type {
+                    type string {
+                        length 1..64;
+                    }
+                    description "Leak sensor type identifier (e.g., rope, flex_pcb, spot)";
+                }
+
+                leaf leak_type {
+                    type string {
+                        length 1..64;
+                    }
+                    description "Descriptive name of the leak sensor type";
+                }
+
+                leaf max_minor_duration_sec {
+                    type uint32;
+                    description "Maximum time in seconds a minor leak may persist before being escalated to critical. Set to 0 if the platform does not support this escalation.";
+                }
+            }
+        } /* end of container LEAK_PROFILE */
+
+    } /* end of container sonic-leak-control */
+
+} /* end of module sonic-leak-control */

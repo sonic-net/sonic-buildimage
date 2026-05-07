@@ -437,4 +437,14 @@ if [ -f /var/log/fsck.log.gz ]; then
     rm -f /var/log/fsck.log.gz
 fi
 
+# On Switch-BMC systems, create the persistent BMC event log directory and
+# file on /host (eMMC-backed) so that leak, power and host-state events
+# survive reboots.  /var/log is on tmpfs so it is NOT used for this.
+PLATFORM_ENV_CONF="/usr/share/sonic/device/$platform/platform_env.conf"
+if [ -f "$PLATFORM_ENV_CONF" ] && grep -q '^switch_bmc=1' "$PLATFORM_ENV_CONF" 2>/dev/null; then
+    mkdir -p /host/bmc
+    touch /host/bmc/event.log
+    chmod 640 /host/bmc/event.log
+fi
+
 exit 0

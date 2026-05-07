@@ -70,6 +70,27 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/90-dhcp6-systcl.conf.j2,/etc/sysctl.d/90-dhcp6-systcl.conf \
     -t /usr/share/sonic/templates/dhclient.conf.j2,/etc/dhcp/dhclient.conf \
 "
+
+# On BMC/Switch-Host platforms, pass bmc.json to sonic-cfggen via -j so
+# interfaces.j2 can render the BMC interface stanza. Platform-specific
+# bmc.json takes priority; fall back to /etc/sonic/bmc.json only when the
+# platform_env.conf signals a BMC role (switch_bmc=1 or switch_host=1).
+PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+BMC_JSON=""
+if [[ -n "$PLATFORM" && -f "/usr/share/sonic/device/$PLATFORM/bmc.json" ]]; then
+    BMC_JSON="/usr/share/sonic/device/$PLATFORM/bmc.json"
+elif [[ -f "/etc/sonic/bmc.json" ]]; then
+    # Only use the global fallback when this device has a BMC role
+    PLATFORM_ENV_CONF="/usr/share/sonic/platform/platform_env.conf"
+    if [[ -f "$PLATFORM_ENV_CONF" ]] && \
+       { grep -q '^switch_bmc=1' "$PLATFORM_ENV_CONF" || grep -q '^switch_host=1' "$PLATFORM_ENV_CONF"; }; then
+        BMC_JSON="/etc/sonic/bmc.json"
+    fi
+fi
+if [[ -n "$BMC_JSON" ]]; then
+    CFGGEN_PARAMS="$CFGGEN_PARAMS -j $BMC_JSON"
+fi
+
 sonic-cfggen $CFGGEN_PARAMS
 
 [[ -f /var/run/dhclient.eth0.pid ]] && kill `cat /var/run/dhclient.eth0.pid` && rm -f /var/run/dhclient.eth0.pid

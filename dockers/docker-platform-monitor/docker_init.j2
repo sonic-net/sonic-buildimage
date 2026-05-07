@@ -148,7 +148,17 @@ if [ -e $MODULAR_CHASSISDB_CONF_FILE ] && [[ $disaggregated_chassis -ne 1 ]]; th
     IS_MODULAR_CHASSIS=1
 fi
 
-confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS}"
+# Determine if this pmon instance is running on the Switch BMC.
+# switch_bmc=1 is set in platform_env.conf on BMC systems.
+IS_SWITCH_BMC=0
+if [ -e $PLATFORM_ENV_CONF_FILE ]; then
+    bmc_val=$(grep -s '^switch_bmc=' $PLATFORM_ENV_CONF_FILE | cut -d= -f2 | tr -d '[:space:]')
+    if [[ "$bmc_val" == "1" ]]; then
+        IS_SWITCH_BMC=1
+    fi
+fi
+
+confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS, \"IS_SWITCH_BMC\":$IS_SWITCH_BMC}"
 
 if [ -e $PMON_DAEMON_CONTROL_FILE ];
 then

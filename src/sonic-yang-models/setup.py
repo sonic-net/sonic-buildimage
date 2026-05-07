@@ -144,6 +144,7 @@ yang_files = [
     'sonic-interface.yang',
     'sonic-kdump.yang',
     'sonic-kubernetes_master.yang',
+    'sonic-leak-control.yang',
     'sonic-lldp.yang',
     'sonic-logger.yang',
     'sonic-loopback-interface.yang',

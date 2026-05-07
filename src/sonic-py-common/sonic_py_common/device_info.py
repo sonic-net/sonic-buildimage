@@ -23,6 +23,7 @@ PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
 BMC_DATA_FILE = 'bmc.json'
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
+GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
 # Fabric port configuration file names
 FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
@@ -696,6 +697,32 @@ def is_dpu():
     return False
 
 
+def is_platform_env_key_present(key):
+    """Return True if <key>=1 is set in platform_env.conf, False otherwise."""
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    if platform_env_conf_file_path is None:
+        return False
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == key:
+                return tokens[1].strip() == '1'
+    return False
+
+
+def is_switch_host():
+    """Return True if this system is the Switch-Host (switch_host=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_host')
+
+
+def is_switch_bmc():
+    """Return True if this system is the Switch BMC (switch_bmc=1 in platform_env.conf)."""
+    return is_platform_env_key_present('switch_bmc')
+
+
+
 def is_supervisor():
     platform_env_conf_file_path = get_platform_env_conf_file_path()
     if platform_env_conf_file_path is None:
@@ -985,16 +1012,63 @@ def is_warm_restart_enabled(container_name):
 
 
 def get_bmc_data():
-    json_file = None
+    """
+    Get BMC network configuration.
+
+    Checks the platform-specific bmc.json in the platform directory first;
+    if absent, falls back to the SONiC-wide global bmc.json (/etc/sonic/bmc.json).
+    This allows a platform to override the global defaults with platform-specific
+    IP addresses.
+
+    Returns:
+        A dict with bmc_if_name, bmc_if_addr, bmc_addr and bmc_net_mask,
+        or None if no bmc.json is found.
+    """
     try:
         platform_path = get_path_to_platform_dir()
-        json_file = os.path.join(platform_path, BMC_DATA_FILE)
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
+        if platform_path:
+            json_file = os.path.join(platform_path, BMC_DATA_FILE)
+            if os.path.exists(json_file):
+                with open(json_file, "r") as f:
+                    return json.load(f)
+        if os.path.exists(GLOBAL_BMC_DATA_FILE):
+            with open(GLOBAL_BMC_DATA_FILE, "r") as f:
                 return json.load(f)
         return None
     except Exception:
         return None
+
+
+def get_bmc_address():
+    """
+    Return the IP address of the BMC.
+
+    Reads 'bmc_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-Host to connect to the BMC's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_addr')
+
+
+def get_switch_host_address():
+    """
+    Return the IP address of the switch-host's BMC interface.
+
+    Reads 'bmc_if_addr' from bmc.json (/etc/sonic/bmc.json or platform bmc.json).
+    Use this on a Switch-BMC to connect to the switch-host's Redis over TCP.
+
+    Returns:
+        IP address string, or None if bmc.json is unavailable.
+    """
+    bmc_data = get_bmc_data()
+    if not bmc_data:
+        return None
+    return bmc_data.get('bmc_if_addr')
 
 
 def get_bmc_build_config():

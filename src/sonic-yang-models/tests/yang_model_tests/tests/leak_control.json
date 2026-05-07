@@ -1,0 +1,32 @@
+{
+    "LEAK_CONTROL_POLICY_DEFAULT": {
+        "desc": "Load leak control policy with default enabled settings"
+    },
+    "LEAK_CONTROL_POLICY_DISABLED": {
+        "desc": "Load leak control policy with both policies disabled"
+    },
+    "LEAK_CONTROL_POLICY_POWER_OFF_ON_CRITICAL": {
+        "desc": "Load leak control policy with graceful_shutdown on rack_mgr critical and power_off on system critical"
+    },
+    "LEAK_CONTROL_POLICY_INVALID_ACTION": {
+        "desc": "Load leak control policy with an invalid action value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["system_critical_leak_action"]
+    },
+    "LEAK_CONTROL_POLICY_INVALID_POLICY_STATE": {
+        "desc": "Load leak control policy with an invalid policy state value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["system_leak_policy"]
+    },
+    "LEAK_PROFILE_VALID": {
+        "desc": "Load valid leak profile entries for rope and spot sensor types"
+    },
+    "LEAK_PROFILE_ZERO_DURATION": {
+        "desc": "Load leak profile with max_minor_duration_sec set to 0 (escalation disabled)"
+    },
+    "LEAK_PROFILE_INVALID_SENSOR_TYPE_EMPTY": {
+        "desc": "Load leak profile with empty sensor_type key (violates length constraint)",
+        "eStrKey": "Length",
+        "eStr": ["sensor_type"]
+    }
+}
