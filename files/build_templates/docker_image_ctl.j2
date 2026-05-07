@@ -735,6 +735,11 @@ start() {
 {%- endif %}
     docker create {{docker_image_run_opt}} \
         -v /host/warmboot$DEV:/var/warmboot \
+{%- if docker_container_name == "telemetry" %}
+        --memory=600M \
+        --memory-swap=600M \
+        --cpus=0.6 \
+{%- endif %}
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
 {%- endif %}
