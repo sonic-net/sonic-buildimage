@@ -4,3 +4,4 @@
 0004-When-interface-removed-just-as-we-discover-it-log-wi.patch
 0005-Use-close-range-syscall-over-blindly-looping-over-al.patch
 0006-mod_sonic-defer-redis-commands.patch
+0007-hsflowd-stop-overriding-sigabrt.patch

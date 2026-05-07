@@ -17,6 +17,7 @@
 #
 
 from .device_data import DeviceDataManager
+from .db_table_helper import get_db_table_helper
 from . import utils
 from sonic_py_common import logger
 
@@ -45,8 +46,7 @@ except ImportError:
         raise
 
 
-SFP_TEMPERATURE_SCALE = 1000
-ASIC_TEMPERATURE_SCALE = 125
+TEMPERATURE_SCALE = 1000
 ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD = 105000
 ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD = 120000
 
@@ -78,6 +78,11 @@ class ThermalUpdater:
         self._sfp_list = sfp_list
         self._sfp_status = {}
         self._timer = utils.Timer()
+        asic_count = DeviceDataManager.get_asic_count()
+        if asic_count > 1:
+            self._asic_names = [f'ASIC{i}' for i in range(asic_count)]
+        else:
+            self._asic_names = ['ASIC']
         atexit.register(functools.partial(clean_thermal_data, self._sfp_list))
 
     def _find_matching_key(self, dev_parameters, pattern):
@@ -144,17 +149,19 @@ class ThermalUpdater:
         logger.log_notice(f'Set hw-management-tc to {"suspend" if suspend else "resume"}')
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
 
-    def get_asic_temp(self, asic_index=0):
-        temperature = utils.read_int_from_file(f'/sys/module/sx_core/asic{asic_index}/temperature/input', default=None)
-        return temperature * ASIC_TEMPERATURE_SCALE if temperature is not None else None
+    def get_asic_temp(self, asic_name):
+        try:
+            present, temperature = get_db_table_helper().get_temperature_info_table().hget(asic_name, 'temperature')
+            return int(float(temperature) * TEMPERATURE_SCALE) if present else 0
+        except Exception as e:
+            logger.log_error(f'Failed to read ASIC {asic_name} temperature - {temperature} - {e}')
+            return None
 
-    def get_asic_temp_warning_threshold(self, asic_index=0):
-        emergency = utils.read_int_from_file(f'/sys/module/sx_core/asic{asic_index}/temperature/emergency', default=None, log_func=None)
-        return emergency * ASIC_TEMPERATURE_SCALE if emergency is not None else ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
+    def get_asic_temp_warning_threshold(self):
+        return ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
 
-    def get_asic_temp_critical_threshold(self, asic_index=0):
-        critical = utils.read_int_from_file(f'/sys/module/sx_core/asic{asic_index}/temperature/critical', default=None, log_func=None)
-        return critical * ASIC_TEMPERATURE_SCALE if  critical is not None else ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
+    def get_asic_temp_critical_threshold(self):
+        return ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
     def update_single_module(self, sfp):
         try:
@@ -185,9 +192,9 @@ class ThermalUpdater:
                 hw_management_independent_mode_update.thermal_data_set_module(
                     sfp.get_asic_index(),
                     sfp.sdk_index + 1,
-                    int(temperature * SFP_TEMPERATURE_SCALE),
-                    int(critical_thresh * SFP_TEMPERATURE_SCALE),
-                    int(warning_thresh * SFP_TEMPERATURE_SCALE),
+                    int(temperature * TEMPERATURE_SCALE),
+                    int(critical_thresh * TEMPERATURE_SCALE),
+                    int(warning_thresh * TEMPERATURE_SCALE),
                     fault
                 )
                 hw_management_independent_mode_update.vendor_data_set_module(
@@ -233,9 +240,9 @@ class ThermalUpdater:
     def update_asic(self):
         try:
             for asic_index in range(DeviceDataManager.get_asic_count()):
-                asic_temp = self.get_asic_temp(asic_index)
-                warn_threshold = self.get_asic_temp_warning_threshold(asic_index)
-                critical_threshold = self.get_asic_temp_critical_threshold(asic_index)
+                asic_temp = self.get_asic_temp(self._asic_names[asic_index])
+                warn_threshold = self.get_asic_temp_warning_threshold()
+                critical_threshold = self.get_asic_temp_critical_threshold()
                 fault = 0
                 if asic_temp is None:
                     logger.log_error(f'Failed to read ASIC {asic_index} temperature, send fault to hw-management-tc')

@@ -176,4 +176,3 @@ gzip -f "$DISK_IMAGE"
 log_info "eMMC image created successfully: ${DISK_IMAGE}.gz"
 log_info ""
 log_info "Image size: $(du -h ${DISK_IMAGE}.gz | cut -f1)"
-

@@ -817,33 +817,6 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
         fi
     fi
-
-    # Install platform-level scripts and services for aspeed platform
-    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing platform scripts and services for aspeed..."
-
-        # Copy all scripts from platform/aspeed/scripts/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
-            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
-                if [ -f "$script" ]; then
-                    echo "Installing $(basename $script)..."
-                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
-                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
-                fi
-            done
-        fi
-
-        # Copy all systemd services from platform/aspeed/systemd/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
-            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
-                if [ -f "$service" ]; then
-                    echo "Installing and enabling $(basename $service)..."
-                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
-                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
-                fi
-            done
-        fi
-    fi
 fi
 
 # Collect host image version files before cleanup
