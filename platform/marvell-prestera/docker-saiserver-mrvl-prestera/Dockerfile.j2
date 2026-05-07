@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -10,11 +10,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update              \
  && apt-get -y install          \
-      libboost-atomic1.74.0     \
+      libboost-atomic1.88.0     \
       libqt5core5a              \
       libqt5network5            \
       gdb                       \
-      libthrift-0.17.0
+      libthrift-0.19.0t64
 
 COPY \
 {% for deb in docker_saiserver_mrvl_prestera_debs.split(' ') -%}
