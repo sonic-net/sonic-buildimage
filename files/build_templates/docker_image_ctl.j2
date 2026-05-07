@@ -202,8 +202,9 @@ function postStartAction()
            ip netns exec "$NET_NS" ip addr add 127.0.0.1/16 dev lo
            ip netns exec "$NET_NS" ip addr del 127.0.0.1/8 dev lo
 
-           slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-           supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+           slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())')
+           supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())')
+           echo "${DOCKERNAME} slot_id=${slot_id} supervisor_slot_id=${supervisor_slot_id}"
 
            # Create eth1 in database instance
            if [[ "${slot_id}" == "${supervisor_slot_id}" ]]; then
