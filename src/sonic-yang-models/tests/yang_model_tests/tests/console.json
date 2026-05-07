@@ -11,6 +11,22 @@
             "value": "no"
         }
     },
+    "CONSOLE_DEFAULT_CONTROLLED_DEVICE": {
+        "desc": "CONSOLE_SWITCH default value for controlled_device enabled field.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-console:sonic-console/CONSOLE_SWITCH/controlled_device/enabled",
+            "key": "sonic-console:enabled",
+            "value": "no"
+        }
+    },
+    "CONSOLE_VALID_CONTROLLED_DEVICE": {
+        "desc": "Verifying CONSOLE_SWITCH controlled_device configuration."
+    },
+    "CONSOLE_CONTROLLED_DEVICE_INCORRECT_PATTERN": {
+        "desc": "CONSOLE_SWITCH controlled_device configuration pattern failure.",
+        "eStrKey": "Pattern"
+    },
     "CONSOLE_DISABLED_INCORRECT_PATTERN": {
         "desc": "CONSOLE_SWITCH configuration pattern failure.",
         "eStrKey": "Pattern"
