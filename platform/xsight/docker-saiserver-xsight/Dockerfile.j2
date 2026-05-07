@@ -1,0 +1,36 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+## Pre-install the fundamental packages
+RUN apt-get update \
+ && apt-get -y install  \
+    gdb                 \
+    libboost-atomic1.74.0
+
+COPY \
+{% for deb in docker_saiserver_xsight_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_saiserver_xsight_debs.split(' ')) }}
+
+RUN apt-get install -y gdb libpcap0.8 libjsoncpp25 libasan6 pciutils
+
+COPY ["start.sh", "saiserver_start.sh", "/usr/bin/"]
+COPY ["files/syncd_init_common.sh", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+RUN chmod +x /usr/bin/saiserver_start.sh /usr/bin/syncd_init_common.sh
+RUN ln -s /usr/lib/x86_64-linux-gnu/libjsoncpp.so.25 /usr/lib/x86_64-linux-gnu/libjsoncpp.so.1
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

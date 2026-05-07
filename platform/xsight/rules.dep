@@ -1,0 +1,10 @@
+#DPKG FRK
+include $(PLATFORM_PATH)/xsight-sai.dep
+include $(PLATFORM_PATH)/docker-syncd-xsight.dep
+#include $(PLATFORM_PATH)/docker-syncd-xsight-rpc.dep
+include $(PLATFORM_PATH)/one-image.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep
+include $(PLATFORM_PATH)/docker-saiserver-xsight.dep
+include $(PLATFORM_PATH)/xpci.dep
+include $(PLATFORM_PATH)/xplt.dep
+include $(PLATFORM_PATH)/platform-modules-accton.dep

@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton ES9618XX Platform Monitoring service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/es9618xx_util.py install
+ExecStart=/usr/local/bin/es9618xx_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
