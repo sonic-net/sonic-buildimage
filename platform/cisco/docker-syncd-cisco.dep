@@ -1,0 +1,10 @@
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/docker-syncd-cisco.mk $(PLATFORM_PATH)/docker-syncd-cisco.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# N.B. we need to enter the platform directory first, since it's a git submodule
+DEP_FILES   += $(addprefix $(PLATFORM_PATH)/,$(shell cd $(PLATFORM_PATH) && git ls-files $(DOCKER_SYNCD_BASE_STEM)))
+
+$(DOCKER_SYNCD_BASE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_SYNCD_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_SYNCD_BASE)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_SYNCD_BASE),$(DOCKER_SYNCD_BASE_DBG)))

@@ -1,0 +1,63 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+COPY \
+        {% for deb in docker_syncd_cisco_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get -y install libgrpc++1.51 libabsl-dev
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_cisco_debs.split(' ')) }}
+
+## TODO: add kmod into Depends
+RUN apt-get install -yf kmod
+
+COPY ["critical_processes", "/etc/supervisor/"]
+
+COPY start.sh \
+     files/rdb-cli \
+     /usr/bin/
+
+RUN chmod +x /usr/bin/rdb-cli
+
+COPY ["supervisord.conf", "dshell_client.conf", "/etc/supervisor/conf.d/"]
+
+RUN  apt-get install -y     \
+        git-core            \
+        gdb                 \
+        gcc                 \
+        make                \
+        screen              \
+        sudo                \
+        net-tools           \
+        tcpdump             \
+        python3             \
+        python3-pip         \
+        python3-yaml        \
+        scapy               \
+        python3-pytest      \
+        libgtk-3-dev        \
+        unzip               \
+        pkg-config          \
+        binutils            \
+        wget                \
+        python3-grpcio      \
+        python3-dev
+
+## For dshell_client gRPC
+RUN pip3 install prettytable terminaltables decor
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
