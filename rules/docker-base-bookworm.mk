@@ -4,6 +4,7 @@ DOCKER_BASE_BOOKWORM = docker-base-bookworm.gz
 $(DOCKER_BASE_BOOKWORM)_PATH = $(DOCKERS_PATH)/docker-base-bookworm
 
 $(DOCKER_BASE_BOOKWORM)_DEPENDS += $(SOCAT)
+$(DOCKER_BASE_BOOKWORM)_DEPENDS += $(IPROUTE2)
 
 GDB = gdb
 GDBSERVER = gdbserver
