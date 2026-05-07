@@ -1,0 +1,34 @@
+Index: p4lang-bmv2-1.15.0/debian/control
+===================================================================
+--- p4lang-bmv2-1.15.0.orig/debian/control
++++ p4lang-bmv2-1.15.0/debian/control
+@@ -26,7 +26,6 @@ Build-Depends:
+     libprotobuf-dev,
+     libprotoc-dev,
+     libssl-dev,
+-    libthrift | libthrift-0.11.0 | libthrift-0.13.0 | libthrift-0.16.0 | libthrift-0.17.0,
+     libthrift-dev,
+     libtool,
+     pkg-config,
+@@ -50,21 +49,6 @@ Depends:
+     ${shlibs:Depends},
+     ${misc:Depends},
+     ${python3:Depends},
+-    libboost1.83-dev,
+-    libboost-filesystem1.83-dev,
+-    libboost-program-options1.83-dev,
+-    libboost-system1.83-dev,
+-    libboost-thread1.83-dev,
+-    libgmp-dev,
+-    libgrpc++-dev,
+-    libgrpc-dev,
+-    libnanomsg-dev,
+-    libpcap-dev,
+-    libprotobuf-dev,
+-    libprotoc-dev,
+-    libssl-dev,
+-    libthrift | libthrift-0.11.0 | libthrift-0.13.0 | libthrift-0.16.0 | libthrift-0.17.0,
+-    libthrift-dev,
+     libtool,
+     pkg-config,
+     protobuf-compiler,

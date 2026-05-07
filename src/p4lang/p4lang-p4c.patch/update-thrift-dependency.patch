@@ -1,0 +1,20 @@
+Index: p4lang-p4c-1.2.4.2/debian/control
+===================================================================
+--- p4lang-p4c-1.2.4.2.orig/debian/control
++++ p4lang-p4c-1.2.4.2/debian/control
+@@ -36,7 +36,6 @@ Build-Depends:
+     libgrpc-dev,
+     libgrpc++-dev,
+     protobuf-compiler-grpc,
+-    libthrift | libthrift-0.11.0 | libthrift-0.13.0 | libthrift-0.16.0 | libthrift-0.17.0,
+     libthrift-dev,
+     thrift-compiler,
+     p4lang-bmv2
+@@ -78,7 +77,6 @@ Depends:
+     libgrpc-dev,
+     libgrpc++-dev,
+     protobuf-compiler-grpc,
+-    libthrift | libthrift-0.11.0 | libthrift-0.13.0 | libthrift-0.16.0 | libthrift-0.17.0,
+     libthrift-dev,
+     thrift-compiler,
+     p4lang-bmv2

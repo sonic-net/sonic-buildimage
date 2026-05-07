@@ -213,7 +213,7 @@ INCLUDE_P4RT = n
 INCLUDE_PTF ?= y
 
 # INCLUDE_VS_DASH_SAI - build dash-sai for VS
-INCLUDE_VS_DASH_SAI ?= y
+INCLUDE_VS_DASH_SAI ?= n
 
 # ENABLE_AUTO_TECH_SUPPORT - Enable the configuration for event-driven techsupport & coredump mgmt feature
 ENABLE_AUTO_TECH_SUPPORT = y
