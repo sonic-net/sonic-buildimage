@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 
 # Dependencies for sonic-cfggen
-RUN apt-get install -y build-essential python-dev
+RUN apt-get install -y build-essential python-dev python3-cffi
 
 # Install python-redis
 RUN pip install redis>=3.5.3

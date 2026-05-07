@@ -9,7 +9,8 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(SONIC_DEVICE_DATA) \
                               $(LIBYANG) \
                               $(LIBYANG_CPP) \
-                              $(LIBYANG_PY3) \
+                              $(LIBYANG3) \
+                              $(LIBYANG3_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
                               $(SYSMGR)

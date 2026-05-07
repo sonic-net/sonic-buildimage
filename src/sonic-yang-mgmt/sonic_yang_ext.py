@@ -1,14 +1,18 @@
 # This script is used as extension of sonic_yang class. It has methods of
 # class sonic_yang. A separate file is used to avoid a single large file.
 
-from __future__ import print_function
-import yang as ly
+from __future__ import print_function, annotations
+import libyang as ly
 import syslog
 from json import dump, dumps, loads
-from xmltodict import parse
 from glob import glob
 import copy
+import traceback
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from sonic_yang_path import SonicYangPathMixin
+
+if TYPE_CHECKING:
+    from sonic_yang import SonicYang
 
 Type_1_list_maps_model = [
     'DSCP_TO_TC_MAP_LIST',
@@ -46,12 +50,39 @@ class SonicYangException(Exception):
 # class sonic_yang methods, use mixin to extend sonic_yang
 class SonicYangExtMixin(SonicYangPathMixin):
 
+    # Mixin type stubs — these attributes are defined in SonicYang.__init__
+    if TYPE_CHECKING:
+        yang_dir: str
+        ctx: ly.Context
+        module: Optional[ly.Module]
+        root: Optional[ly.DNode]
+        DEBUG: bool
+        print_log_enabled: bool
+        yangFiles: List[str]
+        confDbYangMap: Dict[str, Any]
+        _yJsonCache: Optional[List[Dict[str, Any]]]
+        jIn: Dict[str, Any]
+        xlateJson: Dict[str, Any]
+        revXlateJson: Dict[str, Any]
+        tablesWithOutYang: Dict[str, Any]
+        elementPath: List[str]
+
+        def sysLog(self, debug: int = ..., msg: Optional[str] = ..., doPrint: bool = ...) -> None: ...
+        def fail(self, e: Exception) -> None: ...
+        def _load_schema_module(self, yang_file: str) -> Optional[ly.Module]: ...
+        def _find_data_node(self, data_xpath: str) -> Optional[ly.DNode]: ...
+        def _find_parent_data_node(self, data_xpath: str) -> Optional[ly.DNode]: ...
+        def _deleteNode(self, xpath: str) -> bool: ...
+        def _print_data_mem(self, option: str) -> str: ...
+
     """
-    load all YANG models, create JSON of yang models. (Public function)
+    load all YANG models, build the table-to-schema map. (Public function)
     """
     def loadYangModel(self):
 
         try:
+            # Invalidate any cached YIN-shape view from a previous load.
+            self._yJsonCache = None
             # get all files
             self.yangFiles = glob(self.yang_dir +"/*.yang")
             # load yang modules
@@ -68,12 +99,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
             self.sysLog(syslog.LOG_DEBUG,'Loaded below Yang Models')
             self.sysLog(syslog.LOG_DEBUG,str(self.yangFiles))
 
-            # load json for each yang model
-            self._loadJsonYangModel()
-            # create a map from config DB table to yang container
+            # libyang3 already resolves uses/grouping/augment/deviation when it
+            # compiles each schema, so the SNode tree we walk below has all of
+            # that pre-resolved — no manual uses/grouping inlining is needed.
             self._createDBTableToModuleMap()
-            # compile uses clause (embed into schema)
-            self._compileUsesClause()
         except Exception as e:
             self.sysLog(msg="Yang Models Load failed:{}".format(str(e)), \
                 debug=syslog.LOG_ERR, doPrint=True)
@@ -81,245 +110,40 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         return True
 
-    """
-    load JSON schema format from yang models
-    """
-    def _loadJsonYangModel(self):
-
-        try:
-            for f in self.yangFiles:
-                m = self.ctx.get_module(f)
-                if m is not None:
-                    xml = m.print_mem(ly.LYD_JSON, ly.LYP_FORMAT)
-                    self.yJson.append(parse(xml))
-                    self.sysLog(msg="Parsed Json for {}".format(m.name()))
-        except Exception as e:
-            self.sysLog(msg="JSON schema Load failed:{}".format(str(e)), \
-                debug=syslog.LOG_ERR, doPrint=True)
-            raise e
-
-        return
-
-    def _preProcessYangGrouping(self, moduleName, module):
-        '''
-            PreProcess Grouping Section of YANG models, and store it in
-            self.preProcessedYang['grouping'] as
-            {'<moduleName>':
-                {'<groupingName>':
-                    [<List of Leafs>]
-                }
-            }
-
-            Parameters:
-                moduleName (str): name of yang module.
-                module (dict): json format of yang module.
-
-            Returns:
-                void
-        '''
-        try:
-            # create grouping dict
-            if self.preProcessedYang.get('grouping') is None:
-                self.preProcessedYang['grouping'] = dict()
-            self.preProcessedYang['grouping'][moduleName] = dict()
-
-            # get groupings from yang module
-            groupings = module['grouping']
-
-            # if grouping is a dict, make it a list for common processing
-            if isinstance(groupings, dict):
-                groupings = [groupings]
-
-            for grouping in groupings:
-                gName = grouping["@name"]
-                gdata = dict()
-                # Extract all possible child node types from the grouping
-                for node_type in ['leaf', 'leaf-list', 'choice', 'container',
-                                  'list', 'uses']:
-                    val = grouping.get(node_type)
-                    if val is not None:
-                        gdata[node_type] = val
-                self.preProcessedYang['grouping'][moduleName][gName] = gdata
-
-        except Exception as e:
-            self.sysLog(msg="_preProcessYangGrouping failed:{}".format(str(e)), \
-                debug=syslog.LOG_ERR, doPrint=True)
-            raise e
-        return
-
-    # preProcesss Generic Yang Objects
-    def _preProcessYang(self, moduleName, module):
-        '''
-            PreProcess Generic Section of YANG models by calling
-            _preProcessYang<SectionName> methods.
-
-            Parameters:
-                moduleName (str): name of yang module.
-                module (dict): json format of yang module.
-
-            Returns:
-                void
-        '''
-        try:
-            # preProcesss Grouping
-            if module.get('grouping') is not None:
-                self._preProcessYangGrouping(moduleName, module)
-        except Exception as e:
-            self.sysLog(msg="_preProcessYang failed:{}".format(str(e)), \
-                debug=syslog.LOG_ERR, doPrint=True)
-            raise e
-        return
-
-    def _compileUsesClauseRefineApply(self, refine, model):
-        for item in model:
-            if item["@name"] == refine["@target-node"]:
-                # NOTE: We only handle 'description' and 'mandatory'
-                if refine.get('description') is not None:
-                    item["description"] = refine["description"]
-                if refine.get('mandatory') is not None:
-                    item["mandatory"] = refine["mandatory"]
-                return
-
-    def _compileUsesClauseRefine(self, refine, model):
-        # Nothing to refine
-        if refine is None:
-            return
-
-        # Convert to list if not already
-        if not isinstance(refine, list):
-            refine = [ refine ]
-
-        # Iterate across each refine
-        for r in refine:
-            self._compileUsesClauseRefineApply(r, model)
-
-
-    def _compileUsesClauseList(self, model, group, name, refine):
-        # If group doesn't have this entry, nothing to do.
-        groupobj = group.get(name)
-        if groupobj is None:
-            return
-
-        # model doesn't have this entry type, create it as a list
-        if model.get(name) is None:
-            model[name] = []
-
-        # model has this entry type, but its not a list, convert
-        if not isinstance(model[name], list):
-            model[name] = [ model[name] ]
-
-        if isinstance(groupobj, list):
-            model[name].extend(groupobj)
-        else:
-            model[name].append(groupobj)
-
-        self._compileUsesClauseRefine(refine, model[name])
-
-    def _compileUsesClauseModel(self, module, model):
-        """
-        Recursively process the yang schema looking for the "uses" clause under
-        "container", "list", and "choice"/"case" nodes.  Merge in the "uses"
-        dictionaries for leaf and leaf-list so callers don't need to try to do
-        their own "uses" processing.  Remove the "uses" member when processed so
-        anyone expecting it won't try to re-process.  It will just look like a
-        yang model that doesn't use "uses" so shouldn't cause compatibility issues.
-        """
-        if isinstance(model, list):
-            for item in model:
-                self._compileUsesClauseModel(module, item)
-            return
-
-        for model_name in [ "container", "list", "choice", "case",
-                             "notification" ]:
-            node = model.get(model_name)
-            if node:
-                self._compileUsesClauseModel(module, node)
-
-        uses_s = model.get("uses")
-        if not uses_s:
-            return
-
-        # Always make as a list
-        if isinstance(uses_s, dict):
-            uses_s = [uses_s]
-
-        # uses Example: "@name": "bgpcmn:sonic-bgp-cmn"
-        for uses in uses_s:
-            # Assume ':'  means reference to another module
-            if ':' in uses['@name']:
-                prefix = uses['@name'].split(':')[0].strip()
-                uses_module_name = self._findYangModuleFromPrefix(prefix, module)
-            else:
-                uses_module_name = module['@name']
-            grouping = uses['@name'].split(':')[-1].strip()
-            groupdata = self.preProcessedYang['grouping'][uses_module_name][grouping]
-
-            # Merge all node types from uses grouping
-            refine = uses.get("refine")
-            for node_type in ['leaf', 'leaf-list', 'choice', 'container',
-                              'list', 'uses']:
-                self._compileUsesClauseList(model, groupdata, node_type, refine)
-
-        # Delete the uses node so callers don't use it.
-        del model["uses"]
-
-    def _compileUsesClause(self):
-        try:
-            for module in self.yJson:
-                self._compileUsesClauseModel(module["module"], module["module"])
-        except Exception as e:
-            traceback.print_exc()
-            raise e
-
     def _createDBTableToModuleMap(self):
         """
-        Create a map from config DB tables to container in yang model
-        This module name and topLevelContainer are fetched considering YANG models are
-        written using below Guidelines:
+        Populate self.confDbYangMap[<table_name>] = {
+            'module': <module name>,
+            'topLevelContainer': <top-level container name>,
+            'container': <SContainer for the table>,
+        }
+
+        Each YANG module that maps to ConfigDB is expected to have a single
+        top-level container whose name matches the module name; each child
+        container of that top-level container is a ConfigDB table. See
         https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
+        Modules with no top-level container are helper-only (typedefs,
+        groupings, etc.) and are skipped here — they don't define tables.
         """
-        for j in self.yJson:
-            # get module name
-            moduleName = j['module']['@name']
-            # preProcesss Generic Yang Objects
-            self._preProcessYang(moduleName, j['module'])
-            # get top level container
-            topLevelContainer = j['module'].get('container')
-            # if top level container is none, this is common yang files, which may
-            # have definitions. Store module.
-            if topLevelContainer is None:
-                self.confDbYangMap[moduleName] = j['module']
+        for module_name in self.yangFiles:
+            m = self.ctx.get_module(module_name)
+            if m is None:
                 continue
-
-            # top level container must exist for rest of the yang files and it should
-            # have same name as module name.
-            if topLevelContainer['@name'] != moduleName:
-                raise(SonicYangException("topLevelContainer mismatch {}:{}".\
-                    format(topLevelContainer['@name'], moduleName)))
-
-            # Each container inside topLevelContainer maps to a sonic config table.
-            container = topLevelContainer['container']
-            # container is a list
-            if isinstance(container, list):
-                for c in container:
-                    self.confDbYangMap[c['@name']] = {
-                        "module" : moduleName,
-                        "topLevelContainer": topLevelContainer['@name'],
-                        "container": c,
-                        "yangModule": j['module']
-                        }
-            # container is a dict
-            else:
-                self.confDbYangMap[container['@name']] = {
-                    "module" : moduleName,
-                    "topLevelContainer": topLevelContainer['@name'],
-                    "container": container,
-                    "yangModule": j['module']
-                    }
-        return
+            top = next(iter(m.children(types=(ly.SNode.CONTAINER,))), None)
+            if top is None:
+                continue
+            if top.name() != m.name():
+                raise SonicYangException("topLevelContainer mismatch {}:{}".format(
+                    top.name(), m.name()))
+            for table in top.children(types=(ly.SNode.CONTAINER,)):
+                self.confDbYangMap[table.name()] = {
+                    'module': m.name(),
+                    'topLevelContainer': top.name(),
+                    'container': table,
+                }
 
     """
-    Get module, topLevelContainer(TLC) and json container for a config DB table
+    Get module, topLevelContainer(TLC) and container SNode for a config DB table
     """
     def _getModuleTLCcontainer(self, table):
         cmap = self.confDbYangMap
@@ -366,7 +190,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
     keys: key string from YANG list, i.e. 'vlan_name ip-prefix'.
 
     Return:
-    KeyDict = {"vlan_name": "Vlan111", "ip-prefix": "2a04:5555:45:6709::1/64"}
+    keyDict = {"vlan_name": "Vlan111", "ip-prefix": "2a04:5555:45:6709::1/64"}
     """
     def _extractKey(self, tableKey, keys):
 
@@ -375,7 +199,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
         value = tableKey.split("|")
         # match lens
         if len(keyList) != len(value):
-                raise Exception("Value not found for {} in {}".format(keys, tableKey))
+            raise Exception("Value not found for {} in {}".format(keys, tableKey))
         # create the keyDict
         keyDict = dict()
         for i in range(len(keyList)):
@@ -383,133 +207,63 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         return keyDict
 
-    """
-    Fill the dict based on leaf as a list or dict @model yang model object
-    """
-    def _fillLeafDict(self, leafs, leafDict, isleafList=False):
+    def _createLeafDict(self, model_snode, table):
+        """
+        Build a name-keyed dict of leaf and leaf-list SNodes directly under
+        model_snode. iter_children with default options transparently descends
+        into choice/case, so leaves under choice/case are flattened in.
 
-        if leafs is None:
-            return
-
-        # fill default values
-        def _fillSteps(leaf):
-            leaf['__isleafList'] = isleafList
-            leafDict[leaf['@name']] = leaf
-            return
-
-        if isinstance(leafs, list):
-            for leaf in leafs:
-                #print("{}:{}".format(leaf['@name'], leaf))
-                _fillSteps(leaf)
-        else:
-            #print("{}:{}".format(leaf['@name'], leaf))
-            _fillSteps(leafs)
-
-        return
-
-    def _findYangModuleFromPrefix(self, prefix, module):
-        '''
-            Find yang module name from prefix used in given yang module.
-
-            Parameters:
-                prefix (str): prefix used in given yang module.
-                module (dict): json format of yang module.
-
-            Returns:
-                 (str): module name or None
-        '''
-        try:
-            # get imports
-            yangImports = module.get("import");
-            if yangImports is None:
-                return None
-            # make a list
-            if isinstance(yangImports, dict):
-                yangImports = [yangImports]
-            # find module for given prefix
-            for yImport in yangImports:
-                if yImport['prefix']['@value'] == prefix:
-                    return yImport['@module']
-        except Exception as e:
-            self.sysLog(msg="_findYangModuleFromPrefix failed:{}".format(str(e)), \
-                debug=syslog.LOG_ERR, doPrint=True)
-            raise e
-        return None
-
-    def _createLeafDict(self, model, table):
-        '''
-            create a dict to map each key under primary key with a leaf in yang model.
-            This is done to improve performance of mapping from values of TABLEs in
-            config DB to leaf in YANG LIST.
-
-            Parameters:
-                module (dict): json format of yang module.
-                table (str): config DB table, this table is being translated.
-
-            Returns:
-                 leafDict (dict): dict with leaf(s) information for List/Container
-                    corresponding to config DB table.
-        '''
-        leafDict = dict()
-        #Iterate over leaf, choices and leaf-list.
-        self._fillLeafDict(model.get('leaf'), leafDict)
-
-        #choices, this is tricky, since leafs are under cases in tree.
-        choices = model.get('choice')
-        if choices:
-            # If single choice exists in container/list
-            if isinstance(choices, dict):
-                cases = choices['case']
-                for case in cases:
-                    self._fillLeafDict(case.get('leaf'), leafDict)
-            # If multiple choices exist in container/list
-            else:
-                for choice in choices:
-                    cases = choice['case']
-                    for case in cases:
-                        self._fillLeafDict(case.get('leaf'), leafDict)
-
-        # leaf-lists
-        self._fillLeafDict(model.get('leaf-list'), leafDict, True)
-
+        Used to drive ConfigDB-key → YANG-leaf mapping during xlate/revXlate.
+        """
+        leafDict = {}
+        for child in model_snode.children(types=(ly.SNode.LEAF, ly.SNode.LEAFLIST)):
+            leafDict[child.name()] = child
         return leafDict
 
     """
     Convert a string from Config DB value to Yang Value based on type of the
     key in Yang model.
-    @model : A List of Leafs in Yang model list
     """
     def _findYangTypedValue(self, key, value, leafDict):
+        leaf = leafDict[key]
+        is_leaf_list = isinstance(leaf, ly.SLeafList)
 
         # convert config DB string to yang Type
         def _yangConvert(val):
             # Convert everything to string
             val = str(val)
-            # find type of this key from yang leaf
-            type = leafDict[key]['type']['@name']
-
-            if 'uint' in type:
-                vValue = int(val, 10)
-            # TODO: find type of leafref from schema node
-            elif 'leafref' in type:
-                vValue = val
-            #TODO: find type in sonic-head, as of now, all are enumeration
-            elif 'stypes:' in type:
-                vValue = val
-            else:
-                vValue = val
-            return vValue
+            base = leaf.type().basename()
+            # uint{8,16,32,64} → integer; everything else stays a string.
+            # leafref/enumeration/identityref/string/etc. all serialise as
+            # JSON strings in the yang data tree.
+            if 'uint' in base:
+                return int(val, 10)
+            return val
 
         # if it is a leaf-list do it for each element
-        if leafDict[key]['__isleafList']:
+        if is_leaf_list:
             vValue = list()
             if isinstance(value, str) and (self.elementPath[0], self.elementPath[-1]) in LEAF_LIST_WITH_STRING_VALUE_DICT:
                 # For field defined as leaf-list but has string value in CONFIG DB, need do special handling here. For exampe:
                 # port.adv_speeds in CONFIG DB has value "100,1000,10000", it shall be transferred to [100,1000,10000] as YANG value here to
-                # make it align with its YANG definition.
-                value = (x.strip() for x in value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])]))
+                # be compliant with yang model.
+                value = value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])])
             for v in value:
                 vValue.append(_yangConvert(v))
+            # SONiC YANG models that allow "logically empty" leaf-lists declare
+            # `default ""` (e.g. ACL_TABLE.ports) so libyang accepts the empty
+            # representation by auto-applying the default. libyang3, unlike
+            # libyang1, silently drops an explicit `[]` instead of substituting
+            # the default — which lets generic_config_updater's patch sorter
+            # accept moves like `remove /ports/0` that strand the configdb
+            # field as `[]`. Reject those here so the sorter falls back to
+            # removing the whole field (matching the libyang1 behaviour the
+            # patch_sorter_test_success fixtures were generated against).
+            if len(vValue) == 0 and list(leaf.defaults()):
+                raise Exception(
+                    "Empty leaf-list at {}: schema declares a default; "
+                    "remove the field instead of leaving it empty".format(
+                        '/'.join(self.elementPath)))
         else:
             vValue = _yangConvert(value)
 
@@ -524,11 +278,18 @@ class SonicYangExtMixin(SonicYangPathMixin):
     are displayed only when an entry is not xlated properly from ConfigDB
     to sonic_yang.json.
 
-    Type 1 Lists have inner list, which is diffrent from config DB.
-    Each field value in config db should be converted to inner list with
-    key and value.
+    Type 1 lists have inner list, each inner list key:val should
+    be mapped to field:value in Config DB.
     Example:
-
+    Yang Model:
+        list DSCP_TO_TC_MAP_LIST {
+            description "DSCP_TO_TC_MAP part of config_db.json";
+            key "name";
+            leaf name {
+                type string;
+            }
+            list DSCP_TO_TC_MAP { ... }
+        }
     Config DB:
     "DSCP_TO_TC_MAP": {
        "Dscp_to_tc_map1": {
@@ -536,53 +297,24 @@ class SonicYangExtMixin(SonicYangPathMixin):
           "2": "2"
        }
     }
-
-    YANG Model:
-    module: sonic-dscp-tc-map
-     +--rw sonic-dscp-tc-map
-     +--rw DSCP_TO_TC_MAP
-        +--rw DSCP_TO_TC_MAP_LIST* [name]
-           +--rw name              string
-           +--rw DSCP_TO_TC_MAP* [dscp]
-              +--rw dscp    string
-              +--rw tc?     string
-
-    YANG JSON:
-    "sonic-dscp-tc-map:sonic-dscp-tc-map": {
-        "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
-             "DSCP_TO_TC_MAP_LIST": [
-                   {
-                        "name": "map3",
-                        "DSCP_TO_TC_MAP": [
-                            {
-                                "dscp": "64",
-                                "tc": "1"
-                            },
-                            {
-                                "dscp":"2",
-                                "tc":"2"
-                            }
-                        ]
-                    }
-                ]
-            }
-    }
     """
-    def _xlateType1MapList(self, model, yang, config, table, exceptionList):
+    def _xlateType1MapList(self, list_snode, yang, config, table, exceptionList):
 
-        #create a dict to map each key under primary key with a dict yang model.
-        #This is done to improve performance of mapping from values of TABLEs in
-        #config DB to leaf in YANG LIST.
-        inner_clist = model.get('list')
-        if inner_clist:
-            inner_listKey = inner_clist['key']['@value']
+        # Inner list (e.g. DSCP_TO_TC_MAP inside DSCP_TO_TC_MAP_LIST). Type 1
+        # maps always have at most one inner list per the model convention.
+        inner_clist = next(iter(list_snode.children(types=(ly.SNode.LIST,))), None)
+        inner_listKey = ""
+        inner_listVal = ""
+        if inner_clist is not None:
+            inner_keys = [k.name() for k in inner_clist.keys()]
+            inner_listKey = inner_keys[0] if inner_keys else ""
             inner_leafDict = self._createLeafDict(inner_clist, table)
             for lkey in inner_leafDict:
                 if inner_listKey != lkey:
                     inner_listVal = lkey
 
         # get keys from YANG model list itself
-        listKeys = model['key']['@value']
+        listKeys = " ".join(k.name() for k in list_snode.keys())
         self.sysLog(msg="xlateList keyList:{}".format(listKeys))
         primaryKeys = list(config.keys())
         for pkey in primaryKeys:
@@ -593,17 +325,17 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # Find and extracts key from each dict in config
                 keyDict = self._extractKey(pkey, listKeys)
 
-                if inner_clist:
-                   inner_yang_list = list()
-                   for vKey in config[pkey]:
-                      inner_keyDict = dict()
-                      self.sysLog(syslog.LOG_DEBUG, "xlateList Key {} vkey {} Val {} vval {}".\
-                          format(inner_listKey, str(vKey), inner_listVal, str(config[pkey][vKey])))
-                      inner_keyDict[inner_listKey] = str(vKey)
-                      inner_keyDict[inner_listVal] = str(config[pkey][vKey])
-                      inner_yang_list.append(inner_keyDict)
+                inner_yang_list = list()
+                if inner_clist is not None:
+                    for vKey in config[pkey]:
+                        inner_keyDict = dict()
+                        self.sysLog(syslog.LOG_DEBUG, "xlateList Key {} vkey {} Val {} vval {}".\
+                            format(inner_listKey, str(vKey), inner_listVal, str(config[pkey][vKey])))
+                        inner_keyDict[inner_listKey] = str(vKey)
+                        inner_keyDict[inner_listVal] = str(config[pkey][vKey])
+                        inner_yang_list.append(inner_keyDict)
 
-                keyDict[inner_clist['@name']] = inner_yang_list
+                    keyDict[inner_clist.name()] = inner_yang_list
                 yang.append(keyDict)
                 # delete pkey from config, done to match one key with one list
                 del config[pkey]
@@ -622,9 +354,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
     This function will call xlateContainer based on Container(s) present
     in outer List.
     """
-    def _xlateContainerInList(self, model, yang, configC, table):
-        ccontainer = model
-        ccName = ccontainer.get('@name')
+    def _xlateContainerInList(self, ccontainer, yang, configC, table):
+        ccName = ccontainer.name()
         if ccName not in configC:
             # Inner container doesn't exist in config
             return
@@ -649,47 +380,40 @@ class SonicYangExtMixin(SonicYangPathMixin):
     are displayed only when an entry is not xlated properly from ConfigDB
     to sonic_yang.json.
     """
-    def _xlateList(self, model, yang, config, table, exceptionList):
+    def _xlateList(self, list_snode, yang, config, table, exceptionList):
 
         # Type 1 lists need special handling because of inner yang list and
         # config db format.
-        if model['@name'] in Type_1_list_maps_model:
-            self.sysLog(msg="_xlateType1MapList: {}".format(model['@name']))
-            self._xlateType1MapList(model, yang, config, table, exceptionList)
+        if list_snode.name() in Type_1_list_maps_model:
+            self.sysLog(msg="_xlateType1MapList: {}".format(list_snode.name()))
+            self._xlateType1MapList(list_snode, yang, config, table, exceptionList)
             return
 
-        # For handling of container(s) in list
-        ccontainer = model.get('container')
+        # Pre-build a name → SContainer map for fast container-vs-leaf dispatch
+        # while iterating the configdb keys for each list entry.
+        container_map = {c.name(): c for c in list_snode.children(types=(ly.SNode.CONTAINER,))}
 
-        #create a dict to map each key under primary key with a dict yang model.
-        #This is done to improve performance of mapping from values of TABLEs in
-        #config DB to leaf in YANG LIST.
-
-        leafDict = self._createLeafDict(model, table)
+        leafDict = self._createLeafDict(list_snode, table)
         # get keys from YANG model list itself
-        listKeys = model['key']['@value']
+        listKeys = " ".join(k.name() for k in list_snode.keys())
         self.sysLog(msg="xlateList keyList:{}".format(listKeys))
         primaryKeys = list(config.keys())
         for pkey in primaryKeys:
             try:
                 self.elementPath.append(pkey)
-                vKey = None
                 self.sysLog(syslog.LOG_DEBUG, "xlateList Extract pkey:{}".\
                     format(pkey))
                 # Find and extracts key from each dict in config
                 keyDict = self._extractKey(pkey, listKeys)
                 # fill rest of the values in keyDict
                 for vKey in config[pkey]:
-                    if ccontainer and vKey == ccontainer.get('@name'):
+                    ccontainer = container_map.get(vKey)
+                    if ccontainer is not None:
                         self.sysLog(syslog.LOG_DEBUG, "xlateList Handle container {} in list {}".\
                             format(vKey, table))
                         yangContainer = dict()
-                        if isinstance(ccontainer, dict) and bool(config):
+                        if bool(config):
                             self._xlateContainerInList(ccontainer, yangContainer, config[pkey], table)
-                        # If multi-list exists in container,
-                        elif ccontainer and isinstance(ccontainer, list) and bool(config):
-                            for modelContainer in ccontainer:
-                                self._xlateContainerInList(modelContainer, yangContainer, config[pkey], table)
                         if len(yangContainer):
                             keyDict[vKey] = yangContainer
                         continue
@@ -720,14 +444,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
     Process list inside a Container.
     This function will call xlateList based on list(s) present in Container.
     """
-    def _xlateListInContainer(self, model, yang, configC, table, exceptionList):
-        clist = model
-        yang[clist['@name']] = list()
-        self.sysLog(msg="xlateProcessListOfContainer: {}".format(clist['@name']))
-        self._xlateList(clist, yang[clist['@name']], configC, table, exceptionList)
+    def _xlateListInContainer(self, modelList, yang, configC, table, exceptionList):
+        yang[modelList.name()] = list()
+        self.sysLog(msg="xlateProcessListOfContainer: {}".format(modelList.name()))
+        self._xlateList(modelList, yang[modelList.name()], configC, table, exceptionList)
         # clean empty lists
-        if len(yang[clist['@name']]) == 0:
-            del yang[clist['@name']]
+        if len(yang[modelList.name()]) == 0:
+            del yang[modelList.name()]
 
         return
 
@@ -736,9 +459,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
     This function will call xlateContainer based on Container(s) present
     in outer Container.
     """
-    def _xlateContainerInContainer(self, model, yang, configC, table):
-        ccontainer = model
-        ccName = ccontainer.get('@name')
+    def _xlateContainerInContainer(self, ccontainer, yang, configC, table):
+        ccName = ccontainer.name()
         yang[ccName] = dict()
         if ccName not in configC:
             # Inner container doesn't exist in config
@@ -767,36 +489,32 @@ class SonicYangExtMixin(SonicYangPathMixin):
     This function will xlate from a dict in config DB to a Yang JSON container
     using yang model. Output will be stored in self.xlateJson
     """
-    def _xlateContainer(self, model, yang, config, table):
+    def _xlateContainer(self, model_snode, yang, config, table):
 
         # To Handle multiple Lists, Make a copy of config, because we delete keys
         # from config after each match. This is done to match one pkey with one list.
         configC = config.copy()
         exceptionList = list()
-        clist = model.get('list')
-        # If single list exists in container,
-        if clist and isinstance(clist, dict) and \
-           clist['@name'] == model['@name']+"_LIST" and bool(configC):
-                self._xlateListInContainer(clist, yang, configC, table, \
-                    exceptionList)
-        # If multi-list exists in container,
-        elif clist and isinstance(clist, list) and bool(configC):
-            for modelList in clist:
-                self._xlateListInContainer(modelList, yang, configC, table, \
-                    exceptionList)
+        lists = list(model_snode.children(types=(ly.SNode.LIST,)))
+        # Single-list case: only process if its name matches "<container>_LIST"
+        # (preserves original sonic-yang convention). Multi-list case: process
+        # all lists regardless of name.
+        if len(lists) == 1:
+            if lists[0].name() == model_snode.name() + "_LIST" and bool(configC):
+                self._xlateListInContainer(lists[0], yang, configC, table,
+                                           exceptionList)
+        elif len(lists) > 1 and bool(configC):
+            for modelList in lists:
+                self._xlateListInContainer(modelList, yang, configC, table,
+                                           exceptionList)
 
         # Handle container(s) in container
-        ccontainer = model.get('container')
-        # If single list exists in container,
-        if ccontainer and isinstance(ccontainer, dict) and bool(configC):
-            self._xlateContainerInContainer(ccontainer, yang, configC, table)
-        # If multi-list exists in container,
-        elif ccontainer and isinstance(ccontainer, list) and bool(configC):
-            for modelContainer in ccontainer:
+        if bool(configC):
+            for modelContainer in model_snode.children(types=(ly.SNode.CONTAINER,)):
                 self._xlateContainerInContainer(modelContainer, yang, configC, table)
 
         ## Handle other leaves in container,
-        leafDict = self._createLeafDict(model, table)
+        leafDict = self._createLeafDict(model_snode, table)
         vKeys = list(configC.keys())
         for vKey in vKeys:
             #vkey must be a leaf\leaf-list\choice in container
@@ -829,7 +547,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             cmap = self.confDbYangMap[table]
             # create top level containers
             key = cmap['module']+":"+cmap['topLevelContainer']
-            subkey = cmap['topLevelContainer']+":"+cmap['container']['@name']
+            subkey = cmap['topLevelContainer']+":"+cmap['container'].name()
             # Add new top level container for first table in this container
             yangJ[key] = dict() if yangJ.get(key) is None else yangJ[key]
             yangJ[key][subkey] = dict()
@@ -869,13 +587,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
         for key in keyList:
             val = entry.get(key)
             if val:
-                #print("pair: {} {}".format(key, val))
                 keyDict[key] = sval = str(val)
                 keyV += sval + "|"
-                #print("VAL: {} {}".format(regex, keyV))
             else:
                 raise Exception("key {} not found in entry".format(key))
-        #print("kDict {}".format(keyDict))
         keyV = keyV.rstrip("|")
 
         return keyV, keyDict
@@ -883,9 +598,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     Convert a string from Config DB value to Yang Value based on type of the
     key in Yang model.
-    @model : A List of Leafs in Yang model list
     """
     def _revFindYangTypedValue(self, key, value, leafDict):
+        leaf = leafDict[key]
+        is_leaf_list = isinstance(leaf, ly.SLeafList)
 
         # convert yang Type to config DB string
         def _revYangConvert(val):
@@ -893,7 +609,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
             return str(val)
 
         # if it is a leaf-list do it for each element
-        if leafDict[key]['__isleafList']:
+        if is_leaf_list:
             if isinstance(value, list) and (self.elementPath[0], self.elementPath[-1]) in LEAF_LIST_WITH_STRING_VALUE_DICT:
                 # For field defined as leaf-list but has string value in CONFIG DB, we need do special handling here:
                 # e.g. port.adv_speeds is [10,100,1000] in YANG, need to convert it into a string for CONFIG DB: "10,100,1000"
@@ -902,7 +618,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 vValue = list()
                 for v in value:
                     vValue.append(_revYangConvert(v))
-        elif leafDict[key]['type']['@name'] == 'boolean':
+        elif leaf.type().basename() == 'boolean':
             vValue = 'true' if value else 'false'
         else:
             vValue = _revYangConvert(value)
@@ -955,31 +671,33 @@ class SonicYangExtMixin(SonicYangPathMixin):
     }
     """
 
-    def _revXlateType1MapList(self, model, yang, config, table):
+    def _revXlateType1MapList(self, list_snode, yang, config, table):
         # get keys from YANG model list itself
-        listKeys = model['key']['@value']
-        # create a dict to map each key under primary key with a dict yang model.
-        # This is done to improve performance of mapping from values of TABLEs in
-        # config DB to leaf in YANG LIST.
+        listKeys = " ".join(k.name() for k in list_snode.keys())
 
         # Gather inner list key and value from model
-        inner_clist = model.get('list')
-        if inner_clist:
-            inner_listKey = inner_clist['key']['@value']
+        inner_clist = next(iter(list_snode.children(types=(ly.SNode.LIST,))), None)
+        inner_listKey = ""
+        inner_listVal = ""
+        if inner_clist is not None:
+            inner_keys = [k.name() for k in inner_clist.keys()]
+            inner_listKey = inner_keys[0] if inner_keys else ""
             inner_leafDict = self._createLeafDict(inner_clist, table)
             for lkey in inner_leafDict:
                 if inner_listKey != lkey:
                     inner_listVal = lkey
 
         # list with name <NAME>_LIST should be removed,
-        if "_LIST" in model['@name']:
+        if "_LIST" in list_snode.name():
             for entry in yang:
                 # create key of config DB table
                 pkey, pkeydict = self._createKey(entry, listKeys)
                 self.sysLog(syslog.LOG_DEBUG, "revXlateList pkey:{}".format(pkey))
                 config[pkey]= dict()
                 # fill rest of the entries
-                inner_list = entry[inner_clist['@name']]
+                if inner_clist is None:
+                    continue
+                inner_list = entry[inner_clist.name()]
                 for index in range(len(inner_list)):
                     self.sysLog(syslog.LOG_DEBUG, "revXlateList fkey:{} fval {}".\
                          format(str(inner_list[index][inner_listKey]),\
@@ -990,25 +708,23 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     Rev xlate from <TABLE>_LIST to table in config DB
     """
-    def _revXlateList(self, model, yang, config, table):
+    def _revXlateList(self, list_snode, yang, config, table):
 
         # special processing for Type 1 Map tables.
-        if model['@name'] in Type_1_list_maps_model:
-           self._revXlateType1MapList(model, yang, config, table)
+        if list_snode.name() in Type_1_list_maps_model:
+           self._revXlateType1MapList(list_snode, yang, config, table)
            return
 
-        # For handling of container(s) in list
-        ccontainer = model.get('container')
+        # Pre-build a name → SContainer map for fast container-vs-leaf dispatch
+        # while iterating list-entry keys.
+        container_map = {c.name(): c for c in list_snode.children(types=(ly.SNode.CONTAINER,))}
 
         # get keys from YANG model list itself
-        listKeys = model['key']['@value']
-        # create a dict to map each key under primary key with a dict yang model.
-        # This is done to improve performance of mapping from values of TABLEs in
-        # config DB to leaf in YANG LIST.
-        leafDict = self._createLeafDict(model, table)
+        listKeys = " ".join(k.name() for k in list_snode.keys())
+        leafDict = self._createLeafDict(list_snode, table)
 
         # list with name <NAME>_LIST should be removed,
-        if "_LIST" in model['@name']:
+        if "_LIST" in list_snode.name():
             for entry in yang:
                 # create key of config DB table
                 pkey, pkeydict = self._createKey(entry, listKeys)
@@ -1018,15 +734,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # fill rest of the entries
                 for key in entry:
                     if key not in pkeydict:
-                        if ccontainer and key == ccontainer['@name']:
+                        ccontainer = container_map.get(key)
+                        if ccontainer is not None:
                             self.sysLog(syslog.LOG_DEBUG, "revXlateList handle container {} in list {}".format(pkey, table))
-                            # IF container has only one inner container
-                            if isinstance(ccontainer, dict):
-                                self._revXlateContainerInContainer(ccontainer, entry, config[pkey], table)
-                            # IF container has many inner container
-                            elif isinstance(ccontainer, list):
-                                for modelContainer in ccontainer:
-                                    self._revXlateContainerInContainer(modelContainer, entry, config[pkey], table)
+                            self._revXlateContainerInContainer(ccontainer, entry, config[pkey], table)
                             continue
 
                         self.elementPath.append(key)
@@ -1040,54 +751,40 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     Rev xlate a list inside a yang container
     """
-    def _revXlateListInContainer(self, model, yang, config, table):
-        modelList = model
+    def _revXlateListInContainer(self, modelList, yang, config, table):
         # Pass matching list from Yang Json if exist
-        if yang.get(modelList['@name']):
-            self.sysLog(msg="revXlateListInContainer {}".format(modelList['@name']))
-            self._revXlateList(modelList, yang[modelList['@name']], config, table)
+        if yang.get(modelList.name()):
+            self.sysLog(msg="revXlateListInContainer {}".format(modelList.name()))
+            self._revXlateList(modelList, yang[modelList.name()], config, table)
         return
 
     """
     Rev xlate a container inside a yang container
     """
-    def _revXlateContainerInContainer(self, model, yang, config, table):
-        modelContainer = model
+    def _revXlateContainerInContainer(self, modelContainer, yang, config, table):
         # Pass matching list from Yang Json if exist
-        if yang.get(modelContainer['@name']):
-            config[modelContainer['@name']] = dict()
-            self.sysLog(msg="revXlateContainerInContainer {}".format(modelContainer['@name']))
-            self.elementPath.append(modelContainer['@name'])
-            self._revXlateContainer(modelContainer, yang[modelContainer['@name']], \
-                config[modelContainer['@name']], table)
+        if yang.get(modelContainer.name()):
+            config[modelContainer.name()] = dict()
+            self.sysLog(msg="revXlateContainerInContainer {}".format(modelContainer.name()))
+            self.elementPath.append(modelContainer.name())
+            self._revXlateContainer(modelContainer, yang[modelContainer.name()], \
+                config[modelContainer.name()], table)
             self.elementPath.pop()
         return
 
     """
     Rev xlate from yang container to table in config DB
     """
-    def _revXlateContainer(self, model, yang, config, table):
+    def _revXlateContainer(self, model_snode, yang, config, table):
 
-        # IF container has only one list
-        clist = model.get('list')
-        if isinstance(clist, dict):
-            self._revXlateListInContainer(clist, yang, config, table)
-        # IF container has lists
-        elif isinstance(clist, list):
-            for modelList in clist:
-                self._revXlateListInContainer(modelList, yang, config, table)
+        for modelList in model_snode.children(types=(ly.SNode.LIST,)):
+            self._revXlateListInContainer(modelList, yang, config, table)
 
-        ccontainer = model.get('container')
-        # IF container has only one inner container
-        if isinstance(ccontainer, dict):
-            self._revXlateContainerInContainer(ccontainer, yang, config, table)
-        # IF container has only many inner container
-        elif isinstance(ccontainer, list):
-            for modelContainer in ccontainer:
-                self._revXlateContainerInContainer(modelContainer, yang, config, table)
+        for modelContainer in model_snode.children(types=(ly.SNode.CONTAINER,)):
+            self._revXlateContainerInContainer(modelContainer, yang, config, table)
 
         ## Handle other leaves in container,
-        leafDict = self._createLeafDict(model, table)
+        leafDict = self._createLeafDict(model_snode, table)
         for vKey in yang:
             #vkey must be a leaf\leaf-list\choice in container
             if leafDict.get(vKey):
@@ -1117,10 +814,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 if len(names) > 2:
                     raise SonicYangException("Invalid Yang data file structure")
                 table = names[0] if len(names) == 1 else names[1]
-                #print("revXlate " + table)
                 cmap = self.confDbYangMap[table]
                 cDbJson[table] = dict()
-                #print(key + "--" + subkey)
                 self.sysLog(msg="revXlateYangtoConfigDB {}".format(table))
                 self.elementPath.append(table)
                 self._revXlateContainer(cmap['container'], yangJ[module_top][container], \
@@ -1146,22 +841,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
         return
 
     """
-    Find a list in YANG Container
-    c = container
-    l = list name
-    return: list if found else None
+    Find a YANG list child by name within a container SNode.
+    Returns the SList SNode or None.
     """
-    def _findYangList(self, container, listName):
-
-        if isinstance(container['list'], dict):
-            clist = container['list']
-            if clist['@name'] == listName:
+    def _findYangList(self, container_snode, listName):
+        for clist in container_snode.children(types=(ly.SNode.LIST,)):
+            if clist.name() == listName:
                 return clist
-
-        elif isinstance(container['list'], list):
-            clist = [l for l in container['list'] if l['@name'] == listName]
-            return clist[0]
-
         return None
 
     """
@@ -1174,8 +860,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
             table = "PORT"
             xpath = self.findXpathPort(portName)
             module, topc, container = self._getModuleTLCcontainer(table)
-            list = self._findYangList(container, table+"_LIST")
-            xpath = xpath + "/" + list['key']['@value'].split()[0]
+            ylist = self._findYangList(container, table+"_LIST")
+            if ylist is None:
+                raise SonicYangException("YANG list not found for {}".format(table+"_LIST"))
+            keys = list(ylist.keys())
+            if not keys:
+                raise SonicYangException("YANG list {} has no keys".format(table+"_LIST"))
+            xpath = xpath + "/" + keys[0].name()
         except Exception as e:
             self.sysLog(msg="find xpath of port Leaf failed", \
                 debug = syslog.LOG_ERR, doPrint=True)
@@ -1193,8 +884,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
             module, topc, container = self._getModuleTLCcontainer(table)
             xpath = "/" + module + ":" + topc + "/" + table
 
-            list = self._findYangList(container, table+"_LIST")
-            xpath = self._findXpathList(xpath, list, [portName])
+            ylist = self._findYangList(container, table+"_LIST")
+            xpath = self._findXpathList(xpath, ylist, [portName])
         except Exception as e:
             self.sysLog(msg="find xpath of port failed", \
                 debug = syslog.LOG_ERR, doPrint=True)
@@ -1203,21 +894,18 @@ class SonicYangExtMixin(SonicYangPathMixin):
         return xpath
 
     """
-    Find xpath of a YANG LIST from keys,
-    xpath: xpath till list
-    list: YANG List
-    keys: list of keys in YANG LIST
+    Find xpath of a YANG LIST from keys.
+    xpath: xpath up to and including parent
+    list_snode: SList SNode
+    keys: list of key values, in the same order as list_snode.keys()
     """
-    def _findXpathList(self, xpath, list, keys):
+    def _findXpathList(self, xpath, list_snode, keys):
 
         try:
-            # add list name in xpath
-            xpath = xpath + "/" + list['@name']
-            listKeys = list['key']['@value'].split()
-            i = 0;
-            for listKey in listKeys:
+            xpath = xpath + "/" + list_snode.name()
+            listKeys = [k.name() for k in list_snode.keys()]
+            for i, listKey in enumerate(listKeys):
                 xpath = xpath + '['+listKey+'=\''+keys[i]+'\']'
-                i = i + 1
         except Exception as e:
             self.sysLog(msg="_findXpathList:{}".format(str(e)), \
                 debug=syslog.LOG_ERR, doPrint=True)
@@ -1257,11 +945,9 @@ class SonicYangExtMixin(SonicYangPathMixin):
           self._cropConfigDB()
           # xlated result will be in self.xlateJson
           self._xlateConfigDB(xlateFile=xlateFile)
-          #print(self.xlateJson)
           if not quiet:
               self.sysLog(msg="Try to load Data in the tree")
-          self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), \
-                        ly.LYD_JSON, ly.LYD_OPT_CONFIG|ly.LYD_OPT_STRICT)
+          self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), "json", no_state=True, strict=True, json_string_datatypes=True)
 
        except Exception as e:
            self.root = None
@@ -1301,28 +987,26 @@ class SonicYangExtMixin(SonicYangPathMixin):
     """
     def deleteNode(self, xpath):
 
-        # These MACROS used only here, can we get it from Libyang Header ?
         try:
-            LYS_LEAF = 4
             node = self._find_data_node(xpath)
             if node is None:
-                raise('Node {} not found'.format(xpath))
+                raise Exception('Node {} not found'.format(xpath))
 
             snode = node.schema()
             # check for a leaf if it is a key. If yes delete the parent
-            if (snode.nodetype() == LYS_LEAF):
-                leaf = ly.Schema_Node_Leaf(snode)
-                if leaf.is_key():
-                    # try to delete parent
-                    nodeP = self._find_parent_data_node(xpath)
-                    xpathP = nodeP.path()
-                    if self._deleteNode(xpath=xpathP, node=nodeP) == False:
-                        raise Exception('_deleteNode failed')
-                    else:
-                        return True
+            if isinstance(snode, ly.SLeaf) and snode.is_key():
+                # try to delete parent
+                nodeP = self._find_parent_data_node(xpath)
+                if nodeP is None:
+                    raise Exception('Parent node for {} not found'.format(xpath))
+                xpathP = nodeP.path()
+                if self._deleteNode(xpath=xpathP) == False:
+                    raise Exception('_deleteNode failed')
+                else:
+                    return True
 
             # delete non key element
-            if self._deleteNode(xpath=xpath, node=node) == False:
+            if self._deleteNode(xpath=xpath) == False:
                 raise Exception('_deleteNode failed')
         except Exception as e:
             self.sysLog(msg="deleteNode:{}".format(str(e)), \

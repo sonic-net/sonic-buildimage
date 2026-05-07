@@ -16,10 +16,9 @@ $(SONIC_CONFIG_ENGINE_PY3)_SRC_PATH = $(SRC_PATH)/sonic-config-engine
 $(SONIC_CONFIG_ENGINE_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                       $(SONIC_YANG_MGMT_PY3) \
                                       $(SONIC_YANG_MODELS_PY3)
-$(SONIC_CONFIG_ENGINE_PY3)_DEBS_DEPENDS += $(LIBYANG) \
-                                           $(LIBYANG_CPP) \
-                                           $(LIBYANG_PY3) \
-	                                       $(PYTHON3_SWSSCOMMON)
+$(SONIC_CONFIG_ENGINE_PY3)_DEBS_DEPENDS += $(LIBYANG3) \
+                                           $(LIBYANG3_PY3) \
+                                           $(PYTHON3_SWSSCOMMON)
 ifeq ($(ENABLE_PY2_MODULES), y)
     # Synthetic dependency to avoid building the Python 2 and 3 packages
     # simultaneously and any potential conflicts which may arise
