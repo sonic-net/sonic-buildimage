@@ -69,5 +69,6 @@ if [ ! -f /etc/rsyslog.conf ] || ! cmp -s "$TMPFILE" /etc/rsyslog.conf; then
     fi
 else
     # Config unchanged — just signal rsyslog to re-open log files
-    systemctl kill -s HUP rsyslog
+    #systemctl kill -s HUP rsyslog
+    systemctl restart rsyslog
 fi
