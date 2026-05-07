@@ -258,12 +258,13 @@ class TestGenerateAirflow:
             },
         }
 
-    @patch.object(ga, 'AIRFLOW_RESULT_FILE', '/tmp/test_airflow_result.json')
-    def test_all_intake(self):
+    def test_all_intake(self, tmp_path):
+        result_file = str(tmp_path / "airflow_result.json")
         ga.AIR_FLOW_CONF = self.air_flow_conf
 
-        with patch.object(ga, 'get_device_modele') as mock_model, \
-             patch('os.system'):
+        with patch.object(ga, 'AIRFLOW_RESULT_FILE', result_file), \
+             patch.object(ga, 'get_device_modele') as mock_model, \
+             patch('subprocess.call') as mock_call:
             mock_model.side_effect = [
                 (True, "MODEL-INTAKE"),
                 (True, "MODEL-INTAKE"),
@@ -271,21 +272,22 @@ class TestGenerateAirflow:
             ]
             ga.generate_airflow()
 
-        with open('/tmp/test_airflow_result.json', 'r') as f:
+        with open(result_file, 'r') as f:
             result = json.load(f)
 
         assert result["FAN1"]["airflow"] == "intake"
         assert result["FAN2"]["airflow"] == "intake"
         assert result["PSU1"]["airflow"] == "intake"
         assert result["board"] == "intake"
-        os.remove('/tmp/test_airflow_result.json')
+        mock_call.assert_any_call(["sync"])
 
-    @patch.object(ga, 'AIRFLOW_RESULT_FILE', '/tmp/test_airflow_result.json')
-    def test_mixed_airflow(self):
+    def test_mixed_airflow(self, tmp_path):
+        result_file = str(tmp_path / "airflow_result.json")
         ga.AIR_FLOW_CONF = self.air_flow_conf
 
-        with patch.object(ga, 'get_device_modele') as mock_model, \
-             patch('os.system'):
+        with patch.object(ga, 'AIRFLOW_RESULT_FILE', result_file), \
+             patch.object(ga, 'get_device_modele') as mock_model, \
+             patch('subprocess.call') as mock_call:
             mock_model.side_effect = [
                 (True, "MODEL-INTAKE"),
                 (True, "MODEL-EXHAUST"),
@@ -293,20 +295,21 @@ class TestGenerateAirflow:
             ]
             ga.generate_airflow()
 
-        with open('/tmp/test_airflow_result.json', 'r') as f:
+        with open(result_file, 'r') as f:
             result = json.load(f)
 
         assert result["FAN1"]["airflow"] == "intake"
         assert result["FAN2"]["airflow"] == "exhaust"
         assert result["board"] == "intake"
-        os.remove('/tmp/test_airflow_result.json')
+        mock_call.assert_any_call(["sync"])
 
-    @patch.object(ga, 'AIRFLOW_RESULT_FILE', '/tmp/test_airflow_result.json')
-    def test_fan_eeprom_read_failure(self):
+    def test_fan_eeprom_read_failure(self, tmp_path):
+        result_file = str(tmp_path / "airflow_result.json")
         ga.AIR_FLOW_CONF = self.air_flow_conf
 
-        with patch.object(ga, 'get_device_modele') as mock_model, \
-             patch('os.system'):
+        with patch.object(ga, 'AIRFLOW_RESULT_FILE', result_file), \
+             patch.object(ga, 'get_device_modele') as mock_model, \
+             patch('subprocess.call'):
             mock_model.side_effect = [
                 (False, "read error"),
                 (True, "MODEL-EXHAUST"),
@@ -314,20 +317,20 @@ class TestGenerateAirflow:
             ]
             ga.generate_airflow()
 
-        with open('/tmp/test_airflow_result.json', 'r') as f:
+        with open(result_file, 'r') as f:
             result = json.load(f)
 
         assert result["FAN1"]["model"] == "N/A"
         assert result["FAN1"]["airflow"] == "N/A"
         assert result["board"] == "exhaust"
-        os.remove('/tmp/test_airflow_result.json')
 
-    @patch.object(ga, 'AIRFLOW_RESULT_FILE', '/tmp/test_airflow_result.json')
-    def test_unknown_model(self):
+    def test_unknown_model(self, tmp_path):
+        result_file = str(tmp_path / "airflow_result.json")
         ga.AIR_FLOW_CONF = self.air_flow_conf
 
-        with patch.object(ga, 'get_device_modele') as mock_model, \
-             patch('os.system'):
+        with patch.object(ga, 'AIRFLOW_RESULT_FILE', result_file), \
+             patch.object(ga, 'get_device_modele') as mock_model, \
+             patch('subprocess.call'):
             mock_model.side_effect = [
                 (True, "UNKNOWN-MODEL"),
                 (True, "UNKNOWN-MODEL"),
@@ -335,22 +338,21 @@ class TestGenerateAirflow:
             ]
             ga.generate_airflow()
 
-        with open('/tmp/test_airflow_result.json', 'r') as f:
+        with open(result_file, 'r') as f:
             result = json.load(f)
 
         assert result["FAN1"]["airflow"] == "N/A"
         assert result["board"] == "N/A"
-        os.remove('/tmp/test_airflow_result.json')
 
-    @patch.object(ga, 'AIRFLOW_RESULT_FILE', '/tmp/test_airflow_subdir/test_airflow.json')
-    def test_creates_output_directory(self):
+    def test_creates_output_directory(self, tmp_path):
+        subdir = tmp_path / "subdir"
+        result_file = str(subdir / "airflow_result.json")
         ga.AIR_FLOW_CONF = {"fans": [], "psus": []}
 
-        ga.generate_airflow()
+        with patch.object(ga, 'AIRFLOW_RESULT_FILE', result_file):
+            ga.generate_airflow()
 
-        assert os.path.exists('/tmp/test_airflow_subdir/test_airflow.json')
-        os.remove('/tmp/test_airflow_subdir/test_airflow.json')
-        os.rmdir('/tmp/test_airflow_subdir')
+        assert os.path.exists(result_file)
 
 
 class TestLogging:
