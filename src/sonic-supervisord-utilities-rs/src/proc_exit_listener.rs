@@ -3,7 +3,7 @@
 
 use crate::childutils;
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info, warn, LevelFilter};
 use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
@@ -15,8 +15,9 @@ use std::process;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
-use syslog::Severity;
 use thiserror::Error;
+use sonic_rs_common::logger::{Severity, Facility};
+use sonic_rs_common::simple_logger::SimpleLogger;
 
 // File paths
 const WATCH_PROCESSES_FILE: &str = "/etc/supervisor/watchdog_processes";
@@ -173,9 +174,9 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
 
     // Log with appropriate severity (matching syslog levels)
     match priority {
-        Severity::LOG_ERR => error!("{}", message),
-        Severity::LOG_WARNING => warn!("{}", message),
-        Severity::LOG_INFO => info!("{}", message),
+        Severity::Error => error!("{}", message),
+        Severity::Warning => warn!("{}", message),
+        Severity::Info => info!("{}", message),
         _ => error!("{}", message),
     }
 }
@@ -259,10 +260,8 @@ pub fn get_current_time() -> f64 {
 
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
-        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
-
+    let _ = log::set_boxed_logger(Box::new(SimpleLogger::new(Facility::User)))
+        .map(|()| log::set_max_level(LevelFilter::Info));
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
         Args::try_parse_from(args).map_err(|e| SupervisorError::Parse(e.to_string()))?
@@ -472,7 +471,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                     let new_dead_minutes = current_dead_minutes + elapsed_mins as f64;
                     process_info.insert("dead_minutes".to_string(), new_dead_minutes);
 
-                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Severity::LOG_ERR);
+                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Severity::Error);
                 }
             }
         }
@@ -484,7 +483,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                 let threshold = get_heartbeat_alert_interval(process, &heartbeat_intervals);
                 if threshold > 0.0 && elapsed_secs >= threshold {
                     let elapsed_mins = (elapsed_secs / 60.0) as u64;
-                    generate_alerting_message(process, "stuck", elapsed_mins, Severity::LOG_WARNING);
+                    generate_alerting_message(process, "stuck", elapsed_mins, Severity::Warning);
                 }
             }
         }

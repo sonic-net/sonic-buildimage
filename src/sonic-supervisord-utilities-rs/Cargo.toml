@@ -16,11 +16,11 @@ path = "src/bin/supervisor_proc_exit_listener.rs"
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 log = "0.4"
-syslog = "6.0"
 nix = { version = "0.27", features = ["signal", "process"] }
 thiserror = "1.0"
 mio = { version = "0.8", features = ["os-poll", "os-ext"] }
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+sonic-rs-common = { path = "../sonic-rs-common" }
 
 [dev-dependencies]
 tempfile = "3.0"
