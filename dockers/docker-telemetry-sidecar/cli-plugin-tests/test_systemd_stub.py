@@ -119,10 +119,27 @@ def ss(tmp_path, monkeypatch):
             return True
         return False
 
+    def fake_db_hdel(key: str, field: str):
+        """Delete a single field from a CONFIG_DB hash."""
+        entry = config_db.get(key)
+        if entry is None or field not in entry:
+            return True  # already absent
+        del entry[field]
+        if not entry:
+            del config_db[key]
+        return True
+
+    def fake_db_get_table_keys(table: str):
+        """Return all entry keys for a given table from config_db."""
+        prefix = f"{table}|"
+        return [k.split("|", 1)[1] for k in config_db if k.startswith(prefix)]
+
     monkeypatch.setattr(real_sidecar_common, "db_hget", fake_db_hget)
     monkeypatch.setattr(real_sidecar_common, "db_hgetall", fake_db_hgetall)
     monkeypatch.setattr(real_sidecar_common, "db_hset", fake_db_hset)
     monkeypatch.setattr(real_sidecar_common, "db_del", fake_db_del)
+    monkeypatch.setattr(real_sidecar_common, "db_hdel", fake_db_hdel)
+    monkeypatch.setattr(real_sidecar_common, "db_get_table_keys", fake_db_get_table_keys)
 
     # ----- Fake run_nsenter for host operations (patch on sidecar_common) -----
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
@@ -440,7 +457,6 @@ def test_reconcile_enables_user_auth_and_cname(ss):
 def test_reconcile_disabled_removes_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     ss.GNMI_VERIFY_ENABLED = False
-    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
 
     # Seed an existing entry to be removed
     config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
@@ -448,6 +464,91 @@ def test_reconcile_disabled_removes_cname(ss):
     ss.reconcile_config_db_once()
 
     assert "GNMI_CLIENT_CERT|fake-infra-ca.test.example.com" not in config_db
+
+
+def test_reconcile_disabled_removes_multiple_cnames(ss):
+    """When verify=false, all GNMI_CLIENT_CERT entries in the table are removed."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = False
+
+    config_db["GNMI_CLIENT_CERT|a.test.example.com"] = {"role": "admin"}
+    config_db["GNMI_CLIENT_CERT|b.test.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert "GNMI_CLIENT_CERT|a.test.example.com" not in config_db
+    assert "GNMI_CLIENT_CERT|b.test.example.com" not in config_db
+
+
+def test_reconcile_disabled_removes_entries_not_in_env(ss):
+    """When verify=false, entries NOT in GNMI_CLIENT_CERTS env are also removed."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    ss.GNMI_CLIENT_CERTS = []  # env list is empty
+
+    # These entries exist in DB but not in env
+    config_db["GNMI_CLIENT_CERT|unknown.example.com"] = {"role": "admin"}
+    config_db["GNMI_CLIENT_CERT|other.example.com"] = {"role": "gnmi_show_readonly"}
+
+    ss.reconcile_config_db_once()
+
+    assert "GNMI_CLIENT_CERT|unknown.example.com" not in config_db
+    assert "GNMI_CLIENT_CERT|other.example.com" not in config_db
+
+
+def test_reconcile_disabled_clears_user_auth(ss):
+    """When verify=false and user_auth was 'cert', the field should be removed."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = False
+
+    # Seed user_auth=cert from a prior enabled state
+    config_db["TELEMETRY|gnmi"] = {"user_auth": "cert"}
+
+    ss.reconcile_config_db_once()
+
+    assert "user_auth" not in config_db.get("TELEMETRY|gnmi", {})
+
+
+def test_reconcile_disabled_removes_user_auth_any_value(ss):
+    """When verify=false, user_auth should be removed regardless of its value."""
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = False
+
+    config_db["TELEMETRY|gnmi"] = {"user_auth": "password"}
+
+    ss.reconcile_config_db_once()
+
+    assert "user_auth" not in config_db.get("TELEMETRY|gnmi", {})
+
+
+# ─────────────── Test that db_del passes None to truly delete keys ───────────────
+
+def test_db_del_passes_none_to_set_entry(monkeypatch):
+    """db_del must call set_entry(table, key, None) to truly remove the key.
+
+    Passing {} would cause typed_to_raw to store {"NULL":"NULL"} as a placeholder.
+    Passing None causes typed_to_raw to return {} which the C++ layer treats as
+    a real deletion.
+    """
+    set_entry_calls = []
+
+    class FakeConfigDB:
+        def connect(self, *a, **kw):
+            pass
+        def get_entry(self, table, key):
+            return {"role": "admin"}
+        def set_entry(self, table, key, data):
+            set_entry_calls.append((table, key, data))
+
+    monkeypatch.setattr(real_sidecar_common, "_config_db", FakeConfigDB())
+
+    ok = real_sidecar_common.db_del("GNMI_CLIENT_CERT|test.example.com")
+    assert ok is True
+    assert len(set_entry_calls) == 1
+    table, key, data = set_entry_calls[0]
+    assert table == "GNMI_CLIENT_CERT"
+    assert key == "test.example.com"
+    assert data is None, f"db_del must pass None to set_entry, got {data!r}"
 
 def test_reconcile_multiple_cnames(ss):
     ss, container_fs, host_fs, commands, config_db = ss

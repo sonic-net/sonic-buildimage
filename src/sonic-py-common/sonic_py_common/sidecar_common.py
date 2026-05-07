@@ -137,6 +137,24 @@ def db_hset(key: str, field: str, value: str) -> bool:
         return False
 
 
+def db_hdel(key: str, field: str) -> bool:
+    """Delete a single field from a CONFIG_DB hash entry."""
+    db = _get_config_db()
+    if db is None:
+        return False
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        if field not in entry:
+            return True  # already absent
+        entry.pop(field)
+        db.set_entry(table, entry_key, entry if entry else None)
+        return True
+    except Exception as e:
+        logger.log_error(f"db_hdel failed for {key} field {field}: {e}")
+        return False
+
+
 def db_del(key: str) -> bool:
     """Delete an entry from CONFIG_DB."""
     db = _get_config_db()
@@ -144,12 +162,24 @@ def db_del(key: str) -> bool:
         return False
     try:
         table, entry_key = _split_redis_key(key)
-        # In ConfigDBConnector, setting an empty dict deletes the key
-        db.set_entry(table, entry_key, {})
+        db.set_entry(table, entry_key, None)
         return True
     except Exception as e:
         logger.log_error(f"db_del failed for {key}: {e}")
         return False
+
+
+def db_get_table_keys(table: str) -> List[str]:
+    """Return all entry keys for a CONFIG_DB table."""
+    db = _get_config_db()
+    if db is None:
+        return []
+    try:
+        entries = db.get_table(table)
+        return list(entries.keys())
+    except Exception as e:
+        logger.log_error(f"db_get_table_keys failed for {table}: {e}")
+        return []
 
 
 # ───────────── File operations ─────────────
