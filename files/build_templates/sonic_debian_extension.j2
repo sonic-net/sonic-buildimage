@@ -119,6 +119,22 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get updat
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
 
+# Install sedutil for SED password management
+install_deb_package $debs_path/sedutil_*.deb
+
+# SED password mgmt - common scripts and service
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_utils.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_utils.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_change.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_change.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_reset.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_reset.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed_pw_tpm_recovery.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_tpm_recovery.sh
+sudo cp $IMAGE_CONFIGS/sed_mgmt/sed-pw-tpm-recovery.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "sed-pw-tpm-recovery.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl enable sed-pw-tpm-recovery.service
+
 # Install tpm-tools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
 
@@ -1216,6 +1232,10 @@ sudo install -m 755 platform/mellanox/udev-manager/udev-manager.sh $FILESYSTEM_R
 # Install udev-manager service
 sudo install -m 644 platform/mellanox/udev-manager/udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable udev-manager
+
+# SED password mgmt - Mellanox script to read default password from TPM bank 3
+sudo cp platform/mellanox/sed-password-mgmt/read_default_sed_pw_from_tpm.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/read_default_sed_pw_from_tpm.sh
 
 {% endif %}
 

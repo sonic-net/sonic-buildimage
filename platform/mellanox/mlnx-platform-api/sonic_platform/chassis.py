@@ -36,6 +36,7 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
+    from .sed_mgmt import SedMgmt
     import re
     import select
     import threading
@@ -1247,6 +1248,11 @@ class Chassis(ChassisBase):
         self._initialize_bmc()
         return self._bmc
 
+    def get_sed_mgmt(self):
+        """Return Mellanox SED password management instance."""
+        if self._sed_mgmt is None:
+            self._sed_mgmt = SedMgmt.get_instance()
+        return self._sed_mgmt
 
     ##############################################
     # LiquidCooling methods
