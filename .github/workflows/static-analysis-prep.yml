@@ -1,0 +1,110 @@
+# Static Analysis Preparation — GitHub Actions
+#
+# Prepares a clean sonic-buildimage workspace with all submodules and
+# externally-fetched source trees fully initialized, ready for static
+# code analysis tools (bandit, semgrep, pylint, etc.).
+# No build is performed.
+#
+# All source acquisition logic lives in:
+#   .azure-pipelines/scripts/prepare_source.py
+
+name: Static Analysis Prep
+
+on:
+  push:
+    branches:
+      - master
+      - '202*'
+  pull_request:
+    branches:
+      - master
+      - '202*'
+
+jobs:
+  prepare-source:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: sudo apt-get install -y -q devscripts
+
+      - name: Prepare source tree
+        run: |
+          python3 .azure-pipelines/scripts/prepare_source.py \
+            --repo-root . \
+            --summary
+
+      - name: Stage source tree
+        run: |
+          DEST=$RUNNER_TEMP/sonic-buildimage-source
+          mkdir -p "$DEST"
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='target/' \
+            --exclude='fsroot*' \
+            --exclude='dpkg/' \
+            --exclude='src/p4lang/' \
+            --exclude='src/sonic-linux-kernel/' \
+            --exclude='src/sonic-device-data/' \
+            --exclude='src/sonic-gnmi/testdata/' \
+            --exclude='src/snmpd/*/debian/' \
+            ./ "$DEST"/
+          # Remove any remaining files with colons in name (not valid on NTFS/Windows)
+          find "$DEST" -name "*:*" -delete
+          echo "Artifact size: $(du -sh "$DEST" | cut -f1)"
+          echo "ARTIFACT_PATH=$DEST" >> $GITHUB_ENV
+
+      - name: Upload source tree artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonic-buildimage-source
+          path: ${{ env.ARTIFACT_PATH }}
+          retention-days: 7
+
+      - name: Compare artifact vs fresh clone
+        run: |
+          # Fresh recursive clone of upstream — mirrors what the main checkout did,
+          # but without the externally-fetched sources (dget/git-clone).
+          FRESH=$RUNNER_TEMP/sonic-buildimage-fresh
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
+            https://github.com/sonic-net/sonic-buildimage.git "$FRESH"
+
+          ARTIFACT=${{ env.ARTIFACT_PATH }}
+
+          # List all dirs, relative to base, excluding .git
+          list_dirs() {
+            local base="$1"
+            find "$base" -mindepth 1 -type d \
+              | sed "s|$base/||" \
+              | grep -v '/\.git\b' \
+              | sort
+          }
+
+          ARTIFACT_DIRS=$(list_dirs "$ARTIFACT")
+          FRESH_DIRS=$(list_dirs "$FRESH")
+
+          # Filter a sorted list to only top-level unique entries:
+          # if a parent dir is already in the list, skip its children.
+          top_level_only() {
+            local prev=""
+            while IFS= read -r line; do
+              if [ -z "$prev" ] || [[ "$line" != "$prev"/* ]]; then
+                echo "$line"
+                prev="$line"
+              fi
+            done
+          }
+
+          echo ""
+          echo "=== In ARTIFACT but NOT in fresh clone (externally fetched source) ==="
+          comm -23 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") \
+            | top_level_only || echo "  (none)"
+
+          echo ""
+          echo "=== In fresh clone but NOT in ARTIFACT (excluded or missing) ==="
+          comm -13 <(echo "$ARTIFACT_DIRS") <(echo "$FRESH_DIRS") \
+            | top_level_only || echo "  (none)"
