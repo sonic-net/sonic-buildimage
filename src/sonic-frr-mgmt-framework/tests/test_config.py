@@ -1032,8 +1032,10 @@ def test_bmp_target_deletion_triggers_default_target(run_cmd):
     assert 'bmp stats interval 1000' in all_commands
     assert 'bmp monitor ipv4 unicast pre-policy' in all_commands
     assert 'bmp monitor ipv6 unicast pre-policy' in all_commands
-    
-    
+
+
+@patch.dict('sys.modules', **mockmapping)
+@patch('frrcfgd.frrcfgd.g_run_command')
 def test_bgp_neighbor_description_injection(run_cmd):
     """Regression test: shell metacharacters in BGP_NEIGHBOR description must be
     passed as a literal vtysh argument, not interpreted by a shell."""
