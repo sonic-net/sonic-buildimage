@@ -1,0 +1,43 @@
+{
+    "BFD_PROFILE_VALID": {
+        "desc": "Configure a valid BFD_PROFILE entry."
+    },
+    "BFD_PROFILE_NAME_WITH_QUOTE": {
+        "desc": "Profile name containing a single quote must be rejected by the name pattern; otherwise it would mis-parse in vtysh command construction.",
+        "eStrKey": "Pattern"
+    },
+    "BFD_PROFILE_NAME_WITH_SPACE": {
+        "desc": "Profile name containing whitespace must be rejected by the name pattern; FRR does not accept whitespace in profile names.",
+        "eStrKey": "Pattern"
+    },
+    "BFD_PROFILE_RECEIVE_INTERVAL_TOO_LOW": {
+        "desc": "receive_interval below 10ms must be rejected (FRR floor is 10ms per frr-bfdd.yang range \"10000..max\" microseconds).",
+        "eStrKey": "Range"
+    },
+    "BFD_PROFILE_TRANSMIT_INTERVAL_TOO_HIGH": {
+        "desc": "transmit_interval above 60000ms must be rejected.",
+        "eStrKey": "Range"
+    },
+    "BFD_PROFILE_DETECT_MULTIPLIER_TOO_LOW": {
+        "desc": "detect_multiplier below 2 must be rejected (BFD requires at least 2 to tolerate a single packet loss).",
+        "eStrKey": "Range"
+    },
+    "BFD_PROFILE_MINIMUM_TTL_TOO_HIGH": {
+        "desc": "minimum_ttl above 254 must be rejected.",
+        "eStrKey": "Range"
+    },
+    "BFD_PROFILE_BIND_VALID": {
+        "desc": "BGP_NEIGHBOR.bfd_profile referencing an existing BFD_PROFILE entry is accepted by the leafref."
+    },
+    "BFD_PROFILE_BIND_GHOST_REJECTED": {
+        "desc": "BGP_NEIGHBOR.bfd_profile referencing a non-existent BFD_PROFILE entry must be rejected by the leafref. This is the symmetric protection for delete-while-bound: any final state in which a peer references a missing profile is invalid, regardless of how it was reached.",
+        "eStrKey": "LeafRef"
+    },
+    "BFD_PROFILE_BIND_VALID_PEER_GROUP": {
+        "desc": "BGP_PEER_GROUP.bfd_profile referencing an existing BFD_PROFILE entry is accepted by the leafref. The bfd_profile leaf lives in the shared sonic-bgp-cmn grouping; both BGP_NEIGHBOR_LIST and BGP_PEER_GROUP_LIST inherit it, so the leafref must work on either."
+    },
+    "BFD_PROFILE_BIND_GHOST_REJECTED_PEER_GROUP": {
+        "desc": "BGP_PEER_GROUP.bfd_profile referencing a non-existent BFD_PROFILE entry must be rejected by the leafref — the same symmetric protection as the BGP_NEIGHBOR case.",
+        "eStrKey": "LeafRef"
+    }
+}

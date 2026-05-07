@@ -40,6 +40,10 @@ module sonic-bgp-common {
         prefix ext;
     }
 
+    import sonic-bfd-profile {
+        prefix bfdprof;
+    }
+
     organization
         "SONiC";
 
@@ -48,6 +52,16 @@ module sonic-bgp-common {
 
     description
         "SONIC BGP common YANG attributes for Neighbors and Peer group";
+
+    revision 2026-04-29 {
+        description
+            "Add bfd_profile leafref into sonic-bfd-profile/BFD_PROFILE/name; align bfd_min_rx and bfd_min_tx ranges with BFD_PROFILE timer ranges.";
+    }
+
+    revision 2025-12-09 {
+        description
+            "Add BFD custom timer parameters: bfd_detect_multiplier, bfd_min_rx, bfd_min_tx";
+    }
 
     revision 2021-02-26 {
         description
@@ -274,9 +288,37 @@ module sonic-bgp-common {
             description "Enable Bidirectional Forwarding Detection (BFD) for rapid link failure detection on this peer.";
         }
 
+        leaf bfd_detect_multiplier {
+            type uint8 {
+                range 2..255;
+            }
+            description "BFD detection multiplier";
+        }
+
+        leaf bfd_min_rx {
+            type uint32 {
+                range 10..60000;
+            }
+            description "BFD minimum receive interval in milliseconds. Range matches sonic-bfd-profile receive_interval so per-peer and profile-bound timers are interchangeable.";
+        }
+
+        leaf bfd_min_tx {
+            type uint32 {
+                range 10..60000;
+            }
+            description "BFD minimum transmit interval in milliseconds. Range matches sonic-bfd-profile transmit_interval so per-peer and profile-bound timers are interchangeable.";
+        }
+
         leaf bfd_check_ctrl_plane_failure {
             type boolean;
             description "Trigger BGP session reset when a BFD control plane failure is detected.";
+        }
+
+        leaf bfd_profile {
+            type leafref {
+                path "/bfdprof:sonic-bfd-profile/bfdprof:BFD_PROFILE/bfdprof:BFD_PROFILE_LIST/bfdprof:name";
+            }
+            description "BFD profile applied to this peer. References an entry in the BFD_PROFILE table.";
         }
 
         leaf capability_dynamic {

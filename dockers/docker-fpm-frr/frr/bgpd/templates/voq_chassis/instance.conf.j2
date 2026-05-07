@@ -17,6 +17,17 @@
   neighbor {{ neighbor_addr }} shutdown
 {% endif %}
 !
+{% if 'bfd' in bgp_session and bgp_session['bfd'] == 'true' %}
+{%   if 'bfd_profile' in bgp_session %}
+  neighbor {{ neighbor_addr }} bfd
+  neighbor {{ neighbor_addr }} bfd profile {{ bgp_session['bfd_profile'] }}
+{%   elif 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
+  neighbor {{ neighbor_addr }} bfd {{ bgp_session['bfd_detect_multiplier'] }} {{ bgp_session['bfd_min_rx'] }} {{ bgp_session['bfd_min_tx'] }}
+{%   else %}
+  neighbor {{ neighbor_addr }} bfd
+{%   endif %}
+{% endif %}
+!
   address-family ipv4
 {% if constants.bgp.maximum_paths.enabled is defined and constants.bgp.maximum_paths.enabled %}
     maximum-paths ibgp {{ constants.bgp.maximum_paths.ipv4 | default(64) }}

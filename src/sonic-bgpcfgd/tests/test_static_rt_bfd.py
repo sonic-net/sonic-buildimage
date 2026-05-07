@@ -750,3 +750,226 @@ def test_set_del_ifname_only_route():
 
     assert "Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty."\
         in test_set_del_ifname_only_route.logs
+
+
+def test_bfd_custom_timers():
+    """Test BFD with custom timer parameters"""
+    dut = constructor()
+    intf_setup(dut)
+
+    # Test static route with custom BFD timer parameters (single nexthop)
+    set_del_test(dut, "srt",
+        "SET",
+        ("2.2.2.0/24", {
+            "nexthop": "192.168.1.2",
+            "ifname": "if1",
+            "bfd": "true",
+            "bfd_detect_multiplier": "5",
+            "bfd_min_rx": "300",
+            "bfd_min_tx": "300"
+        }),
+        {
+            "set_default:default:192.168.1.2": {
+                "multihop": "false",
+                "rx_interval": "300",
+                "tx_interval": "300",
+                "multiplier": "5",
+                "local_addr": "192.168.1.1"
+            }
+        },
+        {}
+    )
+
+    # BFD session comes UP - static route should be written with the UP nexthop
+    set_del_test(dut, "bfd",
+        "SET",
+        ("192.168.1.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_default:2.2.2.0/24': {'nexthop': '192.168.1.2', 'ifname': 'if1', 'nexthop-vrf': 'default', 'expiry': 'false'}}
+    )
+
+    # Test another route with different custom timer parameters
+    set_del_test(dut, "srt",
+        "SET",
+        ("3.3.3.0/24", {
+            "nexthop": "192.168.2.2",
+            "ifname": "if2",
+            "bfd": "true",
+            "bfd_detect_multiplier": "10",
+            "bfd_min_rx": "500",
+            "bfd_min_tx": "500"
+        }),
+        {
+            "set_default:default:192.168.2.2": {
+                "multihop": "false",
+                "rx_interval": "500",
+                "tx_interval": "500",
+                "multiplier": "10",
+                "local_addr": "192.168.2.1"
+            }
+        },
+        {}
+    )
+
+    # Delete the first route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("2.2.2.0/24", {}),
+        {
+            "del_default:default:192.168.1.2": {}
+        },
+        {
+            "del_default:2.2.2.0/24": {}
+        }
+    )
+
+    # Delete the second route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("3.3.3.0/24", {}),
+        {
+            "del_default:default:192.168.2.2": {}
+        },
+        {
+            "del_default:3.3.3.0/24": {}
+        }
+    )
+
+
+def test_bfd_vrf_based_key():
+    """Test BFD with VRF-based key format (unified mode)"""
+    dut = constructor()
+    intf_setup(dut)
+
+    # Test static route with VRF in key (Vrf-BLUE|prefix format)
+    set_del_test(dut, "srt",
+        "SET",
+        ("Vrf-BLUE|3.3.3.0/24", {
+            "nexthop": "192.168.1.2",
+            "ifname": "if1",
+            "bfd": "true",
+            "bfd_detect_multiplier": "7",
+            "bfd_min_rx": "400",
+            "bfd_min_tx": "400"
+        }),
+        {
+            "set_Vrf-BLUE:default:192.168.1.2": {
+                "multihop": "false",
+                "rx_interval": "400",
+                "tx_interval": "400",
+                "multiplier": "7",
+                "local_addr": "192.168.1.1"
+            }
+        },
+        {}
+    )
+
+    # BFD session comes UP - static route should be written
+    set_del_test(dut, "bfd",
+        "SET",
+        ("Vrf-BLUE|default|192.168.1.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_Vrf-BLUE:3.3.3.0/24': {'nexthop': '192.168.1.2', 'ifname': 'if1', 'nexthop-vrf': 'Vrf-BLUE', 'expiry': 'false'}}
+    )
+
+    # Delete the route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("Vrf-BLUE|3.3.3.0/24", {}),
+        {
+            "del_Vrf-BLUE:default:192.168.1.2": {}
+        },
+        {
+            "del_Vrf-BLUE:3.3.3.0/24": {}
+        }
+    )
+
+
+def test_bfd_vrf_based_key_custom_timers():
+    """Test BFD with VRF-based key and custom timer parameters (unified mode)"""
+    dut = constructor()
+    intf_setup(dut)
+
+    # Test static route with VRF in key and custom BFD timer parameters (single nexthop)
+    set_del_test(dut, "srt",
+        "SET",
+        ("Vrf-RED|4.4.4.0/24", {
+            "nexthop": "192.168.1.2",
+            "ifname": "if1",
+            "bfd": "true",
+            "bfd_detect_multiplier": "3",
+            "bfd_min_rx": "250",
+            "bfd_min_tx": "250"
+        }),
+        {
+            "set_Vrf-RED:default:192.168.1.2": {
+                "multihop": "false",
+                "rx_interval": "250",
+                "tx_interval": "250",
+                "multiplier": "3",
+                "local_addr": "192.168.1.1"
+            }
+        },
+        {}
+    )
+
+    # BFD session comes UP - static route should be written with the UP nexthop
+    set_del_test(dut, "bfd",
+        "SET",
+        ("Vrf-RED|default|192.168.1.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_Vrf-RED:4.4.4.0/24': {'nexthop': '192.168.1.2', 'ifname': 'if1', 'nexthop-vrf': 'Vrf-RED', 'expiry': 'false'}}
+    )
+
+    # Test another route with different custom timer parameters
+    set_del_test(dut, "srt",
+        "SET",
+        ("Vrf-RED|5.5.5.0/24", {
+            "nexthop": "192.168.2.2",
+            "ifname": "if2",
+            "bfd": "true",
+            "bfd_detect_multiplier": "8",
+            "bfd_min_rx": "600",
+            "bfd_min_tx": "600"
+        }),
+        {
+            "set_Vrf-RED:default:192.168.2.2": {
+                "multihop": "false",
+                "rx_interval": "600",
+                "tx_interval": "600",
+                "multiplier": "8",
+                "local_addr": "192.168.2.1"
+            }
+        },
+        {}
+    )
+
+    # Delete the first route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("Vrf-RED|4.4.4.0/24", {}),
+        {
+            "del_Vrf-RED:default:192.168.1.2": {}
+        },
+        {
+            "del_Vrf-RED:4.4.4.0/24": {}
+        }
+    )
+
+    # Delete the second route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("Vrf-RED|5.5.5.0/24", {}),
+        {
+            "del_Vrf-RED:default:192.168.2.2": {}
+        },
+        {
+            "del_Vrf-RED:5.5.5.0/24": {}
+        }
+    )
