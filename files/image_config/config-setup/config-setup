@@ -291,7 +291,7 @@ do_config_initialization()
     if [ -r ${MINGRAPH_FILE} ]; then
         echo "No config_db.json found but minigraph.xml is available, using minigraph..."
         reload_minigraph
-        rm -f /tmp/pending_config_initialization
+        rm -f /etc/sonic/pending_config_initialization
         sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
         return 0
     fi
@@ -455,7 +455,7 @@ boot_config()
         # Mark config as initialized so subsequent boots don't re-trigger
         # initialization unnecessarily (warm-reboot to new image scenario).
         sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
-        rm -f /tmp/pending_config_initialization
+        rm -f /etc/sonic/pending_config_initialization
         return 0
     fi
 
