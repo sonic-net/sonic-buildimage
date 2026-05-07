@@ -1075,8 +1075,10 @@ sudo bash -c "echo } >> $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/ctr_image_nam
 {% for script in installer_start_scripts.split(' ') -%}
 if [ -f $TARGET_MACHINE"_{{script}}" ]; then
     sudo cp $TARGET_MACHINE"_{{script}}" $FILESYSTEM_ROOT/usr/bin/{{script}}
-else
+elif [ -f {{script}} ]; then
     sudo cp {{script}} $FILESYSTEM_ROOT/usr/bin/
+else
+    sudo cp $SCRIPTS_DIR/{{script}} $FILESYSTEM_ROOT/usr/bin/
 fi
 {% endfor %}
 {% for service in installer_services.split(' ') -%}
