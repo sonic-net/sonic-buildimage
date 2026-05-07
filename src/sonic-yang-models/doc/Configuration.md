@@ -461,7 +461,7 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 ### BGP Device Global
 
 The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
-It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+It has a **STATE** object containing device state such as **tsa_enabled**, **chassis_tsa_supported**, **wcmp_enabled**, and **idf_isolation_state**.
 
 When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
 
@@ -470,6 +470,22 @@ When **tsa_enabled** is set to true, the device is isolated using traffic-shift-
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
         "tsa_enabled": "true"
+    }
+}
+```
+
+**chassis_tsa_supported** selects how chassis-wide Traffic-Shift-Away is coordinated on chassis systems:
+
+- When **true**, the supervisor uses **CHASSIS_APP_DB** to publish **`tsa_enabled`** to line cards.
+- When **false**, that **CHASSIS_APP_DB** synchronization is not used; TSA/TSB is applied on each line card (for example via **rexec** on the supervisor).
+
+YANG defines a default for this leaf; for the exact value, see **sonic-bgp-device-global** (`BGP_DEVICE_GLOBAL/STATE/chassis_tsa_supported`).
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "chassis_tsa_supported": "false"
     }
 }
 ```
