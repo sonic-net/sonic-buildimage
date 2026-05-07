@@ -65,3 +65,4 @@
 0104-SONiC-ONLY-zebra-skip-if-add-update-in-speed-timer-for-unready-ifp.patch
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
+0107-staticd-Fix-SRv6-SID-use-after-free-on-locator-deletion.patch
