@@ -244,7 +244,7 @@ main() {
         done
     else
         demo_mnt="build_raw_image_mnt"
-        demo_dev="$cur_wd/target/sonic-vs-amd64.raw"
+        demo_dev="/sonic/%%OUTPUT_RAW_IMAGE%%"
         mkfs.ext4 -L "$demo_volume_label" "$demo_dev"
 
         log_info "Mounting $demo_dev on $demo_mnt..."
@@ -325,6 +325,14 @@ main() {
     # Ensure XBOOTLDR is mounted at /boot for subsequent installers (sonic-installer)
     # log_info "Preparing environment for subsequent installers..."
 
+    if [ "$install_env" = "build" ]; then
+        mkdir -p /boot
+        if ! is_mounted /boot; then
+            log_info "Mounting ${demo_mnt} to /boot"
+            mount --bind "${demo_mnt}" /boot
+        fi
+    fi
+
     if is_mounted /boot; then
         log_info "/boot is already mounted (likely in SONIE environment)."
     else
@@ -332,6 +340,7 @@ main() {
         exit 1
     fi
 
+    mkdir -p /boot/grub
     if [ ! -d /boot/grub ]; then
         log_error "/boot/grub not found. Exiting."
         exit 1
@@ -354,6 +363,7 @@ main() {
     if [ "$install_env" = "sonie" ]; then
         mount --make-rprivate / || log_warn "Failed to make / rprivate"
     fi
+    mkdir -p /host
     mount --move "${demo_mnt}" /host
     demo_mnt="/host"
 
@@ -394,6 +404,18 @@ main() {
     fi
 
     # Cleanup temporary mounts manually since we are clearing the trap
+    if is_mounted /host/grub; then
+        log_info "Unmounting /host/grub..."
+        umount /host/grub || log_warn "Failed to unmount /host/grub"
+    fi
+
+    if [ "$install_env" = "build" ]; then
+        if is_mounted /boot; then
+            log_info "Unmounting /boot..."
+            umount /boot || log_warn "Failed to unmount /boot"
+        fi
+    fi
+
     if [ -n "$demo_mnt" ] && is_mounted "$demo_mnt"; then
         if [ "$demo_mnt" != "/host" ]; then
             log_info "Unmounting temporary mount $demo_mnt (lazy)"
