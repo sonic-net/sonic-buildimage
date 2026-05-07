@@ -1,0 +1,13 @@
+# Scouty default configuration for SONiC
+# Installed to /etc/scouty/config.yaml
+
+theme: "default"
+
+default_paths:
+  - "/var/log/syslog"
+  - "/var/log/swss/swss.rec"
+  - "/var/log/swss/sairedis.rec"
+
+general:
+  follow_on_pipe: true
+  detail_panel_ratio: 0.3
