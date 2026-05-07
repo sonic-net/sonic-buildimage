@@ -349,6 +349,12 @@ module sonic-device_metadata {
                     default "false";
                 }
 
+                leaf orch_southbound_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature between orchagent and syncd (southbound).";
+                    default "false";
+                }
+
                 leaf syslog_with_osversion {
                     type boolean;
                     description "Enable syslog with OS version feature.";
