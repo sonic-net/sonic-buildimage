@@ -92,3 +92,9 @@ class Dcdc(object):
         if value is None:
             value = 0
         return round(float(value), 3)
+
+    def get_position_in_parent(self):
+        """
+        Retrieves the index of position in its parent device.
+        """
+        return self.index
