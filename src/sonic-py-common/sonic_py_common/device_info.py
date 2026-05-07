@@ -731,6 +731,44 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # The file /etc/sonic/chassisdb_address is not present
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
+
+
+def get_smartswitch_midplane_ip():
+    """Parse /usr/lib/systemd/network/bridge-midplane.network to get the NPU bridge-midplane IP.
+    This file is deployed on both NPU and DPU sides of a smartswitch."""
+    network_file = "/usr/lib/systemd/network/bridge-midplane.network"
+    if not os.path.isfile(network_file):
+        return None
+
+    with open(network_file) as f:
+        for line in f:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].strip().lower() == 'address':
+                # Strip prefix length (e.g. "169.254.200.254/24" -> "169.254.200.254")
+                return tokens[1].strip().split('/')[0]
+
+    return None
 
 def get_device_runtime_metadata():
     chassis_metadata = {}

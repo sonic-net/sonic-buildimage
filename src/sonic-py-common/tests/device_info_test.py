@@ -368,6 +368,54 @@ class TestDeviceInfo(object):
         mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
         assert device_info.get_dpu_list() == ["dpu0", "dpu1"]
 
+    @mock.patch("os.path.isfile")
+    def test_get_chassis_db_address(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_chassis_db_address() is None
+
+        # File exists with a valid chassis_db_address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.1\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.1"
+
+        # File exists but contains no chassis_db_address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="some_other_key=value\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() is None
+
+        # Key is present but value should be stripped of whitespace
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="chassis_db_address=10.1.0.2  \n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_chassis_db_address() == "10.1.0.2"
+
+    @mock.patch("os.path.isfile")
+    def test_get_smartswitch_midplane_ip(self, mock_isfile):
+        # File does not exist — should return None
+        mock_isfile.return_value = False
+        assert device_info.get_smartswitch_midplane_ip() is None
+
+        # File exists with a valid Address entry
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254/24\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
+
+        # File exists but contains no Address key
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nLinkLocalAddressing=no\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() is None
+
+        # Address entry without prefix length
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="[Network]\nAddress=169.254.200.254\n")
+        with mock.patch("{}.open".format(BUILTINS), open_mocked):
+            assert device_info.get_smartswitch_midplane_ip() == "169.254.200.254"
+
     @classmethod
     def teardown_class(cls):
         print("TEARDOWN")
