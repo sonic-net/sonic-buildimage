@@ -3,6 +3,7 @@ click-log==0.4.0
 colorful==0.5.8
 docker==7.1.0
 docker-image-py==0.1.13
+execnet==2.1.2
 filelock==3.29.0
 freezegun==1.5.5
 ijson==3.5.0
@@ -22,6 +23,8 @@ ptyprocess==0.7.0
 pycairo==1.26.1
 pyroute2==0.9.6
 pytest-mock==3.15.1
+pytest-xdist==3.8.0
+python_arptable==0.0.2
 responses==0.26.0
 semantic-version==2.10.0
 supervisor==4.3.0

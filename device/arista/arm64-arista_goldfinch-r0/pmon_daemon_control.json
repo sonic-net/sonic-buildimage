@@ -11,7 +11,9 @@
     "thermalctld": {
         "thermal_monitor_initial_interval": 5,
         "thermal_monitor_update_interval": 60,
-        "thermal_monitor_update_elapsed_threshold": 30
+        "thermal_monitor_update_elapsed_threshold": 30,
+        "enable_liquid_cooling": true,
+        "liquid_cooling_update_interval": 0.5
     }
 }
 
