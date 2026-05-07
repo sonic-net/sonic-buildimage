@@ -286,8 +286,13 @@ class DpuModule(ModuleBase):
         self.MLX_DPU_REBOOT_CAUSE_WARM = 0
         self.MLX_DPU_REBOOT_CAUSE_COLD = 1
         self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
-        self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
-        self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        self.chassis_state_db = None
+
+    def get_chassis_db_conn(self):
+        if not self.chassis_state_db:
+            self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
+            self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
+        return self.chassis_state_db
 
     def get_base_mac(self):
         """
@@ -562,10 +567,11 @@ class DpuModule(ModuleBase):
         dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
         return_dict = {}
         try:
-            return_dict[ddr] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
-            return_dict[cpu] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
-            return_dict[nvme] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
+            chassis_state_db = self.get_chassis_db_conn()
+            return_dict[ddr] = chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
+            return_dict[cpu] = chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
+            return_dict[nvme] = chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
         except Exception as e:
-            logger.log_error(f"Failed to check obtain DPU temperature informatoin for {self.get_name()}! {e}")
+            logger.log_error(f"Failed to obtain DPU temperature information for {self.get_name()}! {e}")
             return {}
         return return_dict

@@ -8,5 +8,10 @@
          "dhcp6-duid" : "LL"
       }
     }
+  },
+  "vrf" : {
+    "module_globals" : {
+       "vrf-table-id-end" : 6000
+    }
   }
 }
