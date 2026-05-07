@@ -92,9 +92,53 @@ stages:
   - name: BUILD_BRANCH
     value: $(Build.SourceBranchName)
   jobs:
+  - job: trivy_scan
+    displayName: "Trivy vulnerability scan (docker-sonic-mgmt)"
+    pool: sonic-ubuntu-1c
+    continueOnError: true
+    timeoutInMinutes: 30
+    steps:
+    - checkout: self
+      clean: true
+      fetchDepth: 1
+    - download: current
+      artifact: docker-sonic-mgmt
+      displayName: "Download docker-sonic-mgmt artifact"
+    - script: |
+        set -ex
+        TRIVY_VERSION="0.70.0"
+        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
+        trivy --version
+      displayName: "Install Trivy"
+    - script: |
+        set -x
+        trivy image \
+          --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          --format table \
+          --no-progress \
+          --timeout 15m \
+          --output $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+        TRIVY_EXIT=$?
+        echo ""
+        echo "=== Trivy Scan Results (docker-sonic-mgmt) ==="
+        cat $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+        exit $TRIVY_EXIT
+      displayName: "Trivy scan docker-sonic-mgmt"
+    - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
+      artifact: trivy-scan-results
+      displayName: "Publish Trivy scan results"
+      condition: always()
+      continueOnError: true
+
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         CHECKOUT_SONIC_MGMT: true
+        # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
+        INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
         OVERRIDE_PARAMS:
           REPO_NAME: "sonic-mgmt"
           SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"

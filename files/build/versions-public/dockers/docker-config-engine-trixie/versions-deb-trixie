@@ -71,7 +71,7 @@ libxslt1.1==1.1.35-1.2+deb13u2
 libyaml-0-2==0.2.5-2
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==6.12.74-2
+linux-libc-dev==6.12.85-1
 make==4.4.1-2
 patch==2.8-2
 python3-redis==6.1.0-2
