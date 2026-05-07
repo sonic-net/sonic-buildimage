@@ -193,6 +193,12 @@ module sonic-device_metadata {
                     description "Device subtype for specialized topology roles (e.g., DualToR, SmartSwitch).";
                 }
 
+                leaf dualatortype {
+                    type string {
+                        pattern "active-active|active-standby";
+                    }
+                }
+
                 leaf peer_switch {
                     type stypes:hostname;
                     description "Hostname of the peer switch in a dual ToR configuration.";
