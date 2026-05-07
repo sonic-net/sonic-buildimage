@@ -1,8 +1,18 @@
+From 12b830b290f182f199a1797cc2dfe6bdfaad5482 Mon Sep 17 00:00:00 2001
+From: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+Date: Fri, 17 Apr 2026 01:45:22 +0300
+Subject: [PATCH] Fix fd leak in worker thread
+
+Signed-off-by: Hemanth Kumar Tirupati <htirupati@nvidia.com>
+---
+ scapy/sendrecv.py | 28 +++++++++++++++++-----------
+ 1 file changed, 17 insertions(+), 11 deletions(-)
+
 diff --git a/scapy/sendrecv.py b/scapy/sendrecv.py
-index f97fc415..dbcc372f 100644
+index 4f06c19d..503c15c5 100644
 --- a/scapy/sendrecv.py
 +++ b/scapy/sendrecv.py
-@@ -1111,17 +1111,19 @@ class AsyncSniffer(object):
+@@ -1257,17 +1257,19 @@ class AsyncSniffer(object):
              # The _RL2 function resolves the L2socket of an iface
              _RL2 = lambda i: L2socket or resolve_iface(i).l2listen()  # type: Callable[[_GlobInterfaceType], Callable[..., SuperSocket]]  # noqa: E501
              if isinstance(iface, list):
@@ -22,9 +32,9 @@ index f97fc415..dbcc372f 100644
 -                sniff_sockets.update(
 -                    (_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg),
 -                     iflabel)
--                    for ifname, iflabel in six.iteritems(iface)
+-                    for ifname, iflabel in iface.items()
 -                )
-+                for ifname, iflabel in six.iteritems(iface):
++                for ifname, iflabel in iface.items():
 +                    try:
 +                        sniff_sockets.update({_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg): iflabel})
 +                    except OSError:
@@ -32,7 +42,7 @@ index f97fc415..dbcc372f 100644
              else:
                  iface = iface or conf.iface
                  sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
-@@ -1221,7 +1223,11 @@ class AsyncSniffer(object):
+@@ -1380,7 +1382,11 @@ class AsyncSniffer(object):
          self.running = False
          if opened_socket is None:
              for s in sniff_sockets:
@@ -44,4 +54,7 @@ index f97fc415..dbcc372f 100644
 +                    pass
          elif close_pipe:
              close_pipe.close()
-         self.results = session.toPacketList()
+         self.results = PacketList(lst, "Sniffed")
+-- 
+2.49.0
+
