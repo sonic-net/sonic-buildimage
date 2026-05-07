@@ -1111,17 +1111,15 @@ instance is supported in SONiC.
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
-        "bgp_router_id": "8.8.8.8"
+        "bgp_router_id": "8.8.8.8",
+        "use_template_render_for_restore": "true"
     }
   }
 }
-
 ```
-
 
 ### Device neighbor metada
 
-```
 {
 "DEVICE_NEIGHBOR_METADATA": {
     "ARISTA01T1": {

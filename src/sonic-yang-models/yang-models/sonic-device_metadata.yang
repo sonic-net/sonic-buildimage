@@ -375,6 +375,12 @@ module sonic-device_metadata {
                     }
                     default enabled;
                 }
+
+                leaf use_template_render_for_restore {
+                    type boolean;
+                    description "When set to true, use template rendering to generate FRR configurations during startup in unified mode. When set to false, restore FRR configurations from cached DB tables. This field only takes effect in unified mode.";
+                    default "true";
+                }
             }
             /* end of container localhost */
 
