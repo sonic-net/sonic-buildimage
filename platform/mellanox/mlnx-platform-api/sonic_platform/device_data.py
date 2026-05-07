@@ -298,6 +298,12 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def get_pdb_count(cls):
+        """Return number of PDBs from /var/run/hw-management/config/hotplug_pdbs."""
+        return utils.read_int_from_file('/var/run/hw-management/config/hotplug_pdbs', default = 0, log_func=None)
+
+    @classmethod
+    @utils.read_only_cache()
     def get_sfp_count(cls):
         from sonic_py_common import device_info
         platform_path = device_info.get_path_to_platform_dir()
