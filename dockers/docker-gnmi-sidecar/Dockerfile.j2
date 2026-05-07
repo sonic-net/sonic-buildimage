@@ -5,6 +5,12 @@ FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
+
+# Override the base image's rsyslog.conf with one that prefers RELP on
+# 2514 and falls back to UDP on 514 so the container works on both new
+# (RELP-capable) and old (UDP-only) host images. See etc/rsyslog.conf.
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive

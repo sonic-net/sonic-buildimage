@@ -14,6 +14,11 @@ ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
 
+# Override the base image's rsyslog.conf with one that prefers RELP on
+# 2514 and falls back to UDP on 514 so the container works on both new
+# (RELP-capable) and old (UDP-only) host images. See etc/rsyslog.conf.
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_sonic_gnmi_debs.split(' '), "/debs/") }}
