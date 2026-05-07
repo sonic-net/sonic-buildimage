@@ -949,6 +949,14 @@ class Chassis(ChassisBase):
             if not self.vpd_data:
                 self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
             model = self.vpd_data.get(SYS_DISPLAY, "N/A")
+            if model == "N/A" and DeviceDataManager.is_simx_platform():
+                # vpd_data is not always produced on simx; fall back to the
+                # ONIE TLV part number instead of returning "N/A".
+                logger.log_notice(
+                    "VPD SYS_DISPLAY unavailable on simx; "
+                    "falling back to EEPROM part number")
+                self.initialize_eeprom()
+                model = self._eeprom.get_part_number()
         else:
             self.initialize_eeprom()
             model = self._eeprom.get_part_number()
@@ -1149,6 +1157,10 @@ class Chassis(ChassisBase):
         result = {}
         try:
             if not os.access(filename, os.R_OK):
+                if DeviceDataManager.is_simx_platform():
+                    # Skip the inotify wait on simx — vpd_data may not
+                    # appear, and stalling every call is costly.
+                    return result
                 logger.log_info("VPD data file {} not accessible, waiting for creation".format(filename))
                 if not utils.wait_for_file_creation(filename, VPD_DATA_WAIT_TIMEOUT):
                     logger.log_error("VPD data file {} not available after timeout".format(filename))
