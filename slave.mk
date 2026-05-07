@@ -96,6 +96,7 @@ export IMAGE_DISTRO_DEBS_PATH
 export MULTIARCH_QEMU_ENVIRON
 export DOCKER_BASE_ARCH
 export CROSS_BUILD_ENVIRON
+export INCLUDE_FRR_RPKI
 export BLDENV
 export BUILD_WORKDIR
 export MIRROR_SNAPSHOT
@@ -188,6 +189,10 @@ endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_BMP),y)
 INCLUDE_SYSTEM_BMP = y
+endif
+
+ifeq ($(SONIC_INCLUDE_FRR_RPKI),y)
+INCLUDE_FRR_RPKI = y
 endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_EVENTD),y)
@@ -486,6 +491,7 @@ $(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
 $(info "INCLUDE_SYSTEM_TELEMETRY"        : "$(INCLUDE_SYSTEM_TELEMETRY)")
 $(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
 $(info "INCLUDE_SYSTEM_BMP"              : "$(INCLUDE_SYSTEM_BMP)")
+$(info "INCLUDE_FRR_RPKI"                : "$(INCLUDE_FRR_RPKI)")
 $(info "INCLUDE_SYSTEM_OTEL"             : "$(INCLUDE_SYSTEM_OTEL)")
 $(info "INCLUDE_SYSTEM_EVENTD"           : "$(INCLUDE_SYSTEM_EVENTD)")
 $(info "ENABLE_HOST_SERVICE_ON_START"    : "$(ENABLE_HOST_SERVICE_ON_START)")
@@ -1558,6 +1564,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_system_otel="$(INCLUDE_SYSTEM_OTEL)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
 	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
+	export include_frr_rpki="$(INCLUDE_FRR_RPKI)"
 	export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 	export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
 	export include_restapi="$(INCLUDE_RESTAPI)"
