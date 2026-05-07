@@ -1,0 +1,2820 @@
+{
+    "interfaces": {
+        "Ethernet1": {
+            "index": "1,1,1,1,1,1,1,1",
+            "lanes": "265,266,267,268,269,270,271,272",
+            "autoneg": "off",
+            "lport": "148",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth1"
+                ],
+                "2x400G": [
+                    "Eth1/1",
+                    "Eth1/2"
+                ],
+                "4x200G": [
+                    "Eth1/1",
+                    "Eth1/2",
+                    "Eth1/3",
+                    "Eth1/4"
+                ]
+            }
+        },
+        "Ethernet9": {
+            "index": "2,2,2,2,2,2,2,2",
+            "lanes": "297,298,299,300,301,302,303,304",
+            "autoneg": "off",
+            "lport": "166",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth2"
+                ],
+                "2x400G": [
+                    "Eth2/1",
+                    "Eth2/2"
+                ],
+                "4x200G": [
+                    "Eth2/1",
+                    "Eth2/2",
+                    "Eth2/3",
+                    "Eth2/4"
+                ]
+            }
+        },
+        "Ethernet17": {
+            "index": "3,3,3,3,3,3,3,3",
+            "lanes": "33,34,35,36,37,38,39,40",
+            "autoneg": "off",
+            "lport": "18",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth3"
+                ],
+                "2x400G": [
+                    "Eth3/1",
+                    "Eth3/2"
+                ],
+                "4x200G": [
+                    "Eth3/1",
+                    "Eth3/2",
+                    "Eth3/3",
+                    "Eth3/4"
+                ]
+            }
+        },
+        "Ethernet25": {
+            "index": "4,4,4,4,4,4,4,4",
+            "lanes": "1,2,3,4,5,6,7,8",
+            "autoneg": "off",
+            "lport": "1",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth4"
+                ],
+                "2x400G": [
+                    "Eth4/1",
+                    "Eth4/2"
+                ],
+                "4x200G": [
+                    "Eth4/1",
+                    "Eth4/2",
+                    "Eth4/3",
+                    "Eth4/4"
+                ]
+            }
+        },
+        "Ethernet33": {
+            "index": "5,5,5,5,5,5,5,5",
+            "lanes": "17,18,19,20,21,22,23,24",
+            "autoneg": "off",
+            "lport": "9",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth5"
+                ],
+                "2x400G": [
+                    "Eth5/1",
+                    "Eth5/2"
+                ],
+                "4x200G": [
+                    "Eth5/1",
+                    "Eth5/2",
+                    "Eth5/3",
+                    "Eth5/4"
+                ]
+            }
+        },
+        "Ethernet41": {
+            "index": "6,6,6,6,6,6,6,6",
+            "lanes": "25,26,27,28,29,30,31,32",
+            "autoneg": "off",
+            "lport": "13",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth6"
+                ],
+                "2x400G": [
+                    "Eth6/1",
+                    "Eth6/2"
+                ],
+                "4x200G": [
+                    "Eth6/1",
+                    "Eth6/2",
+                    "Eth6/3",
+                    "Eth6/4"
+                ]
+            }
+        },
+        "Ethernet49": {
+            "index": "7,7,7,7,7,7,7,7",
+            "lanes": "209,210,211,212,213,214,215,216",
+            "autoneg": "off",
+            "lport": "116",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth7"
+                ],
+                "2x400G": [
+                    "Eth7/1",
+                    "Eth7/2"
+                ],
+                "4x200G": [
+                    "Eth7/1",
+                    "Eth7/2",
+                    "Eth7/3",
+                    "Eth7/4"
+                ]
+            }
+        },
+        "Ethernet57": {
+            "index": "8,8,8,8,8,8,8,8",
+            "lanes": "193,194,195,196,197,198,199,200",
+            "autoneg": "off",
+            "lport": "108",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth8"
+                ],
+                "2x400G": [
+                    "Eth8/1",
+                    "Eth8/2"
+                ],
+                "4x200G": [
+                    "Eth8/1",
+                    "Eth8/2",
+                    "Eth8/3",
+                    "Eth8/4"
+                ]
+            }
+        },
+        "Ethernet65": {
+            "index": "9,9,9,9,9,9,9,9",
+            "lanes": "305,306,307,308,309,310,311,312",
+            "autoneg": "off",
+            "lport": "170",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth9"
+                ],
+                "2x400G": [
+                    "Eth9/1",
+                    "Eth9/2"
+                ],
+                "4x200G": [
+                    "Eth9/1",
+                    "Eth9/2",
+                    "Eth9/3",
+                    "Eth9/4"
+                ]
+            }
+        },
+        "Ethernet73": {
+            "index": "10,10,10,10,10,10,10,10",
+            "lanes": "313,314,315,316,317,318,319,320",
+            "autoneg": "off",
+            "lport": "174",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth10"
+                ],
+                "2x400G": [
+                    "Eth10/1",
+                    "Eth10/2"
+                ],
+                "4x200G": [
+                    "Eth10/1",
+                    "Eth10/2",
+                    "Eth10/3",
+                    "Eth10/4"
+                ]
+            }
+        },
+        "Ethernet81": {
+            "index": "11,11,11,11,11,11,11,11",
+            "lanes": "41,42,43,44,45,46,47,48",
+            "autoneg": "off",
+            "lport": "22",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth11"
+                ],
+                "2x400G": [
+                    "Eth11/1",
+                    "Eth11/2"
+                ],
+                "4x200G": [
+                    "Eth11/1",
+                    "Eth11/2",
+                    "Eth11/3",
+                    "Eth11/4"
+                ]
+            }
+        },
+        "Ethernet89": {
+            "index": "12,12,12,12,12,12,12,12",
+            "lanes": "57,58,59,60,61,62,63,64",
+            "autoneg": "off",
+            "lport": "30",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth12"
+                ],
+                "2x400G": [
+                    "Eth12/1",
+                    "Eth12/2"
+                ],
+                "4x200G": [
+                    "Eth12/1",
+                    "Eth12/2",
+                    "Eth12/3",
+                    "Eth12/4"
+                ]
+            }
+        },
+        "Ethernet97": {
+            "index": "13,13,13,13,13,13,13,13",
+            "lanes": "49,50,51,52,53,54,55,56",
+            "autoneg": "off",
+            "lport": "26",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth13"
+                ],
+                "2x400G": [
+                    "Eth13/1",
+                    "Eth13/2"
+                ],
+                "4x200G": [
+                    "Eth13/1",
+                    "Eth13/2",
+                    "Eth13/3",
+                    "Eth13/4"
+                ]
+            }
+        },
+        "Ethernet105": {
+            "index": "14,14,14,14,14,14,14,14",
+            "lanes": "9,10,11,12,13,14,15,16",
+            "autoneg": "off",
+            "lport": "5",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth14"
+                ],
+                "2x400G": [
+                    "Eth14/1",
+                    "Eth14/2"
+                ],
+                "4x200G": [
+                    "Eth14/1",
+                    "Eth14/2",
+                    "Eth14/3",
+                    "Eth14/4"
+                ]
+            }
+        },
+        "Ethernet113": {
+            "index": "15,15,15,15,15,15,15,15",
+            "lanes": "225,226,227,228,229,230,231,232",
+            "autoneg": "off",
+            "lport": "126",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth15"
+                ],
+                "2x400G": [
+                    "Eth15/1",
+                    "Eth15/2"
+                ],
+                "4x200G": [
+                    "Eth15/1",
+                    "Eth15/2",
+                    "Eth15/3",
+                    "Eth15/4"
+                ]
+            }
+        },
+        "Ethernet121": {
+            "index": "16,16,16,16,16,16,16,16",
+            "lanes": "217,218,219,220,221,222,223,224",
+            "autoneg": "off",
+            "lport": "120",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth16"
+                ],
+                "2x400G": [
+                    "Eth16/1",
+                    "Eth16/2"
+                ],
+                "4x200G": [
+                    "Eth16/1",
+                    "Eth16/2",
+                    "Eth16/3",
+                    "Eth16/4"
+                ]
+            }
+        },
+        "Ethernet129": {
+            "index": "17,17,17,17,17,17,17,17",
+            "lanes": "377,378,379,380,381,382,383,384",
+            "autoneg": "off",
+            "lport": "210",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth17"
+                ],
+                "2x400G": [
+                    "Eth17/1",
+                    "Eth17/2"
+                ],
+                "4x200G": [
+                    "Eth17/1",
+                    "Eth17/2",
+                    "Eth17/3",
+                    "Eth17/4"
+                ]
+            }
+        },
+        "Ethernet137": {
+            "index": "18,18,18,18,18,18,18,18",
+            "lanes": "369,370,371,372,373,374,375,376",
+            "autoneg": "off",
+            "lport": "206",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth18"
+                ],
+                "2x400G": [
+                    "Eth18/1",
+                    "Eth18/2"
+                ],
+                "4x200G": [
+                    "Eth18/1",
+                    "Eth18/2",
+                    "Eth18/3",
+                    "Eth18/4"
+                ]
+            }
+        },
+        "Ethernet145": {
+            "index": "19,19,19,19,19,19,19,19",
+            "lanes": "121,122,123,124,125,126,127,128",
+            "autoneg": "off",
+            "lport": "66",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth19"
+                ],
+                "2x400G": [
+                    "Eth19/1",
+                    "Eth19/2"
+                ],
+                "4x200G": [
+                    "Eth19/1",
+                    "Eth19/2",
+                    "Eth19/3",
+                    "Eth19/4"
+                ]
+            }
+        },
+        "Ethernet153": {
+            "index": "20,20,20,20,20,20,20,20",
+            "lanes": "105,106,107,108,109,110,111,112",
+            "autoneg": "off",
+            "lport": "58",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth20"
+                ],
+                "2x400G": [
+                    "Eth20/1",
+                    "Eth20/2"
+                ],
+                "4x200G": [
+                    "Eth20/1",
+                    "Eth20/2",
+                    "Eth20/3",
+                    "Eth20/4"
+                ]
+            }
+        },
+        "Ethernet161": {
+            "index": "21,21,21,21,21,21,21,21",
+            "lanes": "73,74,75,76,77,78,79,80",
+            "autoneg": "off",
+            "lport": "40",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth21"
+                ],
+                "2x400G": [
+                    "Eth21/1",
+                    "Eth21/2"
+                ],
+                "4x200G": [
+                    "Eth21/1",
+                    "Eth21/2",
+                    "Eth21/3",
+                    "Eth21/4"
+                ]
+            }
+        },
+        "Ethernet169": {
+            "index": "22,22,22,22,22,22,22,22",
+            "lanes": "113,114,115,116,117,118,119,120",
+            "autoneg": "off",
+            "lport": "62",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth22"
+                ],
+                "2x400G": [
+                    "Eth22/1",
+                    "Eth22/2"
+                ],
+                "4x200G": [
+                    "Eth22/1",
+                    "Eth22/2",
+                    "Eth22/3",
+                    "Eth22/4"
+                ]
+            }
+        },
+        "Ethernet177": {
+            "index": "23,23,23,23,23,23,23,23",
+            "lanes": "281,282,283,284,285,286,287,288",
+            "autoneg": "off",
+            "lport": "156",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth23"
+                ],
+                "2x400G": [
+                    "Eth23/1",
+                    "Eth23/2"
+                ],
+                "4x200G": [
+                    "Eth23/1",
+                    "Eth23/2",
+                    "Eth23/3",
+                    "Eth23/4"
+                ]
+            }
+        },
+        "Ethernet185": {
+            "index": "24,24,24,24,24,24,24,24",
+            "lanes": "289,290,291,292,293,294,295,296",
+            "autoneg": "off",
+            "lport": "162",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth24"
+                ],
+                "2x400G": [
+                    "Eth24/1",
+                    "Eth24/2"
+                ],
+                "4x200G": [
+                    "Eth24/1",
+                    "Eth24/2",
+                    "Eth24/3",
+                    "Eth24/4"
+                ]
+            }
+        },
+        "Ethernet193": {
+            "index": "25,25,25,25,25,25,25,25",
+            "lanes": "361,362,363,364,365,366,367,368",
+            "autoneg": "off",
+            "lport": "202",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth25"
+                ],
+                "2x400G": [
+                    "Eth25/1",
+                    "Eth25/2"
+                ],
+                "4x200G": [
+                    "Eth25/1",
+                    "Eth25/2",
+                    "Eth25/3",
+                    "Eth25/4"
+                ]
+            }
+        },
+        "Ethernet201": {
+            "index": "26,26,26,26,26,26,26,26",
+            "lanes": "329,330,331,332,333,334,335,336",
+            "autoneg": "off",
+            "lport": "184",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth26"
+                ],
+                "2x400G": [
+                    "Eth26/1",
+                    "Eth26/2"
+                ],
+                "4x200G": [
+                    "Eth26/1",
+                    "Eth26/2",
+                    "Eth26/3",
+                    "Eth26/4"
+                ]
+            }
+        },
+        "Ethernet209": {
+            "index": "27,27,27,27,27,27,27,27",
+            "lanes": "65,66,67,68,69,70,71,72",
+            "autoneg": "off",
+            "lport": "36",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth27"
+                ],
+                "2x400G": [
+                    "Eth27/1",
+                    "Eth27/2"
+                ],
+                "4x200G": [
+                    "Eth27/1",
+                    "Eth27/2",
+                    "Eth27/3",
+                    "Eth27/4"
+                ]
+            }
+        },
+        "Ethernet217": {
+            "index": "28,28,28,28,28,28,28,28",
+            "lanes": "97,98,99,100,101,102,103,104",
+            "autoneg": "off",
+            "lport": "54",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth28"
+                ],
+                "2x400G": [
+                    "Eth28/1",
+                    "Eth28/2"
+                ],
+                "4x200G": [
+                    "Eth28/1",
+                    "Eth28/2",
+                    "Eth28/3",
+                    "Eth28/4"
+                ]
+            }
+        },
+        "Ethernet225": {
+            "index": "29,29,29,29,29,29,29,29",
+            "lanes": "89,90,91,92,93,94,95,96",
+            "autoneg": "off",
+            "lport": "48",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth29"
+                ],
+                "2x400G": [
+                    "Eth29/1",
+                    "Eth29/2"
+                ],
+                "4x200G": [
+                    "Eth29/1",
+                    "Eth29/2",
+                    "Eth29/3",
+                    "Eth29/4"
+                ]
+            }
+        },
+        "Ethernet233": {
+            "index": "30,30,30,30,30,30,30,30",
+            "lanes": "81,82,83,84,85,86,87,88",
+            "autoneg": "off",
+            "lport": "44",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth30"
+                ],
+                "2x400G": [
+                    "Eth30/1",
+                    "Eth30/2"
+                ],
+                "4x200G": [
+                    "Eth30/1",
+                    "Eth30/2",
+                    "Eth30/3",
+                    "Eth30/4"
+                ]
+            }
+        },
+        "Ethernet241": {
+            "index": "31,31,31,31,31,31,31,31",
+            "lanes": "257,258,259,260,261,262,263,264",
+            "autoneg": "off",
+            "lport": "144",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth31"
+                ],
+                "2x400G": [
+                    "Eth31/1",
+                    "Eth31/2"
+                ],
+                "4x200G": [
+                    "Eth31/1",
+                    "Eth31/2",
+                    "Eth31/3",
+                    "Eth31/4"
+                ]
+            }
+        },
+        "Ethernet249": {
+            "index": "32,32,32,32,32,32,32,32",
+            "lanes": "273,274,275,276,277,278,279,280",
+            "autoneg": "off",
+            "lport": "152",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth32"
+                ],
+                "2x400G": [
+                    "Eth32/1",
+                    "Eth32/2"
+                ],
+                "4x200G": [
+                    "Eth32/1",
+                    "Eth32/2",
+                    "Eth32/3",
+                    "Eth32/4"
+                ]
+            }
+        },
+        "Ethernet257": {
+            "index": "33,33,33,33,33,33,33,33",
+            "lanes": "505,506,507,508,509,510,511,512",
+            "autoneg": "off",
+            "lport": "282",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth33"
+                ],
+                "2x400G": [
+                    "Eth33/1",
+                    "Eth33/2"
+                ],
+                "4x200G": [
+                    "Eth33/1",
+                    "Eth33/2",
+                    "Eth33/3",
+                    "Eth33/4"
+                ]
+            }
+        },
+        "Ethernet265": {
+            "index": "34,34,34,34,34,34,34,34",
+            "lanes": "497,498,499,500,501,502,503,504",
+            "autoneg": "off",
+            "lport": "278",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth34"
+                ],
+                "2x400G": [
+                    "Eth34/1",
+                    "Eth34/2"
+                ],
+                "4x200G": [
+                    "Eth34/1",
+                    "Eth34/2",
+                    "Eth34/3",
+                    "Eth34/4"
+                ]
+            }
+        },
+        "Ethernet273": {
+            "index": "35,35,35,35,35,35,35,35",
+            "lanes": "153,154,155,156,157,158,159,160",
+            "autoneg": "off",
+            "lport": "84",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth35"
+                ],
+                "2x400G": [
+                    "Eth35/1",
+                    "Eth35/2"
+                ],
+                "4x200G": [
+                    "Eth35/1",
+                    "Eth35/2",
+                    "Eth35/3",
+                    "Eth35/4"
+                ]
+            }
+        },
+        "Ethernet281": {
+            "index": "36,36,36,36,36,36,36,36",
+            "lanes": "145,146,147,148,149,150,151,152",
+            "autoneg": "off",
+            "lport": "80",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth36"
+                ],
+                "2x400G": [
+                    "Eth36/1",
+                    "Eth36/2"
+                ],
+                "4x200G": [
+                    "Eth36/1",
+                    "Eth36/2",
+                    "Eth36/3",
+                    "Eth36/4"
+                ]
+            }
+        },
+        "Ethernet289": {
+            "index": "37,37,37,37,37,37,37,37",
+            "lanes": "129,130,131,132,133,134,135,136",
+            "autoneg": "off",
+            "lport": "72",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth37"
+                ],
+                "2x400G": [
+                    "Eth37/1",
+                    "Eth37/2"
+                ],
+                "4x200G": [
+                    "Eth37/1",
+                    "Eth37/2",
+                    "Eth37/3",
+                    "Eth37/4"
+                ]
+            }
+        },
+        "Ethernet297": {
+            "index": "38,38,38,38,38,38,38,38",
+            "lanes": "161,162,163,164,165,166,167,168",
+            "autoneg": "off",
+            "lport": "90",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth38"
+                ],
+                "2x400G": [
+                    "Eth38/1",
+                    "Eth38/2"
+                ],
+                "4x200G": [
+                    "Eth38/1",
+                    "Eth38/2",
+                    "Eth38/3",
+                    "Eth38/4"
+                ]
+            }
+        },
+        "Ethernet305": {
+            "index": "39,39,39,39,39,39,39,39",
+            "lanes": "201,202,203,204,205,206,207,208",
+            "autoneg": "off",
+            "lport": "112",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth39"
+                ],
+                "2x400G": [
+                    "Eth39/1",
+                    "Eth39/2"
+                ],
+                "4x200G": [
+                    "Eth39/1",
+                    "Eth39/2",
+                    "Eth39/3",
+                    "Eth39/4"
+                ]
+            }
+        },
+        "Ethernet313": {
+            "index": "40,40,40,40,40,40,40,40",
+            "lanes": "233,234,235,236,237,238,239,240",
+            "autoneg": "off",
+            "lport": "130",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth40"
+                ],
+                "2x400G": [
+                    "Eth40/1",
+                    "Eth40/2"
+                ],
+                "4x200G": [
+                    "Eth40/1",
+                    "Eth40/2",
+                    "Eth40/3",
+                    "Eth40/4"
+                ]
+            }
+        },
+        "Ethernet321": {
+            "index": "41,41,41,41,41,41,41,41",
+            "lanes": "489,490,491,492,493,494,495,496",
+            "autoneg": "off",
+            "lport": "274",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth41"
+                ],
+                "2x400G": [
+                    "Eth41/1",
+                    "Eth41/2"
+                ],
+                "4x200G": [
+                    "Eth41/1",
+                    "Eth41/2",
+                    "Eth41/3",
+                    "Eth41/4"
+                ]
+            }
+        },
+        "Ethernet329": {
+            "index": "42,42,42,42,42,42,42,42",
+            "lanes": "457,458,459,460,461,462,463,464",
+            "autoneg": "off",
+            "lport": "256",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth42"
+                ],
+                "2x400G": [
+                    "Eth42/1",
+                    "Eth42/2"
+                ],
+                "4x200G": [
+                    "Eth42/1",
+                    "Eth42/2",
+                    "Eth42/3",
+                    "Eth42/4"
+                ]
+            }
+        },
+        "Ethernet337": {
+            "index": "43,43,43,43,43,43,43,43",
+            "lanes": "321,322,323,324,325,326,327,328",
+            "autoneg": "off",
+            "lport": "180",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth43"
+                ],
+                "2x400G": [
+                    "Eth43/1",
+                    "Eth43/2"
+                ],
+                "4x200G": [
+                    "Eth43/1",
+                    "Eth43/2",
+                    "Eth43/3",
+                    "Eth43/4"
+                ]
+            }
+        },
+        "Ethernet345": {
+            "index": "44,44,44,44,44,44,44,44",
+            "lanes": "353,354,355,356,357,358,359,360",
+            "autoneg": "off",
+            "lport": "198",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth44"
+                ],
+                "2x400G": [
+                    "Eth44/1",
+                    "Eth44/2"
+                ],
+                "4x200G": [
+                    "Eth44/1",
+                    "Eth44/2",
+                    "Eth44/3",
+                    "Eth44/4"
+                ]
+            }
+        },
+        "Ethernet353": {
+            "index": "45,45,45,45,45,45,45,45",
+            "lanes": "345,346,347,348,349,350,351,352",
+            "autoneg": "off",
+            "lport": "192",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth45"
+                ],
+                "2x400G": [
+                    "Eth45/1",
+                    "Eth45/2"
+                ],
+                "4x200G": [
+                    "Eth45/1",
+                    "Eth45/2",
+                    "Eth45/3",
+                    "Eth45/4"
+                ]
+            }
+        },
+        "Ethernet361": {
+            "index": "46,46,46,46,46,46,46,46",
+            "lanes": "337,338,339,340,341,342,343,344",
+            "autoneg": "off",
+            "lport": "188",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth46"
+                ],
+                "2x400G": [
+                    "Eth46/1",
+                    "Eth46/2"
+                ],
+                "4x200G": [
+                    "Eth46/1",
+                    "Eth46/2",
+                    "Eth46/3",
+                    "Eth46/4"
+                ]
+            }
+        },
+        "Ethernet369": {
+            "index": "47,47,47,47,47,47,47,47",
+            "lanes": "241,242,243,244,245,246,247,248",
+            "autoneg": "off",
+            "lport": "134",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth47"
+                ],
+                "2x400G": [
+                    "Eth47/1",
+                    "Eth47/2"
+                ],
+                "4x200G": [
+                    "Eth47/1",
+                    "Eth47/2",
+                    "Eth47/3",
+                    "Eth47/4"
+                ]
+            }
+        },
+        "Ethernet377": {
+            "index": "48,48,48,48,48,48,48,48",
+            "lanes": "249,250,251,252,253,254,255,256",
+            "autoneg": "off",
+            "lport": "138",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth48"
+                ],
+                "2x400G": [
+                    "Eth48/1",
+                    "Eth48/2"
+                ],
+                "4x200G": [
+                    "Eth48/1",
+                    "Eth48/2",
+                    "Eth48/3",
+                    "Eth48/4"
+                ]
+            }
+        },
+        "Ethernet385": {
+            "index": "49,49,49,49,49,49,49,49",
+            "lanes": "449,450,451,452,453,454,455,456",
+            "autoneg": "off",
+            "lport": "252",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth49"
+                ],
+                "2x400G": [
+                    "Eth49/1",
+                    "Eth49/2"
+                ],
+                "4x200G": [
+                    "Eth49/1",
+                    "Eth49/2",
+                    "Eth49/3",
+                    "Eth49/4"
+                ]
+            }
+        },
+        "Ethernet393": {
+            "index": "50,50,50,50,50,50,50,50",
+            "lanes": "465,466,467,468,469,470,471,472",
+            "autoneg": "off",
+            "lport": "260",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth50"
+                ],
+                "2x400G": [
+                    "Eth50/1",
+                    "Eth50/2"
+                ],
+                "4x200G": [
+                    "Eth50/1",
+                    "Eth50/2",
+                    "Eth50/3",
+                    "Eth50/4"
+                ]
+            }
+        },
+        "Ethernet401": {
+            "index": "51,51,51,51,51,51,51,51",
+            "lanes": "409,410,411,412,413,414,415,416",
+            "autoneg": "off",
+            "lport": "230",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth51"
+                ],
+                "2x400G": [
+                    "Eth51/1",
+                    "Eth51/2"
+                ],
+                "4x200G": [
+                    "Eth51/1",
+                    "Eth51/2",
+                    "Eth51/3",
+                    "Eth51/4"
+                ]
+            }
+        },
+        "Ethernet409": {
+            "index": "52,52,52,52,52,52,52,52",
+            "lanes": "401,402,403,404,405,406,407,408",
+            "autoneg": "off",
+            "lport": "224",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth52"
+                ],
+                "2x400G": [
+                    "Eth52/1",
+                    "Eth52/2"
+                ],
+                "4x200G": [
+                    "Eth52/1",
+                    "Eth52/2",
+                    "Eth52/3",
+                    "Eth52/4"
+                ]
+            }
+        },
+        "Ethernet417": {
+            "index": "53,53,53,53,53,53,53,53",
+            "lanes": "385,386,387,388,389,390,391,392",
+            "autoneg": "off",
+            "lport": "216",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth53"
+                ],
+                "2x400G": [
+                    "Eth53/1",
+                    "Eth53/2"
+                ],
+                "4x200G": [
+                    "Eth53/1",
+                    "Eth53/2",
+                    "Eth53/3",
+                    "Eth53/4"
+                ]
+            }
+        },
+        "Ethernet425": {
+            "index": "54,54,54,54,54,54,54,54",
+            "lanes": "417,418,419,420,421,422,423,424",
+            "autoneg": "off",
+            "lport": "234",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth54"
+                ],
+                "2x400G": [
+                    "Eth54/1",
+                    "Eth54/2"
+                ],
+                "4x200G": [
+                    "Eth54/1",
+                    "Eth54/2",
+                    "Eth54/3",
+                    "Eth54/4"
+                ]
+            }
+        },
+        "Ethernet433": {
+            "index": "55,55,55,55,55,55,55,55",
+            "lanes": "185,186,187,188,189,190,191,192",
+            "autoneg": "off",
+            "lport": "102",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth55"
+                ],
+                "2x400G": [
+                    "Eth55/1",
+                    "Eth55/2"
+                ],
+                "4x200G": [
+                    "Eth55/1",
+                    "Eth55/2",
+                    "Eth55/3",
+                    "Eth55/4"
+                ]
+            }
+        },
+        "Ethernet441": {
+            "index": "56,56,56,56,56,56,56,56",
+            "lanes": "177,178,179,180,181,182,183,184",
+            "autoneg": "off",
+            "lport": "98",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth56"
+                ],
+                "2x400G": [
+                    "Eth56/1",
+                    "Eth56/2"
+                ],
+                "4x200G": [
+                    "Eth56/1",
+                    "Eth56/2",
+                    "Eth56/3",
+                    "Eth56/4"
+                ]
+            }
+        },
+        "Ethernet449": {
+            "index": "57,57,57,57,57,57,57,57",
+            "lanes": "481,482,483,484,485,486,487,488",
+            "autoneg": "off",
+            "lport": "270",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth57"
+                ],
+                "2x400G": [
+                    "Eth57/1",
+                    "Eth57/2"
+                ],
+                "4x200G": [
+                    "Eth57/1",
+                    "Eth57/2",
+                    "Eth57/3",
+                    "Eth57/4"
+                ]
+            }
+        },
+        "Ethernet457": {
+            "index": "58,58,58,58,58,58,58,58",
+            "lanes": "473,474,475,476,477,478,479,480",
+            "autoneg": "off",
+            "lport": "264",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth58"
+                ],
+                "2x400G": [
+                    "Eth58/1",
+                    "Eth58/2"
+                ],
+                "4x200G": [
+                    "Eth58/1",
+                    "Eth58/2",
+                    "Eth58/3",
+                    "Eth58/4"
+                ]
+            }
+        },
+        "Ethernet465": {
+            "index": "59,59,59,59,59,59,59,59",
+            "lanes": "393,394,395,396,397,398,399,400",
+            "autoneg": "off",
+            "lport": "220",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth59"
+                ],
+                "2x400G": [
+                    "Eth59/1",
+                    "Eth59/2"
+                ],
+                "4x200G": [
+                    "Eth59/1",
+                    "Eth59/2",
+                    "Eth59/3",
+                    "Eth59/4"
+                ]
+            }
+        },
+        "Ethernet473": {
+            "index": "60,60,60,60,60,60,60,60",
+            "lanes": "433,434,435,436,437,438,439,440",
+            "autoneg": "off",
+            "lport": "242",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth60"
+                ],
+                "2x400G": [
+                    "Eth60/1",
+                    "Eth60/2"
+                ],
+                "4x200G": [
+                    "Eth60/1",
+                    "Eth60/2",
+                    "Eth60/3",
+                    "Eth60/4"
+                ]
+            }
+        },
+        "Ethernet481": {
+            "index": "61,61,61,61,61,61,61,61",
+            "lanes": "441,442,443,444,445,446,447,448",
+            "autoneg": "off",
+            "lport": "246",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth61"
+                ],
+                "2x400G": [
+                    "Eth61/1",
+                    "Eth61/2"
+                ],
+                "4x200G": [
+                    "Eth61/1",
+                    "Eth61/2",
+                    "Eth61/3",
+                    "Eth61/4"
+                ]
+            }
+        },
+        "Ethernet489": {
+            "index": "62,62,62,62,62,62,62,62",
+            "lanes": "425,426,427,428,429,430,431,432",
+            "autoneg": "off",
+            "lport": "238",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth62"
+                ],
+                "2x400G": [
+                    "Eth62/1",
+                    "Eth62/2"
+                ],
+                "4x200G": [
+                    "Eth62/1",
+                    "Eth62/2",
+                    "Eth62/3",
+                    "Eth62/4"
+                ]
+            }
+        },
+        "Ethernet497": {
+            "index": "63,63,63,63,63,63,63,63",
+            "lanes": "169,170,171,172,173,174,175,176",
+            "autoneg": "off",
+            "lport": "94",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth63"
+                ],
+                "2x400G": [
+                    "Eth63/1",
+                    "Eth63/2"
+                ],
+                "4x200G": [
+                    "Eth63/1",
+                    "Eth63/2",
+                    "Eth63/3",
+                    "Eth63/4"
+                ]
+            }
+        },
+        "Ethernet505": {
+            "index": "64,64,64,64,64,64,64,64",
+            "lanes": "137,138,139,140,141,142,143,144",
+            "autoneg": "off",
+            "lport": "76",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth64"
+                ],
+                "2x400G": [
+                    "Eth64/1",
+                    "Eth64/2"
+                ],
+                "4x200G": [
+                    "Eth64/1",
+                    "Eth64/2",
+                    "Eth64/3",
+                    "Eth64/4"
+                ]
+            }
+        },
+        "Ethernet513": {
+            "index": "65,65,65,65,65,65,65,65",
+            "lanes": "537,538,539,540,541,542,543,544",
+            "autoneg": "off",
+            "lport": "300",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth65"
+                ],
+                "2x400G": [
+                    "Eth65/1",
+                    "Eth65/2"
+                ],
+                "4x200G": [
+                    "Eth65/1",
+                    "Eth65/2",
+                    "Eth65/3",
+                    "Eth65/4"
+                ]
+            }
+        },
+        "Ethernet521": {
+            "index": "66,66,66,66,66,66,66,66",
+            "lanes": "545,546,547,548,549,550,551,552",
+            "autoneg": "off",
+            "lport": "306",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth66"
+                ],
+                "2x400G": [
+                    "Eth66/1",
+                    "Eth66/2"
+                ],
+                "4x200G": [
+                    "Eth66/1",
+                    "Eth66/2",
+                    "Eth66/3",
+                    "Eth66/4"
+                ]
+            }
+        },
+        "Ethernet529": {
+            "index": "67,67,67,67,67,67,67,67",
+            "lanes": "585,586,587,588,589,590,591,592",
+            "autoneg": "off",
+            "lport": "328",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth67"
+                ],
+                "2x400G": [
+                    "Eth67/1",
+                    "Eth67/2"
+                ],
+                "4x200G": [
+                    "Eth67/1",
+                    "Eth67/2",
+                    "Eth67/3",
+                    "Eth67/4"
+                ]
+            }
+        },
+        "Ethernet537": {
+            "index": "68,68,68,68,68,68,68,68",
+            "lanes": "625,626,627,628,629,630,631,632",
+            "autoneg": "off",
+            "lport": "350",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth68"
+                ],
+                "2x400G": [
+                    "Eth68/1",
+                    "Eth68/2"
+                ],
+                "4x200G": [
+                    "Eth68/1",
+                    "Eth68/2",
+                    "Eth68/3",
+                    "Eth68/4"
+                ]
+            }
+        },
+        "Ethernet545": {
+            "index": "69,69,69,69,69,69,69,69",
+            "lanes": "633,634,635,636,637,638,639,640",
+            "autoneg": "off",
+            "lport": "354",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth69"
+                ],
+                "2x400G": [
+                    "Eth69/1",
+                    "Eth69/2"
+                ],
+                "4x200G": [
+                    "Eth69/1",
+                    "Eth69/2",
+                    "Eth69/3",
+                    "Eth69/4"
+                ]
+            }
+        },
+        "Ethernet553": {
+            "index": "70,70,70,70,70,70,70,70",
+            "lanes": "617,618,619,620,621,622,623,624",
+            "autoneg": "off",
+            "lport": "346",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth70"
+                ],
+                "2x400G": [
+                    "Eth70/1",
+                    "Eth70/2"
+                ],
+                "4x200G": [
+                    "Eth70/1",
+                    "Eth70/2",
+                    "Eth70/3",
+                    "Eth70/4"
+                ]
+            }
+        },
+        "Ethernet561": {
+            "index": "71,71,71,71,71,71,71,71",
+            "lanes": "841,842,843,844,845,846,847,848",
+            "autoneg": "off",
+            "lport": "472",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth71"
+                ],
+                "2x400G": [
+                    "Eth71/1",
+                    "Eth71/2"
+                ],
+                "4x200G": [
+                    "Eth71/1",
+                    "Eth71/2",
+                    "Eth71/3",
+                    "Eth71/4"
+                ]
+            }
+        },
+        "Ethernet569": {
+            "index": "72,72,72,72,72,72,72,72",
+            "lanes": "873,874,875,876,877,878,879,880",
+            "autoneg": "off",
+            "lport": "490",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth72"
+                ],
+                "2x400G": [
+                    "Eth72/1",
+                    "Eth72/2"
+                ],
+                "4x200G": [
+                    "Eth72/1",
+                    "Eth72/2",
+                    "Eth72/3",
+                    "Eth72/4"
+                ]
+            }
+        },
+        "Ethernet577": {
+            "index": "73,73,73,73,73,73,73,73",
+            "lanes": "529,530,531,532,533,534,535,536",
+            "autoneg": "off",
+            "lport": "296",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth73"
+                ],
+                "2x400G": [
+                    "Eth73/1",
+                    "Eth73/2"
+                ],
+                "4x200G": [
+                    "Eth73/1",
+                    "Eth73/2",
+                    "Eth73/3",
+                    "Eth73/4"
+                ]
+            }
+        },
+        "Ethernet585": {
+            "index": "74,74,74,74,74,74,74,74",
+            "lanes": "513,514,515,516,517,518,519,520",
+            "autoneg": "off",
+            "lport": "288",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth74"
+                ],
+                "2x400G": [
+                    "Eth74/1",
+                    "Eth74/2"
+                ],
+                "4x200G": [
+                    "Eth74/1",
+                    "Eth74/2",
+                    "Eth74/3",
+                    "Eth74/4"
+                ]
+            }
+        },
+        "Ethernet593": {
+            "index": "75,75,75,75,75,75,75,75",
+            "lanes": "601,602,603,604,605,606,607,608",
+            "autoneg": "off",
+            "lport": "336",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth75"
+                ],
+                "2x400G": [
+                    "Eth75/1",
+                    "Eth75/2"
+                ],
+                "4x200G": [
+                    "Eth75/1",
+                    "Eth75/2",
+                    "Eth75/3",
+                    "Eth75/4"
+                ]
+            }
+        },
+        "Ethernet601": {
+            "index": "76,76,76,76,76,76,76,76",
+            "lanes": "593,594,595,596,597,598,599,600",
+            "autoneg": "off",
+            "lport": "332",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth76"
+                ],
+                "2x400G": [
+                    "Eth76/1",
+                    "Eth76/2"
+                ],
+                "4x200G": [
+                    "Eth76/1",
+                    "Eth76/2",
+                    "Eth76/3",
+                    "Eth76/4"
+                ]
+            }
+        },
+        "Ethernet609": {
+            "index": "77,77,77,77,77,77,77,77",
+            "lanes": "577,578,579,580,581,582,583,584",
+            "autoneg": "off",
+            "lport": "324",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth77"
+                ],
+                "2x400G": [
+                    "Eth77/1",
+                    "Eth77/2"
+                ],
+                "4x200G": [
+                    "Eth77/1",
+                    "Eth77/2",
+                    "Eth77/3",
+                    "Eth77/4"
+                ]
+            }
+        },
+        "Ethernet617": {
+            "index": "78,78,78,78,78,78,78,78",
+            "lanes": "609,610,611,612,613,614,615,616",
+            "autoneg": "off",
+            "lport": "342",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth78"
+                ],
+                "2x400G": [
+                    "Eth78/1",
+                    "Eth78/2"
+                ],
+                "4x200G": [
+                    "Eth78/1",
+                    "Eth78/2",
+                    "Eth78/3",
+                    "Eth78/4"
+                ]
+            }
+        },
+        "Ethernet625": {
+            "index": "79,79,79,79,79,79,79,79",
+            "lanes": "881,882,883,884,885,886,887,888",
+            "autoneg": "off",
+            "lport": "494",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth79"
+                ],
+                "2x400G": [
+                    "Eth79/1",
+                    "Eth79/2"
+                ],
+                "4x200G": [
+                    "Eth79/1",
+                    "Eth79/2",
+                    "Eth79/3",
+                    "Eth79/4"
+                ]
+            }
+        },
+        "Ethernet633": {
+            "index": "80,80,80,80,80,80,80,80",
+            "lanes": "889,890,891,892,893,894,895,896",
+            "autoneg": "off",
+            "lport": "498",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth80"
+                ],
+                "2x400G": [
+                    "Eth80/1",
+                    "Eth80/2"
+                ],
+                "4x200G": [
+                    "Eth80/1",
+                    "Eth80/2",
+                    "Eth80/3",
+                    "Eth80/4"
+                ]
+            }
+        },
+        "Ethernet641": {
+            "index": "81,81,81,81,81,81,81,81",
+            "lanes": "521,522,523,524,525,526,527,528",
+            "autoneg": "off",
+            "lport": "292",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth81"
+                ],
+                "2x400G": [
+                    "Eth81/1",
+                    "Eth81/2"
+                ],
+                "4x200G": [
+                    "Eth81/1",
+                    "Eth81/2",
+                    "Eth81/3",
+                    "Eth81/4"
+                ]
+            }
+        },
+        "Ethernet649": {
+            "index": "82,82,82,82,82,82,82,82",
+            "lanes": "553,554,555,556,557,558,559,560",
+            "autoneg": "off",
+            "lport": "310",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth82"
+                ],
+                "2x400G": [
+                    "Eth82/1",
+                    "Eth82/2"
+                ],
+                "4x200G": [
+                    "Eth82/1",
+                    "Eth82/2",
+                    "Eth82/3",
+                    "Eth82/4"
+                ]
+            }
+        },
+        "Ethernet657": {
+            "index": "83,83,83,83,83,83,83,83",
+            "lanes": "641,642,643,644,645,646,647,648",
+            "autoneg": "off",
+            "lport": "360",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth83"
+                ],
+                "2x400G": [
+                    "Eth83/1",
+                    "Eth83/2"
+                ],
+                "4x200G": [
+                    "Eth83/1",
+                    "Eth83/2",
+                    "Eth83/3",
+                    "Eth83/4"
+                ]
+            }
+        },
+        "Ethernet665": {
+            "index": "84,84,84,84,84,84,84,84",
+            "lanes": "673,674,675,676,677,678,679,680",
+            "autoneg": "off",
+            "lport": "378",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth84"
+                ],
+                "2x400G": [
+                    "Eth84/1",
+                    "Eth84/2"
+                ],
+                "4x200G": [
+                    "Eth84/1",
+                    "Eth84/2",
+                    "Eth84/3",
+                    "Eth84/4"
+                ]
+            }
+        },
+        "Ethernet673": {
+            "index": "85,85,85,85,85,85,85,85",
+            "lanes": "665,666,667,668,669,670,671,672",
+            "autoneg": "off",
+            "lport": "372",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth85"
+                ],
+                "2x400G": [
+                    "Eth85/1",
+                    "Eth85/2"
+                ],
+                "4x200G": [
+                    "Eth85/1",
+                    "Eth85/2",
+                    "Eth85/3",
+                    "Eth85/4"
+                ]
+            }
+        },
+        "Ethernet681": {
+            "index": "86,86,86,86,86,86,86,86",
+            "lanes": "657,658,659,660,661,662,663,664",
+            "autoneg": "off",
+            "lport": "368",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth86"
+                ],
+                "2x400G": [
+                    "Eth86/1",
+                    "Eth86/2"
+                ],
+                "4x200G": [
+                    "Eth86/1",
+                    "Eth86/2",
+                    "Eth86/3",
+                    "Eth86/4"
+                ]
+            }
+        },
+        "Ethernet689": {
+            "index": "87,87,87,87,87,87,87,87",
+            "lanes": "825,826,827,828,829,830,831,832",
+            "autoneg": "off",
+            "lport": "462",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth87"
+                ],
+                "2x400G": [
+                    "Eth87/1",
+                    "Eth87/2"
+                ],
+                "4x200G": [
+                    "Eth87/1",
+                    "Eth87/2",
+                    "Eth87/3",
+                    "Eth87/4"
+                ]
+            }
+        },
+        "Ethernet697": {
+            "index": "88,88,88,88,88,88,88,88",
+            "lanes": "817,818,819,820,821,822,823,824",
+            "autoneg": "off",
+            "lport": "458",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth88"
+                ],
+                "2x400G": [
+                    "Eth88/1",
+                    "Eth88/2"
+                ],
+                "4x200G": [
+                    "Eth88/1",
+                    "Eth88/2",
+                    "Eth88/3",
+                    "Eth88/4"
+                ]
+            }
+        },
+        "Ethernet705": {
+            "index": "89,89,89,89,89,89,89,89",
+            "lanes": "561,562,563,564,565,566,567,568",
+            "autoneg": "off",
+            "lport": "314",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth89"
+                ],
+                "2x400G": [
+                    "Eth89/1",
+                    "Eth89/2"
+                ],
+                "4x200G": [
+                    "Eth89/1",
+                    "Eth89/2",
+                    "Eth89/3",
+                    "Eth89/4"
+                ]
+            }
+        },
+        "Ethernet713": {
+            "index": "90,90,90,90,90,90,90,90",
+            "lanes": "569,570,571,572,573,574,575,576",
+            "autoneg": "off",
+            "lport": "318",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth90"
+                ],
+                "2x400G": [
+                    "Eth90/1",
+                    "Eth90/2"
+                ],
+                "4x200G": [
+                    "Eth90/1",
+                    "Eth90/2",
+                    "Eth90/3",
+                    "Eth90/4"
+                ]
+            }
+        },
+        "Ethernet721": {
+            "index": "91,91,91,91,91,91,91,91",
+            "lanes": "857,858,859,860,861,862,863,864",
+            "autoneg": "off",
+            "lport": "480",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth91"
+                ],
+                "2x400G": [
+                    "Eth91/1",
+                    "Eth91/2"
+                ],
+                "4x200G": [
+                    "Eth91/1",
+                    "Eth91/2",
+                    "Eth91/3",
+                    "Eth91/4"
+                ]
+            }
+        },
+        "Ethernet729": {
+            "index": "92,92,92,92,92,92,92,92",
+            "lanes": "849,850,851,852,853,854,855,856",
+            "autoneg": "off",
+            "lport": "476",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth92"
+                ],
+                "2x400G": [
+                    "Eth92/1",
+                    "Eth92/2"
+                ],
+                "4x200G": [
+                    "Eth92/1",
+                    "Eth92/2",
+                    "Eth92/3",
+                    "Eth92/4"
+                ]
+            }
+        },
+        "Ethernet737": {
+            "index": "93,93,93,93,93,93,93,93",
+            "lanes": "833,834,835,836,837,838,839,840",
+            "autoneg": "off",
+            "lport": "468",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth93"
+                ],
+                "2x400G": [
+                    "Eth93/1",
+                    "Eth93/2"
+                ],
+                "4x200G": [
+                    "Eth93/1",
+                    "Eth93/2",
+                    "Eth93/3",
+                    "Eth93/4"
+                ]
+            }
+        },
+        "Ethernet745": {
+            "index": "94,94,94,94,94,94,94,94",
+            "lanes": "865,866,867,868,869,870,871,872",
+            "autoneg": "off",
+            "lport": "486",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth94"
+                ],
+                "2x400G": [
+                    "Eth94/1",
+                    "Eth94/2"
+                ],
+                "4x200G": [
+                    "Eth94/1",
+                    "Eth94/2",
+                    "Eth94/3",
+                    "Eth94/4"
+                ]
+            }
+        },
+        "Ethernet753": {
+            "index": "95,95,95,95,95,95,95,95",
+            "lanes": "809,810,811,812,813,814,815,816",
+            "autoneg": "off",
+            "lport": "454",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth95"
+                ],
+                "2x400G": [
+                    "Eth95/1",
+                    "Eth95/2"
+                ],
+                "4x200G": [
+                    "Eth95/1",
+                    "Eth95/2",
+                    "Eth95/3",
+                    "Eth95/4"
+                ]
+            }
+        },
+        "Ethernet761": {
+            "index": "96,96,96,96,96,96,96,96",
+            "lanes": "777,778,779,780,781,782,783,784",
+            "autoneg": "off",
+            "lport": "436",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth96"
+                ],
+                "2x400G": [
+                    "Eth96/1",
+                    "Eth96/2"
+                ],
+                "4x200G": [
+                    "Eth96/1",
+                    "Eth96/2",
+                    "Eth96/3",
+                    "Eth96/4"
+                ]
+            }
+        },
+        "Ethernet769": {
+            "index": "97,97,97,97,97,97,97,97",
+            "lanes": "649,650,651,652,653,654,655,656",
+            "autoneg": "off",
+            "lport": "364",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth97"
+                ],
+                "2x400G": [
+                    "Eth97/1",
+                    "Eth97/2"
+                ],
+                "4x200G": [
+                    "Eth97/1",
+                    "Eth97/2",
+                    "Eth97/3",
+                    "Eth97/4"
+                ]
+            }
+        },
+        "Ethernet777": {
+            "index": "98,98,98,98,98,98,98,98",
+            "lanes": "681,682,683,684,685,686,687,688",
+            "autoneg": "off",
+            "lport": "382",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth98"
+                ],
+                "2x400G": [
+                    "Eth98/1",
+                    "Eth98/2"
+                ],
+                "4x200G": [
+                    "Eth98/1",
+                    "Eth98/2",
+                    "Eth98/3",
+                    "Eth98/4"
+                ]
+            }
+        },
+        "Ethernet785": {
+            "index": "99,99,99,99,99,99,99,99",
+            "lanes": "897,898,899,900,901,902,903,904",
+            "autoneg": "off",
+            "lport": "504",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth99"
+                ],
+                "2x400G": [
+                    "Eth99/1",
+                    "Eth99/2"
+                ],
+                "4x200G": [
+                    "Eth99/1",
+                    "Eth99/2",
+                    "Eth99/3",
+                    "Eth99/4"
+                ]
+            }
+        },
+        "Ethernet793": {
+            "index": "100,100,100,100,100,100,100,100",
+            "lanes": "929,930,931,932,933,934,935,936",
+            "autoneg": "off",
+            "lport": "522",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth100"
+                ],
+                "2x400G": [
+                    "Eth100/1",
+                    "Eth100/2"
+                ],
+                "4x200G": [
+                    "Eth100/1",
+                    "Eth100/2",
+                    "Eth100/3",
+                    "Eth100/4"
+                ]
+            }
+        },
+        "Ethernet801": {
+            "index": "101,101,101,101,101,101,101,101",
+            "lanes": "921,922,923,924,925,926,927,928",
+            "autoneg": "off",
+            "lport": "516",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth101"
+                ],
+                "2x400G": [
+                    "Eth101/1",
+                    "Eth101/2"
+                ],
+                "4x200G": [
+                    "Eth101/1",
+                    "Eth101/2",
+                    "Eth101/3",
+                    "Eth101/4"
+                ]
+            }
+        },
+        "Ethernet809": {
+            "index": "102,102,102,102,102,102,102,102",
+            "lanes": "913,914,915,916,917,918,919,920",
+            "autoneg": "off",
+            "lport": "512",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth102"
+                ],
+                "2x400G": [
+                    "Eth102/1",
+                    "Eth102/2"
+                ],
+                "4x200G": [
+                    "Eth102/1",
+                    "Eth102/2",
+                    "Eth102/3",
+                    "Eth102/4"
+                ]
+            }
+        },
+        "Ethernet817": {
+            "index": "103,103,103,103,103,103,103,103",
+            "lanes": "721,722,723,724,725,726,727,728",
+            "autoneg": "off",
+            "lport": "404",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth103"
+                ],
+                "2x400G": [
+                    "Eth103/1",
+                    "Eth103/2"
+                ],
+                "4x200G": [
+                    "Eth103/1",
+                    "Eth103/2",
+                    "Eth103/3",
+                    "Eth103/4"
+                ]
+            }
+        },
+        "Ethernet825": {
+            "index": "104,104,104,104,104,104,104,104",
+            "lanes": "705,706,707,708,709,710,711,712",
+            "autoneg": "off",
+            "lport": "396",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth104"
+                ],
+                "2x400G": [
+                    "Eth104/1",
+                    "Eth104/2"
+                ],
+                "4x200G": [
+                    "Eth104/1",
+                    "Eth104/2",
+                    "Eth104/3",
+                    "Eth104/4"
+                ]
+            }
+        },
+        "Ethernet833": {
+            "index": "105,105,105,105,105,105,105,105",
+            "lanes": "689,690,691,692,693,694,695,696",
+            "autoneg": "off",
+            "lport": "386",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth105"
+                ],
+                "2x400G": [
+                    "Eth105/1",
+                    "Eth105/2"
+                ],
+                "4x200G": [
+                    "Eth105/1",
+                    "Eth105/2",
+                    "Eth105/3",
+                    "Eth105/4"
+                ]
+            }
+        },
+        "Ethernet841": {
+            "index": "106,106,106,106,106,106,106,106",
+            "lanes": "697,698,699,700,701,702,703,704",
+            "autoneg": "off",
+            "lport": "390",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth106"
+                ],
+                "2x400G": [
+                    "Eth106/1",
+                    "Eth106/2"
+                ],
+                "4x200G": [
+                    "Eth106/1",
+                    "Eth106/2",
+                    "Eth106/3",
+                    "Eth106/4"
+                ]
+            }
+        },
+        "Ethernet849": {
+            "index": "107,107,107,107,107,107,107,107",
+            "lanes": "953,954,955,956,957,958,959,960",
+            "autoneg": "off",
+            "lport": "534",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth107"
+                ],
+                "2x400G": [
+                    "Eth107/1",
+                    "Eth107/2"
+                ],
+                "4x200G": [
+                    "Eth107/1",
+                    "Eth107/2",
+                    "Eth107/3",
+                    "Eth107/4"
+                ]
+            }
+        },
+        "Ethernet857": {
+            "index": "108,108,108,108,108,108,108,108",
+            "lanes": "937,938,939,940,941,942,943,944",
+            "autoneg": "off",
+            "lport": "526",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth108"
+                ],
+                "2x400G": [
+                    "Eth108/1",
+                    "Eth108/2"
+                ],
+                "4x200G": [
+                    "Eth108/1",
+                    "Eth108/2",
+                    "Eth108/3",
+                    "Eth108/4"
+                ]
+            }
+        },
+        "Ethernet865": {
+            "index": "109,109,109,109,109,109,109,109",
+            "lanes": "905,906,907,908,909,910,911,912",
+            "autoneg": "off",
+            "lport": "508",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth109"
+                ],
+                "2x400G": [
+                    "Eth109/1",
+                    "Eth109/2"
+                ],
+                "4x200G": [
+                    "Eth109/1",
+                    "Eth109/2",
+                    "Eth109/3",
+                    "Eth109/4"
+                ]
+            }
+        },
+        "Ethernet873": {
+            "index": "110,110,110,110,110,110,110,110",
+            "lanes": "945,946,947,948,949,950,951,952",
+            "autoneg": "off",
+            "lport": "530",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth110"
+                ],
+                "2x400G": [
+                    "Eth110/1",
+                    "Eth110/2"
+                ],
+                "4x200G": [
+                    "Eth110/1",
+                    "Eth110/2",
+                    "Eth110/3",
+                    "Eth110/4"
+                ]
+            }
+        },
+        "Ethernet881": {
+            "index": "111,111,111,111,111,111,111,111",
+            "lanes": "737,738,739,740,741,742,743,744",
+            "autoneg": "off",
+            "lport": "414",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth111"
+                ],
+                "2x400G": [
+                    "Eth111/1",
+                    "Eth111/2"
+                ],
+                "4x200G": [
+                    "Eth111/1",
+                    "Eth111/2",
+                    "Eth111/3",
+                    "Eth111/4"
+                ]
+            }
+        },
+        "Ethernet889": {
+            "index": "112,112,112,112,112,112,112,112",
+            "lanes": "729,730,731,732,733,734,735,736",
+            "autoneg": "off",
+            "lport": "408",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth112"
+                ],
+                "2x400G": [
+                    "Eth112/1",
+                    "Eth112/2"
+                ],
+                "4x200G": [
+                    "Eth112/1",
+                    "Eth112/2",
+                    "Eth112/3",
+                    "Eth112/4"
+                ]
+            }
+        },
+        "Ethernet897": {
+            "index": "113,113,113,113,113,113,113,113",
+            "lanes": "761,762,763,764,765,766,767,768",
+            "autoneg": "off",
+            "lport": "426",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth113"
+                ],
+                "2x400G": [
+                    "Eth113/1",
+                    "Eth113/2"
+                ],
+                "4x200G": [
+                    "Eth113/1",
+                    "Eth113/2",
+                    "Eth113/3",
+                    "Eth113/4"
+                ]
+            }
+        },
+        "Ethernet905": {
+            "index": "114,114,114,114,114,114,114,114",
+            "lanes": "753,754,755,756,757,758,759,760",
+            "autoneg": "off",
+            "lport": "422",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth114"
+                ],
+                "2x400G": [
+                    "Eth114/1",
+                    "Eth114/2"
+                ],
+                "4x200G": [
+                    "Eth114/1",
+                    "Eth114/2",
+                    "Eth114/3",
+                    "Eth114/4"
+                ]
+            }
+        },
+        "Ethernet913": {
+            "index": "115,115,115,115,115,115,115,115",
+            "lanes": "1001,1002,1003,1004,1005,1006,1007,1008",
+            "autoneg": "off",
+            "lport": "562",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth115"
+                ],
+                "2x400G": [
+                    "Eth115/1",
+                    "Eth115/2"
+                ],
+                "4x200G": [
+                    "Eth115/1",
+                    "Eth115/2",
+                    "Eth115/3",
+                    "Eth115/4"
+                ]
+            }
+        },
+        "Ethernet921": {
+            "index": "116,116,116,116,116,116,116,116",
+            "lanes": "1017,1018,1019,1020,1021,1022,1023,1024",
+            "autoneg": "off",
+            "lport": "570",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth116"
+                ],
+                "2x400G": [
+                    "Eth116/1",
+                    "Eth116/2"
+                ],
+                "4x200G": [
+                    "Eth116/1",
+                    "Eth116/2",
+                    "Eth116/3",
+                    "Eth116/4"
+                ]
+            }
+        },
+        "Ethernet929": {
+            "index": "117,117,117,117,117,117,117,117",
+            "lanes": "1009,1010,1011,1012,1013,1014,1015,1016",
+            "autoneg": "off",
+            "lport": "566",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth117"
+                ],
+                "2x400G": [
+                    "Eth117/1",
+                    "Eth117/2"
+                ],
+                "4x200G": [
+                    "Eth117/1",
+                    "Eth117/2",
+                    "Eth117/3",
+                    "Eth117/4"
+                ]
+            }
+        },
+        "Ethernet937": {
+            "index": "118,118,118,118,118,118,118,118",
+            "lanes": "969,970,971,972,973,974,975,976",
+            "autoneg": "off",
+            "lport": "544",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth118"
+                ],
+                "2x400G": [
+                    "Eth118/1",
+                    "Eth118/2"
+                ],
+                "4x200G": [
+                    "Eth118/1",
+                    "Eth118/2",
+                    "Eth118/3",
+                    "Eth118/4"
+                ]
+            }
+        },
+        "Ethernet945": {
+            "index": "119,119,119,119,119,119,119,119",
+            "lanes": "793,794,795,796,797,798,799,800",
+            "autoneg": "off",
+            "lport": "444",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth119"
+                ],
+                "2x400G": [
+                    "Eth119/1",
+                    "Eth119/2"
+                ],
+                "4x200G": [
+                    "Eth119/1",
+                    "Eth119/2",
+                    "Eth119/3",
+                    "Eth119/4"
+                ]
+            }
+        },
+        "Ethernet953": {
+            "index": "120,120,120,120,120,120,120,120",
+            "lanes": "801,802,803,804,805,806,807,808",
+            "autoneg": "off",
+            "lport": "450",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth120"
+                ],
+                "2x400G": [
+                    "Eth120/1",
+                    "Eth120/2"
+                ],
+                "4x200G": [
+                    "Eth120/1",
+                    "Eth120/2",
+                    "Eth120/3",
+                    "Eth120/4"
+                ]
+            }
+        },
+        "Ethernet961": {
+            "index": "121,121,121,121,121,121,121,121",
+            "lanes": "713,714,715,716,717,718,719,720",
+            "autoneg": "off",
+            "lport": "400",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth121"
+                ],
+                "2x400G": [
+                    "Eth121/1",
+                    "Eth121/2"
+                ],
+                "4x200G": [
+                    "Eth121/1",
+                    "Eth121/2",
+                    "Eth121/3",
+                    "Eth121/4"
+                ]
+            }
+        },
+        "Ethernet969": {
+            "index": "122,122,122,122,122,122,122,122",
+            "lanes": "745,746,747,748,749,750,751,752",
+            "autoneg": "off",
+            "lport": "418",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth122"
+                ],
+                "2x400G": [
+                    "Eth122/1",
+                    "Eth122/2"
+                ],
+                "4x200G": [
+                    "Eth122/1",
+                    "Eth122/2",
+                    "Eth122/3",
+                    "Eth122/4"
+                ]
+            }
+        },
+        "Ethernet977": {
+            "index": "123,123,123,123,123,123,123,123",
+            "lanes": "993,994,995,996,997,998,999,1000",
+            "autoneg": "off",
+            "lport": "558",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth123"
+                ],
+                "2x400G": [
+                    "Eth123/1",
+                    "Eth123/2"
+                ],
+                "4x200G": [
+                    "Eth123/1",
+                    "Eth123/2",
+                    "Eth123/3",
+                    "Eth123/4"
+                ]
+            }
+        },
+        "Ethernet985": {
+            "index": "124,124,124,124,124,124,124,124",
+            "lanes": "961,962,963,964,965,966,967,968",
+            "autoneg": "off",
+            "lport": "540",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth124"
+                ],
+                "2x400G": [
+                    "Eth124/1",
+                    "Eth124/2"
+                ],
+                "4x200G": [
+                    "Eth124/1",
+                    "Eth124/2",
+                    "Eth124/3",
+                    "Eth124/4"
+                ]
+            }
+        },
+        "Ethernet993": {
+            "index": "125,125,125,125,125,125,125,125",
+            "lanes": "977,978,979,980,981,982,983,984",
+            "autoneg": "off",
+            "lport": "548",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth125"
+                ],
+                "2x400G": [
+                    "Eth125/1",
+                    "Eth125/2"
+                ],
+                "4x200G": [
+                    "Eth125/1",
+                    "Eth125/2",
+                    "Eth125/3",
+                    "Eth125/4"
+                ]
+            }
+        },
+        "Ethernet1001": {
+            "index": "126,126,126,126,126,126,126,126",
+            "lanes": "985,986,987,988,989,990,991,992",
+            "autoneg": "off",
+            "lport": "552",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth126"
+                ],
+                "2x400G": [
+                    "Eth126/1",
+                    "Eth126/2"
+                ],
+                "4x200G": [
+                    "Eth126/1",
+                    "Eth126/2",
+                    "Eth126/3",
+                    "Eth126/4"
+                ]
+            }
+        },
+        "Ethernet1009": {
+            "index": "127,127,127,127,127,127,127,127",
+            "lanes": "785,786,787,788,789,790,791,792",
+            "autoneg": "off",
+            "lport": "440",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth127"
+                ],
+                "2x400G": [
+                    "Eth127/1",
+                    "Eth127/2"
+                ],
+                "4x200G": [
+                    "Eth127/1",
+                    "Eth127/2",
+                    "Eth127/3",
+                    "Eth127/4"
+                ]
+            }
+        },
+        "Ethernet1017": {
+            "index": "128,128,128,128,128,128,128,128",
+            "lanes": "769,770,771,772,773,774,775,776",
+            "autoneg": "off",
+            "lport": "432",
+            "default_brkout_mode": "1x800G",
+            "breakout_modes": {
+                "1x800G": [
+                    "Eth128"
+                ],
+                "2x400G": [
+                    "Eth128/1",
+                    "Eth128/2"
+                ],
+                "4x200G": [
+                    "Eth128/1",
+                    "Eth128/2",
+                    "Eth128/3",
+                    "Eth128/4"
+                ]
+            }
+        }
+    }
+}
