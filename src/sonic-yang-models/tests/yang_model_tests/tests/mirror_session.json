@@ -99,5 +99,50 @@
     "MIRROR_ERSPAN_ENTRY_WITH_INVALID_POLICER": {
         "desc": "Configuring SPAN entry with invalid policer",
         "eStrKey": "LeafRef"
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE": {
+        "desc": "Configuring ERSPAN entry with valid sample_rate (50000)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MIN": {
+        "desc": "Configuring ERSPAN entry with minimum valid sample_rate (256)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_MAX": {
+        "desc": "Configuring ERSPAN entry with maximum valid sample_rate (8388608)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE": {
+        "desc": "Configuring ERSPAN entry with valid truncate_size (128)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MIN": {
+        "desc": "Configuring ERSPAN entry with minimum valid truncate_size (64)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_TRUNCATE_SIZE_MAX": {
+        "desc": "Configuring ERSPAN entry with maximum valid truncate_size (9216)."
+    },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_SAMPLE_RATE_AND_TRUNCATE": {
+        "desc": "Configuring ERSPAN entry with both sample_rate and truncate_size."
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with sample_rate below minimum (100).",
+        "eStr": "Sample rate must be 256..8388608"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TOO_HIGH": {
+        "desc": "Configuring ERSPAN entry with sample_rate above maximum (8388609).",
+        "eStr": "Sample rate must be 256..8388608"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_LOW": {
+        "desc": "Configuring ERSPAN entry with truncate_size below minimum (32).",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TOO_HIGH": {
+        "desc": "Configuring ERSPAN entry with truncate_size above maximum (9217).",
+        "eStr": "Truncate size must be 64..9216"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_SAMPLE_RATE_TYPE": {
+        "desc": "Configuring SPAN entry with sample_rate (ERSPAN only).",
+        "eStrKey": "When"
+    },
+    "MIRROR_ERSPAN_ENTRY_WRONG_TRUNCATE_SIZE_TYPE": {
+        "desc": "Configuring SPAN entry with truncate_size (ERSPAN only).",
+        "eStrKey": "When"
     }
 }

@@ -20,6 +20,12 @@ module sonic-mirror-session {
     description
         "SONiC Mirror session yang model";
 
+    revision 2026-04-14 {
+        description
+            "Add sample_rate and truncate_size leaves for sampled port mirroring
+             with truncation support.";
+    }
+
     revision 2021-06-15 {
         description
             "Initial revision.";
@@ -182,6 +188,34 @@ module sonic-mirror-session {
                     }
                     description
                         "Policer to be applied for the mirrored traffic.";
+                }
+
+                leaf sample_rate {
+                    when "current()/../type = 'ERSPAN'";
+                    type uint32 {
+                        range "256..8388608" {
+                            error-message "Sample rate must be 256..8388608";
+                            error-app-tag sample-rate-invalid;
+                        }
+                    }
+                    description
+                        "Sampling rate for mirrored packets. When not configured,
+                         full mirroring is used (no sampling). N means mirror 1 out
+                         of every N packets.";
+                }
+
+                leaf truncate_size {
+                    when "current()/../type = 'ERSPAN'";
+                    type uint32 {
+                        range "64..9216" {
+                            error-message "Truncate size must be 64..9216";
+                            error-app-tag truncate-size-invalid;
+                        }
+                    }
+                    description
+                        "Truncation size in bytes for mirrored packets.
+                         When not configured, no truncation is applied. When set,
+                         only the first N bytes of each mirrored packet are sent.";
                 }
             }
         }
