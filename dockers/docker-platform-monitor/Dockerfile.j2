@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -33,7 +33,8 @@ RUN apt-get update &&   \
         ethtool         \
         xxd             \
         python3-yaml    \
-        python3-bottle
+        python3-bottle   \
+        smartmontools
 {% if sonic_asic_platform == 'mellanox' %}
 RUN apt-get install -y dbus
 {% endif %}
@@ -42,17 +43,13 @@ RUN apt-get install -y dbus
 RUN apt-get install -y busybox
 {% endif %}
 
-# smartmontools version should match the installed smartmontools in sonic_debian_extension build template
-RUN apt-get install -y -t bookworm-backports \
-        smartmontools
-
 # On Arista devices, the sonic_platform wheel is not installed in the container.
 # Instead, the installation directory is mounted from the host OS. However, this method
 # doesn't ensure all dependencies are installed in the container. So here we
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
-RUN pip3 install grpcio==1.51.1 \
-        grpcio-tools==1.51.1 --no-build-isolation && \
+RUN pip3 install grpcio==1.67.1 \
+        grpcio-tools==1.67.1 --no-build-isolation && \
     find /usr/local/lib/python3*/dist-packages/grpc* -name '*.so' -exec strip --strip-unneeded {} +
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
