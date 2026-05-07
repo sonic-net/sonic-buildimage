@@ -21,5 +21,9 @@
     },
     "KDUMP_WITH_VALID_REMOTE_VALUES": {
         "desc": "Configuring the kdump with valid remote ssh values."
+    },
+    "KDUMP_WITH_INVALID_SSH_STRING_USERNAME": {
+        "desc": "Configure ssh_string with username starting with invalid character.",
+        "eStrKey": "Pattern"
     }
 }
