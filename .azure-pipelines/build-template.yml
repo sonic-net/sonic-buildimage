@@ -7,6 +7,7 @@ parameters:
   - marvell-prestera-armhf
   - mellanox
   - vs
+  - alpinevs
 
 - name: platform_arch
   type: string
@@ -24,6 +25,7 @@ parameters:
   - marvell-prestera-armhf
   - mlnx
   - vs
+  - alpinevs
 
 - name: cache_mode
   type: string
@@ -94,6 +96,8 @@ jobs:
 
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+      elif [ ${{ parameters.platform }} == alpinevs ]; then
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-alpinevs.img.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \

@@ -58,6 +58,10 @@ jobs:
             dbg_image: yes
             asan_image: yes
 
+        - name: alpinevs
+          variables:
+            dbg_image: yes
+
         - name: barefoot
           variables:
             docker_syncd_rpc_image: yes
@@ -165,6 +169,25 @@ jobs:
               mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
             fi
             make $BUILD_OPTIONS target/sonic-vpp.img.gz
+          elif [ $(GROUP_NAME) == alpinevs ]; then
+
+            echo "=== Downloading Pre-built Deb ==="
+            mkdir -p target/debs/bookworm
+            # curl -f -L -o target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb "https://github.com/sonic-net/sonic-alpine/releases/tag/latest-builds/lucius-libsai_1.0-3_amd64.deb"
+            curl -f -L -o target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb "https://github.com/sonic-net/sonic-alpine/releases/download/latest-builds/lucius-libsai_1.0-3_amd64.deb"
+
+            echo "=== Touch the deb file ==="
+            [ -f target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb ] && touch -d "tomorrow" target/debs/bookworm/lucius-libsai_1.0-3_amd64.deb
+
+            echo "=== VERIFYING DOWNLOAD-2 ==="
+            ls -lh target/debs/bookworm/ | grep lucius
+
+            #export SONIC_DPKG_CACHE_METHOD=rwcache
+
+            make $BUILD_OPTIONS target/sonic-alpinevs.img.gz
+
+            echo "=== VERIFYING DOWNLOAD-3 ==="
+            ls -lh target/debs/bookworm/ | grep lucius
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
