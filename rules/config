@@ -406,3 +406,6 @@ BUILD_SKIP_TEST ?= n
 # target/ccache/ and persists across builds.
 # Default: disabled (no impact on clean builds without a warm cache)
 SONIC_CONFIG_USE_CCACHE ?= n
+
+# apt-get timeout for HTTP and HTTPS connections, in seconds
+BUILD_APT_GET_HTTP_TIMEOUT ?= 60

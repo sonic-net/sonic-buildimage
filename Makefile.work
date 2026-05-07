@@ -213,6 +213,7 @@ $(shell \
 	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
 	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
 	PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+	BUILD_APT_GET_HTTP_TIMEOUT=$(BUILD_APT_GET_HTTP_TIMEOUT) \
 	scripts/generate_buildinfo_config.sh)
 
 # Generate the slave Dockerfile, and prepare build info for it
@@ -647,6 +648,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+						   BUILD_APT_GET_HTTP_TIMEOUT=$(BUILD_APT_GET_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            BUILD_SKIP_TEST=$(BUILD_SKIP_TEST) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
@@ -678,6 +680,7 @@ export BUILD_SNAPSHOT_URL
 export SONIC_VERSION_CONTROL_COMPONENTS
 export PIP_HTTP_TIMEOUT
 export SECURE_UPGRADE_PROD_TOOL_ARGS
+export BUILD_APT_GET_HTTP_TIMEOUT
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)

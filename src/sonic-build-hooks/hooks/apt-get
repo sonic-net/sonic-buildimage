@@ -10,12 +10,17 @@ if [ -z "$REAL_COMMAND" ]; then
     exit 1
 fi
 
+APT_OPTIONS=
+if [[ "${BUILD_APT_GET_HTTP_TIMEOUT}" =~ ^[1-9][0-9]*$ ]]; then
+    APT_OPTIONS="-o Acquire::http::Timeout=${BUILD_APT_GET_HTTP_TIMEOUT} -o Acquire::https::Timeout=${BUILD_APT_GET_HTTP_TIMEOUT}"
+fi
+
 INSTALL=$(check_apt_install "$@")
 COMMAND_INFO="Locked by command: $REAL_COMMAND $@"
 if [ "$INSTALL" == y ]; then
     check_apt_version "$@"
     lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
-    $REAL_COMMAND "$@"
+    $REAL_COMMAND $APT_OPTIONS "$@"
     command_result=$?
     [ "$lock_result" == y ] && release_apt_installation_lock
     exit $command_result
@@ -26,6 +31,6 @@ else
       dpkg-query -W -f '${Package}==${Version}\n' >> $POST_VERSION_PATH/purge-versions-deb
       chmod a+wr $POST_VERSION_PATH/purge-versions-deb
     fi
-    $REAL_COMMAND "$@"
+    $REAL_COMMAND $APT_OPTIONS "$@"
 fi
 
