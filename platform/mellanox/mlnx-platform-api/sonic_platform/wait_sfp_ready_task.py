@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,10 @@ class WaitSfpReadyTask(threading.Thread):
         super().__init__(daemon=True)
         self.running = False
         
+        # protect this thread from starting more than 1 time
+        self.start_lock = threading.Lock()
+        self.started_once = False
+
         # Lock to protect the wait list 
         self.lock = threading.Lock()
         
@@ -49,6 +53,12 @@ class WaitSfpReadyTask(threading.Thread):
         # The queue to store those SFPs who finish loading firmware.
         self._ready_set = set()
         
+    def start_once(self):
+        with self.start_lock:
+            if not self.started_once:
+                super().start()
+                self.started_once = True
+
     def stop(self):
         """Stop the task, only used in unit test
         """

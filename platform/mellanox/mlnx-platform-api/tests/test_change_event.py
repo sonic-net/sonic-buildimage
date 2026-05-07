@@ -35,6 +35,7 @@ from sonic_platform import sfp
 class TestChangeEventSeekFailure:
     """Cover OSError from fd.seek(0) in change-event polling loops."""
 
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.sfp.SFP.get_fd_for_polling_legacy')
     @mock.patch('select.poll')
     @mock.patch('time.monotonic')
@@ -47,10 +48,11 @@ class TestChangeEventSeekFailure:
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.sfp.SFP.get_module_status')
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
-    def test_get_change_event_legacy_seek_fails(self, mock_status, mock_time, mock_create_poll, mock_get_fd):
+    def test_get_change_event_legacy_seek_fails(self, mock_status, mock_time, mock_create_poll, mock_get_fd, mock_get_asic_event):
         c = chassis.Chassis()
         c.get_sfp(1)
         mock_status.return_value = sfp.SFP_STATUS_INSERTED
+        mock_get_asic_event.return_value = {}
 
         mock_poll = mock.MagicMock()
         mock_create_poll.return_value = mock_poll
@@ -68,6 +70,7 @@ class TestChangeEventSeekFailure:
         mock_file.seek.assert_called_with(0)
         mock_file.read.assert_not_called()
 
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.wait_sfp_ready_task.WaitSfpReadyTask.get_ready_set')
     @mock.patch('sonic_platform.sfp.SFP.get_fd')
     @mock.patch('select.poll')
@@ -81,7 +84,7 @@ class TestChangeEventSeekFailure:
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.initialize', mock.MagicMock())
     def test_get_change_event_module_host_management_seek_fails(
-        self, mock_time, mock_create_poll, mock_get_fd, mock_ready,
+        self, mock_time, mock_create_poll, mock_get_fd, mock_ready, mock_get_asic_event,
     ):
         c = chassis.Chassis()
         c.initialize_sfp()
@@ -91,6 +94,7 @@ class TestChangeEventSeekFailure:
         mock_poll = mock.MagicMock()
         mock_create_poll.return_value = mock_poll
         mock_poll.poll = mock.MagicMock(return_value=[(1, 10)])
+        mock_get_asic_event.return_value = {}
 
         mock_hw_present_file = mock.MagicMock()
         mock_power_good_file = mock.MagicMock()
@@ -118,6 +122,7 @@ class TestChangeEventSeekFailure:
 
 
 class TestChangeEvent:
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.sfp.SFP.get_fd_for_polling_legacy')
     @mock.patch('select.poll')
     @mock.patch('time.monotonic')
@@ -127,12 +132,12 @@ class TestChangeEvent:
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.sfp.SFP.get_module_status')
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
-    def test_get_change_event_legacy(self, mock_status, mock_time, mock_create_poll, mock_get_fd):
+    def test_get_change_event_legacy(self, mock_status, mock_time, mock_create_poll, mock_get_fd, mock_get_asic_event):
         c = chassis.Chassis()
         s = c.get_sfp(1)
         
         mock_status.return_value = sfp.SFP_STATUS_INSERTED
-        
+        mock_get_asic_event.return_value = {}
         # mock poll object
         mock_poll = mock.MagicMock()
         mock_create_poll.return_value = mock_poll
@@ -172,6 +177,7 @@ class TestChangeEvent:
         assert 'sfp' in change_event and sfp_index in change_event['sfp'] and change_event['sfp'][sfp_index] == '2'
         assert 'sfp_error' in change_event and sfp_index in change_event['sfp_error'] and change_event['sfp_error'][sfp_index] == 'some error'
     
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.wait_sfp_ready_task.WaitSfpReadyTask.get_ready_set')    
     @mock.patch('sonic_platform.sfp.SFP.get_fd')
     @mock.patch('select.poll')
@@ -181,7 +187,7 @@ class TestChangeEvent:
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.initialize', mock.MagicMock())
-    def test_get_change_event_for_module_host_management_mode(self, mock_time, mock_create_poll, mock_get_fd, mock_ready):
+    def test_get_change_event_for_module_host_management_mode(self, mock_time, mock_create_poll, mock_get_fd, mock_ready, mock_get_asic_event):
         """Test steps:
             1. Simulate polling with no event
             2. Simulate polling the first dummy event. (SDK always return a event when first polling the fd even if there is no change)
@@ -203,6 +209,7 @@ class TestChangeEvent:
         mock_create_poll.return_value = mock_poll
         mock_poll.poll = mock.MagicMock(return_value = [])
         
+        mock_get_asic_event.return_value = {}
         # mock file descriptors for polling
         mock_hw_present_file = mock.MagicMock()
         mock_power_good_file = mock.MagicMock()
