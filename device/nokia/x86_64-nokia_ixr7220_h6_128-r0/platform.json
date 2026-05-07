@@ -6,28 +6,28 @@
                 "name": "BIOS"
             },
             {
-                "name": "SYS_FPGA"
+                "name": "CB_FPGA"
             },
             {
-                "name": "SYS_CPLD"
+                "name": "MB_FPGA"
             },
             {
-                "name": "PORT_CPLD0"
+                "name": "MB_PORT_FPGA_0"
             },
             {
-                "name": "PORT_CPLD1"
+                "name": "MB_PORT_FPGA_1"
             },
             {
-                "name": "PORT_CPLD_TL"
+                "name": "UDB_LPORT_FPGA"
             },
             {
-                "name": "PORT_CPLD_TR"
+                "name": "UDB_RPORT_FPGA"
             },
             {
-                "name": "PORT_CPLD_BL"
+                "name": "LDB_LPORT_FPGA"
             },
             {
-                "name": "PORT_CPLD_BR"
+                "name": "LDB_RPORT_FPGA"
             },
             {
                 "name": "FCM0_CPLD"
@@ -902,10 +902,7 @@
                 "name": "OSFP_128"
             },
             {
-                "name": "SFP28_0"
-            },
-            {
-                "name": "SFP28_1"
+                "name": "QSFP28_0"
             }
         ]
     },
@@ -5008,19 +5005,10 @@
         },
         "Ethernet1024": {
             "index": "129",
-            "lanes": "1027",
+            "lanes": "1026,1027,1028,1029",
             "breakout_modes": {
-                "1x25G": [
+                "1x100G": [
                     "etp129"
-                ]
-            }
-        },
-        "Ethernet1025": {
-            "index": "130",
-            "lanes": "1026",
-            "breakout_modes": {
-                "1x25G": [
-                    "etp130"
                 ]
             }
         }
