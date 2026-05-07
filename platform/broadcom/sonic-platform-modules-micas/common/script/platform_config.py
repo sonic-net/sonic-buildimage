@@ -20,6 +20,7 @@ import os
 from wbutil.baseutil import get_machine_info
 from wbutil.baseutil import get_platform_info
 from wbutil.baseutil import get_board_id
+from wbutil.baseutil import get_sub_version
 
 __all__ = [
     "MAILBOX_DIR",
@@ -61,7 +62,8 @@ __all__ = [
     "DEV_LEDS",
     "fanloc",
     "PLATFORM_POWER_CONF",
-    "POWER_CTRL_CONF"
+    "POWER_CTRL_CONF",
+    "PRODUCT_NAME_CONF"
 ]
 
 
@@ -75,17 +77,21 @@ def getdeviceplatform():
 
 platform = get_platform_info(get_machine_info())
 board_id = get_board_id(get_machine_info())
+sub_ver = get_sub_version()
 platformpath = getdeviceplatform()
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
 grtd_productfile = (platform + "_config").replace("-", "_")
 common_productfile = "platform_common"
 platform_configfile = (platform + "_" + board_id + "_config").replace("-", "_")  # platfrom + board_id
+platform_subver_configfile = (platform + "_" + board_id + "_" + sub_ver + "_config").replace("-", "_")
 configfile_pre = "/usr/local/bin/"
 sys.path.append(platformpath)
 sys.path.append(configfile_pre)
 
 ############################################################################################
-if os.path.exists(configfile_pre + platform_configfile + ".py"):
+if os.path.exists(configfile_pre + platform_subver_configfile + ".py"):
+    module_product = __import__(platform_subver_configfile, globals(), locals(), [], 0)
+elif os.path.exists(configfile_pre + platform_configfile + ".py"):
     module_product = __import__(platform_configfile, globals(), locals(), [], 0)
 elif os.path.exists(configfile_pre + grtd_productfile + ".py"):
     module_product = __import__(grtd_productfile, globals(), locals(), [], 0)
@@ -164,6 +170,9 @@ PLATFORM_POWER_CONF = module_product.PLATFORM_POWER_CONF
 
 # power control config
 POWER_CTRL_CONF = module_product.POWER_CTRL_CONF
+
+# product name config
+PRODUCT_NAME_CONF = getattr(module_product, "PRODUCT_NAME_CONF", {})
 
 ################################ fancontrol parameter###################################
 

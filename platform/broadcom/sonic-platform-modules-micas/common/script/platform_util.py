@@ -31,7 +31,7 @@ import ast
 
 CONFIG_DB_PATH = "/etc/sonic/config_db.json"
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
-
+BSP_COMMON_LOG_DIR = "/var/log/bsp_tech/"
 
 __all__ = [
     "strtoint",
@@ -524,6 +524,38 @@ def read_sysfs(location):
     return True, retval
 
 
+def setup_logger(log_file, max_bytes=1024*1024*5, backup_count=3):
+    dir_path = os.path.dirname(log_file)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    # creat logger
+    logger = logging.getLogger(log_file)
+    if not logger.hasHandlers():
+        logger.setLevel(logging.DEBUG)
+
+        # creat RotatingFileHandler set log file size and backupCount
+        handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
+        handler.setLevel(logging.DEBUG)
+
+        # creat formatter and addd to handler
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+
+        logger.addHandler(handler)
+
+    return logger
+
+
+def log_to_file(content, log_file_path, max_size=5*1024*1024):
+    try:
+        logger = setup_logger(log_file_path, max_size)
+        logger.info(content)
+
+    except Exception as e:
+        return False, (str(e) + "log_file_path[%s]" % log_file_path)
+    return True, "log_to_file success"
+
+
 def get_pmc_register(reg_name):
     retval = 'ERR'
     mb_reg_file = MAILBOX_DIR + reg_name
@@ -892,4 +924,3 @@ def get_format_value(format_str):
     visitor.visit(ast_obj)
     ret = visitor.get_value()
     return ret
-

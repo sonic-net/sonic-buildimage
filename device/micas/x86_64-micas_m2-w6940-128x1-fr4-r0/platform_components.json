@@ -1,0 +1,18 @@
+{
+    "chassis": {
+        "M2-W6940-128X1-FR4": {
+            "component": {
+                "CPU CPLD": { },
+                "SCM CPLD": { },
+                "MCB CPLD": { },
+                "SMB CPLD": { },
+                "FCB_T CPLD": { },
+                "FCB_B CPLD": { },
+                "IOB FPGA": { },
+                "DOM FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

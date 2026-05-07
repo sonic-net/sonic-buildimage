@@ -1,0 +1,1 @@
+SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5-m2-w6940-64x1-fr4-64x800g.yml
