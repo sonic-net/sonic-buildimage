@@ -1570,6 +1570,7 @@ def parse_linkmeta(meta, hname):
         lower_tor_hostname = ''
         auto_negotiation = None
         macsec_enabled = False
+        macsec_profile_name = None
         tx_power = None
         laser_freq = None
         properties = linkmeta.find(str(QName(ns1, "Properties")))
@@ -1588,6 +1589,8 @@ def parse_linkmeta(meta, hname):
                 auto_negotiation = value
             elif name == "MacSecEnabled":
                 macsec_enabled = value
+            elif name == "MacSecProfileName":
+                macsec_profile_name = value
             elif name == "TxPower":
                 tx_power = value
             elif name == "Frequency":
@@ -1605,6 +1608,8 @@ def parse_linkmeta(meta, hname):
             linkmetas[port]["AutoNegotiation"] = auto_negotiation
         if macsec_enabled:
             linkmetas[port]["MacSecEnabled"] = macsec_enabled
+        if macsec_profile_name:
+            linkmetas[port]["MacSecProfileName"] = macsec_profile_name
         if tx_power:
             linkmetas[port]["tx_power"] = tx_power
         # Convert the freq in GHz
@@ -2437,9 +2442,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         if autoneg:
             port['autoneg'] = 'on' if autoneg.lower() == 'true' else 'off'
 
-        # If macsec is enabled on interface, and profile is valid, add the profile to port
+        # If macsec is enabled on interface, bind the named profile or fall back to legacy key material
         macsec_enabled = linkmetas.get(alias, {}).get('MacSecEnabled')
-        if macsec_enabled and 'PrimaryKey' in macsec_profile:
+        macsec_profile_name_lm = linkmetas.get(alias, {}).get('MacSecProfileName')
+        if macsec_profile_name_lm:
+            port['macsec'] = macsec_profile_name_lm
+        elif macsec_enabled and 'PrimaryKey' in macsec_profile:
             port['macsec'] = macsec_profile['PrimaryKey']
 
         tx_power = linkmetas.get(alias, {}).get('tx_power')
@@ -2742,6 +2750,32 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     # Enable bgp-suppress-fib by default for leafrouter
     if current_device and current_device['type'] in leafrouter_device_types:
         results['DEVICE_METADATA']['localhost']['suppress-fib-pending'] = 'enabled'
+
+    # Generate MACSEC_PROFILE table entries for named profiles referenced in LinkMetadata
+    _macsec_profile_names = {
+        lm['MacSecProfileName']
+        for lm in linkmetas.values()
+        if 'MacSecProfileName' in lm
+    }
+    if _macsec_profile_names:
+        import json as _json, os as _os
+        _pfile = '/etc/sonic/macsec_profiles.json'
+        if _os.path.exists(_pfile):
+            with open(_pfile) as _f:
+                _all = _json.load(_f)
+            results['MACSEC_PROFILE'] = {
+                name: {
+                    'priority': str(_all[name]['priority']),
+                    'cipher_suite': _all[name]['cipher_suite'],
+                    'primary_cak': _all[name]['primary_cak'],
+                    'primary_ckn': _all[name]['primary_ckn'],
+                    'policy': _all[name].get('policy', 'security'),
+                    'send_sci': _all[name]['send_sci'],
+                    'rekey_period': str(_all[name].get('rekey_period', 0)),
+                }
+                for name in _macsec_profile_names
+                if name in _all
+            }
 
     return results
 
