@@ -8,7 +8,7 @@
     "polling_interval": 60,
     "led_color": {
         "fault": "amber",
-        "normal": "blue",
-        "booting": "green"
+        "normal": "green",
+        "booting": "blue"
     }
 }

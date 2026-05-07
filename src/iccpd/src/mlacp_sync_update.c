@@ -904,18 +904,24 @@ int mlacp_fsm_update_arp_entry(struct CSM* csm, struct ARPMsg *arp_entry)
 
 int mlacp_fsm_update_arp_info(struct CSM* csm, struct mLACPARPInfoTLV* tlv)
 {
-    int count = 0;
+    uint16_t count = 0;
     int i;
 
     if (!csm || !tlv)
         return MCLAG_ERROR;
+
     count = ntohs(tlv->num_of_entry);
+    /* Validate num_of_entry against TLV length to prevent OOB heap read */
+    if (ntohs(tlv->icc_parameter.len) < sizeof(tlv->num_of_entry) + count * sizeof(struct ARPMsg))
+        return MCLAG_ERROR_INVALID_TLV;
     ICCPD_LOG_DEBUG(__FUNCTION__, "Received ARP Info count  %d ", count );
 
     for (i = 0; i < count; i++)
     {
         mlacp_fsm_update_arp_entry(csm, &(tlv->ArpEntry[i]));
     }
+
+    return 0;
 }
 
 /*****************************************
@@ -1226,18 +1232,24 @@ int mlacp_fsm_update_ndisc_entry(struct CSM *csm, struct NDISCMsg *ndisc_entry)
 
 int mlacp_fsm_update_ndisc_info(struct CSM *csm, struct mLACPNDISCInfoTLV *tlv)
 {
-    int count = 0;
+    uint16_t count = 0;
     int i;
 
     if (!csm || !tlv)
         return MCLAG_ERROR;
+
     count = ntohs(tlv->num_of_entry);
+    /* Validate num_of_entry against TLV length to prevent OOB heap read */
+    if (ntohs(tlv->icc_parameter.len) < sizeof(tlv->num_of_entry) + count * sizeof(struct NDISCMsg))
+        return MCLAG_ERROR_INVALID_TLV;
     ICCPD_LOG_INFO(__FUNCTION__, "Received NDISC Info count  %d ", count);
 
     for (i = 0; i < count; i++)
     {
         mlacp_fsm_update_ndisc_entry(csm, &(tlv->NdiscEntry[i]));
     }
+
+    return 0;
 }
 
 /*****************************************

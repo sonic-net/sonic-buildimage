@@ -15,9 +15,10 @@ module sonic-asic-sensors {
 
   container sonic-asic-sensors {
     container ASIC_SENSORS {
-      description "ASIC_SENSORS part of config_db.json";
+      description "ASIC internal thermal sensor poller configuration.";
 
       container ASIC_SENSORS_POLLER_INTERVAL {
+        description "Polling interval configuration for ASIC thermal sensors.";
         leaf interval {
           description "ASIC SENSORS polling interval";
           type uint32 {
@@ -29,6 +30,7 @@ module sonic-asic-sensors {
       } /* ASIC_SENSORS_POLLER_INTERVAL */
 
       container ASIC_SENSORS_POLLER_STATUS {
+        description "Administrative status of the ASIC thermal sensor poller.";
         leaf admin_status {
           description "ASIC SENSORS polling administrative status";
           type stypes:mode-status;

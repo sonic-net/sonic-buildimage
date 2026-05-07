@@ -51,6 +51,15 @@
     "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as LowerSpineRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_LOWER_REGIONALHUB_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerRegionalHub for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_REGIONALHUB_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricRegionalHub for Type field"
+    },
+    "DEVICE_METADATA_TYPE_UPPER_REGIONALHUB_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperRegionalHub for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
@@ -98,6 +107,12 @@
     },
     "DEVICE_METADATA_TYPE_FILTER_LEAF_PATTERN": {
         "desc": "DEVICE_METADATA value as FilterLeaf for Type field"
+    },
+    "DEVICE_METADATA_TYPE_NETWORK_BMC_PATTERN": {
+        "desc": "DEVICE_METADATA value as NetworkBmc for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MSEE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MseeRouter for Type field"
     },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
@@ -159,9 +174,6 @@
     },
     "DEVICE_METADATA_VALID_SUBTYPE3": {
         "desc": "Verifying valid subtype value downstreamLC"
-    },
-    "DEVICE_METADATA_VALID_SUBTYPE4": {
-        "desc": "Verifying valid subtype value LowerSpineRouter"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",

@@ -7,7 +7,6 @@ automat==25.4.16
 babel==2.17.0
 bcrypt==4.2.0
 beautifulsoup4==4.13.4
-bitarray==3.8.0
 blessed==1.21.0
 blkinfo==0.2.0
 bottleneck==1.4.2
@@ -44,7 +43,7 @@ executing==2.2.0
 fastentrypoints==0.12
 fonttools==4.57.0
 fs==2.4.16
-fsspec==2026.2.0
+fsspec==2026.4.0
 gbp==0.9.38
 gcovr==7.2
 gpg==1.24.2
@@ -56,6 +55,7 @@ idna==3.10
 imagesize==1.4.1
 incremental==24.7.2
 inflect==7.3.1
+inflection==0.3.1
 iniconfig==1.1.1
 invoke==2.2.0
 ipython==8.35.0
@@ -121,13 +121,13 @@ pure_eval==0.2.3
 puremagic==1.28
 py-cpuinfo==9.0.0
 pyang==2.4.0
-pyangbind==0.8.2
+pyangbind==0.8.7
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 pycparser==2.22
 pycryptodomex==3.20.0
 pyelftools==0.32
-pyfakefs==6.1.1
+pyfakefs==6.2.0
 pygments==2.18.0
 pygobject==3.50.0
 pyhamcrest==2.1.0
@@ -151,7 +151,7 @@ pytz==2025.2
 pyxdg==0.28
 pyyaml==6.0.2
 pyyaml-include==2.2
-redis==7.2.0
+redis==7.4.0
 regex==2024.11.6
 requests==2.32.3
 roman==5.0

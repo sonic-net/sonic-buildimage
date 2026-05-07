@@ -63,50 +63,56 @@ binddevice bridge-midplane
 {% endif -%}
 {% endif -%}
 
-{# use source interface if configured to send NTP requests, else use eth0 if running in mgmt
-vrf (default is not to listen on anything) -#}
-
-{# Set interface to listen on:
-     * Set global variable for configured source interface name.
-     * Set global boolean to indicate if the ip of the configured source
-       interface is configured.
-     * If the source interface is configured but no ip on that
-       interface, then listen on another interface based on existing logic. -#}
-{%- macro check_ip_on_interface(interface_name, table_name) %}
-    {%- set ns = namespace(valid_intf = 'false') %}
+{# Get interface address to listen on. Return the last IPv4 or IPv6 address on
+an interface, depending on the order it is traversed in CONFIG_DB. -#}
+{%- macro get_ip_on_interface(interface_name, table_name, use_ipv4) %}
+    {%- set ns = namespace(ip_address = 'false') %}
     {%- if table_name %}
         {%- for (name, source_prefix) in table_name|pfx_filter %}
             {%- if source_prefix and name == interface_name %}
-                {%- set ns.valid_intf = 'true' %}
+                {%- if ":" in source_prefix and not use_ipv4 %}
+                    {%- set ns.ip_address = source_prefix.split('/')[0] %}
+                {%- elif ":" not in source_prefix and use_ipv4 %}
+                    {%- set ns.ip_address = source_prefix.split('/')[0] %}
+                {%- endif %}
             {%- endif %}
         {%- endfor %}
     {%- endif %}
-{{ ns.valid_intf }}
+{{ ns.ip_address }}
 {%- endmacro %}
 
-{% set ns = namespace(source_intf = "") %}
-{%- set ns = namespace(source_intf_ip = 'false') %}
+{# use source interface if configured to send NTP requests; otherwise, rely on
+the kernel to route packets as needed. -#}
+{% set ns = namespace(source_intf = "", source_intf_ipv4 = 'false', source_intf_ipv6 = 'false') %}
 {%- if global.src_intf  %}
     {%- set ns.source_intf = global.src_intf %}
     {%- if ns.source_intf != "" %}
         {%- if ns.source_intf == "eth0" %}
-            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, MGMT_INTERFACE) %}
+            {%- set ns.source_intf_ipv4 = get_ip_on_interface(ns.source_intf, MGMT_INTERFACE, true) %}
+            {%- set ns.source_intf_ipv6 = get_ip_on_interface(ns.source_intf, MGMT_INTERFACE, false) %}
         {%- elif ns.source_intf.startswith('Vlan') %}
-            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, VLAN_INTERFACE) %}
+            {%- set ns.source_intf_ipv4 = get_ip_on_interface(ns.source_intf, VLAN_INTERFACE, true) %}
+            {%- set ns.source_intf_ipv6 = get_ip_on_interface(ns.source_intf, VLAN_INTERFACE, false) %}
         {%- elif ns.source_intf.startswith('Ethernet') %}
-            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, INTERFACE) %}
+            {%- set ns.source_intf_ipv4 = get_ip_on_interface(ns.source_intf, INTERFACE, true) %}
+            {%- set ns.source_intf_ipv6 = get_ip_on_interface(ns.source_intf, INTERFACE, false) %}
         {%- elif ns.source_intf.startswith('PortChannel') %}
-            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE) %}
+            {%- set ns.source_intf_ipv4 = get_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE, true) %}
+            {%- set ns.source_intf_ipv6 = get_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE, false) %}
         {%- elif ns.source_intf.startswith('Loopback') %}
-            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE) %}
+            {%- set ns.source_intf_ipv4 = get_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE, true) %}
+            {%- set ns.source_intf_ipv6 = get_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE, false) %}
         {%- endif %}
     {%- endif %}
 {% endif %}
 
-{% if ns.source_intf_ip == 'true' -%}
-bindacqdevice {{ns.source_intf}}
-{% elif (NTP) and NTP['global']['vrf'] == 'mgmt' -%}
-bindacqdevice eth0
+{% if not ((NTP) and NTP['global']['vrf'] == 'mgmt') -%}
+{% if ns.source_intf_ipv4 != 'false' -%}
+bindacqaddress {{ns.source_intf_ipv4}}
+{% endif %}
+{% if ns.source_intf_ipv6 != 'false' -%}
+bindacqaddress {{ns.source_intf_ipv6}}
+{% endif %}
 {% endif %}
 
 # Use time sources from DHCP.

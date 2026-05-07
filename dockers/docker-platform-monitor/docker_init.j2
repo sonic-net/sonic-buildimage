@@ -85,6 +85,14 @@ else
     SONIC_PLATFORM_API_PYTHON_VERSION=3
 fi
 
+# Copy platform-specific supervisor configs if they exist (Aspeed BMC platforms)
+{% if CONFIGURED_PLATFORM == "aspeed" %}
+if [ -n "$(ls /usr/share/sonic/platform/*.supervisord.conf 2>/dev/null)" ]; then
+    echo "Installing platform-specific supervisor configs..."
+    cp /usr/share/sonic/platform/*.supervisord.conf /etc/supervisor/conf.d/
+fi
+{% endif %}
+
 {% if CONFIGURED_PLATFORM == "mellanox" %}
 
 # Dynamic sensors.conf setup: create a symlink from SONiC platform directory sensors.conf -> hw-management sensors.conf

@@ -7,11 +7,10 @@
 Unit tests for the pddf_config_parser module.
 """
 
-import sys
 import os
+import jinja2
 import json
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -21,12 +20,6 @@ def pddf_config_parser_module():
 
     yield pddf_config_parser
 
-# Mock sonic_py_common if not available
-try:
-    import sonic_py_common
-except ImportError:
-    sys.modules["sonic_py_common"] = MagicMock()
-    sys.modules["sonic_py_common.logger"] = MagicMock()
 
 CWD = os.path.dirname(os.path.realpath(__file__))
 BASE_PLATFORM_PDDF_PATH = "../../../../../../device/nexthop/{}/pddf"
@@ -45,6 +38,12 @@ def find_pddf_device_json(platform_variant):
         return pddf_template_path
     else:
         return fallback_path
+
+
+def parse_json(template_string: str, envs: dict[str, ...]) -> dict[str, ...]:
+    env = jinja2.Environment()
+    rendered = env.from_string(template_string).render(envs)
+    return json.loads(rendered)
 
 
 class TestExtractXcvrList:
@@ -232,7 +231,7 @@ class TestExtractXcvrList:
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -257,11 +256,12 @@ class TestExtractXcvrList:
     def test_extract_xcvr_list_real_4220_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-4220 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
-        config_path = find_pddf_device_json("x86_64-nexthop_4220-r0")
+        platform_variant = "x86_64-nexthop_4220-r0"
+        config_path = find_pddf_device_json(platform_variant)
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -286,11 +286,12 @@ class TestExtractXcvrList:
     def test_extract_xcvr_list_real_5010_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-5010 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
-        config_path = find_pddf_device_json("x86_64-nexthop_5010-r0")
+        platform_variant = "x86_64-nexthop_5010-r0"
+        config_path = find_pddf_device_json(platform_variant)
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
@@ -370,7 +371,7 @@ class TestExtractFpgaDevAttrs:
 
         # Load the real configuration
         with open(config_path, "r") as f:
-            config = json.load(f)
+            config = parse_json(f.read(), {"platform": platform_variant})
 
         # When
         fpga_attrs = pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)

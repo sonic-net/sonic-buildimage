@@ -79,6 +79,15 @@ make target/debs/bookworm/swss_1.0.0_amd64.deb
 - **Single logical change per PR**: Isolate each commit to one component/bugfix/feature
 - **Submodule updates**: When updating a submodule, reference the PR in the submodule repo
 - **PR description**: Include what changed, why, and how to test
+- **PR description template**: Fill out all sections of the [PR template](pull_request_template.md) when submitting a pull request:
+  - **Why I did it**: Explain motivation and context for the change
+  - **Work item tracking**: Microsoft ADO number if applicable
+  - **How I did it**: Describe the implementation approach
+  - **How to verify it**: Provide steps or commands to test the change
+  - **Which release branch to backport**: Check applicable release branches if this is a fix
+  - **Tested branch**: Provide the tested image version
+  - **Description for the changelog**: One-line summary for the changelog
+  - **Link to config_db schema for YANG module changes**: If modifying YANG models, link to the relevant section
 
 ## Common Patterns
 

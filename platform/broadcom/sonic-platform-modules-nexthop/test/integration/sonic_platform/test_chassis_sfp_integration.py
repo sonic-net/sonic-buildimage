@@ -20,18 +20,7 @@ XCVR_REMOVED = "0"
 
 
 @pytest.fixture(scope="module")
-def mock_unimportant_modules():
-    """Mock modules that aren't important for integration testing."""
-    modules = {}
-    modules.update(mock_syslog_modules())
-    modules.update(fake_swsscommon_modules())
-
-    with patch.dict(sys.modules, modules):
-        yield
-
-
-@pytest.fixture(scope="module")
-def chassis_module(mock_unimportant_modules):
+def chassis_module():
     """Loads the module before all tests. This is to let conftest.py inject deps first."""
     from sonic_platform import chassis
 
@@ -39,7 +28,7 @@ def chassis_module(mock_unimportant_modules):
 
 
 @pytest.fixture(scope="module")
-def mock_sfps(mock_unimportant_modules):
+def mock_sfps():
     """
     Fixture providing autospec'ed mock SFP objects for testing.
     Creates a list of mock SFPs and attaches them to the chassis.
@@ -116,21 +105,22 @@ class TestChassisSfpIntegration:
     """Test class for Chassis and SFP events functionality."""
 
     def test_get_change_event_initial_state(self, chassis_module, mock_sfps):
-        """Test initial SFP change event detection."""
+        """Test that initial call to get_change_event() returns no events (initializes cache only)."""
         sfp_test_helper = SfpTestHelper()
         with setup_patch_for_chassis_init(pddf_plugin_data={}):
             chassis = chassis_module.Chassis()
             chassis._sfp_list = mock_sfps
 
-            # Initial call test - expect change in all SFPs
+            # Set initial state
             inserted_sfps = mock_sfps[0 : NUM_TEST_SFPS // 2]
             removed_sfps = mock_sfps[NUM_TEST_SFPS // 2 :]
 
             sfp_test_helper.update_state(inserted_sfps, XCVR_INSERTED)
             sfp_test_helper.update_state(removed_sfps, XCVR_REMOVED)
 
-            result = chassis.get_change_event()
-            expected = sfp_test_helper.get_change_events()
+            # First call should return no events (just initializes cache)
+            result = chassis.get_change_event(timeout=100)
+            expected = (True, {"sfp": {}})  # Empty events on first call
 
             assert result == expected
 
@@ -143,8 +133,8 @@ class TestChassisSfpIntegration:
 
             # Set initial state
             sfp_test_helper.update_state(mock_sfps, XCVR_INSERTED)
-            chassis.get_change_event()  # Clear initial events
-            sfp_test_helper.get_change_events()  # Clear helper events
+            chassis.get_change_event(timeout=100)  # First call initializes cache (returns empty)
+            sfp_test_helper.clear_events()  # Clear events from initialization
 
             # Small timeout test - no change
             result = chassis.get_change_event(timeout=1)
@@ -161,8 +151,8 @@ class TestChassisSfpIntegration:
 
             # Set initial state
             sfp_test_helper.update_state(mock_sfps, XCVR_INSERTED)
-            chassis.get_change_event()  # Clear initial events
-            sfp_test_helper.get_change_events()  # Clear helper events
+            chassis.get_change_event(timeout=100)  # First call initializes cache (returns empty)
+            sfp_test_helper.clear_events()  # Clear events from initialization
 
             # Large timeout test - no change (mock time to avoid actual waiting)
             start_time = time.monotonic()
@@ -186,8 +176,8 @@ class TestChassisSfpIntegration:
 
             sfp_test_helper.update_state(inserted_sfps, XCVR_INSERTED)
             sfp_test_helper.update_state(removed_sfps, XCVR_REMOVED)
-            chassis.get_change_event()  # Clear initial events
-            sfp_test_helper.get_change_events()  # Clear helper events
+            chassis.get_change_event(timeout=100)  # First call initializes cache (returns empty)
+            sfp_test_helper.clear_events()  # Clear events from initialization
 
             # Final change test - a subset of SFPs
             sfp_test_helper.update_state(inserted_sfps[0 : NUM_TEST_SFPS // 4], XCVR_REMOVED)
@@ -199,12 +189,17 @@ class TestChassisSfpIntegration:
             assert result == expected
 
     def test_get_change_event_all_inserted(self, chassis_module, mock_sfps):
-        """Test change event when all SFPs are inserted."""
+        """Test change event when all SFPs are inserted after initialization."""
         sfp_test_helper = SfpTestHelper()
         with setup_patch_for_chassis_init(pddf_plugin_data={}):
             chassis = chassis_module.Chassis()
             chassis._sfp_list = mock_sfps
 
+            # Start with all removed
+            sfp_test_helper.set_all_removed(mock_sfps)
+            chassis.get_change_event(timeout=100)  # First call initializes cache (returns empty)
+
+            # Now insert all SFPs
             sfp_test_helper.set_all_inserted(mock_sfps)
             result = chassis.get_change_event()
             expected = sfp_test_helper.get_change_events()
@@ -212,12 +207,17 @@ class TestChassisSfpIntegration:
             assert result == expected
 
     def test_get_change_event_all_removed(self, chassis_module, mock_sfps):
-        """Test change event when all SFPs are removed."""
+        """Test change event when all SFPs are removed after initialization."""
         sfp_test_helper = SfpTestHelper()
         with setup_patch_for_chassis_init(pddf_plugin_data={}):
             chassis = chassis_module.Chassis()
             chassis._sfp_list = mock_sfps
 
+            # Start with all inserted
+            sfp_test_helper.set_all_inserted(mock_sfps)
+            chassis.get_change_event(timeout=100)  # First call initializes cache (returns empty)
+
+            # Now remove all SFPs
             sfp_test_helper.set_all_removed(mock_sfps)
             result = chassis.get_change_event()
             expected = sfp_test_helper.get_change_events()

@@ -95,13 +95,15 @@ stages:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
         CHECKOUT_SONIC_MGMT: true
+        # todo: enable vpp build in sonic-mgmt docker image build pipeline, and add vpp test pipeline back.
+        INCLUDE_JOBS: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dpu_job,t1_multi_asic_job"
         OVERRIDE_PARAMS:
           REPO_NAME: "sonic-mgmt"
           SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish
   dependsOn: Test
-  condition: and(succeeded(), in(dependencies.Test.result, 'Succeeded'))
+  condition: and(not(canceled()), in(dependencies.Test.result, 'Succeeded', 'SucceededWithIssues'))
   jobs:
   - job: PublishAsLatest
     pool: sonicso1ES-amd64

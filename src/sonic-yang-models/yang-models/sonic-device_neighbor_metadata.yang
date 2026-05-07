@@ -23,7 +23,7 @@ module sonic-device_neighbor_metadata {
 
         container DEVICE_NEIGHBOR_METADATA {
 
-            description "DEVICE_NEIGHBOR_METADATA part of config_db.json";
+            description "Metadata about neighbor devices including HWSKU, type, and management addresses";
 
             list DEVICE_NEIGHBOR_METADATA_LIST {
 
@@ -42,6 +42,7 @@ module sonic-device_neighbor_metadata {
                 }
 
                 leaf hwsku {
+                    description "Hardware SKU of the neighbor device";
                     type stypes:hwsku;
                 }
 
@@ -87,11 +88,17 @@ module sonic-device_neighbor_metadata {
                 }
 
                 leaf deployment_id {
+                    description "Deployment identifier for the neighbor device";
                     type uint32;
                 }
 
                 leaf slice_type {
                     description "Metadata tag for the device.";
+                    type string;
+                }
+
+                leaf resource_type {
+                    description "Resource type of the neighbor device (e.g., Storage, Compute).";
                     type string;
                 }
 

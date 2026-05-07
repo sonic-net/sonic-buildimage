@@ -142,7 +142,7 @@ wait_kvm_ready
 
 echo "to kill kvm:  sudo kill $kvm_pid"
 
-./check_install.py -u $SONIC_USERNAME -P $PASSWD -p $KVM_PORT
+./check_install.py -u $SONIC_USERNAME -P "$PASSWD" -p $KVM_PORT
 
 kill $kvm_pid
 

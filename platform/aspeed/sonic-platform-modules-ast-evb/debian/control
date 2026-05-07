@@ -1,0 +1,13 @@
+Source: sonic-platform-ast-evb
+Section: misc
+Priority: optional
+Maintainer: Aspeed Technology Inc. <opensource@aspeedtech.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Standards-Version: 3.9.6
+
+Package: sonic-platform-ast-evb-ast2700
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: SONiC platform support for Aspeed AST2700 EVB
+ This package provides platform-specific implementation for Aspeed's
+ AST2700 EVB platform.

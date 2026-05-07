@@ -217,6 +217,10 @@ install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_
 install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
+# Install python3-ijson from Debian repos first — provides the yajl2_c C extension backend.
+# This must happen before pip installs sonic-yang-mgmt (which depends on ijson>=3.2.3),
+# so pip can use the distro-provided python3-ijson package and avoid downloading from PyPI.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-ijson
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
 
 # Install some dependencies for pyangbind
@@ -261,8 +265,8 @@ install_deb_package $debs_path/sonic-utilities-data_*.deb
 # Install customized bash version to patch bash plugin support.
 install_deb_package $debs_path/bash_*.deb
 
-# sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
-# in bash.bashrc, so we copy a version of the file with it enabled here.
+# Bash completion is disabled by default in bash.bashrc, so we copy a version
+# of the file with it enabled here.
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bashrc $FILESYSTEM_ROOT/etc/
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bash_logout $FILESYSTEM_ROOT/etc/
 
@@ -333,6 +337,8 @@ install_deb_package $debs_path/libnss-tacplus_*.deb
 # Install bash-tacplus
 install_deb_package $debs_path/bash-tacplus_*.deb
 # Install audisp-tacplus
+# Install audisp-tacplus (depends on libauparse0 |libauparse0t64 ; ensure it is installed for Trixie/time64)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libauparse0t64
 install_deb_package $debs_path/audisp-tacplus_*.deb
 # Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
@@ -352,6 +358,9 @@ install_deb_package $debs_path/libnss-radius_*.deb
 #sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove radius tacplus
 sudo sed -i -e '/^passwd/s/ radius//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
+# Install makedumpfile (built from source)
+install_deb_package $debs_path/makedumpfile_*.deb
+
 # Install a custom version of kdump-tools  (and its dependencies via 'apt-get -y install -f')
 if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
     install_deb_package $debs_path/kdump-tools_*.deb
@@ -360,6 +369,7 @@ if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
 for kernel_release in $(ls $FILESYSTEM_ROOT/lib/modules/); do
 	sudo LANG=C chroot $FILESYSTEM_ROOT /etc/kernel/postinst.d/kdump-tools $kernel_release > /dev/null 2>&1
 	sudo LANG=C chroot $FILESYSTEM_ROOT kdump-config symlinks $kernel_release
+	sudo LANG=C chroot $FILESYSTEM_ROOT cp /etc/kdump/sysctl.conf /var/lib/kdump/latest_sysctls-$kernel_release
 done
 fi
 
@@ -390,6 +400,12 @@ sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/conf.d/*
+# Remove inapplicable monit checks on DPU platforms
+if [[ $CONFIGURED_PLATFORM == pensando ]] || [[ $CONFIGURED_PLATFORM == nvidia-bluefield ]]; then
+    sudo sed -i '/^# route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# dualtor_neighbor_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+    sudo sed -i '/^# vnet_route_check\.py/,/^$/d' $FILESYSTEM_ROOT/etc/monit/conf.d/sonic-host
+fi
 sudo cp $IMAGE_CONFIGS/monit/container_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/memory_checker $FILESYSTEM_ROOT/usr/bin/
@@ -577,7 +593,7 @@ sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=systemd --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
 
 # Copy Flannel conf file into sonic-templates
 #
@@ -739,6 +755,10 @@ done
 
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
+# https://github.com/systemd/systemd/issues/29034
+sudo sed -i 's/#ManageForeignNextHops=yes/ManageForeignNextHops=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
+
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
@@ -777,6 +797,13 @@ sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy ASN configuration files
 sudo cp $IMAGE_CONFIGS/constants/constants.yml $FILESYSTEM_ROOT/etc/sonic/
+
+# Copy DBus policy files for sonic-redfish (aspeed BMC platform only)
+if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+    sudo mkdir -p $FILESYSTEM_ROOT/etc/dbus-1/system.d
+    sudo cp src/sonic-redfish/sonic-dbus-bridge/dbus/xyz.openbmc_project.*.conf \
+        $FILESYSTEM_ROOT/etc/dbus-1/system.d/
+fi
 
 # Copy sudoers configuration file
 sudo cp $IMAGE_CONFIGS/sudoers/sudoers $FILESYSTEM_ROOT/etc/
@@ -973,12 +1000,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIV
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}etcd:${MASTER_ETCD_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/metrics-scraper:${MASTER_UI_METRIC_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}kubernetesui/dashboard:${MASTER_UI_DASH_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdm:${MASTER_MDM_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:latest
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag ${DEFAULT_CONTAINER_REGISTRY}distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
 {% else %}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/pause:${MASTER_PAUSE_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/kube-apiserver:${MASTER_KUBERNETES_CONTAINER_IMAGE_VERSION}
@@ -989,12 +1010,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIV
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull k8s.gcr.io/etcd:${MASTER_ETCD_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull kubernetesui/metrics-scraper:${MASTER_UI_METRIC_VERSION}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull kubernetesui/dashboard:${MASTER_UI_DASH_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:${MASTER_MDM_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:${MASTER_MDM_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdm:latest
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:${MASTER_MDS_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:${MASTER_MDS_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevamdsd:latest
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS pull linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION}
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT docker $SONIC_NATIVE_DOCKERD_FOR_DOCKERFS tag linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:${MASTER_FLUENTD_VERSION} linuxgeneva-microsoft.azurecr.io/distroless/genevafluentd_td-agent:latest
 {% endif %}
 echo "kubernetes master docker images pull complete"
 # Install python packages for mdm metrics collection service usage
@@ -1121,6 +1136,7 @@ sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgm
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
 sudo LANG=C cp $SCRIPTS_DIR/startup_tsa_tsb.py $FILESYSTEM_ROOT/usr/local/bin/startup_tsa_tsb.py
+sudo LANG=C cp $SCRIPTS_DIR/sonic-db-aliases.py $FILESYSTEM_ROOT/usr/local/bin/sonic-db-aliases.py
 sudo LANG=C cp $SCRIPTS_DIR/sonic-dpu-mgmt-traffic.sh $FILESYSTEM_ROOT/usr/local/bin/sonic-dpu-mgmt-traffic.sh
 sudo LANG=C cp $SCRIPTS_DIR/dash-ha.sh $FILESYSTEM_ROOT/usr/local/bin/dash-ha.sh
 # Copy sonic-netns-exec script
@@ -1184,10 +1200,6 @@ for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
     sudo cp $files_path/$MLNX_CPLD_ARCHIVE $FILESYSTEM_ROOT/etc/mlnx/cpld/
 done
 
-j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
@@ -1216,12 +1228,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
 sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
-# Install dpu-udev-manager script
-sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.sh $FILESYSTEM_ROOT/usr/bin/dpu-udev-manager.sh
+# Install udev-manager script (platform.json-driven net interface naming)
+sudo install -m 755 platform/mellanox/udev-manager/udev-manager.sh $FILESYSTEM_ROOT/usr/bin/udev-manager.sh
 
-# Install dpu-udev-manager service
-sudo install -m 644 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu-udev-manager
+# Install udev-manager service
+sudo install -m 644 platform/mellanox/udev-manager/udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable udev-manager
 
 {% endif %}
 
@@ -1255,10 +1267,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Copy component-versions file
 sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
 
-# Install current running versions script
-j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}
@@ -1303,6 +1311,42 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
+
+#############################################################################
+# PLATFORM-SPECIFIC SERVICE FILTERING
+# This section MUST remain at the end of the file to ensure all services
+# have been added to GENERATED_SERVICE_FILE before filtering.
+# DO NOT add service registrations (tee -a $GENERATED_SERVICE_FILE) after this point!
+#############################################################################
+
+# Aspeed BMC platform: Filter services for BMC use case
+if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+    # Show original service count
+    ORIGINAL_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE")
+
+    # Use filter script to remove unwanted services and add BMC services
+    sudo cp $BUILD_SCRIPTS_DIR/aspeed_bmc_filter_services.py $FILESYSTEM_ROOT/tmp/
+    sudo chmod a+x $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+
+    # Filter the generated services and mask excluded services
+    sudo python3 $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py \
+        $GENERATED_SERVICE_FILE \
+        $GENERATED_SERVICE_FILE.filtered \
+        $FILESYSTEM_ROOT
+
+    # Show filtered service count
+    FILTERED_COUNT=$(sudo bash -c "wc -l < $GENERATED_SERVICE_FILE.filtered")
+
+    # Replace with filtered version
+    sudo mv $GENERATED_SERVICE_FILE.filtered $GENERATED_SERVICE_FILE
+
+    # Cleanup
+    sudo rm -f $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+fi
+
+#############################################################################
+# END OF FILE - Platform-specific service filtering complete
+#############################################################################
 
 
 ## Copy over  set-vrf-strict-mode.service

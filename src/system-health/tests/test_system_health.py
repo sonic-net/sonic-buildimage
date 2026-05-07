@@ -361,7 +361,7 @@ def test_service_checker_check_by_monit(mock_run):
 @patch('health_checker.utils.run_command')
 @patch('swsscommon.swsscommon.ConfigDBConnector')
 def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_client):
-    """Test that service checker recognizes Kubernetes-managed containers by labels"""
+    """Test that service checker skips Kubernetes-managed containers (namespace=sonic)"""
     setup()
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
@@ -398,7 +398,7 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
         'io.kubernetes.container.name': 'restapi'
     }
     
-    # Mock POD container (should be ignored)
+    # Mock POD container (should also be skipped)
     mock_pod_container = MagicMock()
     mock_pod_container.name = 'k8s_POD_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
     mock_pod_container.labels = {
@@ -418,13 +418,13 @@ def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_cl
     config = Config()
     checker.check(config)
     
-    # Verify k8s containers are recognized by their label names
+    # Verify all K8s containers (namespace=sonic) are excluded from running containers
     running_containers = checker.get_current_running_containers()
-    assert 'snmp' in running_containers
-    assert 'restapi' in running_containers
+    assert 'snmp' not in running_containers
+    assert 'restapi' not in running_containers
     assert 'POD' not in running_containers
     
-    # Verify k8s containers are NOT added to critical processes (k8s has its own health checks)
+    # Verify k8s containers are NOT added to critical processes
     assert 'snmp' not in checker.container_critical_processes
     assert 'restapi' not in checker.container_critical_processes
 
@@ -482,14 +482,15 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     config = Config()
     checker.check(config)
     
-    # Verify both types of containers are recognized
+    # Verify regular Docker container is in running containers
     running_containers = checker.get_current_running_containers()
     assert 'swss' in running_containers
-    assert 'database' in running_containers
+    # K8s container (namespace=sonic) is skipped from running containers
+    assert 'database' not in running_containers
     
     # Verify only regular Docker containers are monitored for critical processes
     assert 'swss' in checker.container_critical_processes
-    assert 'database' not in checker.container_critical_processes  # k8s container, not monitored
+    assert 'database' not in checker.container_critical_processes  # k8s container, skipped entirely
 
 
 def test_hardware_checker():
@@ -961,7 +962,9 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
 
 mock_srv_props={
 'mock_radv.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_radv.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'enabled'},
-'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'}
+'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'},
+'mock_swss_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_swss_generated.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'generated'},
+'mock_syncd_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_syncd_generated.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'generated'}
 }
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service', 'mock_bgp.service', 'mock_ns.service']))
@@ -1027,6 +1030,28 @@ def test_get_unit_status_not_ok():
     sysmon = Sysmonitor()
     result = sysmon.get_unit_status('mock_bgp.service')
     print("get_unit_status:{}".format(result))
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_swss_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_running_ok():
+    """Test that active/running services with UnitFileState=generated are reported as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_swss_generated.service')
+    print("get_unit_status for generated running service:{}".format(result))
+    assert result == 'OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_syncd_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_inactive_not_ok():
+    """Test that inactive services with UnitFileState=generated are reported as NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_syncd_generated.service')
+    print("get_unit_status for generated inactive service:{}".format(result))
     assert result == 'NOT OK'
 
 

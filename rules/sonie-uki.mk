@@ -1,9 +1,17 @@
 # SONIE UKI (Recovery Image) rule
 
 # Define the target based on the configured platform
+ifeq ($(CONFIGURED_ARCH),amd64)
+SONIE_UKI = sonie-$(CONFIGURED_PLATFORM).efi
+else
 SONIE_UKI = sonie-$(CONFIGURED_PLATFORM)-$(CONFIGURED_ARCH).efi
+endif
 
+ifeq ($(CONFIGURED_ARCH),amd64)
+$(SONIE_UKI)_MACHINE = $(CONFIGURED_PLATFORM)
+else
 $(SONIE_UKI)_MACHINE = $(CONFIGURED_PLATFORM)-$(CONFIGURED_ARCH)
+endif
 $(SONIE_UKI)_IMAGE_TYPE = recovery
 
 $(SONIE_UKI)_INSTALLS += $($(SONIC_ONE_IMAGE)_INSTALLS)

@@ -480,7 +480,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
     if [ -d /host/old_config ]; then
         mv -f /host/old_config /etc/sonic/
         rm -rf /etc/sonic/old_config/old_config
-        touch /tmp/pending_config_migration
+        touch /etc/sonic/pending_config_migration
     elif [ -f /host/minigraph.xml ]; then
         mkdir -p /etc/sonic/old_config
         mv /host/minigraph.xml /etc/sonic/old_config/
@@ -488,7 +488,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/port_config.json ] && mv /host/port_config.json /etc/sonic/old_config/
         [ -f /host/snmp.yml ] && mv /host/snmp.yml /etc/sonic/old_config/
         [ -f /host/golden_config_db.json ] && mv /host/golden_config_db.json /etc/sonic/old_config/
-        touch /tmp/pending_config_migration
+        touch /etc/sonic/pending_config_migration
     elif [ -n "$migration" ] && [ -f /host/migration/minigraph.xml ];  then
         mkdir -p /etc/sonic/old_config
         mv /host/migration/minigraph.xml /etc/sonic/old_config/
@@ -499,7 +499,19 @@ if [ -f $FIRST_BOOT_FILE ]; then
         touch /tmp/pending_config_migration
         [ -f /etc/sonic/updategraph.conf ] && sed -i -e "s/enabled=false/enabled=true/g" /etc/sonic/updategraph.conf
     else
-        touch /tmp/pending_config_initialization
+        # config-setup boot_config() skips do_config_initialization on
+        # multi-ASIC platforms, so creating pending_config_initialization
+        # there leaves CONFIG_DB_INITIALIZED stuck at 0 and blocks
+        # swss@N forever. Source asic.conf to learn NUM_ASIC; if it is
+        # missing or unparseable the original behavior is preserved.
+        NUM_ASIC=
+        ASIC_CONF=/usr/share/sonic/device/$platform/asic.conf
+        [ -f "$ASIC_CONF" ] && . "$ASIC_CONF"
+        if [ "$NUM_ASIC" -gt 1 ] 2>/dev/null; then
+            echo "Multi-ASIC platform detected (NUM_ASIC=$NUM_ASIC), skip creating pending_config_initialization flag file"
+        else
+            touch /etc/sonic/pending_config_initialization
+        fi
     fi
 
     # Notify firstboot to Platform, to use it for reboot-cause

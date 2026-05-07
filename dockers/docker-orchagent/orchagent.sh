@@ -62,6 +62,12 @@ if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
 fi
 
+# Enable async swss recorder when explicitly configured
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "async_swss_rec")
+if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-A "
+fi
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"

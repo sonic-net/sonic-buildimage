@@ -26,7 +26,7 @@ module sonic-vlan-sub-interface {
         prefix svnet;
     }
 
-    description "VLAN sub interface for SONiC OS";
+    description "VLAN sub-interface configuration for dot1q encapsulated sub-ports on physical or PortChannel interfaces";
 
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
@@ -39,11 +39,11 @@ module sonic-vlan-sub-interface {
     container sonic-vlan-sub-interface {
         container VLAN_SUB_INTERFACE {
 
-            description "VLAN SUB INTERFACE part of config_db.json";
+            description "VLAN sub-interface configuration table for dot1q encapsulated sub-ports";
 
             list VLAN_SUB_INTERFACE_LIST {
 
-                description "VLAN_SUB_INTERFACE part of config_db.json with vrf";
+                description "Configuration entry for a VLAN sub-interface including VLAN encapsulation and VRF binding";
 
                 // encap vlan is mandatory for short name subinterfaces
                 must "(substring-before(name, '.') = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
@@ -56,6 +56,7 @@ module sonic-vlan-sub-interface {
                 key "name";
 
                 leaf name {
+                    description "Sub-interface name in the format ParentInterface.VlanID (e.g. Ethernet0.100 or Eth0.100)";
                     must "(string-length(current()) <= 15) and " +
                          "((substring-before(current(), '.') = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
                          "(starts-with(substring-before(current(), '.'), 'Eth') and concat('Ethernet', substring-after(substring-before(current(), '.'), 'Eth')) = /port:sonic-port/port:PORT/port:PORT_LIST/port:name) or " +
@@ -73,10 +74,12 @@ module sonic-vlan-sub-interface {
                 }
 
                 leaf admin_status {
+                    description "Administrative state of the VLAN sub-interface";
                     type stypes:admin_status;
                 }
 
                 leaf vrf_name {
+                    description "VRF instance to which this sub-interface is bound";
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
                     }
@@ -95,6 +98,7 @@ module sonic-vlan-sub-interface {
                 }
 
                 leaf vlan {
+                    description "802.1Q VLAN ID for encapsulation on this sub-interface";
                     type uint16 {
                         range 1..4094;
                     }
@@ -103,17 +107,19 @@ module sonic-vlan-sub-interface {
 
             list VLAN_SUB_INTERFACE_IPPREFIX_LIST {
 
-                description "VLAN_SUB_INTERFACE part of config_db.json with ip-prefix";
+                description "IP address prefix assignment for a VLAN sub-interface";
 
                 key "name ip-prefix";
 
                 leaf name {
+                    description "Reference to the parent VLAN sub-interface";
                     type leafref {
                         path "../../VLAN_SUB_INTERFACE_LIST/name";
                     }
                 }
 
                 leaf ip-prefix {
+                    description "IPv4 or IPv6 address with prefix length assigned to the sub-interface";
                     type stypes:sonic-ip-prefix;
                 }
             }

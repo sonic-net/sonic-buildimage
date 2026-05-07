@@ -1,0 +1,9 @@
+[Unit]
+Description=CPU WDT
+Conflicts=watchdog-control.service
+After=nokia-7215init.service
+[Service]
+ExecStart=/usr/local/bin/cpu_wdt.py
+
+[Install]
+WantedBy=multi-user.target

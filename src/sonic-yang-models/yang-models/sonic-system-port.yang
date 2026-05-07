@@ -9,7 +9,7 @@ module sonic-system-port {
         prefix stypes;
     }
 
-    description "SYSTEM_PORT YANG Module for SONiC OS";
+    description "VoQ system port configuration YANG module for SONiC OS.";
 
     revision 2022-11-10 {
         description "First Revision";
@@ -19,24 +19,28 @@ module sonic-system-port {
 
         container SYSTEM_PORT {
 
-            description "SYSTEM_PORT table of config_db.json";
+            description "System port definitions for VoQ-based distributed switch architectures.";
 
             list SYSTEM_PORT_LIST {
 
                 key "hostname asic_name ifname";
+                description "A system port entry uniquely identified by host, ASIC, and interface name.";
 
                 leaf hostname {
                     type stypes:hostname;
+                    description "Hostname of the switch owning this port.";
                 }
 
                 leaf asic_name {
                     type stypes:asic_name;
+                    description "ASIC namespace name within the switch.";
                 }
 
                 leaf ifname {
                     type string {
                         length 1..128;
                     }
+                    description "Interface name of the port on the specified ASIC.";
                 }
 
                 leaf core_index {

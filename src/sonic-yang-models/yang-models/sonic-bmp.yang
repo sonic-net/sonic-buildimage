@@ -25,26 +25,26 @@ module sonic-bmp {
 
         container BMP {
 
-            description "BMP TABLE control part of config_db.json";
+            description "BGP Monitoring Protocol (BMP) table dump configuration.";
 
             container table {
 
                 leaf bgp_neighbor_table {
                     type stypes:boolean_type;
                     default "true";
-                    description "Flag for enabling/disabling bgp_neighbor_table dump.";
+                    description "Enable or disable BMP BGP neighbor table dump.";
                 }
 
                 leaf bgp_rib_in_table {
                     type stypes:boolean_type;
                     default "false";
-                    description "Flag for enabling/disabling bgp_rib_in_table dump.";
+                    description "Enable or disable BMP Adj-RIB-In table dump.";
                 }
 
                 leaf bgp_rib_out_table {
                     type stypes:boolean_type;
                     default "false";
-                    description "Flag for enabling/disabling bgp_rib_out_table dump.";
+                    description "Enable or disable BMP Adj-RIB-Out table dump.";
                 }
 
             }

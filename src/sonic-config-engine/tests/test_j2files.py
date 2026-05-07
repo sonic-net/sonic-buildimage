@@ -77,7 +77,8 @@ class TestJ2Files(TestCase):
         dir_exist = True
         mode = {'arista': 'aboot',
                 'dell': 'onie',
-                'mellanox': 'onie'
+                'mellanox': 'onie',
+                'nexthop': 'onie'
                }
         echo_cmd1 = ["echo", '{}_platform={}'.format(mode[vendor], platform)]
         echo_cmd2 = ["sudo", "tee", "-a", "/host/machine.conf"]
@@ -258,6 +259,13 @@ class TestJ2Files(TestCase):
         argument = ['-j', mgmt_iface_ipv6_json, '-t', lldpd_conf_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(expected_mgmt_ipv6, self.output_file))
+
+        # Test generation of lldpd.conf with PORT table (aliases, special ports, missing alias)
+        mgmt_iface_ipv4_with_ports_json = os.path.join(self.test_dir, "data", "lldp", "mgmt_iface_ipv4_with_ports.json")
+        expected_mgmt_ipv4_with_ports = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'lldp_conf', 'lldpd-ipv4-iface-with-ports.conf')
+        argument = ['-j', mgmt_iface_ipv4_with_ports_json, '-t', lldpd_conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(expected_mgmt_ipv4_with_ports, self.output_file))
 
     def test_ipinip(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
@@ -755,6 +763,39 @@ class TestJ2Files(TestCase):
                                                 minigraph=test_data[3],
                                                 buffer_template=test_data[4],
                                                 expected=test_data[5])
+
+    def test_buffers_frh_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        self._test_buffers_render_template(vendor='arista',
+                                            platform='x86_64-arista_7060x6_64pe_b',
+                                            sku='Arista-7060X6-64PE-B-O128',
+                                            minigraph='sample-frh-b-o128-minigraph.xml',
+                                            buffer_template='buffers.json.j2',
+                                            expected='buffer-frh-b-o128.json')
+
+    def test_buffers_urh_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        self._test_buffers_render_template(vendor='nexthop',
+                                            platform='x86_64-nexthop_5010-r0',
+                                            sku='NH-5010-F-O64',
+                                            minigraph='sample-urh-nh5010-minigraph.xml',
+                                            buffer_template='buffers.json.j2',
+                                            expected='buffer-urh-nh5010.json')
+
+    def test_buffers_lrh_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            return
+
+        self._test_buffers_render_template(vendor='nexthop',
+                                            platform='x86_64-nexthop_5010-r0',
+                                            sku='NH-5010-F-O64',
+                                            minigraph='sample-lrh-nh5010-minigraph.xml',
+                                            buffer_template='buffers.json.j2',
+                                            expected='buffer-lrh-nh5010.json')
     
     def test_ipinip_multi_asic(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
@@ -950,10 +991,6 @@ class TestJ2Files(TestCase):
         self._test_buffers_render_template('arista', 'x86_64-arista_7060_cx32s', 'Arista-7060CX-32S-D48C8', 'sample-arista-7060-t0-minigraph.xml', 'buffers.json.j2', 'buffer-arista7060-t0.json')
 
     def test_rsyslog_conf(self):
-        if utils.PYvX_DIR != 'py3':
-            # Skip on python2 as the change will not be backported to previous version
-            return
-
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
@@ -965,14 +1002,10 @@ class TestJ2Files(TestCase):
             pattern = r'^action.*Device="eth0".*'
             for line in file:
                 assert not bool(re.match(pattern, line.strip())), "eth0 is not allowed in Mgfx device"
-        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog.conf'),
-                                  self.output_file))
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog.conf')
+        self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
     def test_rsyslog_conf_docker0_ip(self):
-        if utils.PYvX_DIR != 'py3':
-            # Skip on python2 as the change will not be backported to previous version
-            return
-
         conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
                                      'rsyslog.conf.j2')
         config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
@@ -981,8 +1014,20 @@ class TestJ2Files(TestCase):
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
-                                               'rsyslog_with_docker0.conf'), self.output_file))
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_with_docker0.conf')
+        self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
+
+    def test_rsyslog_conf_same_ip(self):
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog',
+                                     'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = "{\"udp_server_ip\": \"2.2.2.2\", \"hostname\": \"kvm-host\", " + \
+                          "\"docker0_ip\": \"2.2.2.2\"}"
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        self.run_script(argument, output_file=self.output_file)
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_same_ip.conf')
+        self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

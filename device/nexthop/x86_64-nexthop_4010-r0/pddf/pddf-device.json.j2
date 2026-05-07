@@ -34,7 +34,6 @@
     "std_kos": [
       "at24",
       "i2c-dev",
-      "adm1266",
       "optoe"
     ],
     "pddf_kos": [
@@ -57,6 +56,7 @@
       "nh_pmbus_core",
       "nh_isl68137",
       "nh_tda38740",
+      "nh_adm1266",
       "nh_tmp464"
     ]
   },
@@ -244,6 +244,10 @@
           "dev": "DPM1"
         },
         {
+          "chn": "5",
+          "dev": "DPM2"
+        },
+        {
           "chn": "6",
           "dev": "EEPROM1"
         },
@@ -387,11 +391,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp2_max"
+          "drv_attr_name": "temp2_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp2_crit"
+          "drv_attr_name": "temp2_max"
         }
       ]
     }
@@ -416,11 +420,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp3_max"
+          "drv_attr_name": "temp3_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp3_crit"
+          "drv_attr_name": "temp3_max"
         }
       ]
     }
@@ -445,11 +449,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp4_max"
+          "drv_attr_name": "temp4_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp4_crit"
+          "drv_attr_name": "temp4_max"
         }
       ]
     }
@@ -473,11 +477,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp5_max"
+          "drv_attr_name": "temp5_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp5_crit"
+          "drv_attr_name": "temp5_max"
         }
       ]
     }
@@ -525,11 +529,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
+          "drv_attr_name": "temp1_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
+          "drv_attr_name": "temp1_max"
         }
       ]
     }
@@ -12392,7 +12396,15 @@
       "dev_info": {"device_type":"DPM", "device_name":"DPM1", "device_parent":"MULTIFPGAPCIE0"},
       "i2c":
       {
-          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"adm1266"}
+          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
+      }
+  },
+  "DPM2":
+  {
+      "dev_info": {"device_type":"DPM", "device_name":"DPM2", "device_parent":"MULTIFPGAPCIE0"},
+      "i2c":
+      {
+          "topo_info":{ "parent_bus":"0x9", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
       }
   },
   "VOLTAGE1":

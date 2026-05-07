@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
+#include <linux/version.h>
 
 #include "wb_module.h"
 #include "dfd_cfg_file.h"
@@ -146,7 +147,11 @@ static void dfd_ko_cfg_regval_conv_lst_add(struct list_head *root, int val, char
     val_convert->index1 = index1;
     val_convert->index2 = index2;
     if (str != NULL) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
         strlcpy(val_convert->str_val, str, sizeof(val_convert->str_val));
+#else
+        strscpy(val_convert->str_val, str, sizeof(val_convert->str_val));
+#endif
     }
 
     /* After initialization, the list does not change and does not need to be locked */
@@ -517,7 +522,11 @@ static int dfd_ko_cfg_add_str_item(uint64_t key, char *str, int line_num)
             return -1;
         }
         mem_clear(str_cfg, DFD_CFG_STR_MAX_LEN);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
         strlcpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+#else
+        strscpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+#endif
 
         /* Add to linked list */
         rv = lnode_insert_node(&dfd_ko_cfg_list_root, key, str_cfg);
@@ -535,7 +544,11 @@ static int dfd_ko_cfg_add_str_item(uint64_t key, char *str, int line_num)
         DBG_DEBUG(DBG_WARN, "line%d: replace string item[%s->%s], key=0x%08llx\n",
             line_num, str_cfg, str, key);
         mem_clear(str_cfg, DFD_CFG_STR_MAX_LEN);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
         strlcpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+#else
+        strscpy(str_cfg, str, DFD_CFG_STR_MAX_LEN);
+#endif
     }
 
     return 0;
@@ -748,7 +761,11 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
         break;
     case INFO_CTRL_MEM_FPATH:
         mem_clear(info_ctrl->fpath, sizeof(info_ctrl->fpath));
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
         strlcpy(info_ctrl->fpath, buf_val, sizeof(info_ctrl->fpath));
+#else
+        strscpy(info_ctrl->fpath, buf_val, sizeof(info_ctrl->fpath));
+#endif
         break;
     case INFO_CTRL_MEM_ADDR:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->addr), line_num);
@@ -761,7 +778,11 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
         break;
     case INFO_CTRL_MEM_STR_CONS:
         mem_clear(info_ctrl->str_cons, sizeof(info_ctrl->str_cons));
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
         strlcpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
+#else
+        strscpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
+#endif
         break;
     case INFO_CTRL_MEM_INT_EXTRA1:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->int_extra1), line_num);

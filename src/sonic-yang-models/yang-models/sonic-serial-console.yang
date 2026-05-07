@@ -6,16 +6,17 @@ module sonic-serial-console {
     import sonic-types {
         prefix stypes;
     }
-    description "SERIAL_CONSOLE YANG Module for SONiC-based OS";
+    description "Serial console session policy YANG module for SONiC OS.";
     revision 2023-06-07 {
         description "First Revision";
     }
     container sonic-serial-console {
         container SERIAL_CONSOLE {
-            description "SERIAL_CONSOLE part of config_db.json";
+            description "Serial console session configuration.";
             container POLICIES {
+                description "Serial console session timeout and security policies.";
                 leaf inactivity_timeout {
-                    description "serial-console inactivity-timeout timer value in minutes";
+                    description "Serial console inactivity timeout in minutes; 0 disables the timeout.";
                     type int32 {
                         range "0..35000";
                     }
@@ -24,7 +25,7 @@ module sonic-serial-console {
 
                 leaf sysrq_capabilities {
                     type stypes:admin_mode;
-                    description "managing SysRq capabilities";
+                    description "Enable or disable Linux SysRq key capabilities on the serial console.";
                     default disabled;
                 }
         }

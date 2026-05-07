@@ -345,7 +345,9 @@ environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_
 command=/usr/bin/countersyncd --enable-otel
 priority=18
 autostart=false
-autorestart=false
+autorestart=unexpected
+startsecs=10
+startretries=3
 stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE

@@ -13,9 +13,6 @@
 LIBYANG3-DEV-DONE = libyang3-dev-done
 $(LIBYANG3-DEV-DONE)_DEPENDS = $(LIBYANG3_PY3)
 
-# Not compiling FRR for Trixie
-ifeq ($(BLDENV),bookworm)
 $(LIBYANG3-DEV-DONE)_DEPENDS += $(FRR)
-endif
 
 SONIC_PHONIES += $(LIBYANG3-DEV-DONE)

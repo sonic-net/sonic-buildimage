@@ -15,7 +15,7 @@ module sonic-breakout_cfg {
 
         container BREAKOUT_CFG {
 
-            description "BREAKOUT_CFG part of config_db.json";
+            description "Port breakout mode configuration for dynamic port splitting";
 
             list BREAKOUT_CFG_LIST {
 
@@ -29,6 +29,7 @@ module sonic-breakout_cfg {
                  * PORT table.
                  */
                 leaf port {
+                    description "Parent port name for breakout configuration";
                     type string {
                         length 1..255;
                     }

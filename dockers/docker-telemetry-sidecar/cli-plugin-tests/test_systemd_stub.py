@@ -189,13 +189,23 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
-    # Mock _get_branch_name to return "202412" by default (avoids real file/nsenter I/O)
-    monkeypatch.setattr(ss, "_get_branch_name", lambda: "202412")
+    # Mock _get_branch_name to return "master" by default (avoids real file/nsenter I/O)
+    # Use "master" because it falls through to the default (non-branch-specific) path.
+    monkeypatch.setattr(ss, "_get_branch_name", lambda: "master")
+
+    # Reset the one-shot cleanup flag so each test starts fresh
+    ss._stale_unit_cleaned = False
+    monkeypatch.setattr(ss, "_STALE_UNIT_CLEANUP_ENABLED", True)
 
     # Provide a default container_checker in both filesystems so the auto-appended
     # SyncItem from ensure_sync() is always satisfied and is a no-op.
     container_fs["/usr/share/sonic/systemd_scripts/container_checker"] = b"default-checker"
     host_fs["/bin/container_checker"] = b"default-checker"
+
+    # Provide a default service_checker.py in both filesystems so the auto-appended
+    # SyncItem from ensure_sync() is always satisfied and is a no-op.
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"default-service-checker"
+    host_fs["/usr/local/lib/python3.11/dist-packages/health_checker/service_checker.py"] = b"default-service-checker"
 
     return ss, container_fs, host_fs, commands, config_db
 
@@ -302,32 +312,111 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
 
 
-def test_telemetry_service_syncs_to_host_when_different(ss):
-    ss, container_fs, host_fs, commands, config_db = ss
 
-    # Prepare container unit content and host old content
-    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
-    host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
+# ─────────────────────────── Tests for stale telemetry.service cleanup ───────────────────────────
 
-    # Only include the telemetry service item to make the assertion clear
-    ss.SYNC_ITEMS[:] = [
-        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
-    ]
+STALE_UNIT = b"""[Unit]
+Description=Telemetry container
 
-    # Add post actions for telemetry.service
-    ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "telemetry"],
-    ]
+[Service]
+User=root
+ExecStartPre=/usr/local/bin/telemetry.sh start
+ExecStart=/usr/local/bin/telemetry.sh wait
+"""
 
-    ok = ss.ensure_sync()
-    assert ok is True
-    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
+CLEAN_UNIT = b"""[Unit]
+Description=Telemetry container
 
-    # Verify systemctl actions were invoked
+[Service]
+User=admin
+ExecStartPre=/usr/local/bin/telemetry.sh start
+ExecStart=/usr/local/bin/telemetry.sh wait
+"""
+
+
+def test_cleanup_stale_unit_restores_from_packed_file(ss):
+    """When host telemetry.service has User=root, cleanup overwrites it with the packed clean file."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # Host file should now be the clean version
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+    # daemon-reload and restart should follow
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
     assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
+
+
+def test_cleanup_skips_when_user_admin(ss):
+    """When host telemetry.service already has User=admin, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+
+    # No write should have occurred
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_skips_when_file_missing(ss):
+    """When host telemetry.service doesn't exist, cleanup is a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+
+    write_cmds = [args for _, args in commands if args and args[0] == "/bin/sh"]
+    assert len(write_cmds) == 0
+
+
+def test_cleanup_runs_only_once(ss):
+    """The cleanup is a one-shot; second call should be a no-op."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+
+    # Revert host to stale to prove second call is a no-op
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    # Should still be stale because the flag prevented re-run
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == STALE_UNIT
+
+def test_cleanup_retries_after_transient_read_failure(ss):
+    """When host_read_bytes fails transiently, cleanup retries on the next call."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+    # First call: host file missing (transient failure)
+    # Don't put the file in host_fs
+
+    ss_mod._cleanup_stale_service_unit()
+    assert ss_mod._stale_unit_cleaned is False  # flag NOT set; will retry
+
+    # Second call: host file now present with stale content
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    ss_mod._cleanup_stale_service_unit()
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == CLEAN_UNIT
+    assert ss_mod._stale_unit_cleaned is True
+
+
+def test_cleanup_disabled_by_env(ss, monkeypatch):
+    """When STALE_UNIT_CLEANUP_ENABLED=false, cleanup is skipped entirely."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+    monkeypatch.setattr(ss_mod, "_STALE_UNIT_CLEANUP_ENABLED", False)
+    host_fs[ss_mod._HOST_TELEMETRY_SERVICE] = STALE_UNIT
+    container_fs[ss_mod._CONTAINER_TELEMETRY_SERVICE] = CLEAN_UNIT
+
+    ss_mod._cleanup_stale_service_unit()
+    # File should NOT be overwritten
+    assert host_fs[ss_mod._HOST_TELEMETRY_SERVICE] == STALE_UNIT
+    # Flag set so it won't retry
+    assert ss_mod._stale_unit_cleaned is True
 
 
 # ─────────────────────────── New tests for CONFIG_DB reconcile ───────────────────────────
@@ -336,31 +425,143 @@ def test_reconcile_enables_user_auth_and_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     # Set module-level flags directly (they're read inside reconcile)
     ss.GNMI_VERIFY_ENABLED = True
-    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
 
     # Precondition: empty DB
     assert config_db == {}
 
     ss.reconcile_config_db_once()
 
-    # user_auth must be set to 'cert'
-    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
-    # CNAME hash must exist with role=gnmi_show_readonly (default GNMI_CLIENT_ROLE)
-    cname_key = f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"
-    assert config_db.get(cname_key, {}).get("role") == "gnmi_show_readonly"
+    assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
+    # CNAME hash must exist with role=gnmi_show_readonly
+    assert config_db.get("GNMI_CLIENT_CERT|fake-infra-ca.test.example.com", {}).get("role") == "gnmi_show_readonly"
 
 
 def test_reconcile_disabled_removes_cname(ss):
     ss, container_fs, host_fs, commands, config_db = ss
     ss.GNMI_VERIFY_ENABLED = False
-    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+    ss.GNMI_CLIENT_CERTS = [{"cname": "fake-infra-ca.test.example.com", "role": "gnmi_show_readonly"}]
 
     # Seed an existing entry to be removed
-    config_db[f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"] = {"role": "gnmi_show_readonly"}
+    config_db["GNMI_CLIENT_CERT|fake-infra-ca.test.example.com"] = {"role": "gnmi_show_readonly"}
 
     ss.reconcile_config_db_once()
 
-    assert f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}" not in config_db
+    assert "GNMI_CLIENT_CERT|fake-infra-ca.test.example.com" not in config_db
+
+def test_reconcile_multiple_cnames(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CERTS = [
+        {"cname": "fake-client.test.example.com", "role": "admin"},
+        {"cname": "fake-server.test.example.com", "role": '["gnmi_show_readonly","admin"]'},
+    ]
+    assert config_db == {}
+    ss.reconcile_config_db_once()
+
+    assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-client.test.example.com", {}).get("role") == "admin"
+    assert config_db.get("GNMI_CLIENT_CERT|fake-server.test.example.com", {}).get("role") == '["gnmi_show_readonly","admin"]'
+
+# ─────────────────────────── Tests for _parse_client_certs ───────────────────────────
+
+class TestParseClientCerts:
+    """Tests for _parse_client_certs() env-var parsing."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_module(self, monkeypatch):
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        self.monkeypatch = monkeypatch
+
+    def _import_with_env(self, env_vars):
+        """Set env vars, re-import systemd_stub, and return the parsed GNMI_CLIENT_CERTS."""
+        for k, v in env_vars.items():
+            if v is None:
+                self.monkeypatch.delenv(k, raising=False)
+            else:
+                self.monkeypatch.setenv(k, v)
+        # Clear stale env vars not in the dict
+        for k in ("GNMI_CLIENT_CERTS", "TELEMETRY_CLIENT_CNAME", "GNMI_CLIENT_ROLE"):
+            if k not in env_vars:
+                self.monkeypatch.delenv(k, raising=False)
+        if "systemd_stub" in sys.modules:
+            del sys.modules["systemd_stub"]
+        ss = importlib.import_module("systemd_stub")
+        return ss.GNMI_CLIENT_CERTS
+
+    def test_valid_json_array(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "client.gbl", "role": "admin"}]'
+        })
+        assert certs == [{"cname": "client.gbl", "role": "admin"}]
+
+    def test_valid_json_multiple_entries(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "a.gbl", "role": "admin"}, {"cname": "b.gbl", "role": "readonly"}]'
+        })
+        assert len(certs) == 2
+        assert certs[0] == {"cname": "a.gbl", "role": "admin"}
+        assert certs[1] == {"cname": "b.gbl", "role": "readonly"}
+
+    def test_non_array_json_falls_back_to_legacy(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '{"cname": "c.gbl", "role": "admin"}',
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+            "GNMI_CLIENT_ROLE": "readonly",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "readonly"}]
+
+    def test_invalid_json_falls_back_to_legacy(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": "not-json!",
+            "TELEMETRY_CLIENT_CNAME": "fallback.gbl",
+        })
+        assert certs == [{"cname": "fallback.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_not_dict_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '["not-a-dict"]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_missing_role_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "x.gbl"}]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_entry_empty_cname_falls_back(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": "  ", "role": "admin"}]',
+            "TELEMETRY_CLIENT_CNAME": "fb.gbl",
+        })
+        assert certs == [{"cname": "fb.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_legacy_single_entry(self):
+        certs = self._import_with_env({
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+            "GNMI_CLIENT_ROLE": "admin",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "admin"}]
+
+    def test_legacy_default_role(self):
+        certs = self._import_with_env({
+            "TELEMETRY_CLIENT_CNAME": "legacy.gbl",
+        })
+        assert certs == [{"cname": "legacy.gbl", "role": "gnmi_show_readonly"}]
+
+    def test_no_env_returns_empty(self):
+        certs = self._import_with_env({})
+        assert certs == []
+
+    def test_whitespace_stripped(self):
+        certs = self._import_with_env({
+            "GNMI_CLIENT_CERTS": '[{"cname": " client.gbl ", "role": " admin "}]'
+        })
+        assert certs == [{"cname": "client.gbl", "role": "admin"}]
 
 
 # ─────────────────────────── Tests for _get_branch_name ───────────────────────────
@@ -466,6 +667,10 @@ def test_ensure_sync_uses_202411_checker(ss):
     container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
     host_fs["/bin/container_checker"] = b"old-checker"
 
+    # Also provide 202411 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202411"] = b"service-checker-202411"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202411"
+
     # Clear SYNC_ITEMS to focus only on the container_checker logic
     ss_mod.SYNC_ITEMS[:] = []
 
@@ -502,6 +707,218 @@ def test_ensure_sync_202411_missing_checker_fails(ss):
     # Remove default checker too
     container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202411", None)
     container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional service_checker.py in ensure_sync ───────────
+
+def test_ensure_sync_uses_202411_service_checker(ss):
+    """When branch is 202411, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Provide the 202411-specific service_checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202411"] = b"service-checker-202411"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
+    host_fs["/bin/container_checker"] = b"checker-202411"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202411"
+
+
+def test_ensure_sync_uses_default_service_checker(ss):
+    """When branch is not 202411, ensure_sync uses the default service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    # _get_branch_name already returns "202412" from fixture default
+
+    # Provide the default service_checker in the container and a different one on host
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py"] = b"service-checker-default"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-default"
+
+
+def test_ensure_sync_202411_missing_service_checker_fails(ss):
+    """When branch is 202411 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202411"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202411"] = b"checker-202411"
+    host_fs["/bin/container_checker"] = b"checker-202411"
+
+    # Remove service_checker sources
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202411", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional 202505 in ensure_sync ───────────
+
+def test_ensure_sync_uses_202505_checker(ss):
+    """When branch is 202505, ensure_sync uses the branch-specific container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Also provide 202505 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202505"] = b"service-checker-202505"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202505"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-202505"
+
+
+def test_ensure_sync_uses_202505_service_checker(ss):
+    """When branch is 202505, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202505"] = b"service-checker-202505"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"checker-202505"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202505"
+
+
+def test_ensure_sync_202505_missing_checker_fails(ss):
+    """When branch is 202505 but the branch-specific checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202505", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+def test_ensure_sync_202505_missing_service_checker_fails(ss):
+    """When branch is 202505 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202505"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202505"] = b"checker-202505"
+    host_fs["/bin/container_checker"] = b"checker-202505"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202505", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+# ─────────── Tests for branch-conditional 202412 in ensure_sync ───────────
+
+def test_ensure_sync_uses_202412_checker(ss):
+    """When branch is 202412, ensure_sync uses the branch-specific container_checker."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"old-checker"
+
+    # Also provide 202412 service_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"service-checker-202412"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"service-checker-202412"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs["/bin/container_checker"] == b"checker-202412"
+
+
+def test_ensure_sync_uses_202412_service_checker(ss):
+    """When branch is 202412, ensure_sync uses the branch-specific service_checker.py."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs["/usr/share/sonic/systemd_scripts/service_checker.py_202412"] = b"service-checker-202412"
+    host_fs[ss_mod.HOST_SERVICE_CHECKER] = b"old-service-checker"
+
+    # Also provide container_checker so it doesn't fail
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"checker-202412"
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+    assert host_fs[ss_mod.HOST_SERVICE_CHECKER] == b"service-checker-202412"
+
+
+def test_ensure_sync_202412_missing_checker_fails(ss):
+    """When branch is 202412 but the branch-specific checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker_202412", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/container_checker", None)
+
+    ss_mod.SYNC_ITEMS[:] = []
+
+    ok = ss_mod.ensure_sync()
+    assert ok is False
+
+
+def test_ensure_sync_202412_missing_service_checker_fails(ss):
+    """When branch is 202412 but the branch-specific service_checker is missing, sync fails."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    ss_mod._get_branch_name = lambda: "202412"
+
+    # Provide container_checker so only service_checker causes the failure
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202412"] = b"checker-202412"
+    host_fs["/bin/container_checker"] = b"checker-202412"
+
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py_202412", None)
+    container_fs.pop("/usr/share/sonic/systemd_scripts/service_checker.py", None)
 
     ss_mod.SYNC_ITEMS[:] = []
 

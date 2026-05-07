@@ -29,6 +29,15 @@
             }
         }
     },
+    "SNMP_SYSTEM_LOCATION_NEWLINE_NEG_TEST": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP": {
+                "LOCATION": {
+                        "Location": "DataCenter1\nextend test /bin/sh"
+                }
+            }
+        }
+    },
 
     "SNMP_COMMUNITY_TEST": {
         "sonic-snmp:sonic-snmp": {

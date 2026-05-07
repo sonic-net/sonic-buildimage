@@ -98,6 +98,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pigz \
         git \
         build-essential \
+        ccache \
         remake \
         libtool \
         lintian \
@@ -129,6 +130,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         cron \
         debootstrap \
         e2fsprogs \
+        gdisk \
 # For sonic-swss-common
         nlohmann-json3-dev \
         libhiredis-dev \
@@ -392,6 +394,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libcjson-dev \
         python3-yaml \
         python3-parameterized \
+# For sonic redfish
+        python3-inflection \
+        python3-mako \
+        systemd-dev \
 # For WPA supplication
         qtbase5-dev          \
         aspell-en            \
@@ -575,7 +581,9 @@ RUN eatmydata apt-get install -y golang-go \
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng pyyaml-include
+# Exclude jsonpath_ng 1.8.0 because it causes DASH pipeline failures
+# In version 1.8.0, dict is flattened to a list, which causes type error in DASH.
+RUN pip3 install jsonpath_ng!=1.8.0 pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in trixie

@@ -38,7 +38,7 @@ module sonic-dhcpv4-relay {
 
     container sonic-dhcpv4-relay {
         container DHCPV4_RELAY {
-            description "DHCPV4_RELAY part of config_db.json";
+            description "DHCPv4 relay agent configuration per VLAN interface";
 
             list DHCPV4_RELAY_LIST {
                 key "name";
