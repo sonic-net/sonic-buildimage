@@ -297,7 +297,19 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
         touch /etc/sonic/pending_config_migration
     else
-        touch /etc/sonic/pending_config_initialization
+        # config-setup boot_config() skips do_config_initialization on
+        # multi-ASIC platforms, so creating pending_config_initialization
+        # there leaves CONFIG_DB_INITIALIZED stuck at 0 and blocks
+        # swss@N forever. Source asic.conf to learn NUM_ASIC; if it is
+        # missing or unparseable the original behavior is preserved.
+        NUM_ASIC=
+        ASIC_CONF=/usr/share/sonic/device/$platform/asic.conf
+        [ -f "$ASIC_CONF" ] && . "$ASIC_CONF"
+        if [ "$NUM_ASIC" -gt 1 ] 2>/dev/null; then
+            echo "Multi-ASIC platform detected (NUM_ASIC=$NUM_ASIC), skip creating pending_config_initialization flag file"
+        else
+            touch /etc/sonic/pending_config_initialization
+        fi
     fi
 
     # Notify firstboot to Platform, to use it for reboot-cause
