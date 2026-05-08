@@ -122,7 +122,7 @@ docbook-xml==4.5-13
 docker-buildx-plugin==0.26.1-1~debian.13~trixie
 docker-ce==5:28.5.2-1~debian.13~trixie
 docker-ce-cli==5:28.5.2-1~debian.13~trixie
-docker-ce-rootless-extras==5:29.4.0-1~debian.13~trixie
+docker-ce-rootless-extras==5:29.4.2-2~debian.13~trixie
 docker-compose-plugin==2.39.1-1~debian.13~trixie
 docutils-common==0.21.2+dfsg-2
 dosfstools==4.2-1.2
@@ -187,6 +187,7 @@ gcc-multilib==4:14.2.0-1
 gcc-x86-64-linux-gnu==4:14.2.0-1
 gcovr==7.2+really-1.1
 gdb==16.3-1
+gdisk==1.0.10-2+b1
 gem2deb==2.2.5
 gem2deb-test-runner==2.2.5
 gettext==0.23.1-2
@@ -260,9 +261,9 @@ hwdata==0.394-1
 i965-va-driver==2.4.1+dfsg1-2
 ibverbs-providers==56.1-1
 icu-devtools==76.1-4
-imagemagick==8:7.1.1.43+dfsg1-1+deb13u7
-imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u7
-imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u7
+imagemagick==8:7.1.1.43+dfsg1-1+deb13u8
+imagemagick-7-common==8:7.1.1.43+dfsg1-1+deb13u8
+imagemagick-7.q16==8:7.1.1.43+dfsg1-1+deb13u8
 inetutils-telnet==2:2.6-3+deb13u3
 inkscape==1.4-6
 install-info==7.1.1-1+b1
@@ -925,8 +926,8 @@ libidn2-dev==2.3.8-2
 libiec61883-0==1.2.0-7
 libigdgmm12==22.7.2+ds1-1
 libijs-0.35==0.35-15.2
-libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u7
-libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u7
+libimage-magick-perl==8:7.1.1.43+dfsg1-1+deb13u8
+libimage-magick-q16-perl==8:7.1.1.43+dfsg1-1+deb13u8
 libimagequant0==2.18.0-1+b2
 libimath-3-1-29t64==3.1.12-1+b3
 libimport-into-perl==1.002005-2
@@ -1054,9 +1055,9 @@ liblzo2-2==2.10-3+b1
 liblzo2-dev==2.10-3+b1
 libmagic-mgc==1:5.46-5
 libmagic1t64==1:5.46-5
-libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u7
-libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u7
-libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u7
+libmagickcore-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u8
+libmagickcore-7.q16-10-extra==8:7.1.1.43+dfsg1-1+deb13u8
+libmagickwand-7.q16-10==8:7.1.1.43+dfsg1-1+deb13u8
 libmail-sendmail-perl==0.80-3
 libmailtools-perl==2.22-1
 libmariadb-dev==1:11.8.6-0+deb13u1
@@ -1111,7 +1112,7 @@ libmro-compat-perl==0.15-2
 libmtdev1t64==1.1.7-1
 libmujs3==1.3.6-1
 libmunge2==0.5.16-1.1~deb13u1
-libmupdf25.1==1.25.1+ds1-6
+libmupdf25.1==1.25.1+ds1-6+deb13u1
 libmysofa1==1.3.3+dfsg-1
 libnamespace-autoclean-perl==0.31-1
 libnamespace-clean-perl==0.27-2
@@ -1145,8 +1146,8 @@ libnghttp2-14==1.64.0-1.1
 libnghttp2-dev==1.64.0-1.1
 libnghttp3-9==1.8.0-1
 libnghttp3-dev==1.8.0-1
-libngtcp2-16==1.11.0-1
-libngtcp2-crypto-gnutls8==1.11.0-1
+libngtcp2-16==1.11.0-1+deb13u1
+libngtcp2-crypto-gnutls8==1.11.0-1+deb13u1
 libnl-3-200==3.7.0-2
 libnl-3-dev==3.7.0-2
 libnl-genl-3-200==3.7.0-2
@@ -1440,7 +1441,6 @@ libssh-4==0.11.2-1+deb13u1
 libssh2-1-dev==1.11.1-1
 libssh2-1t64==1.11.1-1
 libssl-dev==3.5.5-1~deb13u2
-libssl3t64==3.5.5-1~deb13u2
 libstdc++-14-dev==14.2.0-19
 libstdc++6-armhf-cross==14.2.0-19cross1
 libstemmer0d==2.2.0-4+b2
@@ -1748,7 +1748,7 @@ libzzip-0-13t64==0.13.78+dfsg.1-0.1
 licensecheck==3.3.9-1
 lintian==2.122.0
 linux-base==4.12.1
-linux-libc-dev==6.12.74-2
+linux-libc-dev==6.12.85-1
 linux-sysctl-defaults==4.12.1
 linuxdoc-tools==0.9.86-1
 llvm==1:19.0-63
@@ -1797,7 +1797,7 @@ mokutil==0.7.2-1
 mpi-default-bin==1.18
 mpi-default-dev==1.18
 mtools==4.0.48-1
-mupdf-tools==1.25.1+ds1-6
+mupdf-tools==1.25.1+ds1-6+deb13u1
 mysql-common==5.8+1.1.1
 native-architecture==0.2.6
 ncurses-term==6.5+20250216-2
@@ -1822,10 +1822,10 @@ nodejs-doc==20.19.2+dfsg-1+deb13u2
 numba-doc==0.61.2+dfsg-1
 ocl-icd-libopencl1==2.3.3-1
 openjade==1.4devel1-23.3
-openjdk-21-jdk==21.0.10+7-1~deb13u1
-openjdk-21-jdk-headless==21.0.10+7-1~deb13u1
-openjdk-21-jre==21.0.10+7-1~deb13u1
-openjdk-21-jre-headless==21.0.10+7-1~deb13u1
+openjdk-21-jdk==21.0.11+10-1~deb13u2
+openjdk-21-jdk-headless==21.0.11+10-1~deb13u2
+openjdk-21-jre==21.0.11+10-1~deb13u2
+openjdk-21-jre-headless==21.0.11+10-1~deb13u2
 openmpi-bin==5.0.7-1
 openmpi-common==5.0.7-1
 opensp==1.5.2-15.2
@@ -1833,7 +1833,6 @@ openssh-client==1:10.0p1-7+deb13u2
 openssh-server==1:10.0p1-7+deb13u2
 openssh-sftp-server==1:10.0p1-7+deb13u2
 openssl==3.5.5-1~deb13u2
-openssl-provider-legacy==3.5.5-1~deb13u2
 os-prober==1.83
 ovmf==2025.02-8+deb13u1
 pahole==1.30-1
@@ -1980,6 +1979,7 @@ python3-idna==3.10-1
 python3-imagesize==1.4.1-1
 python3-incremental==24.7.2-3
 python3-inflect==7.3.1-2
+python3-inflection==0.3.1-3
 python3-iniconfig==1.1.1-2
 python3-invoke==2.2.0-2
 python3-ipython==8.35.0-1
@@ -2029,8 +2029,8 @@ python3-paramiko==3.5.1-3
 python3-parse==1.20.2-1
 python3-parso==0.8.4-1
 python3-pexpect==4.9-3
-python3-pil==11.1.0-5+deb13u1
-python3-pil.imagetk==11.1.0-5+deb13u1
+python3-pil==11.1.0-5+deb13u2
+python3-pil.imagetk==11.1.0-5+deb13u2
 python3-pip==25.1.1+dfsg-1
 python3-pip-whl==25.1.1+dfsg-1
 python3-pkg-resources==78.1.1-0.1
@@ -2181,6 +2181,7 @@ sudo==1.9.16p2-3+deb13u1
 swig==4.3.0-1
 systemd==257.9-1~deb13u1
 systemd-cryptsetup==257.9-1~deb13u1
+systemd-dev==257.9-1~deb13u1
 systemd-sysv==257.9-1~deb13u1
 systemd-timesyncd==257.9-1~deb13u1
 systemtap-sdt-dev==5.1-5

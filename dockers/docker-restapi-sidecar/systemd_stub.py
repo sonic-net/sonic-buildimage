@@ -10,12 +10,13 @@ import traceback
 from typing import List
 
 from sonic_py_common.sidecar_common import (
-    get_bool_env_var, logger, SyncItem,
+    get_bool_env_var, logger, SyncItem, run_nsenter,
+    read_file_bytes_local, host_read_bytes, host_write_atomic,
     sync_items, SYNC_INTERVAL_S
 )
 
-# ───────────── restapi.service sync paths ─────────────
-HOST_RESTAPI_SERVICE = "/lib/systemd/system/restapi.service"
+# ───────────── restapi.service paths ─────────────
+_HOST_RESTAPI_SERVICE = "/lib/systemd/system/restapi.service"
 
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
@@ -94,10 +95,6 @@ def _get_branch_name() -> str:
         return "private"
 
 POST_COPY_ACTIONS = {
-    "/lib/systemd/system/restapi.service": [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "restapi"],
-    ],
     "/usr/bin/restapi.sh": [
         ["sudo", "docker", "stop", "restapi"],
         ["sudo", "docker", "rm", "restapi"],
@@ -150,7 +147,61 @@ def _resolve_branch(branch_name: str) -> str:
     return resolved
 
 
+# TO-be-deleted in next rounds releases, as long as restapi.service rollouts have been restored.
+# Previous sidecar versions overwrote /lib/systemd/system/restapi.service
+# with a variant containing "User=root" (needed for kubectl).  Now that kubectl
+# is gone we no longer sync that file, but hosts upgraded from the old sidecar
+# still carry the stale unit.  This one-shot cleanup restores the original
+# build-template version (User=admin) packed inside this container.
+_STALE_UNIT_CLEANUP_ENABLED = get_bool_env_var("STALE_UNIT_CLEANUP_ENABLED", default=True)
+_stale_unit_cleaned = False
+
+def _cleanup_stale_service_unit() -> None:
+    """If the host restapi.service still has User=root from a prior sidecar, restore it."""
+    global _stale_unit_cleaned
+    if _stale_unit_cleaned:
+        return
+    if not _STALE_UNIT_CLEANUP_ENABLED:
+        _stale_unit_cleaned = True
+        return
+
+    host_bytes = host_read_bytes(_HOST_RESTAPI_SERVICE)
+    if host_bytes is None:
+        return  # transient failure or file missing; retry next cycle
+
+    host_content = host_bytes.decode("utf-8", errors="ignore")
+    if "\nUser=root\n" not in f"\n{host_content}\n":
+        _stale_unit_cleaned = True  # unit is clean; no further retries needed
+        return
+
+    # Determine the correct per-branch clean file
+    detected_branch = _get_branch_name()
+    branch_name = _resolve_branch(detected_branch)
+    container_service_path = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
+
+    clean_bytes = read_file_bytes_local(container_service_path)
+    if clean_bytes is None:
+        logger.log_error(f"Cannot read restore file {container_service_path}")
+        return  # container file missing; retry next cycle
+
+    logger.log_notice("Stale sidecar restapi.service detected (User=root); restoring from packed file")
+    if not host_write_atomic(_HOST_RESTAPI_SERVICE, clean_bytes, 0o644):
+        logger.log_error("Failed to restore restapi.service")
+        return  # write failed; retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "daemon-reload"])
+    if rc != 0:
+        logger.log_error(f"daemon-reload failed after restapi.service restore: {err}")
+        return  # retry next cycle
+    rc, _, err = run_nsenter(["sudo", "systemctl", "restart", "restapi"])
+    if rc != 0:
+        logger.log_error(f"restapi restart failed after restapi.service restore: {err}")
+        return  # retry next cycle
+    _stale_unit_cleaned = True
+    logger.log_notice("Restored restapi.service and restarted")
+
+
 def ensure_sync() -> bool:
+    _cleanup_stale_service_unit()
     # Evaluate branch and source paths each time to allow retry on runtime failures
     detected_branch = _get_branch_name()
 
@@ -164,14 +215,12 @@ def ensure_sync() -> bool:
     )
     
     container_checker_src = f"/usr/share/sonic/systemd_scripts/container_checker_{branch_name}"
-    container_restapi_service = f"/usr/share/sonic/systemd_scripts/restapi.service_{branch_name}"
     
     # Construct SYNC_ITEMS with evaluated paths
     sync_items_list: List[SyncItem] = [
         SyncItem(restapi_src, "/usr/bin/restapi.sh", mode=0o755),
         SyncItem(container_checker_src, "/bin/container_checker", mode=0o755),
         SyncItem("/usr/share/sonic/scripts/k8s_pod_control.sh", "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh", mode=0o755),
-        SyncItem(container_restapi_service, HOST_RESTAPI_SERVICE, mode=0o644),
     ]
     return sync_items(sync_items_list, POST_COPY_ACTIONS)
 

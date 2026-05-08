@@ -43,7 +43,7 @@ executing==2.2.0
 fastentrypoints==0.12
 fonttools==4.57.0
 fs==2.4.16
-fsspec==2026.3.0
+fsspec==2026.4.0
 gbp==0.9.38
 gcovr==7.2
 gpg==1.24.2
@@ -55,6 +55,7 @@ idna==3.10
 imagesize==1.4.1
 incremental==24.7.2
 inflect==7.3.1
+inflection==0.3.1
 iniconfig==1.1.1
 invoke==2.2.0
 ipython==8.35.0

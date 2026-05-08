@@ -6,7 +6,7 @@ BindsTo=sonic.target
 After=sonic.target
 
 [Service]
-User=root
+User=admin
 ExecStartPre=/usr/bin/restapi.sh start
 ExecStart=/usr/bin/restapi.sh wait
 ExecStop=/usr/bin/restapi.sh stop

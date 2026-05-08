@@ -18,6 +18,7 @@
 
 """Class Implementation for per DPU functionality"""
 import errno
+import logging
 import os.path
 import time
 import multiprocessing
@@ -35,13 +36,44 @@ try:
 except ImportError as e:
     raise ImportError(str(e)) from e
 
+logger = SysLogger("dpuctl_plat")
+
+def use_logger(new_logger: logging.Logger):
+    """Plug in a logging.Logger instance in place of the SysLogger.
+
+    Do this at the module level so it happens to all instances of DpuCtlPlat, including those
+    created under-the-hood by the module interface.
+    """
+    class LoggerLikeSysLogger:
+        # A class with an API like SysLogger, but wraps a regular logging.Logger instance.
+
+        def __init__(self):
+            self.logger = new_logger
+
+        def log_debug(self, msg):
+            self.logger.debug(msg)
+
+        def log_info(self, msg):
+            self.logger.info(msg)
+
+        def log_error(self, msg):
+            self.logger.error(msg)
+
+        def log_warning(self, msg):
+            self.logger.warning(msg)
+
+        # NOTICE is set up by sonic_py_common.syslogger
+        def log_notice(self, msg):
+            self.logger.log(logging.NOTICE, msg)
+
+    global logger
+    logger = LoggerLikeSysLogger()
+
 HW_BASE = "/var/run/hw-management/"
 EVENT_BASE = os.path.join(HW_BASE, "events/")
 SYSTEM_BASE = os.path.join(HW_BASE, "system/")
 PCI_BASE = "/sys/bus/pci/"
 PCI_DEV_BASE = os.path.join(PCI_BASE, "devices/")
-
-logger = SysLogger("dpuctl_plat")
 
 WAIT_FOR_SHTDN = 120
 WAIT_FOR_DPU_READY = 180
