@@ -3158,6 +3158,7 @@ bcm_device:
             l3_ecmp_member_secondary_mem_size: 8192
             stat_custom_receive0_management_mode: 1
             sai_tunnel_ipinip_multi_vrf_support: 1
+            default_cpu_tx_queue: 7
 ...
 ---
 device:
