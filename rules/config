@@ -142,7 +142,7 @@ FRR_USER_UID = 300
 FRR_USER_GID = 300
 
 # ENABLE_FRR_TCMALLOC - build FRR with gperftools tcmalloc support.
-ENABLE_FRR_TCMALLOC ?= n
+ENABLE_FRR_TCMALLOC ?= y
 
 # DPKG cache allows the .deb files to be stored in the cache path. This allows the submodules
 # package to be cached and restored back if its commit hash is not modified and its dependencies are not modified.
