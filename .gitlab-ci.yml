@@ -34,6 +34,7 @@ variables:
     ./.gitlab-ci-submodule-init.sh
     pushd altos && git fetch && git reset --hard origin/master && popd
     echo "PLUTO_POSTED_LATEST: ${PLUTO_POSTED_LATEST}"
+    echo "PLUTO_COMMIT_DIR": ${PLUTO_COMMIT_DIR}
 
 stages:
   - configure
@@ -601,9 +602,6 @@ regress:tb45:
 
 .post:
   stage: post
-  rules:
-    - if: $CI_COMMIT_TAG
-      when: never
   tags:
     - post
   before_script:
@@ -613,6 +611,11 @@ regress:tb45:
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       exit 0
     fi
+    if [ -z "$CI_COMMIT_BRANCH" ]; then
+      echo "Not posting null branch build artifacts"
+      exit 0
+    fi
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     # with all express passed, we post images and update the symlink latest
     mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
     for f in `ls target/sonic-*.bin` ; do \
