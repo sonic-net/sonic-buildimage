@@ -214,8 +214,8 @@ def getonieplatform(path):
 def getplatform_config_db():
     if not os.path.isfile(CONFIG_DB_PATH):
         return ""
-    val = subprocess.Popen(["sonic-cfggen", "-j", CONFIG_DB_PATH, "-v", "DEVICE_METADATA.localhost.platform"],
-                           stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()
+    val = subprocess.run(["sonic-cfggen", "-j", CONFIG_DB_PATH, "-v", "DEVICE_METADATA.localhost.platform"],
+                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout.strip()
     if len(val) <= 0:
         return ""
     return val

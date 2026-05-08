@@ -12,6 +12,9 @@ from unittest.mock import patch, mock_open, MagicMock
 # Mock heavy platform imports
 sys.modules['platform_config'] = MagicMock()
 
+# Ensure platform_util is importable from any working directory
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
 import platform_util as pu
 
 
@@ -23,32 +26,26 @@ class TestGetplatformConfigDb:
         result = pu.getplatform_config_db()
         assert result == ""
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_returns_platform_name(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = "x86_64-mlnx_msn2700-r0"
-        mock_popen.return_value.stdout = mock_stdout
+    def test_returns_platform_name(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = "x86_64-mlnx_msn2700-r0"
 
         result = pu.getplatform_config_db()
         assert result == "x86_64-mlnx_msn2700-r0"
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_returns_empty_when_command_returns_empty(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = ""
-        mock_popen.return_value.stdout = mock_stdout
+    def test_returns_empty_when_command_returns_empty(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = ""
 
         result = pu.getplatform_config_db()
         assert result == ""
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_strips_whitespace(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = "  x86_64-ragile-r0  \n"
-        mock_popen.return_value.stdout = mock_stdout
+    def test_strips_whitespace(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = "  x86_64-ragile-r0  \n"
 
         result = pu.getplatform_config_db()
         assert result == "x86_64-ragile-r0"

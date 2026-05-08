@@ -46,32 +46,26 @@ class TestGetplatformConfigDb:
         result = sfp.getplatform_config_db()
         assert result == ""
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_returns_platform_name(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = "x86_64-ragile_ra-b6510-32c-r0"
-        mock_popen.return_value.stdout = mock_stdout
+    def test_returns_platform_name(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = "x86_64-ragile_ra-b6510-32c-r0"
 
         result = sfp.getplatform_config_db()
         assert result == "x86_64-ragile_ra-b6510-32c-r0"
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_returns_empty_when_command_returns_empty(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = ""
-        mock_popen.return_value.stdout = mock_stdout
+    def test_returns_empty_when_command_returns_empty(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = ""
 
         result = sfp.getplatform_config_db()
         assert result == ""
 
-    @patch('subprocess.Popen')
+    @patch('subprocess.run')
     @patch('os.path.isfile', return_value=True)
-    def test_strips_whitespace(self, mock_isfile, mock_popen):
-        mock_stdout = MagicMock()
-        mock_stdout.read.return_value = "  x86_64-ragile-r0  \n"
-        mock_popen.return_value.stdout = mock_stdout
+    def test_strips_whitespace(self, mock_isfile, mock_run):
+        mock_run.return_value.stdout = "  x86_64-ragile-r0  \n"
 
         result = sfp.getplatform_config_db()
         assert result == "x86_64-ragile-r0"
