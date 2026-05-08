@@ -92,11 +92,10 @@ if [[ $IS_SWITCH_BMC -eq 1 || $IS_SWITCH_HOST -eq 1 ]]; then
     fi
     if [[ -n "$BMC_JSON" ]]; then
         CFGGEN_PARAMS="$CFGGEN_PARAMS -j $BMC_JSON"
-        CFGGEN_PARAMS="$CFGGEN_PARAMS -a '{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}'"
-    fi
+        sonic-cfggen $CFGGEN_PARAMS -a "{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}"
+else
+    sonic-cfggen $CFGGEN_PARAMS
 fi
-
-eval sonic-cfggen $CFGGEN_PARAMS
 
 [[ -f /var/run/dhclient.eth0.pid ]] && kill `cat /var/run/dhclient.eth0.pid` && rm -f /var/run/dhclient.eth0.pid
 [[ -f /var/run/dhclient6.eth0.pid ]] && kill `cat /var/run/dhclient6.eth0.pid` && rm -f /var/run/dhclient6.eth0.pid

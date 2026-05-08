@@ -707,7 +707,7 @@ def is_platform_env_key_present(key):
             tokens = line.split('=')
             if len(tokens) < 2:
                 continue
-            if tokens[0].lower() == key:
+            if tokens[0].strip().lower() == key.strip().lower():
                 return tokens[1].strip() == '1'
     return False
 
