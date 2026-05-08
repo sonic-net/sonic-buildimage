@@ -1,0 +1,6 @@
+{
+    "mmu_capabilities": {
+        "bpf_dynamic_th_low": -7,
+        "bpf_dynamic_th_high": 3
+    }
+}
