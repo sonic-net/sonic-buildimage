@@ -1,0 +1,18 @@
+!
+! template: bgpd/templates/general/unnumbered/peer-group.conf.j2
+! Renders the PEER_UNNUMBERED peer-group inside `router bgp <asn>`.
+!
+  neighbor PEER_UNNUMBERED peer-group
+  address-family ipv4 unicast
+    neighbor PEER_UNNUMBERED soft-reconfiguration inbound
+    neighbor PEER_UNNUMBERED route-map FROM_BGP_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_BGP_PEER_UNNUMBERED out
+  exit-address-family
+  address-family ipv6 unicast
+    neighbor PEER_UNNUMBERED soft-reconfiguration inbound
+    neighbor PEER_UNNUMBERED route-map FROM_BGP_PEER_UNNUMBERED in
+    neighbor PEER_UNNUMBERED route-map TO_BGP_PEER_UNNUMBERED out
+  exit-address-family
+!
+! end of template: bgpd/templates/general/unnumbered/peer-group.conf.j2
+!

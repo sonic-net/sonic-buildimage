@@ -1,0 +1,17 @@
+{# router.j2 - dispatch peer-template rendering between numbered (IPv4/IPv6 keyed)
+   and unnumbered (interface-name keyed) BGP neighbors.
+   Caller imports `general_routing` and invokes it with the logical template
+   name (one of: instance, peer-group, policies). The macro selects the
+   unnumbered sub-template only when `neighbor_addr` is provided AND is not a
+   valid IPv4/IPv6 address (i.e. it is an interface name). When `neighbor_addr`
+   is absent the template is rendered in numbered mode, preserving existing
+   behaviour for legacy code paths and golden tests that render the template
+   in a per-peer-loop without passing a single neighbor_addr kwarg. #}
+{% macro general_routing(template_name) %}
+{%- set is_unnumbered = neighbor_addr is defined and not ((neighbor_addr | ipv4) or (neighbor_addr | ipv6)) -%}
+{%- if is_unnumbered -%}
+{%- include "bgpd/templates/general/unnumbered/" + template_name + ".conf.j2" -%}
+{%- else -%}
+{%- include "bgpd/templates/general/numbered/" + template_name + ".conf.j2" -%}
+{%- endif -%}
+{% endmacro %}
