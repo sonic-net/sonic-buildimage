@@ -288,11 +288,11 @@ device:
             :
                 PC_PHYS_PORT_ID: 1 #TSC-BH7 0 in Pipe 0
             ?
-                PORT_ID: 5
+                PORT_ID: 2
             :
                 PC_PHYS_PORT_ID: 5 #TSC-BH7 0 in Pipe 0
             ?
-                PORT_ID: 6
+                PORT_ID: 5
             :
                 PC_PHYS_PORT_ID: 9 #TSC-BH7 1 in Pipe 0
             ?
@@ -477,7 +477,7 @@ device:
                 MAX_FRAME_SIZE: 9416
                 LINK_TRAINING: 1
             ?
-                PORT_ID: [1, 5, 6, 7, 16, 17, 20, 24,
+                PORT_ID: [1, 2, 5, 7, 16, 17, 20, 24,
                           [28, 35],
                           63, 64, 68, 72]
             :
@@ -485,13 +485,13 @@ device:
                 ENABLE: 0
                 SPEED: 100000
                 NUM_LANES: 4
-                #FEC_MODE: PC_FEC_RS528
+                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
                 #LINK_TRAINING: 1
 
         PC_PMD_FIRMWARE:
             ?
-                PORT_ID: [[8, 15], 1, 5, 6, 7, 16, 17, 20, 24,
+                PORT_ID: [[8, 15], 1, 2, 5, 7, 16, 17, 20, 24,
                           [28, 35],
                           [60, 63],
                           40, 44, 48, 52, 56, 64, 68, 72]
@@ -511,7 +511,7 @@ device:
     0:
         TM_ING_PORT_PRI_GRP:
             ?
-                PORT_ID: [[8, 15], 1, 5, 6, 7, 16, 17, 20, 24,
+                PORT_ID: [[8, 15], 1, 2, 5, 7, 16, 17, 20, 24,
                           [28, 35],
                           [60, 63],
                           40, 44, 48, 52, 56, 64, 68, 72]
