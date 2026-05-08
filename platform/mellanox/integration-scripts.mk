@@ -26,6 +26,7 @@ TEMP_HW_MGMT_DIR = /tmp/hw_mgmt
 PTCH_DIR = $(TEMP_HW_MGMT_DIR)/patch_dir/
 NON_UP_PTCH_DIR = $(TEMP_HW_MGMT_DIR)/non_up_patch_dir/
 PTCH_LIST  = $(TEMP_HW_MGMT_DIR)/series
+HWMGMT_RESOLVED_REF_ENV = $(TEMP_HW_MGMT_DIR)/resolved_hw_mgmt_ref.env
 HWMGMT_NONUP_LIST = $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches
 HWMGMT_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-hw-mgmt_user.out
 SDK_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-sdk_user.out
@@ -62,6 +63,15 @@ integrate-mlnx-hw-mgmt:
 	mkdir -p $(PTCH_DIR) $(NON_UP_PTCH_DIR) $(KCFG_BASE_TMPDIR)
 	touch $(PTCH_LIST) $(KCFG_LIST) $(KCFG_DOWN_LIST) $(KCFG_LIST_ARM) $(KCFG_DOWN_LIST_ARM) $(KCFG_LIST_ASPEED)
 
+	# Resolve MLNX_HW_MANAGEMENT_VERSION to a hw-mgmt ref (tag V.<input>
+	# wins over branch <input>), write env vars to $(HWMGMT_RESOLVED_REF_ENV),
+	# then source them.
+	$(BUILD_WORKDIR)/$(MLNX_PLATFORM_PATH)/integration-scripts/hwmgmt_resolve_ref.py \
+		--repo $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt \
+		--input "$(MLNX_HW_MANAGEMENT_VERSION)" \
+		--env-file $(HWMGMT_RESOLVED_REF_ENV) $(LOG_SIMPLE)
+	. $(HWMGMT_RESOLVED_REF_ENV)
+
 	# Fetch the vanilla .config files
 	pushd $(KCFG_BASE_TMPDIR) $(LOG_SIMPLE)
 	rm -rf linux/; mkdir linux
@@ -78,27 +88,51 @@ integrate-mlnx-hw-mgmt:
 	# clean up existing untracked files
 	pushd $(BUILD_WORKDIR); git clean -f -- $(MLNX_PLATFORM_PATH)/
 ifeq ($(CREATE_BRANCH), y)
-	git checkout -B "$(BRANCH_SONIC)_$(SB_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION)" HEAD
-	echo $(BRANCH_SONIC)_$(SB_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION) branch created in sonic-buildimage
+	# Tag path: HWMGMT_PACKAGE_VERSION == input (today's name). Branch path:
+	# "-<sha9>" suffix makes two runs against the same hw-mgmt branch produce
+	# distinct sonic-buildimage branch names.
+	git checkout -B "$(BRANCH_SONIC)_$(SB_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION" HEAD
+	echo $(BRANCH_SONIC)_$(SB_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION branch created in sonic-buildimage
 endif
 	popd
 
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/
 ifeq ($(CREATE_BRANCH), y)
-	git checkout -B "$(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION)" HEAD
-	echo $(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$(MLNX_HW_MANAGEMENT_VERSION) branch created in sonic-linux-kernel
+	git checkout -B "$(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION" HEAD
+	echo $(BRANCH_SONIC)_$(SLK_HEAD)_integrate_$$HWMGMT_PACKAGE_VERSION branch created in sonic-linux-kernel
 endif
 	popd
 
-	echo "#### Integrate HW-MGMT $(MLNX_HW_MANAGEMENT_VERSION) Kernel Patches into SONiC" > ${HWMGMT_USER_OUTFILE}
+	echo "#### Integrate HW-MGMT $$HWMGMT_PACKAGE_VERSION Kernel Patches into SONiC" > ${HWMGMT_USER_OUTFILE}
+	{ \
+		echo ""; \
+		echo "Resolved hw-mgmt source:"; \
+		echo "  input:           $$HWMGMT_INPUT"; \
+		echo "  ref type:        $$HWMGMT_REF_TYPE"; \
+		echo "  checkout ref:    $$HWMGMT_CHECKOUT_REF"; \
+		echo "  commit:          $$HWMGMT_COMMIT"; \
+		echo "  base version:    $$HWMGMT_BASE_VERSION"; \
+		echo "  distinct id:     $$HWMGMT_DISTINCT_ID"; \
+		echo "  package version: $$HWMGMT_PACKAGE_VERSION"; \
+	} >> ${HWMGMT_USER_OUTFILE}
 	pushd $(BUILD_WORKDIR)/$(MLNX_PLATFORM_PATH) $(LOG_SIMPLE)
 
 	# Run tests
 	pushd integration-scripts/tests; pytest-3 -v; popd
 
-	# Checkout to the corresponding hw-mgmt version and update mk file.
-	pushd hw-management/hw-mgmt; git checkout V.${MLNX_HW_MANAGEMENT_VERSION}; popd
-	sed -i "s/\(^MLNX_HW_MANAGEMENT_VERSION = \).*/\1${MLNX_HW_MANAGEMENT_VERSION}/g" hw-management.mk
+	# Detach hw-mgmt at the resolved commit and write HWMGMT_PACKAGE_VERSION
+	# into hw-management.mk. Tag path: byte-identical to today. Branch path:
+	# <changelog-version>-<sha9>, unique per commit so two iterations against
+	# the same branch don't produce identically-named debs in $(DEST).
+	#
+	# HWMGMT_PACKAGE_VERSION is the SONiC-side identity (deb filename,
+	# downstream caching). The Debian package's internal `Version:` still
+	# comes from hw-mgmt/debian/changelog via dpkg-buildpackage and stays
+	# at the unsuffixed base; hw-management/Makefile's wildcard
+	# `mv hw-management_*.deb $(DEST)/$*` reconciles the two. Changing
+	# internal Debian metadata is intentionally out of scope.
+	pushd hw-management/hw-mgmt; git checkout --detach "$$HWMGMT_COMMIT"; popd
+	sed -i "s|\(^MLNX_HW_MANAGEMENT_VERSION = \).*|\1$$HWMGMT_PACKAGE_VERSION|g" hw-management.mk
 
 	# Pre-processing before runing hw_mgmt script
 	integration-scripts/hwmgmt_kernel_patches.py pre \
@@ -110,7 +144,7 @@ endif
 							--config_inc_aspeed $(KCFG_LIST_ASPEED) \
 							--build_root $(BUILD_WORKDIR) \
 							--kernel_version $(KERNEL_VERSION) \
-							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION} $(LOG_SIMPLE)
+							--hw_mgmt_ver "$$HWMGMT_PACKAGE_VERSION" $(LOG_SIMPLE)
 
 	# Disable Writing KConfigs for arm64 platform
 	# $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
@@ -166,7 +200,7 @@ endif
 							--patches $(PTCH_DIR) \
 							--non_up_patches $(NON_UP_PTCH_DIR) \
 							--kernel_version $(KERNEL_VERSION) \
-							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION} \
+							--hw_mgmt_ver "$$HWMGMT_PACKAGE_VERSION" \
 							--config_base_amd $(KCFG_BASE) \
 							--config_base_arm $(KCFG_BASE_ARM) \
 							--config_inc_amd $(KCFG_LIST) \
