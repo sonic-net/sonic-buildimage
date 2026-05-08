@@ -56,6 +56,20 @@
         "PORT_BUFFER_DROP": {
             "FLEX_COUNTER_STATUS": "enable"
         }
+{%- if sonic_asic_platform in ["nvidia-bluefield", "pensando"] %},
+        "ENI": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "DASH_METER": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "HA_SET": {
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        }
+{%- endif %}
     },
     "BGP_DEVICE_GLOBAL": {
         "STATE": {
