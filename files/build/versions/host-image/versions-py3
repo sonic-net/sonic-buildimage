@@ -23,7 +23,7 @@ filelock==3.29.0
 grpcio==1.66.2
 grpcio-tools==1.66.2
 idna==3.13
-ijson==3.2.3
+ijson==3.4.0
 inflect==7.3.1
 inotify==0.2.12
 ipaddr==2.2.0
@@ -84,7 +84,7 @@ telnetlib3==4.0.2
 toposort==1.6
 typeguard==4.4.2
 typing_extensions==4.13.2
-urllib3==2.6.3
+urllib3==2.7.0
 watchdog==6.0.0
 wcwidth==0.7.0
 wheel==0.46.1

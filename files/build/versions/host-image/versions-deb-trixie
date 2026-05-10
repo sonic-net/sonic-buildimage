@@ -312,8 +312,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.85-1
-linux-perf==6.12.85-1
+linux-libc-dev==6.12.86-1
+linux-perf==6.12.86-1
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u2
 logrotate==3.22.0-1+b2
@@ -374,6 +374,7 @@ python3-dbus==1.4.0-1
 python3-enlighten==1.11.2-1
 python3-gi==3.50.0-4+b1
 python3-idna==3.10-1
+python3-ijson==3.4.0-1
 python3-inflect==7.3.1-2
 python3-jaraco.context==6.0.1-1+deb13u1
 python3-jaraco.functools==4.1.0-1
