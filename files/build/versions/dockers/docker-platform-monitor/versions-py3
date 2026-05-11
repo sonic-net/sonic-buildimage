@@ -22,4 +22,4 @@ python-dateutil==2.9.0.post0
 requests==2.33.1
 smbus2==0.6.1
 thrift==0.13.0
-urllib3==2.6.3
+urllib3==2.7.0
