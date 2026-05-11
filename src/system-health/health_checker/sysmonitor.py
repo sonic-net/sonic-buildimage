@@ -77,6 +77,7 @@ class MonitorSystemBusTask(ThreadTaskBase):
         ThreadTaskBase.__init__(self)
         self.task_queue = myQ
         self.loop = None
+        self.GLib = None
 
     def on_job_removed(self, id, job, unit, result):
         if result == "done" or result == "failed":
@@ -91,6 +92,7 @@ class MonitorSystemBusTask(ThreadTaskBase):
         from gi.repository import GLib
         from dbus.mainloop.glib import DBusGMainLoop
 
+        self.GLib = GLib
         DBusGMainLoop(set_as_default=True)
         bus = dbus.SystemBus()
         systemd = bus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
@@ -112,8 +114,8 @@ class MonitorSystemBusTask(ThreadTaskBase):
         self.task_stopping_event.set()
         
         # Stop GLib.MainLoop to unblock the thread
-        if hasattr(self, 'loop') and self.loop is not None:
-            GLib.idle_add(self.loop.quit)
+        if self.loop is not None and self.GLib is not None:
+            self.GLib.idle_add(self.loop.quit)
 
         # Wait for the thread to exit
         if self._task_thread is not None:
