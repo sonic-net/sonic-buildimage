@@ -17,12 +17,17 @@ REST_SERVER=$(echo $MGMT_VARS | jq -r '.rest_server')
 
 if [ -n "$REST_SERVER" ]; then
     SERVER_PORT=$(echo $REST_SERVER | jq -r '.port // empty')
-    CLIENT_AUTH=$(echo $REST_SERVER | jq -r '.client_auth // empty')
+    CLIENT_AUTH=$(echo $REST_SERVER | jq -r '.client_auth // "user"')
     LOG_LEVEL=$(echo $REST_SERVER | jq -r '.log_level // empty')
 
     SERVER_CRT=$(echo $REST_SERVER | jq -r '.server_crt // empty')
     SERVER_KEY=$(echo $REST_SERVER | jq -r '.server_key // empty')
     CA_CRT=$(echo $REST_SERVER | jq -r '.ca_crt // empty')
+fi
+
+# Default to user authentication when not explicitly configured
+if [ -z "$CLIENT_AUTH" ]; then
+    CLIENT_AUTH="user"
 fi
 
 if [[ -z $SERVER_CRT ]] && [[ -z $SERVER_KEY ]] && [[ -z $CA_CRT ]]; then

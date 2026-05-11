@@ -7,5 +7,8 @@
     },
     "DEVICE_NEIGHBOR_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_NEIGHBOR_METADATA value as not-provisioned for Type field"
+    },
+    "DEVICE_NEIGHBOR_METADATA_VALID_RESOURCE_TYPE": {
+        "desc": "DEVICE_NEIGHBOR_METADATA with resource_type field for metro optimization"
     }
 }

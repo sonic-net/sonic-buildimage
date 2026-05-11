@@ -1,0 +1,15 @@
+[Unit]
+Description=Initialize BCM Interfaces
+Wants=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
+After=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
+BindsTo=sys-subsystem-net-devices-bcm0.device sys-subsystem-net-devices-bcm1.device
+Before=syncd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/bcm_intf_init.sh
+
+[Install]
+RequiredBy=syncd.service
+WantedBy=multi-user.target

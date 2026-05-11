@@ -31,6 +31,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 #define PSU_STATUS_I2C_ADDR			0x60
 #define PSU_STATUS_I2C_REG_OFFSET	0x2
@@ -138,11 +139,18 @@ static const struct attribute_group as6712_32x_psu_group = {
     .attrs = as6712_32x_psu_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as6712_32x_psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int as6712_32x_psu_probe(struct i2c_client *client)
+#endif
 {
     struct as6712_32x_psu_data *data;
     int status;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_I2C_BLOCK)) {
         status = -EIO;

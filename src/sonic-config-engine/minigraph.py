@@ -2188,7 +2188,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if bool(results['PEER_SWITCH']):
         results['DEVICE_METADATA']['localhost']['subtype'] = 'DualToR'
         if len(results['PEER_SWITCH'].keys()) > 1:
-            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
+            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(next(iter(results['PEER_SWITCH']))), file=sys.stderr)
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
     elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':

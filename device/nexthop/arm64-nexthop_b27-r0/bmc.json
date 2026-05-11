@@ -1,0 +1,5 @@
+{
+    "bmc_if_name": "bmc0",
+    "bmc_if_addr": "192.168.100.1",
+    "bmc_net_mask": "255.255.255.0"
+}

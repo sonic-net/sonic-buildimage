@@ -16,6 +16,7 @@ module sonic-types {
     }
 
     typedef ip-family {
+        description "IP address family";
         type enumeration {
             enum IPv4;
             enum IPv6;
@@ -23,6 +24,7 @@ module sonic-types {
     }
 
     typedef sonic-ip4-prefix {
+        description "IPv4 prefix in CIDR notation";
         type string {
             pattern
              '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
@@ -32,6 +34,7 @@ module sonic-types {
     }
 
     typedef sonic-ip6-prefix {
+        description "IPv6 prefix in CIDR notation";
         type string {
             pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
                  + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
@@ -45,6 +48,7 @@ module sonic-types {
     }
 
     typedef sonic-ip-prefix {
+      description "IPv4 or IPv6 prefix in CIDR notation";
       type union {
         type sonic-ip4-prefix;
         type sonic-ip6-prefix;
@@ -65,6 +69,7 @@ module sonic-types {
     }
 
     typedef admin_status {
+        description "Administrative status (up/down)";
         type enumeration {
             enum up;
             enum down;
@@ -72,6 +77,7 @@ module sonic-types {
     }
 
     typedef packet_action{
+        description "ACL packet action type";
         type enumeration {
             enum DROP;
             enum ACCEPT;
@@ -83,6 +89,7 @@ module sonic-types {
     }
 
     typedef ip_type {
+        description "IP protocol type for ACL matching";
         type enumeration {
             enum ANY;
             enum IP;
@@ -100,6 +107,7 @@ module sonic-types {
     }
 
     typedef acl_table_type {
+        description "ACL table type determining match criteria";
         type enumeration {
             enum L2;
             enum L3;
@@ -113,6 +121,7 @@ module sonic-types {
     }
 
     typedef hwsku {
+        description "Hardware SKU identifier string";
         type string {
             length 1..255;
             /* Should we list all hwsku here */
@@ -120,6 +129,7 @@ module sonic-types {
     }
 
     typedef vlan_tagging_mode {
+        description "VLAN tagging mode for a member port";
         type enumeration {
             enum tagged;
             enum untagged;
@@ -128,6 +138,7 @@ module sonic-types {
     }
 
     typedef crm_threshold_type {
+        description "CRM threshold type: percentage, used, or free";
         type string {
             length 1..64;
             pattern "percentage|used|free|PERCENTAGE|USED|FREE";
@@ -135,12 +146,14 @@ module sonic-types {
     }
 
     typedef loopback_action {
+        description "Action for loopback traffic: drop or forward";
         type string {
             pattern "drop|forward";
         }
     }
 
     typedef admin_mode {
+        description "Administrative mode (enabled/disabled)";
         type enumeration {
             enum enabled;
             enum disabled;
@@ -148,6 +161,7 @@ module sonic-types {
     }
 
     typedef ip-protocol-type {
+        description "IP transport protocol type";
         type enumeration {
             enum TCP;
             enum UDP;
@@ -155,6 +169,7 @@ module sonic-types {
     }
 
     typedef interface_type {
+        description "Physical interface type (transceiver/media type)";
         type enumeration {
             enum CR;
             enum CR2;
@@ -220,6 +235,7 @@ module sonic-types {
     }
 
     typedef tpid_type {
+        description "VLAN Tag Protocol Identifier (TPID) value";
         type string {
             pattern "0x8100|0x9100|0x9200|0x88a8|0x88A8";
         }
@@ -234,6 +250,7 @@ module sonic-types {
     }
 
     typedef meter_type {
+        description "Policer metering unit: packets or bytes";
         type enumeration {
             enum packets;
             enum bytes;
@@ -241,6 +258,7 @@ module sonic-types {
     }
 
     typedef policer_mode {
+        description "Policer operating mode (single-rate TCM, two-rate TCM, or storm control)";
         type enumeration {
             enum sr_tcm;
             enum tr_tcm;
@@ -249,6 +267,7 @@ module sonic-types {
     }
 
     typedef policer_color_source {
+        description "Policer color-awareness mode";
         type enumeration {
 	    enum aware;
 	    enum blind;
@@ -257,6 +276,7 @@ module sonic-types {
 
 
     typedef policer_packet_action {
+        description "Action applied by policer to conforming or violating packets";
         type enumeration {
             enum drop;
             enum forward;
@@ -270,12 +290,14 @@ module sonic-types {
     }
 
     typedef boolean_type {
+        description "String-encoded boolean value";
         type string {
             pattern "false|true|False|True";
         }
     }
 
     typedef mac-addr-and-mask {
+        description "MAC address with optional mask (e.g., AA:BB:CC:DD:EE:FF/FF:FF:FF:00:00:00)";
         type string {
             pattern "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}|[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}/[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
         }
@@ -290,6 +312,7 @@ module sonic-types {
     }
 
     typedef hostname {
+        description "System hostname string";
         type string {
             length 1..63;
         }
@@ -313,6 +336,7 @@ module sonic-types {
     }
 
     typedef tc_type {
+        description "Traffic class identifier (0-15)";
         type uint8 {
             range "0..15" {
                 error-message "Invalid Traffic Class";
@@ -322,6 +346,7 @@ module sonic-types {
     }
 
     typedef process_name {
+        description "SONiC process name identifier";
         type string {
             pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                 error-message "Invalid process_name.";
@@ -335,6 +360,7 @@ module sonic-types {
     }
 
     typedef ctr_name {
+        description "Container name identifier";
         type string {
             pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                 error-message "Invalid ctr_name.";
@@ -429,12 +455,14 @@ module sonic-types {
     }
 
     typedef asic_name {
+        description "ASIC instance name (e.g., asic0)";
         type string {
             pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
         }
     }
 
     typedef debug_counter_type {
+        description "Debug counter scope and direction";
         type enumeration {
             enum PORT_INGRESS_DROPS;
             enum PORT_EGRESS_DROPS;
@@ -444,6 +472,7 @@ module sonic-types {
     }
 
     typedef counter_drop_reason {
+        description "Packet drop reason for debug counters";
         type enumeration {
             enum L2_ANY;
             enum SMAC_MULTICAST;

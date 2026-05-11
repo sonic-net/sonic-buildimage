@@ -174,7 +174,7 @@ elif [ "$IMAGE_TYPE" = "kvm" ]; then
     # Generate single asic KVM image
     generate_kvm_image
     if [ "$BUILD_MULTIASIC_KVM" == "y" ]; then
-        # Genrate 4-asic KVM image
+        # Generate 4-asic KVM image
         generate_kvm_image 4
         # Generate 6-asic KVM image
         generate_kvm_image 6

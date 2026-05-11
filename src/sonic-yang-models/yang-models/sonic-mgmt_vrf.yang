@@ -6,7 +6,7 @@ module sonic-mgmt_vrf {
     prefix mvrf;
 
     description
-        "SONiC MGMT VRF";
+        "Management VRF configuration to isolate management traffic from data-plane traffic";
 
     revision 2021-04-07 {
         description
@@ -16,9 +16,14 @@ module sonic-mgmt_vrf {
     container sonic-mgmt_vrf {
         container MGMT_VRF_CONFIG {
 
+            description "Global management VRF configuration";
+
             container vrf_global {
 
+                description "Global settings for management VRF";
+
                 leaf mgmtVrfEnabled {
+                    description "Enable or disable the management VRF for out-of-band management traffic isolation";
                     type boolean;
                     default false;
                 }

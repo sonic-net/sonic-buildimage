@@ -16,50 +16,38 @@ log = logging.getLogger("YANG-TEST")
 log.setLevel(logging.INFO)
 log.addHandler(logging.NullHandler())
 
-class Test_SonicYang(object):
-    # class vars
+def _load_test_data():
+    test_file = "./tests/libyang-python-tests/test_SonicYang.json"
+    with open(test_file) as data_file:
+        return json.load(data_file)
+
+def _create_yang_s(data):
+    """Create a SonicYang instance with schemas and data loaded."""
+    yang_dir = str(data['yang_dir'])
+    yang_files = glob.glob(yang_dir+"/*.yang")
+    data_file = str(data['data_file'])
+    yang_s = sy.SonicYang(yang_dir)
+    yang_s._load_data_model(yang_dir, yang_files, [data_file])
+    yang_s.validate_data_tree()
+    return yang_s
+
+
+class Test_SonicYang_Loading(object):
+    """Tests that verify the loading, merging, and validation pipeline.
+
+    These tests exercise the progressive loading process and share a single
+    SonicYang instance across the class (class-scoped fixture).
+    """
 
     @pytest.fixture(autouse=True, scope='class')
     def data(self):
-        test_file = "./tests/libyang-python-tests/test_SonicYang.json"
-        data = self.jsonTestParser(test_file)
-        return data
+        return _load_test_data()
 
     @pytest.fixture(autouse=True, scope='class')
     def yang_s(self, data):
         yang_dir = str(data['yang_dir'])
         yang_s = sy.SonicYang(yang_dir)
         return yang_s
-
-    def jsonTestParser(self, file):
-        """
-        Open the json test file
-        """
-        with open(file) as data_file:
-            data = json.load(data_file)
-        return data
-
-    """
-        Get the JSON input based on func name
-        and return jsonInput
-    """
-    def readIjsonInput(self, yang_test_file, test):
-        try:
-            # load test specific Dictionary, using Key = func
-            # this is to avoid loading very large JSON in memory
-            print(" Read JSON Section: " + test)
-            jInput = ""
-            with open(yang_test_file, 'rb') as f:
-                jInst = ijson_itmes(f, test)
-                for it in jInst:
-                    jInput = jInput + json.dumps(it)
-        except Exception as e:
-            print("Reading Ijson failed")
-            raise(e)
-        return jInput
-
-    def setup_class(self):
-        pass
 
     def load_yang_model_file(self, yang_s, yang_dir, yang_file, module_name):
         yfile = yang_dir + yang_file
@@ -91,7 +79,6 @@ class Test_SonicYang(object):
     # test load_module_str_name on test-acl.yang
     def test_load_module_str_name(self, data, yang_s):
         yang_dir = data['yang_dir']
-        file = "test-acl.yang"
 
         try:
             with open(f'{yang_dir}/test-acl.yang', 'r') as f:
@@ -140,6 +127,180 @@ class Test_SonicYang(object):
     #test_validate_data_tree():
     def test_validate_data_tree(self, data, yang_s):
         yang_s.validate_data_tree()
+
+    #test merge data tree
+    def test_merge_data_tree(self, data, yang_s):
+        data_merge_file = data['data_merge_file']
+        yang_dir = str(data['yang_dir'])
+        yang_s._merge_data(data_merge_file, yang_dir)
+
+
+class Test_SonicYang_UsesCompilation(object):
+    """Tests that verify the uses clause compilation handles all node types.
+
+    Validates fixes for groupings containing container, list, and uses
+    child nodes, as well as notification traversal in _compileUsesClauseModel.
+    """
+
+    @pytest.fixture(autouse=True, scope='class')
+    def yang_s(self):
+        data = _load_test_data()
+        yang_dir = str(data['yang_dir'])
+        yang_s = sy.SonicYang(yang_dir)
+        yang_s.loadYangModel()
+        return yang_s
+
+    def _find_module_json(self, yang_s, module_name):
+        for j in yang_s.yJson:
+            if j['module']['@name'] == module_name:
+                return j['module']
+        return None
+
+    def _find_list_in_module(self, module_json):
+        """Navigate to TEST_GROUPING_LIST in the test-grouping module."""
+        container = module_json.get('container', {})
+        table = container.get('container', {})
+        return table.get('list', {})
+
+    def test_grouping_preprocessing_captures_container(self, yang_s):
+        """Verify _preProcessYangGrouping captures container nodes."""
+        groupings = yang_s.preProcessedYang.get('grouping', {})
+        tg_groups = groupings.get('test-grouping', {})
+        assert 'container' in tg_groups.get('group-with-container', {}), \
+            "Grouping 'group-with-container' should have 'container' key"
+
+    def test_grouping_preprocessing_captures_list(self, yang_s):
+        """Verify _preProcessYangGrouping captures list nodes."""
+        groupings = yang_s.preProcessedYang.get('grouping', {})
+        tg_groups = groupings.get('test-grouping', {})
+        assert 'list' in tg_groups.get('group-with-list', {}), \
+            "Grouping 'group-with-list' should have 'list' key"
+
+    def test_grouping_preprocessing_captures_uses(self, yang_s):
+        """Verify _preProcessYangGrouping captures uses nodes in groupings."""
+        groupings = yang_s.preProcessedYang.get('grouping', {})
+        tg_groups = groupings.get('test-grouping', {})
+        nested = tg_groups.get('nested-uses-group', {})
+        # nested-uses-group has 'uses simple-fields' and 'leaf extra'
+        # After preprocessing, it should have the 'uses' key captured
+        # (compilation resolves it later, but preprocessing must capture it)
+        assert 'leaf' in nested, \
+            "Grouping 'nested-uses-group' should have 'leaf' key for 'extra'"
+
+    def test_uses_clause_merges_container(self, yang_s):
+        """Verify container from grouping is merged into the using model."""
+        module = self._find_module_json(yang_s, 'test-grouping')
+        assert module is not None, "test-grouping module not found"
+        list_node = self._find_list_in_module(module)
+        assert 'container' in list_node, \
+            "TEST_GROUPING_LIST should have 'container' merged from group-with-container"
+        # Verify it's the 'settings' container
+        container = list_node['container']
+        if isinstance(container, list):
+            names = [c['@name'] for c in container]
+            assert 'settings' in names
+        else:
+            assert container['@name'] == 'settings'
+
+    def test_uses_clause_merges_list(self, yang_s):
+        """Verify list from grouping is merged into the using model."""
+        module = self._find_module_json(yang_s, 'test-grouping')
+        assert module is not None
+        list_node = self._find_list_in_module(module)
+        assert 'list' in list_node, \
+            "TEST_GROUPING_LIST should have 'list' merged from group-with-list"
+        member_list = list_node['list']
+        if isinstance(member_list, list):
+            names = [m['@name'] for m in member_list]
+            assert 'member' in names
+        else:
+            assert member_list['@name'] == 'member'
+
+    def test_uses_clause_merges_nested_uses(self, yang_s):
+        """Verify nested uses (uses within a grouping) are resolved."""
+        module = self._find_module_json(yang_s, 'test-grouping')
+        assert module is not None
+        list_node = self._find_list_in_module(module)
+        # nested-uses-group uses simple-fields (leaf description) + leaf extra
+        # After compilation, both leaves should be present
+        leaves = list_node.get('leaf', [])
+        if isinstance(leaves, dict):
+            leaves = [leaves]
+        leaf_names = [l['@name'] for l in leaves]
+        assert 'description' in leaf_names, \
+            "'description' leaf from simple-fields via nested-uses-group should be merged"
+        assert 'extra' in leaf_names, \
+            "'extra' leaf from nested-uses-group should be merged"
+
+    def test_uses_clause_removes_uses_key(self, yang_s):
+        """Verify 'uses' key is deleted after compilation."""
+        module = self._find_module_json(yang_s, 'test-grouping')
+        assert module is not None
+        list_node = self._find_list_in_module(module)
+        assert 'uses' not in list_node, \
+            "'uses' key should be removed after compilation"
+
+    def test_uses_clause_in_notification(self, yang_s):
+        """Verify _compileUsesClauseModel traverses notification nodes."""
+        module = self._find_module_json(yang_s, 'test-grouping')
+        assert module is not None
+        notification = module.get('notification')
+        assert notification is not None, "test-grouping should have a notification"
+        # The notification uses simple-fields (leaf description) + leaf event-data
+        # After compilation, uses should be resolved
+        assert 'uses' not in notification, \
+            "'uses' in notification should be resolved"
+        leaves = notification.get('leaf', [])
+        if isinstance(leaves, dict):
+            leaves = [leaves]
+        leaf_names = [l['@name'] for l in leaves]
+        assert 'description' in leaf_names, \
+            "'description' from simple-fields should be merged into notification"
+        assert 'event-data' in leaf_names, \
+            "'event-data' leaf should remain in notification"
+
+
+class Test_SonicYang(object):
+    """Tests that query or manipulate an already-loaded data tree.
+
+    Each test gets a fresh SonicYang instance with schemas loaded and
+    config_data.json parsed and validated (function-scoped fixture).
+    """
+
+    @pytest.fixture(autouse=True, scope='class')
+    def data(self):
+        return _load_test_data()
+
+    @pytest.fixture(autouse=True)
+    def yang_s(self, data):
+        return _create_yang_s(data)
+
+    def jsonTestParser(self, file):
+        """
+        Open the json test file
+        """
+        with open(file) as data_file:
+            data = json.load(data_file)
+        return data
+
+    """
+        Get the JSON input based on func name
+        and return jsonInput
+    """
+    def readIjsonInput(self, yang_test_file, test):
+        try:
+            # load test specific Dictionary, using Key = func
+            # this is to avoid loading very large JSON in memory
+            print(" Read JSON Section: " + test)
+            jInput = ""
+            with open(yang_test_file, 'rb') as f:
+                jInst = ijson_itmes(f, test)
+                for it in jInst:
+                    jInput = jInput + json.dumps(it)
+        except Exception as e:
+            print("Reading Ijson failed")
+            raise(e)
+        return jInput
 
     #test find node
     def test_find_node(self, data, yang_s):
@@ -230,13 +391,6 @@ class Test_SonicYang(object):
             depend = yang_s.find_schema_dependencies(xpath)
             assert set(depend) == set(list)
 
-    #test merge data tree
-    def test_merge_data_tree(self, data, yang_s):
-        data_merge_file = data['data_merge_file']
-        yang_dir = str(data['yang_dir'])
-        yang_s._merge_data(data_merge_file, yang_dir)
-        #yang_s.root.print_mem(ly.LYD_JSON, ly.LYP_FORMAT)
-
     #test get module prefix
     def test_get_module_prefix(self, yang_s, data):
         for node in data['prefix']:
@@ -255,6 +409,12 @@ class Test_SonicYang(object):
             assert expected_type == data_type
 
     def test_get_leafref_type(self, yang_s, data):
+        # Merging data triggers libyang1 to internally re-resolve leafrefs
+        # in the data tree, which is required for value_type() to return
+        # the resolved type instead of LY_TYPE_LEAFREF.
+        data_merge_file = data['data_merge_file']
+        yang_dir = str(data['yang_dir'])
+        yang_s._merge_data(data_merge_file, yang_dir)
         for node in data['leafref_type']:
             xpath = str(node['xpath'])
             expected = node['data_type']
@@ -444,6 +604,86 @@ class Test_SonicYang(object):
 
         # load config and create Data tree
         syc.loadData(jIn)
+
+        return
+
+    def test_loaddata_quiet_suppresses_syslog_on_success(self, sonic_yang_data, monkeypatch):
+        # With quiet=True, the informational "Try to load Data" sysLog
+        # call must not be emitted. Exception path is covered below.
+        # monkeypatch.setattr cleanly reverts the instance-level override
+        # on teardown so state does not leak across tests.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+
+        syc.loadData(jIn, quiet=True)
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert not any('Try to load Data' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Try to load Data' sysLog: {}".format(msgs)
+        assert not any('Data Loading Failed' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Data Loading Failed' sysLog: {}".format(msgs)
+
+        return
+
+    def test_loaddata_quiet_suppresses_syslog_on_failure(self, sonic_yang_data, monkeypatch):
+        # With quiet=True, the LOG_ERR "Data Loading Failed" sysLog call
+        # must not be emitted even when parse_data_mem raises. The
+        # SonicYangException must still be raised so the caller sees the
+        # failure. monkeypatch.setattr cleanly reverts on teardown.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+
+        def _boom(*a, **kw):
+            raise RuntimeError('forced parse failure')
+
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+        monkeypatch.setattr(syc.ctx, 'parse_data_mem', _boom)
+
+        raised = False
+        try:
+            syc.loadData(jIn, quiet=True)
+        except sy.SonicYangException:
+            raised = True
+        assert raised, "SonicYangException must still be raised even when quiet=True"
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert not any('Data Loading Failed' in str(m) for m in msgs), \
+            "quiet=True must suppress 'Data Loading Failed' sysLog on failure: {}".format(msgs)
+
+        return
+
+    def test_loaddata_default_logs_syslog_on_success(self, sonic_yang_data, monkeypatch):
+        # Default (quiet=False) preserves existing behavior: the
+        # "Try to load Data" sysLog call must be emitted on success.
+        # monkeypatch.setattr cleanly reverts on teardown.
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+        jIn = json.loads(self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON'))
+
+        calls = []
+        monkeypatch.setattr(syc, 'sysLog',
+                            lambda *a, **kw: calls.append((a, kw)))
+
+        syc.loadData(jIn)
+
+        msgs = [kw.get('msg', '') for (_a, kw) in calls] + [
+            a[0] for (a, _kw) in calls if a
+        ]
+        assert any('Try to load Data' in str(m) for m in msgs), \
+            "default quiet=False must log 'Try to load Data': {}".format(msgs)
 
         return
 

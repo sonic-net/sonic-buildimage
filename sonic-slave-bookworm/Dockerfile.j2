@@ -351,7 +351,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         dosfstools \
         qemu-kvm \
         libvirt-clients \
-        python3-pexpect \
 # For rasdaemon build
         libsqlite3-dev \
         libgettextpo-dev \
@@ -627,6 +626,9 @@ RUN eatmydata apt-get install -y vim
 
 # Install rsyslog
 RUN eatmydata apt-get install -y rsyslog
+
+# # For sonic vs image build
+RUN pip3 install pexpect
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest

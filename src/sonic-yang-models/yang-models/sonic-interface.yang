@@ -26,7 +26,7 @@ module sonic-interface {
 		prefix svnet;
 	}
 
-	description "INTERFACE yang Module for SONiC OS";
+	description "Physical Ethernet interface L3 configuration including IP addressing, VRF binding, and NAT zones";
 
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
@@ -44,21 +44,23 @@ module sonic-interface {
 
 		container INTERFACE {
 
-			description "INTERFACE part of config_db.json";
+			description "Physical Ethernet interface L3 configuration table";
 
 			list INTERFACE_LIST {
 
-				description "INTERFACE part of config_db.json with vrf";
+				description "Configuration entry for a physical Ethernet interface including VRF binding and interface properties";
 
 				key "name";
 
 				leaf name {
+					description "Reference to a physical Ethernet port";
 					type leafref {
 						path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
 					}
 				}
 
 				leaf vrf_name {
+					description "VRF instance to which this interface is bound";
 					type leafref {
 						path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
 					}
@@ -110,11 +112,12 @@ module sonic-interface {
 
 			list INTERFACE_IPPREFIX_LIST {
 
-				description "INTERFACE part of config_db.json with ip-prefix";
+				description "IP address prefix assignment for a physical Ethernet interface";
 
 				key "name ip-prefix";
 
 				leaf name {
+					description "Reference to a physical Ethernet port that must also exist in INTERFACE_LIST";
 					/* This node must be present in INTERFACE_LIST */
 					must "(current() = ../../INTERFACE_LIST[name=current()]/name)"
 					{
@@ -127,6 +130,7 @@ module sonic-interface {
 				}
 
 				leaf ip-prefix {
+					description "IPv4 or IPv6 address with prefix length assigned to the interface";
 					type union {
 						type stypes:sonic-ip4-prefix;
 						type stypes:sonic-ip6-prefix;
@@ -134,6 +138,7 @@ module sonic-interface {
 				}
 
 				leaf scope {
+					description "Address scope indicating global or link-local reachability";
 					type enumeration {
 						enum global;
 						enum local;
@@ -141,6 +146,7 @@ module sonic-interface {
 				}
 
 				leaf family {
+					description "IP address family, must match the format of ip-prefix";
 
 					/* family leaf needed for backward compatibility
 					   Both ip4 and ip6 address are string in IETF RFC 6021,
