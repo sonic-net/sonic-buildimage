@@ -1,4 +1,4 @@
-# platform/template/docker-syncd-trixie.mk
+# docker image for TRIXIE syncd container
 
 DOCKER_SYNCD_BASE_STEM = docker-syncd-$(DOCKER_SYNCD_PLATFORM_CODE)
 DOCKER_SYNCD_BASE = $(DOCKER_SYNCD_BASE_STEM).gz
