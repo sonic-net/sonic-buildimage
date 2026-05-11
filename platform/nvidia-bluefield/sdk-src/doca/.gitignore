@@ -4,3 +4,4 @@
 !.gitignore
 !Makefile
 !packages.txt
+!*.patch

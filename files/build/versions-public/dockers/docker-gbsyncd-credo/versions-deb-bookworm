@@ -27,10 +27,10 @@ openssh-client==1:9.2p1-2+deb12u5+fips
 openssl==3.0.19-1~deb12u2
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
-saicredo-blackhawk==1.2.4
-saicredo-crt88322==1.2.4
-saicredo-owl==1.2.4
-saicredo-saicredo==1.2.4
+saicredo-blackhawk==1.2.6
+saicredo-crt88322==1.2.6
+saicredo-owl==1.2.6
+saicredo-saicredo==1.2.6
 sensible-utils==0.0.17+nmu1
 sonic-db-cli-dbgsym==1.0.0
 sonic-eventd-dbgsym==1.0.0-0

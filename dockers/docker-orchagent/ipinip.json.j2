@@ -64,6 +64,16 @@
         {%- set ipv6_vlan_addresses = ipv6_vlan_addresses.append(prefix) %}
     {%- endif %}
 {% endfor %}
+{# Generation of IP-in-IP decap entries is disabled for BackEnd device types and devices without storage_device metadata. #}
+{%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter', 'BackEndSpineRouter'] -%}
+{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in backend_device_types and 'storage_device' not in DEVICE_METADATA['localhost'] %}
+{% set ipv4_addresses = [] %}
+{% set ipv6_addresses = [] %}
+{% set ipv4_vlan_addresses = [] %}
+{% set ipv6_vlan_addresses = [] %}
+{% set ipv4_loopback_addresses = [] %}
+{% set ipv6_loopback_addresses = [] %}
+{% endif %}
 {%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
 {%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
 {# SAI report tunnel TABLE_FULL for large topo. Only generating for VLAN and loopback if over 128 routed interfaces.#}

@@ -540,6 +540,54 @@
             },
             {
                 "name": "DCDC10"
+            },
+            {
+                "name": "PHY0"
+            },
+            {
+                "name": "PHY1"
+            },
+            {
+                "name": "PHY2"
+            },
+            {
+                "name": "PHY3"
+            },
+            {
+                "name": "PHY4"
+            },
+            {
+                "name": "PHY5"
+            },
+            {
+                "name": "PHY6"
+            },
+            {
+                "name": "PHY7"
+            },
+            {
+                "name": "PHY8"
+            },
+            {
+                "name": "PHY9"
+            },
+            {
+                "name": "PHY10"
+            },
+            {
+                "name": "PHY11"
+            },
+            {
+                "name": "PHY12"
+            },
+            {
+                "name": "PHY13"
+            },
+            {
+                "name": "PHY14"
+            },
+            {
+                "name": "PHY15"
             }
         ],
         "fans": [

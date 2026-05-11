@@ -37,6 +37,10 @@ RUN apt-get update &&   \
 {% if sonic_asic_platform == 'mellanox' %}
 RUN apt-get install -y dbus
 {% endif %}
+{% if sonic_asic_platform == 'aspeed' %}
+# Install busybox for devmem access (needed for BMC hardware register control)
+RUN apt-get install -y busybox
+{% endif %}
 
 # smartmontools version should match the installed smartmontools in sonic_debian_extension build template
 RUN apt-get install -y -t bookworm-backports \

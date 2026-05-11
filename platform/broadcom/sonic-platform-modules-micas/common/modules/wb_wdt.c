@@ -21,7 +21,9 @@
 #include <linux/err.h>
 #include <linux/delay.h>
 #include <linux/module.h>
-#include <linux/of_gpio.h>
+#include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
 #include <linux/hrtimer.h>
@@ -30,6 +32,7 @@
 #include <linux/mutex.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/uio.h>
+#include <linux/version.h>
 
 #include "wb_wdt.h"
 
@@ -310,15 +313,15 @@ static void wdt_hwping(wb_wdt_priv_t *priv)
         case HW_ALGO_TOGGLE:
             gpio_wdt = &priv->gpio_wdt;
             gpio_wdt->state = !gpio_wdt->state;
-            gpio_set_value_cansleep(gpio_wdt->gpio, gpio_wdt->state);
+            gpiod_set_value_cansleep(gpio_wdt->gpiod, gpio_wdt->state);
             WDT_VERBOSE("gpio toggle wdt work. val:%u\n", gpio_wdt->state);
             break;
         case HW_ALGO_LEVEL:
             gpio_wdt = &priv->gpio_wdt;
             /* Pulse */
-            gpio_set_value_cansleep(gpio_wdt->gpio, !gpio_wdt->active_low);
+            gpiod_set_value_cansleep(gpio_wdt->gpiod, !gpio_wdt->active_low);
             udelay(1);
-            gpio_set_value_cansleep(gpio_wdt->gpio, gpio_wdt->active_low);
+            gpiod_set_value_cansleep(gpio_wdt->gpiod, gpio_wdt->active_low);
             WDT_VERBOSE("gpio level wdt work.\n");
             break;
         }
@@ -795,7 +798,8 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
 {
     struct device *dev;
     gpio_wdt_info_t *gpio_wdt;
-    enum of_gpio_flags flags;
+    unsigned long flags;
+    struct gpio_desc *gpiod;
     uint32_t f = 0;
     int ret;
 
@@ -803,17 +807,24 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
     gpio_wdt = &priv->gpio_wdt;
 
     if (dev->of_node) {
-        gpio_wdt->gpio = of_get_gpio_flags(dev->of_node, 0, &flags);
+        gpiod = devm_gpiod_get_index(dev, NULL, 0, GPIOD_ASIS);
+        if (IS_ERR(gpiod)) {
+            dev_err(dev, "Failed to get gpio descriptor, ret: %ld.\n", PTR_ERR(gpiod));
+            return PTR_ERR(gpiod);
+        }
+        gpio_wdt->gpiod = gpiod;
+        gpio_wdt->gpio = desc_to_gpio(gpiod);
+        gpio_wdt->active_low = gpiod_is_active_low(gpiod);
     } else {
         gpio_wdt->gpio = wb_wdt_device->wdt_config_mode.gpio_wdt.gpio;
         flags = wb_wdt_device->wdt_config_mode.gpio_wdt.flags;
+        gpio_wdt->gpiod = gpio_to_desc(gpio_wdt->gpio);
+        if (!gpio_wdt->gpiod) {
+            dev_err(dev, "gpio is invalid.\n");
+            return -ENODEV;
+        }
+        gpio_wdt->active_low = !!(flags & GPIOF_ACTIVE_LOW);
     }
-    if (!gpio_is_valid(gpio_wdt->gpio)) {
-        dev_err(dev, "gpio is invalid.\n");
-        return gpio_wdt->gpio;
-    }
-
-    gpio_wdt->active_low = flags & OF_GPIO_ACTIVE_LOW;
 
     if(priv->hw_algo == HW_ALGO_TOGGLE) {
         f = GPIOF_IN;
@@ -821,15 +832,17 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
         f = gpio_wdt->active_low ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW;
     }
 
-    ret = devm_gpio_request_one(dev, gpio_wdt->gpio, f,
-                dev_name(dev));
-    if (ret) {
-        dev_err(dev, "devm_gpio_request_one failed.\n");
-        return ret;
+    if (!dev->of_node) {
+        ret = devm_gpio_request_one(dev, gpio_wdt->gpio, f,
+                    dev_name(dev));
+        if (ret) {
+            dev_err(dev, "devm_gpio_request_one failed.\n");
+            return ret;
+        }
     }
 
     gpio_wdt->state = gpio_wdt->active_low;
-    gpio_direction_output(gpio_wdt->gpio, gpio_wdt->state);
+    gpiod_direction_output(gpio_wdt->gpiod, gpio_wdt->state);
 
     WDT_VERBOSE("active_low:%d\n", gpio_wdt->active_low);
     return 0;
@@ -1164,10 +1177,10 @@ static void unregister_action(struct platform_device *pdev)
 
     if (priv->config_mode == GPIO_FEED_WDT_MODE) {
         gpio_wdt = &priv->gpio_wdt;
-        gpio_set_value_cansleep(gpio_wdt->gpio, !gpio_wdt->active_low);
+        gpiod_set_value_cansleep(gpio_wdt->gpiod, !gpio_wdt->active_low);
 
         if (priv->hw_algo == HW_ALGO_TOGGLE) {
-            gpio_direction_input(gpio_wdt->gpio);
+            gpiod_direction_input(gpio_wdt->gpiod);
         }
     } else {
         logic_wdt = &priv->logic_wdt;
@@ -1182,13 +1195,18 @@ static void unregister_action(struct platform_device *pdev)
     return;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int wb_wdt_remove(struct platform_device *pdev)
+#else
+static void wb_wdt_remove(struct platform_device *pdev)
+#endif
 {
     WDT_VERBOSE("enter remove wdt.\n");
     unregister_action(pdev);
     dev_info(&pdev->dev, "remove wdt finish.\n");
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static void wb_wdt_shutdown(struct platform_device *pdev)

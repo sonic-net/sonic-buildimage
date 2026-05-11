@@ -1,0 +1,14 @@
+[Unit]
+Description=Dell S3248T Platform modules
+Before=pmon.service
+After=platform-init.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/s3248t_platform.sh init
+ExecStop=/usr/local/bin/s3248t_platform.sh deinit
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

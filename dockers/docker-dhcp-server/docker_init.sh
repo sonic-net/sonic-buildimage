@@ -4,7 +4,8 @@
 # Generate supervisord config file
 mkdir -p /etc/supervisor/conf.d/
 # Generate kea folder
-mkdir -p /etc/kea/
+mkdir -p /etc/kea/ /run/kea /var/log/kea /var/lib/kea
+chmod 750 /run/kea
 udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 hostname=$(hostname)
 

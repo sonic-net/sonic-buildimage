@@ -19,7 +19,6 @@ MODULE_DIRS += b27
 SERVICE_DIR := service
 SYSTEMD_DIR := systemd
 SCRIPTS_DIR := scripts
-OBMC_CONSOLE_DIR := obmc-console
 CFG_DIR := cfg
 
 # Uncomment this to turn on verbose mode.
@@ -96,13 +95,6 @@ override_dh_auto_install:
 			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* 2>/dev/null)" ]; then \
 				cp $(MOD_SRC_DIR)/$${mod}/$(CFG_DIR)/* \
 					debian/$${pkg_name}/etc/modules-load.d/; \
-			fi; \
-		fi; \
-		if [ -d $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR) ]; then \
-			dh_installdirs -p$${pkg_name} etc/obmc-console; \
-			if [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR)/* 2>/dev/null)" ]; then \
-				cp $(MOD_SRC_DIR)/$${mod}/$(OBMC_CONSOLE_DIR)/* \
-					debian/$${pkg_name}/etc/obmc-console/; \
 			fi; \
 		fi; \
 	done)
