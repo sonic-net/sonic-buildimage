@@ -58,6 +58,11 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
     && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
+# Remove vulnerable system python3-wheel packages (USN-8221-1) so OS-level
+# scanners no longer flag them. The venv pip/wheel are independent.
+RUN apt-get purge -y python3-wheel python-wheel-common python3-wheel-whl 2>/dev/null; \
+    apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir --upgrade pip wheel \
     && pip install --no-cache-dir \
     aiohttp \
