@@ -149,7 +149,7 @@
             "instance" : "redis_bmp"
         }
 {% endif %}
-{% if include_system_eventd == "y" %}
+{% if include_system_eventd is defined and include_system_eventd == "y" %}
         ,
         "EVENT_DB" : {
             "id" : 19,
