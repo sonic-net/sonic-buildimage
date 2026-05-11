@@ -58,7 +58,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
     && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
-RUN pip install --no-cache-dir --upgrade pip wheel \
+RUN pip install --no-cache-dir --upgrade pip "wheel>=0.45.1" \
     && pip install --no-cache-dir \
     aiohttp \
     allure-pytest \
