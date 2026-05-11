@@ -1,7 +1,7 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# Apache-2.0
+# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 # docker image for mlnx syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = mlnx
-include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
