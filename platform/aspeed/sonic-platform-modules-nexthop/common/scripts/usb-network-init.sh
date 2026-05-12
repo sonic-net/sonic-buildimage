@@ -7,7 +7,7 @@ set -e
 # Configuration
 GADGET_NAME="g1"
 FUNCTION_TYPE="ncm"
-INTERFACE_NAME="usb0"
+INTERFACE_NAME="bmc0"
 VENDOR_ID="0x1d6b"    # Linux Foundation
 PRODUCT_ID="0x0104"   # Multifunction Composite Gadget
 SERIAL_NUMBER="0123456789"
@@ -71,8 +71,8 @@ ln -s "functions/${FUNCTION_TYPE}.${INTERFACE_NAME}" configs/c.1/
 logger -t usb-network "Gadget '${GADGET_NAME}' created with ${FUNCTION_TYPE^^} function"
 
 # Step 4: Enable the gadget
-# Find the first available UDC (USB Device Controller)
-UDC_NAME=$(ls /sys/class/udc 2>/dev/null | head -n1)
+# Use the specific UDC port for AST2700 USB virtual hub
+UDC_NAME="12021000.usb-vhub:p1"
 
 if [ -z "${UDC_NAME}" ]; then
     logger -t usb-network "ERROR: No UDC (USB Device Controller) found!"
@@ -108,6 +108,12 @@ ip link set "${INTERFACE_NAME}" up
 
 # Enable IPv6 on the interface
 sysctl -w net.ipv6.conf.${INTERFACE_NAME}.disable_ipv6=0 2>/dev/null || true
+
+# Step 6b: IP address configuration handled by /etc/network/interfaces
+# The interface configuration is managed through sonic-cfggen and interfaces.j2 template
+# which reads from bmc.json (DEVICE_METADATA['bmc']) and generates /etc/network/interfaces
+# This approach ensures consistent network configuration management across SONiC
+logger -t usb-network "IP configuration will be applied by networking.service from /etc/network/interfaces"
 
 # Wait a moment for interface to stabilize
 sleep 1

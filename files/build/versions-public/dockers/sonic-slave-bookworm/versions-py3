@@ -41,7 +41,7 @@ executing==1.2.0
 fastentrypoints==0.12
 fonttools==4.38.0
 fs==2.4.16
-fsspec==2026.3.0
+fsspec==2026.4.0
 gbp==0.9.30
 gcovr==5.2
 gpg==1.18.0

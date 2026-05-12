@@ -1,6 +1,7 @@
 # tests/test_systemd_stub.py
 import sys
 import os
+import time
 import types
 import importlib
 
@@ -900,3 +901,74 @@ def test_date_extract_pattern_extracts_correctly(ss):
     # Should not match
     match = systemd_stub._DATE_EXTRACT_PATTERN.search("SONiC.master.123456-abcdef12")
     assert not match
+
+
+# ─────────────────────────── Tests for POST_COPY_ACTIONS docker rm --force ───────────────────────────
+
+def test_post_copy_actions_use_docker_rm_force(ss):
+    """POST_COPY_ACTIONS for restapi.sh should use 'docker rm --force' instead of plain 'docker rm'."""
+    ss_mod, *_ = ss
+    # Re-import to get the real POST_COPY_ACTIONS (fixture clears them)
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    ss_fresh = importlib.import_module("systemd_stub")
+
+    actions = ss_fresh.POST_COPY_ACTIONS["/usr/bin/restapi.sh"]
+    # Should have docker stop, docker rm --force, daemon-reload, restart
+    assert ["sudo", "docker", "stop", "restapi"] in actions
+    assert ["sudo", "docker", "rm", "--force", "restapi"] in actions
+    # Old plain 'docker rm' should NOT be present
+    assert ["sudo", "docker", "rm", "restapi"] not in actions
+
+
+# ─────────────────────────── Tests for sync ordering (k8s_pod_control before restapi.sh) ───────────────
+
+def test_sync_order_k8s_pod_control_before_restapi(ss):
+    """k8s_pod_control.sh must be synced before restapi.sh to avoid 'No such file' errors."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    container_fs["/usr/share/sonic/systemd_scripts/restapi.sh"] = b"NEW-RESTAPI"
+    container_fs["/usr/share/sonic/systemd_scripts/container_checker_202311"] = b"NEW-CHECKER"
+    container_fs["/usr/share/sonic/scripts/k8s_pod_control.sh"] = b"NEW-K8S"
+
+    host_fs["/usr/bin/restapi.sh"] = b"OLD"
+    host_fs["/bin/container_checker"] = b"OLD"
+    host_fs["/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"] = b"OLD"
+
+    ok = ss_mod.ensure_sync()
+    assert ok is True
+
+    # Extract the order of file writes by looking at /bin/mv commands (atomic write pattern)
+    mv_dsts = [args[3] for _, args in commands if args[:1] == ("/bin/mv",) and len(args) == 4]
+    # k8s_pod_control.sh dest must appear before restapi.sh dest
+    k8s_dst = "/usr/share/sonic/scripts/docker-restapi-sidecar/k8s_pod_control.sh"
+    restapi_dst = "/usr/bin/restapi.sh"
+    if k8s_dst in mv_dsts and restapi_dst in mv_dsts:
+        assert mv_dsts.index(k8s_dst) < mv_dsts.index(restapi_dst), \
+            f"k8s_pod_control.sh must be synced before restapi.sh, but order was: {mv_dsts}"
+
+
+# ─────────────────────────── Tests for main() jitter ───────────────────────────
+
+def test_main_loop_uses_jitter(ss, monkeypatch):
+    """The sync loop sleep should include jitter (interval ± 10%)."""
+    ss_mod, container_fs, host_fs, commands, config_db = ss
+
+    sleep_values = []
+    original_sleep = time.sleep
+
+    def mock_sleep(secs):
+        sleep_values.append(secs)
+        raise KeyboardInterrupt  # break out of loop after first sleep
+
+    monkeypatch.setattr(time, "sleep", mock_sleep)
+    monkeypatch.setattr(ss_mod, "ensure_sync", lambda: True)
+    monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--interval", "100"])
+
+    # main() will do initial sync, then enter loop, sleep with jitter, then KeyboardInterrupt
+    with pytest.raises(KeyboardInterrupt):
+        ss_mod.main()
+
+    assert len(sleep_values) == 1
+    # With 10% jitter on interval=100, sleep should be in [90, 110]
+    assert 90 <= sleep_values[0] <= 110, f"Sleep value {sleep_values[0]} outside jitter range [90, 110]"

@@ -11,6 +11,7 @@ fastjar==2:0.98-7
 g++-14-arm-linux-gnueabihf==14.2.0-19
 g++-arm-linux-gnueabihf==4:14.2.0-1
 gcc-14-arm-linux-gnueabihf==14.2.0-19
+gdisk==1.0.10-2
 help2man==1.49.3
 libdrm-exynos1==2.4.124-2
 libdrm-omap1==2.4.124-2
