@@ -13,10 +13,12 @@ import kube_commands
 
 
 KUBE_ADMIN_CONF = "/tmp/kube_admin.conf"
+KUBELET_CLIENT_CERT = "/tmp/kubelet-client-current.pem"
 FLANNEL_CONF_FILE = "/tmp/flannel.conf"
 CNI_DIR = "/tmp/cni/net.d"
 AME_CRT = "/tmp/restapiserver.crt"
 AME_KEY = "/tmp/restapiserver.key"
+REMOVE_KUBELET_CLIENT_CERT = "remove_kubelet_client_cert"
 
 # kube_commands test cases
 # NOTE: Ensure state-db entry is complete in PRE as we need to
@@ -160,6 +162,32 @@ none".format(KUBE_ADMIN_CONF),
         ]
     },
     3: {
+        common_test.DESCR: "Regular join when stale config exists without kubelet client cert",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["10.3.157.24", 6443, True, False],
+        common_test.NO_INIT: True,
+        REMOVE_KUBELET_CLIENT_CERT: True,
+        common_test.PROC_CMD: [
+            "kubectl --kubeconfig {} --request-timeout 20s drain none \
+--ignore-daemonsets".format(KUBE_ADMIN_CONF),
+            "kubectl --kubeconfig {} --request-timeout 20s delete node \
+none".format(KUBE_ADMIN_CONF),
+            "kubeadm reset -f",
+            "rm -rf {}".format(CNI_DIR),
+            "systemctl stop kubelet",
+            "modprobe br_netfilter",
+            "mkdir -p {}".format(CNI_DIR),
+            "cp {} {}".format(FLANNEL_CONF_FILE, CNI_DIR),
+            "systemctl start kubelet",
+            "kubeadm join --discovery-file {} --node-name none".format(
+                KUBE_ADMIN_CONF)
+        ],
+        common_test.PROC_RUN: [True, True],
+        common_test.REQ: {
+            "data": {"ca.crt": "test"}
+        }
+    },
+    4: {
         common_test.DESCR: "Regular join: fail due to unable to lock",
         common_test.RETVAL: -1,
         common_test.ARGS: ["10.3.157.24", 6443, False, False],
@@ -439,7 +467,10 @@ clusters:\n\
             s.close()
         with open(AME_KEY, "w") as s:
             s.close()
+        with open(KUBELET_CLIENT_CERT, "w") as s:
+            s.close()
         kube_commands.KUBELET_YAML = kubelet_yaml
+        kube_commands.KUBELET_CLIENT_CERT = KUBELET_CLIENT_CERT
         kube_commands.CNI_DIR = CNI_DIR
         kube_commands.FLANNEL_CONF_FILE = FLANNEL_CONF_FILE
         kube_commands.SERVER_ADMIN_URL = "file://{}".format(self.admin_conf_file)
@@ -527,6 +558,9 @@ clusters:\n\
             if ct_data.get(common_test.FAIL_LOCK, False):
                 lock_file = kube_commands.LOCK_FILE
                 kube_commands.LOCK_FILE = "/xxx/yyy/zzz"
+
+            if ct_data.get(REMOVE_KUBELET_CLIENT_CERT, False):
+                os.system("rm -f {}".format(KUBELET_CLIENT_CERT))
 
             args = ct_data[common_test.ARGS]
             (ret, _, _) = kube_commands.kube_join_master(

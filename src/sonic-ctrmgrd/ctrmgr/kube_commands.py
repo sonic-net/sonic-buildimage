@@ -24,6 +24,7 @@ from swsscommon import swsscommon
 
 KUBE_ADMIN_CONF = "/etc/sonic/kube_admin.conf"
 KUBELET_YAML = "/var/lib/kubelet/config.yaml"
+KUBELET_CLIENT_CERT = "/var/lib/kubelet/pki/kubelet-client-current.pem"
 SERVER_ADMIN_URL = "https://{}/admin.conf"
 LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
@@ -189,7 +190,9 @@ def func_get_labels(args):
 def is_connected(server=""):
     """ Check if we are currently connected """
 
-    if (os.path.exists(KUBELET_YAML) and os.path.exists(KUBE_ADMIN_CONF)):
+    if (os.path.exists(KUBELET_YAML) and
+            os.path.exists(KUBE_ADMIN_CONF) and
+            os.path.exists(KUBELET_CLIENT_CERT)):
         with open(KUBE_ADMIN_CONF, 'r') as s:
             d = yaml.load(s, yaml.SafeLoader)
             d = d['clusters'] if 'clusters' in d else []
