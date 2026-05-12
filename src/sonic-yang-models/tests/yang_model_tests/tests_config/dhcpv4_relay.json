@@ -105,6 +105,51 @@
             }
         }
     },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_APPEND": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "agent_relay_mode": "append"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_REPLACE": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "agent_relay_mode": "replace"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_FORWARD": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "agent_relay_mode": "forward"
+                    }
+                ]
+            }
+        }
+    },
     "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
         "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
             "sonic-dhcpv4-relay:DHCPV4_RELAY": {

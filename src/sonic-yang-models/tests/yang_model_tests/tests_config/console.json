@@ -16,6 +16,32 @@
             }
         }
     },
+    "CONSOLE_DEFAULT_CONTROLLED_DEVICE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:controlled_device": {
+                }
+            }
+        }
+    },
+    "CONSOLE_VALID_CONTROLLED_DEVICE": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:controlled_device": {
+                    "enabled": "yes"
+                }
+            }
+        }
+    },
+    "CONSOLE_CONTROLLED_DEVICE_INCORRECT_PATTERN": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:controlled_device": {
+                    "enabled": "true"
+                }
+            }
+        }
+    },
     "CONSOLE_DISABLED_INCORRECT_PATTERN": {
         "sonic-console:sonic-console": {
             "sonic-console:CONSOLE_SWITCH": {
