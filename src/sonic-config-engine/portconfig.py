@@ -213,8 +213,11 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
 
 def get_system_port_config(hwsku=None, hostname=None, asic_name=None):
     config_db = db_connect_configdb(asic_name)
-    # If available, Read from CONFIG DB first
-    if config_db is not None:
+    config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
+    # Skip CONFIG_DB when caller requested a specific hwsku that doesn't match
+    # the running one — otherwise stale SYSTEM_PORT rows from the live SKU
+    # leak into the dump for an unrelated SKU.
+    if config_db is not None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("SYSTEM_PORT")
         if bool(port_data):
             port_data_str_keys = {
