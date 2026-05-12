@@ -35,8 +35,11 @@ fi
 # Set zmq mode by default for smartswitch DPU and increase the max bulk limit
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.orch_southbound_zmq_enabled')
 if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
+elif [ "$SOUTHBOUND_ZMQ" == "true" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
@@ -60,6 +63,12 @@ fi
 # for multi asic platforms add the asic name to the record file names
 if [[ "$NAMESPACE_ID" ]]; then
     ORCHAGENT_ARGS+="-f swss.asic$NAMESPACE_ID.rec -j sairedis.asic$NAMESPACE_ID.rec "
+fi
+
+# Enable async swss recorder when explicitly configured
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "async_swss_rec")
+if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-A "
 fi
 
 # Add platform specific arguments if necessary

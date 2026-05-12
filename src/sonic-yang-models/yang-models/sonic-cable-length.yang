@@ -19,12 +19,13 @@ module sonic-cable-length {
     container sonic-cable-length {
         container CABLE_LENGTH {
 
-            description "CABLE_LENGTH part of config_db.json";
+            description "Cable length per port, used for lossless buffer calculation";
 
             list CABLE_LENGTH_LIST {
                 key "name";
 
                 leaf name {
+                    description "Name of the cable length configuration group";
                     type string {
                         pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                             error-message "Invalid cable length list name.";
@@ -41,12 +42,14 @@ module sonic-cable-length {
                     key "port";
 
                     leaf port {
+                        description "Port associated with this cable length entry";
                         type leafref {
                             path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
                         }
                     }
 
                     leaf length {
+                        description "Cable length in meters (e.g., '40m')";
                         type string {
                             pattern '[0-9]+m' {
                                 error-message "Invalid cable length.";

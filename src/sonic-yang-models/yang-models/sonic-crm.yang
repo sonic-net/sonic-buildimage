@@ -23,16 +23,18 @@ module sonic-crm {
 
         container CRM {
 
-            description "CRM part of config_db.json";
+            description "Critical Resource Monitoring configuration for tracking ASIC hardware resource utilization";
 
             container Config {
 
                 /* typedef specific to CRM */
                 typedef threshold {
+                    description "Threshold value representing a percentage or absolute resource count for CRM monitoring";
                     type uint16;
                 }
 
                 leaf acl_counter_threshold_type {
+                    description "Threshold type for monitoring ACL counter resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../acl_counter_high_threshold<100 and
                         ../acl_counter_low_threshold<100) or
@@ -41,6 +43,7 @@ module sonic-crm {
                 }
 
                 leaf acl_counter_high_threshold {
+                    description "Upper threshold for ACL counter resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../acl_counter_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -49,10 +52,12 @@ module sonic-crm {
                 }
 
                 leaf acl_counter_low_threshold {
+                    description "Lower threshold for ACL counter resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf acl_group_threshold_type {
+                    description "Threshold type for monitoring ACL group (bind point) resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../acl_group_high_threshold<100 and
                         ../acl_group_low_threshold<100) or
@@ -61,6 +66,7 @@ module sonic-crm {
                 }
 
                 leaf acl_group_high_threshold {
+                    description "Upper threshold for ACL group resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../acl_group_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -69,10 +75,12 @@ module sonic-crm {
                 }
 
                 leaf acl_group_low_threshold {
+                    description "Lower threshold for ACL group resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf acl_entry_threshold_type {
+                    description "Threshold type for monitoring ACL rule entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../acl_entry_high_threshold<100 and
                         ../acl_entry_low_threshold<100) or
@@ -81,6 +89,7 @@ module sonic-crm {
                 }
 
                 leaf acl_entry_high_threshold {
+                    description "Upper threshold for ACL rule entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../acl_entry_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -89,10 +98,12 @@ module sonic-crm {
                 }
 
                 leaf acl_entry_low_threshold {
+                    description "Lower threshold for ACL rule entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf acl_table_threshold_type {
+                    description "Threshold type for monitoring ACL table resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../acl_table_high_threshold<100 and
                         ../acl_table_low_threshold<100) or
@@ -101,6 +112,7 @@ module sonic-crm {
                 }
 
                 leaf acl_table_high_threshold {
+                    description "Upper threshold for ACL table resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../acl_table_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -109,10 +121,12 @@ module sonic-crm {
                 }
 
                 leaf acl_table_low_threshold {
+                    description "Lower threshold for ACL table resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf fdb_entry_threshold_type {
+                    description "Threshold type for monitoring MAC forwarding database entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../fdb_entry_high_threshold<100 and
                         ../fdb_entry_low_threshold<100) or
@@ -121,6 +135,7 @@ module sonic-crm {
                 }
 
                 leaf fdb_entry_high_threshold {
+                    description "Upper threshold for FDB entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../fdb_entry_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -129,10 +144,12 @@ module sonic-crm {
                 }
 
                 leaf fdb_entry_low_threshold {
+                    description "Lower threshold for FDB entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv4_neighbor_threshold_type {
+                    description "Threshold type for monitoring IPv4 ARP neighbor entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv4_neighbor_high_threshold<100 and
                         ../ipv4_neighbor_low_threshold<100) or
@@ -141,6 +158,7 @@ module sonic-crm {
                 }
 
                 leaf ipv4_neighbor_high_threshold {
+                    description "Upper threshold for IPv4 ARP neighbor entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv4_neighbor_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -149,10 +167,12 @@ module sonic-crm {
                 }
 
                 leaf ipv4_neighbor_low_threshold {
+                    description "Lower threshold for IPv4 ARP neighbor entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv4_nexthop_threshold_type {
+                    description "Threshold type for monitoring IPv4 next-hop resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv4_nexthop_high_threshold<100 and
                         ../ipv4_nexthop_low_threshold<100) or
@@ -161,6 +181,7 @@ module sonic-crm {
                 }
 
                 leaf ipv4_nexthop_high_threshold {
+                    description "Upper threshold for IPv4 next-hop resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv4_nexthop_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -169,10 +190,12 @@ module sonic-crm {
                 }
 
                 leaf ipv4_nexthop_low_threshold {
+                    description "Lower threshold for IPv4 next-hop resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv4_route_threshold_type {
+                    description "Threshold type for monitoring IPv4 route entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv4_route_high_threshold<100 and
                         ../ipv4_route_low_threshold<100) or
@@ -181,6 +204,7 @@ module sonic-crm {
                 }
 
                 leaf ipv4_route_high_threshold {
+                    description "Upper threshold for IPv4 route entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv4_route_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -189,10 +213,12 @@ module sonic-crm {
                 }
 
                 leaf ipv4_route_low_threshold {
+                    description "Lower threshold for IPv4 route entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv6_neighbor_threshold_type {
+                    description "Threshold type for monitoring IPv6 neighbor discovery entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv6_neighbor_high_threshold<100 and
                         ../ipv6_neighbor_low_threshold<100) or
@@ -201,6 +227,7 @@ module sonic-crm {
                 }
 
                 leaf ipv6_neighbor_high_threshold {
+                    description "Upper threshold for IPv6 neighbor discovery entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv6_neighbor_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -209,10 +236,12 @@ module sonic-crm {
                 }
 
                 leaf ipv6_neighbor_low_threshold {
+                    description "Lower threshold for IPv6 neighbor discovery entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv6_nexthop_threshold_type {
+                    description "Threshold type for monitoring IPv6 next-hop resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv6_nexthop_high_threshold<100 and
                         ../ipv6_nexthop_low_threshold<100) or
@@ -221,6 +250,7 @@ module sonic-crm {
                 }
 
                 leaf ipv6_nexthop_high_threshold {
+                    description "Upper threshold for IPv6 next-hop resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv6_nexthop_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -229,10 +259,12 @@ module sonic-crm {
                 }
 
                 leaf ipv6_nexthop_low_threshold {
+                    description "Lower threshold for IPv6 next-hop resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipv6_route_threshold_type {
+                    description "Threshold type for monitoring IPv6 route entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipv6_route_high_threshold<100 and
                         ../ipv6_route_low_threshold<100) or
@@ -241,6 +273,7 @@ module sonic-crm {
                 }
 
                 leaf ipv6_route_high_threshold {
+                    description "Upper threshold for IPv6 route entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipv6_route_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -249,10 +282,12 @@ module sonic-crm {
                 }
 
                 leaf ipv6_route_low_threshold {
+                    description "Lower threshold for IPv6 route entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf nexthop_group_threshold_type {
+                    description "Threshold type for monitoring ECMP next-hop group resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../nexthop_group_high_threshold<100 and
                         ../nexthop_group_low_threshold<100) or
@@ -261,6 +296,7 @@ module sonic-crm {
                 }
 
                 leaf nexthop_group_high_threshold {
+                    description "Upper threshold for ECMP next-hop group resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../nexthop_group_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -269,10 +305,12 @@ module sonic-crm {
                 }
 
                 leaf nexthop_group_low_threshold {
+                    description "Lower threshold for ECMP next-hop group resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf nexthop_group_member_threshold_type {
+                    description "Threshold type for monitoring ECMP next-hop group member resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../nexthop_group_member_high_threshold<100 and
                         ../nexthop_group_member_low_threshold<100) or
@@ -281,6 +319,7 @@ module sonic-crm {
                 }
 
                 leaf nexthop_group_member_high_threshold {
+                    description "Upper threshold for ECMP next-hop group member resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../nexthop_group_member_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -289,14 +328,17 @@ module sonic-crm {
                 }
 
                 leaf nexthop_group_member_low_threshold {
+                    description "Lower threshold for ECMP next-hop group member resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf polling_interval {
+                    description "Interval in seconds between CRM resource usage polling cycles";
                     type threshold;
                 }
 
                 leaf dnat_entry_threshold_type {
+                    description "Threshold type for monitoring destination NAT entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../dnat_entry_high_threshold<100 and
                         ../dnat_entry_low_threshold<100) or
@@ -305,6 +347,7 @@ module sonic-crm {
                 }
 
                 leaf dnat_entry_high_threshold {
+                    description "Upper threshold for DNAT entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../dnat_entry_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -313,10 +356,12 @@ module sonic-crm {
                 }
 
                 leaf dnat_entry_low_threshold {
+                    description "Lower threshold for DNAT entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf snat_entry_threshold_type {
+                    description "Threshold type for monitoring source NAT entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../snat_entry_high_threshold<100 and
                         ../snat_entry_low_threshold<100) or
@@ -325,6 +370,7 @@ module sonic-crm {
                 }
 
                 leaf snat_entry_high_threshold {
+                    description "Upper threshold for SNAT entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../snat_entry_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -333,10 +379,12 @@ module sonic-crm {
                 }
 
                 leaf snat_entry_low_threshold {
+                    description "Lower threshold for SNAT entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 
                 leaf ipmc_entry_threshold_type {
+                    description "Threshold type for monitoring IP multicast entry resources (percentage, used, or free)";
                     must "(((current()='PERCENTAGE' or current()='percentage') and
                         ../ipmc_entry_high_threshold<100 and
                         ../ipmc_entry_low_threshold<100) or
@@ -345,6 +393,7 @@ module sonic-crm {
                 }
 
                 leaf ipmc_entry_high_threshold {
+                    description "Upper threshold for IP multicast entry resources that triggers a THRESHOLD_EXCEEDED alert";
                     must "(current() > ../ipmc_entry_low_threshold)"
                     {
                         error-message "high_threshold should be more than low_threshold";
@@ -353,6 +402,7 @@ module sonic-crm {
                 }
 
                 leaf ipmc_entry_low_threshold {
+                    description "Lower threshold for IP multicast entry resources that triggers a THRESHOLD_CLEAR alert";
                     type threshold;
                 }
 

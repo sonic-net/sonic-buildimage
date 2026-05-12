@@ -1,0 +1,59 @@
+
+{%- set default_cable = '5m' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "162539680",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "33374584"
+        },
+        "egress_lossless_pool": {
+            "size": "162539680",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"[BUFFER_POOL|ingress_lossless_pool]",
+            "size":"0",
+            "static_th":"165867080"
+        },
+        "egress_lossless_profile": {
+            "pool":"[BUFFER_POOL|egress_lossless_pool]",
+            "size":"0",
+            "static_th":"165867080"
+        },
+        "egress_lossy_profile": {
+            "pool":"[BUFFER_POOL|egress_lossless_pool]",
+            "size":"1778",
+            "dynamic_th":"0"
+        },
+        "egress_lossy_cpu_profile": {
+            "pool":"[BUFFER_POOL|egress_lossless_pool]",
+            "size":"9398",
+            "dynamic_th":"-2"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_mc_queue_buffers(PORT_ACTIVE) %}
+{% for port in PORT_ACTIVE %}
+       "{{ port }}|8": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        },
+       "{{ port }}|9": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        },
+       "{{ port }}|10": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        },
+       "{{ port }}|11": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{%- endmacro %}

@@ -48,7 +48,7 @@ module sonic-bgp-peerrange {
                             path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                         }
                     }
-                    description "vrf or vnet name";
+                    description "VRF or VNET name for this peer range.";
                 }
 
                 leaf peer_range_name {
@@ -61,6 +61,7 @@ module sonic-bgp-peerrange {
                     must "(current() = current()/../peer_range_name)" {
                         error-message "Invalid name, name must match peer_range_name";
                     }
+                    description "Peer range display name, must match the peer_range_name key.";
                 }
 
                 leaf src_address {
@@ -96,6 +97,7 @@ module sonic-bgp-peerrange {
                     must "(current() = current()/../peer_range_name)" {
                         error-message "Invalid name, name must match peer_range_name";
                     }
+                    description "Peer range display name, must match the peer_range_name key.";
                 }
 
                 leaf src_address {

@@ -409,6 +409,16 @@ class DeviceDataManager:
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
 
     @classmethod
+    @utils.read_only_cache()
+    def is_platform_with_bmc(cls):
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        bmc_json_file = os.path.join(platform_path, 'bmc.json')
+        if os.path.exists(bmc_json_file):
+            return True
+        return False
+
+    @classmethod
     def wait_platform_ready(cls):
         """
         Legacy function for backward compatibility
