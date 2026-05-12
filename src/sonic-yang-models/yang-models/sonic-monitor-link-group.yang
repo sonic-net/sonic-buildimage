@@ -22,6 +22,11 @@ module sonic-monitor-link-group {
     description
         "SONIC monitor link group YANG Module for SONiC OS";
 
+    revision 2026-05-12 {
+        description
+            "Rename uplinks/downlinks to monitored-links/managed-links and min-uplinks to min-monitored-links; drop empty-string defaults on the leaf-lists; add must constraint requiring min-monitored-links to be <= the number of configured monitored-links.";
+    }
+
     revision 2026-04-27 {
         description
             "Initial version";
@@ -37,8 +42,12 @@ module sonic-monitor-link-group {
 
                 key "group_name";
 
-                must "not(uplinks[. = current()/downlinks])" {
-                    error-message "An interface cannot be configured as both uplink and downlink in the same group";
+                must "not(monitored-links[. = current()/managed-links])" {
+                    error-message "An interface cannot be configured as both monitored and managed in the same group";
+                }
+
+                must "min-monitored-links <= count(monitored-links[. != ''])" {
+                    error-message "min-monitored-links cannot exceed the number of configured monitored-links";
                 }
 
                 leaf group_name {
@@ -53,7 +62,7 @@ module sonic-monitor-link-group {
                     description "Name of the link state tracking group";
                 }
 
-                leaf-list uplinks {
+                leaf-list monitored-links {
                     /* union of leafref is allowed in YANG 1.1 */
                     type union {
                         type leafref {
@@ -67,11 +76,10 @@ module sonic-monitor-link-group {
                         }
                     }
                     ordered-by user;
-                    default "";
-                    description "List of uplink interfaces for this monitor link group";
+                    description "List of monitored interfaces (formerly uplinks): their oper state drives the group state.";
                 }
 
-                leaf-list downlinks {
+                leaf-list managed-links {
                     type union {
                         type leafref {
                             path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
@@ -84,8 +92,7 @@ module sonic-monitor-link-group {
                         }
                     }
                     ordered-by user;
-                    default "";
-                    description "List of downlink interfaces for this monitor link group";
+                    description "List of managed interfaces (formerly downlinks): their admin state is held DOWN by monitor-link-group when the group is not up.";
                 }
 
                 leaf description {
@@ -100,13 +107,13 @@ module sonic-monitor-link-group {
                 leaf link-up-delay {
                     type string;
                     default "0";
-                    description "Seconds to wait after uplinks recover before bringing the group UP; prevents churn from link flaps";
+                    description "Seconds to wait after monitored-links recover before bringing the group UP; prevents churn from link flaps";
                 }
 
-                leaf min-uplinks {
+                leaf min-monitored-links {
                     type string;
                     default "1";
-                    description "Minimum number of uplinks that must be operational for the group to be considered up";
+                    description "Minimum number of monitored-links that must be operational for the group to be considered up";
                 }
 
             }

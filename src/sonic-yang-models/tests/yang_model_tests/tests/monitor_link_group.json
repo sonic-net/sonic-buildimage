@@ -1,6 +1,6 @@
 {
     "MONITOR_LINK_GROUP_VALID": {
-        "desc": "Valid monitor link group configuration with uplinks and downlinks arrays"
+        "desc": "Valid monitor link group configuration with monitored-links and managed-links arrays"
     },
     "MONITOR_LINK_GROUP_MINIMAL": {
         "desc": "Minimal valid monitor link group configuration with defaults"
@@ -29,46 +29,46 @@
             "group_name"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PATTERN": {
-        "desc": "Invalid uplink interface pattern (not Ethernet or PortChannel)",
+    "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_PATTERN": {
+        "desc": "Invalid monitored-link interface pattern (not Ethernet or PortChannel)",
         "eStrKey": "Pattern",
         "eStr": [
-            "uplinks"
+            "monitored-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_UPLINKS_ETHERNET_RANGE": {
+    "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_ETHERNET_RANGE": {
         "desc": "Invalid Ethernet interface number (out of range)",
         "eStrKey": "Pattern",
         "eStr": [
-            "uplinks"
+            "monitored-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_UPLINKS_PORTCHANNEL_FORMAT": {
+    "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_PORTCHANNEL_FORMAT": {
         "desc": "Invalid PortChannel format (missing number)",
         "eStrKey": "Pattern",
         "eStr": [
-            "uplinks"
+            "monitored-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PATTERN": {
-        "desc": "Invalid downlink interface pattern (not Ethernet or PortChannel)",
+    "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_PATTERN": {
+        "desc": "Invalid managed-link interface pattern (not Ethernet or PortChannel)",
         "eStrKey": "Pattern",
         "eStr": [
-            "downlinks"
+            "managed-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_ETHERNET_RANGE": {
+    "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_ETHERNET_RANGE": {
         "desc": "Invalid Ethernet interface number (out of range)",
         "eStrKey": "Pattern",
         "eStr": [
-            "downlinks"
+            "managed-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_DOWNLINKS_PORTCHANNEL_FORMAT": {
+    "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_PORTCHANNEL_FORMAT": {
         "desc": "Invalid PortChannel format (missing number)",
         "eStrKey": "Pattern",
         "eStr": [
-            "downlinks"
+            "managed-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_DESCRIPTION_LENGTH_MAX": {
@@ -85,32 +85,32 @@
             "description"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_PATTERN": {
+    "MONITOR_LINK_GROUP_INVALID_LINK_UP_DELAY_PATTERN": {
         "desc": "Invalid link-up-delay with non-numeric characters",
         "eStrKey": "Pattern",
         "eStr": [
             "link-up-delay"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_STARTUP_DELAY_NEGATIVE": {
+    "MONITOR_LINK_GROUP_INVALID_LINK_UP_DELAY_NEGATIVE": {
         "desc": "Invalid link-up-delay with negative number",
         "eStrKey": "Pattern",
         "eStr": [
             "link-up-delay"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_PATTERN": {
-        "desc": "Invalid min-uplinks with non-numeric characters",
+    "MONITOR_LINK_GROUP_INVALID_MIN_MONITORED_LINKS_PATTERN": {
+        "desc": "Invalid min-monitored-links with non-numeric characters",
         "eStrKey": "Pattern",
         "eStr": [
-            "min-uplinks"
+            "min-monitored-links"
         ]
     },
-    "MONITOR_LINK_GROUP_INVALID_MIN_UPLINKS_NEGATIVE": {
-        "desc": "Invalid min-uplinks with negative number",
+    "MONITOR_LINK_GROUP_INVALID_MIN_MONITORED_LINKS_NEGATIVE": {
+        "desc": "Invalid min-monitored-links with negative number",
         "eStrKey": "Pattern",
         "eStr": [
-            "min-uplinks"
+            "min-monitored-links"
         ]
     },
     "MONITOR_LINK_GROUP_VALID_ETHERNET_RANGES": {
