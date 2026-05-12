@@ -1,0 +1,17 @@
+diff --git a/src/sonic-swss/orchagent/port/porthlpr.cpp b/src/sonic-swss/orchagent/port/porthlpr.cpp
+index 2d7c552b..447cc43f 100644
+--- a/src/sonic-swss/orchagent/port/porthlpr.cpp
++++ b/src/sonic-swss/orchagent/port/porthlpr.cpp
+@@ -1272,6 +1272,12 @@ bool PortHelper::parsePortConfig(PortConfig &port) const
+              * Setting exists in sonic-port.yang with possible values: routed|access|trunk
+              */
+         }
++        else if (field == "poe_pri" || field == "poe_status" || field == "poe_maxpower" || field == "poe_tlv" || field == "dhcp_rate_limit")
++        {
++            /* Placeholder to prevent warning for Wistron custom PoE and DHCP fields.
++             * These fields are actively managed by pmon/poemd instead of Orchagent.
++             */
++        }
+         else
+         {
+             SWSS_LOG_WARN("Unknown field(%s): skipping ...", field.c_str());
