@@ -1,0 +1,80 @@
+name: Close Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    if: github.repository_owner == 'sonic-net'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          days-before-stale: 365
+          days-before-close: 14
+
+          stale-issue-label: 'stale'
+          stale-pr-label: 'stale'
+
+          exempt-issue-labels: 'never-stale'
+          exempt-pr-labels: 'never-stale'
+
+          # Process 200 items per run; at this rate the initial backlog of
+          # ~1,262 stale items will be labelled over roughly 7 daily runs.
+          operations-per-run: 200
+
+          # Remove the stale label when activity resumes.
+          remove-stale-when-updated: true
+
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has
+            not had any activity for 365 days. It will be closed in 14 days
+            if no further activity occurs.
+
+
+            If this issue is still relevant, please leave a comment — this
+            will reset the inactivity timer. If you believe this issue should
+            remain open regardless of activity, add the `never-stale` label.
+
+
+            Thank you for your contribution to SONiC!
+
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because
+            it has not had any activity for 365 days. It will be closed in 14
+            days if no further activity occurs.
+
+
+            If this PR is still relevant, please leave a comment or push a
+            new commit — this will reset the inactivity timer. You may also
+            want to rebase onto the latest `master` to resolve any conflicts.
+            If you believe this PR should remain open regardless of activity,
+            add the `never-stale` label.
+
+
+            Thank you for your contribution to SONiC!
+
+          close-issue-message: >
+            This issue has been closed due to inactivity (no updates in over
+            1 year). If this issue is still relevant, please re-open it or
+            create a new issue with updated context.
+
+
+            Thank you for your contribution to SONiC!
+
+          close-pr-message: >
+            This pull request has been closed due to inactivity (no updates
+            in over 1 year). If you would like to continue this work, please
+            re-open the PR or submit a new one rebased onto the latest
+            `master`.
+
+
+            Thank you for your contribution to SONiC!
