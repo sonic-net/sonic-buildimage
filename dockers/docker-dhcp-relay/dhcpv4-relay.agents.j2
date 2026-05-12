@@ -14,10 +14,7 @@ command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p %%P --name-alias-map-file /t
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -U Loopback0 -dt{% endif -%}
 {#- si option to use intf addr in relay #}
 {% if DEVICE_METADATA['localhost']['deployment_id'] == '8' %} -si{% endif -%}
-{#- We treat all other interfaces as upstream interfaces (-iu), as we only want to listen for replies #}
-{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name != vlan_name %} -iu {{ name }}{% endif -%}
-{% endfor %}
+{#- We treat L3 interfaces (PortChannels, native ports, mgmt) as upstream (-iu) so dhcrelay listens for server replies on them. Sibling VLAN_INTERFACEs are intentionally not listed: dhcrelay should never broadcast a relayed client request to peer L2 vlans, and it never needs to listen for server replies on them either. #}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
 {% endfor %}

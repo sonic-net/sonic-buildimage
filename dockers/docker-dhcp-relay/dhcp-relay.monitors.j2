@@ -25,10 +25,7 @@ dhcpmon-{{ vlan_name }}
 command=/usr/sbin/dhcpmon -id {{ vlan_name }}
 {#- Dual ToR Option #}
 {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif -%}
-{#- We treat all other interfaces as upstream interfaces (-iu), as we only want to listen for replies #}
-{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name != vlan_name %} -iu {{ name }}{% endif -%}
-{% endfor %}
+{#- We treat L3 interfaces (PortChannels, native ports, mgmt) as upstream (-iu) so dhcrelay listens for server replies on them. Sibling VLAN_INTERFACEs are intentionally not listed: dhcrelay should never broadcast a relayed client request to peer L2 vlans, and it never needs to listen for server replies on them either. #}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
 {% endfor %}
