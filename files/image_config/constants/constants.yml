@@ -72,3 +72,7 @@ constants:
         enabled: true
         db_table: "BGP_SENTINELS"
         template_dir: "sentinels"
+    prefix_list:
+      SUPPRESS_PREFIX:
+        ipv4_name: "SUPPRESS_IPV4_PREFIX"
+        ipv6_name: "SUPPRESS_IPV6_PREFIX"

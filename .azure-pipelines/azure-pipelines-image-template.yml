@@ -81,21 +81,21 @@ jobs:
           echo "Build.Reason = $BUILD_REASON"
           echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
           if [[ "$BUILD_REASON" == "PullRequest" ]]; then
-            echo "Checking for changes to dockers/docker-ptf/Dockerfile.j2 in PR..."
-            # Get the target branch and check for changes
-            TARGET_BRANCH="origin/$(System.PullRequest.TargetBranch)"
-            echo "Comparing against target branch: $TARGET_BRANCH"
-            # Fetch target branch to ensure we have the latest
-            git fetch origin $(System.PullRequest.TargetBranch)
-            # Check if docker-ptf Dockerfile.j2 has changes
+            echo "Checking for changes to docker-ptf in PR..."
+            # Set PTF_MODIFIED to True if docker-ptf was not built from cache, otherwise set it to False
             # NOTE: The PTF_MODIFIED template parameter is of type string
             # Ensure to set it to "True" or "False" (not boolean true/false)
-            if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
-              echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
-            else
-              echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
+            if [ ! -f "target/docker-ptf.gz.log" ]; then
+              echo "docker-ptf was not built in this PR, setting PTF_MODIFIED to False"
               echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+            else
+              if grep -q "CACHE::LOADED" target/docker-ptf.gz.log; then
+                echo "docker-ptf was built from cache in this PR, setting PTF_MODIFIED to False"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
+              else
+                echo "docker-ptf was not built from cache in this PR, setting PTF_MODIFIED to True"
+                echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
+              fi
             fi
           else
             echo "Not a PR build, setting PTF_MODIFIED to false"

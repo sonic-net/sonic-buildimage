@@ -1,26 +1,30 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
         "1-6": {
-            ".*": {
+            "COPPER10": {
+                   "unreliable_los": "off"
+            },
+            "OPTICAL10": {
                    "interface_type": "sr4",
                    "unreliable_los": "on"
-
             }
-
         },
         "11-22": {
-            ".*": {
+            "COPPER10": {
+                   "unreliable_los": "off"
+            },
+            "OPTICAL10": {
                    "interface_type": "sr4",
                    "unreliable_los": "on"
-
             }
-
         },
         "27-30": {
-            ".*": {
+            "COPPER10": {
+                   "unreliable_los": "off"
+            },
+            "OPTICAL10": {
                    "interface_type": "sr4",
                    "unreliable_los": "on"
-
             }
         }
     }
