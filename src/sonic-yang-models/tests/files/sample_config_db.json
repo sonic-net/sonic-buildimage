@@ -3382,6 +3382,13 @@
                 "mac_holdtime": "1000",
                 "neigh_holdtime": "600"
             }
+        },
+	"PTP": {
+            "global": {
+                "domain_number": "0",
+                "sync_interval": "-3",
+                "announce_interval": "1"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

@@ -1,0 +1,39 @@
+
+{
+    "version": "1.0.0",
+    "package": {
+        "version": "1.0.0",
+        "depends": [],
+        "name": "ptp"
+    },
+    "service": {
+        "name": "ptp",
+        "requires": [],
+        "after": [],
+        "before": [],
+        "dependent-of": [],
+        "asic-service": false,
+        "host-service": true,
+        "warm-shutdown": {
+            "after": [],
+            "before": []
+        },
+        "fast-shutdown": {
+            "after": [],
+            "before": []
+        },
+        "syslog": {
+            "support-rate-limit": true
+        }
+    },
+    "container": {
+        "privileged": false,
+        "volumes": [],
+        "tmpfs": []
+    },
+    "cli": {
+        "config": "",
+        "show": "",
+        "clear": ""
+    }
+}

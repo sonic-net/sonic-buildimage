@@ -1,0 +1,48 @@
+{
+    "PTP_GLOBAL_TEST": {
+        "desc": "Configure PTP global settings with domain number and intervals."
+    },
+    "PTP_GLOBAL_DOMAIN_INVALID_TEST": {
+        "desc": "Configure PTP global with out-of-range domain number (> 127).",
+        "eStr": ["PTP domain number must be in range 0..127"]
+    },
+    "PTP_GLOBAL_SYNC_INTERVAL_INVALID_TEST": {
+        "desc": "Configure PTP global with out-of-range sync interval (> 7).",
+        "eStr": ["PTP sync interval must be in range -7..7"]
+    },
+    "PTP_GLOBAL_ANNOUNCE_INTERVAL_INVALID_TEST": {
+        "desc": "Configure PTP global with out-of-range announce interval (> 4).",
+        "eStr": ["PTP announce interval must be in range -3..4"]
+    },
+    "PTP_PORT_TEST": {
+        "desc": "Configure a PTP port entry with a valid Ethernet interface."
+    },
+    "PTP_PORT_WITH_UNICAST_TABLE_TEST": {
+        "desc": "Configure a PTP port entry with a unicast master table and unicast-listen enabled."
+    },
+    "PTP_PORT_NON_EXIST_INTF_TEST": {
+        "desc": "Configure a PTP port entry referencing an interface that does not exist in PORT table.",
+        "eStrKey": "InvalidValue"
+    },
+    "PTP_PORT_NON_EXIST_UNICAST_TABLE_TEST": {
+        "desc": "Configure a PTP port entry referencing a unicast master table that does not exist.",
+        "eStrKey": "InvalidValue"
+    },
+    "PTP_UNICAST_MASTER_TABLE_TEST": {
+        "desc": "Create a PTP unicast master table entry."
+    },
+    "PTP_UNICAST_MASTER_TABLE_INVALID_ID_TEST": {
+        "desc": "Create a PTP unicast master table entry with an out-of-range (negative) numeric ID.",
+        "eStr": ["Value \"-1\" is out of type uint32 min/max bounds."]
+    },
+    "PTP_UNICAST_MASTER_TABLE_IP_TEST": {
+        "desc": "Add an IPv4 address to a PTP unicast master table."
+    },
+    "PTP_UNICAST_MASTER_TABLE_IPV6_TEST": {
+        "desc": "Add an IPv6 address to a PTP unicast master table."
+    },
+    "PTP_UNICAST_MASTER_TABLE_IP_NON_EXIST_TABLE_TEST": {
+        "desc": "Add an IP to a PTP unicast master table that does not exist.",
+        "eStrKey": "InvalidValue"
+    }
+}

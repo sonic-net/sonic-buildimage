@@ -1,0 +1,185 @@
+diff --git a/orchagent/port.h b/orchagent/port.h
+index b417a661..0864a14f 100644
+--- a/orchagent/port.h
++++ b/orchagent/port.h
+@@ -179,6 +179,7 @@ public:
+     bool                m_l3_vni = false;
+     sai_object_id_t     m_port_id = 0;
+     sai_port_fec_mode_t m_fec_mode = SAI_PORT_FEC_MODE_NONE;
++    sai_port_ptp_mode_t m_ptp_mode = SAI_PORT_PTP_MODE_NONE;
+     VlanInfo            m_vlan_info;
+     MacAddress          m_mac;
+     sai_object_id_t     m_bridge_port_id = 0;   // TODO: port could have multiple bridge port IDs
+diff --git a/orchagent/port/portcnt.h b/orchagent/port/portcnt.h
+index 0bdc0492..d6267ea8 100644
+--- a/orchagent/port/portcnt.h
++++ b/orchagent/port/portcnt.h
+@@ -238,6 +238,12 @@ public:
+     } pt_timestamp_template; // Port timestamp template for Path Tracing
+ 
+     struct {
++        sai_port_ptp_mode_t value;
++        bool is_set = false;
++    } pt_ptp_mode; // Port HW timestamping mode
++
++
++  struct {
+         sai_redis_link_event_damping_algorithm_t value;
+         bool is_set = false;
+     } link_event_damping_algorithm; // Port link event damping algorithm
+diff --git a/orchagent/port/porthlpr.cpp b/orchagent/port/porthlpr.cpp
+index dfa25b98..8464ca71 100644
+--- a/orchagent/port/porthlpr.cpp
++++ b/orchagent/port/porthlpr.cpp
+@@ -136,6 +136,13 @@ static const std::unordered_map<std::string, sai_redis_link_event_damping_algori
+     { "aied", SAI_REDIS_LINK_EVENT_DAMPING_ALGORITHM_AIED }
+ };
+ 
++static const std::unordered_map<std::string, sai_port_ptp_mode_t> portPtpModeMap =
++{
++    { PORT_PTP_MODE_NONE,     SAI_PORT_PTP_MODE_NONE                   },
++    { PORT_PTP_MODE_ONE_STEP, SAI_PORT_PTP_MODE_SINGLE_STEP_TIMESTAMP  },
++    { PORT_PTP_MODE_TWO_STEP, SAI_PORT_PTP_MODE_TWO_STEP_TIMESTAMP     }
++};
++
+ // functions ----------------------------------------------------------------------------------------------------------
+ 
+ template<typename T>
+@@ -954,6 +961,21 @@ bool PortHelper::parsePortPtTimestampTemplate(PortConfig &port, const std::strin
+     return true;
+ }
+ 
++bool PortHelper::parsePortPtpMode(PortConfig &port,
++    const std::string &field, const std::string &value) const
++{
++    auto cit = portPtpModeMap.find(value);
++    if (cit == portPtpModeMap.cend())
++    {
++        SWSS_LOG_ERROR("Failed to parse field(%s): invalid value(%s)",
++                       field.c_str(), value.c_str());
++        return false;
++    }
++    port.pt_ptp_mode.value  = cit->second;
++    port.pt_ptp_mode.is_set = true;
++    return true;
++}
++
+ bool PortHelper::parsePortMediaType(PortConfig &port, const std::string &field, const std::string &value) const
+ {
+     SWSS_LOG_ENTER();
+@@ -1328,6 +1350,13 @@ bool PortHelper::parsePortConfig(PortConfig &port) const
+                 return false;
+             }
+         }
++        else if (field == PORT_PTP_MODE)
++        {
++            if (!this->parsePortPtpMode(port, field, value))
++	    {
++                return false;
++	    }
++        }
+         else
+         {
+             SWSS_LOG_WARN("Unknown field(%s): skipping ...", field.c_str());
+diff --git a/orchagent/port/porthlpr.h b/orchagent/port/porthlpr.h
+index 958230ee..1825bafc 100644
+--- a/orchagent/port/porthlpr.h
++++ b/orchagent/port/porthlpr.h
+@@ -64,5 +64,6 @@ private:
+     bool parsePortSubport(PortConfig &port, const std::string &field, const std::string &value) const;
+     bool parsePortPtIntfId(PortConfig &port, const std::string &field, const std::string &value) const;
+     bool parsePortPtTimestampTemplate(PortConfig &port, const std::string &field, const std::string &value) const;
++    bool parsePortPtpMode(PortConfig &port, const std::string &field, const std::string &value) const;
+     bool parsePortMediaType(PortConfig &port, const std::string &field, const std::string &value) const;
+ };
+diff --git a/orchagent/port/portschema.h b/orchagent/port/portschema.h
+index d2f4cab3..8d1a94a1 100644
+--- a/orchagent/port/portschema.h
++++ b/orchagent/port/portschema.h
+@@ -53,6 +53,11 @@
+ #define PORT_ROLE_REC "Rec"
+ #define PORT_ROLE_DPC "Dpc"
+ 
++#define PORT_PTP_MODE           "ptp_mode"
++#define PORT_PTP_MODE_NONE      "none"
++#define PORT_PTP_MODE_ONE_STEP  "one-step"
++#define PORT_PTP_MODE_TWO_STEP  "two-step"
++
+ #define PORT_PT_TIMESTAMP_TEMPLATE_1 "template1"
+ #define PORT_PT_TIMESTAMP_TEMPLATE_2 "template2"
+ #define PORT_PT_TIMESTAMP_TEMPLATE_3 "template3"
+diff --git a/orchagent/portsorch.cpp b/orchagent/portsorch.cpp
+index 96c2cafa..d4a4e2ad 100644
+--- a/orchagent/portsorch.cpp
++++ b/orchagent/portsorch.cpp
+@@ -1303,7 +1303,14 @@ bool PortsOrch::addPortBulk(const std::vector<PortConfig> &portList, std::vector
+             p.m_override_fec = cit.fec.override_fec;
+             p.m_fec_cfg = true;
+         }
+-
++
++        if (cit.pt_ptp_mode.is_set)
++        {
++            attr.id        = SAI_PORT_ATTR_PTP_MODE;
++            attr.value.s32 = cit.pt_ptp_mode.value;
++            attrList.push_back(attr);
++        }
++
+         if (cit.tpid.is_set)
+         {
+             if (cit.tpid.value != DEFAULT_TPID)
+@@ -5556,6 +5563,20 @@ void PortsOrch::doPortTask(Consumer &consumer)
+                         );
+                     }
+                 }
++
++                if (pCfg.pt_ptp_mode.is_set)
++                {
++                    if (p.m_ptp_mode != pCfg.pt_ptp_mode.value)
++                    {
++                        if (!setPortPtpMode(p, pCfg.pt_ptp_mode.value))
++                        {
++                            it++;
++                            continue;
++                        }
++                        p.m_ptp_mode = pCfg.pt_ptp_mode.value;
++                        m_portList[p.m_alias] = p;
++                    }
++                }
+             }
+         }
+         else if (op == DEL_COMMAND)
+@@ -11346,6 +11367,21 @@ bool PortsOrch::setPortPtTimestampTemplate(const Port& port, sai_port_path_traci
+     return true;
+ }
+ 
++bool PortsOrch::setPortPtpMode(const Port& port, sai_port_ptp_mode_t mode)
++{
++    sai_attribute_t attr;
++    attr.id    = SAI_PORT_ATTR_PTP_MODE;
++    attr.value.s32 = mode;
++    sai_status_t status = sai_port_api->set_port_attribute(port.m_port_id, &attr);
++    if (status != SAI_STATUS_SUCCESS)
++    {
++        task_process_status handle_status = handleSaiSetStatus(SAI_API_PORT, status);
++        if (handle_status != task_success)
++            return parseHandleSaiStatusFailure(handle_status);
++    }
++    return true;
++}
++
+ bool PortsOrch::setPortPtTam(const Port& port, sai_object_id_t tam_id)
+ {
+     sai_attribute_t attr;
+diff --git a/orchagent/portsorch.h b/orchagent/portsorch.h
+index fbfeda1b..0b9c0dfd 100644
+--- a/orchagent/portsorch.h
++++ b/orchagent/portsorch.h
+@@ -289,6 +289,7 @@ public:
+ 
+     bool setPortPtIntfId(const Port& port, sai_uint16_t intf_id);
+     bool setPortPtTimestampTemplate(const Port& port, sai_port_path_tracing_timestamp_type_t ts_type);
++    bool setPortPtpMode(const Port& port, sai_port_ptp_mode_t mode);
+ 
+ private:
+     unique_ptr<CounterNameMapUpdater> m_counterNameMapUpdater;

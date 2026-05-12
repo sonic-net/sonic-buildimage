@@ -273,6 +273,10 @@ endif
 override INCLUDE_P4RT = n
 endif
 
+ifeq ($(SONIC_INCLUDE_PTP),y)
+INCLUDE_PTP = y
+endif
+
 ifeq ($(SONIC_INCLUDE_MACSEC),y)
 INCLUDE_MACSEC = y
 endif
@@ -526,6 +530,7 @@ $(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
 $(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
 $(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
 $(info "INCLUDE_P4RT"                    : "$(INCLUDE_P4RT)")
+$(info "INCLUDE_PTP"                     : "$(INCLUDE_PTP)")
 $(info "INCLUDE_VS_DASH_SAI"             : "$(INCLUDE_VS_DASH_SAI)")
 $(info "INCLUDE_KUBERNETES"              : "$(INCLUDE_KUBERNETES)")
 $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
@@ -1880,6 +1885,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
+	export include_ptp="$(INCLUDE_PTP)"
 	export include_snmp="$(INCLUDE_SNMP)"
 	export include_lldp="$(INCLUDE_LLDP)"
 	export include_redfish="$(INCLUDE_REDFISH)"

@@ -177,6 +177,7 @@ yang_files = [
     'sonic-port-qos-map.yang',
     'sonic-port.yang',
     'sonic-portchannel.yang',
+    'sonic-ptp.yang',
     'sonic-queue.yang',
     'sonic-restapi.yang',
     'sonic-route-common.yang',

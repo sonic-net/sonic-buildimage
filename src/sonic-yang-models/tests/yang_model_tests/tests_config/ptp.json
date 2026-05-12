@@ -1,0 +1,224 @@
+{
+    "PTP_GLOBAL_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP": {
+                "global": {
+                    "domain_number": 0,
+                    "sync_interval": -3,
+                    "announce_interval": 1
+                }
+            }
+        }
+    },
+
+    "PTP_GLOBAL_DOMAIN_INVALID_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP": {
+                "global": {
+                    "domain_number": 200
+                }
+            }
+        }
+    },
+
+    "PTP_GLOBAL_SYNC_INTERVAL_INVALID_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP": {
+                "global": {
+                    "sync_interval": 10
+                }
+            }
+        }
+    },
+
+    "PTP_GLOBAL_ANNOUNCE_INTERVAL_INVALID_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP": {
+                "global": {
+                    "announce_interval": 5
+                }
+            }
+        }
+    },
+
+    "PTP_PORT_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_PORT": {
+                "PTP_PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "unicast_listen": "false"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_PORT_WITH_UNICAST_TABLE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE": {
+                "PTP_UNICAST_MASTER_TABLE_LIST": [
+                    {
+                        "id": 1
+                    }
+                ]
+            },
+            "sonic-ptp:PTP_PORT": {
+                "PTP_PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "unicast_table": 1,
+                        "unicast_listen": "true"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_PORT_NON_EXIST_INTF_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_PORT": {
+                "PTP_PORT_LIST": [
+                    {
+                        "name": "Ethernet99"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_PORT_NON_EXIST_UNICAST_TABLE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_PORT": {
+                "PTP_PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "unicast_table": 999
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_UNICAST_MASTER_TABLE_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE": {
+                "PTP_UNICAST_MASTER_TABLE_LIST": [
+                    {
+                        "id": 1
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_UNICAST_MASTER_TABLE_INVALID_ID_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE": {
+                "PTP_UNICAST_MASTER_TABLE_LIST": [
+                    {
+                        "id": -1
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_UNICAST_MASTER_TABLE_IP_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE": {
+                "PTP_UNICAST_MASTER_TABLE_LIST": [
+                    {
+                        "id": 1
+                    }
+                ]
+            },
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE_IP": {
+                "PTP_UNICAST_MASTER_TABLE_IP_LIST": [
+                    {
+                        "id": 1,
+                        "ip_address": "192.168.1.1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_UNICAST_MASTER_TABLE_IPV6_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE": {
+                "PTP_UNICAST_MASTER_TABLE_LIST": [
+                    {
+                        "id": 1
+                    }
+                ]
+            },
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE_IP": {
+                "PTP_UNICAST_MASTER_TABLE_IP_LIST": [
+                    {
+                        "id": 1,
+                        "ip_address": "2001:db8::1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PTP_UNICAST_MASTER_TABLE_IP_NON_EXIST_TABLE_TEST": {
+        "sonic-ptp:sonic-ptp": {
+            "sonic-ptp:PTP_UNICAST_MASTER_TABLE_IP": {
+                "PTP_UNICAST_MASTER_TABLE_IP_LIST": [
+                    {
+                        "id": 999,
+                        "ip_address": "192.168.1.1"
+                    }
+                ]
+            }
+        }
+    }
+}

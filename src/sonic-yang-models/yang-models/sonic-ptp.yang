@@ -1,0 +1,144 @@
+module sonic-ptp {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-ptp";
+    prefix ptp;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "PTP yang Module for SONiC OS";
+
+    revision 2026-07-08 {
+        description "Change PTP_UNICAST_MASTER_TABLE_LIST key from name (string) to id (uint32)";
+    }
+
+    revision 2026-05-27 {
+        description "Add global PTP config, per-interface (port) config, and unicast master table";
+    }
+
+    container sonic-ptp {
+
+        container PTP {
+
+            description "PTP global configuration";
+
+            container global {
+
+                leaf domain_number {
+                    type uint8 {
+                        range "0..127" {
+                            error-message "PTP domain number must be in range 0..127 (IEEE 1588-2008)";
+                        }
+                    }
+                    description "PTP domain number (IEEE 1588-2008 section 7.1)";
+                }
+
+                leaf sync_interval {
+                    type int8 {
+                        range "-7..7" {
+                            error-message "PTP sync interval must be in range -7..7";
+                        }
+                    }
+                    description "Log2 of the mean Sync message transmission interval in seconds";
+                }
+
+                leaf announce_interval {
+                    type int8 {
+                        range "-3..4" {
+                            error-message "PTP announce interval must be in range -3..4";
+                        }
+                    }
+                    description "Log2 of the mean Announce message transmission interval in seconds";
+                }
+
+            } /* end of container global */
+
+        } /* end of container PTP */
+
+        container PTP_PORT {
+
+            description "PTP per-interface (port) configuration";
+
+            list PTP_PORT_LIST {
+
+                key "name";
+
+                leaf name {
+                    type leafref {
+                        path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                    }
+                    description "Ethernet interface name";
+                }
+
+                leaf unicast_table {
+                    type leafref {
+                        path /ptp:sonic-ptp/ptp:PTP_UNICAST_MASTER_TABLE/ptp:PTP_UNICAST_MASTER_TABLE_LIST/ptp:id;
+                    }
+                    description "PTP unicast master table associated with this interface (optional)";
+                }
+
+                leaf unicast_listen {
+                    type stypes:boolean_type;
+                    default "false";
+                    description "When true, accept unicast Delay_Req messages on this interface";
+                }
+
+            } /* end of list PTP_PORT_LIST */
+
+        } /* end of container PTP_PORT */
+
+        container PTP_UNICAST_MASTER_TABLE {
+
+            description "PTP unicast master table - keyed by table ID";
+
+            list PTP_UNICAST_MASTER_TABLE_LIST {
+
+                key "id";
+
+                leaf id {
+                    type uint32;
+                    description "Numeric ID of the PTP unicast master table";
+                }
+
+            } /* end of list PTP_UNICAST_MASTER_TABLE_LIST */
+
+        } /* end of container PTP_UNICAST_MASTER_TABLE */
+
+        container PTP_UNICAST_MASTER_TABLE_IP {
+
+            description "PTP unicast master IP entries - one row per table-name|ip-address pair";
+
+            list PTP_UNICAST_MASTER_TABLE_IP_LIST {
+
+                key "id ip_address";
+
+                leaf id {
+                    type leafref {
+                        path /ptp:sonic-ptp/ptp:PTP_UNICAST_MASTER_TABLE/ptp:PTP_UNICAST_MASTER_TABLE_LIST/ptp:id;
+                    }
+                    description "ID of the parent PTP unicast master table";
+                }
+
+                leaf ip_address {
+                    type inet:ip-address;
+                    description "IPv4 or IPv6 address of the unicast master";
+                }
+
+            } /* end of list PTP_UNICAST_MASTER_TABLE_IP_LIST */
+
+        } /* end of container PTP_UNICAST_MASTER_TABLE_IP */
+
+    } /* end of container sonic-ptp */
+
+} /* end of module sonic-ptp */

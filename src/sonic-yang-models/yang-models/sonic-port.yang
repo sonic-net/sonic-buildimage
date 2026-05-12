@@ -255,6 +255,15 @@ module sonic-port{
 					description "Enable or disable fast link-up on the port";
 				}
 
+				leaf ptp_mode {
+						description "PTP mode for interface";
+                                                type enumeration {
+                                                        enum none;
+                                                        enum one-step;
+                                                        enum two-step;
+                                                }
+						default none;
+				}
 
 			} /* end of list PORT_LIST */
 
