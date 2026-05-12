@@ -40,18 +40,18 @@ command=/usr/sbin/dhcpmon -id {{ vlan_name }}
 {#- An interface may appear multiple times in pfx_filter() (once per IP prefix); dedup so we don't pass the same -iu/-im to dhcpmon. #}
 {% set seen_upstream = [] %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or prefix | ipv6) and name != vlan_name and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name != vlan_name and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or prefix | ipv6) and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or prefix | ipv6) and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
+{% if prefix | ipv4 and name not in seen_upstream %}{% set _ = seen_upstream.append(name) %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% if MGMT_INTERFACE %}
 {% set seen_mgmt = [] %}
 {% for (name, prefix) in MGMT_INTERFACE|pfx_filter %}
-{% if (prefix | ipv4 or prefix | ipv6) and name not in seen_mgmt %}{% set _ = seen_mgmt.append(name) %} -im {{ name }}{% endif -%}
+{% if prefix | ipv4 and name not in seen_mgmt %}{% set _ = seen_mgmt.append(name) %} -im {{ name }}{% endif -%}
 {% endfor %}
 {% endif %}
 
