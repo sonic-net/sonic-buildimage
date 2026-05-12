@@ -13,18 +13,21 @@ DISABLED_PACKAGES_LOCAL = $(DOCKER_DHCP_RELAY) $(DOCKER_SFLOW) $(DOCKER_MGMT_FRA
                           $(DOCKER_EVENTD) $(DOCKER_DASH_HA) $(DOCKER_STP) \
                           $(DOCKER_RESTAPI)
 
-$(info [aspeed] Filtering out packages: $(DISABLED_PACKAGES_LOCAL))
-SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
+# Aspeed BMC does not ship eventd / snmp / radv / restapi as features. Disable
+# their INCLUDE_* flags so the rendered init_cfg.json FEATURE table does not
+# advertise them as enabled, which would otherwise cause "show feature status"
+# and tools/tests that trust it to try to operate on systemd units that do not
+# exist on BMC.
+DISABLED_FEATURE_FLAGS = INCLUDE_SYSTEM_EVENTD \
+                         INCLUDE_SNMP \
+                         INCLUDE_ROUTER_ADVERTISER \
+                         INCLUDE_RESTAPI
 
-# Aspeed BMC does not ship eventd / snmp / radv / restapi (their dockers are
-# already filtered out above). Override the include flags so the rendered
-# init_cfg.json FEATURE table does not advertise them as enabled, which would
-# otherwise cause "show feature status" and tests/tools that trust it to try
-# to operate on systemd units that do not exist.
-INCLUDE_SYSTEM_EVENTD = n
-INCLUDE_SNMP = n
-INCLUDE_ROUTER_ADVERTISER = n
-INCLUDE_RESTAPI = n
+$(info [aspeed] Filtering out packages: $(DISABLED_PACKAGES_LOCAL))
+$(info [aspeed] Disabling feature flags: $(DISABLED_FEATURE_FLAGS))
+
+SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
+$(foreach feature, $(DISABLED_FEATURE_FLAGS), $(eval override $(feature)=n))
 
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 $(SONIC_ONE_IMAGE)_INSTALLS += $(ASPEED_PLATFORM_SERVICES)
