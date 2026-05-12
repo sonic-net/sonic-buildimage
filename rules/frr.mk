@@ -24,7 +24,12 @@ $(eval $(call add_extra_package,$(FRR),$(FRR_SNMP)))
 FRR_SNMP_DBG = frr-snmp-dbgsym_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_extra_package,$(FRR),$(FRR_SNMP_DBG)))
 
-export FRR FRR_PYTHONTOOLS FRR_DBG FRR_SNMP FRR_SNMP_DBG
+ifeq ($(INCLUDE_FRR_RPKI), y)
+FRR_RPKI = frr-rpki-rtrlib_$(FRR_VERSION)-sonic-$(FRR_SUBVERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_extra_package,$(FRR),$(FRR_RPKI)))
+endif
+
+export FRR FRR_PYTHONTOOLS FRR_DBG FRR_SNMP FRR_SNMP_DBG FRR_RPKI
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.

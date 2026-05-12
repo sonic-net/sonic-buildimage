@@ -98,13 +98,18 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
+{% set bgpd_modules = ['-M snmp'] %}
 {% if FEATURE is defined and
       (FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
       (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled") %}
-command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
-{% else %}
-command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
+{% set _ = bgpd_modules.append('-M bmp') %}
 {% endif %}
+{% if FEATURE is defined and
+      ((FEATURE.frr_rpki is defined and FEATURE.frr_rpki.state is defined and FEATURE.frr_rpki.state == "enabled") or
+       (FEATURE.rpki is defined and FEATURE.rpki.state is defined and FEATURE.rpki.state == "enabled")) %}
+{% set _ = bgpd_modules.append('-M rpki') %}
+{% endif %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 {{ bgpd_modules | join(' ') }}
 priority=5
 stopsignal=KILL
 autostart=false

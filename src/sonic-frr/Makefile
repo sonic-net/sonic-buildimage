@@ -3,7 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = $(FRR)
-DERIVED_TARGET = $(FRR_PYTHONTOOLS) $(FRR_DBG) $(FRR_SNMP) $(FRR_SNMP_DBG)
+DERIVED_TARGET = $(FRR_PYTHONTOOLS) $(FRR_DBG) $(FRR_SNMP) $(FRR_SNMP_DBG) $(FRR_RPKI)
 STG_PATCHED_BRANCH = $(FRR_TAG)-patched
 PATCHSET_SHA_FILE = ../.sonic-frr-patch-$(STG_PATCHED_BRANCH).sha1
 DPLANE_FPM_SONIC_MODULE = dplane_fpm_sonic/dplane_fpm_sonic.c
@@ -57,10 +57,14 @@ endif
 
 	# Build the package.
 
+ifneq ($(INCLUDE_FRR_RPKI), y)
+FRR_RPKI_PROFILE = -Ppkg.frr.nortrlib
+endif
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
-	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -Ppkg.frr.nortrlib -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc $(FRR_RPKI_PROFILE) -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
-	dpkg-buildpackage -rfakeroot -b -us -uc -Ppkg.frr.nortrlib -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	dpkg-buildpackage -rfakeroot -b -us -uc $(FRR_RPKI_PROFILE) -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
 
 	popd
