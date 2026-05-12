@@ -1,0 +1,23 @@
+diff --git a/files/image_config/monit/monitrc b/files/image_config/monit/monitrc
+index e3b252fce..1967dd831 100644
+--- a/files/image_config/monit/monitrc
++++ b/files/image_config/monit/monitrc
+@@ -17,7 +17,7 @@
+ ## Start Monit in the background (run as a daemon):
+ #
+   set daemon 60             # check services at 1-minute intervals
+-    with start delay 300    # we delay Monit to start monitoring for 5 minutes
++    with start delay 0    # we delay Monit to start monitoring for 5 minutes
+                             # intentionally such that all containers and processes
+                             # have ample time to start up.
+ #
+diff --git a/src/sonic-eventd/tools/monit_events b/src/sonic-eventd/tools/monit_events
+index ebb9acce4..66d90a9a2 100644
+--- a/src/sonic-eventd/tools/monit_events
++++ b/src/sonic-eventd/tools/monit_events
+@@ -3,4 +3,4 @@
+ ###############################################################################
+ check program container_eventd with path "/usr/bin/events_monit_test.py"
+     every 5 cycles
+-    if status != 0 for 3 cycle then alert repeat every 1 cycles
++    if status != 0 for 5 cycles then alert repeat every 1 cycles
