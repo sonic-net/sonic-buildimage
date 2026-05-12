@@ -18,6 +18,7 @@
 #include <regex>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <iostream>
 
 // Utility function for logging to /dev/kmsg
 void log_to_kmsg(const char* format, ...) {
