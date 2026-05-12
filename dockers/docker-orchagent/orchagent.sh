@@ -36,8 +36,11 @@ fi
 # Set zmq mode by default for smartswitch DPU and increase the max bulk limit
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.orch_southbound_zmq_enabled')
 if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync -k $DPU_BATCH_SIZE "
+elif [ "$SOUTHBOUND_ZMQ" == "true" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi

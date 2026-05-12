@@ -15,7 +15,7 @@
 # limitations under the License.
 
 MFT_VERSION = 4.34.0
-MFT_REVISION = 145
+MFT_REVISION = 148
 
 MFT_INTERNAL_SOURCE_BASE_URL =
 
