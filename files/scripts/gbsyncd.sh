@@ -8,7 +8,7 @@ function startplatform() {
     for DB_CLI in "${DbCliArray[@]}"; do
         # Add gbsyncd to FEATURE table, if not in. It did have same config as syncd.
         if [ -z $($DB_CLI CONFIG_DB HGET 'FEATURE|gbsyncd' state) ]; then
-            local CMD="local r=redis.call('DUMP', KEYS[1]); redis.call('RESTORE', KEYS[2], 0, r)"
+            local CMD="local r=redis.call('DUMP', KEYS[1]); redis.call('RESTORE', KEYS[2], 0, r, 'REPLACE')"
             $DB_CLI CONFIG_DB EVAL "$CMD" 2 'FEATURE|syncd' 'FEATURE|gbsyncd'
             $DB_CLI CONFIG_DB EVAL "$CMD" 2 'SYSLOG_CONFIG_FEATURE|syncd' 'SYSLOG_CONFIG_FEATURE|gbsyncd'
         fi
