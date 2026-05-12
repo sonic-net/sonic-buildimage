@@ -40,7 +40,8 @@
         ],        
         "thermals": [
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "CPU Pack Temp"

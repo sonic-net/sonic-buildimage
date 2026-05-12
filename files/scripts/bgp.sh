@@ -69,7 +69,7 @@ stop() {
 
     # Kill bgpd to start the bgp graceful restart procedure
     if [[ x"$WARM_BOOT" == x"true" ]] || [[ x"$FAST_BOOT" == x"true" ]]; then
-        debug "Kill zebra first"
+        debug "Kill zebra and bgpd"
         /usr/bin/docker exec -i bgp pkill -9 zebra || [ $? == 1 ]
         /usr/bin/docker exec -i bgp pkill -9 bgpd || [ $? == 1 ]
     fi

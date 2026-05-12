@@ -623,16 +623,6 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 	// Enable DMA
 	pci_set_master(dev);
 
-	// Request MMIO/IOP resources - reserve PCI I/O and memory resources
-	// DRIVER_NAME shows up in /proc/iomem
-	if ((err = pci_request_regions(dev, DRIVER_NAME)) < 0) {
-		pddf_dbg(MULTIFPGA,
-			 KERN_ERR
-			 "[%s] pci_request_regions failed. dev:%s err:%#x\n",
-			 __FUNCTION__, pci_name(dev), err);
-		goto error_pci_req;
-	}
-
 	pci_privdata =
 		kzalloc(sizeof(struct pddf_multifpgapci_drvdata), GFP_KERNEL);
 
@@ -708,7 +698,6 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 	delete_fpga_data_node(pci_name(dev));
 	free_bars(pci_privdata, dev);
 	pci_disable_device(dev);
-	pci_release_regions(dev);
 	kfree(pci_privdata);
 }
 
