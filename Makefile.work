@@ -526,6 +526,7 @@ SONIC_SLAVE_BASE_BUILD = \
 	{ \
 		set -o pipefail ; \
 		echo Image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Building... ; \
+		mkdir -p $(SLAVE_DIR)/files/apt/apt.conf.d && cp -r files/apt/apt.conf.d/* $(SLAVE_DIR)/files/apt/apt.conf.d/ ; \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
 		$(COLLECT_DOCKER) ; \
