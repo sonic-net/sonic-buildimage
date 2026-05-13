@@ -450,10 +450,16 @@ $(foreach pkg, $(SONIC_INSTALL_PKGS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(FSROOT_PATH))) \
 		$(eval $(FSROOT_PATH)/$(pkg)_TARGET := $(pkg)) )
 
+# RFS squashfs contents include the configured login/BMC accounts. Keep these
+# values in the RFS cache key so a cache hit cannot reuse an image built with a
+# different account configuration.
+SONIC_RFS_CONFIG_FLAGS_LIST := $(USERNAME) $(PASSWORD) $(CHANGE_DEFAULT_PASSWORD) \
+                               $(BMC_NOS_ACCOUNT_USERNAME) $(BMC_ROOT_ACCOUNT_DEFAULT_PASSWORD)
+
 $(foreach pkg, $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
         $(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA) \
-        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)) \
+        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(SONIC_RFS_CONFIG_FLAGS_LIST)) \
         $(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES)) \
         $(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
 
