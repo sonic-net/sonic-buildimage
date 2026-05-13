@@ -333,9 +333,6 @@ if [ -f $FIRST_BOOT_FILE ]; then
             rm -f /var/lib/apt/lists/_host_image-${SONIC_VERSION}_platform_common_Packages.lz4
             # This is first boot so there should be no package lists or indices to restore, just the sources
             mv /etc/apt/sources.list.rc-local /etc/apt/sources.list
-            # Requeue interfaces-config after platform packages are installed.
-            systemctl reset-failed interfaces-config.service || true
-            systemctl start --no-block interfaces-config.service || true
         else
             dpkg -i /host/image-$SONIC_VERSION/platform/$platform/*.deb
         fi
