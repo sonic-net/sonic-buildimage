@@ -535,5 +535,3 @@ class Chassis(ChassisBase):
                 ret_dict[name] = status
         self.voltage_status_dict = current_voltage_status_dict
         return ret_dict
-
-

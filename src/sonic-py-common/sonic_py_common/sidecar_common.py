@@ -274,3 +274,25 @@ def _run_host_actions_for(path_on_host: str, post_copy_actions: Dict[str, List[L
             logger.log_info(f"Post-copy action succeeded: {' '.join(cmd)}")
         else:
             logger.log_error(f"Post-copy action FAILED (rc={rc}): {' '.join(cmd)}; stderr={str(err).strip()}")
+
+
+def cleanup_native_container(container_name: str, is_v1_enabled: bool) -> None:
+    """In V2 mode, check for and remove any native container.
+
+    Post-copy actions only fire when a synced file changes, so on subsequent
+    sidecar restarts (files already in sync) or after a race with the
+    container framework, the native container may persist.  Called every
+    sync cycle to guarantee it is eventually cleaned up.
+    """
+    if is_v1_enabled:
+        return
+    rc, out, _ = run_nsenter(
+        ["sudo", "docker", "inspect", "--format", "{{.State.Status}}", container_name]
+    )
+    if rc != 0:
+        logger.log_info(f"No native {container_name} container found")
+        return
+    status = out.strip()
+    logger.log_notice(f"Native {container_name} container found (status={status}); removing")
+    run_nsenter(["sudo", "docker", "stop", container_name])
+    run_nsenter(["sudo", "docker", "rm", "--force", container_name])
