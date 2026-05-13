@@ -7,6 +7,7 @@
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.eeprom import Eeprom
@@ -240,6 +241,47 @@ class Chassis(ChassisBase):
         """
         switch_host = self._module_list[0]
         return switch_host.get_serial()
+
+    # SKU suffix -> cooling type mapping. Driven by the Product Name (TLV 0x21)
+    # in the BMC IDPROM, which is programmed at system assembly with the
+    # full system SKU (e.g. "NH-4240-L" for liquid, "NH-4220-F" for air).
+    #
+    # Liquid-cooled:
+    #   -L  suffix
+    # Air-cooled airflow direction suffixes per the spec:
+    #   -F  Front-to-Back
+    #   -R  Reverse (Rear-to-Front)
+    _COOLING_TYPE_LIQUID_SUFFIXES = ("-L",)
+    _COOLING_TYPE_AIR_SUFFIXES = ("-F", "-R")
+
+    def get_cooling_type(self):
+        """
+        Identify whether this chassis is liquid- or air-cooled by reading
+        the system Product Name (TLV 0x21) from the BMC IDPROM.
+
+        Returns:
+            str: One of self.COOLING_TYPE_LIQUID, self.COOLING_TYPE_AIR,
+                 self.COOLING_TYPE_UNKNOWN.
+        """
+        try:
+            e = self._eeprom.read_eeprom()
+            valid, tlv = self._eeprom.get_tlv_field(
+                e, TlvInfoDecoder._TLV_CODE_PRODUCT_NAME)
+        except Exception:
+            return self.COOLING_TYPE_UNKNOWN
+
+        if not valid or tlv is None:
+            return self.COOLING_TYPE_UNKNOWN
+        pn = tlv[2].decode("ascii", errors="ignore").strip().upper()
+        if not pn:
+            return self.COOLING_TYPE_UNKNOWN
+
+        if any(pn.endswith(s) for s in self._COOLING_TYPE_LIQUID_SUFFIXES):
+            return self.COOLING_TYPE_LIQUID
+        if any(pn.endswith(s) for s in self._COOLING_TYPE_AIR_SUFFIXES):
+            return self.COOLING_TYPE_AIR
+
+        return self.COOLING_TYPE_UNKNOWN
 
     def get_watchdog(self):
         """

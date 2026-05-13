@@ -96,6 +96,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
+{% do features.append(("redfish", "{% if DEVICE_RUNTIME_METADATA['IS_LIQUID_COOLED_BMC'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}

@@ -696,6 +696,24 @@ def is_dpu():
     return False
 
 
+def is_liquid_cooled():
+    """
+    Check if this chassis is liquid-cooled.
+
+    Returns:
+        True if Chassis.get_cooling_type() returns COOLING_TYPE_LIQUID.
+        False for COOLING_TYPE_AIR / COOLING_TYPE_UNKNOWN, or any failure
+        (fail-closed -- callers gating liquid-only features stay disabled
+        when the cooling type cannot be determined).
+    """
+    try:
+        from sonic_platform_base.chassis_base import ChassisBase
+        from sonic_platform.chassis import Chassis
+        return Chassis().get_cooling_type() == ChassisBase.COOLING_TYPE_LIQUID
+    except Exception:
+        return False
+
+
 def is_supervisor():
     platform_env_conf_file_path = get_platform_env_conf_file_path()
     if platform_env_conf_file_path is None:
@@ -740,10 +758,18 @@ def get_device_runtime_metadata():
 
     port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
     macsec_support_metadata = {'MACSEC_SUPPORTED': True if is_macsec_supported() else False}
+
+    # Gates the redfish docker via the FEATURE table.
+    # is_liquid_cooled() consults the platform's
+    # Chassis.get_cooling_type() to detect chassis is liquid or
+    # air cooled.
+    redfish_support_metadata = {'IS_LIQUID_COOLED_BMC': is_liquid_cooled()}
+
     runtime_metadata = {}
     runtime_metadata.update(chassis_metadata)
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
+    runtime_metadata.update(redfish_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
 
 def get_npu_id_from_name(npu_name):
