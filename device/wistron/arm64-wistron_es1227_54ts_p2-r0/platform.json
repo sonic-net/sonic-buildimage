@@ -115,10 +115,6 @@
                 "controllable": false
             },
             {
-                "name": "PHY Temp",
-                "controllable": false
-            },
-            {
                 "name": "PSU 1 Temp",
                 "controllable": false
             },
