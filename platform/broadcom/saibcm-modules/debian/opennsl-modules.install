@@ -6,3 +6,4 @@ systemd/opennsl-modules.service lib/systemd/system
 sdklt/build/bde/linux_ngbde.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
 sdklt/build/knet/linux_ngknet.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
 sdklt/build/knetcb/linux_ngknetcb.ko lib/modules/6.12.41+deb13-sonic-amd64/extra
+sdklt/build/bcmgenl/linux_bcmgenl.ko lib/modules/6.12.41+deb13-sonic-amd64/extra

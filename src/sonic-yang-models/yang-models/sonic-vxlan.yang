@@ -21,7 +21,7 @@ module sonic-vxlan {
         "SONiC";
 
     description
-        "SONIC VXLAN";
+        "VXLAN tunnel and EVPN NVO configuration for SONiC.";
 
     revision 2021-04-12 {
         description
@@ -32,7 +32,7 @@ module sonic-vxlan {
 
         container VXLAN_TUNNEL {
 
-            description "config db VXLAN_TUNNEL table";
+            description "VXLAN tunnel endpoint (VTEP) definitions including source and destination IP addresses.";
 
             list VXLAN_TUNNEL_LIST {
 
@@ -40,14 +40,17 @@ module sonic-vxlan {
                 max-elements 2;
 
                 leaf name {
+                    description "VXLAN tunnel name.";
                     type string;
                 }
 
                 leaf src_ip {
+                    description "Source VTEP IP address for tunnel origination.";
                     type inet:ip-address;
                 }
 
                 leaf dst_ip {
+                    description "Destination VTEP IP address for point-to-point tunnels.";
                     type inet:ip-address;
                 }
 
@@ -62,22 +65,25 @@ module sonic-vxlan {
 
         container VXLAN_TUNNEL_MAP {
 
-            description "config db VXLAN_TUNNEL_MAP table";
+            description "Mappings between VLAN and VNI for a VXLAN tunnel.";
 
             list VXLAN_TUNNEL_MAP_LIST {
                 key "name mapname";
 
                 leaf name {
+                    description "Reference to the parent VXLAN tunnel.";
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
                     }
                 }
 
                 leaf mapname {
+                    description "Name of the VLAN-to-VNI mapping entry.";
                     type string;
                 }
 
                 leaf vlan {
+                    description "VLAN associated with this mapping.";
                     mandatory true;
                     // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
                     // type leafref {
@@ -90,6 +96,7 @@ module sonic-vxlan {
                 }
 
                 leaf vni {
+                    description "VXLAN Network Identifier mapped to the VLAN.";
                     mandatory true;
                     type stypes:vnid_type;
                 }
@@ -98,7 +105,7 @@ module sonic-vxlan {
 
         container VXLAN_EVPN_NVO {
 
-            description "config db VXLAN_EVPN_NVO table";
+            description "EVPN Network Virtualization Overlay instance binding a source VTEP.";
 
             list VXLAN_EVPN_NVO_LIST {
 
@@ -106,10 +113,12 @@ module sonic-vxlan {
                 max-elements 1;
 
                 leaf name {
+                    description "EVPN NVO instance name.";
                     type string;
                 }
 
                 leaf source_vtep {
+                    description "Reference to the VXLAN tunnel used as the source VTEP.";
                     mandatory true;
                     type leafref {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";

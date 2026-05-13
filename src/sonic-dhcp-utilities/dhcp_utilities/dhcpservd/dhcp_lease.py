@@ -8,7 +8,7 @@ from datetime import datetime
 from dhcp_utilities.common.utils import is_smart_switch
 
 DHCP_SERVER_IPV4_LEASE = "DHCP_SERVER_IPV4_LEASE"
-KEA_LEASE_FILE_PATH = "/tmp/kea-lease.csv"
+KEA_LEASE_FILE_PATH = "/var/lib/kea/kea-lease.csv"
 DEFAULE_LEASE_UPDATE_INTERVAL = 2  # unit: sec
 
 

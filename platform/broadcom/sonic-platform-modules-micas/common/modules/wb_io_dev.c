@@ -24,6 +24,7 @@
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
@@ -31,6 +32,7 @@
 #include <linux/fs.h>
 #include <linux/export.h>
 #include <linux/uio.h>
+#include <linux/version.h>
 
 #include "wb_io_dev.h"
 
@@ -638,7 +640,11 @@ static int io_dev_probe(struct platform_device *pdev)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int io_dev_remove(struct platform_device *pdev)
+#else
+static void io_dev_remove(struct platform_device *pdev)
+#endif
 {
     int i;
 
@@ -648,8 +654,9 @@ static int io_dev_remove(struct platform_device *pdev)
             io_dev_arry[i] = NULL;
         }
     }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 }
 
 static struct of_device_id io_dev_match[] = {

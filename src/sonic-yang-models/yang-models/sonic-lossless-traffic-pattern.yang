@@ -15,12 +15,13 @@ module sonic-lossless-traffic-pattern {
     container sonic-lossless-traffic-pattern {
         container LOSSLESS_TRAFFIC_PATTERN {
 
-            description "LOSSLESS_TRAFFIC_PATTERN part of config_db.json";
+            description "Default lossless traffic pattern parameters for headroom calculation";
 
             list LOSSLESS_TRAFFIC_PATTERN_LIST {
                 key "name";
 
                 leaf name {
+                    description "Name of the lossless traffic pattern entry";
                     type string {
                         pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
                             error-message "Invalid lossless traffic pattern list name.";

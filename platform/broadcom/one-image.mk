@@ -24,7 +24,9 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
                                $(DELL_N3248PXE_PLATFORM_MODULE) \
                                $(DELL_N3248TE_PLATFORM_MODULE) \
                                $(DELL_E3224F_PLATFORM_MODULE) \
-			       $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_S3248T_PLATFORM_MODULE) \
+                               $(DELL_Z9664F_PLATFORM_MODULE) \
+                               $(DELL_Z9864F_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_54XC_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_64XC_PLATFORM_MODULE) \
                                $(INGRASYS_S9100_PLATFORM_MODULE) \
@@ -131,6 +133,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += \
 			       $(MICAS_M2_W6920_32QC2X_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_48C8QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6940_128X1_FR4_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8164_PLATFORM_MODULE) \
 			       $(SMCI_SSE_T8196_PLATFORM_MODULE)
 

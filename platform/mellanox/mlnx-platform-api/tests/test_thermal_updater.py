@@ -112,19 +112,30 @@ class TestThermalUpdater:
         assert not updater._timer.is_alive()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 1)
 
-    @mock.patch('sonic_platform.utils.read_int_from_file')
-    def test_update_asic(self, mock_read):
+    @mock.patch('sonic_platform.thermal_updater.get_db_table_helper')
+    def test_update_asic(self, mock_get_db_table_helper):
         hw_management_independent_mode_update.reset_mock()
-        mock_read.return_value = 8
-        updater = ThermalUpdater(None)
-        assert updater.get_asic_temp() == 1000
-        assert updater.get_asic_temp_warning_threshold() == 1000
-        assert updater.get_asic_temp_critical_threshold() == 1000
-        updater.update_asic()
-        hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once()
+        mock_temp_table = mock.MagicMock()
+        mock_db_table_helper = mock.MagicMock()
+        mock_db_table_helper.get_temperature_info_table.return_value = mock_temp_table
+        mock_get_db_table_helper.return_value = mock_db_table_helper
 
-        mock_read.return_value = None
-        assert updater.get_asic_temp() is None
+        mock_temp_table.hget.return_value = (True, 8)
+        updater = ThermalUpdater(None)
+        assert updater.get_asic_temp('ASIC') == 8000
+        assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
+        assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
+        updater.update_asic()
+        hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once_with(
+            0,
+            8000,
+            ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD,
+            ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD,
+            0
+        )
+
+        mock_temp_table.hget.return_value = (False, None)
+        assert updater.get_asic_temp('ASIC') == 0
         assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
         assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 

@@ -20,6 +20,7 @@
 
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include "wb_module.h"
 #include "dfd_cfg.h"
@@ -440,7 +441,11 @@ static int dfd_fan_product_name_decode(char *fan_buf, int buf_len)
                     return -DFD_RV_DEV_NOTSUPPORT;
                 }
                 mem_clear(fan_buf, buf_len);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
                 strlcpy(fan_buf, p_decode_name, buf_len);
+#else
+                strscpy(fan_buf, p_decode_name, buf_len);
+#endif
                 DFD_FAN_DEBUG(DBG_VERBOSE, "fan name match ok, display fan name: %s.\n", fan_buf);
                 return DFD_RV_OK;
             }
