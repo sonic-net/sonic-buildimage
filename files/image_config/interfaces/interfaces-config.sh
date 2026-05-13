@@ -75,7 +75,8 @@ CFGGEN_PARAMS=" \
 # so interfaces.j2 can render the BMC interface stanza with the correct IP.
 #   switch_bmc=1  -> use bmc_addr  (BMC's own IP on the link)
 #   switch_host=1 -> use bmc_if_addr (Switch-Host's IP on the BMC link)
-PLATFORM_ENV_CONF="/usr/share/sonic/platform/platform_env.conf"
+PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
+PLATFORM_ENV_CONF="/usr/share/sonic/device/$PLATFORM/platform_env.conf"
 IS_SWITCH_BMC=0
 IS_SWITCH_HOST=0
 if [[ -f "$PLATFORM_ENV_CONF" ]]; then
@@ -83,16 +84,9 @@ if [[ -f "$PLATFORM_ENV_CONF" ]]; then
     grep -q '^switch_host=1' "$PLATFORM_ENV_CONF" && IS_SWITCH_HOST=1
 fi
 if [[ $IS_SWITCH_BMC -eq 1 || $IS_SWITCH_HOST -eq 1 ]]; then
-    PLATFORM=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform 2>/dev/null)
-    BMC_JSON=""
-    if [[ -n "$PLATFORM" && -f "/usr/share/sonic/device/$PLATFORM/bmc.json" ]]; then
-        BMC_JSON="/usr/share/sonic/device/$PLATFORM/bmc.json"
-    elif [[ -f "/etc/sonic/bmc.json" ]]; then
-        BMC_JSON="/etc/sonic/bmc.json"
-    fi
-    if [[ -n "$BMC_JSON" ]]; then
-        CFGGEN_PARAMS="$CFGGEN_PARAMS -j $BMC_JSON"
-        sonic-cfggen $CFGGEN_PARAMS -a "{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}"
+    if [[ -f "/etc/sonic/bmc.json" ]]; then
+        sonic-cfggen $CFGGEN_PARAMS -j /etc/sonic/bmc.json \
+            -a "{\"IS_SWITCH_BMC\": $IS_SWITCH_BMC, \"IS_SWITCH_HOST\": $IS_SWITCH_HOST}"
     else
         sonic-cfggen $CFGGEN_PARAMS
     fi

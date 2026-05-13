@@ -21,7 +21,6 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
-BMC_DATA_FILE = 'bmc.json'
 BMC_BUILD_CONFIG_FILE = '/etc/sonic/bmc_config.json'
 GLOBAL_BMC_DATA_FILE = '/etc/sonic/bmc.json'
 
@@ -1013,24 +1012,16 @@ def is_warm_restart_enabled(container_name):
 
 def get_bmc_data():
     """
-    Get BMC network configuration.
+    Get BMC network configuration from /etc/sonic/bmc.json.
 
-    Checks the platform-specific bmc.json in the platform directory first;
-    if absent, falls back to the SONiC-wide global bmc.json (/etc/sonic/bmc.json).
-    This allows a platform to override the global defaults with platform-specific
-    IP addresses.
+    This file is populated at boot by config-setup from either the
+    platform-specific bmc.json or the image-wide template fallback.
 
     Returns:
         A dict with bmc_if_name, bmc_if_addr, bmc_addr and bmc_net_mask,
-        or None if no bmc.json is found.
+        or None if /etc/sonic/bmc.json is not found.
     """
     try:
-        platform_path = get_path_to_platform_dir()
-        if platform_path:
-            json_file = os.path.join(platform_path, BMC_DATA_FILE)
-            if os.path.exists(json_file):
-                with open(json_file, "r") as f:
-                    return json.load(f)
         if os.path.exists(GLOBAL_BMC_DATA_FILE):
             with open(GLOBAL_BMC_DATA_FILE, "r") as f:
                 return json.load(f)
