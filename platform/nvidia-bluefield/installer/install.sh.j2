@@ -264,11 +264,10 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 		bfb_pre_fw_install
 	fi
 
-	ex chroot $sonic_fs_mountpoint mst start
-	ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --nosyslog --verbose
+	ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager -m --nosyslog --verbose
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager --reset --nosyslog --verbose
+		ex chroot $sonic_fs_mountpoint /usr/local/bin/mlnx-fw-manager -m --reset --nosyslog --verbose
 	fi
 
 	ex umount $sonic_fs_mountpoint/host

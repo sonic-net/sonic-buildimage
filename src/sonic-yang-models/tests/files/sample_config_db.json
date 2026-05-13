@@ -2200,7 +2200,7 @@
                 "link_selection": "enable",
                 "vrf_selection": "enable",
                 "server_id_override": "enable",
-                "agent_relay_mode": "forward_untouched",
+                "agent_relay_mode": "discard",
                 "max_hop_count": "4"
             },
             "Vlan222": {
@@ -2943,6 +2943,9 @@
         },
         "CONSOLE_SWITCH": {
             "console_mgmt": {
+                "enabled": "yes"
+            },
+            "controlled_device": {
                 "enabled": "yes"
             }
         },
