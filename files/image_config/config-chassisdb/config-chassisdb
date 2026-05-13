@@ -39,8 +39,9 @@ config_chassis_db() {
         else
            midplane_interface_ip=$(python3 -c 'import sonic_platform.platform; \
                                  platform_chassis = sonic_platform.platform.Platform().get_chassis(); \
-                                 sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() \
-                                 for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])')
+                                 sup_slot = platform_chassis.get_supervisor_slot(); \
+                                 matches = [m.get_midplane_ip() for m in platform_chassis.get_all_modules() \
+                                 if m.get_slot() == sup_slot]; print(matches[0] if matches else "")')
         fi
     elif [[ "$is_disagg" == True ]]; then
         # With disagg T2 pizza box it is docker0 bridge which is midplane
@@ -57,7 +58,7 @@ config_chassis_db() {
         echo "chassis_db_address=$midplane_interface_ip" > "$chassisdb_address_file"
     else
         echo "Error: No IP address configured on midplane_interface"
-        exit 0
+        exit 1
     fi
 
     start_chassis_db=0
@@ -73,17 +74,17 @@ config_chassis_db() {
     if [[ "$chassis_db_address" == "0.0.0.0" ]]; then
         echo "Error: chassis_db address configured as 0.0.0.0"
         [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
-        exit 0
+        exit 1
     fi
     # if the midplane subnet is defined make sure the IP address is part of the midplane subnet
     if [[ -n "$midplane_subnet" ]]; then
         result=$(python3 -c "import ipaddress; print(ipaddress.ip_address('$chassis_db_address') \
               in ipaddress.ip_network('$midplane_subnet'))")
-        # Exit as error if chassis_db_address not in the midplane subnet
-        if [[ $result == False ]]; then
+        # Exit as error if chassis_db_address not in the midplane subnet or if validation fails
+        if [[ $? -ne 0 ]] || [[ "$result" == "False" ]]; then
             echo "Error: chassis_db address does not belong to midplane subnet"
             [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
-            exit 0
+            exit 1
         fi
     fi
 
