@@ -32,6 +32,7 @@
 #include <linux/delay.h>
 #include <linux/ioport.h>
 #include <asm/io.h>
+#include <linux/version.h>
 
 #define DRVNAME "as9716_32d_ioport"
 #define IOPORT_I2C_MUX_RST 0x50D
@@ -117,11 +118,17 @@ exit:
 	return status;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int as9716_32d_ioport_remove(struct platform_device *pdev)
+#else
+static void as9716_32d_ioport_remove(struct platform_device *pdev)
+#endif
 {
 	sysfs_remove_group(&pdev->dev.kobj, &sys_group);
 	release_region(IOPORT_I2C_MUX_RST, 1);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 	return 0;
+#endif
 }
 
 static struct platform_driver as9716_32d_ioport_driver = {

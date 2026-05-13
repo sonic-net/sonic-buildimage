@@ -242,3 +242,21 @@ def test_bgp_confed_ft2_single_asic():
              "bgpd/bgpd.main.conf.j2",
              "bgpd.main.conf.j2/single_asic_ft2.json",
              "bgpd.main.conf.j2/single_asic_ft2.conf")
+
+def test_bgp_confed_lrh_single_asic():
+    run_test("BGP Confederation LowerRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lrh.json",
+             "bgpd.main.conf.j2/single_asic_lrh.conf")
+
+def test_bgp_confed_frh_single_asic():
+    run_test("BGP Confederation FabricRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_frh.json",
+             "bgpd.main.conf.j2/single_asic_frh.conf")
+
+def test_bgp_confed_urh_single_asic():
+    run_test("BGP Confederation UpperRegionalHub Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_urh.json",
+             "bgpd.main.conf.j2/single_asic_urh.conf")

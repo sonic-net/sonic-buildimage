@@ -1,0 +1,44 @@
+From 3fd5c01f6e71de1ca05c1983f8762a7713ead7b2 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Mon, 2 Feb 2026 20:17:27 +0000
+Subject: [PATCH] staticd: Unset SID validity flag when locator is deleted
+
+When a locator is removed, we iterate over the list of SIDs and
+uninstall them from the data plane. However, the validity flag of
+the SID remains set, and the locator pointer still points to the
+freed locator memory.
+
+This causes issues in other parts of the code where we check the
+SID validity flag. Since the flag is still set, we assume the SID
+is valid and attempt to access the locator pointer, resulting in
+use-after-free crashes.
+
+Fix this by:
+- Unsetting the STATIC_FLAG_SRV6_SID_VALID flag to mark the SID
+  as invalid when its locator is deleted
+- Setting the locator pointer to NULL to indicate that the SID
+  no longer has a locator associated with it
+
+This ensures that when the locator is removed, associated SIDs are
+properly marked as invalid and cannot accidentally reference freed
+memory.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_zebra.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index b6757ed5b1b0..ceb60bfbc00b 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -1259,6 +1259,9 @@ static int static_zebra_process_srv6_locator_delete(ZAPI_CALLBACK_ARGS)
+ 			static_zebra_srv6_sid_uninstall(sid);
+ 			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
+ 		}
++
++		sid->locator = NULL;
++		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 	}
+ 
+ 	listnode_delete(srv6_locators, locator);

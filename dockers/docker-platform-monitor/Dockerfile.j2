@@ -38,6 +38,10 @@ RUN apt-get update &&   \
 {% if sonic_asic_platform == 'mellanox' %}
 RUN apt-get install -y dbus
 {% endif %}
+{% if sonic_asic_platform == 'aspeed' %}
+# Install busybox for devmem access (needed for BMC hardware register control)
+RUN apt-get install -y busybox
+{% endif %}
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.
 # Instead, the installation directory is mounted from the host OS. However, this method

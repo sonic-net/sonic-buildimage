@@ -1,4 +1,5 @@
 bfscripts==4.14.0-13868
+frr==10.5.1-sonic-0
 gpio-mlxbf3-dkms==1.0-0
 kernel-mft-dkms==4.34.0-145
 kernel-mft-dkms-modules-6.12.41+deb13-sonic-arm64==4.34.0
@@ -55,6 +56,8 @@ python3-libyang==3.1.0-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sdhci-of-dwcmshc-dkms==1.0-0
+sonic-mgmt-common==1.0.0
+sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
 stp==1.0.0

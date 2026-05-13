@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
 #include <swss/dbconnector.h>
+#include <swss/events_common.h>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -20,6 +23,24 @@ class SwsscommonEnvironment : public ::testing::Environment {
 public:
     // Override this to define how to set up the environment
     void SetUp() override {
+        // Set up ZMQ custom ports so other tests don't interfere
+        cout << "Setting custom ZMQ ports" << endl;
+        std::string configfilename = std::tmpnam(nullptr);
+        EXPECT_FALSE(configfilename.empty());
+        ofstream configfile(configfilename);
+        EXPECT_TRUE(configfile.is_open());
+        configfile <<
+            "{\n"
+            "  \"events\" : {\n"
+            "     \"xsub_path\": \"tcp://127.0.0.1:25570\",\n"
+            "     \"xpub_path\": \"tcp://127.0.0.1:25571\",\n"
+            "     \"capture_path\": \"tcp://127.0.0.1:25573\"\n"
+            "  }\n"
+            "}\n";
+        configfile.close();
+        read_init_config(configfilename.c_str());
+        remove(configfilename.c_str());
+
         // by default , init should be false
         cout << "Default : isInit = " << SonicDBConfig::isInit() << endl;
         EXPECT_FALSE(SonicDBConfig::isInit());

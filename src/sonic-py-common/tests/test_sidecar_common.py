@@ -193,3 +193,90 @@ def test_sync_items_with_post_actions(fake_logger, mock_nsenter, monkeypatch):
     sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in sudo_cmds
     assert ("sudo", "systemctl", "restart", "myservice") in sudo_cmds
+
+
+# ─────────────────────────── Tests for cleanup_native_container ───────────────────────────
+
+@pytest.fixture
+def docker_nsenter(monkeypatch):
+    """Mock run_nsenter with configurable docker inspect response."""
+    commands = []
+    inspect_result = {"rc": 1, "out": "", "err": ""}
+
+    def fake_run_nsenter(args, *, text=True, input_bytes=None):
+        commands.append(("nsenter", tuple(args)))
+        if args[:2] == ["sudo", "docker"] and "inspect" in args:
+            return inspect_result["rc"], inspect_result["out"], inspect_result["err"]
+        if args[:1] == ["sudo"]:
+            return 0, "" if text else b"", "" if text else b""
+        return 1, "" if text else b"", "unsupported" if text else b"unsupported"
+
+    monkeypatch.setattr(sidecar_common, "run_nsenter", fake_run_nsenter)
+    return commands, inspect_result
+
+
+def test_cleanup_native_container_removes_running(fake_logger, docker_nsenter):
+    """When a native container is running, it is stopped and force-removed."""
+    commands, inspect_result = docker_nsenter
+    inspect_result.update(rc=0, out="running\n", err="")
+
+    sidecar_common.cleanup_native_container("mycontainer", False)
+
+    sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "docker", "inspect", "--format", "{{.State.Status}}", "mycontainer") in sudo_cmds
+    assert ("sudo", "docker", "stop", "mycontainer") in sudo_cmds
+    assert ("sudo", "docker", "rm", "--force", "mycontainer") in sudo_cmds
+
+
+def test_cleanup_native_container_removes_exited(fake_logger, docker_nsenter):
+    """When a native container exists but is exited, it is still removed."""
+    commands, inspect_result = docker_nsenter
+    inspect_result.update(rc=0, out="exited\n", err="")
+
+    sidecar_common.cleanup_native_container("mycontainer", False)
+
+    sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "docker", "stop", "mycontainer") in sudo_cmds
+    assert ("sudo", "docker", "rm", "--force", "mycontainer") in sudo_cmds
+
+
+def test_cleanup_native_container_noop_when_absent(fake_logger, docker_nsenter):
+    """When no native container exists, cleanup is a no-op."""
+    commands, inspect_result = docker_nsenter
+    inspect_result.update(rc=1, out="", err="No such object: mycontainer")
+
+    sidecar_common.cleanup_native_container("mycontainer", False)
+
+    sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "docker", "stop", "mycontainer") not in sudo_cmds
+    assert ("sudo", "docker", "rm", "--force", "mycontainer") not in sudo_cmds
+
+
+def test_cleanup_native_container_skipped_when_v1(fake_logger, docker_nsenter):
+    """When is_v1_enabled=True, native container cleanup is skipped entirely."""
+    commands, _ = docker_nsenter
+
+    sidecar_common.cleanup_native_container("mycontainer", True)
+
+    assert len(commands) == 0
+
+
+def test_cleanup_native_container_uses_container_name(fake_logger, docker_nsenter):
+    """Container name parameter is correctly passed to all docker commands."""
+    commands, inspect_result = docker_nsenter
+    inspect_result.update(rc=0, out="running\n", err="")
+
+    sidecar_common.cleanup_native_container("restapi", False)
+
+    sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "docker", "stop", "restapi") in sudo_cmds
+    assert ("sudo", "docker", "rm", "--force", "restapi") in sudo_cmds
+
+    commands.clear()
+    inspect_result.update(rc=0, out="running\n", err="")
+
+    sidecar_common.cleanup_native_container("acms", False)
+
+    sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "docker", "stop", "acms") in sudo_cmds
+    assert ("sudo", "docker", "rm", "--force", "acms") in sudo_cmds

@@ -50,6 +50,11 @@ endif
 	# Clean artifacts in frr/debian directory from previous run.
 	fakeroot debian/rules clean
 
+	# Also remove the cmake/autoconf build directory to prevent stale compiled
+	# binaries (e.g. lib/clippy) from a previous build against a different Python
+	# version (e.g. bookworm/3.11 vs trixie/3.13) from being reused.
+	rm -rf build/
+
 	# Build the package.
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)

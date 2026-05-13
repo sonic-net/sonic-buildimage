@@ -349,6 +349,10 @@ run_pip_command()
         parameters+=("${tmp_version_file}")
     fi
 
+    if [ "$install" == "y" ] && [ "$ENABLE_VERSION_CONTROL_PY" == "y" ]; then
+        parameters+=("--no-build-isolation")
+    fi
+
     if [ ! -z "$(get_version_cache_option)" ]; then
         FLOCK ${PIP_CACHE_PATH}
         $REAL_COMMAND ${PKG_CACHE_OPTION} "${parameters[@]}"

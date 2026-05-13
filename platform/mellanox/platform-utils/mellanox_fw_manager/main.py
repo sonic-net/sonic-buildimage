@@ -227,7 +227,8 @@ def handle_dry_run(verbose: bool, upgrade: bool) -> int:
         return EXIT_FAILURE
 
 
-def handle_upgrade(verbose: bool, upgrade: bool, clear_semaphore: bool) -> int:
+def handle_upgrade(verbose: bool, upgrade: bool, clear_semaphore: bool,
+                   ignore_mst_start_failure: bool = False) -> int:
     """
     Handle firmware upgrade operation.
 
@@ -235,6 +236,7 @@ def handle_upgrade(verbose: bool, upgrade: bool, clear_semaphore: bool) -> int:
         verbose: Enable verbose logging
         upgrade: Use firmware from next SONiC image
         clear_semaphore: Clear hardware semaphore before upgrade
+        ignore_mst_start_failure: Continue upgrade even if MST driver fails to start
 
     Returns:
         Exit code
@@ -243,7 +245,8 @@ def handle_upgrade(verbose: bool, upgrade: bool, clear_semaphore: bool) -> int:
         fw_coordinator = FirmwareCoordinator(
             verbose=verbose,
             from_image=upgrade,
-            clear_semaphore=clear_semaphore
+            clear_semaphore=clear_semaphore,
+            ignore_mst_start_failure=ignore_mst_start_failure
         )
 
         if not fw_coordinator.check_upgrade_required():
@@ -278,11 +281,14 @@ def handle_upgrade(verbose: bool, upgrade: bool, clear_semaphore: bool) -> int:
               help='Clear hw semaphore before firmware upgrade')
 @click.option('-r', '--reset', is_flag=True,
               help='Reset firmware configuration (NVIDIA BlueField platform only)')
+@click.option('-m', '--ignore-mst-start-failure', is_flag=True,
+              help='Continue firmware upgrade even if MST driver fails to start '
+                   '(useful on SmartSwitch when DPUs are powered off)')
 @click.option('--nosyslog', is_flag=True,
               help='Disable syslog and log to console only')
 @click.option('--status', 'status', type=str, default=None, is_flag=False, flag_value='__flag__', metavar='[ASIC_ID|all]',
               help='Show firmware version status. Single-ASIC: use as flag. Multi-ASIC: specify ASIC ID or "all".')
-def main(upgrade, verbose, dry_run, clear_semaphore, reset, nosyslog, status):
+def main(upgrade, verbose, dry_run, clear_semaphore, reset, ignore_mst_start_failure, nosyslog, status):
     """
     Mellanox Firmware Manager
 
@@ -333,7 +339,7 @@ def main(upgrade, verbose, dry_run, clear_semaphore, reset, nosyslog, status):
         elif dry_run:
             exit_code = handle_dry_run(verbose, upgrade)
         else:
-            exit_code = handle_upgrade(verbose, upgrade, clear_semaphore)
+            exit_code = handle_upgrade(verbose, upgrade, clear_semaphore, ignore_mst_start_failure)
 
     logger.info(f"Mellanox Firmware Manager finished with exit code {exit_code}")
     sys.exit(exit_code)

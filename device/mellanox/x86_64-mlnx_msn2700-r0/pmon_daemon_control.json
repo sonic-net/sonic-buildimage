@@ -3,6 +3,9 @@
     "skip_fancontrol": true,
     "delay_xcvrd": true,
     "skip_xcvrd_cmis_mgr": true,
-    "delay_non_critical_daemon": true
+    "delay_non_critical_daemon": true,
+    "xcvrd": {
+        "dom_temperature_poll_interval": 20
+    }
 }
 

@@ -1,0 +1,8 @@
+aspeed-platform-services (1.0.0) unstable; urgency=low
+
+  * Initial release
+  * Consolidate Aspeed platform initialization services
+  * Add watchdog keepalive daemon (180s timeout, 60s interval)
+
+ -- SONiC Team <sonic-dev@lists.sonic-net.org>  Mon, 16 Mar 2026 00:00:00 +0000
+

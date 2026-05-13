@@ -21,6 +21,13 @@ ip prefix-list PL_LoopbackV4 permit {{ lo0_ipv4 }}/32
 {% set disagg_t2 = "true" %}
 {% endif%}
 {% endif %}
+{# Check if the device is a disaggregated Regional Hub device #}
+{% set disagg_rh = "false" %}
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('type' in DEVICE_METADATA['localhost']) %}
+{% if DEVICE_METADATA['localhost']['type'].lower() in ['lowerregionalhub', 'fabricregionalhub', 'upperregionalhub']%}
+{% set disagg_rh = "true" %}
+{% endif%}
+{% endif %}
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
 {% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
@@ -87,7 +94,7 @@ route-map HIDE_INTERNAL permit 20
 {% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'none') and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'null') %}
 router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
-{% if disagg_t2  == "true" %}
+{% if disagg_t2  == "true" or disagg_rh == "true" %}
 {% if (BGP_DEVICE_GLOBAL is defined) and ('CONFED' in BGP_DEVICE_GLOBAL) and ('asn' in BGP_DEVICE_GLOBAL['CONFED'] )  %}
   bgp confederation identifier {{ BGP_DEVICE_GLOBAL['CONFED']['asn'] }}
 {% endif %}
