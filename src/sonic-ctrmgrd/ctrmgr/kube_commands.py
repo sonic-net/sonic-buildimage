@@ -261,7 +261,10 @@ users:
     client-key-data: {{ ame_key }}
     """
     if insecure:
-        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False, timeout=10)
+        # verify=False is intentional: this branch is taken only when the operator explicitly
+        # opts in via the `insecure` flag for first-time bootstrap before the cluster CA is known.
+        r = requests.get(K8S_CA_URL.format(server, port),  # nosemgrep: python.requests.security.disabled-cert-validation.disabled-cert-validation
+                         cert=(AME_CRT, AME_KEY), verify=False, timeout=10)
     else:
         r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), timeout=10)
     if not r.ok:
