@@ -49,8 +49,7 @@ RUN apt-get update \
 # Install uv - a fast Python package manager that replaces pip/venv/wheel.
 # This eliminates the need for python3-pip, python3-venv, and python3-wheel
 # system packages, avoiding vulnerabilities like USN-8221-1.
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Create a virtual environment at /opt/venv using uv
 RUN uv venv --system-site-packages /opt/venv
