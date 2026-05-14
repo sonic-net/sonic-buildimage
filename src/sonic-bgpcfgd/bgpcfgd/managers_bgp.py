@@ -1,4 +1,5 @@
 import json
+import re
 from swsscommon import swsscommon
 
 import jinja2
@@ -10,6 +11,15 @@ from .manager import Manager
 from .template import TemplateFabric
 from .utils import run_command
 from .managers_device_global import DeviceGlobalCfgMgr
+
+INTERFACE_PATTERN = re.compile(r'^(Ethernet|PortChannel|Vlan)\d+$')
+
+
+def is_interface_neighbor(neighbor):
+    """Return True if neighbor key is an interface name, not an IP address."""
+    if not neighbor:
+        return False
+    return bool(INTERFACE_PATTERN.match(neighbor))
 
 
 class BGPPeerGroupMgr(object):
@@ -191,7 +201,10 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, data
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
 
-        if "local_addr" not in data:
+        if is_interface_neighbor(nbr):
+            # Interface-based (unnumbered) neighbor: skip local_addr validation
+            pass
+        elif "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)

@@ -579,5 +579,13 @@ module sonic-bgp-common {
             type stypes:admin_status;
             description "Administrative status to enable or disable this BGP peer.";
         }
+
+        leaf v6only {
+            type string {
+                pattern "true|false";
+            }
+            default "false";
+            description "When set to true, only IPv6 address family is activated for this unnumbered BGP peer.";
+        }
     }
 }
