@@ -162,6 +162,7 @@ scp==0.15.0
 service-identity==24.2.0
 setuptools==75.8.0
 setuptools-scm==8.2.1
+setuptools-scm-git-archive==1.4.1
 six==1.17.0
 snowballstemmer==2.2.0
 soupsieve==2.7

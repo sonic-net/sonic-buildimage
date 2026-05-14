@@ -228,7 +228,9 @@ class TestFirmwareCoordinator(unittest.TestCase):
 
         coordinator = FirmwareCoordinator()
 
-        with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
             mock_queue_instance = MagicMock()
             mock_queue.return_value = mock_queue_instance
 
@@ -255,7 +257,9 @@ class TestFirmwareCoordinator(unittest.TestCase):
 
         coordinator = FirmwareCoordinator()
 
-        with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
             mock_queue_instance = MagicMock()
             mock_queue.return_value = mock_queue_instance
 
@@ -295,7 +299,9 @@ class TestFirmwareCoordinator(unittest.TestCase):
 
         coordinator = FirmwareCoordinator()
 
-        with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue:
             mock_queue_instance = MagicMock()
             mock_queue.return_value = mock_queue_instance
 
@@ -599,7 +605,9 @@ class TestFirmwareCoordinator(unittest.TestCase):
 
         coordinator = FirmwareCoordinator()
 
-        with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue_class:
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue_class:
             mock_queue_instance = MagicMock()
             mock_queue_class.return_value = mock_queue_instance
 
@@ -664,7 +672,9 @@ class TestFirmwareCoordinator(unittest.TestCase):
 
         coordinator = FirmwareCoordinator()
 
-        with patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue_class:
+        with patch.object(coordinator, '_start_mst', return_value=True), \
+             patch.object(coordinator, '_stop_mst'), \
+             patch('mellanox_fw_manager.firmware_coordinator.Queue') as mock_queue_class:
             mock_queue_instance = MagicMock()
             mock_queue_class.return_value = mock_queue_instance
 
