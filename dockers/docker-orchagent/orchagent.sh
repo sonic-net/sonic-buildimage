@@ -71,6 +71,11 @@ if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
     ORCHAGENT_ARGS+="-A "
 fi
 
+SUPPRESS_FIB_CONFIG=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "suppress-fib-pending"`
+if [ "$SUPPRESS_FIB_CONFIG" == "enabled" ]; then
+    ORCHAGENT_ARGS+="-F "
+fi
+
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
