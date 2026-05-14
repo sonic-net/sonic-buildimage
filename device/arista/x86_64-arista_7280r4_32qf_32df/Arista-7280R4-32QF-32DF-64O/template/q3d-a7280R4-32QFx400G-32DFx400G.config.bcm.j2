@@ -1,0 +1,450 @@
+soc_family=BCM8887X
+system_ref_core_clock_khz=1600000
+
+dpp_db_path=/usr/share/bcm/db
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
+####################################################
+##Reference applications related properties - Start
+####################################################
+
+## PMF small EXEM connected stage:
+# Options: IPMF2 - Ingress PMF 2 stage can perform small EXEM lookups.
+#          IPMF3 - Ingress PMF 3 stage can perform small EXEM lookups.
+## PMF small EXEM connected stage:
+# Options: IPMF2 - Ingress PMF 2 stage can perform small EXEM lookups.
+#          IPMF3 - Ingress PMF 3 stage can perform small EXEM lookups.
+pmf_sexem3_stage=IPMF2
+
+####################################################
+##Reference applications related properties - End
+####################################################
+
+# HW mode to support 1024 16-member system wide LAGs
+trunk_group_max_members=16
+
+# Disable link-training
+port_init_cl72=0
+
+###Default interfaces
+#CPU interfaces
+ucode_port_0=CPU.0:core_0.0
+ucode_port_200=CPU.8:core_1.200
+ucode_port_201=CPU.16:core_0.201
+ucode_port_202=CPU.24:core_2.202
+ucode_port_203=CPU.32:core_3.203
+ucode_port_204=CPU.4:core_6.204
+ucode_port_205=CPU.12:core_7.205
+ucode_port_206=CPU.20:core_4.206
+ucode_port_207=CPU.28:core_5.207
+
+#NIF ETH interfaces on device
+{% for port_id, speed_lane in bcm_port_lane_config['speed_lane_map']|dictsort -%}
+ucode_port_{{ port_id }}={{ speed_lane }}:core_{{ bcm_port_lane_config['port_map'][port_id].core_id }}.{{ bcm_port_lane_config['port_map'][port_id].core_port_id }}
+{% endfor %}
+#NIF default speeds
+port_init_speed_xe=25000
+port_init_speed_xl=40000
+port_init_speed_le=50000
+port_init_speed_ce=100000
+port_init_speed_cc=200000
+port_init_speed_cd=400000
+port_init_speed_d3c=800000
+port_init_speed_il=10312
+
+port_priorities=8
+port_priorities_sch=8
+port_priorities_0=2
+port_priorities_200=2
+port_priorities_201=2
+port_priorities_202=2
+port_priorities_203=2
+port_priorities_204=2
+port_priorities_205=2
+port_priorities_206=2
+port_priorities_207=2
+
+#special ports
+ucode_port_240=OLP0:core_0.240
+ucode_port_241=OLP1:core_0.241
+ucode_port_244=OLP0:core_4.240
+ucode_port_245=OLP1:core_4.241
+tm_port_header_type_in_240=INJECTED_2
+tm_port_header_type_out_240=RAW
+tm_port_header_type_in_241=INJECTED_2
+tm_port_header_type_out_241=RAW
+tm_port_header_type_in_244=INJECTED_2
+tm_port_header_type_out_244=RAW
+tm_port_header_type_in_245=INJECTED_2
+tm_port_header_type_out_245=RAW
+
+# NIF lane mapping
+{% for lane, serdes in bcm_port_lane_config['lane_to_serdes_map']|dictsort -%}
+lane_to_serdes_map_nif_lane{{ lane }}={{ serdes }}
+{% endfor %}
+#########################
+### High Availability ###
+#########################
+
+sw_state_max_size=750000000
+
+#location of warmboot NV memory
+#Allowed options for dnx are - 3:external storage in filesystem 4:driver will save the state directly in shared memory 
+stable_location=4
+
+# Note that each unit should have a unique filename and that adapter does not play well with tmp and dev/shm folders.
+stable_filename=/dev/shm/warmboot_data_0
+stable_filename.1=/dev/shm/warmboot_data_1
+stable_filename.2=/dev/shm/warmboot_data_2
+
+#Maximum size for NVM used for WB storage, must be larger than sw_state_max_size.BCM8885X
+stable_size=800000000
+
+#########################
+#########################
+#########################
+
+tm_port_header_type_in_0=INJECTED
+tm_port_header_type_out_0=CPU
+
+tm_port_header_type_in_200=INJECTED
+tm_port_header_type_out_200=ETH
+tm_port_header_type_in_201=INJECTED
+tm_port_header_type_out_201=ETH
+tm_port_header_type_in_202=INJECTED
+tm_port_header_type_out_202=ETH
+tm_port_header_type_in_203=INJECTED
+tm_port_header_type_out_203=ETH
+tm_port_header_type_in_204=INJECTED
+tm_port_header_type_out_204=ETH
+tm_port_header_type_in_205=INJECTED
+tm_port_header_type_out_205=ETH
+tm_port_header_type_in_206=INJECTED
+tm_port_header_type_out_206=ETH
+tm_port_header_type_in_207=INJECTED
+tm_port_header_type_out_207=ETH
+
+
+### RCY
+sai_recycle_port_lane_base=215
+ucode_port_65=RCY0:core_0.65
+tm_port_header_type_out_65=ETH
+tm_port_header_type_in_65=ETH
+port_init_speed_65=800000
+appl_param_rcy_mirror_ports_range=100-164
+ucode_port_100=RCY_MIRROR.0:core_0.100
+ucode_port_101=RCY_MIRROR.1:core_1.101
+ucode_port_102=RCY_MIRROR.2:core_1.102
+ucode_port_103=RCY_MIRROR.3:core_1.103
+ucode_port_104=RCY_MIRROR.4:core_1.104
+ucode_port_105=RCY_MIRROR.5:core_1.105
+ucode_port_106=RCY_MIRROR.6:core_1.106
+ucode_port_107=RCY_MIRROR.7:core_1.107
+ucode_port_108=RCY_MIRROR.8:core_1.108
+ucode_port_109=RCY_MIRROR.9:core_3.109
+ucode_port_110=RCY_MIRROR.10:core_3.110
+ucode_port_111=RCY_MIRROR.11:core_3.111
+ucode_port_112=RCY_MIRROR.12:core_3.112
+ucode_port_113=RCY_MIRROR.13:core_3.113
+ucode_port_114=RCY_MIRROR.14:core_3.114
+ucode_port_115=RCY_MIRROR.15:core_3.115
+ucode_port_116=RCY_MIRROR.16:core_3.116
+ucode_port_117=RCY_MIRROR.17:core_2.117
+ucode_port_118=RCY_MIRROR.18:core_2.118
+ucode_port_119=RCY_MIRROR.19:core_2.119
+ucode_port_120=RCY_MIRROR.20:core_2.120
+ucode_port_121=RCY_MIRROR.21:core_2.121
+ucode_port_122=RCY_MIRROR.22:core_2.122
+ucode_port_123=RCY_MIRROR.23:core_2.123
+ucode_port_124=RCY_MIRROR.24:core_2.124
+ucode_port_125=RCY_MIRROR.25:core_0.125
+ucode_port_126=RCY_MIRROR.26:core_0.126
+ucode_port_127=RCY_MIRROR.27:core_0.127
+ucode_port_128=RCY_MIRROR.28:core_0.128
+ucode_port_129=RCY_MIRROR.29:core_0.129
+ucode_port_130=RCY_MIRROR.30:core_0.130
+ucode_port_131=RCY_MIRROR.31:core_0.131
+ucode_port_132=RCY_MIRROR.32:core_0.132
+ucode_port_133=RCY_MIRROR.33:core_5.133
+ucode_port_134=RCY_MIRROR.34:core_5.134
+ucode_port_135=RCY_MIRROR.35:core_5.135
+ucode_port_136=RCY_MIRROR.36:core_5.136
+ucode_port_137=RCY_MIRROR.37:core_5.137
+ucode_port_138=RCY_MIRROR.38:core_5.138
+ucode_port_139=RCY_MIRROR.39:core_5.139
+ucode_port_140=RCY_MIRROR.40:core_5.140
+ucode_port_141=RCY_MIRROR.41:core_7.141
+ucode_port_142=RCY_MIRROR.42:core_7.142
+ucode_port_143=RCY_MIRROR.43:core_7.143
+ucode_port_144=RCY_MIRROR.44:core_7.144
+ucode_port_145=RCY_MIRROR.45:core_7.145
+ucode_port_146=RCY_MIRROR.46:core_7.146
+ucode_port_147=RCY_MIRROR.47:core_7.147
+ucode_port_148=RCY_MIRROR.48:core_7.148
+ucode_port_149=RCY_MIRROR.49:core_6.149
+ucode_port_150=RCY_MIRROR.50:core_6.150
+ucode_port_151=RCY_MIRROR.51:core_6.151
+ucode_port_152=RCY_MIRROR.52:core_6.152
+ucode_port_153=RCY_MIRROR.53:core_6.153
+ucode_port_154=RCY_MIRROR.54:core_6.154
+ucode_port_155=RCY_MIRROR.55:core_6.155
+ucode_port_156=RCY_MIRROR.56:core_6.156
+ucode_port_157=RCY_MIRROR.57:core_4.157
+ucode_port_158=RCY_MIRROR.58:core_4.158
+ucode_port_159=RCY_MIRROR.59:core_4.159
+ucode_port_160=RCY_MIRROR.60:core_4.160
+ucode_port_161=RCY_MIRROR.61:core_4.161
+ucode_port_162=RCY_MIRROR.62:core_4.162
+ucode_port_163=RCY_MIRROR.63:core_4.163
+ucode_port_164=RCY_MIRROR.64:core_4.164
+rcy_mirror_to_forward_port_map_100=0
+rcy_mirror_to_forward_port_map_101=1
+rcy_mirror_to_forward_port_map_102=2
+rcy_mirror_to_forward_port_map_103=3
+rcy_mirror_to_forward_port_map_104=4
+rcy_mirror_to_forward_port_map_105=5
+rcy_mirror_to_forward_port_map_106=6
+rcy_mirror_to_forward_port_map_107=7
+rcy_mirror_to_forward_port_map_108=8
+rcy_mirror_to_forward_port_map_109=9
+rcy_mirror_to_forward_port_map_110=10
+rcy_mirror_to_forward_port_map_111=11
+rcy_mirror_to_forward_port_map_112=12
+rcy_mirror_to_forward_port_map_113=13
+rcy_mirror_to_forward_port_map_114=14
+rcy_mirror_to_forward_port_map_115=15
+rcy_mirror_to_forward_port_map_116=16
+rcy_mirror_to_forward_port_map_117=17
+rcy_mirror_to_forward_port_map_118=18
+rcy_mirror_to_forward_port_map_119=19
+rcy_mirror_to_forward_port_map_120=20
+rcy_mirror_to_forward_port_map_121=21
+rcy_mirror_to_forward_port_map_122=22
+rcy_mirror_to_forward_port_map_123=23
+rcy_mirror_to_forward_port_map_124=24
+rcy_mirror_to_forward_port_map_125=25
+rcy_mirror_to_forward_port_map_126=26
+rcy_mirror_to_forward_port_map_127=27
+rcy_mirror_to_forward_port_map_128=28
+rcy_mirror_to_forward_port_map_129=29
+rcy_mirror_to_forward_port_map_130=30
+rcy_mirror_to_forward_port_map_131=31
+rcy_mirror_to_forward_port_map_132=32
+rcy_mirror_to_forward_port_map_133=33
+rcy_mirror_to_forward_port_map_134=34
+rcy_mirror_to_forward_port_map_135=35
+rcy_mirror_to_forward_port_map_136=36
+rcy_mirror_to_forward_port_map_137=37
+rcy_mirror_to_forward_port_map_138=38
+rcy_mirror_to_forward_port_map_139=39
+rcy_mirror_to_forward_port_map_140=40
+rcy_mirror_to_forward_port_map_141=41
+rcy_mirror_to_forward_port_map_142=42
+rcy_mirror_to_forward_port_map_143=43
+rcy_mirror_to_forward_port_map_144=44
+rcy_mirror_to_forward_port_map_145=45
+rcy_mirror_to_forward_port_map_146=46
+rcy_mirror_to_forward_port_map_147=47
+rcy_mirror_to_forward_port_map_148=48
+rcy_mirror_to_forward_port_map_149=49
+rcy_mirror_to_forward_port_map_150=50
+rcy_mirror_to_forward_port_map_151=51
+rcy_mirror_to_forward_port_map_152=52
+rcy_mirror_to_forward_port_map_153=53
+rcy_mirror_to_forward_port_map_154=54
+rcy_mirror_to_forward_port_map_155=55
+rcy_mirror_to_forward_port_map_156=56
+rcy_mirror_to_forward_port_map_157=57
+rcy_mirror_to_forward_port_map_158=58
+rcy_mirror_to_forward_port_map_159=59
+rcy_mirror_to_forward_port_map_160=60
+rcy_mirror_to_forward_port_map_161=61
+rcy_mirror_to_forward_port_map_162=62
+rcy_mirror_to_forward_port_map_163=63
+rcy_mirror_to_forward_port_map_164=64
+
+# Set statically the region mode per region id
+dtm_flow_mapping_mode_region_257=3
+dtm_flow_mapping_mode_region_258=3
+dtm_flow_mapping_mode_region_259=3
+dtm_flow_mapping_mode_region_260=3
+dtm_flow_mapping_mode_region_261=3
+dtm_flow_mapping_mode_region_262=3
+dtm_flow_mapping_mode_region_263=3
+dtm_flow_mapping_mode_region_264=3
+dtm_flow_mapping_mode_region_265=3
+dtm_flow_mapping_mode_region_266=7
+dtm_flow_mapping_mode_region_267=3
+dtm_flow_mapping_mode_region_268=3
+dtm_flow_mapping_mode_region_269=3
+dtm_flow_mapping_mode_region_270=3
+dtm_flow_mapping_mode_region_271=3
+dtm_flow_mapping_mode_region_272=3
+dtm_flow_mapping_mode_region_273=3
+dtm_flow_mapping_mode_region_274=3
+dtm_flow_mapping_mode_region_275=3
+dtm_flow_mapping_mode_region_276=3
+dtm_flow_mapping_mode_region_277=3
+dtm_flow_mapping_mode_region_278=3
+dtm_flow_mapping_mode_region_279=3
+dtm_flow_mapping_mode_region_280=3
+dtm_flow_mapping_mode_region_281=3
+dtm_flow_mapping_mode_region_282=3
+dtm_flow_mapping_mode_region_283=3
+dtm_flow_mapping_mode_region_284=3
+dtm_flow_mapping_mode_region_285=3
+dtm_flow_mapping_mode_region_286=3
+dtm_flow_mapping_mode_region_287=3
+
+## Configure number of symmetric cores each region supports ##
+dtm_flow_nof_remote_cores_region_1=2
+dtm_flow_nof_remote_cores_region_2=2
+dtm_flow_nof_remote_cores_region_3=2
+dtm_flow_nof_remote_cores_region_4=2
+dtm_flow_nof_remote_cores_region_5=2
+dtm_flow_nof_remote_cores_region_6=2
+dtm_flow_nof_remote_cores_region_7=2
+dtm_flow_nof_remote_cores_region_8=2
+dtm_flow_nof_remote_cores_region_9=2
+dtm_flow_nof_remote_cores_region_10=2
+dtm_flow_nof_remote_cores_region_11=2
+dtm_flow_nof_remote_cores_region_12=2
+dtm_flow_nof_remote_cores_region_13=2
+dtm_flow_nof_remote_cores_region_14=2
+dtm_flow_nof_remote_cores_region_15=2
+dtm_flow_nof_remote_cores_region_16=2
+dtm_flow_nof_remote_cores_region_17=2
+dtm_flow_nof_remote_cores_region_18=2
+dtm_flow_nof_remote_cores_region_19=2
+dtm_flow_nof_remote_cores_region_20=2
+dtm_flow_nof_remote_cores_region_21=2
+dtm_flow_nof_remote_cores_region_22=2
+dtm_flow_nof_remote_cores_region_23=2
+dtm_flow_nof_remote_cores_region_24=2
+dtm_flow_nof_remote_cores_region_25=2
+dtm_flow_nof_remote_cores_region_26=2
+dtm_flow_nof_remote_cores_region_27=2
+dtm_flow_nof_remote_cores_region_28=2
+dtm_flow_nof_remote_cores_region_29=2
+dtm_flow_nof_remote_cores_region_30=2
+dtm_flow_nof_remote_cores_region_31=2
+dtm_flow_nof_remote_cores_region_32=2
+dtm_flow_nof_remote_cores_region_33=2
+dtm_flow_nof_remote_cores_region_34=2
+dtm_flow_nof_remote_cores_region_35=2
+dtm_flow_nof_remote_cores_region_36=2
+dtm_flow_nof_remote_cores_region_37=2
+dtm_flow_nof_remote_cores_region_38=2
+dtm_flow_nof_remote_cores_region_39=2
+dtm_flow_nof_remote_cores_region_40=2
+dtm_flow_nof_remote_cores_region_41=2
+dtm_flow_nof_remote_cores_region_42=2
+dtm_flow_nof_remote_cores_region_43=2
+dtm_flow_nof_remote_cores_region_44=2
+dtm_flow_nof_remote_cores_region_45=2
+dtm_flow_nof_remote_cores_region_46=2
+dtm_flow_nof_remote_cores_region_47=2
+dtm_flow_nof_remote_cores_region_48=2
+dtm_flow_nof_remote_cores_region_49=2
+dtm_flow_nof_remote_cores_region_50=2
+dtm_flow_nof_remote_cores_region_51=2
+dtm_flow_nof_remote_cores_region_52=2
+dtm_flow_nof_remote_cores_region_53=2
+dtm_flow_nof_remote_cores_region_54=2
+dtm_flow_nof_remote_cores_region_55=2
+dtm_flow_nof_remote_cores_region_56=2
+dtm_flow_nof_remote_cores_region_57=2
+dtm_flow_nof_remote_cores_region_58=2
+dtm_flow_nof_remote_cores_region_59=2
+dtm_flow_nof_remote_cores_region_60=2
+
+### MDB configuration ###
+mdb_profile=Elastic-Balanced
+
+### Descriptor-DMA configuration ###
+dma_desc_aggregator_chain_length_max=1000
+dma_desc_aggregator_buff_size_kb=100
+dma_desc_aggregator_timeout_usec=1000
+dma_desc_aggregator_enable_specific_MDB_LPM=1
+dma_desc_aggregator_enable_specific_MDB_FEC=1
+
+### Outlif configuarion ###
+outlif_logical_to_physical_phase_map_1=S1
+outlif_logical_to_physical_phase_map_2=L1
+outlif_logical_to_physical_phase_map_3=XL
+outlif_logical_to_physical_phase_map_4=L2
+outlif_logical_to_physical_phase_map_5=M1
+outlif_logical_to_physical_phase_map_6=M2
+outlif_logical_to_physical_phase_map_7=M3
+outlif_logical_to_physical_phase_map_8=S2
+
+### Outlif data granularity configuration ###
+outlif_physical_phase_data_granularity_S1=60
+outlif_physical_phase_data_granularity_S2=60
+outlif_physical_phase_data_granularity_M1=60
+outlif_physical_phase_data_granularity_M2=60
+outlif_physical_phase_data_granularity_M3=60
+outlif_physical_phase_data_granularity_L1=60
+outlif_physical_phase_data_granularity_L2=60
+outlif_physical_phase_data_granularity_XL=60
+
+## Fabric transmission mode
+# Set the Connect mode to the Fabric
+# Options: FE - presence of a Fabric device (single stage)
+#          SINGLE_FAP - stand-alone device
+#          MESH - devices in Mesh
+# Note: If 'diag_chassis' is on, value will be override in dnx.soc
+#       to be FE instead of SINGLE_FAP.
+fabric_connect_mode=SINGLE_FAP
+
+#
+##Protocol trap look-up mode:
+# Options: IN_LIF  - Look-ups in the profile table are done by IN-LIF
+#          IN_PORT - Look-ups in the profile table are done by IN-PORT
+protocol_traps_mode=IN_LIF
+
+# access definitions
+schan_intr_enable=0
+tdma_intr_enable=0
+tslam_intr_enable=0
+miim_intr_enable=0
+schan_timeout_usec=300000
+tdma_timeout_usec=1000000
+tslam_timeout_usec=1000000
+
+### Interrupts
+appl_enable_intr_init=1
+polled_irq_mode=0
+# reduce CPU load, configure delay 100ms
+polled_irq_delay=1000
+
+# reduce the CPU load over adapter (caused by counter thread)
+bcm_stat_interval=1000000
+
+# shadow memory
+mem_cache_enable_ecc=1
+mem_cache_enable_parity=1
+
+# serdes_nif/fabric_clk_freq_in/out configuration
+serdes_nif_clk_freq_in=2
+serdes_nif_clk_freq_out=1
+serdes_fabric_clk_freq_in=2
+serdes_fabric_clk_freq_out=1
+
+dport_map_direct=1
+
+rif_id_max=0x2000
+
+# Port Polarity
+{% for phy, polarity_flip  in bcm_port_lane_config['phy_polarity_flip']|dictsort -%}
+phy_rx_polarity_flip_phy{{ phy }}={{ polarity_flip['rx'] }}
+phy_tx_polarity_flip_phy{{ phy }}={{ polarity_flip['tx'] }}
+{% endfor %}
+appl_param_nof_ports_per_modid=66
+xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
+xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
+sai_pfc_dlr_init_capability=0
+sai_default_cpu_tx_tc=7
+sai_disable_srcmacqedstmac_ctrl=1
+appl_param_active_links_thr_high=91
+appl_param_active_links_thr_low=1
+sai_ecmp_group_members_increment=8
