@@ -2,5 +2,5 @@ bitarray==2.8.1
 certifi==2026.4.22
 cffi==2.0.0
 pyyaml==6.0.3
-requests==2.33.1
-urllib3==2.6.3
+requests==2.34.0
+urllib3==2.7.0

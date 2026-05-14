@@ -132,6 +132,8 @@ class Chassis(ChassisBase):
         # Mapping from SFP index to ASIC ID
         self._asic_id_map = None
 
+        self._num_npus = device_info.get_num_npus()
+
         self.liquid_cooling = None
 
         Chassis.chassis_instance = self
@@ -153,14 +155,14 @@ class Chassis(ChassisBase):
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
         return self._RJ45_port_list
 
     @property
     def cpo_port_list(self):
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         return self._cpo_port_list
 
@@ -221,6 +223,56 @@ class Chassis(ChassisBase):
         """
         self.initialize_psu()
         return super(Chassis, self).get_psu(index)
+
+    ##############################################
+    # PDB methods
+    ##############################################
+
+    def initialize_pdb(self):
+        if not self._pdb_list:
+            pdb_count = DeviceDataManager.get_pdb_count()
+            if pdb_count == 0:
+                return
+            from .pdb import Pdb
+            for index in range(pdb_count):
+                self._pdb_list.append(Pdb(index))
+
+    def get_num_pdbs(self):
+        """
+        Retrieves the number of power distribution boards available on this chassis
+
+        Returns:
+            An integer, the number of PDBs available on this chassis
+        """
+        self.initialize_pdb()
+        return len(self._pdb_list)
+
+    def get_all_pdbs(self):
+        """
+        Retrieves all power distribution boards available on this chassis
+
+        Returns:
+            A list of objects derived from PdbBase representing all PDBs
+            available on this chassis
+        """
+        self.initialize_pdb()
+        return self._pdb_list
+
+    def get_pdb(self, index):
+        """
+        Retrieves the PDB object at the specified (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the PDB to retrieve
+
+        Returns:
+            An object derived from PdbBase representing the specified PDB
+        """
+        self.initialize_pdb()
+        if index < 0 or index >= len(self._pdb_list):
+            logger.log_error(f"PDB index {index} is out of range")
+            return None
+        return self._pdb_list[index]
 
     ##############################################
     # Fan methods
@@ -364,11 +416,11 @@ class Chassis(ChassisBase):
         """
         num_sfps = 0
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
-        
+
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         
         num_sfps = DeviceDataManager.get_sfp_count()
