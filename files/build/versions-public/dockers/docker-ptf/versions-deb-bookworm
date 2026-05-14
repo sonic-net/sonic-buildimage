@@ -353,7 +353,7 @@ libkrb5-3==1.20.1-2+deb12u4
 libkrb5support0==1.20.1-2+deb12u4
 libksba8==1.6.3-2
 liblapack3==3.11.0-2
-liblcms2-2==2.14-2
+liblcms2-2==2.14-2+deb12u1
 libldap-2.5-0==2.5.13+dfsg-5
 libldap-common==2.5.13+dfsg-5
 liblerc4==4.0.0+ds-2
@@ -429,7 +429,7 @@ libpixman-1-0==0.42.2-1
 libpkgconf3==1.8.1-1
 libpmix-dev==4.2.2-1+deb12u1
 libpmix2==4.2.2-1+deb12u1
-libpng16-16==1.6.39-2+deb12u4
+libpng16-16==1.6.39-2+deb12u5
 libpopt0==1.19+dfsg-1
 libproc2-0==2:4.0.2-3
 libprotobuf-dev==3.21.12-3
@@ -534,12 +534,12 @@ libwbclient0==2:4.17.12+dfsg-0+deb12u3
 libwebp7==1.2.4-0.2+deb12u1
 libwebpdemux2==1.2.4-0.2+deb12u1
 libwebpmux3==1.2.4-0.2+deb12u1
-libwireshark-data==4.0.17-0+deb12u1
-libwireshark16==4.0.17-0+deb12u1
-libwiretap13==4.0.17-0+deb12u1
+libwireshark-data==4.0.17-0+deb12u3
+libwireshark16==4.0.17-0+deb12u3
+libwiretap13==4.0.17-0+deb12u3
 libwrap0==7.6.q-32
 libwrap0-dev==7.6.q-32
-libwsutil14==4.0.17-0+deb12u1
+libwsutil14==4.0.17-0+deb12u3
 libx11-6==2:1.8.4-2+deb12u2
 libx11-data==2:1.8.4-2+deb12u2
 libx11-xcb1==2:1.8.4-2+deb12u2
@@ -592,7 +592,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.170-1
+linux-libc-dev==6.1.170-3
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12
@@ -748,9 +748,9 @@ vim==2:9.0.1378-2+deb12u2
 vim-common==2:9.0.1378-2+deb12u2
 vim-runtime==2:9.0.1378-2+deb12u2
 wget==1.21.3-1+deb12u1
-wireshark==4.0.17-0+deb12u1
-wireshark-common==4.0.17-0+deb12u1
-wireshark-qt==4.0.17-0+deb12u1
+wireshark==4.0.17-0+deb12u3
+wireshark-common==4.0.17-0+deb12u3
+wireshark-qt==4.0.17-0+deb12u3
 x11-common==1:7.7+23
 xauth==1:1.1.2-1
 xdg-user-dirs==0.18-1
