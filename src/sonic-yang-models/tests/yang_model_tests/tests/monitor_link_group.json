@@ -31,42 +31,42 @@
     },
     "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_PATTERN": {
         "desc": "Invalid monitored-link interface pattern (not Ethernet or PortChannel)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "monitored-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_ETHERNET_RANGE": {
         "desc": "Invalid Ethernet interface number (out of range)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "monitored-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MONITORED_LINKS_PORTCHANNEL_FORMAT": {
         "desc": "Invalid PortChannel format (missing number)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "monitored-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_PATTERN": {
         "desc": "Invalid managed-link interface pattern (not Ethernet or PortChannel)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "managed-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_ETHERNET_RANGE": {
         "desc": "Invalid Ethernet interface number (out of range)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "managed-links"
         ]
     },
     "MONITOR_LINK_GROUP_INVALID_MANAGED_LINKS_PORTCHANNEL_FORMAT": {
         "desc": "Invalid PortChannel format (missing number)",
-        "eStrKey": "Pattern",
+        "eStrKey": "LeafRef",
         "eStr": [
             "managed-links"
         ]

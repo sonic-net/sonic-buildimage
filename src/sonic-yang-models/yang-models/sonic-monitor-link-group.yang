@@ -22,6 +22,11 @@ module sonic-monitor-link-group {
     description
         "SONIC monitor link group YANG Module for SONiC OS";
 
+    revision 2026-05-14 {
+        description
+            "Drop the empty-string fallback branch from the monitored-links and managed-links union types so leafref-only unions enforce that interface names exist in PORT or PORTCHANNEL. Add numeric patterns on link-up-delay and min-monitored-links so non-numeric and negative values are rejected. Drop the custom error-message on the group_name pattern so libyang emits the default 'Unsatisfied pattern' text.";
+    }
+
     revision 2026-05-12 {
         description
             "Rename uplinks/downlinks to monitored-links/managed-links and min-uplinks to min-monitored-links; drop empty-string defaults on the leaf-lists; add must constraint requiring min-monitored-links to be <= the number of configured monitored-links.";
@@ -55,9 +60,7 @@ module sonic-monitor-link-group {
                         length "1..128" {
                             error-message "Unsatisfied length for group_name";
                         }
-                        pattern "[a-zA-Z0-9_-]+" {
-                            error-message "pattern does not satisfy for group_name";
-                        }
+                        pattern "[a-zA-Z0-9_-]+";
                     }
                     description "Name of the link state tracking group";
                 }
@@ -71,9 +74,6 @@ module sonic-monitor-link-group {
                         type leafref {
                             path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
                         }
-                        type string {
-                            pattern "";
-                        }
                     }
                     ordered-by user;
                     description "List of monitored interfaces (formerly uplinks): their oper state drives the group state.";
@@ -86,9 +86,6 @@ module sonic-monitor-link-group {
                         }
                         type leafref {
                             path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
-                        }
-                        type string {
-                            pattern "";
                         }
                     }
                     ordered-by user;
@@ -105,13 +102,17 @@ module sonic-monitor-link-group {
                 }
 
                 leaf link-up-delay {
-                    type string;
+                    type string {
+                        pattern "[0-9]+";
+                    }
                     default "0";
                     description "Seconds to wait after monitored-links recover before bringing the group UP; prevents churn from link flaps";
                 }
 
                 leaf min-monitored-links {
-                    type string;
+                    type string {
+                        pattern "[0-9]+";
+                    }
                     default "1";
                     description "Minimum number of monitored-links that must be operational for the group to be considered up";
                 }
