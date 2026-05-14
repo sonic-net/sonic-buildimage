@@ -23,22 +23,22 @@ index 74bdeb5719..251531b62e 100644
 +++ b/lib/ansible/plugins/loader.py
 @@ -801,15 +801,14 @@ class PluginLoader:
              warnings.simplefilter("ignore", RuntimeWarning)
-             spec = importlib.util.spec_from_file_location(to_native(full_name), to_native(path))
+             spec = importlib.util.spec_from_file_location(to_native(python_module_name), to_native(path))
              module = importlib.util.module_from_spec(spec)
 -
 -            # mimic import machinery; make the module-being-loaded available in sys.modules during import
 -            # and remove if there's a failure...
--            sys.modules[full_name] = module
+-            sys.modules[python_module_name] = module
 -
              try:
                  spec.loader.exec_module(module)
 +                # mimic import machinery; make the module-being-loaded available in sys.modules during import
 +                # and remove if there's a failure...
-+                sys.modules[full_name] = module
++                sys.modules[python_module_name] = module
              except Exception:
--                del sys.modules[full_name]
-+                if full_name in sys.modules:
-+                    del sys.modules[full_name]
+-                del sys.modules[python_module_name]
++                if python_module_name in sys.modules:
++                    del sys.modules[python_module_name]
                  raise
 
          return module
