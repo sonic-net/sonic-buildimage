@@ -14,15 +14,25 @@
   neighbor {{ neighbor_addr }} shutdown
 {% endif %}
 !
-{% if neighbor_addr | ipv4 %}
+{% if neighbor_addr | is_interface %}
+  neighbor {{ neighbor_addr }} interface peer-group PEER_UNNUMBERED
+{% if 'v6only' not in bgp_session or bgp_session['v6only'] != 'true' %}
+  address-family ipv4
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
+  address-family ipv6
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% elif neighbor_addr | ipv4 %}
   address-family ipv4
     neighbor {{ neighbor_addr }} peer-group PEER_V4
-!
-{% elif neighbor_addr | ipv6 %}
-  address-family ipv6
-    neighbor {{ neighbor_addr }} peer-group PEER_V6
-!
-{% endif %}
 !
 {%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
     neighbor {{ neighbor_addr }} route-reflector-client
@@ -34,6 +44,21 @@
 !
     neighbor {{ neighbor_addr }} activate
   exit-address-family
+{% elif neighbor_addr | ipv6 %}
+  address-family ipv6
+    neighbor {{ neighbor_addr }} peer-group PEER_V6
+!
+{%   if 'rrclient' in bgp_session and bgp_session['rrclient'] | int != 0 %}
+    neighbor {{ neighbor_addr }} route-reflector-client
+{%   endif %}
+!
+{%   if 'nhopself' in bgp_session and bgp_session['nhopself'] | int != 0 %}
+    neighbor {{ neighbor_addr }} next-hop-self
+{%   endif %}
+!
+    neighbor {{ neighbor_addr }} activate
+  exit-address-family
+{% endif %}
 !
 {% if bgp_session["asn"] == bgp_asn and CONFIG_DB__DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
   address-family l2vpn evpn
