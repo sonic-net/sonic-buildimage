@@ -96,6 +96,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
+{% do features.append(("dpu-auto-recovery", "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'SmartSwitch' and ('type' not in DEVICE_METADATA['localhost'] or DEVICE_METADATA['localhost']['type'] != 'SmartSwitchDPU') %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
