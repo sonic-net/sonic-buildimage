@@ -6,6 +6,7 @@
  * This FIT image contains multiple DTBs for different hardware variants:
  * - ast2700-evb: Aspeed AST2700 EVB reference platform
  * - nexthop-b27-r0: NextHop AST2700 platform
+ * - arista_goldfinch-r0: Arista AST2700 BMC platform
  *
  * U-Boot selects the appropriate DTB configuration using the 'bootconf' variable
  * which is set based on hardware detection at boot time.
@@ -74,6 +75,17 @@
 				algo = "sha256";
 			};
 		};
+		fdt-arista_goldfinch-r0 {
+			description = "Flattened Device Tree blob for Arista 2700 BMC";
+			data = /incbin/("__DTB_PATH_ASPEED__/arista_goldfinch-r0.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
 		ramdisk-1 {
 			description = "Initramfs";
 			data = /incbin/("__INITRD_PATH__");
@@ -103,6 +115,15 @@
 			description = "SONiC for NextHop AST2700";
 			kernel = "kernel-1";
 			fdt = "fdt-nexthop-b27-r0";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		conf-arista_goldfinch-r0 {
+			description = "SONiC for Arista 2700 BMC";
+			kernel = "kernel-1";
+			fdt = "fdt-arista_goldfinch-r0";
 			ramdisk = "ramdisk-1";
 			hash-1 {
 				algo = "sha256";
