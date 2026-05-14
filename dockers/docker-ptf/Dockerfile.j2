@@ -160,10 +160,6 @@ RUN rm -rf /debs \
     && python setup.py install \
     && cd .. \
     && rm -fr scapy-vxlan \
-{% else %}
-    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
-    && python3 get-pip.py \
-    && rm -f get-pip.py \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
