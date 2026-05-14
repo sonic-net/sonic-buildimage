@@ -32,6 +32,9 @@ jobs:
   - task: DownloadPipelineArtifact@2
     inputs:
       artifact: sonic-buildimage.${{ parameters.platform }}
+      itemPattern: |
+        **/target/docker-*.gz
+        **/target/sonic-${{ parameters.platform }}.bin
     displayName: "Download sonic-buildimage.${{ parameters.platform }} artifact"
 
   - script: |
@@ -41,7 +44,7 @@ jobs:
       sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
       sudo apt install -y squashfs-tools
       trivy --version
-      unsquashfs --version
+      unsquashfs -v
     displayName: "Install Trivy and squashfs-tools"
 
   - script: |
