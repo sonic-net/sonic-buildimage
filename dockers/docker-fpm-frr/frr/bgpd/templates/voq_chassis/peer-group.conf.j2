@@ -9,10 +9,13 @@
   {% if 'bgp_asn' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
   neighbor VOQ_CHASSIS_V6_PEER remote-as {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }}
   {% endif %}
+  neighbor PEER_UNNUMBERED peer-group
+  neighbor PEER_UNNUMBERED capability extended-nexthop
 
   address-family ipv4
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
     neighbor VOQ_CHASSIS_V4_PEER allowas-in 1
+    neighbor PEER_UNNUMBERED allowas-in 1
 {% endif %}
     neighbor VOQ_CHASSIS_V4_PEER activate
     neighbor VOQ_CHASSIS_V4_PEER addpath-tx-all-paths
@@ -20,10 +23,16 @@
     neighbor VOQ_CHASSIS_V4_PEER route-map FROM_VOQ_CHASSIS_V4_PEER in
     neighbor VOQ_CHASSIS_V4_PEER route-map TO_VOQ_CHASSIS_V4_PEER out
     neighbor VOQ_CHASSIS_V4_PEER send-community
+    neighbor PEER_UNNUMBERED addpath-tx-all-paths
+    neighbor PEER_UNNUMBERED soft-reconfiguration inbound
+    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_V4_PEER in
+    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_V4_PEER out
+    neighbor PEER_UNNUMBERED send-community
   exit-address-family
   address-family ipv6
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
     neighbor VOQ_CHASSIS_V6_PEER allowas-in 1
+    neighbor PEER_UNNUMBERED allowas-in 1
 {% endif %}
     neighbor VOQ_CHASSIS_V6_PEER activate
     neighbor VOQ_CHASSIS_V6_PEER addpath-tx-all-paths
@@ -31,6 +40,11 @@
     neighbor VOQ_CHASSIS_V6_PEER route-map FROM_VOQ_CHASSIS_V6_PEER in
     neighbor VOQ_CHASSIS_V6_PEER route-map TO_VOQ_CHASSIS_V6_PEER out
     neighbor VOQ_CHASSIS_V6_PEER send-community
+    neighbor PEER_UNNUMBERED addpath-tx-all-paths
+    neighbor PEER_UNNUMBERED soft-reconfiguration inbound
+    neighbor PEER_UNNUMBERED route-map FROM_VOQ_CHASSIS_V6_PEER in
+    neighbor PEER_UNNUMBERED route-map TO_VOQ_CHASSIS_V6_PEER out
+    neighbor PEER_UNNUMBERED send-community
   exit-address-family
 !
 ! end of template: bgpd/templates/voq_chassis/peer-group.conf.j2
