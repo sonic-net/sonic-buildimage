@@ -413,16 +413,13 @@ RUN cd gnxi \
 
 # Build gnmic from source at a pinned upstream main commit. Picks up the
 # dependency fixes merged after v0.45.0 (grpc 1.79.3, otel-sdk 1.43.0,
-# go-git 5.19.0, etc.) that address the CVEs which forced removal in
-# #27059. Temporary until the next tagged gnmic release ships.
-# prometheus is pinned forward to v0.311.3 to close CVE-2026-42151
-# (Azure AD OAuth client secret exposed via config API); upstream gnmic
-# still pins v0.311.2 at the SHA above.
-RUN GNMIC_REV=71878d1936327b96883488d5f7a7584b1dda9bf1 \
+# go-git 5.19.0, prometheus 0.311.3, etc.) that address the CVEs which
+# forced removal in #27059. Temporary until the next tagged gnmic
+# release ships.
+RUN GNMIC_REV=653dc5dd4ddcd3bd4197317875a10c1ce8b06653 \
     && git clone https://github.com/openconfig/gnmic.git /tmp/gnmic \
     && cd /tmp/gnmic \
     && git checkout "${GNMIC_REV}" \
-    && go get github.com/prometheus/prometheus@v0.311.3 \
     && go build -o /usr/local/bin/gnmic . \
     && chmod +x /usr/local/bin/gnmic \
     && rm -rf /tmp/gnmic /root/go/pkg/mod /root/.cache/go-build
