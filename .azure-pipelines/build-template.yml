@@ -94,6 +94,8 @@ jobs:
 
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
+      elif [ ${{ parameters.platform }} == alpinevs ]; then
+        make USERNAME=admin SONIC_BUILD_JOB=2 $CACHE_OPTIONS target/sonic-alpinevs.img.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
