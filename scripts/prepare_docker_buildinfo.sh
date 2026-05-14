@@ -45,6 +45,14 @@ fi
 
 if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-base-* ]] || [[ "$IMAGENAME" == docker-ptf ]]; then
     scripts/build_mirror_config.sh ${DOCKERFILE_PATH} $ARCH $DISTRO
+fi
+
+if [[ "$IMAGENAME" == sonic-slave-* ]] || [[ "$IMAGENAME" == docker-ptf ]]; then
+	mkdir -p "${DOCKERFILE_PATH}/files/apt/apt.conf.d"
+	cp -f files/apt/apt.conf.d/{apt-timeout-n-retries,no-check-valid-until} "${DOCKERFILE_PATH}/files/apt/apt.conf.d/"
+fi
+
+if [[ "$IMAGENAME" == docker-base-* ]]; then
 	mkdir -p "${DOCKERFILE_PATH}/files/apt/apt.conf.d"
 	cp -f files/apt/apt.conf.d/* "${DOCKERFILE_PATH}/files/apt/apt.conf.d/"
 fi
