@@ -42,7 +42,7 @@ function startplatform() {
             else
                 platform="unknown"
             fi
-            if [[ x"$platform" == x"x86_64-arista_720dt_48s" ]]; then
+            if [[ x"$platform" =~ x"x86_64-arista_720dt_48s" ]]; then
                 is_bcm0=$(ls /sys/class/net | grep bcm0)
                 if [[ "$is_bcm0" == "bcm0" ]]; then
                     debug "stop SDK opennsl-modules ..."
