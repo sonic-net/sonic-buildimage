@@ -198,7 +198,7 @@
     },
     "KDUMP": {
         "config": {
-{%- if sonic_asic_platform == "cisco-8000" %}
+{%- if sonic_asic_platform == "cisco-8000" or sonic_asic_platform == "cisco" %}
             "enabled": "true",
 {% else %}
             "enabled": "false",
