@@ -123,8 +123,13 @@ ip link set "${INTERFACE_NAME}" up
 # interface configuration is managed through sonic-cfggen and interfaces.j2
 # Step 6b: Add static IPv4 for gNOI communication with switch host
 # Read configuration from bmc.json
-BMC_CONFIG="/usr/share/sonic/platform/bmc.json"
+BMC_CONFIG="/etc/sonic/bmc.json"
 BMC_IPV4=""
+
+if [ ! -f "${BMC_CONFIG}" ]; then
+    # Use platform specific if global bmc.json is missing
+    BMC_CONFIG="/usr/share/sonic/platform/bmc.json"
+fi
 
 if [ -f "${BMC_CONFIG}" ]; then
     logger -t usb-network "Reading BMC configuration from ${BMC_CONFIG}"
