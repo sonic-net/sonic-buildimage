@@ -24,3 +24,14 @@
 0105-bgpd-Show-all-advertised-paths-including-non-best-paths-only-if-addpath-is-enabled.patch
 0106-bgpd-Fix-suppress-fib-pending-config-race-condition.patch
 0108-zebra-defer-rib-sweep-until-metaqueue-drained.patch
+0112-Route-map-command-to-filter-out-VPN-paths-based-on-their-origin.patch
+0113-bgpd-improve-clarify-bgp-static-tables.patch
+0114-bgpd-add-SRv6-unicast-at-default-VRF.patch
+0115-bgpd-add-remoteTransposedSid-value-in-json-output-of-vpn-paths.patch
+0116-SID-extension-to-32bits.patch
+0117-various-srv6-fixes.patch
+0118-bgpd-Fix-SRv6-SID-locator-memory-leak-in-SID-notify-handler.patch
+0119-bgpd-Track-route-map-references-for-srv6-when-rmap-is-used.patch
+0120-bgpd-Fix-route-map-cleanup-ordering-in-SRv6-unicast-SID-export.patch
+0121-bgpd-Fix-SRv6-SID-export-route-map-update-not-taking-effect.patch
+0122-bgpd-Add-SRv6-uDT46-SID-support-for-GRT.patch
