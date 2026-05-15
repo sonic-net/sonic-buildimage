@@ -18,6 +18,7 @@
 #include <regex>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <iostream>
 
 // Utility function for logging to /dev/kmsg
 void log_to_kmsg(const char* format, ...) {
@@ -966,10 +967,17 @@ static int render_network_service_for_smart_switch(const std::filesystem::path& 
         return 0;
     }
 
-    // Render Before instruction for midplane network with database service
+    // Render database@dpuX ordering with midplane network
     for (int i = 0; i < num_dpus; i++) {
         auto unit_override_dir = install_dir / std::format("database@dpu{}.service.d", i);
-        std::filesystem::create_directory(unit_override_dir);
+
+        std::error_code ec;
+        std::filesystem::create_directory(unit_override_dir, ec);
+        if (ec) {
+            std::cerr << "Failed to create directory " << unit_override_dir
+                      << ": " << ec.message() << std::endl;
+            return -1;
+        }
 
         auto unit_ordering_file_path = unit_override_dir / "ordering.conf";
 
@@ -978,6 +986,27 @@ static int render_network_service_for_smart_switch(const std::filesystem::path& 
         unit_ordering_file << "[Unit]\n";
         unit_ordering_file << "Requires=systemd-networkd-wait-online@bridge-midplane.service\n";
         unit_ordering_file << "After=systemd-networkd-wait-online@bridge-midplane.service\n";
+    }
+
+    // Render pmon ordering and dependency on all database@dpuX instance services
+    auto pmon_override_dir = install_dir / "pmon.service.d";
+
+    std::error_code ec;
+    std::filesystem::create_directory(pmon_override_dir, ec);
+    if (ec) {
+        std::cerr << "Failed to create directory " << pmon_override_dir
+                  << ": " << ec.message() << std::endl;
+        return -1;
+    }
+
+    auto pmon_ordering_file_path = pmon_override_dir / "dpu-database-ordering.conf";
+
+    std::ofstream pmon_ordering_file;
+    pmon_ordering_file.open(pmon_ordering_file_path);
+    pmon_ordering_file << "[Unit]\n";
+    for (int i = 0; i < num_dpus; i++) {
+        pmon_ordering_file << "Wants=database@dpu" << i << ".service\n";
+        pmon_ordering_file << "After=database@dpu" << i << ".service\n";
     }
 
     return 0;
