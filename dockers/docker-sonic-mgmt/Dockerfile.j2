@@ -32,8 +32,6 @@ RUN apt-get update \
     psmisc \
     python3 \
     python3-dev \
-    python3-pip \
-    python3-venv \
     python-is-python3 \
     rsyslog \
     shellcheck \
@@ -48,9 +46,13 @@ RUN apt-get update \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/*
 
-# Ubuntu 24.04 recommends installing pip packages in a virtual environment
-# Create a virtual environment at /opt/venv and install all required python packages there
-RUN python3 -m venv --system-site-packages /opt/venv
+# Install uv - a fast Python package manager that replaces pip/venv/wheel.
+# This eliminates the need for python3-pip, python3-venv, and python3-wheel
+# system packages, avoiding vulnerabilities like USN-8221-1.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Create a virtual environment at /opt/venv using uv
+RUN uv venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
@@ -58,8 +60,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
     && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
+RUN uv pip install --no-cache \
     aiohttp \
     allure-pytest \
     ansible \
@@ -146,7 +147,7 @@ RUN pip install --no-cache-dir --upgrade pip \
     && cd ../..            \
     && rm -fr nanomsg-1.2.1  \
     && rm -f 1.2.1.tar.gz  \
-    && python3 -m pip install --no-cache-dir nnpy
+    && uv pip install --no-cache nnpy
 
 # Install docker-ce-cli, azure-cli
 RUN install -m 0755 -d /etc/apt/keyrings \
@@ -185,7 +186,7 @@ RUN tmpdir=$(mktemp -d) \
     && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
     && cd utils \
     && python3 setup.py bdist_wheel \
-    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \
     && rm -rf "$tmpdir"
 

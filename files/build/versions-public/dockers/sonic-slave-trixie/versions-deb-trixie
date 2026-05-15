@@ -103,6 +103,7 @@ dh-autoreconf==20
 dh-dkms==3.2.2-1~deb13u1
 dh-exec==0.30+b1
 dh-make==2.202503
+dh-package-notes==0.15
 dh-python==6.20250414
 dh-runit==2.16.4
 dh-strip-nondeterminism==1.14.1-2
@@ -1094,6 +1095,7 @@ libmime-tools-perl==5.515-1
 libmldbm-perl==2.05-4
 libmnl-dev==1.0.5-3
 libmnl0==1.0.5-3
+libnsl-dev==1.3.0-3+b3
 libmodule-implementation-perl==0.09-2
 libmodule-runtime-conflicts-perl==0.003-2
 libmodule-runtime-perl==0.018-1
