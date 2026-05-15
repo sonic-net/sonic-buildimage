@@ -161,10 +161,6 @@ RUN rm -rf /debs \
     && python setup.py install \
     && cd .. \
     && rm -fr scapy-vxlan \
-{% else %}
-    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
-    && python3 get-pip.py \
-    && rm -f get-pip.py \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
@@ -235,7 +231,7 @@ COPY ["tacacs+", "/etc/default"]
 # causes the process API to have a restricted
 # environment without access to the virtualenv.
 {% if PTF_ENV_PY_VER == "py3" %}
-    RUN pip3 install --break-system-packages "tornado>=6.5.5"
+    RUN pip3 install "tornado>=6.5.5"
 {% endif %}
 
 
