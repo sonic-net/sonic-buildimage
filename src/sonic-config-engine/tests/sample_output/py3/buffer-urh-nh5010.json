@@ -65,7 +65,9 @@
             "Ethernet240": "50m",
             "Ethernet244": "50m",
             "Ethernet248": "50m",
-            "Ethernet252": "300m"
+            "Ethernet252": "300m",
+            "Ethernet256": "300m",
+            "Ethernet260": "300m"
         }
     },
 
