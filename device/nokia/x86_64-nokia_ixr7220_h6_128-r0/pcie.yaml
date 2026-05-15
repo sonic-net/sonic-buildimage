@@ -162,12 +162,6 @@
   id: 16d6
   name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM57412 NetXtreme-E
     10Gb RDMA Ethernet Controller (rev 01)'
-- bus: '03'
-  dev: '00'
-  fn: '1'
-  id: 16d6
-  name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM57412 NetXtreme-E
-    10Gb RDMA Ethernet Controller (rev 01)'
 - bus: '04'
   dev: '00'
   fn: '0'
@@ -223,6 +217,6 @@
 - bus: 09
   dev: '00'
   fn: '0'
-  id: 15b8
-  name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Raphael/Granite Ridge
-    USB 2.0 xHCI'
+  id: 14de
+  name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
+    Raphael/Granite Ridge PCIe Dummy Function'
