@@ -14,7 +14,7 @@ https://github.com/karimra/gnoic.git==27bc5a65d391d07c903f6cd0a05b73219657e00d
 https://github.com/Mellanox/libpsample.git==62bb27d9a49424e45191eee81df7ce0d8c74e774
 https://github.com/openconfig/gnmic.git==883b7f9ab0d486f9dc9272a1018070d7f23197b7
 https://github.com/openconfig/oc-pyang.git==a116b53b1c1a149bc9a5d42dc26f3d0ab797846a
-https://github.com/p4lang/ptf.git==1fa45d0a5b21c0fa55bec7a77e00b8093bbd5108
+https://github.com/p4lang/ptf.git==a38629d0e24d7dd586012090ca0855d1cc7842dc
 https://github.com/redis/librdb.git==a7065962cf434da1a909aa45107dafa7e45b5057
 https://github.com/sflow/host-sflow==281adc4122092780859bae16f44b139503846f2a
 https://github.com/sflow/sflowtool==b843dce0e1ff447675506aa4c316cba1b6378af4
