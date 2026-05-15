@@ -20,7 +20,7 @@ parameters:
 
 jobs:
 - job: trivy_scan_${{ parameters.platform }}
-  displayName: "Trivy scan (${{ parameters.platform }})"
+  displayName: "[OPTIONAL] Trivy scan (${{ parameters.platform }})"
   pool: sonic-ubuntu-1c
   continueOnError: true
   timeoutInMinutes: 120
@@ -44,7 +44,7 @@ jobs:
       sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
       sudo apt install -y squashfs-tools
       trivy --version
-      unsquashfs -v
+      unsquashfs -v || true
     displayName: "Install Trivy and squashfs-tools"
 
   - script: |
@@ -69,7 +69,7 @@ jobs:
         trivy image \
           --input "$img" \
           --skip-db-update \
-          --severity HIGH,CRITICAL \
+          --severity MEDIUM,HIGH,CRITICAL \
           --ignore-unfixed \
           --exit-code 1 \
           --format table \
@@ -129,7 +129,7 @@ jobs:
       echo "Scanning rootfs..."
       trivy rootfs \
         "$WORKDIR/rootfs" \
-        --severity HIGH,CRITICAL \
+        --severity MEDIUM,HIGH,CRITICAL \
         --ignore-unfixed \
         --exit-code 1 \
         --format table \
