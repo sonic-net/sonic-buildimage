@@ -247,7 +247,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 # For field defined as leaf-list but has string value in CONFIG DB, need do special handling here. For exampe:
                 # port.adv_speeds in CONFIG DB has value "100,1000,10000", it shall be transferred to [100,1000,10000] as YANG value here to
                 # be compliant with yang model.
-                value = value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])])
+                value = [x.strip() for x in value.split(LEAF_LIST_WITH_STRING_VALUE_DICT[(self.elementPath[0], self.elementPath[-1])])]
             for v in value:
                 vValue.append(_yangConvert(v))
             # SONiC YANG models that allow "logically empty" leaf-lists declare
