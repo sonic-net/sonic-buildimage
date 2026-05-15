@@ -1,0 +1,51 @@
+--- a/src/Linux/mod_sonic.c
++++ b/src/Linux/mod_sonic.c
+@@ -1035,13 +1035,19 @@
+ 
+   static bool mapPorts(EVMod *mod) {
+     HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
+-    // kick off just one - starts a chain reaction if there are more.
+-    // Gets the ifIndex and Linux (OS) ifIndex
+-    HSPSonicPort *prt = UTArrayPop(mdata->unmappedPorts);
+-    if(prt) {
++    // Dispatch all unmapped ports at once using Redis async pipelining.
++    // The callbacks no longer chain (hiredis 1.2.0 forbids redisAsyncCommand
++    // from within callbacks), so we fire all queries here and let the
++    // replies arrive asynchronously.
++    bool dispatched = NO;
++    HSPSonicPort *prt;
++    while((prt = UTArrayPop(mdata->unmappedPorts)) != NULL) {
+       prt->unmappedPort = NO;
+       db_getIfIndexMap(mod, prt);
+-      return YES;  // still mapping points
++      dispatched = YES;
++    }
++    if(dispatched) {
++      return YES;  // still waiting for replies
+     }
+ 
+     // something changed - for example we may have just learned the alias for the
+@@ -1223,15 +1229,17 @@
+ 
+   static bool discoverNewPorts(EVMod *mod) {
+     HSP_mod_SONIC *mdata = (HSP_mod_SONIC *)mod->data;
+-    // kick off just one - starts a chain reaction if there are more.
+-    // Gets the state (index, speed etc.) so we can add it as an adaptor.
+-    HSPSonicPort *prt = UTArrayPop(mdata->newPorts);
+-    if(prt) {
++    // Dispatch all new ports at once using Redis async pipelining.
++    // The callbacks no longer chain (hiredis 1.2.0 forbids redisAsyncCommand
++    // from within callbacks), so we fire all queries here.
++    bool dispatched = NO;
++    HSPSonicPort *prt;
++    while((prt = UTArrayPop(mdata->newPorts)) != NULL) {
+       prt->newPort = NO;
+       db_getPortState(mod, prt);
+-      return YES; // still discovering new ports
++      dispatched = YES;
+     }
+-    return NO; // done discoveriny new ports
++    return dispatched; // YES if we dispatched queries, NO if nothing to do
+   }
+ 
+ 
