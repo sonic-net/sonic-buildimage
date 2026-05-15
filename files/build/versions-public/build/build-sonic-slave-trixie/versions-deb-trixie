@@ -3,7 +3,7 @@ doca-sdk-argp==3.3.0055-1
 doca-sdk-common==3.3.0055-1
 doca-sdk-dpdk-bridge==3.3.0055-1
 doca-sdk-flow==3.3.0055-1
-frr==10.5.1-sonic-0
+frr==10.5.4-sonic-0
 gpio-mlxbf3-dkms==1.0-0
 kernel-mft-dkms==4.34.0-148
 kernel-mft-dkms-modules-6.12.41+deb13-sonic-arm64==4.34.0
@@ -57,7 +57,7 @@ mlnx-dpdk-dev==22.11.0-2510.2.1
 mlnx-iproute2==2601.0.2-1
 mlnx-ofed-kernel-dkms==26.01.OFED.26.01.0.2.9.1-1
 mlnx-ofed-kernel-utils==26.01.OFED.26.01.0.2.9.1-1
-mlnx-sai==1.mlnx.SAIBuild0.0.50.0
+mlnx-sai==1.mlnx.SAIBuild2511.35.3400.14
 mlnx-tools==2601.0.0-1
 mlx-bootctl-dkms==1.3-0
 mlxbf-bootctl==2.1

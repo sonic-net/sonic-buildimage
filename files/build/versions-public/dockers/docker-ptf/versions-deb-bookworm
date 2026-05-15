@@ -387,7 +387,7 @@ libnetfilter-conntrack3==1.0.9-3
 libnfnetlink0==1.0.2-2
 libnftables1==1.0.6-2+deb12u2
 libnftnl11==1.2.4-2
-libnghttp2-14==1.52.0-1+deb12u2
+libnghttp2-14==1.52.0-1+deb12u3
 libnl-3-200==3.7.0-0.2+b1
 libnl-3-dev==3.7.0-0.2+b1
 libnl-cli-3-200==3.7.0-0.2+b1
