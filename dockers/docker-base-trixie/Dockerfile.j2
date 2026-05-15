@@ -21,8 +21,6 @@ COPY ["files/apt/apt.conf.d/", "/etc/apt/apt.conf.d/"]
 RUN apt -o Acquire::https::Verify-Peer=false update && \
     apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
 
-RUN apt-config dump
-
 # Update apt cache and
 # pre-install fundamental packages
 RUN apt update &&            \
