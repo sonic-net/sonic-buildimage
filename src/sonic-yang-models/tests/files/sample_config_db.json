@@ -1496,6 +1496,16 @@
                 "allow_insecure": "false"
             }
          },
+        "REST_SERVER": {
+            "default": {
+                "port": "443",
+                "client_auth": "user",
+                "log_level": "2",
+                "server_crt": "/etc/sonic/credentials/restserver.crt",
+                "server_key": "/etc/sonic/credentials/restserver.key",
+                "ca_crt": "/etc/sonic/credentials/restca.crt"
+            }
+        },
         "FABRIC_MONITOR": {
             "FABRIC_MONITOR_DATA": {
                 "monErrThreshCrcCells": "1",
