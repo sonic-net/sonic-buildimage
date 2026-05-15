@@ -1,0 +1,9 @@
+arping==2.25-1
+binutils-arm-linux-gnueabihf==2.44-3
+conntrack==1:1.4.8-2
+cpp-14-arm-linux-gnueabihf==14.2.0-19
+cpp-arm-linux-gnueabihf==4:14.2.0-1
+gcc-14-arm-linux-gnueabihf==14.2.0-19
+gcc-arm-linux-gnueabihf==4:14.2.0-1
+ndisc6==1.0.7-1
+ndppd==0.2.5-6

@@ -10,12 +10,17 @@ import hashlib
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Union
 
 from swsscommon.swsscommon import ConfigDBConnector
 from sonic_py_common import logger as log
 
 logger = log.Logger()
+
+# CONFIG_DB field values may be plain strings or YANG leaf-list values
+# (returned by ConfigDBConnector.get_entry as Python lists, e.g. role).
+DBValue = Union[str, List[str]]
+DBEntry = Dict[str, DBValue]
 
 
 def get_bool_env_var(name: str, default: bool = False) -> bool:
@@ -89,14 +94,17 @@ def _split_redis_key(key: str) -> Tuple[str, str]:
     return parts[0], parts[1]
 
 
-def db_hget(key: str, field: str) -> Optional[str]:
-    """Get a single field value from CONFIG_DB hash."""
+def db_hget(key: str, field: str) -> Optional[DBValue]:
+    """Get a single field value from CONFIG_DB hash.
+
+    May return a list for YANG leaf-list fields (e.g. GNMI_CLIENT_CERT.role).
+    """
     db = _get_config_db()
     if db is None:
         return None
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
     except Exception as e:
         logger.log_error(f"db_hget failed for {key} field {field}: {e}")
         return None
@@ -107,33 +115,54 @@ def db_hget(key: str, field: str) -> Optional[str]:
     return val
 
 
-def db_hgetall(key: str) -> Dict[str, str]:
-    """Get all field-value pairs from CONFIG_DB hash."""
+def db_hgetall(key: str) -> DBEntry:
+    """Get all field-value pairs from CONFIG_DB hash.
+
+    Values may be strings or lists (for YANG leaf-list fields).
+    """
     db = _get_config_db()
     if db is None:
         return {}
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
         return entry or {}
     except Exception as e:
         logger.log_error(f"db_hgetall failed for {key}: {e}")
         return {}
 
 
-def db_hset(key: str, field: str, value: str) -> bool:
+def db_hset(key: str, field: str, value: DBValue) -> bool:
     """Set a single field value in CONFIG_DB hash."""
     db = _get_config_db()
     if db is None:
         return False
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
         entry[field] = value
         db.set_entry(table, entry_key, entry)
         return True
     except Exception as e:
         logger.log_error(f"db_hset failed for {key} field {field}: {e}")
+        return False
+
+
+def db_hdel(key: str, field: str) -> bool:
+    """Delete a single field from a CONFIG_DB hash entry."""
+    db = _get_config_db()
+    if db is None:
+        return False
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: DBEntry = db.get_entry(table, entry_key)
+        if field not in entry:
+            return True  # already absent
+        entry.pop(field)
+        db.set_entry(table, entry_key, entry if entry else None)
+        return True
+    except Exception as e:
+        logger.log_error(f"db_hdel failed for {key} field {field}: {e}")
         return False
 
 
@@ -144,12 +173,24 @@ def db_del(key: str) -> bool:
         return False
     try:
         table, entry_key = _split_redis_key(key)
-        # In ConfigDBConnector, setting an empty dict deletes the key
-        db.set_entry(table, entry_key, {})
+        db.set_entry(table, entry_key, None)
         return True
     except Exception as e:
         logger.log_error(f"db_del failed for {key}: {e}")
         return False
+
+
+def db_get_table_keys(table: str) -> List[str]:
+    """Return all entry keys for a CONFIG_DB table."""
+    db = _get_config_db()
+    if db is None:
+        return []
+    try:
+        entries = db.get_table(table) or {}
+        return list(entries.keys())
+    except Exception as e:
+        logger.log_error(f"db_get_table_keys failed for {table}: {e}")
+        return []
 
 
 # ───────────── File operations ─────────────
