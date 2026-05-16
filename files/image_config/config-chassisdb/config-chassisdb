@@ -28,7 +28,7 @@ config_chassis_db() {
     # Check if this is a chassis
     read -r is_chassis < <(python3 -c 'import sonic_platform.platform as platform;\
 	    chassis=platform.Platform().get_chassis(); m=chassis.get_module(0);\
-	    name=m.get_name() if m else ""; print("SUPERVISOR" in name or "LINECARD" in name)')
+	    name=m.get_name() if m else ""; print("SUPERVISOR" in name or "LINE-CARD" in name)')
 
     # Identify the midplane IP in each sonic platform
     if [[ "$is_chassis" == True ]]; then
