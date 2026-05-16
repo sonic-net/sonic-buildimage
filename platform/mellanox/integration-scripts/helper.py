@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +26,13 @@ MLNX_NOARCH_MARKER = "mellanox_common"
 MLNX_ARM_KFG_SECTION = "mellanox-arm64"
 SDK_MARKER = "mellanox_sdk"
 HW_MGMT_MARKER = "mellanox_hw_mgmt"
+MLNX_ASPEED_MARKER = "nvidia_aspeed_bmc"
 SLK_PATCH_LOC = "src/sonic-linux-kernel/patches-sonic/"
 SLK_KCONFIG_DIR = "src/sonic-linux-kernel/config.local/"
 SLK_KCONFIG = SLK_KCONFIG_DIR+"featureset-sonic/config"
 SLK_KCONFIG_AMD64 = SLK_KCONFIG_DIR+"amd64/config.sonic"
-SLK_KCONFIG_ARM64 = SLK_KCONFIG_DIR+"arm64/config.sonic-mellanox" 
+SLK_KCONFIG_ARM64 = SLK_KCONFIG_DIR+"arm64/config.sonic-mellanox"
+SLK_KCONFIG_ASPEED = SLK_KCONFIG_DIR+"arm64/config.sonic-aspeed"
 SLK_SERIES = SLK_PATCH_LOC + "series"
 NON_UP_PATCH_DIR = "platform/mellanox/non-upstream-patches/"
 NON_UP_PATCH_LOC = NON_UP_PATCH_DIR + "patches"
@@ -140,11 +143,11 @@ class Action():
         pass
 
 
-def build_commit_description(changes):
+def build_commit_description(changes, title="Patch List"):
     if not changes:
         return ""
     content = "\n"
-    content = content + " ## Patch List\n"
+    content = content + f" ## {title}\n"
     for key, value in changes.items():
         content = content + f"* {key} : {value}\n"
     return content

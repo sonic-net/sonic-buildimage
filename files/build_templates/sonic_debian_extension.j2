@@ -782,6 +782,9 @@ sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 # Copy ASN configuration files
 sudo cp $IMAGE_CONFIGS/constants/constants.yml $FILESYSTEM_ROOT/etc/sonic/
 
+# Copy BMC network configuration file to share templates
+sudo cp $IMAGE_CONFIGS/constants/bmc.json $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+
 # Copy DBus policy files for sonic-redfish (aspeed BMC platform only)
 if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
     sudo mkdir -p $FILESYSTEM_ROOT/etc/dbus-1/system.d

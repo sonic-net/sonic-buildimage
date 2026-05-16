@@ -5,3 +5,4 @@
 0005-Use-close-range-syscall-over-blindly-looping-over-al.patch
 0006-mod_sonic-defer-redis-commands.patch
 0007-hsflowd-stop-overriding-sigabrt.patch
+0008-mod_sonic-batch-port-discovery.patch

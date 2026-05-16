@@ -63,5 +63,44 @@
                 ]
             }
         }
+    },
+    "CHASSIS_MODULE_WITH_SWITCH_HOST": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "SWITCH-HOST",
+                        "admin_status": "up",
+                        "power_on_delay": 30,
+                        "graceful_shutdown_timeout": 120
+                    }
+                ]
+            }
+        }
+    },
+    "CHASSIS_MODULE_WITH_SWITCH_HOST_INVALID_NAME": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "SWITCH-HOST0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "CHASSIS_MODULE_LINECARD_WITH_SWITCH_HOST_FIELDS": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "LINE-CARD0",
+                        "admin_status": "up",
+                        "power_on_delay": 30
+                    }
+                ]
+            }
+        }
     }
 }
