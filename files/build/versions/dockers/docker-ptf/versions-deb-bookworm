@@ -350,7 +350,7 @@ libkrb5-3==1.20.1-2+deb12u4
 libkrb5support0==1.20.1-2+deb12u4
 libksba8==1.6.3-2
 liblapack3==3.11.0-2
-liblcms2-2==2.14-2
+liblcms2-2==2.14-2+deb12u1
 libldap-2.5-0==2.5.13+dfsg-5
 libldap-common==2.5.13+dfsg-5
 liblerc4==4.0.0+ds-2
@@ -384,7 +384,7 @@ libnetfilter-conntrack3==1.0.9-3
 libnfnetlink0==1.0.2-2
 libnftables1==1.0.6-2+deb12u2
 libnftnl11==1.2.4-2
-libnghttp2-14==1.52.0-1+deb12u2
+libnghttp2-14==1.52.0-1+deb12u3
 libnl-3-200==3.7.0-0.2+b1
 libnl-3-dev==3.7.0-0.2+b1
 libnl-cli-3-200==3.7.0-0.2+b1
@@ -404,7 +404,7 @@ libobjc-12-dev==12.2.0-14+deb12u1
 libobjc4==12.2.0-14+deb12u1
 libogg0==1.3.5-3
 libopenblas0-pthread==0.3.21+ds-4
-libopenjp2-7==2.5.0-2+deb12u2
+libopenjp2-7==2.5.0-2+deb12u3
 libopenmpi-dev==4.1.4-3+b1
 libopenmpi3==4.1.4-3+b1
 libopus0==1.3.1-3
@@ -426,7 +426,7 @@ libpixman-1-0==0.42.2-1
 libpkgconf3==1.8.1-1
 libpmix-dev==4.2.2-1+deb12u1
 libpmix2==4.2.2-1+deb12u1
-libpng16-16==1.6.39-2+deb12u4
+libpng16-16==1.6.39-2+deb12u5
 libpopt0==1.19+dfsg-1
 libproc2-0==2:4.0.2-3
 libprotobuf-dev==3.21.12-3
@@ -589,7 +589,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.170-1
+linux-libc-dev==6.1.172-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12
