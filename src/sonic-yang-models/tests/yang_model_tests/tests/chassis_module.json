@@ -9,5 +9,18 @@
         "desc": "Load chassis module table with admin_status set to invalid value",
         "eStrKey": "InvalidValue",
         "eStr": ["admin_status"]
+    },
+    "CHASSIS_MODULE_WITH_SWITCH_HOST": {
+        "desc": "Load chassis module table with SWITCH-HOST entry and BMC timing fields"
+    },
+    "CHASSIS_MODULE_WITH_SWITCH_HOST_INVALID_NAME": {
+        "desc": "Load chassis module table with invalid SWITCH-HOST name variant",
+        "eStrKey": "Pattern",
+        "eStr": ["name"]
+    },
+    "CHASSIS_MODULE_LINECARD_WITH_SWITCH_HOST_FIELDS": {
+        "desc": "power_on_delay and graceful_shutdown_timeout must only be set on SWITCH-HOST, not LINE-CARD",
+        "eStrKey": "None",
+        "eStr": ["power_on_delay is only applicable to SWITCH-HOST"]
     }
 }

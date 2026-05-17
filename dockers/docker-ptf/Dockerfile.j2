@@ -107,15 +107,15 @@ RUN apt-get update          \
 # to ensure they use a patched Go stdlib (GO-2026-4337: crypto/tls)
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN GO_ARCH=armv6l \
-    && GO_SHA256=7d4f0d266d871301e08ef4ac31c56e66048688893b2848392e5c600276351ee8 \
+    && GO_SHA256=39f168f158e693887d3ad006168af1b1a3007b19c5993cae4d9d57f82f52aaf8 \
 {% elif CONFIGURED_ARCH == "arm64" %}
 RUN GO_ARCH=arm64 \
-    && GO_SHA256=ec342e7389b7f489564ed5463c63b16cf8040023dabc7861256677165a8c0e2b \
+    && GO_SHA256=654da1f9b50a5d1c2a85ccf8ed405aa89c06e94d18384628bf186f7712677b08 \
 {% else %}
 RUN GO_ARCH=amd64 \
-    && GO_SHA256=00859d7bd6defe8bf84d9db9e57b9a4467b2887c18cd93ae7460e713db774bc1 \
+    && GO_SHA256=42d4f7a32316aa66591eca7e89867256057a4264451aca10570a715b3637ba70 \
 {% endif %}
-    && GO_VERSION=1.25.9 \
+    && GO_VERSION=1.25.10 \
     && curl -L "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz \
     && echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
@@ -158,7 +158,10 @@ RUN set -eux \
     && ldconfig /usr/local/lib/influxdb3-python/lib \
     && ln -sf /usr/local/bin/influxdb3 /usr/local/bin/influxd \
     && rm -f "influxdb3-core-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
-    && rm -rf "/tmp/influxdb3-core-${INFLUXDB_VERSION}"
+    && rm -rf "/tmp/influxdb3-core-${INFLUXDB_VERSION}" \
+    && pip3 install --target /usr/local/lib/influxdb3-python/lib/python3.13/site-packages "pip>=26.1" \
+    && NEWPIP=$(ls -d /usr/local/lib/influxdb3-python/lib/python3.13/site-packages/pip-*.dist-info | sort -V | tail -1) \
+    && find /usr/local/lib/influxdb3-python/lib/python3.13/site-packages -maxdepth 1 -name 'pip-*.dist-info' ! -path "$NEWPIP" -exec rm -rf {} +
 {% endif %}
 
 {% if PTF_ENV_PY_VER == "py3" %}
@@ -456,8 +459,10 @@ RUN echo "PYTHONPATH=/root/env-python3/lib/python3.11/site-packages" >> /etc/env
 # Final system-level security upgrade: ensure every Debian package is at its
 # latest patched version. This must run AFTER all apt-get install / dpkg -i
 # steps so nothing slips through.
-# Covers OpenSSL, openssh, libpng, gdk-pixbuf, inetutils, tiff CVEs.
-RUN apt-get update \
+# The build system pins package versions via /etc/apt/preferences.d/01-versions-deb.
+# Remove the pin so apt-get upgrade can pull in the latest security patches.
+RUN rm -f /etc/apt/preferences.d/01-versions-deb \
+    && apt-get update \
     && apt-get upgrade -y \
     && apt-get dist-upgrade -y \
     && rm -rf /var/lib/apt/lists/*

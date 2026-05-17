@@ -93,7 +93,7 @@ stages:
     value: $(Build.SourceBranchName)
   jobs:
   - job: trivy_scan
-    displayName: "Trivy vulnerability scan (docker-sonic-mgmt)"
+    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-sonic-mgmt)"
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 30
@@ -115,7 +115,7 @@ stages:
         set -x
         trivy image \
           --input $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz \
-          --severity HIGH,CRITICAL \
+          --severity MEDIUM,HIGH,CRITICAL \
           --ignore-unfixed \
           --exit-code 1 \
           --format table \
