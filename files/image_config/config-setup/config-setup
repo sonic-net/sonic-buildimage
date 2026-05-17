@@ -510,6 +510,18 @@ if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
     source $PLATFORM_ENV_CONF_FILE
 fi
 
+# On BMC/Switch-Host platforms, copy bmc.json to /etc/sonic/.
+# Platform-specific bmc.json takes priority over the image-wide template.
+if [[ "${switch_bmc}" == "1" || "${switch_host}" == "1" ]]; then
+    PLATFORM_BMC_JSON="/usr/share/sonic/device/$PLATFORM/bmc.json"
+    TEMPLATE_BMC_JSON="/usr/share/sonic/templates/bmc.json"
+    if [[ -f "$PLATFORM_BMC_JSON" ]]; then
+        cp "$PLATFORM_BMC_JSON" /etc/sonic/bmc.json
+    elif [[ -f "$TEMPLATE_BMC_JSON" ]]; then
+        cp "$TEMPLATE_BMC_JSON" /etc/sonic/bmc.json
+    fi
+fi
+
 CMD=$1
 # Default command is boot
 if [ "$CMD" = "" ] || [ "$CMD" = "help" ] || \

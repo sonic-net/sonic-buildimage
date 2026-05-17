@@ -280,3 +280,143 @@ def test_cleanup_native_container_uses_container_name(fake_logger, docker_nsente
     sudo_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "docker", "stop", "acms") in sudo_cmds
     assert ("sudo", "docker", "rm", "--force", "acms") in sudo_cmds
+# ───────────── CONFIG_DB helper tests ─────────────
+
+class FakeConfigDB:
+    """Minimal in-memory fake of ConfigDBConnector for unit testing."""
+
+    def __init__(self, tables=None):
+        # tables: {table_name: {entry_key: {field: value}}}
+        self.tables = tables or {}
+        self.set_calls = []  # list of (table, key, value) tuples
+
+    def get_entry(self, table, key):
+        return dict(self.tables.get(table, {}).get(key, {}))
+
+    def get_table(self, table):
+        return {k: dict(v) for k, v in self.tables.get(table, {}).items()}
+
+    def set_entry(self, table, key, value):
+        self.set_calls.append((table, key, value))
+        if value is None:
+            self.tables.get(table, {}).pop(key, None)
+            return
+        self.tables.setdefault(table, {})[key] = dict(value)
+
+
+@pytest.fixture
+def fake_db(fake_logger, monkeypatch):
+    """Install a FakeConfigDB as the singleton used by sidecar_common."""
+    db = FakeConfigDB()
+    monkeypatch.setattr(sidecar_common, "_get_config_db", lambda: db)
+    return db
+
+
+def test_db_hdel_removes_field_and_keeps_entry(fake_db):
+    fake_db.tables["TELEMETRY"] = {"gnmi": {"user_auth": "cert", "port": "50051"}}
+
+    assert sidecar_common.db_hdel("TELEMETRY|gnmi", "user_auth") is True
+
+    # set_entry called with remaining fields (not None — entry still has 'port')
+    assert len(fake_db.set_calls) == 1
+    table, key, value = fake_db.set_calls[0]
+    assert (table, key) == ("TELEMETRY", "gnmi")
+    assert value == {"port": "50051"}
+    assert "user_auth" not in fake_db.tables["TELEMETRY"]["gnmi"]
+
+
+def test_db_hdel_field_absent_is_noop_returns_true(fake_db):
+    fake_db.tables["TELEMETRY"] = {"gnmi": {"port": "50051"}}
+
+    assert sidecar_common.db_hdel("TELEMETRY|gnmi", "user_auth") is True
+    # No mutation should have been written
+    assert fake_db.set_calls == []
+
+
+def test_db_hdel_last_field_writes_none_for_true_deletion(fake_db):
+    """Removing the only field must call set_entry(table, key, None) so the
+    entry is deleted, not left as an empty dict (regression coverage)."""
+    fake_db.tables["TELEMETRY"] = {"gnmi": {"user_auth": "cert"}}
+
+    assert sidecar_common.db_hdel("TELEMETRY|gnmi", "user_auth") is True
+
+    assert len(fake_db.set_calls) == 1
+    _, _, value = fake_db.set_calls[0]
+    assert value is None
+
+
+def test_db_hdel_handles_get_entry_failure(fake_db, monkeypatch):
+    def raising_get(*_a, **_kw):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(fake_db, "get_entry", raising_get)
+    assert sidecar_common.db_hdel("TELEMETRY|gnmi", "user_auth") is False
+    assert fake_db.set_calls == []
+
+
+def test_db_hdel_returns_false_when_db_unavailable(fake_logger, monkeypatch):
+    monkeypatch.setattr(sidecar_common, "_get_config_db", lambda: None)
+    assert sidecar_common.db_hdel("TELEMETRY|gnmi", "user_auth") is False
+
+
+def test_db_del_passes_none_not_empty_dict(fake_db):
+    """db_del must pass None to set_entry — passing {} would not delete the
+    entry (regression coverage for the fix in this commit)."""
+    fake_db.tables["GNMI_CLIENT_CERT"] = {"server.example.com": {"role@": "admin"}}
+
+    assert sidecar_common.db_del("GNMI_CLIENT_CERT|server.example.com") is True
+
+    assert len(fake_db.set_calls) == 1
+    table, key, value = fake_db.set_calls[0]
+    assert (table, key) == ("GNMI_CLIENT_CERT", "server.example.com")
+    assert value is None
+    assert "server.example.com" not in fake_db.tables["GNMI_CLIENT_CERT"]
+
+
+def test_db_del_returns_false_when_db_unavailable(fake_logger, monkeypatch):
+    monkeypatch.setattr(sidecar_common, "_get_config_db", lambda: None)
+    assert sidecar_common.db_del("GNMI_CLIENT_CERT|x") is False
+
+
+def test_db_get_table_keys_returns_all_keys(fake_db):
+    fake_db.tables["GNMI_CLIENT_CERT"] = {
+        "client.a.example.com": {"role@": "admin"},
+        "server.b.example.com": {"role@": "gnmi_show_readonly,admin"},
+    }
+
+    keys = sidecar_common.db_get_table_keys("GNMI_CLIENT_CERT")
+
+    assert sorted(keys) == ["client.a.example.com", "server.b.example.com"]
+
+
+def test_db_get_table_keys_empty_table(fake_db):
+    assert sidecar_common.db_get_table_keys("GNMI_CLIENT_CERT") == []
+
+
+def test_db_get_table_keys_returns_empty_when_db_unavailable(fake_logger, monkeypatch):
+    monkeypatch.setattr(sidecar_common, "_get_config_db", lambda: None)
+    assert sidecar_common.db_get_table_keys("GNMI_CLIENT_CERT") == []
+
+
+def test_db_get_table_keys_handles_exception(fake_db, monkeypatch):
+    def raising_get_table(*_a, **_kw):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(fake_db, "get_table", raising_get_table)
+    assert sidecar_common.db_get_table_keys("GNMI_CLIENT_CERT") == []
+
+
+def test_db_hset_persists_leaf_list_value(fake_db):
+    """db_hset must accept a List[str] value (YANG leaf-list) unchanged."""
+    fake_db.tables["GNMI_CLIENT_CERT"] = {"server.example.com": {}}
+
+    ok = sidecar_common.db_hset(
+        "GNMI_CLIENT_CERT|server.example.com",
+        "role",
+        ["gnmi_show_readonly", "admin"],
+    )
+    assert ok is True
+
+    assert len(fake_db.set_calls) == 1
+    _, _, value = fake_db.set_calls[0]
+    assert value["role"] == ["gnmi_show_readonly", "admin"]

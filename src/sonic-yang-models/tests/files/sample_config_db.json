@@ -2030,6 +2030,16 @@
                 "admin_status": "down"
             }
         },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",

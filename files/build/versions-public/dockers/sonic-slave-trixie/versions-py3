@@ -114,7 +114,7 @@ pooch==1.8.2
 prefixed==0.7.0
 prompt_toolkit==3.0.51
 protobuf==5.29.6
-psutil==7.2.2
+psutil==7.0.0
 psutils==3.3.8
 ptyprocess==0.7.0
 pure_eval==0.2.3
@@ -162,6 +162,7 @@ scp==0.15.0
 service-identity==24.2.0
 setuptools==75.8.0
 setuptools-scm==8.2.1
+setuptools-scm-git-archive==1.4.1
 six==1.17.0
 snowballstemmer==2.2.0
 soupsieve==2.7

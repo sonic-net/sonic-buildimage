@@ -94,6 +94,19 @@ fn env_or_default(env_var: &str, default: &str) -> String {
     }
 }
 
+/// Truncate `s` to at most `max_bytes`, walking back to the nearest UTF-8
+/// char boundary so we never panic on multi-byte sequences.
+fn truncate_on_char_boundary(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
 fn load_xpath_list() -> (Vec<String>, Vec<String>) {
     let mut set: HashSet<String> = HashSet::new();
     let mut errors: Vec<String> = Vec::new();
@@ -256,10 +269,11 @@ fn run_gnmi_for_xpath(
             } else {
                 // Possibly large stderr; truncate if huge (optional threshold 16KB).
                 let mut truncated = if stderr_string.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(&stderr_string, STDERR_TRUNCATE_LIMIT);
                     format!(
                         "{}...[truncated {} bytes]",
-                        &stderr_string[..STDERR_TRUNCATE_LIMIT],
-                        stderr_string.len() - STDERR_TRUNCATE_LIMIT
+                        head,
+                        stderr_string.len() - head.len()
                     )
                 } else {
                     stderr_string.clone()
@@ -275,11 +289,25 @@ fn run_gnmi_for_xpath(
             }
         },
         Err(e) => {
-            eprintln!("Failed to spawn gnmi_get for {}: {}", xpath, e);
+            eprintln!("gnmi_get wait/timeout failed for {}: {}", xpath, e);
+            let trimmed_stderr = stderr_string.trim();
+            let mut err_msg = format!("error: {e}");
+            if !trimmed_stderr.is_empty() {
+                if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                    err_msg.push_str(&format!(
+                        "; stderr: {}...[truncated {} bytes]",
+                        head,
+                        trimmed_stderr.len() - head.len()
+                    ));
+                } else {
+                    err_msg.push_str(&format!("; stderr: {trimmed_stderr}"));
+                }
+            }
             CommandResult {
                 xpath: xpath.to_string(),
                 success: false,
-                error: Some(e.to_string()),
+                error: Some(err_msg),
                 duration_ms: dur,
             }
         }
@@ -302,6 +330,147 @@ fn get_security_config() -> TelemetrySecurityConfig {
     let client_auth_opt = redis_hget("TELEMETRY|gnmi", "client_auth");
     let use_client_auth = matches!(client_auth_opt.as_ref(), Some(v) if v.eq_ignore_ascii_case("true"));
     TelemetrySecurityConfig { use_client_auth, ca_crt, server_crt, server_key }
+}
+
+fn run_yang_config_apply_patch_probe(timeout: Duration) -> CommandResult {
+    let start = Instant::now();
+    let mut cmd = Command::new("sudo");
+    cmd.arg("-n")
+        .arg("config")
+        .arg("apply-patch")
+        .arg("/dev/stdin")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            let dur = start.elapsed().as_millis();
+            eprintln!("Failed to spawn config apply-patch: {}", e);
+            return CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(e.to_string()),
+                duration_ms: dur,
+            };
+        }
+    };
+
+    // Write empty JSON patch to stdin, then close it
+    if let Some(mut stdin_pipe) = child.stdin.take() {
+        if let Err(e) = stdin_pipe.write_all(b"[]\n") {
+            eprintln!("Failed to write to config apply-patch stdin: {}", e);
+            let _ = child.kill();
+            let _ = child.wait();
+            let dur = start.elapsed().as_millis();
+            return CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(format!("stdin write failed: {e}")),
+                duration_ms: dur,
+            };
+        }
+        // stdin_pipe is dropped here, sending EOF
+    }
+
+    // Drain stderr in a separate thread to prevent pipe-buffer deadlock
+    let stderr_handle = child.stderr.take().map(|pipe| {
+        std::thread::spawn(move || {
+            use std::io::Read;
+            let mut buf = Vec::new();
+            let mut pipe = pipe;
+            let _ = pipe.read_to_end(&mut buf);
+            String::from_utf8_lossy(&buf).to_string()
+        })
+    });
+
+    // Poll with timeout
+    let wait_result = {
+        let start_wait = Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break Ok(status),
+                Ok(None) => {
+                    if start_wait.elapsed() >= timeout {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        break Err(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "config apply-patch timed out",
+                        ));
+                    }
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+                Err(e) => break Err(e),
+            }
+        }
+    };
+
+    let stderr_string = stderr_handle
+        .and_then(|h| h.join().ok())
+        .unwrap_or_default();
+    let dur = start.elapsed().as_millis();
+
+    match wait_result {
+        Ok(status) => {
+            if status.success() {
+                CommandResult {
+                    xpath: "config-apply-patch-probe".to_string(),
+                    success: true,
+                    error: None,
+                    duration_ms: dur,
+                }
+            } else {
+                let trimmed_stderr = stderr_string.trim();
+                let mut err_msg = String::new();
+                if !trimmed_stderr.is_empty() {
+                    if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                        let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                        err_msg.push_str(&format!(
+                            "stderr: {}...[truncated {} bytes]",
+                            head,
+                            trimmed_stderr.len() - head.len()
+                        ));
+                    } else {
+                        err_msg.push_str(&format!("stderr: {}", trimmed_stderr));
+                    }
+                }
+                let exit_code = status.code().map(|c| c.to_string()).unwrap_or_else(|| "unknown".to_string());
+                if !err_msg.is_empty() { err_msg.push_str("; "); }
+                err_msg.push_str(&format!("exit code: {exit_code}"));
+                CommandResult {
+                    xpath: "config-apply-patch-probe".to_string(),
+                    success: false,
+                    error: Some(err_msg),
+                    duration_ms: dur,
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("config apply-patch wait/timeout failed: {}", e);
+            let trimmed_stderr = stderr_string.trim();
+            let mut err_msg = format!("error: {e}");
+            if !trimmed_stderr.is_empty() {
+                if trimmed_stderr.len() > STDERR_TRUNCATE_LIMIT {
+                    let head = truncate_on_char_boundary(trimmed_stderr, STDERR_TRUNCATE_LIMIT);
+                    err_msg.push_str(&format!(
+                        "; stderr: {}...[truncated {} bytes]",
+                        head,
+                        trimmed_stderr.len() - head.len()
+                    ));
+                } else {
+                    err_msg.push_str(&format!("; stderr: {trimmed_stderr}"));
+                }
+            }
+            CommandResult {
+                xpath: "config-apply-patch-probe".to_string(),
+                success: false,
+                error: Some(err_msg),
+                duration_ms: dur,
+            }
+        }
+    }
 }
 
 fn get_target_name() -> String {
@@ -459,6 +628,15 @@ fn main() {
                                 let res_good = run_gnmi_for_xpath(&xpath_rc, port, &good_sec, &good_cname, timeout, "SHOW");
                                 if !res_good.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
                                 cmd_results.push(res_good);
+                            }
+
+                            // Config apply-patch probe: validates ConfigDB YANG integrity
+                            // Runs `echo '[]' | sudo config apply-patch /dev/stdin` and checks for success.
+                            if is_cert_probe_enabled() {
+                                let yang_timeout = Duration::from_secs(30);
+                                let res_patch = run_yang_config_apply_patch_probe(yang_timeout);
+                                if !res_patch.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_patch);
                             }
 
                             // Check Serial Number
