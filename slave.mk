@@ -1493,6 +1493,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(MONIT) \
                 $(OPENSSH_SERVER) \
                 $(PYTHON3_SWSSCOMMON) \
+                $(LIBYANG_PY3) \
                 $(SONIC_DB_CLI) \
                 $(SONIC_NETTOOLS) \
                 $(SONIC_RSYSLOG_PLUGIN) \
