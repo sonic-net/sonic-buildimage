@@ -41,7 +41,7 @@ libteam5==1.31-1
 libteamdctl0==1.31-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-libyang-dev==1.0.73
+libyang-dev==3.12.2-1
 libyang3==3.12.2-1
 mlnx-dpdk==22.11.0-2510.2.1
 mlnx-dpdk-dev==22.11.0-2510.2.1
@@ -60,5 +60,5 @@ sonic-bmp==0.1
 sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 stp==1.0.0
-sys-sdk-dev==1.mlnx.4.8.3430
-sys-sdk-main==1.mlnx.4.8.3430
+sys-sdk-dev==1.mlnx.4.8.3442
+sys-sdk-main==1.mlnx.4.8.3442

@@ -30,7 +30,7 @@ liblognorm5==2.0.6-4
 liblzf1==3.6-3
 libmnl0==1.0.4-3
 libncursesw6==6.4-4
-libnghttp2-14==1.52.0-1+deb12u2
+libnghttp2-14==1.52.0-1+deb12u3
 libnorm1==1.5.9+dfsg-2
 libnsl2==1.3.0-2
 libonig5==6.9.8-1
