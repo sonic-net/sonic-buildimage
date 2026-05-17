@@ -387,7 +387,7 @@ libnetfilter-conntrack3==1.0.9-3
 libnfnetlink0==1.0.2-2
 libnftables1==1.0.6-2+deb12u2
 libnftnl11==1.2.4-2
-libnghttp2-14==1.52.0-1+deb12u2
+libnghttp2-14==1.52.0-1+deb12u3
 libnl-3-200==3.7.0-0.2+b1
 libnl-3-dev==3.7.0-0.2+b1
 libnl-cli-3-200==3.7.0-0.2+b1
@@ -407,7 +407,7 @@ libobjc-12-dev==12.2.0-14+deb12u1
 libobjc4==12.2.0-14+deb12u1
 libogg0==1.3.5-3
 libopenblas0-pthread==0.3.21+ds-4
-libopenjp2-7==2.5.0-2+deb12u2
+libopenjp2-7==2.5.0-2+deb12u3
 libopenmpi-dev==4.1.4-3+b1
 libopenmpi3==4.1.4-3+b1
 libopus0==1.3.1-3
@@ -592,7 +592,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.170-3
+linux-libc-dev==6.1.172-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12

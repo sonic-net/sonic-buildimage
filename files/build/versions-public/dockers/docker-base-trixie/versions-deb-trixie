@@ -1,7 +1,7 @@
 adduser==3.152
 ca-certificates==20250419
 curl==8.14.1-2+deb13u2
-iproute2==6.15.0-1
+iproute2==6.15.0-1+sonic.0
 jq==1.7.1-6+deb13u1
 less==668-1
 libatomic1==14.2.0-19
@@ -34,7 +34,7 @@ liblognorm5==2.0.6-5
 liblzf1==3.6-4+b3
 libmnl0==1.0.5-3
 libncursesw6==6.5+20250216-2
-libnghttp2-14==1.64.0-1.1
+libnghttp2-14==1.64.0-1.1+deb13u1
 libnghttp3-9==1.8.0-1
 libnorm1t64==1.5.9+dfsg-3.1+b2
 libonig5==6.9.9-1+b1

@@ -61,7 +61,7 @@ libthrift-0.19.0t64==0.19.0-4+b1
 libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libuv1t64==1.50.0-2
-linux-libc-dev==6.12.86-1
+linux-libc-dev==6.12.88-1
 make==4.4.1-2
 openssl==3.5.5-1~deb13u2
 patch==2.8-2

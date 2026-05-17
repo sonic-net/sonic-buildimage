@@ -25,6 +25,9 @@ http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-x86_64-deb.tgz==f203d9d1fbc
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37.orig.tar.xz==6075acd95528d14013fcde1ae279efdf
+https://deb.debian.org/debian/pool/main/i/iproute2/iproute2_6.15.0-1.debian.tar.xz==d113e76b6f0042545934917d84cec1b7
+https://deb.debian.org/debian/pool/main/i/iproute2/iproute2_6.15.0-1.dsc==ff32f139ab598ae72a0356c848dada9c
+https://deb.debian.org/debian/pool/main/i/iproute2/iproute2_6.15.0.orig.tar.xz==d85d77deed57e055cb2d1409595a6348
 https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.10.7.dsc==b7c20dcfa144f7905dae83f907878201
 https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.10.7.tar.xz==8a29aa85664696551fa8ac0601e649f3
 https://deb.debian.org/debian/pool/main/libn/libnl3/libnl3_3.7.0-0.2.debian.tar.xz==a36598f37197fcad7228f22196dd7f2f
@@ -105,7 +108,7 @@ https://github.com/open-telemetry/opentelemetry-collector-releases/releases/down
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
-https://go.dev/dl/go1.25.9.linux-amd64.tar.gz==53424070f6f21eecb56c26f3bcb44be4
+https://go.dev/dl/go1.25.10.linux-amd64.tar.gz==283a6a8b6ef84a0ddfd6fb05af38ceff
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d

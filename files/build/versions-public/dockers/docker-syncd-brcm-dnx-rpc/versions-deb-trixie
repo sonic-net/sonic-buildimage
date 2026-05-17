@@ -58,7 +58,7 @@ libtsan2==14.2.0-19
 libubsan1==14.2.0-19
 libuv1t64==1.50.0-2
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
-linux-libc-dev==6.12.86-1
+linux-libc-dev==6.12.88-1
 make==4.4.1-2
 openssl==3.5.5-1~deb13u2
 patch==2.8-2
