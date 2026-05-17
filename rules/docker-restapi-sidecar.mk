@@ -26,7 +26,7 @@ $(DOCKER_RESTAPI_SIDECAR)_INSTALL_PYTHON_WHEELS = $(SONIC_PY_COMMON_PY3)
 
 $(DOCKER_RESTAPI_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                                          $(PYTHON3_SWSSCOMMON) \
-                                         $(LIBYANG_PY3)
+                                         $(LIBYANG3_PY3)
 
 $(DOCKER_RESTAPI_SIDECAR)_CONTAINER_NAME = restapi-sidecar
 # NOTE: This container must run in privileged mode with host PID namespace so that
