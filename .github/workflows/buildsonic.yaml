@@ -1,0 +1,97 @@
+name: Build Sonic
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SONIC_BUILD_JOBS: 8
+  SONIC_CONFIG_MAKE_JOBS: 8
+  SONIC_CONFIG_BUILD_JOBS: 8
+  SONIC_VERSION_CONTROL_COMPONENTS: none
+  MIRROR_SNAPSHOT: n
+  SONIC_DPKG_CACHE_METHOD: cache
+
+jobs:
+  build:
+    runs-on: self-hosted
+    name: "Build Sonic"
+    steps:
+      - name: Install needed packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sudo curl wget ca-certificates cmake ninja-build autoconf automake libtool g++ pkg-config python3-pip git
+          sudo apt-get dist-upgrade -y --assume-yes
+      - name: Install j2cli
+        run: |
+          pip3 install --user j2cli
+      - name: Clean up from prior runs
+        run: |
+          docker image prune --all --force
+          docker builder prune --all --force
+          mydir=`pwd`
+          sudo rm -rf *
+          sudo rm -rf .git
+          cd ..
+          sudo rm -rf ${mydir}
+          mkdir -p ${mydir}
+          cd ${mydir}
+          sudo rm -rf /var/cache/sonic
+          sudo mkdir -p /var/cache/sonic/artifacts
+          sudo chown $USER: /var/cache/sonic/artifacts
+          sudo chmod 777 /var/cache/sonic/artifacts
+      - name: Checkout sonic-build
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+      - name: "Broadcom: Configure"
+        run: |
+          make init
+          make configure PLATFORM=broadcom
+      - name: "Broadcom: Make target/sonic-broadcom.bin"
+        run: |
+          make target/sonic-broadcom.bin
+          cp -f target/sonic-broadcom.bin .
+      - name: "Broadcom: Cleanup"
+        run: |
+          sudo rm -rf target
+      - name: "Mellanox: Configure"
+        run: |
+          make init
+          make configure PLATFORM=mellanox
+      - name: "Mellanox: Make target/sonic-mellanox.bin"
+        run: |
+          make target/sonic-mellanox.bin
+          cp -f target/sonic-mellanox.bin .
+      - name: "Broadcom: upload artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sonic-broadcom.bin"
+          path: 'sonic-broadcom.bin'
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+      - name: "Mellanox: upload artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "sonic-mellanox.bin"
+          path: 'sonic-mellanox.bin'
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          files: |
+            sonic-broadcom.bin
+            sonic-mellanox.bin
+          fail_on_unmatched_files: true
