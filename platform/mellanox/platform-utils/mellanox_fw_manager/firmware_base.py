@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import logging
+import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -190,7 +191,48 @@ class FirmwareManagerBase(Process):
         Returns:
             True if upgrade is required, False otherwise
         """
-        return self.current_version != self.available_version
+        if self.current_version != self.available_version:
+            return True
+        return self._has_prod_image_dev_capable_device()
+
+    def _has_prod_image_dev_capable_device(self) -> bool:
+        """
+        Check whether the device exposes the 'prod_image_dev_capable_device'
+        security attribute via 'flint -d <pci_id> q full'. When this attribute
+        is set, the firmware must be re-burned to transition the device out of
+        the dev-capable state, even if versions already match.
+
+        Returns:
+            True if the attribute is present in the device's security
+            attributes, False otherwise (including on query failure).
+        """
+        try:
+            cmd = ['/usr/bin/flint', '-d', self.pci_id, 'q', 'full']
+            result = self._run_command(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                self.logger.warning(
+                    f"flint query full failed for {self.pci_id} "
+                    f"(rc={result.returncode}): {result.stderr}"
+                )
+                return False
+
+            match = re.search(r'^Security Attributes:\s*(.+)$', result.stdout, re.MULTILINE)
+            if not match:
+                return False
+            tokens = {t.strip() for t in match.group(1).split(',')}
+            if 'prod_image_dev_capable_device' in tokens:
+                self.logger.info(
+                    f"ASIC {self.asic_index} ({self.pci_id}) has "
+                    f"'prod_image_dev_capable_device' security attribute; "
+                    f"firmware upgrade is required."
+                )
+                return True
+            return False
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to query security attributes for {self.pci_id}: {e}"
+            )
+            return False
 
     def _report_status(self, status: UpgradeStatusType, message: str = ""):
         """Report status to parent process."""
