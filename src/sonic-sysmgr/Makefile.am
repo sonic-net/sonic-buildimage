@@ -23,4 +23,8 @@ build_gen_librebootgnoi_la_SOURCES = \
         build/gen/github.com/openconfig/gnoi/types/types.pb.cc \
         build/gen/github.com/openconfig/gnoi/common/common.pb.cc
 
+build/gen/github.com/openconfig/gnoi/system/system.pb.cc: rebootbackend_protobuf_compilation
+build/gen/github.com/openconfig/gnoi/types/types.pb.cc: rebootbackend_protobuf_compilation
+build/gen/github.com/openconfig/gnoi/common/common.pb.cc: rebootbackend_protobuf_compilation
+
 SUBDIRS = rebootbackend
