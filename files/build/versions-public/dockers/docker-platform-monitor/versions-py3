@@ -17,7 +17,7 @@ protobuf==4.25.9
 psutil==7.2.2
 pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
-requests==2.34.0
+requests==2.34.2
 smbus2==0.6.1
 thrift==0.13.0
 urllib3==2.7.0

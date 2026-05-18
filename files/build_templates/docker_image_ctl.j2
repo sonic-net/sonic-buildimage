@@ -111,9 +111,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
-                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
-            fi
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -445,7 +443,6 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
-
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
     # Set the SYNCD_SHM_SIZE if this variable not defined
@@ -674,7 +671,6 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
-            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -786,6 +782,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(if [ -d /host/bmc ]; then echo "-v /host/bmc:/host/bmc:rw"; fi) \
     $(get_pmon_device_mounts) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
@@ -914,10 +911,6 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
-fi
-
-if [[ "$IS_BMC_DEVICE" == "true" ]]; then
-    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}

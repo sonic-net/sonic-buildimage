@@ -35,7 +35,7 @@ pygobject==3.42.2
 pynacl==1.6.2
 pyproject-metadata==0.11.0
 pyroute2==0.9.6
-requests==2.34.0
+requests==2.34.2
 scapy==2.5.0
 scp==0.14.5
 semantic-version==2.10.0
