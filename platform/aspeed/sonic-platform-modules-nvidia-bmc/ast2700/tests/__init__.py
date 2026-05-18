@@ -15,12 +15,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-# NVIDIA BMC Platform modules
-
-ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE = sonic-platform-aspeed-nvidia-ast2700-bmc_1.0_arm64.deb
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-modules-nvidia-bmc
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_WHEEL_DEPENDS += $(SONIC_PLATFORM_COMMON_PY3) $(SONIC_PY_COMMON_PY3)
-
-SONIC_DPKG_DEBS += $(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)

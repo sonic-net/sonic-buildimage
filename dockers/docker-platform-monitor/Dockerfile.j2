@@ -40,7 +40,9 @@ RUN apt-get install -y dbus
 {% endif %}
 {% if sonic_asic_platform == 'aspeed' %}
 # Install busybox for devmem access (needed for BMC hardware register control)
-RUN apt-get install -y busybox
+RUN apt-get install -y \
+        busybox        \
+        freeipmi-tools
 {% endif %}
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.

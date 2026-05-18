@@ -16,11 +16,29 @@
 # limitations under the License.
 #
 
-# NVIDIA BMC Platform modules
+"""SONiC Platform API - Platform class for the NVIDIA AST2700 BMC."""
 
-ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE = sonic-platform-aspeed-nvidia-ast2700-bmc_1.0_arm64.deb
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-modules-nvidia-bmc
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_WHEEL_DEPENDS += $(SONIC_PLATFORM_COMMON_PY3) $(SONIC_PY_COMMON_PY3)
+try:
+    from sonic_platform.chassis import Chassis
+except ImportError as e:
+    raise ImportError(str(e) + " - required module not found")
 
-SONIC_DPKG_DEBS += $(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)
+
+class Platform:
+    """
+    Platform class for the NVIDIA AST2700 BMC.
+
+    Provides access to chassis-level functionality.
+    """
+
+    def __init__(self) -> None:
+        self._chassis = Chassis()
+
+    def get_chassis(self):
+        """
+        Retrieve the chassis object.
+
+        Returns:
+            An object derived from `ChassisBase` representing the chassis.
+        """
+        return self._chassis

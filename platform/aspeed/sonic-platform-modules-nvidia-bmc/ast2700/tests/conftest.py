@@ -1,3 +1,4 @@
+#
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -15,34 +16,12 @@
 # limitations under the License.
 #
 
-"""
-SONiC Platform API - Platform class for NVIDIA AST2700 BMC
-"""
+import os
+import sys
 
-try:
-    from sonic_platform.chassis import Chassis
-except ImportError as e:
-    raise ImportError(str(e) + " - required module not found")
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+PKG_PARENT_DIR = os.path.dirname(TESTS_DIR)
 
-
-class Platform:
-    """
-    Platform class for NVIDIA AST2700 BMC
-
-    Provides access to chassis-level functionality.
-    """
-
-    def __init__(self):
-        """
-        Initialize the Platform object
-        """
-        self._chassis = Chassis()
-
-    def get_chassis(self):
-        """
-        Retrieves the chassis object
-
-        Returns:
-            An object derived from ChassisBase representing the chassis
-        """
-        return self._chassis
+# Make the top-level `sonic_platform` package importable from source.
+if PKG_PARENT_DIR not in sys.path:
+    sys.path.insert(0, PKG_PARENT_DIR)

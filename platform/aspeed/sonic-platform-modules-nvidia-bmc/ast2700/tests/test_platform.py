@@ -16,11 +16,17 @@
 # limitations under the License.
 #
 
-# NVIDIA BMC Platform modules
+from unittest.mock import MagicMock, patch
 
-ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE = sonic-platform-aspeed-nvidia-ast2700-bmc_1.0_arm64.deb
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-modules-nvidia-bmc
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_PLATFORM = arm64-aspeed_nvidia_ast2700_bmc-r0
-$(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)_WHEEL_DEPENDS += $(SONIC_PLATFORM_COMMON_PY3) $(SONIC_PY_COMMON_PY3)
 
-SONIC_DPKG_DEBS += $(ASPEED_NVIDIA_AST2700_BMC_PLATFORM_MODULE)
+class TestPlatform:
+    """Minimal checks that `Platform` instantiates and owns a chassis."""
+
+    def test_platform_constructs_chassis(self):
+        sentinel = MagicMock(name="Chassis-sentinel")
+        with patch("sonic_platform.platform.Chassis", return_value=sentinel) as chassis_cls:
+            from sonic_platform.platform import Platform
+            platform = Platform()
+
+        chassis_cls.assert_called_once_with()
+        assert platform.get_chassis() is sentinel
