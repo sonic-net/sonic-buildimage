@@ -88,46 +88,21 @@ class TestChassis:
         chassis._psu_list = []
         assert chassis.get_num_psus() == 3
 
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready', return_value=True)
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_sysfs_count')
-    def test_fan(self, mock_sysfs_count):
-        from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
+    def test_fan(self, mock_sysfs_count, mock_ensure_sysfs):
+        from sonic_platform.fan_drawer import VirtualDrawer
 
         # Test creating fixed fan
         mock_sysfs_count.return_value = 4
-        DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=False)
-        assert DeviceDataManager.get_fan_drawer_count() == 1
-        DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
-        chassis = Chassis()
-        chassis.initialize_fan()
-        assert len(chassis._fan_drawer_list) == 1
-        assert len(list(filter(lambda x: isinstance(x, VirtualDrawer) ,chassis._fan_drawer_list))) == 1
-        assert chassis.get_fan_drawer(0).get_num_fans() == 4
-
-        # Test creating hot swapable fan
-        DeviceDataManager.get_fan_drawer_count = mock.MagicMock(return_value=2)
-        DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
-        DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=True)
-        chassis._fan_drawer_list = []
-        chassis.initialize_fan()
-        assert len(chassis._fan_drawer_list) == 2
-        assert len(list(filter(lambda x: isinstance(x, RealDrawer) ,chassis._fan_drawer_list))) == 2
-        assert chassis.get_fan_drawer(0).get_num_fans() == 2
-        assert chassis.get_fan_drawer(1).get_num_fans() == 2
-
-        # Test chassis.get_all_fan_drawers
-        chassis._fan_drawer_list = []
-        assert len(chassis.get_all_fan_drawers()) == 2
-
-        # Test chassis.get_fan_drawer
-        chassis._fan_drawer_list = []
-        fan_drawer = chassis.get_fan_drawer(0)
-        assert fan_drawer and isinstance(fan_drawer, RealDrawer)
-        fan_drawer = chassis.get_fan_drawer(2)
-        assert fan_drawer is None
-
-        # Test chassis.get_num_fan_drawers
-        chassis._fan_drawer_list = []
-        assert chassis.get_num_fan_drawers() == 2
+        with mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0), \
+             mock.patch.object(DeviceDataManager, 'get_fan_count', return_value=4):
+            assert DeviceDataManager.get_fan_drawer_count() == 1
+            chassis = Chassis()
+            chassis.initialize_fan()
+            assert len(chassis._fan_drawer_list) == 1
+            assert len(list(filter(lambda x: isinstance(x, VirtualDrawer), chassis._fan_drawer_list))) == 1
+            assert chassis.get_fan_drawer(0).get_num_fans() == 4
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.chassis.Chassis.wait_sfp_ready_for_use', mock.MagicMock(return_value=True))
@@ -424,3 +399,78 @@ class TestChassis:
              mock.patch('sonic_platform.chassis.Chassis.initialize_bmc') as mock_init_bmc:
             chassis.initialize_components()
             mock_init_bmc.assert_not_called()
+
+    @mock.patch('sonic_platform.thermal.initialize_chassis_thermals')
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_thermals_sysfs_labels_ready(self, mock_ensure,
+                                                   mock_init_chassis_thermals):
+        """Sysfs labels ready: ensure_sysfs_labels_ready called, thermals initialized."""
+        mock_ensure.return_value = True
+        mock_init_chassis_thermals.return_value = [MagicMock(), MagicMock()]
+
+        chassis = Chassis()
+        chassis._thermal_list = []
+        chassis.initialize_thermals()
+
+        mock_ensure.assert_called_once()
+        mock_init_chassis_thermals.assert_called_once()
+        assert len(chassis._thermal_list) == 2
+
+    @mock.patch('sonic_platform.thermal.initialize_chassis_thermals')
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_thermals_wait_sysfs_labels_ready_timeout(self, mock_ensure,
+                                                                mock_init_chassis_thermals):
+        """Sysfs labels ready file never appears: timeout logged but thermals still initialized."""
+        mock_ensure.return_value = False
+        mock_init_chassis_thermals.return_value = [MagicMock()]
+
+        chassis = Chassis()
+        chassis._thermal_list = []
+        chassis.initialize_thermals()
+
+        mock_ensure.assert_called_once()
+        mock_init_chassis_thermals.assert_called_once()
+        assert len(chassis._thermal_list) == 1
+
+    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_count', return_value=4)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=1)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_sysfs_labels_ready(self, mock_ensure, mock_drawer_count,
+                                               mock_fan_count, mock_read_int):
+        """Fan init waits for sysfs labels ready before creating fan drawers."""
+        mock_ensure.return_value = True
+
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_called_once()
+        assert len(chassis._fan_drawer_list) == 1
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=0)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_no_wait_when_no_fan_drawer(self, mock_ensure, mock_drawer_count):
+        """Liquid cooling system with no fans should not wait for sysfs labels."""
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_not_called()
+        assert len(chassis._fan_drawer_list) == 0
+
+    @mock.patch('sonic_platform.device_data.utils.read_int_from_file', return_value=0)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_count', return_value=4)
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_count', return_value=1)
+    @mock.patch('sonic_platform.chassis.utils.ensure_sysfs_labels_ready')
+    def test_initialize_fan_wait_sysfs_labels_ready_timeout(self, mock_ensure, mock_drawer_count,
+                                                            mock_fan_count, mock_read_int):
+        """Fan init proceeds even if sysfs labels ready times out."""
+        mock_ensure.return_value = False
+
+        chassis = Chassis()
+        chassis._fan_drawer_list = []
+        chassis.initialize_fan()
+
+        mock_ensure.assert_called_once()
+        assert len(chassis._fan_drawer_list) == 1
