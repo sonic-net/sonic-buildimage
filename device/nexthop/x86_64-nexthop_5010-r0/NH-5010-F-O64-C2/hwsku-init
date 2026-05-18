@@ -1,1 +1,0 @@
-python3 /usr/share/sonic/platform/hwsku_init.py /usr/share/sonic/hwsku/ > /var/log/hwsku-init.log
