@@ -11,6 +11,7 @@ module from the sys.modules cache. Then while getting "ActionModule"
 attribute from this module, exception AttributeError could be raised.
 
 Signed-off-by: Xin Wang <xiwang5@microsoft.com>
+Signed-off-by: Sai Kiran <110003254+opcoder0@users.noreply.github.com>
 ---
  lib/ansible/plugins/loader.py | 9 +++++----
  1 file changed, 5 insertions(+), 4 deletions(-)
