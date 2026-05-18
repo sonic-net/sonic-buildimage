@@ -3263,8 +3263,8 @@
         "MONITOR_LINK_GROUP": {
             "critical_links": {
                 "description": "Critical monitored and managed link monitoring group",
-                "monitored-links": ["Ethernet0", "Ethernet4", "Ethernet8", "PortChannel100"],
-                "managed-links": ["Ethernet12", "Ethernet16", "PortChannel200"],
+                "monitored-links": ["Ethernet0", "Ethernet4", "Ethernet8", "PortChannel2"],
+                "managed-links": ["Ethernet12", "Ethernet16", "PortChannel42"],
                 "min-monitored-links": "3",
                 "link-up-delay": "5"
             },
@@ -3277,8 +3277,8 @@
             },
             "edge_links": {
                 "description": "Edge link monitoring group with minimal configuration",
-                "monitored-links": ["Ethernet36"],
-                "managed-links": ["Ethernet40"],
+                "monitored-links": ["Ethernet33"],
+                "managed-links": ["Ethernet36"],
                 "min-monitored-links": "1"
             }
         }
