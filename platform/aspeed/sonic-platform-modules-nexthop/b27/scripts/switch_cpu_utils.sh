@@ -138,6 +138,12 @@ show_switch_cpu_status() {
 # Main function
 #######################################
 main() {
+    # Check for root.
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "ERROR: ${SCRIPT_NAME} must be run as root (try: sudo ${SCRIPT_NAME} $*)" >&2
+        exit 1
+    fi
+
     # Handle no arguments
     if [ $# -eq 0 ]; then
         echo "ERROR: No command specified" >&2
