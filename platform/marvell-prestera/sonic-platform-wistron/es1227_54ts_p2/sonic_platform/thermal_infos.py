@@ -83,8 +83,8 @@ class ThermalInfo(ThermalPolicyInfoBase):
     INFO_NAME = 'thermal_info'
 
     def __init__(self):
-        self._state = ["N/A"] * 16
-        self._enter_warm_up_state = [False] * 16
+        self._state = []
+        self._enter_warm_up_state = []
         self.init = False
         self.normal_thres = False
         self.high_thres = False
@@ -102,6 +102,9 @@ class ThermalInfo(ThermalPolicyInfoBase):
 
         # Calculate average temp within the device
         num_of_thermals = chassis.get_num_thermals()
+        if not self._state:
+            self._state = ["N/A"] * num_of_thermals
+            self._enter_warm_up_state = [False] * num_of_thermals
 
         # Initial the to default
         self.normal_thres = False
