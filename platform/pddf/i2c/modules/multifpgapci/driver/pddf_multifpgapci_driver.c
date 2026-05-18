@@ -276,8 +276,7 @@ void delete_all_fpga_data_nodes(void)
 
 	// Clear the global list after copying over the pointer
 	mutex_lock(&fpga_list_lock);
-	local_list = fpga_list;
-	INIT_LIST_HEAD(&fpga_list);
+	list_replace_init(&fpga_list, &local_list);
 	mutex_unlock(&fpga_list_lock);
 
 	// Work on the local copy without the need for a lock
@@ -709,8 +708,7 @@ static void cleanup_all_protocols(void)
 
 	// Move the list to a local one to be able to process without lock
 	mutex_lock(&protocol_modules_lock);
-	local_list = protocol_modules;
-	INIT_LIST_HEAD(&protocol_modules);
+	list_replace_init(&protocol_modules, &local_list);
 	mutex_unlock(&protocol_modules_lock);
 
 	// Work on local copy without any locks
