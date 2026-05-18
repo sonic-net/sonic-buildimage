@@ -9,7 +9,6 @@
 {% elif neighbor_addr | ipv6 %}
   neighbor {{ neighbor_addr }} peer-group VOQ_CHASSIS_V6_PEER
 {% endif %}
-  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
   neighbor {{ neighbor_addr }} timers 2 7
   neighbor {{ neighbor_addr }} timers connect 10

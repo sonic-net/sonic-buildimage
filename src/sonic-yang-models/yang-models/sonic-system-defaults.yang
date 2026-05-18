@@ -9,27 +9,28 @@ module sonic-system-defaults{
         prefix stypes;
     }
 
-    description "SYSTEM_DEFAULTS Table yang Module for SONiC";
+    description "System-wide default feature settings YANG module for SONiC OS.";
 
     container sonic-system-defaults {
 
         container SYSTEM_DEFAULTS {
 
-            description "system_defaults table in config_db.json";
+            description "Default enable/disable state for optional system features.";
 
             list SYSTEM_DEFAULTS_LIST {
 
                 key "name";
+                description "A system default entry keyed by feature name.";
 
                 leaf name {
-                    description "feature name in SYSTEM_DEFAULTS table";
+                    description "Name of the system feature.";
                     type string {
                         length 1..32;
                     }
                 }
 
                 leaf status {
-                    description "default status of the feature";
+                    description "Default administrative state of the feature (enabled or disabled).";
                     type stypes:admin_mode;
                 }
 

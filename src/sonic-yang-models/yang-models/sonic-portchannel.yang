@@ -22,7 +22,7 @@ module sonic-portchannel {
         prefix vrf;
     }
 
-    description "PORTCHANNEL yang Module for SONiC OS";
+    description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
     revision 2021-06-13 {
         description "Change min-links valid range from 1-128 to 1-1024";
@@ -44,19 +44,23 @@ module sonic-portchannel {
 
         container PORTCHANNEL {
 
-            description "PORTCHANNEL part of config_db.json";
+            description "PortChannel (LAG) interface configuration table";
 
             list PORTCHANNEL_LIST {
+
+                description "Configuration entry for a PortChannel aggregate interface";
 
                 key "name";
 
                 leaf name {
+                    description "PortChannel interface name (e.g. PortChannel0001)";
                     type string {
                         pattern 'PortChannel[0-9]{1,4}';
                     }
                 }
 
                 leaf min_links {
+                    description "Minimum number of active member links required for the PortChannel to be operationally up";
                     type uint16 {
                         range 1..1024;
                     }
@@ -69,23 +73,27 @@ module sonic-portchannel {
                 }
 
                 leaf description {
+                    description "User-defined description for the PortChannel interface";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf mtu {
+                    description "Maximum transmission unit size in bytes";
                     type uint16 {
                         range 1..9216;
                     }
                 }
 
                 leaf admin_status {
+                    description "Administrative state of the PortChannel interface";
                     mandatory true;
                     type stypes:admin_status;
                 }
 
                 leaf lacp_key {
+                    description "LACP aggregation key; 'auto' derives it from the PortChannel name, or specify a value from 1 to 65535";
                     /* lacp key should be either auto or a integer in the range of 1 to 65535 */
                     /* When lacp_key is set to 'auto' the lacp key would be set to be the number */
                     /* on the end of the PortChannel name with a prefix of 1 */
@@ -121,19 +129,23 @@ module sonic-portchannel {
 
         container PORTCHANNEL_MEMBER {
 
-            description "PORTCHANNEL_MEMBER part of config_db.json";
+            description "Mapping of physical ports to PortChannel aggregate interfaces";
 
             list PORTCHANNEL_MEMBER_LIST {
+
+                description "Association of a physical port as a member of a PortChannel";
 
                 key "name port";
 
                 leaf name {
+                    description "Reference to the parent PortChannel interface";
                     type leafref {
                         path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                     }
                 }
 
                 leaf port {
+                    description "Reference to the physical port that is a member of this PortChannel";
                     /* key elements are mandatory by default */
                     type leafref {
                         path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
@@ -145,12 +157,15 @@ module sonic-portchannel {
 
         container PORTCHANNEL_INTERFACE {
 
-            description "PORTCHANNEL_INTERFACE part of config_db.json";
+            description "PortChannel interface L3 configuration including VRF binding and IP addressing";
 
             list PORTCHANNEL_INTERFACE_LIST {
+                description "L3 configuration entry for a PortChannel interface";
+
                 key "name";
 
                 leaf name {
+                    description "Reference to the PortChannel interface";
                     /* key elements are mandatory by default */
                     type leafref {
                         path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
@@ -158,6 +173,7 @@ module sonic-portchannel {
                 }
 
                 leaf vrf_name {
+                    description "VRF instance to which this PortChannel interface is bound";
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
                     }
@@ -201,9 +217,12 @@ module sonic-portchannel {
 
             list PORTCHANNEL_INTERFACE_IPPREFIX_LIST {
 
+                description "IP address prefix assignment for a PortChannel interface";
+
                 key "name ip_prefix";
 
                 leaf name {
+                    description "Reference to the PortChannel interface";
                     /* key elements are mandatory by default */
                     type leafref {
                         path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
@@ -211,6 +230,7 @@ module sonic-portchannel {
                 }
 
                 leaf ip_prefix {
+                    description "IPv4 or IPv6 address with prefix length assigned to the PortChannel interface";
                     /* key elements are mandatory by default */
                     type stypes:sonic-ip-prefix;
                 }

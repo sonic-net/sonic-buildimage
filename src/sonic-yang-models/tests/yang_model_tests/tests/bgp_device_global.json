@@ -73,5 +73,13 @@
         "desc": "Load bgp device global table with idf_isolation_state set to invalid value",
         "eStrKey": "InvalidValue",
         "eStr": ["idf_isolation_state"]
+    },
+    "BGP_DEVICE_GLOBAL_CONFED" : {
+        "desc": "Load bgp device global table with confederation asn and peers"
+    },
+    "BGP_DEVICE_GLOBAL_CONFED_INVALID_ASN" : {
+        "desc": "Load bgp device global table with confederation invalid asn",
+        "eStrKey": "InvalidValue",
+        "eStr": ["asn"]
     }
 }

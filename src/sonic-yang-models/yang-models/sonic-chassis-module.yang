@@ -9,6 +9,10 @@ module sonic-chassis-module {
     }
     description "CHASSIS_MODULE YANG to administratively set SONIC modules state";
 
+    revision 2026-04-17 {
+        description "Add SWITCH-HOST to name pattern; add power_on_delay and graceful_shutdown_timeout leaves for BMC support";
+    }
+
     revision 2023-02-24 {
         description "Initial version";
     }
@@ -20,15 +24,31 @@ module sonic-chassis-module {
                 key "name";
                 leaf name {
                     type string {
-                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+|DPU[0-9]+";
+                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+|DPU[0-9]+|SWITCH-HOST";
                     }
-                    description "Line-card or fabric-card or dpu module name";
+                    description "Line-card, fabric-card, dpu, or switch-host module name";
                 }
 
                 leaf admin_status {
                     type stypes:admin_status;
                     default up;
                     description "Administrative state of chassis module";
+                }
+
+                leaf power_on_delay {
+                    type uint32;
+                    must "current()/../name = 'SWITCH-HOST'" {
+                        error-message "power_on_delay is only applicable to SWITCH-HOST";
+                    }
+                    description "Time in seconds BMC waits before powering on Switch-Host when device is powered ON. Applicable only to SWITCH-HOST.";
+                }
+
+                leaf graceful_shutdown_timeout {
+                    type uint32;
+                    must "current()/../name = 'SWITCH-HOST'" {
+                        error-message "graceful_shutdown_timeout is only applicable to SWITCH-HOST";
+                    }
+                    description "Time in seconds BMC waits for graceful shutdown before forcing power-off. Set to 0 to skip graceful shutdown and power off immediately. Applicable only to SWITCH-HOST.";
                 }
             }
         }

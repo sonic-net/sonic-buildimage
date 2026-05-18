@@ -19,7 +19,7 @@ module sonic-buffer-pg {
         "SONiC";
 
     description
-        "SONIC BUFFER PG";
+        "Ingress buffer priority group configuration for SONiC ports.";
 
     revision 2021-07-01 {
         description
@@ -31,13 +31,18 @@ module sonic-buffer-pg {
 
         container BUFFER_PG {
 
+            description "Configures ingress buffer allocation per priority group on a port.";
+
             list BUFFER_PG_LIST {
                 key "port pg_num";
+
+                description "Buffer priority group entry for a specific port and priority group range.";
 
                 leaf port {
                     type leafref {
                         path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
+                    description "Port on which the buffer priority group is configured.";
                 }
 
                 leaf pg_num {
