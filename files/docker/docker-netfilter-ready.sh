@@ -6,8 +6,8 @@
 # services. Wait until the ip6tables paths used by dockerd are usable.
 
 for i in $(seq 1 30); do
-    if ip6tables -w -t filter -L >/dev/null 2>&1 && \
-       ip6tables -w -t nat -L >/dev/null 2>&1; then
+    if ip6tables -w 1 -t filter -L >/dev/null 2>&1 && \
+       ip6tables -w 1 -t nat -L >/dev/null 2>&1; then
         exit 0
     fi
     sleep 1
