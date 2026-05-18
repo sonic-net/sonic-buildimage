@@ -24,11 +24,11 @@ jobs:
       - name: Install needed packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y sudo curl wget ca-certificates cmake ninja-build autoconf automake libtool g++ pkg-config python3-pip git
+          sudo apt-get install -y sudo curl wget ca-certificates cmake ninja-build autoconf automake libtool g++ pkg-config python3-pip git j2cli
           sudo apt-get dist-upgrade -y --assume-yes
-      - name: Install j2cli
-        run: |
-          pip3 install --user j2cli
+      #- name: Install j2cli
+      #  run: |
+      #    pip3 install --user j2cli
       - name: Clean up from prior runs
         run: |
           docker image prune --all --force
