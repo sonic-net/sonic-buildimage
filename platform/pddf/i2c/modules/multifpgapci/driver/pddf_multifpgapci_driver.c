@@ -274,7 +274,7 @@ void delete_all_fpga_data_nodes(void)
 	struct fpga_data_node *node, *tmp;
 	struct list_head local_list;
 
-	// Clear the global list after copying over the pointer
+	// Clear the global list after moving it to local
 	mutex_lock(&fpga_list_lock);
 	list_replace_init(&fpga_list, &local_list);
 	mutex_unlock(&fpga_list_lock);
