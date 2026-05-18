@@ -155,7 +155,8 @@ RUN set -eux \
     && mv "influxdb3-core-${INFLUXDB_VERSION}/influxdb3" /usr/local/bin/influxdb3 \
     && chmod +x /usr/local/bin/influxdb3 \
     && cp -r "influxdb3-core-${INFLUXDB_VERSION}/python" /usr/local/lib/influxdb3-python \
-    && ldconfig /usr/local/lib/influxdb3-python/lib \
+    && echo "/usr/local/lib/influxdb3-python/lib" > /etc/ld.so.conf.d/influxdb3.conf \
+    && ldconfig \
     && ln -sf /usr/local/bin/influxdb3 /usr/local/bin/influxd \
     && rm -f "influxdb3-core-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && rm -rf "/tmp/influxdb3-core-${INFLUXDB_VERSION}" \
