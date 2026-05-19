@@ -2,7 +2,7 @@
 
 # Use flock instead of lockfile to avoid stale lock files after crashes.
 # The lock is automatically released when the file descriptor is closed.
-exec {lock_fd}>.screen.lock
+exec {lock_fd}>.screen
 flock ${lock_fd}
 
 target_list_file=/tmp/target_list
