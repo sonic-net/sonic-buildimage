@@ -26,6 +26,7 @@
 #include <linux/mutex.h>
 #include <linux/i2c.h>
 #include <linux/pmbus.h>
+#include <linux/version.h>
 #include "pmbus.h"
 
 struct pmbus_device_info {
@@ -174,7 +175,11 @@ abort:
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+static int pmbus_probe(struct i2c_client *client, const struct i2c_device_id *id)
+#else
 static int pmbus_probe(struct i2c_client *client)
+#endif
 {
     struct pmbus_driver_info *info;
     struct pmbus_platform_data *pdata = NULL;
@@ -185,7 +190,11 @@ static int pmbus_probe(struct i2c_client *client)
     if (!info)
         return -ENOMEM;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
+    device_info = (struct pmbus_device_info *)id->driver_data;
+#else
     device_info = (struct pmbus_device_info *)i2c_match_id(pmbus_id, client)->driver_data;
+#endif
     if (device_info->flags & PMBUS_SKIP_STATUS_CHECK) {
         pdata = devm_kzalloc(dev, sizeof(struct pmbus_platform_data),
                      GFP_KERNEL);
@@ -239,7 +248,7 @@ static struct i2c_driver pmbus_driver = {
     .driver = {
            .name = "wb_pmbus",
            },
-    .probe_new = pmbus_probe,
+    .probe = pmbus_probe,
     .id_table = pmbus_id,
 };
 

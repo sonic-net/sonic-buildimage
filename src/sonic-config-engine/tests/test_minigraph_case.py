@@ -575,3 +575,25 @@ class TestCfgGenCaseInsensitive(TestCase):
         # TC2: For other minigraph, result should not contain FLEX_COUNTER_TABLE
         result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
         self.assertNotIn('FLEX_COUNTER_TABLE', result)
+
+    def test_multi_peer_switch_no_crash(self):
+        """Regression test: multiple peer switches should not crash (Python 3 dict.keys()[0] fix)."""
+        # Simulate link_metadata with two different PeerSwitch values
+        link_metadata = {
+            "Ethernet4": {"PeerSwitch": "switch2-t0"},
+            "Ethernet8": {"PeerSwitch": "switch3-t0"},
+        }
+        devices = {
+            "switch2-t0": {"lo_addr": "25.1.1.10/32"},
+            "switch3-t0": {"lo_addr": "25.1.1.11/32"},
+        }
+        peer_switch_table, mux_tunnel_name, peer_switch_ip = minigraph.get_peer_switch_info(link_metadata, devices)
+
+        # Should have 2 entries
+        self.assertEqual(len(peer_switch_table), 2)
+        self.assertIn("switch2-t0", peer_switch_table)
+        self.assertIn("switch3-t0", peer_switch_table)
+
+        # The code picks the first key — just verify it doesn't crash
+        first_peer = next(iter(peer_switch_table))
+        self.assertIn(first_peer, ["switch2-t0", "switch3-t0"])

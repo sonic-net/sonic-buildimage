@@ -15,7 +15,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 sonic_logger = logger.Logger('thermal')
-
+FPGA_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
@@ -25,7 +25,7 @@ class Thermal(ThermalBase):
                        ['0-004a/hwmon/', 1])
 
     CN9130_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
-    FPGA_TEMP_INFO = "FPGA_TEMPERATURE_INFO"
+
 
     THERMAL_NAME = ("PCB BACK", "PCB FRONT", "PCB MID", "FPGA", "CPU CORE")
 
@@ -157,8 +157,11 @@ class Thermal(ThermalBase):
         """
 
         if self.index == 4:
-            #TODO: add FPGA temperature sensor
-            thermal_temperature = 1
+            thermal_temperature = self._read_sysfs_file(FPGA_DIR + "temp_cur")
+            if (thermal_temperature != 'ERR'):
+                thermal_temperature = float(thermal_temperature)
+            else:
+                thermal_temperature = 0
         else:
             thermal_temperature = self._read_sysfs_file(self.thermal_temperature_file)
             if (thermal_temperature != 'ERR'):

@@ -100,7 +100,8 @@
                 "name": "CPU Core 1 Temp"
             },
             {
-                "name": "ASIC"
+                "name": "ASIC",
+                "polling_interval": 3
             },
             {
                 "name": "SODIMM 1 Temp"

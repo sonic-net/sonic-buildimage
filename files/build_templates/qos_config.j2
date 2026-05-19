@@ -7,6 +7,10 @@
 {%- set PORT_DOWNLINK = [] %}
 {%- set PORT_SERVICE = [] %}
 
+{%- set SYSTEM_PORT_ACTIVE = [] %}
+{%- set hostname = "" %}
+{%- set asicname = "" %}
+{%- set voq_chassis = false %}
 {% if template_exists("buffers.json.j2") %}
     {% import "buffers.json.j2" as buffer_defs with context %}
     {%- set filename_postfix = buffer_defs.default_topo | default("def", true) %}
@@ -21,13 +25,16 @@
         {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
     {%- endif -%}
 {%- endif -%}
-
-{%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
 {%-  set voq_chassis = true %}
 {%- endif -%}
-
 {%- if voq_chassis %}
+    {%- if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and 'hostname' in DEVICE_METADATA['localhost'] -%}
+        {%- set hostname = DEVICE_METADATA['localhost']['hostname'] -%}
+    {%- endif %}
+    {%- if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and 'asic_name' in DEVICE_METADATA['localhost'] -%}
+        {%- set asicname = DEVICE_METADATA['localhost']['asic_name'] -%}
+    {%- endif %}
     {%- for system_port in SYSTEM_PORT %}
     {% if '|' not in system_port %}
         {%- set system_port_name = system_port|join("|")  %}
@@ -37,6 +44,15 @@
     {%- if 'cpu' not  in system_port_name.lower() and 'IB' not in system_port_name and 'Rec' not in system_port_name %}
         {%- if SYSTEM_PORT_ALL.append(system_port_name) %}{%- endif %}
     {%- endif %}
+{#- find all system_port_name has hostname|asicname. If it is true, get the portname and check if the port name is present in the deviceNeighbor -#}
+    {%- if hostname != "" and asicname != "" -%}
+        {%- if system_port_name.lower().startswith((hostname + '|' + asicname).lower()) -%}
+            {%- set port_name = system_port_name.split('|')[2] -%}
+            {%- if DEVICE_NEIGHBOR is defined and port_name in DEVICE_NEIGHBOR.keys() -%}
+                {%- if SYSTEM_PORT_ACTIVE.append(system_port_name) %}{%- endif -%}
+            {%- endif -%}
+        {%- endif -%}
+    {%- endif -%}
     {%- endfor %}
 {%- endif %}
 {%- for port in PORT %}
@@ -492,37 +508,43 @@
     "QUEUE": {
 {% for system_port in SYSTEM_PORT_ALL %}
         "{{ system_port }}|3": {
-            "scheduler"   : "scheduler.1",
+            {% if system_port in SYSTEM_PORT_ACTIVE -%}
+            "scheduler": "scheduler.1",
+            {% endif -%}
             "wred_profile": "AZURE_LOSSLESS"
         },
 {% endfor %}
 {% for system_port in SYSTEM_PORT_ALL %}
         "{{ system_port }}|4": {
-            "scheduler"   : "scheduler.1",
+            {% if system_port in SYSTEM_PORT_ACTIVE -%}
+            "scheduler": "scheduler.1",
+            {% endif -%}
             "wred_profile": "AZURE_LOSSLESS"
-        },
+        }{% if not loop.last %},{% else %}
+            {% if SYSTEM_PORT_ACTIVE and SYSTEM_PORT_ACTIVE|length > 0 %},{% endif %}
+        {% endif %}
 {% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
+{% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|0": {
             "scheduler": "scheduler.0"
         },
 {% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
+{% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|1": {
             "scheduler": "scheduler.0"
         },
 {% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
+{% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|2": {
             "scheduler": "scheduler.0"
         },
 {% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
+{% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|5": {
             "scheduler": "scheduler.0"
         },
 {% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
+{% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|6": {
             "scheduler": "scheduler.0"
         }{% if not loop.last %},{% endif %}

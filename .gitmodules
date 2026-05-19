@@ -147,6 +147,13 @@
 [submodule "platform/alpinevs"]
 	path = platform/alpinevs
 	url = https://github.com/sonic-net/sonic-alpine/
+[submodule "src/sonic-redfish"]
+	path = src/sonic-redfish
+	url = https://github.com/sonic-net/sonic-redfish
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic
+
 [submodule "platform/broadcom/saibcm-modules-legacy-th"]
 	path = platform/broadcom/saibcm-modules-legacy-th
 	url = https://github.com/sonic-net/saibcm-modules.git

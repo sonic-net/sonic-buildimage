@@ -190,7 +190,7 @@ load_kernel_drivers() {
     sudo insmod /lib/modules/${KVER}/kernel/extra/nokia_7215_ixs_c1_cpld.ko
     fi
     sudo insmod /lib/modules/${KVER}/kernel/extra/cn9130_cpu_thermal_sensor.ko
-    sudo insmod /lib/modules/${KVER}/kernel/extra/nokia_console_fpga.ko
+    sudo insmod /lib/modules/${KVER}/kernel/extra/mule.ko
     sudo insmod /lib/modules/${KVER}/kernel/extra/cn9130_led.ko
 }
 

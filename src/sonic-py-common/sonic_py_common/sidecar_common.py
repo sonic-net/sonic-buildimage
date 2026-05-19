@@ -10,12 +10,17 @@ import hashlib
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Union
 
 from swsscommon.swsscommon import ConfigDBConnector
 from sonic_py_common import logger as log
 
 logger = log.Logger()
+
+# CONFIG_DB field values may be plain strings or YANG leaf-list values
+# (returned by ConfigDBConnector.get_entry as Python lists, e.g. role).
+DBValue = Union[str, List[str]]
+DBEntry = Dict[str, DBValue]
 
 
 def get_bool_env_var(name: str, default: bool = False) -> bool:
@@ -89,14 +94,17 @@ def _split_redis_key(key: str) -> Tuple[str, str]:
     return parts[0], parts[1]
 
 
-def db_hget(key: str, field: str) -> Optional[str]:
-    """Get a single field value from CONFIG_DB hash."""
+def db_hget(key: str, field: str) -> Optional[DBValue]:
+    """Get a single field value from CONFIG_DB hash.
+
+    May return a list for YANG leaf-list fields (e.g. GNMI_CLIENT_CERT.role).
+    """
     db = _get_config_db()
     if db is None:
         return None
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
     except Exception as e:
         logger.log_error(f"db_hget failed for {key} field {field}: {e}")
         return None
@@ -107,33 +115,54 @@ def db_hget(key: str, field: str) -> Optional[str]:
     return val
 
 
-def db_hgetall(key: str) -> Dict[str, str]:
-    """Get all field-value pairs from CONFIG_DB hash."""
+def db_hgetall(key: str) -> DBEntry:
+    """Get all field-value pairs from CONFIG_DB hash.
+
+    Values may be strings or lists (for YANG leaf-list fields).
+    """
     db = _get_config_db()
     if db is None:
         return {}
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
         return entry or {}
     except Exception as e:
         logger.log_error(f"db_hgetall failed for {key}: {e}")
         return {}
 
 
-def db_hset(key: str, field: str, value: str) -> bool:
+def db_hset(key: str, field: str, value: DBValue) -> bool:
     """Set a single field value in CONFIG_DB hash."""
     db = _get_config_db()
     if db is None:
         return False
     try:
         table, entry_key = _split_redis_key(key)
-        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry: DBEntry = db.get_entry(table, entry_key)
         entry[field] = value
         db.set_entry(table, entry_key, entry)
         return True
     except Exception as e:
         logger.log_error(f"db_hset failed for {key} field {field}: {e}")
+        return False
+
+
+def db_hdel(key: str, field: str) -> bool:
+    """Delete a single field from a CONFIG_DB hash entry."""
+    db = _get_config_db()
+    if db is None:
+        return False
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: DBEntry = db.get_entry(table, entry_key)
+        if field not in entry:
+            return True  # already absent
+        entry.pop(field)
+        db.set_entry(table, entry_key, entry if entry else None)
+        return True
+    except Exception as e:
+        logger.log_error(f"db_hdel failed for {key} field {field}: {e}")
         return False
 
 
@@ -144,12 +173,24 @@ def db_del(key: str) -> bool:
         return False
     try:
         table, entry_key = _split_redis_key(key)
-        # In ConfigDBConnector, setting an empty dict deletes the key
-        db.set_entry(table, entry_key, {})
+        db.set_entry(table, entry_key, None)
         return True
     except Exception as e:
         logger.log_error(f"db_del failed for {key}: {e}")
         return False
+
+
+def db_get_table_keys(table: str) -> List[str]:
+    """Return all entry keys for a CONFIG_DB table."""
+    db = _get_config_db()
+    if db is None:
+        return []
+    try:
+        entries = db.get_table(table) or {}
+        return list(entries.keys())
+    except Exception as e:
+        logger.log_error(f"db_get_table_keys failed for {table}: {e}")
+        return []
 
 
 # ───────────── File operations ─────────────
@@ -173,33 +214,59 @@ def host_read_bytes(path_on_host: str) -> Optional[bytes]:
 
 
 def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
-    """Atomically write file to host filesystem via nsenter."""
-    tmp_path = f"/tmp/{os.path.basename(dst_on_host)}.tmp"
-    rc, _, err = run_nsenter(["/bin/sh", "-c", f"cat > {shlex.quote(tmp_path)}"], text=False, input_bytes=data)
-    if rc != 0:
-        emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
-        logger.log_error(f"host write tmp failed: {emsg.strip()}")
-        return False
+    """Atomically write file to host filesystem via nsenter.
 
-    rc, _, err = run_nsenter(["/bin/chmod", f"{mode:o}", tmp_path], text=True)
-    if rc != 0:
-        logger.log_error(f"host chmod failed: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
-        return False
-
+    Uses host-side mktemp(1) in the destination directory so that:
+      * concurrent sidecars writing the same dst do not race on a shared
+        /tmp/<basename>.tmp path, and
+      * the final mv is a same-filesystem rename(2) (truly atomic), instead
+        of a cross-filesystem copy when /tmp is on tmpfs.
+    """
     parent = os.path.dirname(dst_on_host) or "/"
+
+    # Ensure destination directory exists before mktemp targets it.
     rc, _, err = run_nsenter(["/bin/mkdir", "-p", parent], text=True)
     if rc != 0:
         logger.log_error(f"host mkdir failed for {parent}: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
         return False
 
-    rc, _, err = run_nsenter(["/bin/mv", "-f", tmp_path, dst_on_host], text=True)
+    base = os.path.basename(dst_on_host)
+    tmpl = os.path.join(parent, f".{base}.XXXXXX")
+    rc, out, err = run_nsenter(["/bin/mktemp", tmpl], text=True)
     if rc != 0:
-        logger.log_error(f"host mv failed to {dst_on_host}: {str(err).strip()}")
-        run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
+        logger.log_error(f"host mktemp failed for {tmpl}: {str(err).strip()}")
         return False
-    return True
+    tmp_path = out.strip() if isinstance(out, str) else out.decode(errors="ignore").strip()
+    if not tmp_path:
+        logger.log_error(f"host mktemp returned empty path for {tmpl}")
+        return False
+
+    try:
+        rc, _, err = run_nsenter(
+            ["/bin/sh", "-c", f"cat > {shlex.quote(tmp_path)}"],
+            text=False,
+            input_bytes=data,
+        )
+        if rc != 0:
+            emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
+            logger.log_error(f"host write tmp failed: {emsg.strip()}")
+            return False
+
+        rc, _, err = run_nsenter(["/bin/chmod", f"{mode:o}", tmp_path], text=True)
+        if rc != 0:
+            logger.log_error(f"host chmod failed: {str(err).strip()}")
+            return False
+
+        rc, _, err = run_nsenter(["/bin/mv", "-f", tmp_path, dst_on_host], text=True)
+        if rc != 0:
+            logger.log_error(f"host mv failed to {dst_on_host}: {str(err).strip()}")
+            return False
+        # mv succeeded; tmp_path no longer exists, skip cleanup.
+        tmp_path = ""
+        return True
+    finally:
+        if tmp_path:
+            run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
 
 
 # ───────────── SHA256 utilities ─────────────
@@ -274,3 +341,25 @@ def _run_host_actions_for(path_on_host: str, post_copy_actions: Dict[str, List[L
             logger.log_info(f"Post-copy action succeeded: {' '.join(cmd)}")
         else:
             logger.log_error(f"Post-copy action FAILED (rc={rc}): {' '.join(cmd)}; stderr={str(err).strip()}")
+
+
+def cleanup_native_container(container_name: str, is_v1_enabled: bool) -> None:
+    """In V2 mode, check for and remove any native container.
+
+    Post-copy actions only fire when a synced file changes, so on subsequent
+    sidecar restarts (files already in sync) or after a race with the
+    container framework, the native container may persist.  Called every
+    sync cycle to guarantee it is eventually cleaned up.
+    """
+    if is_v1_enabled:
+        return
+    rc, out, _ = run_nsenter(
+        ["sudo", "docker", "inspect", "--format", "{{.State.Status}}", container_name]
+    )
+    if rc != 0:
+        logger.log_info(f"No native {container_name} container found")
+        return
+    status = out.strip()
+    logger.log_notice(f"Native {container_name} container found (status={status}); removing")
+    run_nsenter(["sudo", "docker", "stop", container_name])
+    run_nsenter(["sudo", "docker", "rm", "--force", container_name])

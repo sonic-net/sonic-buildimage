@@ -675,73 +675,86 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def find_data_dependencies(self, data_xpath):
         ref_list = []
-        required_value = None
-        base_dnode = None
-        search_xpath = None
+        ref_set = set()
 
         if data_xpath is None or len(data_xpath) == 0 or data_xpath == "/":
-            data_xpath = None
-            search_xpath = "/"
+            return self._find_data_dependencies_global(ref_list, ref_set)
 
-        if data_xpath is not None:
-            dnode_list = []
-            try:
-                dnode_list = list(self.root.find_path(data_xpath).data())
-            except Exception as e:
-                # We don't care the reason for the failure, this is caught in 
-                # the next statement.
-                pass
-
-            if len(dnode_list) == 0:
-                self.sysLog(msg="find_data_dependencies(): Failed to find data node from xpath: {}".format(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
-                return ref_list
-
-            base_dnode = dnode_list[0]
-            if base_dnode.schema() is None:
-                return ref_list
-
-            search_xpath = base_dnode.schema().path()
-
-            # If exactly 1 node and it's a data node, we need to match the value.
-            if len(dnode_list) == 1:
-                try:
-                    required_value = self._find_data_node_value(data_xpath)
-                except Exception as e:
-                    # Might not be a data node, ignore
-                    pass
-
-        # Get a list of all schema leafrefs pointing to this node (or these data nodes).
-        lreflist = []
-
+        dnode_list = []
         try:
-            match_ancestors = True
-            if required_value is not None:
-                match_ancestors = False
-
-            lreflist = self.find_schema_dependencies(search_xpath, match_ancestors=match_ancestors)
-            if lreflist is None:
-                raise Exception("no schema backlinks found")
+            dnode_list = list(self.root.find_path(data_xpath).data())
         except Exception as e:
-            self.sysLog(msg='Failed to find node or dependencies for {}: {}'.format(data_xpath, str(e)), debug=syslog.LOG_ERR, doPrint=True)
-            lreflist = []
-            # Exception not expected by existing tests if backlinks not found, so don't raise.
-            # raise SonicYangException("Failed to find node or dependencies for {}\n{}".format(data_xpath, str(e)))
+            # Possible no data paths matched, ignore
+            pass
 
-        # For all found data nodes, emit the path to the data node.  If we need to
-        # restrict to a value, do so.
+        if len(dnode_list) == 0:
+            self.sysLog(msg="find_data_dependencies(): Failed to find data node from xpath: {}".format(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
+            return ref_list
+
+        if dnode_list[0].schema() is None:
+            return ref_list
+
+        # Iterate all leaf descendants of the matched data nodes and perform
+        # per-leaf value-matched dependency lookups.  This replicates the
+        # behavior of the old caller in sonic-utilities which would enumerate
+        # leaves via tree_dfs() and call find_data_dependencies() per-leaf
+        # with value matching.
+        for dnode in dnode_list:
+            self._find_data_dependencies_node(dnode, ref_list, ref_set)
+
+        return ref_list
+
+    def _find_data_dependencies_node(self, dnode, ref_list, ref_set):
+        for inner_node in dnode.tree_dfs():
+            schema = inner_node.schema()
+            if schema is None:
+                continue
+
+            ntype = schema.nodetype()
+            if ntype != ly.LYS_LEAF and ntype != ly.LYS_LEAFLIST:
+                continue
+
+            # Get the leaf's value
+            leaf_value = None
+            try:
+                subtype = inner_node.subtype()
+                if subtype is not None:
+                    leaf_value = subtype.value_str()
+            except Exception as e:
+                # Node may not support subtype/value_str, skip
+                continue
+
+            # Find schema backlinks for this specific leaf
+            leaf_schema_path = schema.path()
+            backlinks = self.find_schema_dependencies(leaf_schema_path, match_ancestors=False)
+            if not backlinks:
+                continue
+
+            # Resolve data nodes, filtering by value match
+            self._resolve_backlink_data(backlinks, leaf_value, ref_list, ref_set)
+
+    def _find_data_dependencies_global(self, ref_list, ref_set):
+        # Iterate all top-level data nodes (siblings under root) and DFS each
+        # to find all leaf/leaflist nodes with value matching.
+        for top_node in self.root.tree_for():
+            self._find_data_dependencies_node(top_node, ref_list, ref_set)
+        return ref_list
+
+    def _resolve_backlink_data(self, lreflist, required_value, ref_list, ref_set):
         for lref in lreflist:
             try:
                 data_set = self.root.find_path(lref).data()
                 for dnode in data_set:
-                    if required_value is None or (
-                        dnode.subtype() is not None and dnode.subtype().value_str() == required_value
-                    ):
-                        ref_list.append(dnode.path())
+                    if required_value is not None:
+                        subtype = dnode.subtype()
+                        if subtype is None or subtype.value_str() != required_value:
+                            continue
+                    path = dnode.path()
+                    if path not in ref_set:
+                        ref_set.add(path)
+                        ref_list.append(path)
             except Exception as e:
-                # Possible no data paths matched, ignore
                 pass
-
-        return ref_list
 
     """
     get_module_prefix:   get the prefix of a Yang module

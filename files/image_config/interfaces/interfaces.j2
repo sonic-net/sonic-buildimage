@@ -30,12 +30,20 @@ iface lo inet loopback
 {% endblock loopback %}
 {% block mgmt_interface %}
 
-{%- if DEVICE_METADATA and 'bmc' in DEVICE_METADATA.keys() and ('bmc_if_name' in DEVICE_METADATA['bmc']) and ('bmc_if_addr' in DEVICE_METADATA['bmc']) and ('bmc_net_mask' in DEVICE_METADATA['bmc']) %}
-# BMC interface
-auto {{ DEVICE_METADATA['bmc']['bmc_if_name'] }}
-iface {{ DEVICE_METADATA['bmc']['bmc_if_name'] }} inet static
-    address {{ DEVICE_METADATA['bmc']['bmc_if_addr'] }}
-    netmask {{ DEVICE_METADATA['bmc']['bmc_net_mask'] }}
+{%- if bmc_if_name is defined and bmc_net_mask is defined %}
+{%- if IS_SWITCH_BMC == 1 and bmc_addr is defined %}
+# BMC interface (Switch-BMC side)
+auto {{ bmc_if_name }}
+iface {{ bmc_if_name }} inet static
+    address {{ bmc_addr }}
+    netmask {{ bmc_net_mask }}
+{%- elif IS_SWITCH_HOST == 1 and bmc_if_addr is defined %}
+# BMC interface (Switch-Host side)
+auto {{ bmc_if_name }}
+iface {{ bmc_if_name }} inet static
+    address {{ bmc_if_addr }}
+    netmask {{ bmc_net_mask }}
+{%- endif %}
 {%- endif %}
 
 # The management network interface
@@ -92,8 +100,8 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {% set force_mgmt_route_priority = 32764 %}
     ########## management network policy routing rules
     # management port up rules
-    up ip {{ '-4' if prefix | ipv4 else '-6' }} route add default via {{ MGMT_INTERFACE[(name, prefix)]['gwaddr'] }} dev {{ name }} table {{ vrf_table }} metric 201
     up ip {{ '-4' if prefix | ipv4 else '-6' }} route add {{ prefix | network }}/{{ prefix | prefixlen }} dev {{ name }} table {{ vrf_table }}
+    up ip {{ '-4' if prefix | ipv4 else '-6' }} route add default via {{ MGMT_INTERFACE[(name, prefix)]['gwaddr'] }} dev {{ name }} table {{ vrf_table }} metric 201
     up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ prefix | ip }}/{{ '32' if prefix | ipv4 else '128' }} table {{ vrf_table }}
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
     up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}

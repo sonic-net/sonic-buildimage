@@ -1570,6 +1570,10 @@
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
+            "HA_SET": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
             "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
@@ -2026,6 +2030,16 @@
                 "admin_status": "down"
             }
         },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",
@@ -2196,7 +2210,7 @@
                 "link_selection": "enable",
                 "vrf_selection": "enable",
                 "server_id_override": "enable",
-                "agent_relay_mode": "forward_untouched",
+                "agent_relay_mode": "discard",
                 "max_hop_count": "4"
             },
             "Vlan222": {
@@ -2484,6 +2498,12 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            }
+        },
+        "VNET_ROUTE": {
+            "vnet1|100.100.4.0/24": {
+                "nexthop": "100.100.4.1,100.100.4.2",
+                "ifname": "Ethernet1,Ethernet2"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2934,6 +2954,9 @@
         "CONSOLE_SWITCH": {
             "console_mgmt": {
                 "enabled": "yes"
+            },
+            "controlled_device": {
+                "enabled": "yes"
             }
         },
 	"STATIC_ROUTE": {
@@ -3081,22 +3104,22 @@
             "vdpu0": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu0"]
+                "main_dpu_ids": "dpu0"
             },
             "vdpu1": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu1"]
+                "main_dpu_ids": "dpu1"
             },
             "vdpu2": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu2"]
+                "main_dpu_ids": "dpu2"
             },
             "vdpu3": {
                 "profile": "none",
                 "tier": "none",
-                "main_dpu_ids": ["dpu3"]
+                "main_dpu_ids": "dpu3"
             }
         },
         "DASH_HA_GLOBAL_CONFIG": {

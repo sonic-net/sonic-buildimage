@@ -43,6 +43,7 @@ module sonic-events-syncd {
                     enum "mmu_err";
                     enum "parity_check";
                 }
+                description "Type of syncd failure that occurred.";
             }
 
             uses evtcmn:sonic-events-cmn;

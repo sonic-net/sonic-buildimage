@@ -1,12 +1,14 @@
 import json
 import subprocess
 import os
+import importlib.machinery
+import types
 from unittest import TestCase
 
 techsupport_table_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
@@ -44,7 +46,7 @@ key - GLOBAL
 techsupport_table_field_output="""\
 
 AUTO_TECHSUPPORT
-Description: AUTO_TECHSUPPORT part of config_db.json
+Description: Global auto-techsupport settings for event-driven dump generation
 
 key - GLOBAL
 +---------+--------------------------------------------------+-------------+-----------+-------------+
@@ -59,31 +61,34 @@ key - GLOBAL
 vlan_table_field_output="""\
 
 VLAN
-Description: VLAN part of config_db.json
+Description: IEEE 802.1Q VLAN definitions
 
 key - name
-+--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
-| Field        | Description                                                            | Mandatory   | Default   | Reference   |
-+==============+========================================================================+=============+===========+=============+
-| dhcp_servers | The field contains list of unique membersConfigure the dhcp v4 servers |             |           |             |
-+--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
++--------------+-------------------------------------------+-------------+-----------+-------------+
+| Field        | Description                               | Mandatory   | Default   | Reference   |
++==============+===========================================+=============+===========+=============+
+| dhcp_servers | The field contains list of unique members |             |           |             |
+|              | Configure the dhcp v4 servers             |             |           |             |
++--------------+-------------------------------------------+-------------+-----------+-------------+
 
 """
 
 dscp_to_tc_table_field_output="""\
 
 DSCP_TO_TC_MAP
-Description: DSCP_TO_TC_MAP part of config_db.json
+Description: Maps DSCP values (0-63) to traffic class for ingress QoS classification.
 
 key - name
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | Field   | Description                                          | Mandatory   | Default   | Reference   |
 +=========+======================================================+=============+===========+=============+
-| name    |                                                      |             |           |             |
+| name    | Name of the DSCP to TC map.                          |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | dscp    | This field is for storing mapping between two fields |             |           |             |
+|         | DSCP value (0-63).                                   |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 | tc      | This field is for storing mapping between two fields |             |           |             |
+|         | Target traffic class.                                |             |           |             |
 +---------+------------------------------------------------------+-------------+-----------+-------------+
 
 """
@@ -91,7 +96,7 @@ key - name
 acl_rule_table_field_output="""\
 
 ACL_RULE
-Description: ACL_RULE part of config_db.json
+Description: Defines packet matching criteria and actions for ACL filtering rules
 
 key - ACL_TABLE_NAME:RULE_NAME
 +-----------+-------------------------------------------------+-------------+-----------+-------------+
@@ -99,6 +104,7 @@ key - ACL_TABLE_NAME:RULE_NAME
 +===========+=================================================+=============+===========+=============+
 | ICMP_TYPE | Mutually exclusive in group icmp                |             |           |             |
 |           | when IP_TYPE in ANY,IP,IPV4,IPv4ANY,IPV4ANY,ARP |             |           |             |
+|           | ICMPv4 type value to match                      |             |           |             |
 +-----------+-------------------------------------------------+-------------+-----------+-------------+
 
 """
@@ -106,6 +112,7 @@ key - ACL_TABLE_NAME:RULE_NAME
 snmp_table_output="""\
 
 SNMP
+Description: SNMP system information (contact and location).
 
 key - CONTACT
 +---------+----------------------+-------------+-----------+-------------+
@@ -181,9 +188,93 @@ class TestCfgHelp(TestCase):
     def test_when_condition(self):
         argument = ['-t', 'ACL_RULE', '-f', 'ICMP_TYPE']
         output = self.run_script(argument)
+        self.maxDiff = None
         self.assertEqual(output, acl_rule_table_field_output)
 
     def test_nested_container(self):
         argument = ['-t', 'SNMP']
         output = self.run_script(argument)
         self.assertEqual(output, snmp_table_output)
+
+
+class TestCfgHelpUnionType(TestCase):
+    """Test parse_leaf handles union types with single and multiple members.
+
+    When a YANG union has a single type member, xmltodict produces a dict
+    instead of a list for the 'type' child. The fix ensures both forms
+    are handled correctly.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        script_file = os.path.join(test_dir, '..', 'sonic-cfg-help')
+        loader = importlib.machinery.SourceFileLoader("sonic_cfg_help",
+                                                       script_file)
+        cls.mod = types.ModuleType(loader.name)
+        loader.exec_module(cls.mod)
+
+    def _make_describer(self):
+        """Create a SonicCfgDescriber with a no-op __init__."""
+        obj = object.__new__(self.mod.SonicCfgDescriber)
+        return obj
+
+    def test_parse_leaf_union_single_leafref(self):
+        """Union with a single leafref type (dict, not list)."""
+        describer = self._make_describer()
+        key = {
+            '@name': 'test_field',
+            'type': {
+                '@name': 'union',
+                'type': {
+                    '@name': 'leafref',
+                    'path': {'@value': '/test:sonic-test/test:TABLE/test:LIST/test:name'}
+                }
+            }
+        }
+        result = describer.parse_leaf(key, '')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], 'test_field')
+        self.assertEqual(result[0][4], 'TABLE:name')
+
+    def test_parse_leaf_union_multiple_leafrefs(self):
+        """Union with multiple leafref types (list)."""
+        describer = self._make_describer()
+        key = {
+            '@name': 'test_field',
+            'type': {
+                '@name': 'union',
+                'type': [
+                    {
+                        '@name': 'leafref',
+                        'path': {'@value': '/test:sonic-test/test:TABLE_A/test:LIST/test:name'}
+                    },
+                    {
+                        '@name': 'leafref',
+                        'path': {'@value': '/test:sonic-test/test:TABLE_B/test:LIST/test:id'}
+                    }
+                ]
+            }
+        }
+        result = describer.parse_leaf(key, '')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], 'test_field')
+        self.assertIn('TABLE_A:name', result[0][4])
+        self.assertIn('TABLE_B:id', result[0][4])
+
+    def test_parse_leaf_union_single_non_leafref(self):
+        """Union with a single non-leafref type (no path, no crash)."""
+        describer = self._make_describer()
+        key = {
+            '@name': 'test_field',
+            'type': {
+                '@name': 'union',
+                'type': {
+                    '@name': 'string'
+                }
+            }
+        }
+        result = describer.parse_leaf(key, '')
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], 'test_field')
+        self.assertEqual(result[0][4], '')

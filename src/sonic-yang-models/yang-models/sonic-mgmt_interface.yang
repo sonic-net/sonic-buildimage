@@ -18,7 +18,7 @@ module sonic-mgmt_interface {
     }
 
     description
-        "SONiC MANAGEMENT INTERFACE";
+        "Out-of-band management interface (eth0) IP addressing and gateway configuration";
 
     revision 2021-04-07 {
         description "First revision";
@@ -28,24 +28,29 @@ module sonic-mgmt_interface {
 
         container MGMT_INTERFACE {
 
-            description "MANAGEMENT INTERFACE part of config_db.json";
+            description "Management interface IP address and gateway configuration table";
 
             list MGMT_INTERFACE_LIST {
+
+                description "IP address and gateway configuration for a management interface";
 
                 key "name ip_prefix";
 
                 leaf name{
+                    description "Reference to the management port (e.g. eth0)";
                     type leafref {
                         path /mgmtprt:sonic-mgmt_port/mgmtprt:MGMT_PORT/mgmtprt:MGMT_PORT_LIST/mgmtprt:name;
                     }
                 }
 
                 leaf ip_prefix {
+                    description "IPv4 or IPv6 address with prefix length for the management interface";
                     must "(contains(current(), ':') and contains(../gwaddr, ':')) or (contains(current(), '.') and contains(../gwaddr, '.'))";
                     type stypes:sonic-ip-prefix;
                 }
 
                 leaf gwaddr {
+                    description "Default gateway IP address for the management interface";
                     must "(contains(current(), ':') and contains(../ip_prefix, ':')) or (contains(current(), '.') and contains(../ip_prefix, '.'))";
                     type inet:ip-address;
                 }

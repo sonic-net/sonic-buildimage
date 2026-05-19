@@ -36,7 +36,6 @@ try:
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
-    from .bmc import BMC
     import re
     import select
     import threading
@@ -133,6 +132,8 @@ class Chassis(ChassisBase):
         # Mapping from SFP index to ASIC ID
         self._asic_id_map = None
 
+        self._num_npus = device_info.get_num_npus()
+
         self.liquid_cooling = None
 
         Chassis.chassis_instance = self
@@ -154,14 +155,14 @@ class Chassis(ChassisBase):
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
         return self._RJ45_port_list
 
     @property
     def cpo_port_list(self):
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         return self._cpo_port_list
 
@@ -222,6 +223,56 @@ class Chassis(ChassisBase):
         """
         self.initialize_psu()
         return super(Chassis, self).get_psu(index)
+
+    ##############################################
+    # PDB methods
+    ##############################################
+
+    def initialize_pdb(self):
+        if not self._pdb_list:
+            pdb_count = DeviceDataManager.get_pdb_count()
+            if pdb_count == 0:
+                return
+            from .pdb import Pdb
+            for index in range(pdb_count):
+                self._pdb_list.append(Pdb(index))
+
+    def get_num_pdbs(self):
+        """
+        Retrieves the number of power distribution boards available on this chassis
+
+        Returns:
+            An integer, the number of PDBs available on this chassis
+        """
+        self.initialize_pdb()
+        return len(self._pdb_list)
+
+    def get_all_pdbs(self):
+        """
+        Retrieves all power distribution boards available on this chassis
+
+        Returns:
+            A list of objects derived from PdbBase representing all PDBs
+            available on this chassis
+        """
+        self.initialize_pdb()
+        return self._pdb_list
+
+    def get_pdb(self, index):
+        """
+        Retrieves the PDB object at the specified (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the PDB to retrieve
+
+        Returns:
+            An object derived from PdbBase representing the specified PDB
+        """
+        self.initialize_pdb()
+        if index < 0 or index >= len(self._pdb_list):
+            logger.log_error(f"PDB index {index} is out of range")
+            return None
+        return self._pdb_list[index]
 
     ##############################################
     # Fan methods
@@ -365,11 +416,11 @@ class Chassis(ChassisBase):
         """
         num_sfps = 0
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
-        
+
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         
         num_sfps = DeviceDataManager.get_sfp_count()
@@ -565,7 +616,11 @@ class Chassis(ChassisBase):
                 
                 sfp_index, fd, fd_type = self.registered_fds[fileno]
                 s = self._sfp_list[sfp_index]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd_value = int(fd.read().strip())
                 except Exception as e:
@@ -696,7 +751,11 @@ class Chassis(ChassisBase):
                     continue
                 
                 sfp_index, fd = self.registered_fds[fileno]
-                fd.seek(0)
+                try:
+                    fd.seek(0)
+                except OSError as e:
+                    logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    continue
                 try:
                     fd.read()
                 except Exception as e:
@@ -923,7 +982,9 @@ class Chassis(ChassisBase):
             self._component_list.extend(DeviceDataManager.get_cpld_component_list())
 
         # Initialize BMC and its components
-        self.initialize_bmc()
+        if DeviceDataManager.is_platform_with_bmc():
+            from .bmc import BMC
+            self.initialize_bmc()
 
     def get_num_components(self):
         """
@@ -1104,6 +1165,7 @@ class Chassis(ChassisBase):
     def initialize_reboot_cause(self):
         self.reboot_major_cause_dict = {
             'reset_main_pwr_fail'       :   self.REBOOT_CAUSE_POWER_LOSS,
+            'reset_ac_pwr_fail'         :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_ref'      :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_reload'   :   self.REBOOT_CAUSE_POWER_LOSS,
             'reset_aux_pwr_or_fu'       :   self.REBOOT_CAUSE_POWER_LOSS,

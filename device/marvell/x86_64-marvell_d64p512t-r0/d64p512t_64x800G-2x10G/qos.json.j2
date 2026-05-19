@@ -1,0 +1,107 @@
+{%- set PORT_LOSSY = [] %}
+
+{%- set default_topo = default_topo | default('t1', true) %}
+
+{% if default_topo == 'def_lossy' %}
+{% for port in PORT %}
+    {%- if PORT_LOSSY.append(port) %}{% endif %}
+{% endfor %}
+{% endif %}
+
+{%- macro generate_service_port_list(PORT_SERVICE) -%}
+    {%- if PORT_SERVICE.append("Ethernet512") %}{% endif %}
+    {%- if PORT_SERVICE.append("Ethernet513") %}{% endif %}
+{%- endmacro %}
+
+{%- set PORT_SERVICE = [] %}
+{%- if generate_service_port_list is defined %}
+    {%- if generate_service_port_list(PORT_SERVICE) %}{% endif %}
+{%- endif %}
+
+{%- macro generate_tc_to_pg_map_per_sku() %}
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "AZURE": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "3",
+            "4": "4",
+            "5": "0",
+            "6": "0",
+            "7": "0"
+        },
+        "AZURE_LOSSY": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "1",
+            "4": "2",
+            "5": "0",
+            "6": "0",
+            "7": "0"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_scheduler_per_sku() -%}
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "STRICT"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "1"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_global_dscp_to_tc_map() -%}
+{%- endmacro -%}
+
+{# QUEUE #}
+{%- macro generate_queue_config(port_names_active) %}
+    "QUEUE": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}|0-2": {
+            "scheduler": "scheduler.1"
+        },
+        "{{ port }}|3-4": {
+{% if port not in PORT_SERVICE and port not in PORT_LOSSY %}
+            "wred_profile" : "AZURE_LOSSLESS",
+{% endif %}
+            "scheduler"    : "scheduler.1"
+        },
+        "{{ port }}|5-6": {
+            "scheduler": "scheduler.1"
+        },
+        "{{ port }}|7": {
+            "scheduler": "scheduler.0"
+        }{{ "," if not loop.last else "" }}
+{% endfor %}
+    }
+{%- endmacro %}
+
+{# PORT_QOS_MAP #}
+{%- macro generate_port_qos_map(port_names_active) %}
+    "PORT_QOS_MAP": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}": {
+{% if port in PORT_SERVICE or port in PORT_LOSSY %}
+            "dscp_to_tc_map"   : "AZURE",
+            "tc_to_pg_map"     : "AZURE_LOSSY",
+            "tc_to_queue_map"  : "AZURE"
+{% else %}
+            "dscp_to_tc_map"   : "AZURE",
+            "tc_to_pg_map"     : "AZURE",
+            "tc_to_queue_map"  : "AZURE",
+            "pfc_to_queue_map" : "AZURE",
+            "pfc_enable"       : "3,4",
+            "pfcwd_sw_enable"  : "3,4"
+{% endif %}
+        }{{ "," if not loop.last else "" }}
+{% endfor %}
+    },
+{%- endmacro %}
+
+
+{%- include 'qos_config.j2' %}

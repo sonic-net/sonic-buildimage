@@ -5,7 +5,7 @@ module sonic-warm-restart  {
     namespace "http://github.com/sonic-net/sonic-warm-restart";
     prefix wrm;
 
-    description "SONIC WARMRESTART";
+    description "Warm restart configuration per module for hitless software upgrades";
 
     revision 2021-05-24 {
         description "First Revision";
