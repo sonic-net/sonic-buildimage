@@ -51,16 +51,17 @@ jobs:
       [ -f "$BIN" ] || { echo "ERROR: sonic-${{ parameters.platform }}.bin not found"; exit 1; }
       echo "Using BIN: $BIN"
 
+      RESULTS=$(Build.ArtifactStagingDirectory)/trivy-results
       python3 $(Build.SourcesDirectory)/.azure-pipelines/scripts/trivy-scan-bin.py \
         "$BIN" \
-        $(Build.ArtifactStagingDirectory)/trivy-results
+        "$RESULTS"
     displayName: "Trivy scan all containers from .bin (${{ parameters.platform }})"
 
   - script: |
       set -x
       BIN=$(find $(Pipeline.Workspace) -name "sonic-${{ parameters.platform }}.bin" | head -1)
       WORKDIR=$(Agent.TempDirectory)/trivy-rootfs-${{ parameters.platform }}
-      RESULTS=$(Build.ArtifactStagingDirectory)/trivy-results
+      RESULTS=$(Build.ArtifactStagingDirectory)/trivy-results/results
       mkdir -p "$WORKDIR" "$RESULTS"
 
       echo "Extracting installer/fs.zip from .bin..."
@@ -99,7 +100,7 @@ jobs:
       exit $TRIVY_EXIT
     displayName: "Trivy scan rootfs (${{ parameters.platform }})"
 
-  - publish: $(Build.ArtifactStagingDirectory)/trivy-results
+  - publish: $(Build.ArtifactStagingDirectory)/trivy-results/results
     artifact: trivy-scan-${{ parameters.platform }}
     displayName: "Publish Trivy scan results (${{ parameters.platform }})"
     condition: always()

@@ -197,9 +197,12 @@ def main():
             total_lines = [l for l in content.splitlines() if l.startswith('Total:')]
             summary = total_lines[0] if total_lines else "(no Total line)"
         except:
+            content = ""
             summary = "(unreadable)"
 
         print(f"  -> {status}: {summary}", flush=True)
+        print(f"\n=== {image_name} ===", flush=True)
+        print(content, flush=True)
         if result.returncode not in (0, 1):
             print(f"  trivy stderr: {result.stderr[:300]}", file=sys.stderr)
             overall_exit = 1
