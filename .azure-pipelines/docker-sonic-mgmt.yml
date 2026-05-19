@@ -129,7 +129,7 @@ stages:
         exit $TRIVY_EXIT
       displayName: "Trivy scan docker-sonic-mgmt"
     - publish: $(Build.ArtifactStagingDirectory)/trivy-sonic-mgmt.txt
-      artifact: trivy-scan-results
+      artifact: trivy-scan-sonic-mgmt
       displayName: "Publish Trivy scan results"
       condition: always()
       continueOnError: true

@@ -1,29 +1,25 @@
 # .azure-pipelines/trivy-scan-platform.yml
 #
-# Trivy vulnerability scan for a SONiC platform — covers both:
-# 1. All docker-*.gz container images in the platform artifact
-# 2. Host rootfs extracted from the platform .bin installer
+# Trivy vulnerability scan for a SONiC platform.
+# Scans all Docker images extracted from the platform .bin installer (ground truth),
+# plus the host rootfs from the same .bin.
 #
-# Parameterized by platform (e.g. broadcom, mellanox).
-# Runs in a stage that depends on the Build stage.
+# Uses .azure-pipelines/scripts/trivy-scan-bin.py to extract dockerfs.tar.gz
+# from the .bin and scan each container image.
 #
-# Phase 1: exit-code 1, continueOnError: true (does not block merge)
+# continueOnError: true (does not block merge)
 
 parameters:
 - name: platform
   type: string
   # e.g. broadcom, mellanox
-- name: parallelism
-  type: number
-  default: 4
-  # max concurrent Trivy image scans within this job
 
 jobs:
 - job: trivy_scan_${{ parameters.platform }}
   displayName: "[OPTIONAL] Trivy scan (${{ parameters.platform }})"
   pool: sonic-ubuntu-1c
   continueOnError: true
-  timeoutInMinutes: 120
+  timeoutInMinutes: 180
   steps:
   - checkout: self
     clean: true
@@ -32,10 +28,8 @@ jobs:
   - task: DownloadPipelineArtifact@2
     inputs:
       artifact: sonic-buildimage.${{ parameters.platform }}
-      itemPattern: |
-        **/target/docker-*.gz
-        **/target/sonic-${{ parameters.platform }}.bin
-    displayName: "Download sonic-buildimage.${{ parameters.platform }} artifact"
+      itemPattern: "**/target/sonic-${{ parameters.platform }}.bin"
+    displayName: "Download sonic-${{ parameters.platform }}.bin"
 
   - script: |
       set -ex
@@ -44,76 +38,37 @@ jobs:
       sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
       sudo apt install -y squashfs-tools
       trivy --version
-      unsquashfs -v || true
     displayName: "Install Trivy and squashfs-tools"
 
   - script: |
       set -x
-      # Download DB once; all parallel scans reuse it with --skip-db-update
       trivy image --download-db-only --no-progress
     displayName: "Download Trivy vulnerability DB"
 
   - script: |
-      set -x
-      RESULTS_DIR=$(Build.ArtifactStagingDirectory)/trivy-results
-      mkdir -p "$RESULTS_DIR"
-      OVERALL_EXIT=0
-      MAX_PARALLEL=${{ parameters.parallelism }}
-      pids=()
+      set -ex
+      BIN=$(find $(Pipeline.Workspace) -name "sonic-${{ parameters.platform }}.bin" | head -1)
+      [ -f "$BIN" ] || { echo "ERROR: sonic-${{ parameters.platform }}.bin not found"; exit 1; }
+      echo "Using BIN: $BIN"
 
-      for img in $(Pipeline.Workspace)/target/docker-*.gz; do
-        [ -f "$img" ] || continue
-        name=$(basename "$img" .gz)
-        outfile="$RESULTS_DIR/${name}.txt"
-        echo "--- Queuing scan: $name ---"
-        trivy image \
-          --input "$img" \
-          --skip-db-update \
-          --severity MEDIUM,HIGH,CRITICAL \
-          --ignore-unfixed \
-          --exit-code 1 \
-          --format table \
-          --no-progress \
-          --timeout 15m \
-          --output "$outfile" &
-        pids+=("$!")
-        # Throttle: wait for oldest job when at MAX_PARALLEL
-        while [ ${#pids[@]} -ge $MAX_PARALLEL ]; do
-          wait "${pids[0]}" || OVERALL_EXIT=1
-          pids=("${pids[@]:1}")
-        done
-      done
-
-      # Drain remaining background jobs
-      for pid in "${pids[@]}"; do
-        wait "$pid" || OVERALL_EXIT=1
-      done
-
-      echo ""
-      echo "=== Container Scan Summary (${{ parameters.platform }}) ==="
-      for f in "$RESULTS_DIR"/docker-*.txt; do
-        name=$(basename "$f" .txt)
-        total=$(grep "^Total:" "$f" | head -1 || echo "Clean")
-        echo "  $name: $total"
-      done
-
-      exit $OVERALL_EXIT
-    displayName: "Trivy scan all containers (${{ parameters.platform }}, parallelism=${{ parameters.parallelism }})"
+      python3 $(Build.SourcesDirectory)/.azure-pipelines/scripts/trivy-scan-bin.py \
+        "$BIN" \
+        $(Build.ArtifactStagingDirectory)/trivy-results
+    displayName: "Trivy scan all containers from .bin (${{ parameters.platform }})"
 
   - script: |
       set -x
-      BIN=$(Pipeline.Workspace)/target/sonic-${{ parameters.platform }}.bin
+      BIN=$(find $(Pipeline.Workspace) -name "sonic-${{ parameters.platform }}.bin" | head -1)
       WORKDIR=$(Agent.TempDirectory)/trivy-rootfs-${{ parameters.platform }}
       RESULTS=$(Build.ArtifactStagingDirectory)/trivy-results
+      mkdir -p "$WORKDIR" "$RESULTS"
 
-      mkdir -p "$WORKDIR"
-
-      echo "Extracting installer payload..."
+      echo "Extracting installer/fs.zip from .bin..."
       PAYLOAD_SIZE=$(grep -a 'payload_image_size=' "$BIN" | head -1 | cut -d= -f2)
       sed -e '1,/^exit_marker$/d' "$BIN" | head -c "$PAYLOAD_SIZE" \
         | tar xf - -C "$WORKDIR" installer/fs.zip
 
-      [ -f "$WORKDIR/installer/fs.zip" ] || { echo "ERROR: installer/fs.zip not found — check .bin format for ${{ parameters.platform }}"; exit 1; }
+      [ -f "$WORKDIR/installer/fs.zip" ] || { echo "ERROR: installer/fs.zip not found"; exit 1; }
 
       echo "Extracting fs.squashfs..."
       python3 -c "
