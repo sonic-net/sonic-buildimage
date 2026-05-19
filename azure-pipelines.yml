@@ -27,7 +27,7 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
+    name: yijingyan2/sonic-mgmt
     ref: master
     endpoint: sonic-net
   - repository: buildimage
