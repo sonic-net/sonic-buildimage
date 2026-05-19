@@ -30,12 +30,12 @@ index f76744736..c222984ae 100644
 @@ -252,6 +252,12 @@ zebra_dplane_fpm_nl_la_LDFLAGS = $(MODULE_LDFLAGS)
  zebra_dplane_fpm_nl_la_LIBADD  =
  endif
- 
+
 +module_LTLIBRARIES += zebra/dplane_fpm_sonic.la
 +
 +zebra_dplane_fpm_sonic_la_SOURCES = zebra/dplane_fpm_sonic.c
 +zebra_dplane_fpm_sonic_la_LDFLAGS = $(MODULE_LDFLAGS)
-+zebra_dplane_fpm_sonic_la_LIBADD  =
++zebra_dplane_fpm_sonic_la_LIBADD  = -lnexthopgroup
 +
  if NETLINK_DEBUG
  zebra_zebra_SOURCES += \

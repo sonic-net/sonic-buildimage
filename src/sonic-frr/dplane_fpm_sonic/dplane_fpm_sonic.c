@@ -59,6 +59,7 @@
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
 #include "lib/vrf.h"
+#include <nexthopgroup/c-api/nexthopgroup_capi.h>
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620

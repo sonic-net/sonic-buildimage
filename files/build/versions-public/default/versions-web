@@ -105,7 +105,7 @@ https://github.com/open-telemetry/opentelemetry-collector-releases/releases/down
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_arm64.deb==98ca208ac0f38b10611382add01ef98c
 https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.144.0/otelcol-contrib_0.144.0_linux_armv7.deb==65cbdc3debe9ac968be5d1e09aeaf9a1
 https://github.com/seladb/PcapPlusPlus/archive/refs/tags/v24.09.tar.gz==5ae65d152e8b76390ce28806bc085ffd
-https://go.dev/dl/go1.25.9.linux-amd64.tar.gz==53424070f6f21eecb56c26f3bcb44be4
+https://go.dev/dl/go1.25.10.linux-amd64.tar.gz==283a6a8b6ef84a0ddfd6fb05af38ceff
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi/gnmi.proto==8f354db5e671cf2cefd6aca7215038bf
 https://raw.githubusercontent.com/openconfig/gnmi/master/proto/gnmi_ext/gnmi_ext.proto==bc166087e113759b1351a6412d3f0ec7
 https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d

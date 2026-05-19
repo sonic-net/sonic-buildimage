@@ -1,4 +1,4 @@
-frr==10.5.1-sonic-0
+frr==10.5.4-sonic-0
 libdashapi==1.0.0
 libnetsnmptrapd40==5.9.3+dfsg-2+deb12u1
 libnl-3-dev==3.7.0-0.2+b1sonic1

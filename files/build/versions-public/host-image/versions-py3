@@ -71,7 +71,7 @@ python-dateutil==2.9.0.post0
 pyyaml==6.0.2
 redis==3.5.3
 regex==2024.11.6
-requests==2.34.0
+requests==2.34.2
 scapy==2.6.1
 scp==0.14.5
 semantic-version==2.10.0
