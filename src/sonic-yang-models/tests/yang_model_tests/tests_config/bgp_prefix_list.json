@@ -36,5 +36,256 @@
         },
         "eStrKey": "InvalidValue",
         "eStr": ["prefix"]
+    },
+    "BGP_PREFIX_LIST_WITH_ALL_OPTIONAL_FIELDS": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "seq": "100",
+                        "ge": "16",
+                        "le": "24"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_PERMIT_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.1.0.0/16",
+                        "action": "permit"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_DENY_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "192.168.0.0/16",
+                        "action": "deny"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "reject"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_SEQ_ZERO": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "seq": "0"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_GE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "ge": "129"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_LE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "le": "129"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_IPV4_GE_LENGTH": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "ge": "33"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_IPV4_LE_LENGTH": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "le": "33"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_IPV6_VALID_GE_LE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "fc00::/48",
+                        "action": "permit",
+                        "ge": "64",
+                        "le": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_GE_GREATER_THAN_LE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "action": "permit",
+                        "ge": "24",
+                        "le": "16"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_GE_LESS_THAN_PREFIX_LENGTH": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/24",
+                        "action": "permit",
+                        "ge": "16"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_LE_LESS_THAN_PREFIX_LENGTH": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/24",
+                        "action": "permit",
+                        "le": "8"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_EMBEDDED_IPV4_IN_IPV6_VALID_GE_LE": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "2001:db8::192.0.2.0/120",
+                        "action": "permit",
+                        "ge": "120",
+                        "le": "128"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_EMBEDDED_IPV4_IN_IPV6_GE_LESS_THAN_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "2001:db8::192.0.2.0/120",
+                        "action": "permit",
+                        "ge": "64"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_SEQ_WITHOUT_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "seq": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_GE_WITHOUT_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "ge": "16"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_LE_WITHOUT_ACTION": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "DOWNSTREAM_PREFIX",
+                        "ip-prefix": "10.0.0.0/8",
+                        "le": "16"
+                    }
+                ]
+            }
+        }
     }
 }
