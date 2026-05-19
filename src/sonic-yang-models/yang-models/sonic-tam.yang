@@ -1,0 +1,262 @@
+module sonic-tam {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-tam";
+    prefix tam;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    description "TAM YANG Module for SONiC OS";
+
+    revision 2025-09-24 {
+        description "Initial Revision";
+    }
+
+    container sonic-tam {
+        container TAM {
+            description "Defines TAM device configuration";
+
+            list TAM_LIST {
+                key "device";
+
+                leaf device {
+                    description "Only one instance and has a fixed key 'device'.";
+                    type string {
+                        pattern "device";
+                    }
+                }
+
+                leaf device-id {
+                    description "Uniquely identifies a device on the network to be analyzed. 28bits. Uses last 16bits of the Mac address if not defined.";
+                    type uint32 {
+                        range "1..134217727";
+                    }
+                }
+
+                leaf enterprise-id {
+                    description "Uniquely identifies the enterprise.  28bits. Uses last 16bits of the Mac address if not defined.";
+                    type uint32 {
+                        range "1..134217727";
+                    }
+                }
+
+                leaf ifa {
+                    description "Optional parameter to specify device type as intermediate, value can be 'intermediate'
+                                 only.";
+                    type boolean;
+                }
+            }
+            /* end of list TAM_LIST */
+        }
+        /* end of container TAM */
+
+
+        container TAM_FLOW_GROUP {
+            description "Defines TAM flow group configuration";
+
+            list TAM_FLOW_GROUP_LIST {
+                key "name";
+
+                leaf name {
+                    description "flow group name, should be unique.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf aging_interval {
+                    description "interval in seconds.";
+                    type uint32;
+                }
+
+                leaf-list ports {
+                    min-elements 1;
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type leafref {
+                            path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+                        }
+                    }
+                }
+            }
+            /* end of list TAM_FLOW_GROUP_LIST */
+
+            list TAM_FLOW_GROUP_RULE_LIST {
+                description "rules associated with the TAM flow group";
+
+                key "name rule";
+
+                leaf name {
+                    description "name of flow group";
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
+                    }
+                }
+
+                leaf rule {
+                    description "name of rule for flow group";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf src_ip_prefix {
+                    description "source ipv4 or ipv6 prefix. Use 0.0.0.0/0 or ::/0 for any.";
+                    type union {
+                        type inet:ipv4-prefix;
+                        type inet:ipv6-prefix;
+                    }
+                    mandatory true;
+                }
+
+                leaf dst_ip_prefix {
+                    description "dest ipv4 or ipv6 prefix. Use 0.0.0.0/0 or ::/0 for any.";
+                    type union {
+                        type inet:ipv4-prefix;
+                        type inet:ipv6-prefix;
+                    }
+                    mandatory true;
+                }
+
+                leaf l4_src_port {
+                    type uint16;
+                }
+
+                leaf l4_dst_port {
+                    type uint16;
+                }
+
+                leaf ip_protocol {
+                    type uint8 {
+                        range 0..255;
+                    }
+                }
+            }
+            /* end of list TAM_FLOW_GROUP_RULE_LIST */
+        }
+        /* end of container TAM_FLOW_GROUP */
+
+
+        container TAM_COLLECTOR {
+            description "Defines a TAM collector";
+
+            list TAM_COLLECTOR_LIST {
+                key "name";
+
+                leaf name {
+                    description "unique collector name";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf src_ip {
+                    type union {
+                        type inet:ipv4-address;
+                        type inet:ipv6-address;
+                    }
+                }
+
+                leaf dst_ip {
+                    mandatory true;
+                    type union {
+                        type inet:ipv4-address;
+                        type inet:ipv6-address;
+                    }
+                }
+
+                leaf dst_port {
+                    mandatory true;
+                    type uint16;
+                }
+
+                leaf dscp_value {
+                    type uint8;
+                    default 32;
+                }
+
+                leaf vrf {
+                    description "VRF";
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type enumeration {
+                            enum default;
+                            enum mgmt;
+                        }
+                    }
+                    must "(current() != 'mgmt')
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
+                }
+            }
+            /* end of list TAM_COLLECTOR_LIST */
+        }
+        /* end of container TAM_COLLECTOR */
+
+        container TAM_SESSION {
+            description "Defines a TAM session";
+
+            list TAM_SESSION_LIST {
+                key "name";
+
+                leaf name {
+                    description "unique session name";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf type {
+                    type enumeration {
+                        enum drop-monitor;
+                    }
+                    mandatory true;
+                }
+
+                leaf report_type {
+                    type enumeration {
+                        enum ipfix;
+                    }
+                    default ipfix;
+                }
+
+                leaf flow_group {
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
+                    }
+                }
+
+                leaf-list collector {
+                    type leafref {
+                        path "/tam:sonic-tam/tam:TAM_COLLECTOR/tam:TAM_COLLECTOR_LIST/tam:name";
+                    }
+                    min-elements 1;
+                }
+            }
+            /* end of list TAM_SESSION_LIST */
+        }
+        /* end of container TAM_SESSION */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-tam */

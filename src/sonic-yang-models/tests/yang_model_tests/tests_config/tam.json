@@ -1,0 +1,203 @@
+{
+    "TAM_DEVICE_VALID": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM": {
+                "TAM_LIST": [
+                    {
+                        "device": "device",
+                        "device-id": 12345,
+                        "enterprise-id": 54321,
+                        "ifa": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_DEVICE_VALID_NO_IFA": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM": {
+                "TAM_LIST": [
+                    {
+                        "device": "device",
+                        "device-id": 12345,
+                        "enterprise-id": 54321
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_DEVICE_INVALID_DEVICE": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM": {
+                "TAM_LIST": [
+                    {
+                        "device": "badname",
+                        "device-id": 12345
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_DEVICE_INVALID_DEVICEID_RANGE": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM": {
+                "TAM_LIST": [
+                    {
+                        "device": "device",
+                        "device-id": 999999999
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_DEVICE_INVALID_ENTERPRISEID_RANGE": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM": {
+                "TAM_LIST": [
+                    {
+                        "device": "device",
+                        "enterprise-id": 999999999
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_VALID_IPV4": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "src_ip": "2.2.2.2",
+                        "dst_ip": "1.1.1.1",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_VALID_IPV6": {
+        "sonic-tam:sonic-tam": {
+           "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "src_ip": "2620:10::1",
+                        "dst_ip": "2620:10::2",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_VALID_MULTIPLE": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "src_ip": "2.2.2.2",
+                        "dst_ip": "1.1.1.1",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    },
+                    {
+                        "name": "collector2",
+                        "src_ip": "2620:10::1",
+                        "dst_ip": "2620:10::2",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_INVALID_PORT": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "src_ip": "2620:10::1",
+                        "dst_ip": "2620:10::2",
+                        "dst_port": 99999,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_INVALID_PORT_MISSING": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "src_ip": "2620:10::1",
+                        "dst_ip": "2620:10::2",
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_INVALID_IPADDRESS": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "dst_ip": "xxx.xxx.xxx.xxx",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_COLLECTOR_INVALID_MISSING_IPADDRESS": {
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_COLLECTOR": {
+                "TAM_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "dst_port": 1234,
+                        "dscp_value": 32
+                    }
+                ]
+            }
+        }
+    },
+    "TAM_FLOW_GROUP_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "lanes": "1"
+                    }
+                ]
+            }
+        },
+        "sonic-tam:sonic-tam": {
+            "sonic-tam:TAM_FLOW_GROUP": {
+                "TAM_FLOW_GROUP_LIST": [
+                    {
+                        "name": "flow1",
+                        "aging_interval": 1000,
+                        "ports": [
+                            "Ethernet0"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}
