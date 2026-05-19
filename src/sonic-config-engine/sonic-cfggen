@@ -423,7 +423,7 @@ def main():
         if  brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
 
-        if device_info.is_generate_voq():
+        if device_info.is_generate_voq() and args.preset is not None:
             hostname = ""
             try:
                 with open('/etc/hostname', 'r') as f:
