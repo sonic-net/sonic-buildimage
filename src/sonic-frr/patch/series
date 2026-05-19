@@ -28,5 +28,5 @@
 0110-lib-build-support-gperftools-tcmalloc-release-free-memory-to-host-OS.patch
 0111-debian-add-pkg.frr.tcmalloc-build-profile.patch
 0112-SONiC-ONLY-lib-build-add-configure-check-for-tc_mallinfo2-and-fallback.patch
-0110-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
-0111-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
+0113-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
+0114-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
