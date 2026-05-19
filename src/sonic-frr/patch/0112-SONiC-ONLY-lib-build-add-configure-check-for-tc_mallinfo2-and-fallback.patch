@@ -1,0 +1,66 @@
+From 4ea7a83c0ba673f0735ec839fdcbe458cbf14c3c Mon Sep 17 00:00:00 2001
+From: Ravi Minnikanti <rminnikanti@marvell.com>
+Date: Thu, 16 Apr 2026 20:25:12 +0530
+Subject: [PATCH] lib, build: add configure check for tc_mallinfo2 and fallback
+ to tc_mallinfo
+
+gperftools versions prior to 2.16 do not provide tc_mallinfo2().
+Add configure.ac check for tc_mallinfo2() availability and fall back
+to tc_mallinfo() with struct mallinfo when not available.
+
+This fixes build failures with libgoogle-perftools-dev in Debian
+trixie which ships gperftools 2.15.
+
+Signed-off-by: Ravi Minnikanti <rminnikanti@marvell.com>
+---
+ configure.ac | 5 +++++
+ lib/vty.c    | 8 ++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 9458c2237b..622979b000 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -917,6 +917,11 @@ AC_DEFINE([HAVE_TCMALLOC], [1], [Enable tcmalloc])
+   *) AC_MSG_ERROR([bad value ${enableval} for --enable-gperf-tcmalloc]) ;;
+ esac],[gperf_tcmalloc_enabled=false])
+ 
++if test "$gperf_tcmalloc_enabled" = "true"; then
++  AC_CHECK_FUNC([tc_mallinfo2],
++    [AC_DEFINE([HAVE_TC_MALLINFO2], [1], [tc_mallinfo2 from gperftools])])
++fi
++
+ #if openssl, else use the internal
+ AS_IF([test "$with_crypto" = "openssl"], [
+ AC_CHECK_LIB([crypto], [EVP_DigestInit], [LIBS="$LIBS -lcrypto"], [], [])
+diff --git a/lib/vty.c b/lib/vty.c
+index 39aa86645a..b541b783eb 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -3503,7 +3503,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
+ 	    "tcmalloc library info\n"
+ 	    "Show tcmalloc stats\n")
+ {
++#ifdef HAVE_TC_MALLINFO2
+ 	struct mallinfo2 minfo;
++#else
++	struct mallinfo minfo;
++#endif
+ 	char buf[30];
+ 	size_t sval;
+ 	int major = 0, minor = 0;
+@@ -3513,7 +3517,11 @@ DEFUN_NOSH (show_tcmalloc_stats,
+ 
+ 	vty_out(vty, "Tcmalloc version '%s' (%d.%d)\n", str, major, minor);
+ 
++#ifdef HAVE_TC_MALLINFO2
+ 	minfo = tc_mallinfo2();
++#else
++	minfo = tc_mallinfo();
++#endif
+ 
+ 	vty_out(vty, "Tcmalloc mallinfo statistics:\n");
+ 	vty_out(vty, "  Total heap allocated:  %s\n",
+-- 
+2.25.1
+
