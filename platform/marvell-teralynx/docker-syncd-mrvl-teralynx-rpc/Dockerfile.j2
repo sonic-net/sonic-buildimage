@@ -29,7 +29,7 @@ RUN pip3 install --break-system-packages cffi \
  && pip3 install --break-system-packages nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
- && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
+ && wget https://raw.githubusercontent.com/p4lang/ptf/23ebe7237f3c284032bda02fbd1f4a98f1bc12f4/ptf_nn/ptf_nn_agent.py
 
 COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
 
