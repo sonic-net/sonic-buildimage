@@ -22,11 +22,6 @@ module sonic-monitor-link-group {
     description
         "SONIC monitor link group YANG Module for SONiC OS";
 
-    revision 2026-05-14 {
-        description
-            "Drop the empty-string fallback branch from the monitored-links and managed-links union types so leafref-only unions enforce that interface names exist in PORT or PORTCHANNEL. Add numeric patterns on link-up-delay and min-monitored-links so non-numeric and negative values are rejected. Drop the custom error-message on the group_name pattern so libyang emits the default 'Unsatisfied pattern' text.";
-    }
-
     revision 2026-05-12 {
         description
             "Rename uplinks/downlinks to monitored-links/managed-links and min-uplinks to min-monitored-links; drop empty-string defaults on the leaf-lists; add must constraint requiring min-monitored-links to be <= the number of configured monitored-links.";
