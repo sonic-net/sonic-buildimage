@@ -23,12 +23,12 @@ else
     LOG_LEVEL=5
 fi
 
-NETCONF_SERVER_ARGS="-logtostderr"
-[ -n "$SERVER_PORT" ] && NETCONF_SERVER_ARGS+=" -port $SERVER_PORT"
-[ -n "$LOG_LEVEL"   ] && NETCONF_SERVER_ARGS+=" -v $LOG_LEVEL"
+NETCONF_SERVER_ARGS=("-logtostderr")
+[ -n "$SERVER_PORT" ] && NETCONF_SERVER_ARGS+=("-port" "$SERVER_PORT")
+[ -n "$LOG_LEVEL"   ] && NETCONF_SERVER_ARGS+=("-v" "$LOG_LEVEL")
 
-echo "NETCONF_SERVER_ARGS = $NETCONF_SERVER_ARGS"
+echo "NETCONF_SERVER_ARGS = ${NETCONF_SERVER_ARGS[*]}"
 
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
-exec /usr/sbin/netconf_server ${NETCONF_SERVER_ARGS}
+exec /usr/sbin/netconf_server "${NETCONF_SERVER_ARGS[@]}"

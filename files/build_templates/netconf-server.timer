@@ -3,7 +3,6 @@ Description=Delays netconf-server container until SONiC has started
 PartOf=netconf-server.service
 
 [Timer]
-OnUnitActiveSec=0 sec
 OnBootSec=3min 30 sec
 Unit=netconf-server.service
 
