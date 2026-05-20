@@ -573,6 +573,292 @@
                 ]
             }
         }
+    },
+
+    "QUEUE_VALID_NON_VOQ": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-scheduler:sonic-scheduler": {
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                    {
+                        "name": "scheduler.0",
+                        "type": "DWRR",
+                        "weight": 25
+                    }
+                ]
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "QUEUE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "qindex": "3",
+                        "scheduler": "scheduler.0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_VALID_LOCAL": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_LOCAL_MISSING_PORT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_LOCAL_BOGUS_PORT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet999",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_REMOTE_NO_PORT": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc2",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "qindex": "3"
+                    },
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic1",
+                        "ifname": "Ethernet8",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_NO_LOCAL_ASIC_NAME": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_MIXED_LOCAL_FAIL_REMOTE_PASS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": "9000",
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": "25000"
+                    }
+                ]
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc2",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet16",
+                        "qindex": "3"
+                    },
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic1",
+                        "ifname": "Ethernet24",
+                        "qindex": "3"
+                    },
+                    {
+                        "hostname": "lc1",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet999",
+                        "qindex": "3"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VOQ_QUEUE_MULTIPLE_REMOTE_LCS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                    {
+                        "hostname": "lc2",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "qindex": "3"
+                    },
+                    {
+                        "hostname": "lc3",
+                        "asic_name": "asic1",
+                        "ifname": "Ethernet32",
+                        "qindex": "0-7"
+                    },
+                    {
+                        "hostname": "lc4",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet64",
+                        "qindex": "5"
+                    }
+                ]
+            }
+        }
     }
 
 }

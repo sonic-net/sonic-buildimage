@@ -88,5 +88,32 @@
     },
     "VOQ_QUEUE_CONFIG": {
         "desc": "Attach scheduler and wred profiles to VOQ."
+    },
+    "QUEUE_VALID_NON_VOQ": {
+        "desc": "Non-VOQ QUEUE entry referencing an existing PORT passes validation."
+    },
+    "VOQ_QUEUE_VALID_LOCAL": {
+        "desc": "VOQ_QUEUE for the local switch (hostname/asic_name match localhost) and matching PORT exists - passes."
+    },
+    "VOQ_QUEUE_LOCAL_MISSING_PORT": {
+        "desc": "VOQ_QUEUE for the local switch but no matching PORT row - must fails.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_LOCAL_BOGUS_PORT": {
+        "desc": "VOQ_QUEUE for the local switch references Ethernet999 while only Ethernet0 exists in PORT - must fails.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_REMOTE_NO_PORT": {
+        "desc": "VOQ_QUEUE owned by a remote hostname/asic_name and no PORT - gate is not satisfied so must passes."
+    },
+    "VOQ_QUEUE_NO_LOCAL_ASIC_NAME": {
+        "desc": "DEVICE_METADATA/localhost has no asic_name; gate degrades to no-op so even local-named VOQ_QUEUE without PORT passes."
+    },
+    "VOQ_QUEUE_MIXED_LOCAL_FAIL_REMOTE_PASS": {
+        "desc": "VOQ_QUEUE has remote entries (lc2/asic0, lc1/asic1) that should pass, plus a local entry (lc1/asic0) whose ifname Ethernet999 is not in PORT - must fails on the local entry.",
+        "eStr": "Local VOQ_QUEUE entry"
+    },
+    "VOQ_QUEUE_MULTIPLE_REMOTE_LCS": {
+        "desc": "VOQ_QUEUE owned by ports across multiple remote linecards/ASICs (lc2/asic0, lc3/asic1, lc4/asic0) and no PORT for them - gate never matches so must passes for all entries."
     }
 }
