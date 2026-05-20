@@ -205,7 +205,7 @@ def main():
         print(content, flush=True)
         if result.returncode not in (0, 1):
             print(f"  trivy stderr: {result.stderr[:300]}", file=sys.stderr)
-            overall_exit = 1
+        overall_exit = max(overall_exit, result.returncode)
 
         os.unlink(archive_path)
 
