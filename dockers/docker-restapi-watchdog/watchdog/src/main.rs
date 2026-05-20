@@ -71,7 +71,7 @@ fn read_cert_paths_from_redis() -> Option<CertPaths> {
 }
 
 // Check if root cert, server cert, and server key exist
-fn check_certificates(cert_paths_opt: Option<CertPaths>) -> bool {
+fn check_certificates(cert_paths_opt: &Option<CertPaths>) -> bool {
     let cert_paths = match cert_paths_opt {
         Some(paths) => paths,
         None => return false,
@@ -173,7 +173,7 @@ fn main() {
                     }
 
                     let cert_paths = read_cert_paths_from_redis();
-                    let certs_exist = check_certificates(cert_paths);
+                    let certs_exist = check_certificates(&cert_paths);
                     let restapi_result = if !certs_exist {
                         println!("Skipping restapi connectivity check.");
                         "OK".to_string()
