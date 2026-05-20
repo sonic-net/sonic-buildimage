@@ -999,6 +999,14 @@
       },
       "channel": [
         {
+          "chn": "7",
+          "dev": "CPLDMUX2"
+        },
+        {
+          "chn": "8",
+          "dev": "CPLDMUX3"
+        },
+        {
           "chn": "0",
           "dev": "FAN-CTRL"
         },
@@ -1305,14 +1313,6 @@
         {
           "chn": "5",
           "dev": "DCDC10"
-        },
-        {
-          "chn": "7",
-          "dev": "DCDC11"
-        },
-        {
-          "chn": "8",
-          "dev": "DCDC12"
         }
       ],
       "channel_irq": [
@@ -1671,6 +1671,100 @@
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} SWITCHCARD_FPGA1 {}"
       }
     ]
+  },
+  "CPLDMUX2": {
+    "dev_info": {
+      "device_type": "CPLDMUX",
+      "device_name": "CPLDMUX2",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x64",
+        "dev_type": "multifpgapci_mux",
+        "dev_id": "2"
+      },
+      "dev_attr": {
+        "base_chan": "0xa7",
+        "num_chan": "4",
+        "cpld_name": "SWITCHCARD_FPGA1"
+      },
+      "channel": [
+        {
+          "chan": "0",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x0"
+        },
+        {
+          "chan": "1",
+          "dev": [
+            "DCDC11"
+          ],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x1"
+        },
+        {
+          "chan": "2",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x2"
+        },
+        {
+          "chan": "3",
+          "dev": [],
+          "cpld_offset": "0x10",
+          "cpld_sel": "0x3"
+        }
+      ]
+    }
+  },
+  "CPLDMUX3": {
+    "dev_info": {
+      "device_type": "CPLDMUX",
+      "device_name": "CPLDMUX3",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x65",
+        "dev_type": "multifpgapci_mux",
+        "dev_id": "3"
+      },
+      "dev_attr": {
+        "base_chan": "0xab",
+        "num_chan": "4",
+        "cpld_name": "SWITCHCARD_FPGA1"
+      },
+      "channel": [
+        {
+          "chan": "0",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x0"
+        },
+        {
+          "chan": "1",
+          "dev": [
+            "DCDC12"
+          ],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x1"
+        },
+        {
+          "chan": "2",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x2"
+        },
+        {
+          "chan": "3",
+          "dev": [],
+          "cpld_offset": "0x14",
+          "cpld_sel": "0x3"
+        }
+      ]
+    }
   },
   "COMPONENT4": {
     "comp_attr": {
@@ -25498,11 +25592,11 @@
     "dev_info": {
       "device_type": "DCDC",
       "device_name": "DCDC11",
-      "device_parent": "MULTIFPGAPCIE2"
+      "device_parent": "CPLDMUX2"
     },
     "i2c": {
       "topo_info": {
-        "parent_bus": "0x64",
+        "parent_bus": "0xa8",
         "dev_addr": "0x62",
         "dev_type": "nh_raa228244"
       }
@@ -25518,7 +25612,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "cat /sys/bus/i2c/devices/100-0062/hwmon/hwmon*/mfr_revision"
+        "get_cmd": "cat /sys/bus/i2c/devices/168-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -25542,11 +25636,12 @@
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ0"
+      "display_name": "POS3V3_WEST_MEZZ0",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25577,11 +25672,12 @@
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ0"
+      "display_name": "POS3V3_EAST_MEZZ0",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25612,7 +25708,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
@@ -25639,7 +25735,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC11-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11"
     },
     "dev_attr": {
@@ -25666,7 +25762,7 @@
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC11-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX2",
       "virt_parent": "DCDC11",
       "nexthop_thermal_pid_domain": "main",
       "nexthop_thermal_setpoint_override": 95.0
@@ -25695,11 +25791,11 @@
     "dev_info": {
       "device_type": "DCDC",
       "device_name": "DCDC12",
-      "device_parent": "MULTIFPGAPCIE2"
+      "device_parent": "CPLDMUX3"
     },
     "i2c": {
       "topo_info": {
-        "parent_bus": "0x65",
+        "parent_bus": "0xac",
         "dev_addr": "0x62",
         "dev_type": "nh_raa228244"
       }
@@ -25715,7 +25811,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "cat /sys/bus/i2c/devices/101-0062/hwmon/hwmon*/mfr_revision"
+        "get_cmd": "cat /sys/bus/i2c/devices/172-0062/hwmon/hwmon*/mfr_revision"
       },
       {
         "attr_name": "model",
@@ -25739,11 +25835,12 @@
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST_MEZZ1"
+      "display_name": "POS3V3_WEST_MEZZ1",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25774,11 +25871,12 @@
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST_MEZZ1"
+      "display_name": "POS3V3_EAST_MEZZ1",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -25809,7 +25907,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
@@ -25836,7 +25934,7 @@
     "dev_info": {
       "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC12-RAIL2",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12"
     },
     "dev_attr": {
@@ -25863,7 +25961,7 @@
     "dev_info": {
       "device_type": "TEMP_SENSOR",
       "device_name": "DCDC12-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
+      "device_parent": "CPLDMUX3",
       "virt_parent": "DCDC12",
       "nexthop_thermal_pid_domain": "main",
       "nexthop_thermal_setpoint_override": 95.0
