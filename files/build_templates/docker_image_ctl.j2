@@ -797,6 +797,9 @@ start() {
 {%- if docker_container_name == "dash-ha" %}
         -v /var/log/dash-ha:/var/log/dash-ha:rw \
 {%- endif %}
+{%- if docker_container_name == "gnmi" %}
+        -v /host:/mnt/host/host:rw \
+{%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
