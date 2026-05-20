@@ -58,7 +58,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 95
+                    "max_speed": 100
                 }
             ]
         },
@@ -72,7 +72,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 95
+                    "max_speed": 100
                 }
             ]
         },
@@ -86,7 +86,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 80
+                    "max_speed": 100
                 }
             ]
         },
@@ -100,7 +100,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 80
+                    "max_speed": 100
                 }
             ]
         },
@@ -114,7 +114,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 75
+                    "max_speed": 100
                 }
             ]
         },
@@ -128,7 +128,7 @@
             "actions": [
                 {
                     "type": "fan.set_max_speed",
-                    "max_speed": 75
+                    "max_speed": 100
                 }
             ]
         },
