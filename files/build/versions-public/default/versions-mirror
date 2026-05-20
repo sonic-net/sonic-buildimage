@@ -2,8 +2,8 @@ azure.archive.ubuntu.com_ubuntu_dists_focal==2020-04-23T17:33:17Z
 azure.archive.ubuntu.com_ubuntu_dists_focal-backports==2026-05-14T21:15:03Z
 azure.archive.ubuntu.com_ubuntu_dists_focal-security==2026-05-14T21:12:58Z
 azure.archive.ubuntu.com_ubuntu_dists_focal-updates==2026-05-14T21:13:51Z
-debian==20260515T000748Z
-debian-security==20260515T000741Z
+debian==20260518T000600Z
+debian-security==20260518T000743Z
 download.docker.com_linux_debian_dists_bookworm==2026-05-14T15:14:24Z
 download.docker.com_linux_debian_dists_trixie==2026-05-14T15:14:24Z
 packages.trafficmanager.net_snapshot_debian-security_20260515T000741Z_dists_bookworm-security==2026-05-14T21:01:05Z
