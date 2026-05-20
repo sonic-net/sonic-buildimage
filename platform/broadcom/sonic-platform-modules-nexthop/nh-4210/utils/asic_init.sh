@@ -153,6 +153,12 @@ function clear_sticky_bits() {
   fpga_1_write 0x1d4 0xffffffff
 }
 
+function override_hw_fan_speed_clamp() {
+  fpga_1_write 0xac 0xffffffff
+}
+
+override_hw_fan_speed_clamp
+
 if [ -f /disable_asic ]; then
   logger -p user.warning -t $LOG_TAG "ASIC init disabled due to /disable_asic file"
   release_lock
