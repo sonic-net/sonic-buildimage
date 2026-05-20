@@ -291,6 +291,8 @@ fi
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
+sudo cp files/docker/docker-netfilter-ready.sh $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
+sudo chmod 0755 $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
