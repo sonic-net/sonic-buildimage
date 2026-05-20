@@ -25,25 +25,8 @@ config_chassis_db() {
 	    'import sonic_py_common.device_info as d; print(*[getattr(d,n,lambda:False)() \
 	    for n in ("is_supervisor","is_disaggregated_chassis","is_smartswitch","is_dpu")])')
 
-    # Check if this is a chassis
-    read -r is_chassis < <(python3 -c 'import sonic_platform.platform as platform;\
-	    chassis=platform.Platform().get_chassis(); m=chassis.get_module(0);\
-	    name=m.get_name() if m else ""; print("SUPERVISOR" in name or "LINE-CARD" in name)')
-
     # Identify the midplane IP in each sonic platform
-    if [[ "$is_chassis" == True ]]; then
-        # With chassis handle supervisor and linecard
-        if [[ "$is_supervisor" == True ]]; then
-            midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" | \
-                                  awk '{print $4}' | cut -d/ -f1 | head -n1)
-        else
-           midplane_interface_ip=$(python3 -c 'import sonic_platform.platform; \
-                                 platform_chassis = sonic_platform.platform.Platform().get_chassis(); \
-                                 sup_slot = platform_chassis.get_supervisor_slot(); \
-                                 matches = [m.get_midplane_ip() for m in platform_chassis.get_all_modules() \
-                                 if m.get_slot() == sup_slot]; print(matches[0] if matches else "")')
-        fi
-    elif [[ "$is_disagg" == True ]]; then
+    if [[ "$is_disagg" == True ]]; then
         # With disagg T2 pizza box it is docker0 bridge which is midplane
         midplane_interface_ip=$(ip -4 -o addr show "docker0" | \
                               awk '{print $4}' | cut -d/ -f1 | head -n1)
@@ -51,6 +34,23 @@ config_chassis_db() {
         # On smartswitch (NPU or DPU side) get the NPU bridge-midplane IP from the network config file
         midplane_interface_ip=$(python3 -c \
             'import sonic_py_common.device_info as d; print(d.get_smartswitch_midplane_ip() or "")')
+    elif [[ "$is_supervisor" == True ]]; then
+        # Modular chassis supervisor: midplane IP is on eth1-midplane
+        midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" | \
+                              awk '{print $4}' | cut -d/ -f1 | head -n1)
+    else
+        # Modular chassis linecard: query supervisor's midplane IP via platform API (guarded).
+        midplane_interface_ip=$(python3 -c "import sys
+try:
+    import sonic_platform.platform as p
+    c = p.Platform().get_chassis()
+    s = c.get_supervisor_slot()
+    m = [x.get_midplane_ip() for x in (c.get_all_modules() or [])
+         if x.get_slot() == s]
+    print(m[0] if m else '')
+except Exception as e:
+    print('Error: failed to query supervisor midplane IP:', e, file=sys.stderr)
+    print('')")
     fi
 
     # Generate the chassisdb_address_file from the midplane interface ip address
