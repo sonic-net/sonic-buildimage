@@ -87,10 +87,12 @@ def constructor_with_constants(constants):
     return m
 
 @patch('bgpcfgd.managers_prefix_list.log_warn')
-def test_unsupported_prefix_type(mocked_log_warn):
+def test_dynamic_prefix_type(mocked_log_warn):
     m = constructor_with_constants({})
-    set_handler_test(m, "UNKNOWN_TYPE|10.0.0.0/24", {})
-    mocked_log_warn.assert_called_with("PrefixListMgr:: Prefix type 'UNKNOWN_TYPE' is not supported")
+    set_handler_test(m, "IPV4_DOWNSTREAM_PREFIXES_VNET_Vnet1001|10.0.0.0/24", {"action": "permit"})
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_Vnet1001 permit 10.0.0.0/24" in push_call
+    mocked_log_warn.assert_not_called()
 
 @patch('bgpcfgd.managers_prefix_list.log_warn')
 def test_anchor_prefix_wrong_device(mocked_log_warn):
@@ -158,3 +160,33 @@ def test_suppress_prefix_no_constants_fallback(mocked_log_debug):
     set_handler_test(m, "SUPPRESS_PREFIX|10.0.0.0/24", {})
     push_call = m.cfg_mgr.push.call_args[0][0]
     assert "SUPPRESS_IPV4_PREFIX" in push_call
+
+# test if dynamic prefix-list config with seq/ge/le is generated correctly
+def test_dynamic_prefix_with_seq_ge_le():
+    m = constructor_with_constants({})
+    set_handler_test(
+        m,
+        "Vnet1001|100.64.0.0/10",
+        {"action": "permit", "seq": "5", "ge": "16", "le": "24"}
+    )
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "ip prefix-list Vnet1001 seq 5 permit 100.64.0.0/10 ge 16 le 24" in push_call
+
+# test if dynamic prefix-list delete keeps stored options for exact removal
+def test_dynamic_prefix_delete_uses_stored_options():
+    m = constructor_with_constants({})
+    set_handler_test(
+        m,
+        "Vnet1001|100.64.0.0/10",
+        {"action": "permit", "seq": "5", "ge": "16", "le": "24"}
+    )
+    del_handler_test(m, "Vnet1001|100.64.0.0/10")
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "no ip prefix-list Vnet1001 seq 5 permit 100.64.0.0/10 ge 16 le 24" in push_call
+
+# test if dynamic prefix-list generates ipv6 command correctly
+def test_dynamic_prefix_ipv6():
+    m = constructor_with_constants({})
+    set_handler_test(m, "A_blue|fc00::/64", {"action": "permit"})
+    push_call = m.cfg_mgr.push.call_args[0][0]
+    assert "ipv6 prefix-list A_blue permit fc00::/64" in push_call
