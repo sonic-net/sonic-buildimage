@@ -55,7 +55,7 @@ libmpfr6==4.2.2-1
 libngtcp2-16==1.11.0-1+deb13u1
 libngtcp2-crypto-gnutls8==1.11.0-1+deb13u1
 libpcap0.8t64==1.10.5-2
-libpq5==17.9-0+deb13u1
+libpq5==17.10-0+deb13u1
 libpython3-dev==3.13.5-1
 libpython3.13-dev==3.13.5-2
 libquadmath0==14.2.0-19
