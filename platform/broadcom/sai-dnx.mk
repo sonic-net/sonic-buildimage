@@ -1,7 +1,7 @@
 # Broadcom DNX SAI definitions
-LIBSAIBCM_DNX_VERSION = 14.1.0.1.0.0.28.0
+LIBSAIBCM_DNX_VERSION = 14.1.0.1.0.0.35.0
 LIBSAIBCM_DNX_BRANCH_NAME = dev-dnx
-LIBSAIBCM_DNX_URL_PREFIX = "http://sonic-pluto.wfr.ion.nokia.net/files/sonic/build/sai/$(LIBSAIBCM_DNX_BRANCH_NAME)/1465060/dnx"
+LIBSAIBCM_DNX_URL_PREFIX = "http://sonic-pluto.wfr.ion.nokia.net/files/sonic/build/sai/$(LIBSAIBCM_DNX_BRANCH_NAME)/1483515/dnx"
 
 
 # SAI module for DNX Asic family
