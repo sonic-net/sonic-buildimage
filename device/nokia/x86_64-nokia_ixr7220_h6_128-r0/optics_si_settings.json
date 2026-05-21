@@ -4,14 +4,14 @@
             "100G_SPEED": {
                 "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                     "FixedInputEqTargetTx": {
-                        "FixedInputEqTargetTx1": 3,
-                        "FixedInputEqTargetTx2": 3,
-                        "FixedInputEqTargetTx3": 3,
-                        "FixedInputEqTargetTx4": 3,
-                        "FixedInputEqTargetTx5": 3,
-                        "FixedInputEqTargetTx6": 3,
-                        "FixedInputEqTargetTx7": 3,
-                        "FixedInputEqTargetTx8": 3
+                        "FixedInputEqTargetTx1": 4,
+                        "FixedInputEqTargetTx2": 4,
+                        "FixedInputEqTargetTx3": 4,
+                        "FixedInputEqTargetTx4": 4,
+                        "FixedInputEqTargetTx5": 4,
+                        "FixedInputEqTargetTx6": 4,
+                        "FixedInputEqTargetTx7": 4,
+                        "FixedInputEqTargetTx8": 4
                     }
                 }
             }
