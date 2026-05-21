@@ -20,6 +20,13 @@ config_chassis_db() {
        exit 0
     fi
 
+    # Skip on virtual switch (docker-sonic-vs handles chassis-db internally)
+    asic_type=$(python3 -c 'from sonic_py_common.device_info import get_sonic_version_info; print(get_sonic_version_info().get("asic_type") or "")')
+    if [[ "$asic_type" == "vs" ]]; then
+        echo "config-chassisdb: skipping on virtual switch"
+        exit 0
+    fi
+
     # Read the various device attributes
     read -r is_supervisor is_disagg is_smartswitch is_dpu < <(python3 -c \
 	    'import sonic_py_common.device_info as d; print(*[getattr(d,n,lambda:False)() \
