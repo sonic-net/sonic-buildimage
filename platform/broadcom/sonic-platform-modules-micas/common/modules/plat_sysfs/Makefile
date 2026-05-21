@@ -10,8 +10,8 @@ CHECK :
 
 # dev_sysfs's modpost step reads dev_cfg/Module.symvers (see
 # dev_sysfs/Makefile's KBUILD_EXTRA_SYMBOLS). Without an explicit
-# ordering dependency, make -j can launch dev_sysfs in parallel with
-# dev_cfg and the modpost step fails with:
+# ordering dependency, make -j (SONIC_BUILD_JOBS) can launch dev_sysfs
+# in parallel with dev_cfg and the modpost step fails with:
 #   dev_cfg/Module.symvers: No such file or directory
 dev_sysfs: dev_cfg
 
