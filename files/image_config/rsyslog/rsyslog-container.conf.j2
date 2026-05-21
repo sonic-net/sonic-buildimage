@@ -57,29 +57,10 @@ if ($.PLATFORM == "x86_64-mlnx_msn2700-r0" or $.PLATFORM == "x86_64-mlnx_msn2700
 
 {% endif %}
 
-{% set syslog_udp_fallback_containers = ['gnmi', 'telemetry', 'telemetry_watchdog'] %}
 # Set remote syslog server
 template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg%")
 module(load="omrelp")
-{% if container_name in syslog_udp_fallback_containers %}
-# Forward via RELP/2514 when the host listens on it, and fall back to
-# UDP/514 when the RELP action is suspended so this container also works
-# against older host images that only run an imudp listener.
-#
-# Two non-obvious requirements (verified on rsyslog 8.2504.0):
-#   * action.resumeRetryCount="0" so the action suspends on the first
-#     failure. "-1" retries forever and prevents fallback; ">0" only
-#     delays it.
-#   * The omrelp action must not have its own queue. A per-action queue
-#     defers the send to a worker thread, so the suspended flag is set
-#     asynchronously after the rule engine has already evaluated
-#     execOnlyWhenPreviousIsSuspended on the next action and UDP
-#     fallback never fires.
-*.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="0" action.resumeInterval="30" Template="ForwardFormatInContainer")
-*.* action(type="omfwd" target=`echo $SYSLOG_TARGET_IP` port="514" protocol="udp" action.execOnlyWhenPreviousIsSuspended="on" Template="ForwardFormatInContainer")
-{% else %}
 *.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="60" queue.type="LinkedList" queue.size="20000" Template="ForwardFormatInContainer")
-{% endif %}
 
 #
 # Set the default permissions for all log files.
