@@ -85,3 +85,4 @@
 0114-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
 0115-zebra-Update-promiscuity-flag-silently-without-route.patch
 0116-zebra-keep-route_node-lock-in-NB-RIB-route-lookup_next.patch
+0117-Add-Dplane-definitions-and-functions-for-ribfib.patch
