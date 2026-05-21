@@ -48,3 +48,20 @@ COPY \
 {% macro rsync_from_builder_stage() -%}
 RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 {%- endmacro %}
+
+{% macro apply_relp_udp_failover() -%}
+# Modify the inherited /etc/rsyslog.conf so the omrelp forwarding action
+# suspends on first failure and falls back to omfwd UDP/514. Keeps the
+# image compatible with hosts that only listen on UDP/514, while still
+# using RELP/2514 on newer hosts.
+#
+# Notes (rsyslog 8.2504.0):
+#   * action.resumeRetryCount="0" so the action suspends on the first
+#     failure. "-1" retries forever and prevents fallback; ">0" only
+#     delays it.
+#   * The omrelp action must not have its own queue. A per-action queue
+#     defers the send to a worker thread, so the suspended flag is set
+#     asynchronously and execOnlyWhenPreviousIsSuspended on the UDP
+#     action sees stale state.
+RUN sed -i -E 's|^\*\.\* action\(type="omrelp".*$|*.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="0" action.resumeInterval="30" Template="ForwardFormatInContainer")\n*.* action(type="omfwd" target=`echo $SYSLOG_TARGET_IP` port="514" protocol="udp" action.execOnlyWhenPreviousIsSuspended="on" Template="ForwardFormatInContainer")|' /etc/rsyslog.conf
+{%- endmacro %}

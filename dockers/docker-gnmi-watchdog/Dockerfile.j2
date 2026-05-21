@@ -1,3 +1,4 @@
+{% from "dockers/dockerfile-macros.j2" import apply_relp_udp_failover %}
 FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
 
 # Update apt's cache of available packages
@@ -23,10 +24,7 @@ FROM docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 ARG docker_container_name
 ARG image_version
 
-# Override the base image's rsyslog.conf with one that prefers RELP on
-# 2514 and falls back to UDP on 514 so the container works on both new
-# (RELP-capable) and old (UDP-only) host images. See etc/rsyslog.conf.
-COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+{{ apply_relp_udp_failover() }}
 
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 

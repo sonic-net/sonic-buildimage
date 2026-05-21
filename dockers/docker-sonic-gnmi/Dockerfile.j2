@@ -1,4 +1,4 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage, apply_relp_udp_failover %}
 ARG BASE=docker-config-engine-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
@@ -14,10 +14,7 @@ ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
 
-# Override the base image's rsyslog.conf with one that prefers RELP on
-# 2514 and falls back to UDP on 514 so the container works on both new
-# (RELP-capable) and old (UDP-only) host images. See etc/rsyslog.conf.
-COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
+{{ apply_relp_udp_failover() }}
 
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
