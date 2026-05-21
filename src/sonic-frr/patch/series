@@ -84,3 +84,4 @@
 0113-zebra-Refactor-SRv6-netlink-code-to-remove-duplication.patch
 0114-Provide-interface-when-installing-uninstalling-SRv6-uA-SIDs.patch
 0115-zebra-Update-promiscuity-flag-silently-without-route.patch
+0116-Add-Dplane-definitions-and-functions-for-ribfib.patch
