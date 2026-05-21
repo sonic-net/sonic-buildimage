@@ -108,7 +108,7 @@ while /bin/true; do
       STATIC_ROUTE_NEXTHOPS=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops'))
       STATIC_ROUTE_IFNAMES=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_ifnames'))
 
-      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" && "$TYPE" != "ToRRouter" ]]; then
+      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]]; then
           if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
               # exit gracefully if running on supervisor/rp
               logger "exiting as no static route in packet based chassis"
