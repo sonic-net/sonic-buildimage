@@ -81,6 +81,17 @@ resolve_static_route_ifname() {
     fi
 }
 
+normalize_static_route_ifname() {
+    local ifname="$1"
+
+    if [[ "$ifname" == "__empty__" ]]; then
+        echo ""
+        return 0
+    fi
+
+    echo "$ifname"
+}
+
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
@@ -118,13 +129,9 @@ while /bin/true; do
               # STALE entries may be present if there is no traffic on a path. A far-end down event may not
               # clear the STALE entry. Refresh the STALE entry to clear the table.
               if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
-                  if [[ "$TYPE" == "ToRRouter" ]]; then
+                  interface="$(normalize_static_route_ifname "${STATIC_ROUTE_IFNAMES[i]}")"
+                  if [[ -z "$interface" ]]; then
                       interface="$(resolve_static_route_ifname "$nexthop")"
-                  else
-                      interface="${STATIC_ROUTE_IFNAMES[i]}"
-                      if [[ -z "$interface" ]]; then
-                          interface="$(resolve_static_route_ifname "$nexthop")"
-                      fi
                   fi
                   if [[ -z "$interface" ]]; then
                       logger -p warning "unable to resolve interface for static route nexthop $nexthop"
