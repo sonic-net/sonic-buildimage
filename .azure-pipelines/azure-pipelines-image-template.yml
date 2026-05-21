@@ -110,7 +110,6 @@ jobs:
           echo "PTF_MODIFIED_IN_PR = $PTF_MODIFIED_IN_PR"
           # Prepare publish settings
           PORT=443
-          DOCKERS=$(ls target/docker-ptf.gz)
           BRANCH=$(Build.SourceBranchName)
           echo "Branch = $BRANCH"
           PUSH_DOCKER="False"
@@ -118,10 +117,12 @@ jobs:
           then
             LABELS="$BRANCH"
             [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
+            DOCKERS=$(ls target/docker-ptf.gz)
             PUSH_DOCKER="True"
           elif [[ "$PTF_MODIFIED_IN_PR" == "True" ]]
           then
             LABELS="ptf-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+            DOCKERS=$(ls target/docker-ptf.gz)
             PUSH_DOCKER="True"
           else
             echo "Not publishing docker images since docker-ptf was not modified in this PR or build definition name is not Azure.sonic-buildimage.official.vs"
