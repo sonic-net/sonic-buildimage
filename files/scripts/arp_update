@@ -52,6 +52,35 @@ run_ndisc6_with_retry() {
         ndisc6 -q -w 1 -1 "$ip" "$ifname" >/dev/null 2>&1
 }
 
+static_route_recovery_enabled() {
+    case "$SWITCH_TYPE:$TYPE" in
+        chassis-packet:*|*:BackEndToRRouter|*:ToRRouter)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+resolve_static_route_ifname() {
+    local nexthop="$1"
+    local family="-4"
+    local route_line
+    local resolved_ifname
+
+    if [[ "$nexthop" == *":"* ]]; then
+        family="-6"
+    fi
+
+    route_line=$(ip "$family" route get "$nexthop" 2>/dev/null | head -n 1)
+    resolved_ifname=$(echo "$route_line" | awk '{ for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit } }')
+    if [[ -n "$resolved_ifname" ]]; then
+        echo "$resolved_ifname"
+        return 0
+    fi
+}
+
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
@@ -63,12 +92,12 @@ while /bin/true; do
 
   SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
   TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.type')
-  if [[ "$SWITCH_TYPE" == "chassis-packet" ]] || [[ "$TYPE" == "BackEndToRRouter" ]]; then
+  if static_route_recovery_enabled; then
       # Get array of Nexthops and ifnames. Nexthops and ifnames are mapped one to one
       STATIC_ROUTE_NEXTHOPS=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops'))
       STATIC_ROUTE_IFNAMES=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_ifnames'))
 
-      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" ]]; then
+      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" && "$TYPE" != "ToRRouter" ]]; then
           if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
               # exit gracefully if running on supervisor/rp
               logger "exiting as no static route in packet based chassis"
@@ -89,10 +118,16 @@ while /bin/true; do
               # STALE entries may be present if there is no traffic on a path. A far-end down event may not
               # clear the STALE entry. Refresh the STALE entry to clear the table.
               if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
-                  interface="${STATIC_ROUTE_IFNAMES[i]}"
+                  if [[ "$TYPE" == "ToRRouter" ]]; then
+                      interface="$(resolve_static_route_ifname "$nexthop")"
+                  else
+                      interface="${STATIC_ROUTE_IFNAMES[i]}"
+                      if [[ -z "$interface" ]]; then
+                          interface="$(resolve_static_route_ifname "$nexthop")"
+                      fi
+                  fi
                   if [[ -z "$interface" ]]; then
-                      # should never be here, handling just in case
-                      logger -p warning "missing interface entry for static route $nexthop"
+                      logger -p warning "unable to resolve interface for static route nexthop $nexthop"
                       continue
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")
