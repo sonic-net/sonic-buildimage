@@ -137,9 +137,11 @@ class PrefixListMgr(Manager):
             except (netaddr.NotRegisteredError, netaddr.AddrFormatError, netaddr.AddrConversionError):
                 log_warn("PrefixListMgr:: Prefix '%s' format is wrong for prefix list '%s'" % (prefix_str, prefix_type))
                 return True
-            data = {}
-            if PREFIX_TYPE_CONFIG.get(prefix_type) is None and self.directory.path_exist(self.db_name, self.table_name, key):
-                data = dict(self.directory.get_path(self.db_name, self.table_name, key))
+            if PREFIX_TYPE_CONFIG.get(prefix_type) is None:
+                table_data = self.directory.get_slot(self.db_name, self.table_name)
+                data = dict(table_data.get(key, {}))
+            else:
+                data = {}
             data["prefix"] = str(prefix.cidr)
             data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
