@@ -117,7 +117,9 @@ jobs:
             done
           fi
           mkdir -p $(Build.ArtifactStagingDirectory)/target
+          mkdir -p $(Build.ArtifactStagingDirectory)/src/sonic-swss/tests
           mv target/* $(Build.ArtifactStagingDirectory)/target/
+          mv src/sonic-swss/tests/* $(Build.ArtifactStagingDirectory)/src/sonic-swss/tests/
         env:
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         name: PublishAndSetPtfTag
