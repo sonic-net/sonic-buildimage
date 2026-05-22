@@ -23,7 +23,7 @@ module sonic-tam {
         prefix vrf;
     }
 
-    description "TAM YANG Module for SONiC OS";
+    description "Telemetry and Monitoring (TAM) configuration";
 
     revision 2025-09-24 {
         description "Initial Revision";
@@ -34,32 +34,41 @@ module sonic-tam {
             description "Defines TAM device configuration";
 
             list TAM_LIST {
+                description "Singleton table -- only one entry with key 'device'
+                             is meaningful.";
+
                 key "device";
 
                 leaf device {
-                    description "Only one instance and has a fixed key 'device'.";
+                    description "Fixed key 'device' (the table is a singleton).";
                     type string {
                         pattern "device";
                     }
                 }
 
                 leaf device-id {
-                    description "Uniquely identifies a device on the network to be analyzed. 28bits. Uses last 16bits of the Mac address if not defined.";
+                    description "Uniquely identifies this device in exported
+                                 telemetry records. 28-bit value.
+                                 Defaults to the last 16 bits of the
+                                 switch MAC address when not configured.";
                     type uint32 {
-                        range "1..134217727";
+                        range "1..268435455";
                     }
                 }
 
                 leaf enterprise-id {
-                    description "Uniquely identifies the enterprise.  28bits. Uses last 16bits of the Mac address if not defined.";
+                    description "Uniquely identifies the enterprise in exported
+                                 telemetry records. 28-bit value.
+                                 Defaults to the last 16 bits of the
+                                 switch MAC address when not configured.";
                     type uint32 {
-                        range "1..134217727";
+                        range "1..268435455";
                     }
                 }
 
                 leaf ifa {
-                    description "Optional parameter to specify device type as intermediate, value can be 'intermediate'
-                                 only.";
+                    description "When true, marks this device as an IFA
+                                 (In-band Flow Analyzer) intermediate node.";
                     type boolean;
                 }
             }
@@ -69,20 +78,26 @@ module sonic-tam {
 
 
         container TAM_FLOW_GROUP {
-            description "Defines TAM flow group configuration";
+            description "Flow-groups define what traffic a TAM session
+                         monitors. Each group is a named ACL (its rules in
+                         TAM_FLOW_GROUP_RULE_LIST) optionally bound to a
+                         set of ports for ingress drop-monitoring.";
 
             list TAM_FLOW_GROUP_LIST {
                 key "name";
 
                 leaf name {
-                    description "flow group name, should be unique.";
+                    description "Unique name of the flow-group.";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf aging_interval {
-                    description "interval in seconds.";
+                    description "Flow-cache aging interval in seconds.
+                                 Inactive flows are evicted from the
+                                 per-session flow cache after this many
+                                 seconds without a hit.";
                     type uint32;
                 }
 
@@ -101,26 +116,31 @@ module sonic-tam {
             /* end of list TAM_FLOW_GROUP_LIST */
 
             list TAM_FLOW_GROUP_RULE_LIST {
-                description "rules associated with the TAM flow group";
+                description "ACL match rules for a flow-group. A flow matches
+                             the group if it matches any rule. Each rule
+                             supports 5-tuple matching: src/dst IP prefix,
+                             L4 ports, and IP protocol.";
 
                 key "name rule";
 
                 leaf name {
-                    description "name of flow group";
+                    description "Reference to the parent flow-group this
+                                 rule belongs to.";
                     type leafref {
                         path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
                     }
                 }
 
                 leaf rule {
-                    description "name of rule for flow group";
+                    description "Unique rule name within this flow-group.";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf src_ip_prefix {
-                    description "source ipv4 or ipv6 prefix. Use 0.0.0.0/0 or ::/0 for any.";
+                    description "Source IPv4 or IPv6 prefix to match. Use
+                                 0.0.0.0/0 or ::/0 for any.";
                     type union {
                         type inet:ipv4-prefix;
                         type inet:ipv6-prefix;
@@ -129,7 +149,8 @@ module sonic-tam {
                 }
 
                 leaf dst_ip_prefix {
-                    description "dest ipv4 or ipv6 prefix. Use 0.0.0.0/0 or ::/0 for any.";
+                    description "Destination IPv4 or IPv6 prefix to match.
+                                 Use 0.0.0.0/0 or ::/0 for any.";
                     type union {
                         type inet:ipv4-prefix;
                         type inet:ipv6-prefix;
@@ -138,14 +159,20 @@ module sonic-tam {
                 }
 
                 leaf l4_src_port {
+                    description "Layer-4 source port to match (TCP/UDP).
+                                 Unset means any.";
                     type uint16;
                 }
 
                 leaf l4_dst_port {
+                    description "Layer-4 destination port to match (TCP/UDP).
+                                 Unset means any.";
                     type uint16;
                 }
 
                 leaf ip_protocol {
+                    description "IP protocol number to match (IANA-assigned,
+                                 e.g. 6=TCP, 17=UDP, 1=ICMP). Unset means any.";
                     type uint8 {
                         range 0..255;
                     }
@@ -157,19 +184,28 @@ module sonic-tam {
 
 
         container TAM_COLLECTOR {
-            description "Defines a TAM collector";
+            description "External telemetry collector endpoints. A TAM
+                         session references one or more collectors here as
+                         its export destinations.";
 
             list TAM_COLLECTOR_LIST {
+                description "Per-collector configuration: the destination
+                             IP/UDP port, optional source-IP override, DSCP
+                             marking, and the VRF the export packets are
+                             routed through.";
+
                 key "name";
 
                 leaf name {
-                    description "unique collector name";
+                    description "Unique collector name.";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf src_ip {
+                    description "Source IPv4/IPv6 address used as the exporter source. When unset, the system
+                                 picks the egress interface address.";
                     type union {
                         type inet:ipv4-address;
                         type inet:ipv6-address;
@@ -177,6 +213,9 @@ module sonic-tam {
                 }
 
                 leaf dst_ip {
+                    description "IPv4 or IPv6 address of the external
+                                 collector endpoint that receives the telemetry
+                                 reports.";
                     mandatory true;
                     type union {
                         type inet:ipv4-address;
@@ -185,17 +224,21 @@ module sonic-tam {
                 }
 
                 leaf dst_port {
+                    description "UDP destination port on the collector.";
                     mandatory true;
                     type uint16;
                 }
 
                 leaf dscp_value {
+                    description "DSCP marking applied to IPFIX export packets
+                                 toward the collector. Defaults to 32 (CS4).";
                     type uint8;
                     default 32;
                 }
 
                 leaf vrf {
-                    description "VRF";
+                    description "VRF used to route export telemetry packets
+                                 toward dst_ip.";
                     type union {
                         type leafref {
                             path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
@@ -206,7 +249,9 @@ module sonic-tam {
                         }
                     }
                     must "(current() != 'mgmt')
-                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
+                    or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')" {
+                        error-message "VRF 'mgmt' requires MGMT_VRF_CONFIG.vrf_global.mgmtVrfEnabled = true.";
+                    }
                 }
             }
             /* end of list TAM_COLLECTOR_LIST */
@@ -214,19 +259,22 @@ module sonic-tam {
         /* end of container TAM_COLLECTOR */
 
         container TAM_SESSION {
-            description "Defines a TAM session";
+            description "Defines a TAM session. Each session ties relevant attributes of the
+                        session like type, collectors, report format, etc.";
 
             list TAM_SESSION_LIST {
                 key "name";
 
                 leaf name {
-                    description "unique session name";
+                    description "Unique session name.";
                     type string {
                         length 1..255;
                     }
                 }
 
                 leaf type {
+                    description "Session type: 'drop-monitor' reports packets
+                                 the data plane dropped.";
                     type enumeration {
                         enum drop-monitor;
                     }
@@ -234,6 +282,7 @@ module sonic-tam {
                 }
 
                 leaf report_type {
+                    description "Wire format for exported telemetry records.";
                     type enumeration {
                         enum ipfix;
                     }
@@ -241,12 +290,16 @@ module sonic-tam {
                 }
 
                 leaf flow_group {
+                    description "Flow-group whose matching traffic this
+                                 session monitors.";
                     type leafref {
                         path "/tam:sonic-tam/tam:TAM_FLOW_GROUP/tam:TAM_FLOW_GROUP_LIST/tam:name";
                     }
                 }
 
                 leaf-list collector {
+                    description "One or more collector references receiving
+                                 this session's telemetry reports.";
                     type leafref {
                         path "/tam:sonic-tam/tam:TAM_COLLECTOR/tam:TAM_COLLECTOR_LIST/tam:name";
                     }
