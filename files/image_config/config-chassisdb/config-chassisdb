@@ -54,7 +54,6 @@ try:
          if x.get_slot() == s]
     print(m[0] if m else '')
 except Exception as e:
-    print('Error: failed to query supervisor midplane IP:', e, file=sys.stderr)
     print('')")
     fi
 
