@@ -60,6 +60,12 @@ function nokia_chassis_set_sfm_active_link()
         "ixre-egl-board71"|"ixre-egl-board72"|"ixre-egl-board73"|"ixre-egl-board74" )
             sfm=4
             ;;
+        "ixre-egl-board201"|"ixre-egl-board181" )
+            sfm=3
+            ;;
+        "ixre-egl-board211"|"ixre-egl-board182" )
+            sfm=3
+            ;;
         "ixre-egl-board191"|"ixre-egl-board192" )
             sfm=3
             ;;
