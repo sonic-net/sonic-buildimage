@@ -5,6 +5,7 @@ l2_mem_entries=32768
 l2xmsg_mode=1
 l3_max_ecmp_mode=1
 l3_mem_entries=16384
+l3_alpm_enable=2
 lpm_scaling_enable=1
 max_vp_lags=0
 #mem_cache_enable=0
