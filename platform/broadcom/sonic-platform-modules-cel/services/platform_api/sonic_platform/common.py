@@ -37,7 +37,7 @@ class Common:
         output = ""
         try:
             p = subprocess.Popen(
-                command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                command, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             raw_data, err = p.communicate()
             if err == '':
                 status, output = True, raw_data.strip()
