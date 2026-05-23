@@ -1,0 +1,4 @@
+blacklist lpc_ich
+blacklist i2c-i801
+blacklist i2c_ismt
+blacklist gpio_ich
