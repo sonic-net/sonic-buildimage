@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7312-54X Platform Monitoring service
-Before=pmon.service
+Before=pmon.service system-health.service
 After=sysinit.target
 DefaultDependencies=no
 
