@@ -39,7 +39,7 @@ override_dh_usrlocal:
 override_dh_clean:
 	dh_clean
 	(for mod in $(MODULE_DIRS); do \
-		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean || true; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/modules/*.ko; \
 		rm -rf debian/platform-modules-e582-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/*.ko; \
 	done)

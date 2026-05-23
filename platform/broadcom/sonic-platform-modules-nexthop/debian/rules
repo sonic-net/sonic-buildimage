@@ -146,7 +146,7 @@ override_dh_clean:
 	(for mod in $(MODULE_DIRS); do \
 		set -e; \
 		if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(MOD_SRC_DIR)/$${mod}/modules/Makefile" ]; then \
-			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules clean || true; \
 		fi; \
 		echo $(MOD_SRC_DIR); \
 		rm -f $(MOD_SRC_DIR)/*.whl; \

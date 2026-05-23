@@ -145,7 +145,7 @@ override_dh_auto_clean:
                         rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_z9864f_fpga_ocores.c; \
                         rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 		fi; \
-		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean || true; \
 	done)
 	dh_clean
 

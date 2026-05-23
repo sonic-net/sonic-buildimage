@@ -61,6 +61,6 @@ override_dh_pysupport:
 override_dh_clean:
 	dh_clean
 	(for mod in $(MODULE_DIRS); do \
-		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean || true; \
 	done)
 
