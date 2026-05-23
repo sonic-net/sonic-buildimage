@@ -57,14 +57,40 @@
 {% set port_names = port_names_list | join(',') -%}
 
 {
-    "CABLE_LENGTH": {
-        "AZURE": {
-    {% for port in PORT %}
-        {% set cable = cable_length(port) -%}
-        "{{ port }}": "{{ cable }}"{%- if not loop.last -%},{% endif %}
+    "BUFFER_POOL": {
+        "ingress_uc_pool": {
+            "size": "3796992",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_uc_pool": {
+            "size": "3760128",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
 
-    {% endfor %}
-    }
+    "BUFFER_PROFILE": {
+        "egress_uc_0_6_profile": {
+            "pool":"egress_uc_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        },
+        "egress_uc_7_profile": {
+            "pool":"egress_uc_pool",
+            "size":"0",
+            "static_th":"27648"
+        }
+    },
+
+    "BUFFER_QUEUE": {
+{% for port in PORT %}
+        "{{ port }}|0-6": {
+            "profile" : "egress_uc_0_6_profile"
+        },
+        "{{ port }}|7": {
+            "profile" : "egress_uc_7_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
     }
 }
-
