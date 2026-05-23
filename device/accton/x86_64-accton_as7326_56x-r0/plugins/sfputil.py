@@ -4,6 +4,7 @@
 #
 
 try:
+    import sys
     import time
     import string
     from ctypes import create_string_buffer
@@ -205,7 +206,10 @@ class SfpUtil(SfpUtilBase):
             # Fill in write buffer
             regval = 0x3 if lpmode else 0x1  # 0x3:Low Power Mode, 0x1:High Power Mode
             buffer = create_string_buffer(1)
-            buffer[0] = chr(regval)
+            if sys.version_info[0] >= 3:
+                buffer[0] = regval
+            else:
+                buffer[0] = chr(regval)
 
             # Write to eeprom
             eeprom = open(self.port_to_eeprom_mapping[port_num], "r+b")
@@ -220,6 +224,22 @@ class SfpUtil(SfpUtilBase):
                 eeprom.close()
                 time.sleep(0.01)
 
+    def __read_txt_file(self, file_path):
+        try:
+            with open(file_path, 'r') as fd:
+                return fd.read().strip()
+        except IOError:
+            pass
+        return ""
+
+    def __write_txt_file(self, file_path, value):
+        try:
+            with open(file_path, 'w') as fd:
+                fd.write(str(value))
+        except Exception:
+            return False
+        return True
+
     def reset(self, port_num):
         if port_num < self.qsfp_port_start or port_num > self.qsfp_port_end:
             return False
@@ -228,21 +248,20 @@ class SfpUtil(SfpUtilBase):
         cpld_ps = self._cpld_mapping[cpld_i]
         path = "/sys/bus/i2c/devices/{0}/module_reset_{1}"
         port_ps = path.format(cpld_ps, port_num)
-
         self.__port_to_mod_rst = port_ps
-        try:
-            reg_file = open(self.__port_to_mod_rst, 'r+', buffering=0)
-        except IOError as e:
-            print("Error: unable to open file: %s" % str(e))
-            return False
+        
+        ret = self.__write_txt_file(
+            self.__port_to_mod_rst, 1)
+        if ret is not True:
+            return ret
 
-        # toggle reset
-        reg_file.seek(0)
-        reg_file.write('1')
         time.sleep(1)
-        reg_file.seek(0)
-        reg_file.write('0')
-        reg_file.close()
+        ret = self.__write_txt_file(
+            self.__port_to_mod_rst, 0)
+
+        if ret is not True:
+            return ret
+        time.sleep(0.1)
 
         return True
 
