@@ -27,8 +27,8 @@ try:
     import time
     import logging
     import glob
-    import subprocess
     from collections import namedtuple
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -37,7 +37,7 @@ def log_os_system(cmd, show):
     logging.info('Run :'+cmd)
     status = 1
     output = ""
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     if show:
         print("ACC: " + str(cmd) + " , result:"+ str(status))
    

@@ -29,13 +29,13 @@ command:
     set         : change board setting with fan|led|sfp
 """
 
-import subprocess
 import getopt
 import sys
 import logging
 import re
 import time
 import os
+from sonic_py_common.general import getstatusoutput_noshell
 
 PROJECT_NAME = 'as4630_54te'
 version = '0.0.1'
@@ -251,7 +251,7 @@ def my_log(txt):
 def log_os_system(cmd, show):
     logging.info('Run :' + cmd)
     output = ""
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     my_log(cmd + "with result:" + str(status))
     my_log("cmd:" + cmd)
     my_log("      output:" + output)
