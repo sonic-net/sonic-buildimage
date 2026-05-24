@@ -211,10 +211,15 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     zip -g $OUTPUT_ABOOT_IMAGE .platforms_asic
 
     if [ "$ENABLE_FIPS" = "y" ]; then
-        echo "sonic_fips=1" >> kernel-cmdline-append
+        echo -n "sonic_fips=1" >> kernel-cmdline-append
     else
-        echo "sonic_fips=0" >> kernel-cmdline-append
+        echo -n "sonic_fips=0" >> kernel-cmdline-append
     fi
+
+    # enable kdump support by default 
+    # -n avoids new line and appends to any existing command at the end.
+    echo -n " crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M" >> kernel-cmdline-append
+
     zip -g $OUTPUT_ABOOT_IMAGE kernel-cmdline-append
     rm kernel-cmdline-append
 
