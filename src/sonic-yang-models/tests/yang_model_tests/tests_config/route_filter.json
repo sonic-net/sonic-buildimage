@@ -180,6 +180,7 @@
                     "set_metric_action": "METRIC_SET_VALUE",
                     "set_metric": 50,
                     "set_next_hop": "10.10.10.10",
+                    "set_src": "10.10.10.10",
                     "set_ipv6_next_hop_global": "1000::1",
                     "set_ipv6_next_hop_prefer_global": true,
                     "set_repeat_asn": 5,
