@@ -59,7 +59,7 @@ libjudydebian1==1.0.5-5+b2
 libk5crypto3==1.20.1-2+deb12u1+fips
 libkadm5clnt-mit12==1.20.1-2+deb12u1+fips
 libkadm5srv-mit12==1.20.1-2+deb12u1+fips
-libkdb5-10==1.20.1-2+deb12u4
+libkdb5-10==1.20.1-2+deb12u5
 libkrb5-3==1.20.1-2+deb12u1+fips
 libkrb5-dev==1.20.1-2+deb12u1+fips
 libkrb5support0==1.20.1-2+deb12u1+fips

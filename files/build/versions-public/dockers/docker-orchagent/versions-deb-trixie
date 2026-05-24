@@ -17,7 +17,6 @@ ifupdown==0.8.44+deb13u1
 libasan8==14.2.0-19
 libbabeltrace1==1.5.11-4+b2
 libbinutils==2.44-3
-libcap2==1:2.75-10+deb13u1+b1
 libcbor0.10==0.10.2-2
 libcc1-0==14.2.0-19
 libctf-nobfd0==2.44-3
@@ -54,12 +53,10 @@ libsframe1==2.44-3
 libsource-highlight-common==3.1.9-4.3
 libsource-highlight4t64==3.1.9-4.3+b1
 libswsscommon-dbgsym==1.0.0
-libsystemd0==257.13-1~deb13u1
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libtsan2==14.2.0-19
 libubsan1==14.2.0-19
-libudev1==257.13-1~deb13u1
 libunwind8==1.8.1-0.1
 libyang-cpp-dbgsym==1.0.73
 ndisc6==1.0.7-1

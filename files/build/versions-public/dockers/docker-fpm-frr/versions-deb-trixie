@@ -34,13 +34,10 @@ libsource-highlight-common==3.1.9-4.3
 libsource-highlight4t64==3.1.9-4.3+b1
 libswsscommon-dbgsym==1.0.0
 libsystemd-shared==257.13-1~deb13u1
-libsystemd0==257.13-1~deb13u1
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
-libudev1==257.13-1~deb13u1
 libunwind8==1.8.1-0.1
 libyang-cpp-dbgsym==1.0.73
-libyang3==3.12.2-1
 libyang3-dbgsym==3.12.2-1
 logrotate==3.22.0-1
 lsof==4.99.4+dfsg-2
