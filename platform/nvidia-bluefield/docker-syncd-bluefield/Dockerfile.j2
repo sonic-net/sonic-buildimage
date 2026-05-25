@@ -28,6 +28,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y \
+{%- if ENABLE_ASAN == "y" %}
+        libasan8 \
+{%- endif %}
         udev \
         hwdata \
         pciutils \
@@ -56,10 +59,14 @@ RUN apt-get clean -y && \
     apt-get autoremove -y && \
     rm -rf /debs
 
-COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 RUN mkdir -p /etc/mlnx/
 COPY sai-*.profile /etc/mlnx/
+
+RUN mkdir -p /etc/supervisor/conf.d/
+RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
+RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
