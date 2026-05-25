@@ -14,23 +14,28 @@ To build SONiC installer image, run the following commands:
 cd sonic-buildimage
 
 # (Optional) Checkout a specific branch. By default, it uses master branch.
-git checkout ES-1227-54TS-P2
+git checkout master-mrvl-prestera
 
 # Execute make init once after cloning the repo,
 # or after fetching remote repo with submodule updates
 make init
 
-# Execute patch for platform specific modifications and issue fixing.
-for file in 0001-sonic-kernel-modification-for-wistron.patch \
-    0001-fix-sonic-swss-build-error.patch; do \
-    patch -p1 < $file
-done
+# Execute `apply_patches.sh` for platform specific modifications and issue fixing.
+# Usage & options:
+# Default: Apply standard patches
+./apply_patches.sh
+# Enable ZTP workaround patches
+./apply_patches.sh -z
+# Revert ZTP workaround patches
+./apply_patches.sh ZTP=no
+# Show help options
+./apply_patches.sh -h
 
 # Execute make configure once to configure ASIC
 make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
 
-# Build SONiC image with 4 jobs in parallel.
-# Note: You can set this higher, but 4 is a good number for most cases
+# Build SONiC image with 3 jobs in parallel.
+# Note: You can set this higher, but 3 is a good number for most cases
 #       and is well-tested.
-make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=4 target/sonic-marvell-prestera-arm64.bin
+make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=3 target/sonic-marvell-prestera-arm64.bin
 ```
