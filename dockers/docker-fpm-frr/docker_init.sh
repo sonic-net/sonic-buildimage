@@ -67,8 +67,12 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     write_default_zebra_config /etc/frr/frr.conf
 elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     if [ "$CONFIG_TYPE" == "separated" ]; then
-        logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. The system will use unified mode instead."
-        echo "Config Type separated is not supported"
+        logger -t docker-fpm-frr -p user.warning "Config Type 'separated' is deprecated. Migrating to 'unified'."
+        # Persist the migration in CONFIG_DB so the rest of the system (tests,
+        # bgpcfgd, sonic-utilities) agrees with the runtime layout.
+        sonic-db-cli CONFIG_DB hset 'DEVICE_METADATA|localhost' docker_routing_config_mode unified >/dev/null 2>&1 || true
+        CONFIG_TYPE=unified
+        FRR_VARS=$(echo "$FRR_VARS" | jq -c '.docker_routing_config_mode = "unified"')
     fi
     MGMT_FRAMEWORK_CONFIG=$(echo $FRR_VARS | jq -r '.frr_mgmt_framework_config')
     if [ -n "$MGMT_FRAMEWORK_CONFIG" ] && [ "$MGMT_FRAMEWORK_CONFIG" != "false" ]; then
@@ -82,6 +86,7 @@ elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ] || [ "$CONFIG_TYPE
         CFGGEN_PARAMS=" \
             -d \
             -y /etc/sonic/constants.yml \
+            -T /usr/local/sonic/frrcfgd \
             -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
         "
     fi
