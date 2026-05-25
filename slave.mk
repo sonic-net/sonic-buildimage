@@ -277,12 +277,14 @@ ifeq ($(SONIC_ENABLE_BOOTCHART),y)
 ENABLE_BOOTCHART = y
 endif
 
+# ASAN builds are only supported on amd64 and arm64; disable elsewhere.
 ifeq ($(ENABLE_ASAN),y)
-ifneq ($(CONFIGURED_ARCH),amd64)
-$(Q)echo "Disabling SWSS address sanitizer due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
+ifeq ($(filter amd64 arm64,$(CONFIGURED_ARCH)),)
+$(Q)echo "Disabling address sanitizer due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
 override ENABLE_ASAN = n
 endif
 endif
+export ENABLE_ASAN
 
 include $(RULES_PATH)/functions
 
