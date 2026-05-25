@@ -1,0 +1,196 @@
+{
+    "MAC_MOVE_GUARD_VALID_FULL": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "enabled": "true",
+                        "threshold": 5000,
+                        "detect_interval": 5,
+                        "action_interval": 120,
+                        "action": "DISABLE_PORT"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_VALID_MINIMAL": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_ENABLED": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_THRESHOLD": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_DETECT_INTERVAL": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DEFAULT_ACTION_INTERVAL": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_ACTION_DLOMWA": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "enabled": "true",
+                        "action": "DISABLE_LEARN_ON_MAC_WITH_ACL"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_INVALID_KEY": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "not_global",
+                        "enabled": "true"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_INVALID_ENABLED": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "enabled": "maybe"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_THRESHOLD_OUT_OF_RANGE": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "threshold": 0
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DETECT_INTERVAL_LOW": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "detect_interval": 0
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_DETECT_INTERVAL_HIGH": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "detect_interval": 3601
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_ACTION_INTERVAL_LOW": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "action_interval": 0
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_ACTION_INTERVAL_HIGH": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "action_interval": 86401
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_INVALID_ACTION": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL",
+                        "action": "DROP_MAC"
+                    }
+                ]
+            }
+        }
+    },
+    "MAC_MOVE_GUARD_TOO_MANY_ROWS": {
+        "sonic-mac-move-guard:sonic-mac-move-guard": {
+            "sonic-mac-move-guard:MAC_MOVE_GUARD": {
+                "MAC_MOVE_GUARD_LIST": [
+                    {
+                        "name": "GLOBAL"
+                    },
+                    {
+                        "name": "another_key"
+                    }
+                ]
+            }
+        }
+    }
+}
