@@ -1,5 +1,5 @@
 use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 use std::path::Path;
 
@@ -71,7 +71,7 @@ fn read_cert_paths_from_redis() -> Option<CertPaths> {
 }
 
 // Check if root cert, server cert, and server key exist
-fn check_certificates(cert_paths_opt: &Option<CertPaths>) -> bool {
+fn check_certificates(cert_paths_opt: &Option<CertPaths>, use_https: &bool) -> bool {
     let cert_paths = match cert_paths_opt {
         Some(paths) => paths,
         None => return false,
@@ -86,8 +86,15 @@ fn check_certificates(cert_paths_opt: &Option<CertPaths>) -> bool {
         if path.starts_with(DEFAULT_RESTAPI_CERT_DIR) {
             Path::new(path).exists()
         } else {
-            println!("The path {path} is outside the default directory.");
-            false
+            if use_https {
+                // For HTTPS status check, we need to read certificates.
+                println!("The path {path} is outside the default directory.");
+                false
+            } else {
+                // For TCP connectivity check, we don't need to read certificates.
+                println!("The path {path} is outside the default directory. Assuming it exists.");
+                true
+            }
         }
     )
 }
@@ -96,7 +103,7 @@ fn check_certificates(cert_paths_opt: &Option<CertPaths>) -> bool {
 // Uses the root CA cert to authenticate the server, and sends the server cert and key as
 // client identity to the server.
 // Pre-condition: All cert paths start with DEFAULT_RESTAPI_CERT_DIR and point to existing files.
-fn check_restapi_status(cert_paths: CertPaths) -> String {
+fn check_restapi_status_https(cert_paths: CertPaths) -> String {
     let url = format!("https://127.0.0.1:{}/v1/state/heartbeat", RESTAPI_HTTPS_PORT);
     let timeout = Duration::from_secs(5);
 
@@ -148,6 +155,17 @@ fn check_restapi_status(cert_paths: CertPaths) -> String {
     }
 }
 
+// Check TCP connectivity to restapi.
+fn check_restapi_status_tcp() -> String {
+    let addr = format!("127.0.0.1:{}", RESTAPI_HTTPS_PORT);
+    let timeout = Duration::from_secs(5);
+
+    match TcpStream::connect_timeout(&addr.parse().unwrap(), timeout) {
+        Ok(_) => "OK".to_string(),
+        Err(e) => format!("ERROR: {}", e),
+    }
+}
+
 fn main() {
     // Start a HTTP server listening on port 50100
     let listener = TcpListener::bind(format!("127.0.0.1:{}", WATCHDOG_PORT))
@@ -172,13 +190,25 @@ fn main() {
                         continue;
                     }
 
+                    let use_https = match std::env::var("INCLUDE_RESTAPI_WATCHDOG_HTTPS") {
+                        Ok(v) => {
+                            let v = v.to_lowercase();
+                            v == "1" || v == "y" || v == "yes"
+                        }
+                        Err(_) => false,
+                    };
+
                     let cert_paths = read_cert_paths_from_redis();
-                    let certs_exist = check_certificates(&cert_paths);
+                    let certs_exist = check_certificates(&cert_paths, &use_https);
                     let restapi_result = if !certs_exist {
                         println!("Skipping restapi connectivity check.");
                         "OK".to_string()
                     } else {
-                        check_restapi_status(cert_paths.unwrap())
+                        if use_https {
+                            check_restapi_status_https(cert_paths.unwrap())
+                        } else {
+                            check_restapi_status_tcp()
+                        }
                     };
 
                     let status = HealthStatus {
