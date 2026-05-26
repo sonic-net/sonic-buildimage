@@ -93,5 +93,16 @@
     "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
         "desc": "Set invalid interface mac address.",
         "eStrKey": "Pattern"
+    },
+    "PORTCHANNEL_MEMBER_VALID_MATCHING_MTU": {
+        "desc": "Add a member port whose MTU matches the PortChannel MTU."
+    },
+    "PORTCHANNEL_MEMBER_VALID_NO_PORT_MTU": {
+        "desc": "Add a member port that has no MTU configured (any PortChannel MTU is allowed)."
+    },
+    "PORTCHANNEL_MEMBER_INVALID_MTU_MISMATCH": {
+        "desc": "Reject a member port whose MTU differs from the PortChannel MTU.",
+        "eStrKey": "Must",
+        "eStr": ["Cannot add a port with MTU configured to a PortChannel unless it matches the PortChannel MTU."]
     }
 }
