@@ -190,21 +190,38 @@ class FirmwareManagerBase(Process):
 
         Returns:
             True if upgrade is required, False otherwise
+
+        Raises:
+            FirmwareManagerError: If the device's security state cannot be
+                determined (so the decision is surfaced to the caller rather
+                than silently defaulting to "no upgrade").
         """
         if self.current_version != self.available_version:
             return True
-        return self._has_prod_image_dev_capable_device()
+        is_prod_image_dev_capable = self._has_prod_image_dev_capable_device()
+        if is_prod_image_dev_capable is None:
+            raise FirmwareManagerError(
+                f"Unable to determine security attributes for {self.pci_id}; "
+                f"cannot decide whether firmware upgrade is required."
+            )
+        return is_prod_image_dev_capable
 
-    def _has_prod_image_dev_capable_device(self) -> bool:
+    def _has_prod_image_dev_capable_device(self) -> Optional[bool]:
         """
         Check whether the device exposes the 'prod_image_dev_capable_device'
         security attribute via 'flint -d <pci_id> q full'. When this attribute
         is set, the firmware must be re-burned to transition the device out of
         the dev-capable state, even if versions already match.
 
+        Devices that do not advertise security attributes at all (no
+        'Security Attributes:' line in flint output) are treated as normal
+        and return False.
+
         Returns:
-            True if the attribute is present in the device's security
-            attributes, False otherwise (including on query failure).
+            True if the attribute is present, False if it is not present
+            (including devices that do not expose security attributes at all),
+            None if the security state could not be determined due to a
+            flint query failure or unexpected exception.
         """
         try:
             cmd = ['/usr/bin/flint', '-d', self.pci_id, 'q', 'full']
@@ -214,7 +231,7 @@ class FirmwareManagerBase(Process):
                     f"flint query full failed for {self.pci_id} "
                     f"(rc={result.returncode}): {result.stderr}"
                 )
-                return False
+                return None
 
             match = re.search(r'^Security Attributes:\s*(.+)$', result.stdout, re.MULTILINE)
             if not match:
@@ -232,7 +249,7 @@ class FirmwareManagerBase(Process):
             self.logger.warning(
                 f"Failed to query security attributes for {self.pci_id}: {e}"
             )
-            return False
+            return None
 
     def _report_status(self, status: UpgradeStatusType, message: str = ""):
         """Report status to parent process."""
