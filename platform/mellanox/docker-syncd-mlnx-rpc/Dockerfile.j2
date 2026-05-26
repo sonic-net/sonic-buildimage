@@ -50,8 +50,6 @@ RUN apt-get update        \
     python3-thrift        \
     pciutils
 
-RUN pip3 install --upgrade pip
-
 {% if docker_syncd_mlnx_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_syncd_mlnx_rpc_debs.split(' '), "/debs/") }}

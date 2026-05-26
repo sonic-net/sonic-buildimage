@@ -1,3 +1,6 @@
 usr/bin/eventd
+usr/bin/eventdb
 usr/bin/events_tool
 usr/bin/events_publish_tool.py
+etc/evprofile/default.json
+etc/eventd.json

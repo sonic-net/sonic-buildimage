@@ -11,7 +11,7 @@ from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
 from sonic_py_common.task_base import ThreadTaskBase
-from sonic_py_common import device_info
+from sonic_py_common import device_info, multi_asic
 from .config import Config
 import signal
 import jinja2
@@ -172,6 +172,21 @@ class Sysmonitor(ThreadTaskBase):
             if srv in dir_list:
                 dir_list.remove(srv)
 
+        #On multi-ASIC: prune host-level services that should only run as per-ASIC instances
+        if multi_asic.is_multi_asic():
+            feature_table = self.config_db.get_table("FEATURE")
+            prune = []
+            for srv_ext in dir_list:
+                if '@' in srv_ext:
+                    continue
+                srv_name = srv_ext.replace('.service', '')
+                if srv_name in feature_table:
+                    raw_scope = feature_table[srv_name].get('has_global_scope', 'True')
+                    if raw_scope.lower() == 'false':
+                        prune.append(srv_ext)
+            for srv_ext in prune:
+                dir_list.remove(srv_ext)
+
         dir_list.sort()
         return dir_list
 
@@ -280,7 +295,7 @@ class Sysmonitor(ThreadTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result'.format(service))
+        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult'.format(service))
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
@@ -356,12 +371,16 @@ class Sysmonitor(ThreadTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if (srv_type == "oneshot"
+                        condition_result = sysctl_show.get('ConditionResult', 'yes')
+                        is_known_non_blocking = (srv_type == "oneshot"
                                 or service_name in spl_srv_list
-                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS):
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
+                        if is_known_non_blocking or condition_result == "no":
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
+                            if not is_known_non_blocking and condition_result == "no":
+                                fail_reason = "condition-unmet"
                         else:
                             unit_status = "NOT OK"
                             if fail_reason == "-":
@@ -433,6 +452,21 @@ class Sysmonitor(ThreadTaskBase):
         full_srv_list = self.get_all_service_list()
         if event in full_srv_list:
             ustate = self.get_unit_status(event)
+            if ustate is None:
+                #Service is masked/not-loaded — clean up both dnsrvs_name and stale STATE_DB entry
+                if event in self.dnsrvs_name:
+                    self.dnsrvs_name.remove(event)
+                srv_name, last = event.rsplit('.', 1)
+                if last == "service":
+                    key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
+                    if self.state_db.exists(self.state_db.STATE_DB, key):
+                        self.state_db.delete(self.state_db.STATE_DB, key)
+                if len(self.dnsrvs_name) == 0:
+                    astate = "UP"
+                else:
+                    astate = "DOWN"
+                self.publish_system_status(astate)
+                return 0
             if ustate == "OK" and system_allsrv_state == "UP":
                 astate = "UP"
             elif ustate == "OK" and system_allsrv_state == "DOWN":
