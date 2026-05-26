@@ -136,6 +136,16 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
 
             new_key = self._lease_key(subnet_id, mac_address)
             if new_key in new_lease:
+                existing = new_lease[new_key]
+                existing_is_release = existing["lease_start"] == existing["lease_end"]
+                current_is_valid = int(valid_lifetime) > 0
+                different_ip = existing["ip"] != ip_str
+                if existing_is_release and current_is_valid and different_ip:
+                    new_lease[new_key] = {
+                      "lease_start": str(int(lease_end) - int(valid_lifetime)),
+                      "lease_end": lease_end,
+                      "ip": ip_str
+                    }
                 continue
             new_lease[new_key] = {
                 "lease_start": str(int(lease_end) - int(valid_lifetime)),
