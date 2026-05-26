@@ -66,6 +66,8 @@ REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
 SYS_DISPLAY = "SYS_DISPLAY"
+MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS = 1
+MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS = 0.5
 
 # Global logger class instance
 logger = Logger()
@@ -138,6 +140,8 @@ class Chassis(ChassisBase):
         self._asic_modules_dict = defaultdict(set)
         self._last_asic_ready_states = {}
 
+        self._num_npus = device_info.get_num_npus()
+
         self.liquid_cooling = None
 
         Chassis.chassis_instance = self
@@ -159,14 +163,14 @@ class Chassis(ChassisBase):
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
         return self._RJ45_port_list
 
     @property
     def cpo_port_list(self):
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         return self._cpo_port_list
 
@@ -227,6 +231,56 @@ class Chassis(ChassisBase):
         """
         self.initialize_psu()
         return super(Chassis, self).get_psu(index)
+
+    ##############################################
+    # PDB methods
+    ##############################################
+
+    def initialize_pdb(self):
+        if not self._pdb_list:
+            pdb_count = DeviceDataManager.get_pdb_count()
+            if pdb_count == 0:
+                return
+            from .pdb import Pdb
+            for index in range(pdb_count):
+                self._pdb_list.append(Pdb(index))
+
+    def get_num_pdbs(self):
+        """
+        Retrieves the number of power distribution boards available on this chassis
+
+        Returns:
+            An integer, the number of PDBs available on this chassis
+        """
+        self.initialize_pdb()
+        return len(self._pdb_list)
+
+    def get_all_pdbs(self):
+        """
+        Retrieves all power distribution boards available on this chassis
+
+        Returns:
+            A list of objects derived from PdbBase representing all PDBs
+            available on this chassis
+        """
+        self.initialize_pdb()
+        return self._pdb_list
+
+    def get_pdb(self, index):
+        """
+        Retrieves the PDB object at the specified (0-based) index
+
+        Args:
+            index: An integer, the index (0-based) of the PDB to retrieve
+
+        Returns:
+            An object derived from PdbBase representing the specified PDB
+        """
+        self.initialize_pdb()
+        if index < 0 or index >= len(self._pdb_list):
+            logger.log_error(f"PDB index {index} is out of range")
+            return None
+        return self._pdb_list[index]
 
     ##############################################
     # Fan methods
@@ -372,11 +426,11 @@ class Chassis(ChassisBase):
         """
         num_sfps = 0
         if not self._RJ45_port_inited:
-            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_list = extract_RJ45_ports_index(self._num_npus)
             self._RJ45_port_inited = True
-        
+
         if not self._cpo_port_inited:
-            self._cpo_port_list = extract_cpo_ports_index()
+            self._cpo_port_list = extract_cpo_ports_index(self._num_npus)
             self._cpo_port_inited = True
         
         num_sfps = DeviceDataManager.get_sfp_count()
@@ -613,7 +667,9 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         wait_ready_task = sfp.SFP.get_wait_ready_task()
         
-        while True:        
+        while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -626,11 +682,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd_value = int(fd.read().strip())
-                except Exception as e:
+                except (OSError, IOError, ValueError) as e:
                     logger.log_warning(f'Failed to read value from file {fd_type} for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 # Detecting dummy event
@@ -694,8 +752,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return {'sfp': {}}
 
@@ -749,6 +812,8 @@ class Chassis(ChassisBase):
         begin = time.monotonic()
         
         while True:
+            iteration_begin = time.monotonic()
+            has_read_error = False
             fds_events = self.poll_obj.poll(timeout)
             for fileno, _ in fds_events:
                 if fileno not in self.registered_fds:
@@ -760,11 +825,13 @@ class Chassis(ChassisBase):
                     fd.seek(0)
                 except OSError as e:
                     logger.log_warning(f'Failed to seek module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
                 try:
                     fd.read()
-                except Exception as e:
+                except (OSError, IOError) as e:
                     logger.log_warning(f'Failed to read module sysfs fd for SFP {sfp_index}: {e}')
+                    has_read_error = True
                     continue
 
                 s = self._sfp_list[sfp_index]
@@ -804,8 +871,13 @@ class Chassis(ChassisBase):
                     'sfp_error': error_dict
                 }
             else:
+                now = time.monotonic()
+                if has_read_error:
+                    sleep_time = MALFUNCTION_SYSFS_READ_ERROR_DELAY_SECS - (now - iteration_begin)
+                    if sleep_time > MALFUNCTION_SYSFS_READ_ERROR_MIN_SLEEP_SECS:
+                        time.sleep(sleep_time)
                 if not wait_forever:
-                    elapse = time.monotonic() - begin
+                    elapse = now - begin
                     if elapse * 1000 >= timeout:
                         return {'sfp': {}}
 

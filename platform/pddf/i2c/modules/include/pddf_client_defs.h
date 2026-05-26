@@ -31,6 +31,7 @@
 #define FPGAI2C "PDDF_FPGAI2C"
 #define MUX "PDDF_MUX"
 #define GPIO "PDDF_GPIO"
+#define SPI "PDDF_SPI"
 #define SYSSTATUS "PDDF_SYSSTATUS"
 #define XCVR "PDDF_XCVR"
 #define FPGA "PDDF_FPGAPCI"

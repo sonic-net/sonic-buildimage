@@ -66,8 +66,10 @@ BOOTCONF_RAW=$(fw_printenv -n bootconf 2>/dev/null || true)
 BOOTCONF=$BOOTCONF_RAW
 if [ -z "$BOOTCONF" ]; then
     BOOTCONF="ast2700-evb"
-elif [ "$BOOTCONF" = "ast2700-nvidia-spc6-bmc" ]; then
+elif [ "$BOOTCONF" = "ast2700-nvidia-spc6-a1-bmc" ]; then
     BOOTCONF="sonic-ast2700-nvidia-spc6-a1-bmc"
+elif [ "$BOOTCONF" = "ast2700-nvidia-spc6-bmc" ]; then
+    BOOTCONF="sonic-ast2700-nvidia-spc6-bmc"
 fi
 if [ "$BOOTCONF_RAW" != "$BOOTCONF" ]; then
     sonic_uboot_env_log "Adjusting bootconf for FIT: ${BOOTCONF_RAW:-empty} -> $BOOTCONF"
