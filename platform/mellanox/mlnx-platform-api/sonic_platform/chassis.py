@@ -577,17 +577,74 @@ class Chassis(ChassisBase):
                       has been inserted and sfp 11 has been removed.
         """
         self.sfp_wait_ready_and_initialize()
+
+        # if asic becomes not available, generate not present events for its modules and add to change_events_dict
+        asic_events_dict = self.get_asic_change_event(timeout=500)
+
         if DeviceDataManager.is_module_host_management_mode():
             change_events_dict = self.get_change_event_for_module_host_management_mode(timeout)
         else:
             change_events_dict = self.get_change_event_legacy(timeout)
 
-        # if asic becomes not available, generate not present events for its modules and add to change_events_dict
-        asic_events_dict = self.get_asic_change_event(timeout=500)
         if asic_events_dict:
             change_events_dict.setdefault('sfp', {}).update(asic_events_dict)
         return True, change_events_dict
     
+    def _disable_polling_for_asic(self, asic_id):
+        """
+        Remove SFP fds of the received asic from self.poll_obj.
+
+        Called when an ASIC transitions to not-ready so we stop polling its
+        sysfs nodes without affecting other ASICs. Works for both module host
+        management mode (3-tuple in registered_fds) and legacy mode (2-tuple).
+        """
+        if not self.poll_obj or not self.registered_fds:
+            return
+
+        sdk_indices = {s.sdk_index for s in self._asic_modules_dict.get(asic_id, ())}
+        if not sdk_indices:
+            return
+        for fileno, item in list(self.registered_fds.items()):
+            # item = (sdk_index, fd) in legacy mode,
+            #        or (sdk_index, fd, fd_type) in module host management mode.
+            sdk_index = item[0]
+            fd = item[1]
+            if sdk_index not in sdk_indices:
+                continue
+            try:
+                self.poll_obj.unregister(fd)
+            except (KeyError, ValueError, OSError):
+                pass
+            try:
+                fd.close()
+            except OSError:
+                pass
+            self.registered_fds.pop(fileno, None)
+
+    def _enable_polling_for_asic(self, asic_id):
+        """Re-register polling fds for SFPs of an ASIC that just became ready.
+
+        Host-mgmt mode: SFP.refresh_poll_obj picks the right fds for the SFP's
+        current state (FW vs SW control). Legacy mode: register the 'present'
+        fd as a 2-tuple, like the initial registration block does.
+        """
+        if not self.poll_obj:
+            return
+        host_mgmt = DeviceDataManager.is_module_host_management_mode()
+        for s in self._asic_modules_dict.get(asic_id, ()):
+            try:
+                if host_mgmt:
+                    s.refresh_poll_obj(self.poll_obj, self.registered_fds)
+                else:
+                    fd = s.get_fd_for_polling_legacy()
+                    if fd is None:
+                        continue
+                    self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                    self.registered_fds[fd.fileno()] = (s.sdk_index, fd)
+                    self.sfp_states_before_first_poll[s.sdk_index] = s.get_module_status()
+            except Exception as e:
+                logger.log_warning(f'Failed to enable polling for SFP {s.sdk_index}: {e}')
+
     def get_asic_change_event(self, timeout=500):
         changes = {}
         asic_count = DeviceDataManager.get_asic_count()
@@ -605,17 +662,32 @@ class Chassis(ChassisBase):
 
         self._last_asic_ready_states = after_states
 
+        # wait_ready_task only exists in module host management mode
+        if changed_paths and DeviceDataManager.is_module_host_management_mode():
+            from . import sfp as sfp_module
+            wait_ready_task = sfp_module.SFP.get_wait_ready_task()
+        else:
+            wait_ready_task = None
+
         for path in changed_paths:
             name = os.path.basename(path)
             asic_index = int(name.split("asic")[1].split("_")[0]) - 1
             asic_id = f'asic{asic_index}'
-            sfp_indices = [sfp.sdk_index for sfp in self._asic_modules_dict[asic_id]]
-            value = '1'
-            ready_asic_val = True
+            sfp_set = self._asic_modules_dict.get(asic_id, set())
+            sfp_indices = [sfp.sdk_index for sfp in sfp_set]
             if not os.path.exists(path) or utils.read_int_from_file(path) == 0:
-            # if an asic becomes not available, generate not present events for its modules and add to changes
+                # asic becomes not available: emit removal events for its modules,
+                # cancel any pending reset waits, and unregister its polling fds
                 value = '0'
                 ready_asic_val = False
+                if wait_ready_task is not None:
+                    for s in sfp_set:
+                        wait_ready_task.cancel_wait(s.sdk_index)
+                self._disable_polling_for_asic(asic_id)
+            else:
+                value = '1'
+                ready_asic_val = True
+                self._enable_polling_for_asic(asic_id)
             self.module_host_mgmt_initializer.set_asic_ready_value(asic_index, ready_asic_val)
             for i in sfp_indices:
                 changes[str(i)] = value
@@ -645,7 +717,21 @@ class Chassis(ChassisBase):
         if not self.poll_obj:
             self.poll_obj = select.poll()
             self.registered_fds = {}
+
+            # Skip SFPs whose ASIC is currently not ready -
+            # their sysfs nodes may not exist or disappear.
+            not_ready_sdk_indices = set()
+            if self._last_asic_ready_states:
+                for i in range(DeviceDataManager.get_asic_count()):
+                    state = self._last_asic_ready_states.get(f"asic{i + 1}_ready")
+                    if state is None or state == '0':
+                        not_ready_sdk_indices.update(
+                            s.sdk_index for s in self._asic_modules_dict.get(f"asic{i}", ())
+                        )
+
             for s in self._sfp_list:
+                if s.sdk_index in not_ready_sdk_indices:
+                    continue
                 fds = s.get_fds_for_poling()
                 for fd_type, fd in fds.items():
                     if fd is None:
@@ -733,10 +819,20 @@ class Chassis(ChassisBase):
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
                     logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
-                    
+
             ready_sfp_set = wait_ready_task.get_ready_set()
             for sfp_index in ready_sfp_set:
                 s = self._sfp_list[sfp_index]
+                # Defensive guard: a stale wait_ready_task entry for an SFP
+                # whose ASIC is no longer ready would crash refresh_poll_obj
+                # when get_fd() returns None for missing sysfs nodes.
+                asic_index = int(s.asic_id.replace('asic', ''))
+                ready_path = f"/var/run/hw-management/config/asic{asic_index + 1}_ready"
+                if not os.path.exists(ready_path) or utils.read_int_from_file(ready_path) == 0:
+                    logger.log_info(
+                        f'SFP {sfp_index} ready event ignored: ASIC {asic_index} became not ready'
+                    )
+                    continue
                 s.on_event(sfp.EVENT_RESET_DONE)
                 if s.in_stable_state():
                     self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
