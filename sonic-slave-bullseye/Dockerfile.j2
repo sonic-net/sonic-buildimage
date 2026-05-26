@@ -52,6 +52,8 @@ ARG CROSS_CC=${gcc_arch}-gcc
 ARG CROSS_CXX=${gcc_arch}-g++
 {%- endif %}
 
+COPY ["prefer-snapshots.{{ CONFIGURED_ARCH }}", "/etc/apt/preferences.d/prefer-snapshots"]
+
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
