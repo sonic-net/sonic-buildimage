@@ -520,10 +520,11 @@ class TestFirmwareManagerBase(unittest.TestCase):
         self.assertEqual(available, "2.0.0")
         mock_sleep.assert_not_called()
 
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
-    def test_get_firmware_versions_command_failure(self, mock_run, mock_sleep):
-        """Test _get_firmware_versions when command fails with retry logic"""
+    def test_get_firmware_versions_command_failure(self, mock_run, mock_sleep, mock_monotonic):
+        """Test _get_firmware_versions when command fails with time-bounded retry"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -531,7 +532,8 @@ class TestFirmwareManagerBase(unittest.TestCase):
                 asic_type="test"
             )
 
-        mock_run.return_value = MagicMock(returncode=1)
+        mock_run.return_value = MagicMock(returncode=1, stdout='')
+        mock_monotonic.side_effect = [0, 20, 45, 61]
 
         with patch.object(manager.logger, 'info') as mock_info:
             with patch.object(manager.logger, 'error') as mock_error:
@@ -539,16 +541,23 @@ class TestFirmwareManagerBase(unittest.TestCase):
 
                 self.assertIsNone(current)
                 self.assertIsNone(available)
-                self.assertEqual(mock_run.call_count, 10)
-                self.assertEqual(mock_sleep.call_count, 9)
-                # 10 "Executing" logs from run_command + 9 "Unable to query" logs = 19 total
-                self.assertEqual(mock_info.call_count, 19)
-                mock_error.assert_called_once_with("Failed to get firmware versions after 10 attempts: Query returned non-zero exit code")
+                self.assertEqual(mock_run.call_count, 3)
+                self.assertEqual(mock_sleep.call_count, 2)
+                mock_sleep.assert_any_call(1)
+                mock_sleep.assert_any_call(2)
+                self.assertEqual(mock_info.call_count, 5)
+                mock_error.assert_called_once()
+                error_msg = mock_error.call_args[0][0]
+                self.assertIn("Failed to get firmware versions", error_msg)
+                self.assertIn("01:00.0", error_msg)
+                self.assertIn("3 attempts", error_msg)
+                self.assertIn("61s elapsed", error_msg)
 
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
-    def test_get_firmware_versions_xml_parsing_error(self, mock_run, mock_sleep):
-        """Test _get_firmware_versions with XML parsing error and retry logic"""
+    def test_get_firmware_versions_xml_parsing_error(self, mock_run, mock_sleep, mock_monotonic):
+        """Test _get_firmware_versions with missing XML tags and time-bounded retry"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -557,6 +566,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
             )
 
         mock_run.return_value = MagicMock(returncode=0, stdout="invalid xml")
+        mock_monotonic.side_effect = [0, 20, 45, 61]
 
         with patch.object(manager.logger, 'info') as mock_info:
             with patch.object(manager.logger, 'error') as mock_error:
@@ -564,16 +574,19 @@ class TestFirmwareManagerBase(unittest.TestCase):
 
                 self.assertIsNone(current)
                 self.assertIsNone(available)
-                self.assertEqual(mock_run.call_count, 10)
-                self.assertEqual(mock_sleep.call_count, 9)
-                # 10 "Executing" logs from run_command + 9 "Unable to..." logs = 19 total
-                self.assertEqual(mock_info.call_count, 19)
+                self.assertEqual(mock_run.call_count, 3)
+                self.assertEqual(mock_sleep.call_count, 2)
+                self.assertEqual(mock_info.call_count, 5)
                 mock_error.assert_called_once()
+                error_msg = mock_error.call_args[0][0]
+                self.assertIn("No XML device data found", error_msg)
+                self.assertIn("01:00.0", error_msg)
 
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
-    def test_get_firmware_versions_success_on_retry(self, mock_run, mock_sleep):
-        """Test _get_firmware_versions succeeds on third attempt"""
+    def test_get_firmware_versions_success_on_retry(self, mock_run, mock_sleep, mock_monotonic):
+        """Test _get_firmware_versions succeeds on third attempt with back off"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
                 asic_index=0,
@@ -591,10 +604,11 @@ class TestFirmwareManagerBase(unittest.TestCase):
         </Devices>'''
 
         mock_run.side_effect = [
-            MagicMock(returncode=1),
-            MagicMock(returncode=1),
+            MagicMock(returncode=1, stdout=''),
+            MagicMock(returncode=1, stdout=''),
             MagicMock(returncode=0, stdout=xml_output)
         ]
+        mock_monotonic.side_effect = [0, 1, 3]
 
         with patch.object(manager.logger, 'info') as mock_info:
             current, available = manager._get_firmware_versions()
@@ -603,12 +617,14 @@ class TestFirmwareManagerBase(unittest.TestCase):
             self.assertEqual(available, "2.0.0")
             self.assertEqual(mock_run.call_count, 3)
             self.assertEqual(mock_sleep.call_count, 2)
-            # 3 "Executing" logs from run_command + 2 "Unable to query" logs = 5 total
+            mock_sleep.assert_any_call(1)
+            mock_sleep.assert_any_call(2)
             self.assertEqual(mock_info.call_count, 5)
 
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
-    def test_get_firmware_versions_missing_version_field(self, mock_run, mock_sleep):
+    def test_get_firmware_versions_missing_version_field(self, mock_run, mock_sleep, mock_monotonic):
         """Test _get_firmware_versions when version field is missing"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
@@ -627,6 +643,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
         </Devices>'''
 
         mock_run.return_value = MagicMock(returncode=0, stdout=xml_output)
+        mock_monotonic.side_effect = [0, 20, 45, 61]
 
         with patch.object(manager.logger, 'info') as mock_info:
             with patch.object(manager.logger, 'error') as mock_error:
@@ -634,15 +651,18 @@ class TestFirmwareManagerBase(unittest.TestCase):
 
                 self.assertIsNone(current)
                 self.assertIsNone(available)
-                self.assertEqual(mock_run.call_count, 10)
-                self.assertEqual(mock_sleep.call_count, 9)
-                # 10 "Executing" logs from run_command + 9 "Unable to parse" logs = 19 total
-                self.assertEqual(mock_info.call_count, 19)
-                mock_error.assert_called_once_with("Failed to get firmware versions after 10 attempts: Version or PSID not found in response")
+                self.assertEqual(mock_run.call_count, 3)
+                self.assertEqual(mock_sleep.call_count, 2)
+                self.assertEqual(mock_info.call_count, 5)
+                mock_error.assert_called_once()
+                error_msg = mock_error.call_args[0][0]
+                self.assertIn("Version or PSID not found", error_msg)
+                self.assertIn("01:00.0", error_msg)
 
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
     @patch('mellanox_fw_manager.firmware_base.time.sleep')
     @patch('mellanox_fw_manager.firmware_base.subprocess.run')
-    def test_get_firmware_versions_missing_psid_field(self, mock_run, mock_sleep):
+    def test_get_firmware_versions_missing_psid_field(self, mock_run, mock_sleep, mock_monotonic):
         """Test _get_firmware_versions when psid field is missing"""
         with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
             manager = ConcreteFirmwareManager(
@@ -661,6 +681,7 @@ class TestFirmwareManagerBase(unittest.TestCase):
         </Devices>'''
 
         mock_run.return_value = MagicMock(returncode=0, stdout=xml_output)
+        mock_monotonic.side_effect = [0, 20, 45, 61]
 
         with patch.object(manager.logger, 'info') as mock_info:
             with patch.object(manager.logger, 'error') as mock_error:
@@ -668,11 +689,13 @@ class TestFirmwareManagerBase(unittest.TestCase):
 
                 self.assertIsNone(current)
                 self.assertIsNone(available)
-                self.assertEqual(mock_run.call_count, 10)
-                self.assertEqual(mock_sleep.call_count, 9)
-                # 10 "Executing" logs from run_command + 9 "Unable to parse" logs = 19 total
-                self.assertEqual(mock_info.call_count, 19)
-                mock_error.assert_called_once_with("Failed to get firmware versions after 10 attempts: Version or PSID not found in response")
+                self.assertEqual(mock_run.call_count, 3)
+                self.assertEqual(mock_sleep.call_count, 2)
+                self.assertEqual(mock_info.call_count, 5)
+                mock_error.assert_called_once()
+                error_msg = mock_error.call_args[0][0]
+                self.assertIn("Version or PSID not found", error_msg)
+                self.assertIn("01:00.0", error_msg)
 
     def test_get_env_verbose_mode(self):
         """Test _get_env with verbose mode"""
@@ -760,6 +783,108 @@ class TestFirmwareManagerBase(unittest.TestCase):
         result = manager.clear_semaphore()
 
         self.assertFalse(result)
+
+    @patch('mellanox_fw_manager.firmware_base.subprocess.run')
+    def test_query_firmware_versions_current_version_dashes(self, mock_run):
+        """Test _query_firmware_versions rejects current_version='--' as invalid"""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        xml_output = '''<?xml version="1.0"?>
+        <Devices>
+            <Device psid="MT_0000001187">
+                <Versions>
+                    <FW current="--"/>
+                </Versions>
+            </Device>
+        </Devices>'''
+        mock_run.return_value = MagicMock(returncode=0, stdout=xml_output)
+
+        with self.assertRaises(FirmwareManagerError) as context:
+            manager._query_firmware_versions()
+
+        self.assertIn("Version or PSID not found", str(context.exception))
+
+    @patch('mellanox_fw_manager.firmware_base.subprocess.run')
+    def test_query_firmware_versions_mixed_debug_xml(self, mock_run):
+        """Test _query_firmware_versions extracts XML from mixed debug output"""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mixed_output = (
+            'DEBUG: some debug line\n'
+            'FLASH_ACCESS: reading register 0x1234\n'
+            '<Devices>\n'
+            '    <Device psid="MT_0000001187">\n'
+            '        <Versions>\n'
+            '            <FW current="1.0.0"/>\n'
+            '        </Versions>\n'
+            '    </Device>\n'
+            '</Devices>\n'
+            'DEBUG: done\n'
+        )
+        mock_run.return_value = MagicMock(returncode=0, stdout=mixed_output)
+
+        current, available = manager._query_firmware_versions()
+
+        self.assertEqual(current, "1.0.0")
+        self.assertEqual(available, "2.0.0")
+
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
+    @patch('mellanox_fw_manager.firmware_base.time.sleep')
+    def test_get_firmware_versions_rc523_logging(self, mock_sleep, mock_monotonic):
+        """Test rc=523 error uses ASIC-not-ready log message"""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_monotonic.side_effect = [0, 5, 61]
+        rc523_error = FirmwareManagerError("Query failed rc = 523 details")
+
+        with patch.object(manager, '_query_firmware_versions', side_effect=rc523_error):
+            with patch.object(manager.logger, 'info') as mock_info:
+                with patch.object(manager.logger, 'error'):
+                    manager._get_firmware_versions()
+
+                    info_msgs = [call[0][0] for call in mock_info.call_args_list]
+                    self.assertTrue(any("rc=523" in msg for msg in info_msgs))
+                    self.assertTrue(
+                        any("ASIC not ready" in msg for msg in info_msgs)
+                    )
+
+    @patch('mellanox_fw_manager.firmware_base.time.monotonic')
+    @patch('mellanox_fw_manager.firmware_base.time.sleep')
+    def test_get_firmware_versions_exponential_backoff_timing(self, mock_sleep, mock_monotonic):
+        """Test exponential back off delays double each retry and cap at 16s"""
+        with patch.object(ConcreteFirmwareManager, '_initialize_asic'):
+            manager = ConcreteFirmwareManager(
+                asic_index=0,
+                pci_id="01:00.0",
+                asic_type="test"
+            )
+
+        mock_monotonic.side_effect = [0, 1, 2, 4, 8, 16, 32, 48, 61]
+
+        with patch.object(manager, '_query_firmware_versions',
+                          side_effect=FirmwareManagerError("test error")):
+            with patch.object(manager.logger, 'info'):
+                with patch.object(manager.logger, 'error'):
+                    manager._get_firmware_versions()
+
+        expected_sleeps = [1, 2, 4, 8, 16, 16, 12]
+        actual_sleeps = [call[0][0] for call in mock_sleep.call_args_list]
+        self.assertEqual(actual_sleeps, expected_sleeps)
 
 
 if __name__ == '__main__':

@@ -127,7 +127,9 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_MODIFIED
-    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+    # $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'False') ]
+    # Disable in-PR testing of docker-ptf image; To be re-enabled after image can be uploaded to approved ACR
+    value: 'False' 
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
@@ -217,7 +219,7 @@ stages:
 
   # Trivy scan for docker-ptf — informational, runs in parallel with KVM tests
   - job: trivy_scan
-    displayName: "Trivy vulnerability scan (docker-ptf)"
+    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 60
@@ -242,7 +244,7 @@ stages:
         # docker-ptf.gz is ~1.3GB; scan takes 15-20 min on CI agents
         trivy image \
           --input $(Pipeline.Workspace)/target/docker-ptf.gz \
-          --severity HIGH,CRITICAL \
+          --severity MEDIUM,HIGH,CRITICAL \
           --ignore-unfixed \
           --exit-code 1 \
           --format table \

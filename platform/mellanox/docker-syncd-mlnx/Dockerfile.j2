@@ -41,9 +41,6 @@ RUN apt-get update && \
         pciutils \
         linuxptp
 
-RUN pip3 install --upgrade pip
-RUN apt-get purge -y python-pip
-
 {% if docker_syncd_mlnx_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_syncd_mlnx_debs.split(' '), "/debs/") }}
