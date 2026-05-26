@@ -1,0 +1,74 @@
+diff --git a/src/sonic-swss/orchagent/portsorch.cpp b/src/sonic-swss/orchagent/portsorch.cpp
+index 7f3c29f3..07e8d421 100644
+--- a/src/sonic-swss/orchagent/portsorch.cpp
++++ b/src/sonic-swss/orchagent/portsorch.cpp
+@@ -342,10 +342,7 @@ static const vector<sai_queue_stat_t> queue_stat_ids =
+     SAI_QUEUE_STAT_PACKETS,
+     SAI_QUEUE_STAT_BYTES,
+     SAI_QUEUE_STAT_DROPPED_PACKETS,
+-    SAI_QUEUE_STAT_DROPPED_BYTES,
+-    SAI_QUEUE_STAT_TRIM_PACKETS,
+-    SAI_QUEUE_STAT_DROPPED_TRIM_PACKETS,
+-    SAI_QUEUE_STAT_TX_TRIM_PACKETS
++    SAI_QUEUE_STAT_DROPPED_BYTES
+ };
+ static const vector<sai_queue_stat_t> voq_stat_ids =
+ {
+diff --git a/src/sonic-swss/orchagent/switchorch.cpp b/src/sonic-swss/orchagent/switchorch.cpp
+index aa09f3df..6cc2f36f 100644
+--- a/src/sonic-swss/orchagent/switchorch.cpp
++++ b/src/sonic-swss/orchagent/switchorch.cpp
+@@ -33,11 +33,7 @@ extern string gMyAsicName;
+ 
+ // constants ----------------------------------------------------------------------------------------------------------
+ 
+-static const vector<sai_switch_stat_t> switch_stat_ids =
+-{
+-    SAI_SWITCH_STAT_DROPPED_TRIM_PACKETS,
+-    SAI_SWITCH_STAT_TX_TRIM_PACKETS
+-};
++static const vector<sai_switch_stat_t> switch_stat_ids = {};
+ 
+ const map<string, sai_switch_attr_t> switch_attribute_map =
+ {
+diff --git a/src/sonic-swss/tests/mock_tests/flexcounter_ut.cpp b/src/sonic-swss/tests/mock_tests/flexcounter_ut.cpp
+index 80a400a0..df04f4d3 100644
+--- a/src/sonic-swss/tests/mock_tests/flexcounter_ut.cpp
++++ b/src/sonic-swss/tests/mock_tests/flexcounter_ut.cpp
+@@ -190,6 +190,11 @@ namespace flexcounter_test
+             return counter_field_name.empty();
+         }
+ 
++        if (entries.empty())
++        {
++            return counter_field_name.empty();
++        }
++
+         if (fvField(entries[0]) == counter_field_name)
+         {
+             if (mode == "")
+@@ -695,13 +700,7 @@ namespace flexcounter_test
+         Port firstPort;
+         gPortsOrch->getPort(firstPortName, firstPort);
+         auto pgOid = firstPort.m_priority_group_ids[3];
+-        ASSERT_TRUE(checkFlexCounter(SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP, gSwitchId,
+-                                     {
+-                                         {SWITCH_COUNTER_ID_LIST,
+-                                          "SAI_SWITCH_STAT_TX_TRIM_PACKETS,"
+-                                          "SAI_SWITCH_STAT_DROPPED_TRIM_PACKETS"
+-                                         }
+-                                     }));
++        ASSERT_TRUE(checkFlexCounter(SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP, gSwitchId));
+         ASSERT_TRUE(checkFlexCounter(PG_DROP_STAT_COUNTER_FLEX_COUNTER_GROUP, pgOid,
+                                      {
+                                          {PG_COUNTER_ID_LIST,
+@@ -725,9 +724,6 @@ namespace flexcounter_test
+         ASSERT_TRUE(checkFlexCounter(QUEUE_STAT_COUNTER_FLEX_COUNTER_GROUP, queueOid,
+                                      {
+                                          {QUEUE_COUNTER_ID_LIST,
+-                                          "SAI_QUEUE_STAT_TX_TRIM_PACKETS,"
+-                                          "SAI_QUEUE_STAT_DROPPED_TRIM_PACKETS,"
+-                                          "SAI_QUEUE_STAT_TRIM_PACKETS,"
+                                           "SAI_QUEUE_STAT_DROPPED_BYTES,SAI_QUEUE_STAT_DROPPED_PACKETS,"
+                                           "SAI_QUEUE_STAT_BYTES,SAI_QUEUE_STAT_PACKETS"
+                                          }
