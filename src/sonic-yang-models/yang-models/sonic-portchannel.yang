@@ -24,6 +24,10 @@ module sonic-portchannel {
 
     description "Link Aggregation Group (LAG/PortChannel) configuration using LACP";
 
+    revision 2026-05-02 {
+        description "Allow member port MTU when it matches the PortChannel MTU (MACsec overhead adjustment)";
+    }
+
     revision 2021-06-13 {
         description "Change min-links valid range from 1-128 to 1-1024";
     }
@@ -136,6 +140,12 @@ module sonic-portchannel {
                 description "Association of a physical port as a member of a PortChannel";
 
                 key "name port";
+
+                must "not(/port:sonic-port/port:PORT/port:PORT_LIST[port:name=current()/port]/port:mtu) or " +
+                     "(/port:sonic-port/port:PORT/port:PORT_LIST[port:name=current()/port]/port:mtu = " +
+                     "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST[lag:name=current()/name]/lag:mtu)" {
+                    error-message "Cannot add a port with MTU configured to a PortChannel unless it matches the PortChannel MTU.";
+                }
 
                 leaf name {
                     description "Reference to the parent PortChannel interface";
