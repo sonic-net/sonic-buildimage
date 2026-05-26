@@ -153,3 +153,8 @@
 [submodule "platform/aspeed/sonic-platform-modules-arista"]
 	path = platform/aspeed/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
+
+[submodule "platform/broadcom/saibcm-modules-legacy-th"]
+	path = platform/broadcom/saibcm-modules-legacy-th
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.32-xgs-legacy-th
