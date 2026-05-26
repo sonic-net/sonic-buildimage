@@ -132,6 +132,9 @@
                 "status_led": {
                     "controllable": false
                 }
+            },
+            {
+                "supported_speeds": "40,46,53,60,66,73,80,86,93,100"
             }
         ],
         "fan_drawers": [
