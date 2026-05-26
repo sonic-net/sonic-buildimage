@@ -164,6 +164,7 @@ class TestChangeEventSeekFailure:
         mock_hw_present_file.seek.assert_called_with(0)
         assert abs(mock_sleep.call_args[0][0] - 0.9) < 0.000001
 
+    @mock.patch('sonic_platform.chassis.Chassis.get_asic_change_event')
     @mock.patch('sonic_platform.wait_sfp_ready_task.WaitSfpReadyTask.get_ready_set')
     @mock.patch('sonic_platform.sfp.SFP.get_fd')
     @mock.patch('select.poll')
@@ -276,6 +277,8 @@ class TestChangeEvent:
     @mock.patch('sonic_platform.sfp.SFP.get_fd')
     @mock.patch('select.poll')
     @mock.patch('time.monotonic')
+    @mock.patch('sonic_platform.chassis.utils.read_int_from_file', mock.MagicMock(return_value=1))
+    @mock.patch('sonic_platform.chassis.os.path.exists', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))

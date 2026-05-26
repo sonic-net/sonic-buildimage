@@ -91,10 +91,8 @@ class WaitSfpReadyTask(threading.Thread):
         """
         logger.log_debug(f'SFP {sfp_index} is canceled for waiting reset done')
         with self.lock:
-            if sfp_index in self._wait_dict:
-                self._wait_dict.pop(sfp_index)
-            if sfp_index in self._ready_set:
-                self._ready_set.pop(sfp_index)
+            self._wait_dict.pop(sfp_index, None)
+            self._ready_set.discard(sfp_index)
                 
     def get_ready_set(self):
         """Get ready set and clear it
