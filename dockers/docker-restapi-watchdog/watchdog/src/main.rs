@@ -167,6 +167,14 @@ fn check_restapi_status_tcp() -> String {
 }
 
 fn main() {
+    let use_https = match std::env::var("INCLUDE_RESTAPI_WATCHDOG_HTTPS") {
+        Ok(v) => {
+            let v = v.to_lowercase();
+            v == "1" || v == "y" || v == "yes"
+        }
+        Err(_) => false,
+    };
+
     // Start a HTTP server listening on port 50100
     let listener = TcpListener::bind(format!("127.0.0.1:{}", WATCHDOG_PORT))
         .expect(&format!("Failed to bind to 127.0.0.1:{}", WATCHDOG_PORT));
@@ -189,14 +197,6 @@ fn main() {
                         }
                         continue;
                     }
-
-                    let use_https = match std::env::var("INCLUDE_RESTAPI_WATCHDOG_HTTPS") {
-                        Ok(v) => {
-                            let v = v.to_lowercase();
-                            v == "1" || v == "y" || v == "yes"
-                        }
-                        Err(_) => false,
-                    };
 
                     let cert_paths = read_cert_paths_from_redis();
                     let certs_exist = check_certificates(&cert_paths, use_https);
