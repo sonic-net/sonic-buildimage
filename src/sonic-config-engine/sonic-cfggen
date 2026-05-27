@@ -431,7 +431,7 @@ def main():
             except Exception:
                 pass
             deep_update(data, _get_voq_config(asic_name, asic_id, hostname))
-            system_ports = get_system_port_config(hwsku, hostname, asic_name)
+            system_ports = get_system_port_config(hwsku, hostname, asic_name, args.port_config)
             deep_update(data, {'SYSTEM_PORT': system_ports})
 
     _process_json(args, data)

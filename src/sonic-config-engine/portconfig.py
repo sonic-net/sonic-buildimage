@@ -211,7 +211,7 @@ def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_conf
     else:
         return parse_port_config_file(port_config_file)
 
-def get_system_port_config(hwsku=None, hostname=None, asic_name=None):
+def get_system_port_config(hwsku=None, hostname=None, asic_name=None, port_config_file=None):
     config_db = db_connect_configdb(asic_name)
     config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
     # Skip CONFIG_DB when caller requested a specific hwsku that doesn't match
@@ -231,10 +231,12 @@ def get_system_port_config(hwsku=None, hostname=None, asic_name=None):
     if asic_name is not None:
         asic_id = str(get_asic_id_from_name(asic_name))
 
-    port_config_file = device_info.get_path_to_system_port_config_file(hwsku, asic_id)
 
     if not port_config_file:
-        return {}
+        port_config_file = device_info.get_path_to_system_port_config_file(hwsku, asic_id)
+
+        if not port_config_file:
+            return {}
 
     if asic_name is None:
         asic_name = "Asic0"
