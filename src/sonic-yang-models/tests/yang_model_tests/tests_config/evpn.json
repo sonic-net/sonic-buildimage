@@ -90,18 +90,6 @@
                 ]
             }
         },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
-                    },
-                    {
-                        "name": "Ethernet11"
-                    }
-                ]
-            }
-        },
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
@@ -136,18 +124,6 @@
                 ]
             }
         },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
-                    },
-                    {
-                        "name": "Ethernet11"
-                    }
-                ]
-            }
-        },
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
@@ -177,15 +153,6 @@
                 ]
             }
         },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
-                    }
-                ]
-            }
-        },
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
@@ -206,15 +173,6 @@
                         "name": "Ethernet10",
                         "lanes": "1,2,3,4",
                         "speed": 1000
-                    }
-                ]
-            }
-        },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
                     }
                 ]
             }
@@ -243,15 +201,6 @@
                 ]
             }
         },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
-                    }
-                ]
-            }
-        },
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
@@ -272,15 +221,6 @@
                         "name": "Ethernet10",
                         "lanes": "1,2,3,4",
                         "speed": 1000
-                    }
-                ]
-            }
-        },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
                     }
                 ]
             }

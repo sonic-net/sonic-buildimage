@@ -21,12 +21,12 @@ module sonic-evpn {
     description
         "SONIC EVPN";
 
-    revision 2024-06-14 {
+    revision 2026-05-27 {
         description
             "Add global EVPN Multihoming configuration.";
     }
 
-    revision 2024-05-08 {
+    revision 2026-05-26 {
         description
             "First revision.";
     }
@@ -113,7 +113,7 @@ module sonic-evpn {
 
                 leaf default_key {
                     type string {
-                        length 1..128;
+                        pattern "default";
                     }
                 }
 
