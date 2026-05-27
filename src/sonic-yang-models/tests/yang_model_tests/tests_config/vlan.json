@@ -479,7 +479,7 @@
                 "VLAN_INTERFACE_LIST": [
                     {
                          "name": "Vlan100",
-                         "static_anycast_gateway": "true"
+                         "static_anycast_gateway": true
                     }
                 ]
             }
