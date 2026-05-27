@@ -6,7 +6,8 @@
 	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
-	url = https://github.com/sonic-net/sonic-sairedis
+	url = https://github.com/lolyu/sonic-sairedis
+	branch = add_vpp_ipinip
 [submodule "sonic-swss"]
 	path = src/sonic-swss
 	url = https://github.com/sonic-net/sonic-swss
@@ -128,7 +129,8 @@
 	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
 [submodule "platform/vpp"]
 	path = platform/vpp
-	url = https://github.com/sonic-net/sonic-platform-vpp.git
+	url = https://github.com/lolyu/sonic-platform-vpp
+	branch = add_patch_suppress_e_drop_test
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
