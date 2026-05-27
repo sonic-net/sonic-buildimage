@@ -1,0 +1,78 @@
+diff --git a/src/sonic-yang-models/yang-models/sonic-port.yang b/src/sonic-yang-models/yang-models/sonic-port.yang
+index fb71247fe..0ab64e5ec 100644
+--- a/src/sonic-yang-models/yang-models/sonic-port.yang
++++ b/src/sonic-yang-models/yang-models/sonic-port.yang
+@@ -241,6 +241,34 @@ module sonic-port{
+ 						type int32;
+ 				}
+ 
++				leaf poe_maxpower {
++					description "PoE max power limit for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_pri {
++					description "PoE priority for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_status {
++					description "PoE status for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_tlv {
++					description "PoE TLV status for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
+ 			} /* end of list PORT_LIST */
+ 
+ 		} /* end of container PORT */
+diff --git a/src/sonic-yang-models/cvlyang-models/sonic-port.yang b/src/sonic-yang-models/cvlyang-models/sonic-port.yang
+index fb71247fe..0ab64e5ec 100644
+--- a/src/sonic-yang-models/cvlyang-models/sonic-port.yang
++++ b/src/sonic-yang-models/cvlyang-models/sonic-port.yang
+@@ -241,6 +241,34 @@ module sonic-port{
+ 						type int32;
+ 				}
+ 
++				leaf poe_maxpower {
++					description "PoE max power limit for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_pri {
++					description "PoE priority for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_status {
++					description "PoE status for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
++				leaf poe_tlv {
++					description "PoE TLV status for the port";
++					type string {
++						length 0..64;
++					}
++				}
++
+ 			} /* end of list PORT_LIST */
+ 
+ 		} /* end of container PORT */
