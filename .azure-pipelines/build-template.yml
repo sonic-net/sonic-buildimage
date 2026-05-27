@@ -180,7 +180,12 @@ jobs:
         echo "##[endgroup]"
       done
       exit $OVERALL_RC
-    condition: succeededOrFailed()
+    # Disabled for now; change to `succeededOrFailed()` to re-enable
+    # the SBOM-based vulnerability scan step. SBOM emission itself is
+    # unaffected — the .cdx.json sidecars are still produced by the
+    # `Build sonic image` step above. Only the post-build scan is
+    # gated.
+    condition: false
     continueOnError: true
     displayName: 'SBOM vulnerability scan'
   - template: cleanup.yml

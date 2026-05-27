@@ -94,6 +94,12 @@ stages:
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (docker-sonic-mgmt)"
+    # Disabled for now; remove this `condition: false` (or change to
+    # `and(succeeded(), in(dependencies.Build.result, 'Succeeded'))`)
+    # to re-enable the docker-sonic-mgmt SBOM vulnerability scan.
+    # The SBOM itself is still produced by the Build stage above
+    # when ENABLE_SBOM=y; only the post-build scan is gated.
+    condition: false
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 30

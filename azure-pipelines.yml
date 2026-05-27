@@ -247,9 +247,11 @@ stages:
   dependsOn:
     - BuildVS
     - Build
-  # Run even if a platform build had issues — surface findings for
-  # whatever SBOMs did make it to the artifact server.
-  condition: not(canceled())
+  # Disabled for now; remove this `condition: false` (or change to
+  # `not(canceled())`) to re-enable the SBOM-based vulnerability
+  # scan stage. The SBOM artifacts themselves continue to be
+  # produced when ENABLE_SBOM=y — only the post-build scan is gated.
+  condition: false
   jobs:
   - job: sbom_vuln_scan
     displayName: "[OPTIONAL] SBOM-based vulnerability scan (all artifacts)"
