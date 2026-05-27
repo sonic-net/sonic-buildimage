@@ -515,7 +515,7 @@ static int register_msi_domain(struct pci_dev *pci_dev,
 							   unsigned msi_vector_number,
 							   const char *irq_chip_name, unsigned unmask_reg,
 							   unsigned status_reg,
-							   unsigned long long irq_line_mask) {
+							   unsigned int irq_line_mask) {
 	struct pddf_multifpgapci_drvdata *pci_privdata =
 		(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(&pci_dev->dev);
 	if (!pci_privdata) {
@@ -897,7 +897,7 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 		clk_hw_unregister_fixed_rate(pci_privdata->clk_hw);
 	if (!IS_ERR_OR_NULL(pci_privdata->regmap))
 		regmap_exit(pci_privdata->regmap);
-	for (unsigned i = 0; i < MAX_NUM_MSI_VECTORS; ++i) {
+	for (unsigned i = 0; i < pci_privdata->num_msi_vectors; ++i) {
 		if (pci_privdata->msi_domain_irq_chip_data[i])
 			regmap_del_irq_chip(pci_irq_vector(dev, i),
 								pci_privdata->msi_domain_irq_chip_data[i]);

@@ -32,7 +32,7 @@ dirname = os.path.dirname(os.path.realpath(__file__))
 
 def should_fpga_use_msi(dev) -> bool:
     if "use_msi" in dev:
-        check_fpga_version_cmd = dev["dev_attr"].get("check_fpga_version_cmd", "")
+        check_fpga_version_cmd = dev.get("dev_attr", {}).get("check_fpga_version_cmd", "")
         min_fpga_version = dev["use_msi"].get(
             "min_fpga_version", "0x0"
         )
@@ -583,7 +583,13 @@ class PddfParse():
             ) from e
         num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
         reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
-        input_clk_hz = dev["dev_attr"].get("input_clk_hz", 0)
+        input_clk_hz = dev["dev_attr"].get("input_clk_hz")
+        if input_clk_hz is None or input_clk_hz <= 0:
+            raise ValueError(
+                f"input_clk_hz is missing or invalid (got {input_clk_hz}) "
+                f"for device_bdf={bdf}; "
+                "a valid FPGA input clock frequency is required"
+            )
         cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width} {input_clk_hz}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
         if ret != 0:

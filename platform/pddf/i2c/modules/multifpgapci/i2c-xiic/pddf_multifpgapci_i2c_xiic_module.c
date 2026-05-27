@@ -137,12 +137,12 @@ ssize_t new_i2c_xiic_adapter(struct device *_dev, struct device_attribute *da,
 
 	struct platform_device *platform_device = platform_device_register_resndata(
 		dev, "xiic-i2c", bus_num, res, ARRAY_SIZE(res), NULL, 0);
-	if (!platform_device) {
+	if (IS_ERR(platform_device)) {
 		pddf_dbg(I2C_XIIC,
 				 KERN_ERR "[%s] platform_device_register_resndata failed for "
 						  "i2c (index=%d). ret=%d",
 				 __FUNCTION__, index, ret);
-		ret = -ENOMEM;
+		ret = PTR_ERR(platform_device);
 		goto free_clk_lookup;
 	}
 
