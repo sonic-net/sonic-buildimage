@@ -45,9 +45,8 @@ RUN dpkg -r python-ptf
 RUN pip3 install setuptools==51.0.0
 {% endif %}
 # Install new ptf package
-RUN git clone https://github.com/p4lang/ptf.git \
-        && cd ptf                               \
-        && python3 setup.py install --single-version-externally-managed --record /tmp/ptf_install.txt
+RUN pip3 install git+https://github.com/p4lang/ptf.git \
+        && pip3 show -f ptf > /tmp/ptf_install.txt
 
 run echo "declare -x LANG=\"C.UTF-8\"" >> /root/.bashrc
 run echo "declare -x LC_ALL=\"C.UTF-8\"" >> /root/.bashrc
