@@ -21,14 +21,14 @@ module sonic-evpn {
     description
         "SONIC EVPN";
 
-    revision 2024-05-08 {
-        description
-            "First revision.";
-    }
-
     revision 2024-06-14 {
         description
             "Add global EVPN Multihoming configuration.";
+    }
+
+    revision 2024-05-08 {
+        description
+            "First revision.";
     }
 
     typedef esi-type {
@@ -65,6 +65,7 @@ module sonic-evpn {
                 }
 
                 leaf esi {
+                    mandatory true;
                     type string {
                         /*
                          * Valid ESIs include:
@@ -79,6 +80,7 @@ module sonic-evpn {
                 }
 
                 leaf type {
+                    mandatory true;
                     type esi-type;
                 }
 

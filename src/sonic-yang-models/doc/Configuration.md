@@ -2785,7 +2785,7 @@ channel name as object key, and tagging mode as attributes.
 ```
 
 ### SAG
-The SAG table defines the global mac address configureation for static-anycast-gateway.
+The SAG table defines the global mac address configuration for static-anycast-gateway.
 ```
 {
 
