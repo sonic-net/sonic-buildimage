@@ -421,7 +421,8 @@
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
-                "zebra_nexthop": "disabled"
+                "zebra_nexthop": "disabled",
+                "use_template_render_for_restore": "true"
             }
         },
         "VLAN": {

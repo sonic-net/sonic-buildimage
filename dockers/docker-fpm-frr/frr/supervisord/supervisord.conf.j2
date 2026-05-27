@@ -221,7 +221,6 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 {% endif %}
 
-{% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
 [program:vtysh_b]
 command=/usr/bin/vtysh -b
 priority=6
@@ -234,7 +233,6 @@ stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
-{% endif %}
 
 {% if WARM_RESTART is defined and WARM_RESTART.bgp is defined and WARM_RESTART.bgp.bgp_eoiu is defined and WARM_RESTART.bgp.bgp_eoiu == "true" %}
 [program:bgp_eoiu_marker]
