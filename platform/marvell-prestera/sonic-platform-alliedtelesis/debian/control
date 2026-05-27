@@ -10,3 +10,8 @@ Package: sonic-platform-alliedtelesis-x980-32cq
 Architecture: any
 Depends: ${misc:Depends}
 Description: Provides kernel modules and platform monitoring files
+
+Package: sonic-platform-alliedtelesis-x980-32dq
+Architecture: any
+Depends: ${misc:Depends}
+Description: Provides kernel modules and platform monitoring files
