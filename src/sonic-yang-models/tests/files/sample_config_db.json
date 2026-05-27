@@ -2768,6 +2768,16 @@
             }
         },
 
+        "MAC_MOVE_GUARD": {
+            "GLOBAL": {
+                "enabled": "true",
+                "threshold": "5000",
+                "detect_interval": "5",
+                "action_interval": "120",
+                "action": "DISABLE_PORT"
+            }
+        },
+
         "MACSEC_PROFILE": {
             "test": {
                 "priority": "64",
