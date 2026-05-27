@@ -2468,7 +2468,7 @@ dplane_fpm_nl_send_br_port_shl_entries(const struct zebra_dplane_ctx *ctx,
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
 
 	if (nl_buf_len < sizeof(*req))
-		return 0;
+		return -1;
 
 	memset(req, 0, sizeof(*req));
 
@@ -2490,15 +2490,20 @@ dplane_fpm_nl_send_br_port_shl_entries(const struct zebra_dplane_ctx *ctx,
 		for (i = 0; i < dplane_ctx_get_br_port_sph_filter_cnt(ctx);
 		     i++) {
 			if (IS_IPADDR_V4(&sph_filters[i])) {
-				nl_attr_put(&req->n, nl_buf_len,
-					    FPM_SHL_IPV4_ADDR,
-					    &sph_filters[i].ipaddr_v4,
-					    sizeof(sph_filters[i].ipaddr_v4));
+				if (!nl_attr_put(&req->n, nl_buf_len,
+						 FPM_SHL_IPV4_ADDR,
+						 &sph_filters[i].ipaddr_v4,
+						 sizeof(sph_filters[i].ipaddr_v4)))
+					return 0;
+			} else if (IS_IPADDR_V6(&sph_filters[i])) {
+				if (!nl_attr_put(&req->n, nl_buf_len,
+						 FPM_SHL_IPV6_ADDR,
+						 &sph_filters[i].ipaddr_v6,
+						 sizeof(sph_filters[i].ipaddr_v6)))
+					return 0;
 			} else {
-				nl_attr_put(&req->n, nl_buf_len,
-					    FPM_SHL_IPV6_ADDR,
-					    &sph_filters[i].ipaddr_v6,
-					    sizeof(sph_filters[i].ipaddr_v6));
+				/* Unknown address family in SPH filter; skip. */
+				continue;
 			}
 		}
 	}
@@ -2518,7 +2523,7 @@ dplane_fpm_nl_send_br_port_df_entries(const struct zebra_dplane_ctx *ctx,
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
 
 	if (nl_buf_len < sizeof(*req))
-		return 0;
+		return -1;
 
 	memset(req, 0, sizeof(*req));
 
@@ -2551,7 +2556,7 @@ dplane_fpm_nl_send_br_port_backup_nhg(const struct zebra_dplane_ctx *ctx,
 	} *req = (void *)nl_buf;
 
 	if (nl_buf_len < sizeof(*req))
-		return 0;
+		return -1;
 
 	/*
 	 * There is currently only a backup NHG per-port, so
@@ -2587,27 +2592,33 @@ dplane_fpm_nl_handle_br_port_update(const struct zebra_dplane_ctx *ctx,
 	/*
 	 * DPLANE_OP_BR_PORT_UPDATE/DELETE is used in the context of
 	 * EVPN updates. Encode SHL, DF, and backup NHG messages.
+	 * SHL and DF always emit at least an nlmsghdr, so a 0/negative
+	 * return signals a hard buffer-too-small failure: abort the
+	 * BR_PORT encode rather than enqueue a partial update.
 	 */
 	rv = dplane_fpm_nl_send_br_port_shl_entries(ctx, nl_buf, nl_buf_len);
-	if (rv > 0) {
-		buf_used += rv;
-		nl_buf += rv;
-		nl_buf_len -= rv;
-	}
+	if (rv <= 0)
+		return rv;
+	buf_used += rv;
+	nl_buf += rv;
+	nl_buf_len -= rv;
 
 	rv = dplane_fpm_nl_send_br_port_df_entries(ctx, nl_buf, nl_buf_len);
-	if (rv > 0) {
-		buf_used += rv;
-		nl_buf += rv;
-		nl_buf_len -= rv;
-	}
+	if (rv <= 0)
+		return rv;
+	buf_used += rv;
+	nl_buf += rv;
+	nl_buf_len -= rv;
 
+	/*
+	 * Backup NHG is per-port and only emitted on VLAN 0; a 0 return
+	 * for VLAN != 0 is intentional. Only treat a negative return as
+	 * a hard failure here.
+	 */
 	rv = dplane_fpm_nl_send_br_port_backup_nhg(ctx, nl_buf, nl_buf_len);
-	if (rv > 0) {
-		buf_used += rv;
-		nl_buf += rv;
-		nl_buf_len -= rv;
-	}
+	if (rv < 0)
+		return rv;
+	buf_used += rv;
 
 	return buf_used;
 }
