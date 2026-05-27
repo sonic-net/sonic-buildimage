@@ -79,8 +79,8 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
               /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf \
               /etc/frr/sharpd.conf
     else
-        sonic-cfggen $CFGGEN_PARAMS
         rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf
+        sonic-cfggen $CFGGEN_PARAMS
         echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
         rm -f /etc/frr/frr.conf
     fi
