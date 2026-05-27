@@ -143,8 +143,8 @@ module sonic-vlan {
 
 				leaf static_anycast_gateway {
 					description "Enable/disable static anycast gateway for the vlan interface";
-					type boolean;
-					default false;
+					type stypes:boolean_type;
+					default "false";
 				}
 
 				leaf mac_addr {
