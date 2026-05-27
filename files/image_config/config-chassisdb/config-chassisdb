@@ -32,9 +32,9 @@ config_chassis_db() {
 
     # Identify the midplane IP in each sonic platform
     if [[ "$is_disagg" == True ]]; then
-        # With disagg T2 pizza box it is docker0 bridge which is midplane
-        midplane_interface_ip=$(ip -4 -o addr show "docker0" | \
-                              awk '{print $4}' | cut -d/ -f1 | head -n1)
+        # With disagg T2 pizza box docker0 bridge is the midplane, Extract it from dockerd.conf
+        docker_conf="/etc/systemd/system/docker.service.d/docker.service.conf"
+        [[ $(<"$docker_conf") =~ --bip=([0-9.]+) ]] && midplane_interface_ip="${BASH_REMATCH[1]}"
     elif [[ "$is_smartswitch" == True ]] || [[ "$is_dpu" == True ]]; then
         # On smartswitch (NPU or DPU side) get the NPU bridge-midplane IP from the network config file
         midplane_interface_ip=$(python3 -c \
