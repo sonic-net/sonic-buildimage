@@ -2817,6 +2817,68 @@
             }
         },
         "45": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -2881,6 +2943,68 @@
             }
         },
         "46": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -2945,6 +3069,68 @@
             }
         },
         "47": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -3009,6 +3195,68 @@
             }
         },
         "48": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -3073,6 +3321,68 @@
             }
         },
         "49": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -3137,6 +3447,68 @@
             }
         },
         "50": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -3201,6 +3573,68 @@
             }
         },
         "51": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -3265,6 +3699,68 @@
             }
         },
         "52": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -4865,6 +5361,68 @@
             }
         },
         "77": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -4929,6 +5487,68 @@
             }
         },
         "78": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -4993,6 +5613,68 @@
             }
         },
         "79": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -5057,6 +5739,68 @@
             }
         },
         "80": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -5121,6 +5865,68 @@
             }
         },
         "81": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -5185,6 +5991,68 @@
             }
         },
         "82": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -5249,6 +6117,68 @@
             }
         },
         "83": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -5313,6 +6243,68 @@
             }
         },
         "84": {
+            "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
+                "pre3": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                },
+                "pre2": {
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2",
+                    "lane4": "0x2",
+                    "lane5": "0x2",
+                    "lane6": "0x2",
+                    "lane7": "0x2"
+                },
+                "pre1": {
+                    "lane0": "0xFFFFFFE6",
+                    "lane1": "0xFFFFFFE6",
+                    "lane2": "0xFFFFFFE6",
+                    "lane3": "0xFFFFFFE6",
+                    "lane4": "0xFFFFFFE6",
+                    "lane5": "0xFFFFFFE6",
+                    "lane6": "0xFFFFFFE6",
+                    "lane7": "0xFFFFFFE6"
+                },
+                "main": {
+                    "lane0": "0x86",
+                    "lane1": "0x86",
+                    "lane2": "0x86",
+                    "lane3": "0x86",
+                    "lane4": "0x86",
+                    "lane5": "0x86",
+                    "lane6": "0x86",
+                    "lane7": "0x86"
+                },
+                "post1": {
+                    "lane0": "0xFFFFFFFC",
+                    "lane1": "0xFFFFFFFC",
+                    "lane2": "0xFFFFFFFC",
+                    "lane3": "0xFFFFFFFC",
+                    "lane4": "0xFFFFFFFC",
+                    "lane5": "0xFFFFFFFC",
+                    "lane6": "0xFFFFFFFC",
+                    "lane7": "0xFFFFFFFC"
+                },
+                "post2": {
+                    "lane0": "0x0",
+                    "lane1": "0x0",
+                    "lane2": "0x0",
+                    "lane3": "0x0",
+                    "lane4": "0x0",
+                    "lane5": "0x0",
+                    "lane6": "0x0",
+                    "lane7": "0x0"
+                }
+            },
             "OPTICAL100": {
                 "pre3": {
                     "lane0": "0x0",
@@ -8196,10 +9188,10 @@
             "OPTICAL25": {
                 "media_type": "fiber",
                 "pre1": {
-                    "lane0": "0x4",
-                    "lane1": "0x4",
-                    "lane2": "0x4",
-                    "lane3": "0x4"
+                    "lane0": "0x2",
+                    "lane1": "0x2",
+                    "lane2": "0x2",
+                    "lane3": "0x2"
                 },
                 "main": {
                     "lane0": "0x1F",
@@ -8208,10 +9200,10 @@
                     "lane3": "0x1F"
                 },
                 "post1": {
-                    "lane0": "0x8",
-                    "lane1": "0x8",
-                    "lane2": "0x8",
-                    "lane3": "0x8"
+                    "lane0": "0xD",
+                    "lane1": "0xD",
+                    "lane2": "0xD",
+                    "lane3": "0xD"
                 }
             }
         }

@@ -1,8 +1,8 @@
 {
     "GLOBAL_MEDIA_SETTINGS": {
-        "1-128": {
+        "45-52,77-84": {
             "100G_SPEED": {
-                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                "EOPTOLINK-EO138HGPCT\\d{2}SL1": {
                     "FixedInputEqTargetTx": {
                         "FixedInputEqTargetTx1": 4,
                         "FixedInputEqTargetTx2": 4,
