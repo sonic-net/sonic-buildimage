@@ -87,6 +87,7 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
     sed -i -e "/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" "$SOURCES_LIST_TMP"
 fi
 mv -f "$SOURCES_LIST_TMP" "$SOURCES_LIST"
+chmod 664 "$SOURCES_LIST"
 
 # Handle apt retry count config. Same race applies — write via temp
 # and atomic rename.
@@ -97,3 +98,4 @@ APT_RETRIES_COUNT_TMP=$(mktemp "${APT_RETRIES_COUNT_DEST}.XXXXXX")
 trap 'rm -f "$SOURCES_LIST_TMP" "$APT_RETRIES_COUNT_TMP"' EXIT
 j2 $TEMPLATE > "$APT_RETRIES_COUNT_TMP"
 mv -f "$APT_RETRIES_COUNT_TMP" "$APT_RETRIES_COUNT_DEST"
+chmod 664 "$APT_RETRIES_COUNT_DEST"
