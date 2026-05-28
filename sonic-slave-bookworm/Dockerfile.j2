@@ -29,6 +29,9 @@ COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["sources.list.amd64", "/etc/apt/sources.list"]
 {%- endif %}
 
+RUN echo "=== DEBUG image /etc/apt ===" && \
+     stat -c '%a %U:%G %n' /etc/apt/sources.list /etc/apt/apt.conf.d /etc/apt/apt.conf.d/*
+
 # Install certificates by disabling the peer verification
 RUN apt -o Acquire::https::Verify-Peer=false update && \
     apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
