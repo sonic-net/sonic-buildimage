@@ -113,9 +113,6 @@ ifeq (0,$(docker_is_valid))
 $(error SONiC requires Docker version $(docker_min) or later)
 endif
 
-# Remove lock file in case previous run was forcefully stopped
-$(shell rm -f .screen)
-
 MAKEFLAGS += -B
 
 CONFIGURED_ARCH := $(shell [ -f .arch ] && cat .arch || echo $(PLATFORM_ARCH))

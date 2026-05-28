@@ -53,7 +53,7 @@ echo $1 >> ${target_list_file}
 }
 
 function print_targets_delay {
-sleep 2 && print_targets && rm -f .screen &
+sleep 2 && print_targets &
 exit 0
 }
 
@@ -90,15 +90,11 @@ while getopts ":a:d:e:" opt; do
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
-            rm -f .screen
             exit 1
             ;;
         :)
             echo "Option -$OPTARG requires an argument." >&2
-            rm -f .screen
             exit 1
             ;;
     esac
 done
-
-rm -f .screen
