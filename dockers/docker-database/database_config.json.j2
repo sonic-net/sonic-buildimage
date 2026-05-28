@@ -24,7 +24,7 @@
             "persistence_for_warm_boot" : "yes"
         }
 {% endif %}
-{% if DATABASE_TYPE is defined and (DATABASE_TYPE == "dpudb" or DATABASE_TYPE == "bmcdb") %}
+{% if DATABASE_TYPE is defined and DATABASE_TYPE == "dpudb" %}
 {% else %}
         ,
         "redis_bmp":{
@@ -139,14 +139,20 @@
             "separator": ":",
             "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         }
-{% elif DATABASE_TYPE is defined and DATABASE_TYPE == "bmcdb" %}
-        {# No BMP_STATE_DB for BMC devices #}
 {% else %}
         ,
         "BMP_STATE_DB" : {
             "id" : 20,
             "separator": "|",
             "instance" : "redis_bmp"
+        }
+{% endif %}
+{% if include_system_eventd is defined and include_system_eventd == "y" %}
+        ,
+        "EVENT_DB" : {
+            "id" : 19,
+            "separator": "|",
+            "instance" : "redis"
         }
 {% endif %}
     },

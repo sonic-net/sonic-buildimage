@@ -52,4 +52,5 @@ FROM $BASE
 {{ rsync_from_builder_stage() }}
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV INCLUDE_SYSTEM_EVENTD={{ include_system_eventd | default("n") }}
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

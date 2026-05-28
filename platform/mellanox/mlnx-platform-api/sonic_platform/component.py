@@ -23,6 +23,7 @@
 
 
 try:
+    import contextlib
     import os
     import io
     import re
@@ -771,19 +772,12 @@ class ComponentCPLD(Component):
         self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
 
     def __get_mst_device(self):
-        if not os.path.exists(self.MST_DEVICE_PATH):
-            print("ERROR: mst driver is not loaded")
-            return None
-
-        pattern = os.path.join(self.MST_DEVICE_PATH, self.MST_DEVICE_PATTERN)
-
-        mst_dev_list = glob.glob(pattern)
-        if not mst_dev_list or len(mst_dev_list) != 1:
-            devices = str(os.listdir(self.MST_DEVICE_PATH))
-            print("ERROR: Failed to get mst device: pattern={}, devices={}".format(pattern, devices))
-            return None
-
-        return mst_dev_list[0]
+        output = None
+        try:
+            output = subprocess.check_output(['/usr/bin/asic_detect/asic_detect.sh', '-p']).decode('utf-8').strip()
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Failed to get {} mst device: {}".format(self.name, str(e)))
+        return output
 
     @classmethod
     def _is_spc1_asic(cls):
@@ -811,8 +805,10 @@ class ComponentCPLD(Component):
             return False
 
         if self._is_spc1_asic():
-            mst_dev = self.__get_mst_device()
-            if mst_dev is None:
+            try:
+                mst_dev = self.__get_mst_device()
+            except RuntimeError as e:
+                print("ERROR: {}".format(e))
                 return False
             cmd = list(self.CPLD_FIRMWARE_UPDATE_COMMAND_SPC1)
             cmd[2] = mst_dev
@@ -1066,12 +1062,27 @@ class ComponenetFPGADPU(ComponentCPLD):
 
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--cpld_chain', '2', '--gpio', '--print-progress', '']
 
+    @contextlib.contextmanager
+    def _mst_context(self):
+        try:
+            subprocess.check_call(['/usr/bin/mst', 'start'], universal_newlines=True)
+            yield
+        except subprocess.CalledProcessError as e:
+            logger.log_error("Failed to manage {} mst: {}".format(self.name, str(e)))
+            raise
+        finally:
+            try:
+                subprocess.check_call(['/usr/bin/mst', 'stop'], universal_newlines=True)
+            except subprocess.CalledProcessError as e:
+                logger.log_error("Failed to stop {} mst: {}".format(self.name, str(e)))
+
     def _install_firmware(self, image_path):
         self.CPLD_FIRMWARE_UPDATE_COMMAND[5] = image_path
 
         try:
             print("INFO: Installing {} firmware update: path={}".format(self.name, image_path))
-            subprocess.check_call(self.CPLD_FIRMWARE_UPDATE_COMMAND, universal_newlines=True)
+            with self._mst_context():
+                subprocess.check_call(self.CPLD_FIRMWARE_UPDATE_COMMAND, universal_newlines=True)
         except subprocess.CalledProcessError as e:
             print("ERROR: Failed to update {} firmware: {}".format(self.name, str(e)))
             return False

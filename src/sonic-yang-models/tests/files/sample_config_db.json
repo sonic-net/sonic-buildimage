@@ -2030,6 +2030,16 @@
                 "admin_status": "down"
             }
         },
+        "LEAK_CONTROL_POLICY": {
+            "policy": {
+                "system_leak_policy": "enabled",
+                "system_critical_leak_action": "power_off",
+                "system_minor_leak_action": "syslog_only",
+                "rack_mgr_leak_policy": "enabled",
+                "rack_mgr_critical_alert_action": "syslog_only",
+                "rack_mgr_minor_alert_action": "syslog_only"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",
@@ -2200,7 +2210,7 @@
                 "link_selection": "enable",
                 "vrf_selection": "enable",
                 "server_id_override": "enable",
-                "agent_relay_mode": "forward_untouched",
+                "agent_relay_mode": "discard",
                 "max_hop_count": "4"
             },
             "Vlan222": {
@@ -2943,6 +2953,9 @@
         },
         "CONSOLE_SWITCH": {
             "console_mgmt": {
+                "enabled": "yes"
+            },
+            "controlled_device": {
                 "enabled": "yes"
             }
         },
