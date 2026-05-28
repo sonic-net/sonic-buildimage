@@ -583,14 +583,7 @@ class PddfParse():
             ) from e
         num_msi_vectors = dev["use_msi"]["num_msi_vectors"] if use_msi else 0
         reg_width = dev["dev_attr"].get("reg_width", DEFAULT_FPGA_REGISTER_WIDTH_BITS)
-        input_clk_hz = dev["dev_attr"].get("input_clk_hz")
-        if input_clk_hz is None or input_clk_hz <= 0:
-            raise ValueError(
-                f"input_clk_hz is missing or invalid (got {input_clk_hz}) "
-                f"for device_bdf={bdf}; "
-                "a valid FPGA input clock frequency is required"
-            )
-        cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width} {input_clk_hz}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
+        cmd = f"echo 'fpgapci_init {num_msi_vectors} {reg_width}' > /sys/kernel/pddf/devices/multifpgapci/{bdf}/dev_ops"
         ret = self.runcmd(cmd)
         if ret != 0:
             return create_ret.append(ret)

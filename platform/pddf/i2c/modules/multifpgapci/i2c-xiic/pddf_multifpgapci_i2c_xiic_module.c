@@ -16,8 +16,6 @@
  */
 
 #include <asm-generic/errno-base.h>
-#include <linux/clkdev.h>
-#include <linux/clk-provider.h>
 #include <linux/xarray.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
@@ -98,31 +96,13 @@ ssize_t new_i2c_xiic_adapter(struct device *_dev, struct device_attribute *da,
 
 	const int bus_num = i2c_xiic_privdata->virt_bus + index;
 
-	// Create clock lookup for this specific xiic-i2c device
-	struct clk_hw *clk_hw = pci_privdata->clk_hw;
-	if (clk_hw == NULL) {
-		pddf_dbg(I2C_XIIC, KERN_ERR "[%s] parent clk is not found. index=%d\n",
-				 __FUNCTION__, index);
-		return -ENOENT;
-	}
-	i2c_xiic_privdata->clk_lookup[index] =
-		clkdev_hw_create(clk_hw,
-						 NULL, // con_id - NULL means default clock
-						 "xiic-i2c.%d", bus_num); // dev_id - device name
-	if (!i2c_xiic_privdata->clk_lookup[index]) {
-		pddf_dbg(I2C_XIIC, KERN_ERR "Failed to create clock lookup\n");
-		return -ENOMEM;
-	}
-
-	int ret = 0;
 	int virq = regmap_irq_get_virq(
 		pci_privdata->msi_domain_irq_chip_data[msi_domain], hw_irq);
 	if (virq <= 0) {
 		pddf_dbg(I2C_XIIC,
 				 KERN_ERR "[%s] failed to get virq for msi_domain=%d hw_irq=%d\n",
 				 __FUNCTION__, msi_domain, hw_irq);
-		ret = virq;
-		goto free_clk_lookup;
+		return virq;
 	}
 	pddf_dbg(I2C_XIIC,
 			 KERN_INFO "[%s] got virq=%d for index=%d msi_domain=%d hw_irq=%d\n",
@@ -140,23 +120,15 @@ ssize_t new_i2c_xiic_adapter(struct device *_dev, struct device_attribute *da,
 	if (IS_ERR(platform_device)) {
 		pddf_dbg(I2C_XIIC,
 				 KERN_ERR "[%s] platform_device_register_resndata failed for "
-						  "i2c (index=%d). ret=%d",
-				 __FUNCTION__, index, ret);
-		ret = PTR_ERR(platform_device);
-		goto free_clk_lookup;
+						  "i2c (index=%d)",
+				 __FUNCTION__, index);
+		return PTR_ERR(platform_device);
 	}
 
 	i2c_xiic_privdata->platform_devices[index] = platform_device;
 	i2c_xiic_privdata->i2c_xiic_adapter_registered[index] = true;
 
 	return count;
-
-free_clk_lookup:
-	if (i2c_xiic_privdata->clk_lookup[index]) {
-		clkdev_drop(i2c_xiic_privdata->clk_lookup[index]);
-		i2c_xiic_privdata->clk_lookup[index] = NULL;
-	}
-	return ret;
 }
 
 ssize_t del_i2c_xiic_adapter(struct device *dev, struct device_attribute *da,
@@ -198,10 +170,6 @@ ssize_t del_i2c_xiic_adapter(struct device *dev, struct device_attribute *da,
 	if (i2c_xiic_privdata->platform_devices[index]) {
 		platform_device_unregister(i2c_xiic_privdata->platform_devices[index]);
 		i2c_xiic_privdata->platform_devices[index] = NULL;
-	}
-	if (i2c_xiic_privdata->clk_lookup[index]) {
-		clkdev_drop(i2c_xiic_privdata->clk_lookup[index]);
-		i2c_xiic_privdata->clk_lookup[index] = NULL;
 	}
 	i2c_xiic_privdata->i2c_xiic_adapter_registered[index] = false;
 
@@ -325,8 +293,6 @@ static void pddf_multifpgapci_i2c_xiic_detach(struct pci_dev *pci_dev, struct ko
 		if (i2c_xiic_privdata->platform_devices[i])
 			platform_device_unregister(
 				i2c_xiic_privdata->platform_devices[i]);
-		if (i2c_xiic_privdata->clk_lookup[i])
-			clkdev_drop(i2c_xiic_privdata->clk_lookup[i]);
 	}
 
 	if (i2c_xiic_privdata->i2c_xiic_kobj) {

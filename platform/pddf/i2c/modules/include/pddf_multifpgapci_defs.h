@@ -18,7 +18,6 @@
 #ifndef __PDDF_MULTIFPGAPCI_DEFS_H__
 #define __PDDF_MULTIFPGAPCI_DEFS_H__
 
-#include <linux/clk-provider.h>
 #include "linux/types.h"
 #include <linux/pci.h>
 #include <linux/regmap.h>
@@ -43,9 +42,6 @@ struct pddf_multifpgapci_drvdata {
 	void *__iomem fpga_data_base_addr;
 	size_t bar_length;
 	bool bar_initialized;
-
-	char clk_name[NAME_SIZE];
-	struct clk_hw *clk_hw;
 
 	// IRQ data
 	unsigned int num_msi_vectors;

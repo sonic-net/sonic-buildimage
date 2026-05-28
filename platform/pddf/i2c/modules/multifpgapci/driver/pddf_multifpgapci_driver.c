@@ -18,7 +18,6 @@
 
 #include <asm-generic/errno-base.h>
 #include <linux/cdev.h>
-#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmi.h>
@@ -416,8 +415,7 @@ free_fpga_data:
 
 static int fpgapci_init(struct pci_dev *pci_dev,
 						struct fpga_data_node *fpga_node,
-						unsigned n_msi_vectors, unsigned reg_width,
-						unsigned clk_hz) {
+						unsigned n_msi_vectors, unsigned reg_width) {
 	struct pddf_multifpgapci_drvdata *pci_privdata =
 		(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(&pci_dev->dev);
 
@@ -465,17 +463,6 @@ static int fpgapci_init(struct pci_dev *pci_dev,
 		}
 	}
 
-	// Register a global fixed-rate clock that will be shared by child devices
-	snprintf(pci_privdata->clk_name, sizeof(pci_privdata->clk_name), "multifpga-%s-clk", pci_name(pci_dev));
-	pci_privdata->clk_hw = clk_hw_register_fixed_rate(
-		&pci_dev->dev, pci_privdata->clk_name, NULL, 0, clk_hz);
-	if (IS_ERR(pci_privdata->clk_hw)) {
-		printk("%s: [%s] failed to register clk dev:%s err:%ld\n", MULTIFPGA,
-			   __FUNCTION__, pci_name(pci_dev), PTR_ERR(pci_privdata->clk_hw));
-		pci_privdata->clk_hw = NULL;
-		goto free_regmap;
-	}
-
 	if (pddf_multi_fpgapci_ops.post_device_operation) {
 		pddf_dbg(MULTIFPGA, KERN_INFO "[%s] Invoking post_device_operation\n",
 				 __FUNCTION__);
@@ -485,14 +472,11 @@ static int fpgapci_init(struct pci_dev *pci_dev,
 					 KERN_ERR
 					 "[%s] post_device_operation failed with error %d\n",
 					 __FUNCTION__, ret);
-			goto free_clk;
+			goto free_regmap;
 		}
 	}
 
 	return 0;
-
-free_clk:
-	clk_hw_unregister_fixed_rate(pci_privdata->clk_hw);
 
 free_regmap:
 	if (pci_privdata->regmap) {
@@ -585,10 +569,10 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 	int ret = 0;
 
 	if (strncmp(buf, "fpgapci_init", strlen("fpgapci_init")) == 0) {
-		unsigned int n_msi_vectors, reg_width, clk_hz;
-		int sscanf_result = sscanf(buf, "fpgapci_init %u %u %u", &n_msi_vectors,
-								   &reg_width, &clk_hz);
-		if (sscanf_result != 3) {
+		unsigned int n_msi_vectors, reg_width;
+		int sscanf_result = sscanf(buf, "fpgapci_init %u %u", &n_msi_vectors,
+								   &reg_width);
+		if (sscanf_result != 2) {
 			printk("%s: [%s] Failed to parse buf: %s\n", MULTIFPGA,
 				   __FUNCTION__, buf);
 			return -EINVAL;
@@ -622,8 +606,7 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 		pci_dev = fpga_node->dev;
 		add_device_table(fpga_node->dev_name, (void *)pci_dev_get(pci_dev));
 
-		ret =
-			fpgapci_init(pci_dev, fpga_node, n_msi_vectors, reg_width, clk_hz);
+		ret = fpgapci_init(pci_dev, fpga_node, n_msi_vectors, reg_width);
 		if (ret)
 			return ret;
 
@@ -893,8 +876,6 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 
 	delete_fpga_data_node(pci_name(dev));
 
-	if (!IS_ERR_OR_NULL(pci_privdata->clk_hw))
-		clk_hw_unregister_fixed_rate(pci_privdata->clk_hw);
 	if (!IS_ERR_OR_NULL(pci_privdata->regmap))
 		regmap_exit(pci_privdata->regmap);
 	for (unsigned i = 0; i < pci_privdata->num_msi_vectors; ++i) {

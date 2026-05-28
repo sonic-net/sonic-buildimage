@@ -15,7 +15,6 @@
 #ifndef __PDDF_MULTIFPGAPCI_I2C_XIIC_DEFS_H__
 #define __PDDF_MULTIFPGAPCI_I2C_XIIC_DEFS_H__
 
-#include <linux/clkdev.h>
 #include <linux/i2c.h>
 #include "linux/types.h"
 #include <linux/kobject.h>
@@ -49,8 +48,6 @@ struct i2c_xiic_sysfs_vals {
 struct i2c_xiic_adapter_drvdata {
 	struct pci_dev *pci_dev;
 	struct kobject *i2c_xiic_kobj;
-
-	struct clk_lookup *clk_lookup[I2C_XIIC_MAX_BUS];
 
 	// temp_sysfs_vals store temporary values provided by sysfs,
 	// which are eventually copied/saved to I2C XIIC adapter platform data.
