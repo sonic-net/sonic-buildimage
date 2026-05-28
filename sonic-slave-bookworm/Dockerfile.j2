@@ -21,7 +21,8 @@ FROM {{ prefix }}debian:bookworm
 
 MAINTAINER gulv@microsoft.com
 
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
@@ -152,6 +153,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libgoogle-perftools-dev \
         libprotobuf-c-dev \
         protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}

@@ -11,7 +11,7 @@ dbus-daemon==1.14.10-1~deb12u1
 dbus-session-bus-common==1.14.10-1~deb12u1
 dbus-system-bus-common==1.14.10-1~deb12u1
 dmidecode==3.4-1
-dpkg-dev==1.21.22
+dpkg-dev==1.21.23
 ethtool==1:6.1-1
 fancontrol==1:3.6.0-7.1
 fontconfig==2.14.1-4
@@ -33,8 +33,8 @@ libasan8==12.2.0-14+deb12u1
 libbabeltrace1==1.5.11-1+b2
 libbinutils==2.40-2
 libboost-regex1.74.0==1.74.0+ds1-21
-libc-dev-bin==2.36-9+deb12u13
-libc6-dev==2.36-9+deb12u13
+libc-dev-bin==2.36-9+deb12u14
+libc6-dev==2.36-9+deb12u14
 libcairo2==1.16.0-7
 libcbor0.8==0.8.0-2+b1
 libcc1-0==12.2.0-14+deb12u1
@@ -46,7 +46,7 @@ libdatrie1==0.2.13-2+b1
 libdbi1==0.9.0-6
 libdebuginfod-common==0.188-2.1
 libdebuginfod1==0.188-2.1
-libdpkg-perl==1.21.22
+libdpkg-perl==1.21.23
 libdw1==0.188-2.1
 libedit2==3.1-20221030-2
 libexpat1-dev==2.5.0-1+deb12u2
@@ -56,7 +56,7 @@ libfreeipmi17==1.6.10-1+b1
 libfreetype6==2.12.1+dfsg-5+deb12u4
 libfribidi0==1.0.8-2.1
 libgcc-12-dev==12.2.0-14+deb12u1
-libglib2.0-0==2.74.6-2+deb12u8
+libglib2.0-0==2.74.6-2+deb12u9
 libgomp1==12.2.0-14+deb12u1
 libgpm2==1.20.7-10+b1
 libgprofng0==2.40-2
@@ -85,7 +85,7 @@ libpci3==1:3.9.0-4
 libpixman-1-0==0.42.2-1
 libpng16-16==1.6.39-2+deb12u5
 libpython3-dev==3.11.2-1+b1
-libpython3.11-dev==3.11.2-6+deb12u6
+libpython3.11-dev==3.11.2-6+deb12u7
 libquadmath0==12.2.0-14+deb12u1
 librrd-dev==1.7.2-4+b8
 librrd8==1.7.2-4+b8
@@ -94,8 +94,8 @@ libsensors5==1:3.6.0-7.1
 libsensors5-dbgsym==1:3.6.0-7.1
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
-libssl-dev==3.0.19-1~deb12u2
-libssl3==3.0.19-1~deb12u2
+libssl-dev==3.0.20-1~deb12u1
+libssl3==3.0.20-1~deb12u1
 libstdc++-12-dev==12.2.0-14+deb12u1
 libswsscommon-dbgsym==1.0.0
 libthai-data==0.1.29-1
@@ -115,7 +115,7 @@ libxext6==2:1.3.4-1+b1
 libxml2==2.9.14+dfsg-1.3~deb12u5
 libxrender1==1:0.9.10-1.1
 libyang-cpp-dbgsym==1.0.73
-linux-libc-dev==6.1.170-3
+linux-libc-dev==6.1.172-1
 lm-sensors==1:3.6.0-7.1
 lm-sensors-dbgsym==1:3.6.0-7.1
 make==4.3-4.1
@@ -123,7 +123,7 @@ mft==4.34.0-148
 mlxbf-bootctl==2.1
 nvme-cli==2.4+really2.3-3
 openssh-client==1:9.2p1-2+deb12u5+fips
-openssl==3.0.19-1~deb12u2
+openssl==3.0.20-1~deb12u1
 patch==2.7.6-7
 pci.ids==0.0~2023.04.11-1
 pciutils==1:3.9.0-4
@@ -133,7 +133,7 @@ python3-netifaces==0.11.0-2+b1
 python3-smbus==4.3-2+b3
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
-python3.11-dev==3.11.2-6+deb12u6
+python3.11-dev==3.11.2-6+deb12u7
 rpcsvc-proto==1.4.3-1
 rrdtool==1.7.2-4+b8
 sensible-utils==0.0.17+nmu1
@@ -145,7 +145,7 @@ sonic-eventd-dbgsym==1.0.0-0
 sshpass==1.09-1+b1
 strace==6.1-0.1
 ucf==3.0043+nmu1+deb12u1
-udev==252.39-1~deb12u1
+udev==252.39-1~deb12u2
 uuid-runtime==2.38.1-5+deb12u3
 vim==2:9.0.1378-2+deb12u2
 vim-runtime==2:9.0.1378-2+deb12u2

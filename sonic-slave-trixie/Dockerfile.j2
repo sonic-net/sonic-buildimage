@@ -21,7 +21,8 @@ FROM {{ prefix }}debian:trixie
 
 MAINTAINER gulv@microsoft.com
 
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
@@ -153,6 +154,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libgoogle-perftools-dev \
         libprotobuf-c-dev \
         protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
@@ -603,6 +605,11 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
+# For nvidia-bluefield sdk
+# ctypeslib2 declares `clang>=11`, which pip resolves to the latest PyPI
+# `clang` (21.x today). Those bindings call libclang-21 symbols
+# and break against Debian's libclang-19
+RUN pip3 install ctypeslib2 clang==19.1.7
 
 RUN pip3 install pyangbind==0.8.7
 RUN pip3 uninstall -y enum34

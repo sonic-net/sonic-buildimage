@@ -15,8 +15,8 @@ USER root
 WORKDIR /root
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
-COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
-COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+COPY ["files/apt/apt.conf.d/no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["files/apt/apt.conf.d/apt-timeout-n-retries", "/etc/apt/apt.conf.d/"]
 # Install certificates by disabling the peer verification
 RUN apt -o Acquire::https::Verify-Peer=false update && \
     apt -o Acquire::https::Verify-Peer=false install -y ca-certificates
@@ -155,7 +155,8 @@ RUN set -eux \
     && mv "influxdb3-core-${INFLUXDB_VERSION}/influxdb3" /usr/local/bin/influxdb3 \
     && chmod +x /usr/local/bin/influxdb3 \
     && cp -r "influxdb3-core-${INFLUXDB_VERSION}/python" /usr/local/lib/influxdb3-python \
-    && ldconfig /usr/local/lib/influxdb3-python/lib \
+    && echo "/usr/local/lib/influxdb3-python/lib" > /etc/ld.so.conf.d/influxdb3.conf \
+    && ldconfig \
     && ln -sf /usr/local/bin/influxdb3 /usr/local/bin/influxd \
     && rm -f "influxdb3-core-${INFLUXDB_VERSION}_${INFLUXDB_ARCH}.tar.gz" \
     && rm -rf "/tmp/influxdb3-core-${INFLUXDB_VERSION}" \

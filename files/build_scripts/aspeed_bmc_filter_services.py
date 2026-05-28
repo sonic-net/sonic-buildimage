@@ -30,9 +30,6 @@ BMC_EXCLUDED_SERVICES = {
     'dhcp_dos_logger.service',       # DHCP DoS detection - no switch ports on BMC
     'warmboot-finalizer.service',    # Warm boot reconciliation - no SWSS/BGP on BMC
 
-    # SONiC NOS services - not needed for BMC
-    'sonic-hostservice.service',     # SONiC host services (VLAN, LAG, etc.) - NOS-specific
-
     # UUID daemon - not needed
     'uuidd.service',                 # UUID daemon - kernel provides UUID generation
     'uuidd.socket',                  # UUID daemon socket activation
