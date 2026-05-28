@@ -3,12 +3,12 @@
 # Load the common functions
 source /usr/bin/TS
 
-find_num_routemap
-routemap_count=$?
+find_num_ebgp_neighbors
+neighbor_count=$?
 check_not_installed
 not_installed=$?
 
-if [[ $routemap_count -eq 0 ]];
+if [[ $neighbor_count -eq 0 ]];
 then
   echo "System Mode: No external neighbors"
 elif [[ $not_installed -ne 0 ]];

@@ -70,3 +70,18 @@ function find_num_routemap()
   done
   return $c
 }
+
+function find_num_ebgp_neighbors()
+{
+  count=0
+  summary=$(vtysh -c "show bgp summary json")
+  local_as=$(echo "$summary" | sed -n 's/ *"as":\(\S*\),/\1/p' | uniq)
+  for remote_as in $(echo "$summary" | sed -n 's/ *"remoteAs":\(\S*\),/\1/p');
+  do
+    if [[ $remote_as -ne $local_as ]];
+    then
+      count=$((count+1))
+    fi
+  done
+  return $count
+}
