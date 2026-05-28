@@ -193,8 +193,8 @@ module sonic-mirror-session {
                 leaf sample_rate {
                     when "current()/../type = 'ERSPAN'";
                     type uint32 {
-                        range "256..8388608" {
-                            error-message "Sample rate must be 256..8388608";
+                        range "2..max" {
+                            error-message "Sample rate must be in range 2..max";
                             error-app-tag sample-rate-invalid;
                         }
                     }
