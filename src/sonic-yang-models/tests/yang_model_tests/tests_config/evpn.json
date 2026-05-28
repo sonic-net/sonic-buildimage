@@ -78,11 +78,6 @@
             "sonic-port:PORT": {
                 "PORT_LIST": [
                     {
-                        "name": "Ethernet10",
-                        "lanes": "1,2,3,4",
-                        "speed": 1000
-                    },
-                    {
                         "name": "Ethernet11",
                         "lanes": "5,6,7,8",
                         "speed": 1000
@@ -93,11 +88,6 @@
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
-                    {
-                        "ifname": "Ethernet10",
-                        "esi": "AUTO",
-                        "type": "TYPE_3_MAC_BASED"
-                    },
                     {
                         "ifname": "Ethernet11",
                         "esi": "AUTO",
@@ -115,11 +105,6 @@
                         "name": "Ethernet10",
                         "lanes": "1,2,3,4",
                         "speed": 1000
-                    },
-                    {
-                        "name": "Ethernet11",
-                        "lanes": "5,6,7,8",
-                        "speed": 1000
                     }
                 ]
             }
@@ -131,11 +116,6 @@
                         "ifname": "Ethernet10",
                         "esi": "00:01:02:03:04:05:06:07:08:AA",
                         "type": "TYPE_3_MAC_BASED"
-                    },
-                    {
-                        "ifname": "Ethernet11",
-                        "esi": "00:01:02:03:04:05:06:07:08:FF",
-                        "type": "TYPE_0_OPERATOR_CONFIGURED"
                     }
                 ]
             }

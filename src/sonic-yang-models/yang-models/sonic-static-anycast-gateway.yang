@@ -22,6 +22,8 @@ module sonic-static-anycast-gateway {
                 description "Global static anycast gateway configuration";
 
                 leaf gateway_mac {
+                    description
+                        "Globally shared anycast gateway MAC address used by VLAN interfaces with static anycast gateway enabled.";
                     type yang:mac-address;
                 }
             }

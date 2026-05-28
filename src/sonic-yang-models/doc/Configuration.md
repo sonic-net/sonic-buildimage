@@ -35,6 +35,7 @@
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [EVPN](#evpn)
   * [FG_NHG](#fg_nhg)
   * [FG_NHG_MEMBER](#fg_nhg_member)
   * [FG_NHG_PREFIX](#fg_nhg_prefix)
@@ -64,6 +65,7 @@
   * [Port](#port)
   * [Port Channel](#port-channel)
   * [Portchannel member](#portchannel-member)
+  * [SAG](#sag)
   * [Scheduler](#scheduler)
   * [Port QoS Map](#port-qos-map)
   * [Queue](#queue)
@@ -83,7 +85,6 @@
   * [Versions](#versions)
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
-  * [SAG](#sag)
   * [VNET](#vnet)
   * [VNET_ROUTE](#vnet_route)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
@@ -1263,6 +1264,33 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ```
 
+### EVPN
+
+The EVPN tables configure Ethernet Segment entries and global EVPN multihoming timers.
+
+The **EVPN_ETHERNET_SEGMENT** table is keyed by a physical port or PortChannel name. Each entry defines the ESI type, the ESI value, and an optional DF preference. Type 0 entries require an operator-configured ESI in canonical ten-octet hexadecimal format, while non-Type 0 entries use `AUTO`.
+
+The **EVPN_MH_GLOBAL** table has a single `default` entry for device-wide EVPN multihoming timers, including `startup_delay`, `mac_holdtime`, and `neigh_holdtime`.
+
+```json
+{
+    "EVPN_ETHERNET_SEGMENT": {
+        "Ethernet120": {
+            "type": "TYPE_0_OPERATOR_CONFIGURED",
+            "esi": "00:01:02:03:04:05:06:07:08:FF",
+            "df_pref": "12012"
+        }
+    },
+    "EVPN_MH_GLOBAL": {
+        "default": {
+            "startup_delay": "1800",
+            "mac_holdtime": "1000",
+            "neigh_holdtime": "600"
+        }
+    }
+}
+```
+
 ### FG_NHG
 
 The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
@@ -1590,6 +1618,8 @@ These tables have a number of shared attributes as described below:
  * `mac_addr`: Assign administrator-provided MAC address to Interface.  If not specified will use the system MAC (same for all interfaces). Not applicable to `VLAN_SUB_INTERFACE` as it will use the parent interface's mac address.
  * `loopback_action`: Packet action when a packet ingress and gets routed on the same IP interface. `drop` or `forward`.
 
+`VLAN_INTERFACE` entries also support `static_anycast_gateway`, which enables or disables use of the global SAG MAC on the VLAN interface. Valid values are `true` and `false`; the default is `false`.
+
 
 ```json
 
@@ -1606,7 +1636,8 @@ These tables have a number of shared attributes as described below:
     "VLAN_INTERFACE": {
         "Vlan201": {
             "vrf_name": "red",
-            "mac_addr": "AB:CD:EF:12:34:56"
+            "mac_addr": "AB:CD:EF:12:34:56",
+            "static_anycast_gateway": "true"
         }
     },
     "PORTCHANNEL_INTERFACE": {
@@ -2209,11 +2240,14 @@ name as object key and member list as attribute.
         ],
         "mtu": "9100",
         "fallback": "false",
-        "fast_rate": "true"
+        "fast_rate": "true",
+        "system_mac": "aa:bb:cc:dd:ee:ff"
     }
   }
 }
 ```
+
+The optional **system_mac** field overrides the LACP actor system MAC for the PortChannel. When unset, the device system MAC is used. EVPN multihoming deployments can set this field when peer devices must advertise a shared LACP system identifier.
 
 
 ### Portchannel member
@@ -2229,6 +2263,20 @@ name as object key and member list as attribute.
 }
 
 ```
+
+### SAG
+The SAG table defines the global MAC address configuration for static-anycast-gateway.
+```
+{
+
+"SAG": {
+    "GLOBAL": {
+        "gateway_mac": "00:11:22:33:44:55"
+    }
+  }
+}
+```
+
 ### Scheduler
 
 ```
@@ -2779,19 +2827,6 @@ channel name as object key, and tagging mode as attributes.
 	},
 	"Vlan2000|PortChannel47": {
 		"tagging_mode": "tagged"
-	}
-  }
-}
-```
-
-### SAG
-The SAG table defines the global mac address configuration for static-anycast-gateway.
-```
-{
-
-"SAG": {
-	"GLOBAL": {
-		"gateway_mac": "00:11:22:33:44:55"
 	}
   }
 }
