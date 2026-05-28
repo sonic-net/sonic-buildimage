@@ -319,6 +319,16 @@
             "autoneg": "off",
             "default_brkout_mode": "1x400G",
             "fec": "rs"
+        },
+        "Ethernet256": {
+            "autoneg": "off",
+            "default_brkout_mode": "1x100G",
+            "fec": "rs"
+        },
+        "Ethernet260": {
+            "autoneg": "off",
+            "default_brkout_mode": "1x100G",
+            "fec": "rs"
         }
     }
 }
