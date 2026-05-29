@@ -64,9 +64,10 @@
         {%- set ipv6_vlan_addresses = ipv6_vlan_addresses.append(prefix) %}
     {%- endif %}
 {% endfor %}
-{# Generation of IP-in-IP decap entries is disabled for BackEnd device types and devices without storage_device metadata. #}
+{# Generation of IP-in-IP decap entries is disabled for BackEnd device types without storage_device metadata. AI-compute backends (resource_type ComputeAI) are also exempted and still get the tunnel. #}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter', 'BackEndSpineRouter'] -%}
-{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in backend_device_types and 'storage_device' not in DEVICE_METADATA['localhost'] %}
+{%- set is_ai_compute_backend = DEVICE_METADATA['localhost'].get('resource_type', '') == 'ComputeAI' -%}
+{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in backend_device_types and 'storage_device' not in DEVICE_METADATA['localhost'] and not is_ai_compute_backend %}
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
