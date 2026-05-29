@@ -223,9 +223,38 @@ stages:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
       PTF_MODIFIED: $(PTF_MODIFIED)
 
-  # Trivy scan for docker-ptf — informational, runs in parallel with KVM tests
-  - job: trivy_scan
-    displayName: "[OPTIONAL] Trivy vulnerability scan (docker-ptf)"
+# Unified SBOM-based vulnerability scan — informational, runs after
+# both build stages so every CycloneDX SBOM produced is in scope.
+# Lives in its own stage (not inside Test) because the Test stage
+# dependsOn BuildVS only — putting the scan there meant the .bin
+# SBOMs from the Build stage (broadcom, mellanox, etc.) hadn't been
+# uploaded as artifacts yet when the scan ran. VulnScan dependsOn
+# BuildVS + Build so the scan only fires once every *.cdx.json
+# sidecar this pipeline produces is on the artifact server.
+#
+# Runs after Test (rather than in parallel with it) is fine — this
+# is non-gating telemetry, and putting it in its own stage avoids
+# duplicating the Test stage's KVM-test machinery just to add deps.
+#
+# docker-sonic-mgmt is scanned by its own pipeline
+# (.azure-pipelines/docker-sonic-mgmt.yml) and is intentionally out
+# of scope here: the main pipeline never builds it, so there is no
+# docker-sonic-mgmt.gz.sbom.cdx.json artifact for this scan to
+# consume. The scan step logs a one-line pointer to the other
+# pipeline so readers don't wonder why ptf is listed and mgmt isn't.
+- stage: VulnScan
+  displayName: "Vuln Scan"
+  dependsOn:
+    - BuildVS
+    - Build
+  # Disabled for now; remove this `condition: false` (or change to
+  # `not(canceled())`) to re-enable the SBOM-based vulnerability
+  # scan stage. The SBOM artifacts themselves continue to be
+  # produced when ENABLE_SBOM=y — only the post-build scan is gated.
+  condition: false
+  jobs:
+  - job: sbom_vuln_scan
+    displayName: "[OPTIONAL] SBOM-based vulnerability scan (all artifacts)"
     pool: sonic-ubuntu-1c
     continueOnError: true
     timeoutInMinutes: 60
@@ -235,36 +264,82 @@ stages:
       fetchDepth: 1
     - task: DownloadPipelineArtifact@2
       inputs:
-        artifact: sonic-buildimage.vs
-        itemPattern: "target/docker-ptf.gz"
-      displayName: "Download docker-ptf artifact"
+        # Narrow to aggregate SBOMs only: the top-level installer
+        # (sonic-<platform>.bin / .swi / .img.gz) and the standalone
+        # test-container SBOMs (docker-*.gz.sbom.cdx.json — note the
+        # .sbom. infix that distinguishes them from per-container
+        # recipe fragments). The recipe-emit fragments under
+        # target/debs/, target/python-wheels/, and target/docker-*.gz.cdx.json
+        # are build-internal plumbing; scanning them duplicates work
+        # already done by the .bin aggregate scan.
+        patterns: |
+          **/target/sonic-*.bin.cdx.json
+          **/target/sonic-*.swi.cdx.json
+          **/target/sonic-*.img.gz.cdx.json
+          **/target/docker-*.gz.sbom.cdx.json
+      displayName: "Download aggregate SBOM sidecars"
     - script: |
         set -ex
-        TRIVY_VERSION="0.70.0"
-        curl -fLO https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
-        sudo apt install -y ./trivy_${TRIVY_VERSION}_Linux-64bit.deb
-        trivy --version
-      displayName: "Install Trivy"
+        sudo apt-get install -y python3-pip jq
+      displayName: "Install dependencies"
     - script: |
-        set -x
-        # docker-ptf.gz is ~1.3GB; scan takes 15-20 min on CI agents
-        trivy image \
-          --input $(Pipeline.Workspace)/target/docker-ptf.gz \
-          --severity MEDIUM,HIGH,CRITICAL \
-          --ignore-unfixed \
-          --exit-code 1 \
-          --format table \
-          --no-progress \
-          --timeout 30m \
-          --output $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
-        TRIVY_EXIT=$?
+        set +e
+        OVERALL_RC=0
+        FOUND=0
+        mkdir -p $(Build.ArtifactStagingDirectory)/sbom-vuln
+        shopt -s nullglob globstar
+        # Note for log readers: docker-sonic-mgmt is built and scanned
+        # in its own pipeline (.azure-pipelines/docker-sonic-mgmt.yml).
+        # Its vuln report lives there as the sbom-vuln-scan-results
+        # artifact of that pipeline's runs. That's why ptf appears
+        # below but mgmt does not.
+        echo "Note: docker-sonic-mgmt is scanned in .azure-pipelines/docker-sonic-mgmt.yml; not built in this pipeline."
         echo ""
-        echo "=== Trivy Scan Results (docker-ptf) ==="
-        cat $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
-        exit $TRIVY_EXIT
-      displayName: "Trivy scan docker-ptf"
-    - publish: $(Build.ArtifactStagingDirectory)/trivy-ptf.txt
-      artifact: trivy-scan-results
-      displayName: "Publish Trivy scan results"
+        # Walk only the aggregate SBOMs at the top of each artifact's
+        # target/ directory. Recipe fragments under target/debs/ or
+        # target/python-wheels/ are not matched by these patterns.
+        for sbom in \
+            $(Pipeline.Workspace)/*/target/sonic-*.bin.cdx.json \
+            $(Pipeline.Workspace)/*/target/sonic-*.swi.cdx.json \
+            $(Pipeline.Workspace)/*/target/sonic-*.img.gz.cdx.json \
+            $(Pipeline.Workspace)/*/target/docker-*.gz.sbom.cdx.json
+        do
+          FOUND=$((FOUND+1))
+          # Derive a short name for this scan's outputs. Test-container
+          # SBOMs include a `.sbom` infix on disk (e.g. docker-ptf.gz.sbom.cdx.json)
+          # to distinguish them from per-container recipe fragments
+          # (docker-ptf.gz.cdx.json); strip it so the per-artifact
+          # output names match the underlying artifact extension:
+          #   sonic-broadcom.bin.cdx.json     -> sonic-broadcom.bin{.txt,.cdx.json}
+          #   docker-ptf.gz.sbom.cdx.json     -> docker-ptf.gz{.txt,.cdx.json}
+          name=$(basename "$sbom" .cdx.json)
+          name="${name%.sbom}"
+          # Azure Pipelines log-folding directive — wrap each SBOM's
+          # output so the log view shows a collapsible section per
+          # scan rather than one giant concatenated stream.
+          echo "##[group]SBOM vuln scan: $name"
+          python3 scripts/sbom_vuln_scan.py \
+            --vex vex \
+            --min-severity medium \
+            --fail-on medium \
+            --format both \
+            --output "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.cdx.json" \
+            "$sbom" \
+            | tee "$(Build.ArtifactStagingDirectory)/sbom-vuln/${name}.txt"
+          RC=${PIPESTATUS[0]}
+          if [ "$RC" != "0" ]; then OVERALL_RC=$RC; fi
+          echo "##[endgroup]"
+        done
+        if [ "$FOUND" = "0" ]; then
+          echo "::error::No SBOM files found under $(Pipeline.Workspace) — were the build stages invoked with ENABLE_SBOM=y?"
+          exit 1
+        fi
+        echo ""
+        echo "=== SBOM vulnerability scan: $FOUND SBOM(s) scanned ==="
+        exit $OVERALL_RC
+      displayName: "SBOM vulnerability scan (all artifacts)"
+    - publish: $(Build.ArtifactStagingDirectory)/sbom-vuln
+      artifact: sbom-vuln-scan-results
+      displayName: "Publish SBOM vuln-scan results"
       condition: always()
       continueOnError: true
