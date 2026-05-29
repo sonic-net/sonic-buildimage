@@ -184,13 +184,13 @@ class ServiceChecker(HealthChecker):
             critical_processes_file (str): critical processes file path
 
         Returns:
-            critical_process_list: A list of critical process names
+            critical_process_list: A list of critical process names (programs) and group names (prefixed with 'group:')
         """
         critical_process_list = []
 
         with open(critical_processes_file, 'r') as file:
             for line in file:
-                # Try to match a line like "program:<process_name>"
+                # Try to match a line like "program:<process_name>" or "group:<group_name>"
                 match = re.match(r"^\s*((.+):(.*))*\s*$", line)
                 if match is None:
                     if container not in self.bad_containers:
@@ -202,6 +202,9 @@ class ServiceChecker(HealthChecker):
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
                         critical_process_list.append(identifier_value)
+                    elif identifier_key == "group" and identifier_value:
+                        # Store group with prefix to distinguish from programs
+                        critical_process_list.append('group:' + identifier_value)
 
         return critical_process_list
 
@@ -388,7 +391,7 @@ class ServiceChecker(HealthChecker):
 
         Args:
             container_name (str): Container name
-            critical_process_list (list): Critical processes
+            critical_process_list (list): Critical processes (may include 'group:' prefixed entries)
             config (object): Health checker configuration.
             feature_table (object): Feature table
         """
@@ -411,14 +414,32 @@ class ServiceChecker(HealthChecker):
                     return
 
                 process_status = self._parse_supervisorctl_status(process_status.strip().splitlines())
-                for process_name in critical_process_list:
-                    if config and config.ignore_services and process_name in config.ignore_services:
-                        continue
+                for entry in critical_process_list:
+                    # Check if this is a group entry (prefixed with 'group:')
+                    if entry.startswith('group:'):
+                        group_name = entry[6:]  # Remove 'group:' prefix
+                        if config and config.ignore_services and group_name in config.ignore_services:
+                            continue
+                        # Find all processes belonging to this group (format: group_name:process_name)
+                        group_processes = [p for p in process_status.keys() if p.startswith(group_name + ':')]
+                        if not group_processes:
+                            # No processes found for this group in supervisor
+                            continue
+                        for group_process in group_processes:
+                            if process_status[group_process] != 'RUNNING':
+                                self.set_object_not_ok('Process', '{}:{}'.format(container_name, group_process), "Process '{}' in container '{}' is not running".format(group_process, container_name))
+                            else:
+                                self.set_object_ok('Process', '{}:{}'.format(container_name, group_process))
+                    else:
+                        # Regular program entry
+                        process_name = entry
+                        if config and config.ignore_services and process_name in config.ignore_services:
+                            continue
 
-                    # Sometimes process_name is in critical_processes file, but it is not in supervisor.conf, such process will not run in container.
-                    # and it is safe to ignore such process. E.g, radv. So here we only check those processes which are in process_status.
-                    if process_name in process_status:
-                        if process_status[process_name] != 'RUNNING':
-                            self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))
-                        else:
-                            self.set_object_ok('Process', '{}:{}'.format(container_name, process_name))
+                        # Sometimes process_name is in critical_processes file, but it is not in supervisor.conf, such process will not run in container.
+                        # and it is safe to ignore such process. E.g, radv. So here we only check those processes which are in process_status.
+                        if process_name in process_status:
+                            if process_status[process_name] != 'RUNNING':
+                                self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))
+                            else:
+                                self.set_object_ok('Process', '{}:{}'.format(container_name, process_name))

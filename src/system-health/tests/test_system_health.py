@@ -493,6 +493,116 @@ def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_
     assert 'database' not in checker.container_critical_processes  # k8s container, skipped entirely
 
 
+# Mock supervisorctl output with group processes (dhcp-relay group)
+mock_supervisorctl_group_output = """
+dhcp-relay:dhcp6relay            RUNNING   pid 93, uptime 0:11:17
+dhcp-relay:dhcprelayd            RUNNING   pid 94, uptime 0:11:17
+rsyslogd                         RUNNING   pid 13, uptime 0:11:30
+"""
+
+mock_supervisorctl_group_output_with_exit = """
+dhcp-relay:dhcp6relay            EXITED    May 07 02:02 PM
+dhcp-relay:dhcprelayd            RUNNING   pid 94, uptime 0:11:17
+rsyslogd                         RUNNING   pid 13, uptime 0:11:30
+"""
+
+dhcp_relay_test_path = os.path.join(test_path, 'dhcp_relay')
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=dhcp_relay_test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_group_process(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker correctly handles group: entries in critical_processes file"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'dhcp_relay': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+
+    mock_containers = MagicMock()
+    mock_dhcp_relay_container = MagicMock()
+    mock_dhcp_relay_container.name = 'dhcp_relay'
+    mock_dhcp_relay_container.labels = {}
+    mock_containers.list = MagicMock(return_value=[mock_dhcp_relay_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+
+    mock_run.return_value = mock_supervisorctl_group_output
+
+    checker = ServiceChecker()
+    assert checker.get_category() == 'Services'
+    config = Config()
+    checker.check(config)
+
+    # Verify group entry was parsed correctly
+    assert 'dhcp_relay' in checker.container_critical_processes
+    assert 'group:dhcp-relay' in checker.container_critical_processes['dhcp_relay']
+
+    # Verify both group processes are monitored and reported as OK
+    assert 'dhcp_relay:dhcp-relay:dhcp6relay' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcp6relay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'dhcp_relay:dhcp-relay:dhcprelayd' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcprelayd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=dhcp_relay_test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_group_process_exit(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker correctly reports NOT_OK status for exited group processes"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'dhcp_relay': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+
+    mock_containers = MagicMock()
+    mock_dhcp_relay_container = MagicMock()
+    mock_dhcp_relay_container.name = 'dhcp_relay'
+    mock_dhcp_relay_container.labels = {}
+    mock_containers.list = MagicMock(return_value=[mock_dhcp_relay_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+
+    # Use output where dhcp6relay has EXITED
+    mock_run.return_value = mock_supervisorctl_group_output_with_exit
+
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+
+    # Verify dhcp6relay is reported as NOT_OK (EXITED)
+    assert 'dhcp_relay:dhcp-relay:dhcp6relay' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcp6relay'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    # Verify dhcprelayd is still OK (RUNNING)
+    assert 'dhcp_relay:dhcp-relay:dhcprelayd' in checker._info
+    assert checker._info['dhcp_relay:dhcp-relay:dhcprelayd'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
 def test_hardware_checker():
     MockConnector.data.update({
         'TEMPERATURE_INFO|ASIC': {
