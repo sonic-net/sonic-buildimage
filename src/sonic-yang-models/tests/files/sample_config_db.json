@@ -1156,12 +1156,6 @@
                 "policy_desc": "Test ACL Table for TCP_FLAGS validation",
                 "stage": "INGRESS",
                 "type": "CUSTOM_L3_L4_PORT"
-            },
-            "IFA": {
-                "policy_desc": "IFA Ingress Device Policy",
-                "stage": "INGRESS",
-                "type": "L3",
-                "ports": [ "Ethernet0" ]
             }
         },
         "PBH_HASH_FIELD": {
@@ -3216,8 +3210,8 @@
         },
         "TAM": {
             "device": {
-                "device-id": "12345",
-                "enterprise-id": "54321",
+                "device_id": "12345",
+                "enterprise_id": "54321",
                 "ifa": "true"
             }
         },

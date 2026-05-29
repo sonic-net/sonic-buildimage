@@ -5,8 +5,8 @@
                 "TAM_LIST": [
                     {
                         "device": "device",
-                        "device-id": 12345,
-                        "enterprise-id": 54321,
+                        "device_id": 12345,
+                        "enterprise_id": 54321,
                         "ifa": "true"
                     }
                 ]
@@ -19,8 +19,8 @@
                 "TAM_LIST": [
                     {
                         "device": "device",
-                        "device-id": 12345,
-                        "enterprise-id": 54321
+                        "device_id": 12345,
+                        "enterprise_id": 54321
                     }
                 ]
             }
@@ -32,7 +32,7 @@
                 "TAM_LIST": [
                     {
                         "device": "badname",
-                        "device-id": 12345
+                        "device_id": 12345
                     }
                 ]
             }
@@ -44,7 +44,7 @@
                 "TAM_LIST": [
                     {
                         "device": "device",
-                        "device-id": 999999999
+                        "device_id": 999999999
                     }
                 ]
             }
@@ -56,7 +56,7 @@
                 "TAM_LIST": [
                     {
                         "device": "device",
-                        "enterprise-id": 999999999
+                        "enterprise_id": 999999999
                     }
                 ]
             }
