@@ -78,7 +78,7 @@ gpg==2.4.7-21+deb13u1+b3
 gpgconf==2.4.7-21+deb13u1+b3
 grub-common==2.06-13+deb13u1
 grub2-common==2.06-13+deb13u1
-haveged==1.9.19-12
+haveged==1.9.19-12+deb13u1
 hdparm==9.65+ds-1.1
 hping3==3.a2.ds2-10.1
 hw-management==1.mlnx.7.0060.1002
@@ -158,12 +158,12 @@ libfreeipmi17==1.6.15-1
 libfreetype6==2.13.3+dfsg-1+deb13u1
 libfuse2t64==2.9.9-9
 libgcc-14-dev==14.2.0-19
-libgcrypt20==1.11.0-7
+libgcrypt20==1.11.0-7+deb13u1
 libgdbm-compat4t64==1.24-2
 libgdbm6t64==1.24-2
 libgirepository-1.0-1==1.84.0-1
 libglib2.0-0t64==2.84.4-3~deb13u3
-libgnutls30t64==3.8.9-3+deb13u3
+libgnutls30t64==3.8.9-3+deb13u4
 libgomp1==14.2.0-19
 libgpg-error0==1.51-4
 libgpm2==1.20.7-11+b2
@@ -171,7 +171,7 @@ libgprofng0==2.44-3
 libgrpc++1.51t64==1.51.1-6
 libgrpc29t64==1.51.1-6
 libgssapi-krb5-2==1.21.3-5+fips
-libhavege2==1.9.19-12
+libhavege2==1.9.19-12+deb13u1
 libhiredis1.1.0==1.2.0-6+b3
 libhwasan0==14.2.0-19
 libi2c0==4.4-2
@@ -325,6 +325,7 @@ libyajl2==2.1.0-5+b2
 libyaml-0-2==0.2.5-2
 libyang==1.0.73
 libyang-cpp==1.0.73
+libyang3==3.12.2-1
 libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
@@ -397,6 +398,7 @@ python3-jaraco.context==6.0.1-1+deb13u1
 python3-jaraco.functools==4.1.0-1
 python3-jaraco.text==4.0.0-1
 python3-jinja2==3.1.6-1
+python3-libyang==3.1.0-1
 python3-lxml==5.4.0-1
 python3-m2crypto==0.42.0-3
 python3-markupsafe==2.1.5-1+b3

@@ -248,6 +248,7 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
 	BUILD_PUBLIC_URL=$(BUILD_PUBLIC_URL) \
 	BUILD_SNAPSHOT_URL=$(BUILD_SNAPSHOT_URL) \
+	ENABLE_SBOM=$(ENABLE_SBOM) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -292,6 +293,17 @@ OVERLAY_MODULE_CHECK := \
     (echo "ERROR: Module 'overlay' not loaded. Try running 'sudo modprobe overlay'."; exit 1)
 
 BUILD_TIMESTAMP := $(shell date +%Y%m%d\.%H%M%S)
+
+# SOURCE_DATE_EPOCH is the reproducible-build convention for stamping
+# generated artifacts (SBOMs, in-toto attestations, etc.) with a
+# deterministic time. Default to the timestamp of the HEAD git commit
+# so two builds of the same source produce byte-identical SBOMs; can
+# be overridden by passing SOURCE_DATE_EPOCH= explicitly from the
+# environment, which is what reproducible-build CI typically does.
+ifeq ($(SOURCE_DATE_EPOCH),)
+SOURCE_DATE_EPOCH := $(shell git -C $(SOURCE_TREE) log -1 --format=%ct HEAD 2>/dev/null || date +%s)
+endif
+export SOURCE_DATE_EPOCH
 
 # Create separate Docker lockfiles for saving vs. loading an image.
 ifeq ($(DOCKER_LOCKDIR),)
@@ -480,6 +492,7 @@ DOCKER_SLAVE_BASE_BUILD = docker build $(DOCKER_NO_CACHE_FLAG) \
 		    --build-arg no_proxy=$(no_proxy) \
 		    --build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 		    --build-arg SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+		    --build-arg ENABLE_SBOM=$(ENABLE_SBOM) \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
@@ -653,6 +666,12 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
 						   ENABLE_VRF_STRICT=$(ENABLE_VRF_STRICT) \
 						   ENABLE_FRR_TCMALLOC=$(ENABLE_FRR_TCMALLOC) \
+						   ENABLE_SBOM=$(ENABLE_SBOM) \
+						   SBOM_FORMAT=$(SBOM_FORMAT) \
+						   SBOM_SCAN_TOOL=$(SBOM_SCAN_TOOL) \
+						   SBOM_INCLUDE_LICENSES=$(SBOM_INCLUDE_LICENSES) \
+						   SBOM_STRICT=$(SBOM_STRICT) \
+						   SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

@@ -55,12 +55,10 @@ libsource-highlight-common==3.1.9-4.3
 libsource-highlight4t64==3.1.9-4.3+b1
 libstdc++-14-dev==14.2.0-19
 libswsscommon-dbgsym==1.0.0
-libsystemd0==257.13-1~deb13u1
 libtext-charwidth-perl==0.04-11+b4
 libtext-wrapi18n-perl==0.06-10
 libtsan2==14.2.0-19
 libubsan1==14.2.0-19
-libudev1==257.13-1~deb13u1
 libunwind8==1.8.1-0.1
 libxml2==2.12.7+dfsg+really2.9.14-2.1+deb13u2
 libyang-cpp-dbgsym==1.0.73

@@ -67,8 +67,8 @@ https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13938-trixie/pwr-mlxbf-dkms_1.0-0_all.deb==5bd508345260e975ceb025fc79a1690c
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-bfsoc-4.14.0-13938-trixie/sdhci-of-dwcmshc-dkms_1.0-0_all.deb==e0cba28c7cc8980c59ea408f8ba97ac6
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-fw-48.1000/fw-BlueField-3-rel-32_48_1000.mfa==e43c7ed76bffafaee0944b66f67c8e44
-https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sai-SAIBuild0.0.50.0-trixie/mlnx-sai-dbgsym_1.mlnx.SAIBuild0.0.50.0_arm64.deb==a8c6349def845686a190c08ae888885d
-https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sai-SAIBuild0.0.50.0-trixie/mlnx-sai_1.mlnx.SAIBuild0.0.50.0_arm64.deb==ba31a599e422905832953781320c0b0c
+https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sai-SAIBuild0.0.50.1-trixie/mlnx-sai-dbgsym_1.mlnx.SAIBuild0.0.50.1_arm64.deb==bb37b937d433b2534385cb059d3460da
+https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sai-SAIBuild0.0.50.1-trixie/mlnx-sai_1.mlnx.SAIBuild0.0.50.1_arm64.deb==491b341f40fcc20a774a837455ecd0f3
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-26.1-RC3-trixie//doca-sdk-argp_3.3.0055-1_arm64.deb==3f3c13c6b64ea15f4c8b88ff83a990ab
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-26.1-RC3-trixie//doca-sdk-common_3.3.0055-1_arm64.deb==1289b300c132bedd389a678a86db13e2
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-26.1-RC3-trixie//doca-sdk-dpdk-bridge_3.3.0055-1_arm64.deb==5b3c1e13b0fb9c76c76dc7647d130611
