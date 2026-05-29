@@ -796,6 +796,7 @@ def get_smartswitch_midplane_ip():
 
     return None
 
+
 def get_device_runtime_metadata():
     chassis_metadata = {}
     if is_chassis():
@@ -809,6 +810,7 @@ def get_device_runtime_metadata():
     runtime_metadata.update(port_metadata)
     runtime_metadata.update(macsec_support_metadata)
     return {'DEVICE_RUNTIME_METADATA': runtime_metadata }
+
 
 def get_npu_id_from_name(npu_name):
     if npu_name.startswith(NPU_NAME_PREFIX):

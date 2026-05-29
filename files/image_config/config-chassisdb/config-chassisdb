@@ -12,6 +12,7 @@ config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
     chassisdb_address_file="/etc/sonic/chassisdb_address"
     [ ! -e $startdb_file ] || rm $startdb_file
+    [ ! -e $chassisdb_address_file ] || rm $chassisdb_address_file
     platform=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     # database-chassis services will start when $chassis_config file exists
     chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
@@ -40,12 +41,20 @@ config_chassis_db() {
         midplane_interface_ip=$(python3 -c \
             'import sonic_py_common.device_info as d; print(d.get_smartswitch_midplane_ip() or "")')
     elif [[ "$is_supervisor" == True ]]; then
-        # Modular chassis supervisor: midplane IP is on eth1-midplane
-        midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" | \
-                              awk '{print $4}' | cut -d/ -f1 | head -n1)
+        # supervisor: midplane IP is on eth1-midplane. Add retry for 60sec
+        midplane_interface_ip=""
+        for i in {1..12}; do
+            midplane_interface_ip=$(ip -4 -o addr show "eth1-midplane" 2>/dev/null | \
+                                  awk '{print $4}' | cut -d/ -f1 | head -n1)
+            [[ -n "$midplane_interface_ip" ]] && break
+            echo "eth1-midplane IP not available yet (attempt $i/12); retrying in 5s..."
+            sleep 5
+        done
     else
-        # Modular chassis linecard: query supervisor's midplane IP via platform API (guarded).
-        midplane_interface_ip=$(python3 -c "import sys
+        # linecard: query supervisor's midplane IP via platform API. Add retry for 60sec
+        midplane_interface_ip=""
+        for i in {1..12}; do
+            midplane_interface_ip=$(python3 -c "
 try:
     import sonic_platform.platform as p
     c = p.Platform().get_chassis()
@@ -53,8 +62,12 @@ try:
     m = [x.get_midplane_ip() for x in (c.get_all_modules() or [])
          if x.get_slot() == s]
     print(m[0] if m else '')
-except Exception as e:
+except Exception:
     print('')")
+            [[ -n "$midplane_interface_ip" ]] && break
+            echo "Supervisor midplane IP not available via platform API yet (attempt $i/12); retrying in 5s..."
+            sleep 5
+        done
     fi
 
     # Generate the chassisdb_address_file from the midplane interface ip address
