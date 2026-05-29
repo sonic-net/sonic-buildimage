@@ -1,0 +1,13 @@
+[Unit]
+Description=Update the epoch file with the current time
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/set-epoch.sh
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@default @basic-io @file-system

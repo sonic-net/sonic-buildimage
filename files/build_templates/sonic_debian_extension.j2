@@ -430,6 +430,12 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable chrony.service
 sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable chrony.service
 
+# Copy the timer to set the epoch
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp -f $IMAGE_CONFIGS/systemd/set-epoch.sh $FILESYSTEM_ROOT/usr/local/sbin/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable set-epoch.timer
+
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
