@@ -16,11 +16,7 @@
     exit 1
 }
 
-## Password for the default user
-[ -n "$PASSWORD" ] || {
-    echo "Error: no or empty PASSWORD"
-    exit 1
-}
+## Password for the default user (empty is allowed; means no password on console, SSH blocked)
 
 ## Include common functions
 . functions.sh
@@ -120,8 +116,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT mount
 ## Pointing apt to public apt mirrors and getting latest packages, needed for latest security updates
 scripts/build_mirror_config.sh files/apt $CONFIGURED_ARCH $IMAGE_DISTRO
 sudo cp files/apt/sources.list.$CONFIGURED_ARCH $FILESYSTEM_ROOT/etc/apt/sources.list
-sudo cp files/apt/apt-retries-count $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
-sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
+sudo cp files/apt/apt.conf.d/{81norecommends,apt-{clean,gzip-indexes,no-languages,timeout-n-retries},no-check-valid-until} $FILESYSTEM_ROOT/etc/apt/apt.conf.d/
 
 ## Note: set lang to prevent locale warnings in your chroot
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y update
@@ -164,9 +159,6 @@ fi
 
 ## Update initramfs for booting with squashfs+overlay
 cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
-
-## Install kbuild for sign-file into docker image (not fsroot)
-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
 
 ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
 sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
@@ -294,12 +286,19 @@ fi
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
+sudo cp files/docker/docker-netfilter-ready.sh $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
+sudo chmod 0755 $FILESYSTEM_ROOT/usr/local/bin/docker-netfilter-ready.sh
 
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
 sudo LANG=C chroot $FILESYSTEM_ROOT useradd -G sudo,docker $USERNAME -c "$DEFAULT_USERINFO" -m -s /bin/bash
 ## Create password for the default user
-echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+## If PASSWORD is empty, delete the password (console login works, SSH blocked by PermitEmptyPasswords no)
+if [ -n "$PASSWORD" ]; then
+    echo "$USERNAME:$PASSWORD" | sudo LANG=C chroot $FILESYSTEM_ROOT chpasswd
+else
+    sudo LANG=C chroot $FILESYSTEM_ROOT passwd -d $USERNAME
+fi
 
 ## Create redis group
 sudo LANG=C chroot $FILESYSTEM_ROOT groupadd -f redis
@@ -364,6 +363,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     locales                 \
     cgroup-tools            \
     ipmitool                \
+    freeipmi-tools          \
     ndisc6                  \
     conntrack               \
     python3                 \
@@ -478,6 +478,14 @@ sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
+
+# Mask systemd-ssh-generator: SONiC manages ssh.service directly and does not
+# use the per-socket / AF_VSOCK units this generator creates. Starting with
+# systemd 257.13 the generator exits non-zero on SONiC hosts, which pollutes
+# syslog with an ERR-level message and trips loganalyzer in test runs.
+# An /etc/ override pointing to /dev/null tells systemd to skip the generator.
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system-generators
+sudo ln -sf /dev/null $FILESYSTEM_ROOT/etc/systemd/system-generators/systemd-ssh-generator
 # Config sshd
 # 1. Set 'UseDNS' to 'no'
 # 2. Configure sshd to close all SSH connections after 15 minutes of inactivity
@@ -502,6 +510,10 @@ rm /files/etc/ssh/sshd_config/Banner
 set /files/etc/ssh/sshd_config/Banner /etc/issue
 rm /files/etc/ssh/sshd_config/LogLevel
 set /files/etc/ssh/sshd_config/LogLevel VERBOSE
+rm /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/PermitEmptyPasswords no
+ins #comment before /files/etc/ssh/sshd_config/PermitEmptyPasswords
+set /files/etc/ssh/sshd_config/#comment[following-sibling::*[1][self::PermitEmptyPasswords]] "Deny SSH login with empty password; use console to set a real password first"
 rm /files/etc/ssh/sshd_config/AllowAgentForwarding
 set /files/etc/ssh/sshd_config/AllowAgentForwarding no
 ins #comment before /files/etc/ssh/sshd_config/AllowAgentForwarding
@@ -812,33 +824,6 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             fi
 
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
-        fi
-    fi
-
-    # Install platform-level scripts and services for aspeed platform
-    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
-        echo "Installing platform scripts and services for aspeed..."
-
-        # Copy all scripts from platform/aspeed/scripts/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts" ]; then
-            for script in $PLATFORM_DIR/$CONFIGURED_PLATFORM/scripts/*.sh; do
-                if [ -f "$script" ]; then
-                    echo "Installing $(basename $script)..."
-                    sudo cp -v "$script" $FILESYSTEM_ROOT/usr/bin/
-                    sudo chmod +x $FILESYSTEM_ROOT/usr/bin/$(basename $script)
-                fi
-            done
-        fi
-
-        # Copy all systemd services from platform/aspeed/systemd/
-        if [ -d "$PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd" ]; then
-            for service in $PLATFORM_DIR/$CONFIGURED_PLATFORM/systemd/*.service; do
-                if [ -f "$service" ]; then
-                    echo "Installing and enabling $(basename $service)..."
-                    sudo cp -v "$service" $FILESYSTEM_ROOT/etc/systemd/system/
-                    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable $(basename $service)
-                fi
-            done
         fi
     fi
 fi

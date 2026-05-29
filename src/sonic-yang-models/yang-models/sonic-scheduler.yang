@@ -24,11 +24,13 @@ module sonic-scheduler {
 
         container SCHEDULER {
 
-            description "SCHEDULER part of config_db.json";
+            description "Configures queue scheduling (WRR/DWRR/strict priority) and traffic shaping profiles.";
 
             list SCHEDULER_LIST {
 
                 key "name";
+
+                description "A named scheduler profile with scheduling algorithm and optional shaping parameters.";
 
                 leaf name {
                     type string;
@@ -76,7 +78,7 @@ module sonic-scheduler {
                         }
                     }
                     default bytes;
-                    description "meter type";
+                    description "Metering unit for shaping rates (packets or bytes).";
                 }
 
                 leaf cir {

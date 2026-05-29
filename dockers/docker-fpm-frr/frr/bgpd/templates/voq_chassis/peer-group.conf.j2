@@ -2,7 +2,14 @@
 ! template: bgpd/templates/voq_chassis/peer-group.conf.j2
 !
   neighbor VOQ_CHASSIS_V4_PEER peer-group
+  {% if 'bgp_asn' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
+  neighbor VOQ_CHASSIS_V4_PEER remote-as {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }}
+  {% endif %}
   neighbor VOQ_CHASSIS_V6_PEER peer-group
+  {% if 'bgp_asn' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
+  neighbor VOQ_CHASSIS_V6_PEER remote-as {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }}
+  {% endif %}
+
   address-family ipv4
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
     neighbor VOQ_CHASSIS_V4_PEER allowas-in 1

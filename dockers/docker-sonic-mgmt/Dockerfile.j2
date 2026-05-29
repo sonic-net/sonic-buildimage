@@ -3,7 +3,9 @@ FROM {{ prefix }}ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y \
     apt-transport-https \
     apt-utils \
     bats \
@@ -30,8 +32,6 @@ RUN apt-get update && apt-get install -y \
     psmisc \
     python3 \
     python3-dev \
-    python3-pip \
-    python3-venv \
     python-is-python3 \
     rsyslog \
     shellcheck \
@@ -41,11 +41,18 @@ RUN apt-get update && apt-get install -y \
     sudo \
     tcpdump \
     telnet \
-    vim
+    vim \
+    && apt-get autoremove -y \
+    && apt-get autoclean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Ubuntu 24.04 recommends installing pip packages in a virtual environment
-# Create a virtual environment at /opt/venv and install all required python packages there
-RUN python3 -m venv --system-site-packages /opt/venv
+# Install uv - a fast Python package manager that replaces pip/venv/wheel.
+# This eliminates the need for python3-pip, python3-venv, and python3-wheel
+# system packages, avoiding vulnerabilities like USN-8221-1.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Create a virtual environment at /opt/venv using uv
+RUN uv venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
@@ -53,10 +60,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
     && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
-RUN pip install --no-cache-dir \
+RUN uv pip install --no-cache \
     aiohttp \
     allure-pytest \
-    ansible==11.10.0 \
+    ansible \
     azure-storage-blob \
     azure-kusto-data \
     azure-kusto-ingest \
@@ -64,7 +71,7 @@ RUN pip install --no-cache-dir \
     celery[redis] \
     cffi \
     contextlib2 \
-    cryptography \
+    "cryptography>=46.0.7,<47" \
     ctypesgen \
     debugpy \
     dpkt \
@@ -87,16 +94,17 @@ RUN pip install --no-cache-dir \
     ncclient \
     netaddr \
     netmiko \
-    opentelemetry-api==1.27.0 \
-    opentelemetry-sdk==1.27.0 \
-    opentelemetry-exporter-otlp==1.27.0 \
+    opentelemetry-api==1.41.0 \
+    opentelemetry-sdk==1.41.0 \
+    opentelemetry-exporter-otlp==1.41.0 \
     pandas \
     paramiko \
     passlib \
     pexpect \
     prettytable \
+    "protobuf>=5.29.6,<6" \
     psutil \
-    ptf \
+    ptf==0.10.0 \
     pyasn1 \
     pycryptodome \
     pyfiglet \
@@ -139,7 +147,7 @@ RUN pip install --no-cache-dir \
     && cd ../..            \
     && rm -fr nanomsg-1.2.1  \
     && rm -f 1.2.1.tar.gz  \
-    && python3 -m pip install --no-cache-dir nnpy
+    && uv pip install --no-cache nnpy
 
 # Install docker-ce-cli, azure-cli
 RUN install -m 0755 -d /etc/apt/keyrings \
@@ -152,6 +160,11 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get update  \
     && apt-get install -y docker-ce-cli \
     && curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Patch Azure CLI's bundled cryptography for CVE-2026-39892
+RUN az_site_packages=$(/opt/az/bin/python -c "import site; print(site.getsitepackages()[0])") \
+    && /opt/az/bin/python -m pip install --no-cache-dir --target "$az_site_packages" 'cryptography>=46.0.7,<47' \
+    && find "$az_site_packages" -name 'cryptography-46.0.6*' -type d -exec rm -rf {} + 2>/dev/null; true
 
 # Install dash-api
 RUN tmpdir=$(mktemp -d) \
@@ -173,7 +186,7 @@ RUN tmpdir=$(mktemp -d) \
     && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
     && cd utils \
     && python3 setup.py bdist_wheel \
-    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && uv pip install --no-cache dist/dash_pipeline_utils*.whl \
     && cd / \
     && rm -rf "$tmpdir"
 

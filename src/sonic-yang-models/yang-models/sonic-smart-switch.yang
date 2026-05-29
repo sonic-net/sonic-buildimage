@@ -57,7 +57,7 @@ module sonic-smart-switch {
 
 		container MID_PLANE_BRIDGE {
 
-			description "MID_PLANE_BRIDGE part of config_db.json";
+			description "Midplane bridge connecting switch NPU to DPUs";
 
 			container GLOBAL {
 				leaf bridge {
@@ -79,7 +79,7 @@ module sonic-smart-switch {
 		/* end of container MID_PLANE_BRIDGE */
 
 		container DPUS {
-			description "DPUS part of config_db.json";
+			description "DPU name-to-midplane-interface mapping";
 
 			list DPUS_LIST {
 				key "dpu_name";
@@ -106,7 +106,7 @@ module sonic-smart-switch {
 		/* end of container DPUS */
 
 		container DPU {
-			description "DPUs part of config_db.json";
+			description "DPU device configuration including addresses and service ports";
 
 			list DPU_LIST {
 				key "dpu_name";
@@ -187,7 +187,7 @@ module sonic-smart-switch {
 		/* end of container DPU */
 
 		container REMOTE_DPU {
-			description "REMOTE_DPU part of config_db.json";
+			description "Remote DPU devices on peer smart switches";
 
 			list REMOTE_DPU_LIST {
 				key "dpu_name";
@@ -243,7 +243,7 @@ module sonic-smart-switch {
 		/* end of container REMOTE_DPU */
 
 		container VDPU {
-			description "VDPU part of config_db.json";
+			description "Virtual DPU definitions grouping physical DPUs";
 
 			list VDPU_LIST {
 				key vdpu_id;
@@ -284,7 +284,7 @@ module sonic-smart-switch {
 
 			container global {
 
-				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
+				description "DASH high-availability global settings for DPU-to-DPU communication";
 
 				leaf vnet_name {
 					status deprecated;

@@ -23,6 +23,7 @@ $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(SONIC_XCVRD_PY3)
 $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(SONIC_YCABLED_PY3)
 $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(SONIC_CHASSISD_PY3)
 $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(SONIC_STORMOND_PY3)
+$(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(SONIC_BMCCTLD_PY3)
 
 ifeq ($(PDDF_SUPPORT),y)
 $(DOCKER_PLATFORM_MONITOR)_PYTHON_WHEELS += $(PDDF_PLATFORM_API_BASE_PY3)
@@ -60,6 +61,11 @@ $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/device/pddf:/usr/share
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/lock/pddf-locks:/var/lock/pddf-locks:rw
 # Add sysfs mounts for hardware access
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /sys/:/sys/:rw
+
+# Add /dev/mem device access for BMC platforms (needed for devmem register access)
+ifeq ($(CONFIGURED_PLATFORM),aspeed)
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --device=/dev/mem:/dev/mem:rw
+endif
 
 # Mount Arista python library on Aboot images to be used by plugins
 $(DOCKER_PLATFORM_MONITOR)_aboot_RUN_OPT += -v /usr/lib/libsfp-eeprom.so:/usr/lib/libsfp-eeprom.so:ro

@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files, rsync_from_builder_stage %}
-ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-trixie-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
@@ -15,7 +15,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install required packages
 RUN apt-get update   && \
     apt-get install -y  \
-        iproute2        \
+{% if enable_frr_tcmalloc == "y" %}
+        libgoogle-perftools4 \
+{% endif %}
         logrotate
 
 RUN groupadd -g ${frr_user_gid} frr

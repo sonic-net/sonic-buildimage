@@ -25,6 +25,7 @@ module sonic-flex_counter {
 
             /* typedef specific to FLEX_COUNTER_TABLE */
             typedef flex_status {
+                description "Enable or disable status for flex counter polling";
                 type enumeration {
                     enum enable;
                     enum disable;
@@ -32,16 +33,19 @@ module sonic-flex_counter {
             }
 
             typedef flex_delay_status {
+                description "Whether to delay counter polling until system is ready, used during fast-reboot";
                 type stypes:boolean_type;
             }
 
             typedef poll_interval {
+                description "Counter polling interval in milliseconds";
                 type uint32 {
                     range 100..4294967295;
                 }
             }
 
             typedef bulk_chunk_size {
+                description "Number of counter entries processed per SAI bulk counter API call";
                 type uint32 {
                     range 1..4294967295;
                 }
@@ -52,48 +56,76 @@ module sonic-flex_counter {
                 description "Bulk chunk size per counter name prefix";
             }
 
-            description "FLEX_COUNTER_TABLE part of config_db.json";
+            description "Flexible counter polling configuration for hardware ASIC counters";
 
             /* below are in alphabetical order */
 
             container BUFFER_POOL_WATERMARK {
+                description "Polling configuration for buffer pool watermark counters";
                 /* BUFFER_POOL_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable buffer pool watermark counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay buffer pool watermark counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Buffer pool watermark counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container DEBUG_COUNTER {
+                description "Polling configuration for debug counters such as drop reasons";
                 /* DEBUG_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable debug counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay debug counter polling until system is ready";
                     type flex_delay_status;
                 }
             }
 
             container ENI {
+                description "Polling configuration for DASH Elastic Network Interface counters";
                 /* ENI_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable ENI counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay ENI counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "ENI counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container DASH_METER {
+                description "Polling configuration for DASH metering counters";
                 /* METER_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable DASH meter counter polling";
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay DASH meter counter polling until system is ready";
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    description "DASH meter counter polling interval in milliseconds";
+                    type poll_interval;
+                }
+            }
+
+            container HA_SET {
+                /* HA_SET_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
                     type flex_status;
                 }
@@ -106,275 +138,360 @@ module sonic-flex_counter {
             }
 
             container PFCWD {
+                description "Polling configuration for Priority Flow Control Watchdog counters";
                 /* PFC_WD_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable PFC watchdog counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay PFC watchdog counter polling until system is ready";
                     type flex_delay_status;
                 }
             }
 
             container PG_DROP {
+                description "Polling configuration for priority group drop counters";
                 /* PG_DROP_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable priority group drop counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay priority group drop counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Priority group drop counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of priority group drop counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for priority group drop counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container PG_WATERMARK {
+                description "Polling configuration for priority group watermark counters";
                 /* PG_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable priority group watermark counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay priority group watermark counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Priority group watermark counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of priority group watermark counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for priority group watermark counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container PORT {
+                description "Polling configuration for port-level traffic counters";
                 /* PORT_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable port counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay port counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Port counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of port counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for port counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container PORT_RATES {
+                description "Polling configuration for port rate counters such as bits per second";
                 /* PORT_RATES_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable port rate counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay port rate counter polling until system is ready";
                     type flex_delay_status;
                 }
             }
 
             container PORT_BUFFER_DROP {
+                description "Polling configuration for per-port buffer drop counters";
                 /* PORT_BUFFER_DROP_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable port buffer drop counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay port buffer drop counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Port buffer drop counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of port buffer drop counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for port buffer drop counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container PORT_PHY_ATTR {
+                description "Polling configuration for port physical layer attributes such as link status";
                 /* PORT_PHY_ATTR_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable port physical attribute polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay port physical attribute polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Port physical attribute polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container QUEUE {
+                description "Polling configuration for queue traffic counters";
                 /* QUEUE_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable queue counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay queue counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Queue counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of queue counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for queue counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container QUEUE_WATERMARK {
+                description "Polling configuration for queue watermark counters";
                 /* QUEUE_WATERMARK_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable queue watermark counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay queue watermark counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Queue watermark counter polling interval in milliseconds";
                     type poll_interval;
                 }
                 leaf BULK_CHUNK_SIZE {
+                    description "Number of queue watermark counter entries per bulk API call";
                     type bulk_chunk_size;
                 }
                 leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    description "Bulk chunk size per counter name prefix for queue watermark counters";
                     type bulk_chunk_size_per_prefix;
                 }
             }
 
             container RIF {
+                description "Polling configuration for router interface traffic counters";
                 /* RIF_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable router interface counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay router interface counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Router interface counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container RIF_RATES {
+                description "Polling configuration for router interface rate counters";
                 /* RIF_RATE_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable router interface rate counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay router interface rate counter polling until system is ready";
                     type flex_delay_status;
                 }
             }
 
             container ACL {
+                description "Polling configuration for ACL rule hit counters";
                 /* ACL_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable ACL counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay ACL counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "ACL counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container FLOW_CNT_TRAP {
+                description "Polling configuration for host interface trap flow counters";
                 /* HOSTIF_TRAP_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable trap flow counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay trap flow counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Trap flow counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container FLOW_CNT_ROUTE {
+                description "Polling configuration for route flow counters matching configured prefix patterns";
                 /* ROUTE_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable route flow counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay route flow counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Route flow counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container TUNNEL {
+                description "Polling configuration for tunnel interface traffic counters";
                 /* TUNNEL_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable tunnel counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay tunnel counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Tunnel counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container WRED_ECN_QUEUE {
+                description "Polling configuration for per-queue WRED and ECN marking counters";
                 /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP  */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable per-queue WRED/ECN counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay per-queue WRED/ECN counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Per-queue WRED/ECN counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container WRED_ECN_PORT {
+                description "Polling configuration for per-port WRED and ECN marking counters";
                 /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable per-port WRED/ECN counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay per-port WRED/ECN counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Per-port WRED/ECN counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container SRV6 {
+                description "Polling configuration for SRv6 segment routing counters";
                 /* SRV6_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable SRv6 counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay SRv6 counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "SRv6 counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
 
             container SWITCH {
+                description "Polling configuration for switch-level global counters";
                 /* SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
+                    description "Enable or disable switch-level counter polling";
                     type flex_status;
                 }
                 leaf FLEX_COUNTER_DELAY_STATUS {
+                    description "Delay switch-level counter polling until system is ready";
                     type flex_delay_status;
                 }
                 leaf POLL_INTERVAL {
+                    description "Switch-level counter polling interval in milliseconds";
                     type poll_interval;
                 }
             }
@@ -383,17 +500,20 @@ module sonic-flex_counter {
         /* end of container FLEX_COUNTER_TABLE */
 
         container FLOW_COUNTER_ROUTE_PATTERN {
-            description "Flow counter route pattern of config_db.json";
+            description "IP prefix patterns that select routes for flow counter tracking";
 
             list FLOW_COUNTER_ROUTE_PATTERN_LIST {
+                description "Route flow counter pattern for the default VRF";
 
                 key "ip_prefix";
 
                 leaf ip_prefix {
+                    description "IP prefix pattern to match routes against for flow counting";
                     type inet:ip-prefix;
                 }
 
                 leaf max_match_count {
+                    description "Maximum number of matching routes to bind flow counters to";
                     type uint32 {
                         range 1..50;
                     }
@@ -402,10 +522,12 @@ module sonic-flex_counter {
             }
 
             list FLOW_COUNTER_ROUTE_PATTERN_VRF_LIST {
+                description "Route flow counter pattern for a specific VRF or VNET";
 
                 key "vrf_name ip_prefix";
 
                 leaf vrf_name {
+                    description "VRF or VNET name to scope the route pattern match";
                     /*
                     We don't use vrf_name reference here because:
                     1. User is allowed to configure a VRF that does not exist yet here, orchagent is designed to resolve the VRF name once the VRF is created.
@@ -417,10 +539,12 @@ module sonic-flex_counter {
                 }
 
                 leaf ip_prefix {
+                    description "IP prefix pattern to match routes against for flow counting";
                     type inet:ip-prefix;
                 }
 
                 leaf max_match_count {
+                    description "Maximum number of matching routes to bind flow counters to";
                     type uint32 {
                         range 1..50;
                     }

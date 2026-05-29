@@ -19,8 +19,9 @@ bcm_device:
       sai_tunnel_support: 1
       bcm_tunnel_term_compatible_mode: 1
       l3_ecmp_member_first_lkup_mem_size: 32768
-      #enable port queue drop stats
-      sai_stats_support_mask: 0
+      default_cpu_tx_queue: 7
+      #enable srv6 stats, egr queue drop stats, exclude PFC/pause from in-if discards
+      sai_stats_support_mask: 0x884
       #disable vxlan tunnel stats
       sai_stats_disable_mask: 0x200
       #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
