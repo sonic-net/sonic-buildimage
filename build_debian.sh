@@ -833,6 +833,12 @@ SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE}  \
 	DBGOPT="${DBGOPT}" \
 	scripts/collect_host_image_version_files.sh $CONFIGURED_ARCH $IMAGE_DISTRO $TARGET_PATH $FILESYSTEM_ROOT
 
+# SBOM license harvest happens uniformly via the per-scope
+# collect_version_files hook (see src/sonic-build-hooks/scripts/collect_version_files).
+# That runs inside the chroot via post_run_buildinfo (line 21 of
+# collect_host_image_version_files.sh) before /usr/share/doc/* is wiped
+# below at line ~838.
+
 # Remove GCC
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
 
