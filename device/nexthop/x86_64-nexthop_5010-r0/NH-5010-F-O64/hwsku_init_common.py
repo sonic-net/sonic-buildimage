@@ -343,7 +343,7 @@ class SkuBasePipeline:
             asic_cfg = self.generate_plat_asic_config()
             # Currently we do not support generating gearbox bcm config
             # gb_plat_cfg = self.generate_plat_gearbox_config()
-            asic_type = device_info.get_sonic_version_info(['asic_type'])
+            asic_type = device_info.get_sonic_version_info()['asic_type']
             if asic_type == 'vs':
                 return
             sonic_gb = self.generate_sonic_gearbox_config()
