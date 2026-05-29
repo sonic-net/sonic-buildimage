@@ -10,6 +10,13 @@ FROM {{ prefix }}debian:bookworm
 {% endif %}
 
 {% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
+{% set generated_crypto_material_paths = [
+    "/etc/ssh/ssh_host_*_key*",
+    "/etc/ssl/private/ssl-cert-snakeoil.key",
+    "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+    "/etc/ssl/certs/*snakeoil*",
+] %}
+{% macro remove_generated_crypto_material() -%}rm -f {{ generated_crypto_material_paths | join(' ') }}{%- endmacro %}
 
 USER root
 WORKDIR /root
@@ -26,6 +33,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ## Set the apt source, update package cache and install necessary packages
 ## TODO: Clean up this step
+# openssh-server and ssl-cert can generate SSH host keys and the ssl-cert
+# snakeoil pair during package install. Remove that generated identity material
+# in the same RUN layer so it is not baked into docker-ptf.
 RUN apt-get update          \
     && apt-get upgrade -y   \
     && apt-get dist-upgrade -y  \
@@ -101,6 +111,7 @@ RUN apt-get update          \
 {% endif %}
         freeradius          \
         quilt               \
+    && {{ remove_generated_crypto_material() }} \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go toolchain for building grpcurl and gnmic from source
@@ -457,18 +468,23 @@ RUN echo "/root/env-python3/lib/python3.11/site-packages" > /usr/lib/python3/dis
 
 RUN echo "PYTHONPATH=/root/env-python3/lib/python3.11/site-packages" >> /etc/environment
 
-# Final system-level security upgrade: ensure every Debian package is at its
-# latest patched version. This must run AFTER all apt-get install / dpkg -i
-# steps so nothing slips through.
-# The build system pins package versions via /etc/apt/preferences.d/01-versions-deb.
-# Remove the pin so apt-get upgrade can pull in the latest security patches.
+# Final system-level security upgrade: ensure Debian packages are upgraded after
+# every apt-get install / dpkg -i step. The build system pins package versions
+# via /etc/apt/preferences.d/01-versions-deb; remove the pin so apt can pull
+# the latest packages available in the configured security snapshot. Repeat
+# generated identity cleanup here because upgrade/dist-upgrade can regenerate
+# openssh-server or ssl-cert key material.
 RUN rm -f /etc/apt/preferences.d/01-versions-deb \
     && apt-get update \
     && apt-get upgrade -y \
     && apt-get dist-upgrade -y \
+    && {{ remove_generated_crypto_material() }} \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ["*.ini", "/etc/ptf/"]
+COPY docker-ptf-ssh-host-keys.sh /usr/local/sbin/docker-ptf-ssh-host-keys.sh
+RUN chmod 0755 /usr/local/sbin/docker-ptf-ssh-host-keys.sh
+
 EXPOSE 22 8009
 
 ENTRYPOINT ["/root/env-python3/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

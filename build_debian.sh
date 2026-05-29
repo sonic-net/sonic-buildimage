@@ -475,6 +475,11 @@ sudo cp files/image_config/logrotate/logrotateOverride.conf $FILESYSTEM_ROOT/etc
 
 ## Remove sshd host keys, and will regenerate on first sshd start
 sudo rm -f $FILESYSTEM_ROOT/etc/ssh/ssh_host_*_key*
+# SONiC manages host SSH through ssh.service and its own host key generator.
+# Override systemd's SSH socket generator with a no-op executable to avoid
+# daemon-reload syslog errors on images where systemd-ssh-generator is present.
+sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system-generators
+sudo ln -sf /bin/true $FILESYSTEM_ROOT/etc/systemd/system-generators/systemd-ssh-generator
 sudo cp files/sshd/host-ssh-keygen.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d
 sudo cp files/sshd/override.conf $FILESYSTEM_ROOT/etc/systemd/system/ssh.service.d/override.conf
