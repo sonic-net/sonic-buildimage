@@ -4,7 +4,7 @@ import json
 import os
 
 if __name__ == '__main__':
-    os.system("sudo rm -rf /sys_switch;sudo mkdir -p -m 777 /sys_switch")
+    os.system("sudo rm -rf /sys_switch;sudo mkdir -p -m 755 /sys_switch")
     
     with open('/etc/s3ip/s3ip_sysfs_conf.json', 'r') as jsonfile:
         json_string = json.load(jsonfile)
@@ -16,7 +16,7 @@ if __name__ == '__main__':
             if s3ip_sysfs_path['type'] == "string" :
                 (path, file) = os.path.split(s3ip_sysfs_path['path'])
                 #创建文件
-                command = "sudo mkdir -p -m 777 " + path
+                command = "sudo mkdir -p -m 755 " + path
                 #print(command)
                 os.system(command)
                 command = "sudo echo " +  "\"" + s3ip_sysfs_path['value'] + "\"" + " > " + s3ip_sysfs_path['path']
