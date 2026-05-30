@@ -539,7 +539,7 @@ libwayland-client0==1.21.0-1
 libwayland-cursor0==1.21.0-1
 libwayland-egl1==1.21.0-1
 libwayland-server0==1.21.0-1
-libwbclient0==2:4.17.12+dfsg-0+deb12u3
+libwbclient0==2:4.17.12+dfsg-0+deb12u4
 libwebp7==1.2.4-0.2+deb12u1
 libwebpdemux2==1.2.4-0.2+deb12u1
 libwebpmux3==1.2.4-0.2+deb12u1
@@ -601,7 +601,7 @@ libyaml-0-2==0.2.5-1
 libyuv0==0.0~git20230123.b2528b0-1
 libz3-4==4.8.12-3.1
 libz3-dev==4.8.12-3.1
-linux-libc-dev==6.1.172-1
+linux-libc-dev==6.1.174-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-dev==1:14.0.6-12

@@ -330,8 +330,8 @@ libzmq5==4.3.5-1+b3
 linux-base==4.12.1
 linux-image-6.12.41+deb13-sonic-amd64-unsigned==6.12.41-1
 linux-image-6.12.41+deb13-sonic-arm64-unsigned==6.12.41-1
-linux-libc-dev==6.12.88-1
-linux-perf==6.12.88-1
+linux-libc-dev==6.12.90-2
+linux-perf==6.12.90-2
 linux-sysctl-defaults==4.12.1
 locales==2.41-12+deb13u3
 logrotate==3.22.0-1
@@ -343,10 +343,10 @@ mft==4.34.0-148
 mft-fwtrace-cfg==1.0.0
 mft-oem==4.34.0-148
 minicom==2.10-1
-mlnx-iproute2==2601.0.2-1
-mlnx-ofed-kernel-modules-6.12.41+deb13-sonic-arm64==26.01.OFED.26.01.0.2.9.1
-mlnx-ofed-kernel-utils==26.01.OFED.26.01.0.2.9.1-1
-mlnx-tools==2601.0.0-1
+mlnx-iproute2==2601.0.6-1
+mlnx-ofed-kernel-modules-6.12.41+deb13-sonic-arm64==26.01.OFED.26.01.1.0.0.1
+mlnx-ofed-kernel-utils==26.01.OFED.26.01.1.0.0.1-1
+mlnx-tools==2601.0.2-1
 mlxbf-bootctl==2.1
 mlxbf-bootimages==4.14.0-13938
 mokutil==0.7.2-1
