@@ -23,8 +23,8 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.debian.tar.xz==ea65186950c67556dc215007c8b5d77a
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-17.dsc==2cdce6d80506e66985e68649f129ca3e
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==3308e8d4a1cf5d39d2923bfedf494a73
-http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-aarch64-deb.tgz==8cbab51bd161b2f2f1cccc7a610c4aa8
-http://www.mellanox.com/downloads/MFT/mft-4.34.0-145-x86_64-deb.tgz==c6d68339ee34d84f94438c79d4ce9f52
+http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-aarch64-deb.tgz==aac96049c94f7cd9c5796ddfecd27122
+http://www.mellanox.com/downloads/MFT/mft-4.34.0-148-x86_64-deb.tgz==f203d9d1fbc95a5be72cf538595c1ec3
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.debian.tar.xz==5a87fe5e2077763dd62ad40716804954
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37-2.dsc==c9d75e69a27738c24a25fff61285998b
 https://deb.debian.org/debian/pool/main/b/bash/bash_5.2.37.orig.tar.xz==6075acd95528d14013fcde1ae279efdf
@@ -100,8 +100,8 @@ https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2016.3442/fw-SPC3-rel-30_2016_3442-EVB.mfa==6989f0c7fe24e685325c050effd5dea3
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2016.3442/fw-SPC4-rel-34_2016_3442-EVB.mfa==b179a6347317568931da7f8b27a1ffc5
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2016.3442/fw-SPC5-rel-37_2016_3442-EVB.mfa==9df018c15d9459c505ba9da227022a9c
-https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2511.35.3400.14-bookworm-amd64/mlnx-sai-dbgsym_1.mlnx.SAIBuild2511.35.3400.14_amd64.deb==757e19b5fab8c03f30afdb39ed171e55
-https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2511.35.3400.14-bookworm-amd64/mlnx-sai_1.mlnx.SAIBuild2511.35.3400.14_amd64.deb==f7cffcb501b6877fd2e0aae5d2144330
+https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2511.35.3400.25-bookworm-amd64/mlnx-sai-dbgsym_1.mlnx.SAIBuild2511.35.3400.25_amd64.deb==7f5a2ea2c1b0030d89122550dadef936
+https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2511.35.3400.25-bookworm-amd64/mlnx-sai_1.mlnx.SAIBuild2511.35.3400.25_amd64.deb==0cede55266a843a70d6a498087ff2e1f
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.8.3442-bookworm-amd64/sys-sdk_1.mlnx.4.8.3442_amd64-dev.deb==7bfb44e6f13ef5f36c6c9b815dffb0a6
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.8.3442-bookworm-amd64/sys-sdk_1.mlnx.4.8.3442_amd64.deb==16e25f83a747a2700dc6ae2e6accbe01
 https://github.com/Mellanox/Spectrum-SDK-Drivers/archive/refs/heads/4.8.3442.zip==f3897f4e8e8cce1a10816e99495e62fe
