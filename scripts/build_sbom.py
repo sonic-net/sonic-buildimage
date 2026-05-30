@@ -390,16 +390,61 @@ def parse_lockfiles(target_path: str) -> list:
         return []
 
 
+def _license_cache_dir() -> str:
+    """Cache directory for license resolver output. Sibling to the
+    scanner cache. Lives under target/ so `make reset` invalidates it
+    automatically."""
+    target_path = os.environ.get("TARGET_PATH", "target")
+    d = os.path.join(target_path, "sbom-tools", "license-cache")
+    try:
+        os.makedirs(d, exist_ok=True)
+    except OSError:
+        pass
+    return d
+
+
+def _license_cache_key(tarballs: list) -> str:
+    """SHA-256 over the sorted SHA-256s of every copyrights.tar.gz
+    input. The resolver's output is a pure function of the input
+    tarballs' content, so this is the right cache key — content
+    drift in any tarball forces a re-resolve."""
+    h = hashlib.sha256()
+    for t in sorted(tarballs):
+        sha = file_sha256(t)
+        if sha:
+            h.update(sha.encode())
+    return h.hexdigest()
+
+
 def resolve_licenses(target_path: str) -> dict:
     """Returns { pkg_name: spdx_expression }.
 
     Runs scripts/sbom_resolve_licenses.py against every copyrights.tar.gz
     found under target/. The resolver does the heavy lifting (DEP-5
     parsing, licensecheck fallback, SPDX mapping).
+
+    Output is cached under target/sbom-tools/license-cache/<sha>.json
+    keyed by a hash of the input tarballs' content. The 3 per-variant
+    aggregator invocations (broadcom / broadcom-dnx / broadcom-legacy-th)
+    share the same input copyrights tarballs — they're harvested
+    per-container by collect_version_files, and most containers are
+    identical across variants — so without caching the resolver was
+    running ~3x and producing identical output each time. Cache lives
+    under target/ so `make reset` invalidates naturally.
     """
     tarballs = find_copyright_tarballs(target_path)
     if not tarballs:
         return {}
+
+    cache_key = _license_cache_key(tarballs)
+    cache_file = os.path.join(_license_cache_dir(), f"{cache_key}.json")
+    if os.path.isfile(cache_file):
+        try:
+            with open(cache_file) as f:
+                data = json.load(f)
+            return data.get("resolved", {})
+        except Exception:
+            pass
 
     out_json = os.path.join(target_path, "sbom-licenses.json")
     script = os.path.join(os.path.dirname(__file__),
@@ -414,10 +459,21 @@ def resolve_licenses(target_path: str) -> dict:
     try:
         with open(out_json) as f:
             data = json.load(f)
-        return data.get("resolved", {})
     except Exception as e:
         warn(f"could not read resolver output: {e}")
         return {}
+
+    # Populate the cache for subsequent per-variant aggregator runs.
+    if data.get("resolved"):
+        try:
+            tmp = cache_file + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp, cache_file)
+        except Exception as e:
+            warn(f"could not write license cache {cache_file}: {e}")
+
+    return data.get("resolved", {})
 
 
 def apply_licenses(components: list, license_map: dict) -> tuple:
