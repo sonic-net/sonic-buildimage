@@ -127,6 +127,17 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
                 "set_owner": "local",
                 "state": "enabled",
                 "support_syslog_rate_limit": "False"
+            },
+            "dpu-auto-recovery": {
+                "auto_restart": "enabled",
+                "check_up_status": "False",
+                "delayed": "False",
+                "has_global_scope": "True",
+                "has_per_asic_scope": "False",
+                "high_mem_alert": "disabled",
+                "set_owner": "local",
+                "state": "enabled",
+                "support_syslog_rate_limit": "False"
             }
         }
 
