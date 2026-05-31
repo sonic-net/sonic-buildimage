@@ -285,9 +285,9 @@ class TestJ2Files(TestCase):
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_ipinip_backend_device_without_storage(self):
-        # Test Backend device without storage_device metadata - should clear all IP addresses
+        # Test Mellanox Backend device without storage_device metadata - should clear all IP addresses
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
+        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
@@ -295,23 +295,23 @@ class TestJ2Files(TestCase):
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_ipinip_backend_device_with_storage(self):
-        # Test Backend device with storage_device metadata - should generate normal ipinip config
+        # Mellanox Backend device with storage_device metadata - should generate normal ipinip config
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "storage_device": "true"}}}
+        extra_data = {"ASIC_VENDOR": "mellanox", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "storage_device": "true"}}}
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
-    def test_ipinip_backend_device_ai_compute(self):
-        # Test Backend device with resource_type=ComputeAI (no storage_device) - should generate normal ipinip config
+    def test_ipinip_backend_device_non_mellanox_no_storage(self):
+        # Non-Mellanox Backend device without storage_device metadata - should still generate normal ipinip config
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
-        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter", "resource_type": "ComputeAI"}}}
+        extra_data = {"ASIC_VENDOR": "broadcom", "DEVICE_METADATA": {"localhost": {"type": "BackEndToRRouter"}}}
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
         self.run_script(argument, output_file=self.output_file)
 
-        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_ai_compute.json')
+        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_backend_with_storage.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
     def test_l2switch_template(self):
