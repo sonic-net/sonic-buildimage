@@ -73,7 +73,7 @@ retrying==1.4.2
 rpyc==6.0.2
 scapy==2.4.4
 secretstorage==2.3.1
-serpent==1.42
+serpent==1.43
 setuptools==82.0.1
 simplegeneric==0.8.1
 six==1.12.0

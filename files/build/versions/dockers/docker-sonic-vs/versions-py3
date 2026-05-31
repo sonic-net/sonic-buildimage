@@ -13,7 +13,7 @@ docker==7.1.0
 docker-image-py==0.1.13
 enlighten==1.14.1
 filelock==3.29.0
-idna==3.16
+idna==3.17
 importlib-metadata==6.1.0
 jinxed==2.0.4
 jsonpatch==1.33

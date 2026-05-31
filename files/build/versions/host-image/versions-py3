@@ -20,7 +20,7 @@ enlighten==1.14.1
 filelock==3.29.0
 grpcio==1.58.0
 grpcio-tools==1.58.0
-idna==3.16
+idna==3.17
 ijson==3.2.3
 inotify==0.2.12
 ipaddr==2.2.0
