@@ -1,5 +1,4 @@
 bitarray==2.8.1
-blessed==1.44.0
 certifi==2026.5.20
 cffi==2.0.0
 pyyaml==6.0.3

@@ -234,6 +234,25 @@ def make_openvex_json(
 # ---------------------------------------------------------------------------
 
 
+def _input_fingerprint(patches: list) -> str:
+    """SHA-256 over the sorted (path, content-sha256) pairs of every
+    discovered patch. Used as a self-cache key so re-invocations with
+    identical inputs (e.g. the 3 per-variant aggregator runs that
+    build_sbom.sh fires) can short-circuit and skip the rescan."""
+    h = hashlib.sha256()
+    for p in sorted(patches):
+        try:
+            with open(p, "rb") as f:
+                fhash = hashlib.sha256(f.read()).hexdigest()
+        except Exception:
+            continue
+        h.update(p.encode())
+        h.update(b"\0")
+        h.update(fhash.encode())
+        h.update(b"\0")
+    return h.hexdigest()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", default="src",
@@ -250,6 +269,24 @@ def main() -> int:
 
     patches = find_patches(args.src)
     info(f"scanned {len(patches)} patch files under {args.src}/")
+
+    # Self-cache: if a prior run with byte-identical patch inputs
+    # already produced this output-dir, skip the rescan. The marker
+    # records the input fingerprint and lives inside the output-dir
+    # itself, so `rm -rf vex/auto/` (or `make reset`) invalidates it
+    # naturally. Output is deterministic so the cached files are
+    # identical to what we'd produce now.
+    marker = os.path.join(args.output_dir, ".input_hash")
+    fingerprint = _input_fingerprint(patches)
+    if not args.dry_run and os.path.isfile(marker):
+        try:
+            with open(marker) as f:
+                if f.read().strip() == fingerprint:
+                    info("inputs unchanged since last run; "
+                         "vex/auto/ is fresh, skipping rescan.")
+                    return 0
+        except Exception:
+            pass
 
     written = 0
     cve_total = 0
@@ -277,6 +314,18 @@ def main() -> int:
 
     info(f"wrote {written} VEX file(s) covering {cve_total} CVE statement(s)"
          + (" (dry-run)" if args.dry_run else ""))
+
+    # Persist input fingerprint so subsequent invocations with the
+    # same patch inputs can short-circuit. Only after a successful
+    # write so a failed run can't poison the cache.
+    if not args.dry_run:
+        try:
+            os.makedirs(args.output_dir, exist_ok=True)
+            with open(marker, "w") as f:
+                f.write(fingerprint + "\n")
+        except Exception as e:
+            warn(f"could not write input-hash marker {marker}: {e}")
+
     return 0
 
 

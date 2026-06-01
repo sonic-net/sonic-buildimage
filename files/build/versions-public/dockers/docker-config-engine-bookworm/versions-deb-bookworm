@@ -63,7 +63,7 @@ libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang3==3.12.2-1
-linux-libc-dev==6.1.172-1
+linux-libc-dev==6.1.174-1
 make==4.3-4.1
 patch==2.7.6-7
 python3-cffi==1.15.1-5

@@ -22,7 +22,7 @@ enlighten==1.11.2
 filelock==3.29.0
 grpcio==1.66.2
 grpcio-tools==1.66.2
-idna==3.16
+idna==3.17
 ijson==3.4.0
 inflect==7.3.1
 inotify==0.2.12

@@ -373,6 +373,10 @@ three times. The cache short-circuits 2nd and 3rd hits. `dir:` scans
 variant. `make reset` wipes `target/` and therefore invalidates the
 cache automatically — no stale entries across resets.
 
+The license resolver's output is similarly memoized so it is not
+recomputed once per ASIC variant. Same `make reset` invalidation
+as the scanner cache; transparent to operators.
+
 ## Reproducibility
 
 Two byte-identical builds of the same source produce byte-identical
@@ -485,6 +489,8 @@ statements per patch-mentioned CVE. The regeneration is wired into
 `scripts/build_sbom.sh` so the auto-VEX set always reflects the
 current state of `src/*/patches/` — a patch that introduces or
 removes a CVE marker is reflected on the very next build.
+Re-invocations against an unchanged patch set short-circuit;
+changing any tracked patch forces a rescan on the next build.
 
 ```json
 {
