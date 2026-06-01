@@ -31,6 +31,14 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
                               $(SYSMGR_DBG)
 endif
 
+ifeq ($(ENABLE_ASAN), y)
+$(DOCKER_SONIC_VS)_DEPENDS += $(SWSS_DBG) \
+                              $(LIBSWSSCOMMON_DBG) \
+                              $(LIBSAIREDIS_DBG) \
+                              $(LIBSAIVS_DBG) \
+                              $(SYNCD_VS_DBG)
+endif
+
 ifeq ($(SONIC_ROUTING_STACK), frr)
 $(DOCKER_SONIC_VS)_DEPENDS += $(FRR)
 else

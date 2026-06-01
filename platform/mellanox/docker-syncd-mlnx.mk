@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2016-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
 ifeq ($(ENABLE_ASAN), y)
-$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG) $(LIBSWSSCOMMON_DBG) $(LIBSAIMETADATA_DBG) $(LIBSAIREDIS_DBG)
 endif
 
 $(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI) $(ISSU_VERSION_FILE)

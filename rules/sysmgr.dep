@@ -7,7 +7,7 @@ $(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(a
                                 $(shell cd $(path)  && git ls-files | grep -v " ")))))
 
 $(SYSMGR)_CACHE_MODE  := GIT_CONTENT_SHA
-$(SYSMGR)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(ENABLE_ASAN)
+$(SYSMGR)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(SYSMGR)_DEP_FILES   := $(DEP_FILES)
 $(SYSMGR)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
 $(SYSMGR)_SMDEP_PATHS := $(SPATH) 
