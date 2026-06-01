@@ -13,7 +13,7 @@ $(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(a
 
 
 $(SYNCD)_CACHE_MODE  := GIT_CONTENT_SHA
-$(SYNCD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(ENABLE_ASAN)
+$(SYNCD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(SYNCD)_DEP_FILES   := $(DEP_FILES)
 $(SYNCD)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
 $(SYNCD)_SMDEP_PATHS := $(SMDEP_PATHS)

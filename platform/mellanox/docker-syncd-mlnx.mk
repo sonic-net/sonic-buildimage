@@ -22,16 +22,18 @@ include $(PLATFORM_PATH)/../template/docker-syncd-trixie.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
+DOCKER_SYNCD_MLNX_DBG_DEBS = $(SYNCD_DBG) \
+                             $(LIBSWSSCOMMON_DBG) \
+                             $(LIBSAIMETADATA_DBG) \
+                             $(LIBSAIREDIS_DBG)
+
+$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(DOCKER_SYNCD_MLNX_DBG_DEBS)
+
 ifeq ($(ENABLE_ASAN), y)
-$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(DOCKER_SYNCD_MLNX_DBG_DEBS)
 endif
 
 $(DOCKER_SYNCD_BASE)_FILES += $(RDB-CLI) $(ISSU_VERSION_FILE)
-
-$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
-                                $(LIBSWSSCOMMON_DBG) \
-                                $(LIBSAIMETADATA_DBG) \
-                                $(LIBSAIREDIS_DBG)
 
 ifeq ($(SDK_FROM_SRC), y)
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(MLNX_SDK_DBG_DEBS) $(MLNX_SAI_DBGSYM)
