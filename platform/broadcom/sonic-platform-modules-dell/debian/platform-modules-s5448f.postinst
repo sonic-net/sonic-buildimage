@@ -2,7 +2,6 @@
 
 # Enable Dell-s5448f-platform-service
 depmod -a
-pip3 install /usr/share/sonic/device/x86_64-dellemc_s5448f-r0/sonic_platform-1.0-py3-none-any.whl --force-reinstall -q --root-user-action=ignore
 systemctl enable platform-modules-s5448f.service
 systemctl start platform-modules-s5448f.service
 systemctl enable system-health.service
