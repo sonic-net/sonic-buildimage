@@ -37,13 +37,13 @@ if [ "$ENABLE_VERSION_CONTROL_DEB" != "y" ] || [ ! -d files/build/versions/host-
             sudo mkdir -p $FILESYSTEM_ROOT/usr/bin
             sudo cp /usr/bin/qemu*static $FILESYSTEM_ROOT/usr/bin || true
         fi
-        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --foreign --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
+        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y DEBOOTSTRAP_DIR=files/debootstrap debootstrap --foreign --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
         sudo rm $FILESYSTEM_ROOT/proc -rf
         sudo mkdir $FILESYSTEM_ROOT/proc
         sudo mount -t proc proc $FILESYSTEM_ROOT/proc
         sudo LANG=C chroot $FILESYSTEM_ROOT /debootstrap/debootstrap --second-stage
     else
-        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
+        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y DEBOOTSTRAP_DIR=files/debootstrap debootstrap --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
     fi
     RET=$?
     if [ $RET -ne 0 ]; then
@@ -109,7 +109,7 @@ touch $APTDEBIAN
 touch $DEBOOTSTRAP_BASE
 (cd $BASEIMAGE_TARBALLPATH && fakeroot tar -zcf $BASEIMAGE_TARBALL .)
 
-sudo debootstrap --verbose --variant=minbase --arch $CONFIGURED_ARCH --unpack-tarball=$BASEIMAGE_TARBALL $IMAGE_DISTRO $FILESYSTEM_ROOT
+sudo DEBOOTSTRAP_DIR=files/debootstrap debootstrap --verbose --variant=minbase --arch $CONFIGURED_ARCH --unpack-tarball=$BASEIMAGE_TARBALL $IMAGE_DISTRO $FILESYSTEM_ROOT
 RET=$?
 if [ $RET -ne 0 ]; then
     exit $RET

@@ -44,10 +44,10 @@ $(addprefix $(DEST)/, $(MLNX_TOOLS)): $(DEST)/% :
 						--with-mlnx-tools --without-knem --without-knem-dkms \
 						--without-kernel-mft-dkms
 
-	sudo chown -R ${USER} ./*
+	sudo chown -R ${BUILD_USER} ./*
 
 	pushd DEBS/*/aarch64/
-	chown ${USER} $(MLNX_TOOLS) $(OFED_KERNEL_UTILS) $(OFED_KERNEL_DKMS) 
+	chown ${BUILD_USER} $(MLNX_TOOLS) $(OFED_KERNEL_UTILS) $(OFED_KERNEL_DKMS) 
 	mv $(MLNX_TOOLS) $(OFED_KERNEL_UTILS) $(OFED_KERNEL_DKMS) $(DEST)/
 	popd
 
@@ -79,7 +79,7 @@ $(addprefix $(DEST)/, $(OFED_KERNEL)): $(DEST)/% :
 
 	dpkg -b $(DKMS_TMP) .
 
-	chown ${USER} $(OFED_KERNEL)
+	chown ${BUILD_USER} $(OFED_KERNEL)
 	mv $(OFED_KERNEL) $(DEST)/
 
 	rm -rf $(DKMS_TMP)
