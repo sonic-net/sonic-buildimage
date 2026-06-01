@@ -35,6 +35,10 @@ parameters:
 - name: registry_conn
   type: string
   default: sonicdev
+- name: bypass_cache
+  type: boolean
+  default: false
+  displayName: "Bypass NFS build cache (force full rebuild to pick up upstream USNs)"
 
 stages:
 - stage: Build
@@ -55,8 +59,22 @@ stages:
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
 
+        # Bypass the NFS build cache on scheduled runs (or when manually
+        # requested via the bypass_cache parameter) so that the docker
+        # image is actually rebuilt and `apt-get upgrade -y` inside
+        # Dockerfile.j2 picks up newly-released Ubuntu security updates
+        # (USNs). Without this, GIT_CONTENT_SHA cache hits cause daily
+        # scheduled runs to re-publish an unchanged docker-sonic-mgmt.gz
+        # for weeks at a time, leaving freshly-disclosed CVEs unpatched
+        # (e.g. USN-8292-1 for libarchive13t64).
+        EXTRA_BUILD_VARS=""
+        if [ "$(Build.Reason)" = "Schedule" ] || [ "${{ parameters.bypass_cache }}" = "True" ]; then
+          EXTRA_BUILD_VARS="SONIC_OVERRIDE_BUILD_VARS+=DOCKER_SONIC_MGMT_CACHE_MODE=none"
+          echo "##[notice]Bypassing NFS build cache for docker-sonic-mgmt (reason=$(Build.Reason), bypass_cache=${{ parameters.bypass_cache }})"
+        fi
+
         make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y configure PLATFORM=generic DOCKER_BUILDKIT=0
-        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y target/docker-sonic-mgmt.gz
+        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y ENABLE_SBOM=y $EXTRA_BUILD_VARS target/docker-sonic-mgmt.gz
         cp -r target $(Build.ArtifactStagingDirectory)/target
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
