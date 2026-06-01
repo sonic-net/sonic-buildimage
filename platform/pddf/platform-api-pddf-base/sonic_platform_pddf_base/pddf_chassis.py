@@ -278,3 +278,21 @@ class PddfChassis(ChassisBase):
     ##############################################
     # Other methods
     ##############################################
+    def get_watchdog(self):
+        """
+        Retreives hardware watchdog device on this chassis
+
+        Returns:
+            An object derived from WatchdogBase representing the hardware
+            watchdog device
+        """
+        try:
+            if self._watchdog is None:
+                from sonic_platform.watchdog import Watchdog
+                # Create the watchdog Instance
+                self._watchdog = Watchdog()
+
+        except Exception as e:
+            syslog.syslog(syslog.LOG_WARNING, "{}".format(e))
+        return self._watchdog
+

@@ -1,2 +1,0 @@
--w /etc/resolv.conf -p wa -F auid>=1000 -F auid!=4294967295 -k dns_changes
--w /run/resolvconf/resolv.conf -p wa -F auid>=1000 -F auid!=4294967295 -k dns_changes

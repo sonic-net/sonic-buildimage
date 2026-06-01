@@ -344,12 +344,18 @@ class SsgMainTest : public SsgFunctionTest {
         }
 
         /* Validate Unit file dependency creation for single instance
-         * common services. These entries should not be present for multi
-         * and single asic system.
+         * common services.
+         *
+         * We only rewrite dependencies for true multi-ASIC platforms. 
+         * For SmartSwitch NPU (num_asics == 1 && num_dpus > 0), 
+         * test.service is no longer rewritten, so we should not expect 
+         * common_dependency_list there.
          */
+        bool expect_common_deps = IS_MULTI_ASIC(cfg.num_asics);
+
         validate_output_dependency_list(common_dependency_list,
-            test_service, true, cfg.num_asics);
-    }
+            test_service, expect_common_deps, cfg.num_asics);
+        }
 
     /*
      * This function validates the list of generated Service Unit Files.
@@ -475,6 +481,27 @@ class SsgMainTest : public SsgFunctionTest {
 
         /* Validate environment variables */
         validate_environment_variable(cfg);
+
+        /* Validate masked services */
+        validate_masked_services(cfg);
+    }
+
+    /* Validate systemd-networkd.service is masked on non-smart-switch platforms */
+    void validate_masked_services(const SsgMainConfig &cfg) {
+        fs::path service_path{TEST_OUTPUT_DIR + "systemd-networkd.service"};
+        bool should_be_masked = !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu;
+        bool is_masked = false;
+
+        if (fs::exists(service_path) && fs::is_symlink(service_path)) {
+            char resolved_path[PATH_MAX] = { 0 };
+            realpath(service_path.c_str(), resolved_path);
+            if (strcmp(resolved_path, "/dev/null") == 0) {
+                is_masked = true;
+            }
+        }
+
+        EXPECT_EQ(is_masked, should_be_masked)
+            << "Masked service validation failed for: " << service_path;
     }
 
     /* Save global variables before running tests */

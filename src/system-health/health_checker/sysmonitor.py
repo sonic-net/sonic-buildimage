@@ -4,13 +4,14 @@ import os
 import sys
 import time
 import glob
-import multiprocessing
+import threading
+import queue
 from datetime import datetime
 from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
-from sonic_py_common.task_base import ProcessTaskBase
-from sonic_py_common import device_info
+from sonic_py_common.task_base import ThreadTaskBase
+from sonic_py_common import device_info, multi_asic
 from .config import Config
 import signal
 import jinja2
@@ -19,18 +20,19 @@ SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
 system_allsrv_state = "DOWN"
 spl_srv_list = ['database-chassis', 'gbsyncd']
+NON_BLOCKING_INACTIVE_REASONS = {"exec-condition"}
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
-#Subprocess which subscribes to STATE_DB FEATURE table for any update
-#and push service events to main process via queue
-class MonitorStateDbTask(ProcessTaskBase):
+#Thread which subscribes to STATE_DB FEATURE table for any update
+#and push service events to main thread via queue
+class MonitorStateDbTask(ThreadTaskBase):
 
     def __init__(self,myQ):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self.task_queue = myQ
 
     def subscribe_statedb(self):
@@ -67,12 +69,12 @@ class MonitorStateDbTask(ProcessTaskBase):
         self.task_queue.put(msg)
 
 
-#Subprocess which subscribes to system dbus to listen for systemd events
-#and push service events to main process via queue
-class MonitorSystemBusTask(ProcessTaskBase):
+#Thread which subscribes to system dbus to listen for systemd events
+#and push service events to main thread via queue
+class MonitorSystemBusTask(ThreadTaskBase):
 
     def __init__(self,myQ):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self.task_queue = myQ
 
     def on_job_removed(self, id, job, unit, result):
@@ -105,8 +107,11 @@ class MonitorSystemBusTask(ProcessTaskBase):
         self.subscribe_sysbus()
 
     def task_stop(self):
-        # FIXME: Gracefully stop `loop.run()`.
-        self._task_process.kill()
+        # Signal the thread to stop
+        self.task_stopping_event.set()
+        
+        # Note: GLib.MainLoop() doesn't respond to thread stopping event gracefully
+        # The thread will be daemon-like and terminate when main program exits
         return True
 
     def task_notify(self, msg):
@@ -114,19 +119,18 @@ class MonitorSystemBusTask(ProcessTaskBase):
             return
         self.task_queue.put(msg)
 
-#Mainprocess which launches 2 subtasks - systembus task and statedb task
+#Main thread which launches 2 subtasks - systembus task and statedb task
 #and on receiving events, checks and updates the system ready status to state db
-class Sysmonitor(ProcessTaskBase):
+class Sysmonitor(ThreadTaskBase):
 
     def __init__(self):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self._stop_timeout_secs = TASK_STOP_TIMEOUT
         self.dnsrvs_name = set()
         self.state_db = None
         self.config_db = None
         self.config = Config()
-        self.mpmgr = multiprocessing.Manager()
-        self.myQ = self.mpmgr.Queue()
+        self.myQ = queue.Queue()
 
     #Sets system ready status to state db
     def post_system_status(self, state):
@@ -167,6 +171,21 @@ class Sysmonitor(ProcessTaskBase):
         for srv in exclude_srv_list:
             if srv in dir_list:
                 dir_list.remove(srv)
+
+        #On multi-ASIC: prune host-level services that should only run as per-ASIC instances
+        if multi_asic.is_multi_asic():
+            feature_table = self.config_db.get_table("FEATURE")
+            prune = []
+            for srv_ext in dir_list:
+                if '@' in srv_ext:
+                    continue
+                srv_name = srv_ext.replace('.service', '')
+                if srv_name in feature_table:
+                    raw_scope = feature_table[srv_name].get('has_global_scope', 'True')
+                    if raw_scope.lower() == 'false':
+                        prune.append(srv_ext)
+            for srv_ext in prune:
+                dir_list.remove(srv_ext)
 
         dir_list.sort()
         return dir_list
@@ -276,7 +295,7 @@ class Sysmonitor(ProcessTaskBase):
 
     #Gets the service properties
     def run_systemctl_show(self, service):
-        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result'.format(service))
+        command = ('systemctl show {} --property=Id,LoadState,UnitFileState,Type,ActiveState,SubState,Result,ConditionResult'.format(service))
         output = utils.run_command(command)
         srv_properties = output.split('\n')
         prop_dict = {}
@@ -311,7 +330,7 @@ class Sysmonitor(ProcessTaskBase):
         try:
             service_status = "Down"
             service_up_status = "Down"
-            service_name,last_name = event.split('.')
+            service_name,last_name = event.rsplit('.', 1)
 
             sysctl_show = self.run_systemctl_show(event)
 
@@ -326,7 +345,7 @@ class Sysmonitor(ProcessTaskBase):
                 #Raise syslog for service state change
                 logger.log_info("{} service state changed to [{}/{}]".format(event, active_state, sub_state))
 
-                if status == "enabled" or status == "enabled-runtime" or status == "static":
+                if status in ("enabled", "enabled-runtime", "static", "generated"):
                     if fail_reason == "success":
                         fail_reason = "-"
                     if (active_state == "active" and sub_state == "exited"):
@@ -352,10 +371,16 @@ class Sysmonitor(ProcessTaskBase):
                         service_status = "Stopping"
                         service_up_status = "Stopping"
                     elif active_state == "inactive":
-                        if srv_type == "oneshot" or service_name in spl_srv_list:
+                        condition_result = sysctl_show.get('ConditionResult', 'yes')
+                        is_known_non_blocking = (srv_type == "oneshot"
+                                or service_name in spl_srv_list
+                                or fail_reason in NON_BLOCKING_INACTIVE_REASONS)
+                        if is_known_non_blocking or condition_result == "no":
                             service_status = "OK"
                             service_up_status = "OK"
                             unit_status = "OK"
+                            if not is_known_non_blocking and condition_result == "no":
+                                fail_reason = "condition-unmet"
                         else:
                             unit_status = "NOT OK"
                             if fail_reason == "-":
@@ -427,6 +452,21 @@ class Sysmonitor(ProcessTaskBase):
         full_srv_list = self.get_all_service_list()
         if event in full_srv_list:
             ustate = self.get_unit_status(event)
+            if ustate is None:
+                #Service is masked/not-loaded — clean up both dnsrvs_name and stale STATE_DB entry
+                if event in self.dnsrvs_name:
+                    self.dnsrvs_name.remove(event)
+                srv_name, last = event.rsplit('.', 1)
+                if last == "service":
+                    key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
+                    if self.state_db.exists(self.state_db.STATE_DB, key):
+                        self.state_db.delete(self.state_db.STATE_DB, key)
+                if len(self.dnsrvs_name) == 0:
+                    astate = "UP"
+                else:
+                    astate = "DOWN"
+                self.publish_system_status(astate)
+                return 0
             if ustate == "OK" and system_allsrv_state == "UP":
                 astate = "UP"
             elif ustate == "OK" and system_allsrv_state == "DOWN":
@@ -454,7 +494,7 @@ class Sysmonitor(ProcessTaskBase):
                 astate = "DOWN"
             self.publish_system_status(astate)
 
-            srv_name,last = event.split('.')
+            srv_name,last = event.rsplit('.', 1)
             # stop on service maybe propagated to timers and in that case,
             # the state_db entry for the service should not be deleted
             if last == "service":
@@ -515,14 +555,12 @@ class Sysmonitor(ProcessTaskBase):
     def task_stop(self):
         self.myQ.put("stop")
 
-        # Wait for the process to exit
-        self._task_process.join(self._stop_timeout_secs)
+        # Wait for the thread to exit
+        self._task_thread.join(self._stop_timeout_secs)
 
-        # If the process didn't exit, attempt to kill it
-        if self._task_process.is_alive():
-            logger.log_notice("Attempting to kill sysmon main process with pid {}".format(self._task_process.pid))
-            self._task_process.kill()
-            self._task_process.join()
+        # If the thread didn't exit, log warning
+        if self._task_thread.is_alive():
+            logger.log_notice("Sysmon main thread did not exit within timeout")
             return False
 
         return True

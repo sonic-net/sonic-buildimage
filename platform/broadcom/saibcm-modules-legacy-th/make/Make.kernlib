@@ -1,0 +1,56 @@
+# $Id: Make.kernlib,v 1.7 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+#
+# Make rules/targets for handling libraries
+
+.SECONDARY:: ${BOBJS}
+
+LIBSUFFIX=a
+
+${LIBDIR}/%.a: ${BOBJS}
+ifdef QUIET
+	@$(ECHO) Building library $(notdir $@)
+endif
+	$Q$(RM) $@
+	$Q$(AR) ${ARFLAGS} $@ $(sort ${BOBJS})
+
+targetlib = ${LIBDIR}/${lib}.${LIBSUFFIX}
+
+all:: ${BLDDIR}/.tree ${targetlib}
+
+install:: all
+
+clean::
+ifdef QUIET
+	@$(ECHO) Cleaning objects for ${LOCALDIR} and ${lib}
+endif
+	$Q$(RM) ${BOBJS}
+	$Q$(RM) ${targetlib}
+
+distclean:: clean
+

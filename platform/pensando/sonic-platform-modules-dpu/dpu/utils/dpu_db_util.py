@@ -9,7 +9,6 @@ import signal
 import threading
 import time
 from datetime import datetime
-import docker
 import redis
 import syslog
 from sonic_py_common import daemon_base, logger, syslogger
@@ -88,17 +87,12 @@ class EventHandler(logger.Logger):
         self.stop_event = threading.Event()
 
         # dpu state db update related attributes
-        try:
-            self.apiHelper = APIHelper()
-            self.dpu_docker_name = self.apiHelper.get_dpu_docker_container_name()
-        except:
-            log_err('Failed to get dpu docker name')
+        self.apiHelper = APIHelper()
         self.db = db
         self.chassis = chassis
         slot = get_slot_id(self.chassis)
         self.slot_id = str(slot) if slot != -1 else 'UNDEFINED'
         self.table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
-        self._update_dpu_date_plane_db()
 
     def _log_emerg(self, msg):
         # syslogger.SysLogger doesn't have LOG_EMERG, hence creating one
@@ -106,85 +100,11 @@ class EventHandler(logger.Logger):
         syslog.syslog(syslog.LOG_EMERG,msg)
         syslog.closelog()
 
-    def _bool_to_healthd_status(self, status):
-        if status:
-            return "OK"
-        else:
-            return "Not OK"
-
-    def bool_to_link_status(self, status):
+    def _bool_to_link_status(self, status):
         if status:
             return "up"
         else:
             return "down"
-
-    def _is_dpu_container_running(self):
-        try:
-            client = docker.from_env()
-            containers = client.containers.list(all=True)
-            dpu_docker_status = False
-            for container in containers:
-                container_name = container.name
-                container_status = container.status
-                if container_name == self.dpu_docker_name:
-                    dpu_docker_status = True if container_status == 'running' else False
-            return dpu_docker_status
-        except Exception as e:
-            log_err(f"failed to fetch dpu docker running status due to {e}")
-            return False
-
-    def _fetch_pdsagent_status(self):
-        try:
-            cmd = "ps -ef | grep 'pdsagent\|pds_dp_app'"
-            output = self.apiHelper.run_docker_cmd(cmd)
-            name = 'pdsagent'
-            pdsagent_status = False
-            if "pdsagent" in output:
-                pdsagent_status = True
-            elif "pds_dp_app" in output:
-                pdsagent_status = True
-                name = 'pds_dp_app'
-            else:
-                pdsagent_status = False
-            return name, pdsagent_status
-        except Exception as e:
-            log_err(f'failed to fetch pdsagent status due to {e}')
-            return 'pdsagent', False
-
-    def _fetch_pciemgrd_status(self):
-        try:
-            cmd = "ps -ef | grep 'pciemgrd'"
-            output = self.apiHelper.run_docker_cmd(cmd)
-            pciemgrd_status = False
-            if "pciemgrd" in output:
-                pciemgrd_status = True
-            else:
-                pciemgrd_status = False
-            return pciemgrd_status
-        except Exception as e:
-            log_err(f'failed to fetch pciemgrd status due to {e}')
-            return False
-
-    def _update_dpu_date_plane_db(self):
-        try:
-            dpu_status = 'down'
-            pdsagent_name, pdsagent_status = self._fetch_pdsagent_status()
-            pciemgrd_status = self._fetch_pciemgrd_status()
-            if pdsagent_status and pciemgrd_status:
-                dpu_status = 'up'
-            dpu_docker_status = self._is_dpu_container_running()
-            reason = f"DPU container named {self.dpu_docker_name} is{'' if dpu_docker_status else ' not'} running,"
-            reason += f" {pdsagent_name} running : {self._bool_to_healthd_status(pdsagent_status)},"
-            reason += f" pciemgrd running : {self._bool_to_healthd_status(pciemgrd_status)}"
-            fvs_data_plane_data = [
-                ('dpu_data_plane_state', dpu_status),
-                ('dpu_data_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
-                ('dpu_data_plane_reason', reason)
-            ]
-            for name, value in fvs_data_plane_data:
-                self.db.hset(self.table, name, value)
-        except Exception as e:
-            log_err(f'Failed to init dpu date plane entries due to {e}')
 
     def _fetch_eth_link_status(self):
         try:
@@ -203,7 +123,7 @@ class EventHandler(logger.Logger):
                 if admin_status == 'UP' and oper_status == 'UP':
                     eth_state = True
                 state &= eth_state
-                eth_link_reason.append(f"{name} is {self.bool_to_link_status(eth_state)}")
+                eth_link_reason.append(f"{name} is {self._bool_to_link_status(eth_state)}")
             return state, "host-ethlink-status: " + ', '.join(eth_link_reason)
         except Exception as e:
             log_err(f'failed to fetch eth uplink status due to {e}')
@@ -230,7 +150,7 @@ class EventHandler(logger.Logger):
                 control_plane_reason.append(all_container_reason)
             control_plane_reason.append(eth_link_reason)
             fvs_control_plane_data = [
-                ('dpu_control_plane_state', self.bool_to_link_status(control_plane_status)),
+                ('dpu_control_plane_state', self._bool_to_link_status(control_plane_status)),
                 ('dpu_control_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
                 ('dpu_control_plane_reason', ', '.join(control_plane_reason))
             ]

@@ -4,10 +4,6 @@ module sonic-memory-statistics {
     namespace "http://github.com/sonic-net/sonic-memory-statistics";
     prefix memstats;
 
-    import sonic-types {
-        prefix stypes;
-    }
-
     description "YANG module for configuring memory statistics in SONiC-based OS.";
 
     revision 2024-07-22 {

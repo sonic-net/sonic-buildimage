@@ -6,6 +6,10 @@
         "desc": "Invalid port.",
         "eStrKey": "Must"
     },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_PFC": {
+        "desc": "Invalid PFC.",
+        "eStrKey": "Must"
+    },
     "HIGH_FREQUENCY_TELEMETRY_INVALID_STATS": {
         "desc": "Invalid stats.",
         "eStrKey": "Must"

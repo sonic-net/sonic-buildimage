@@ -18,7 +18,12 @@ module sonic-copp {
 
 	container sonic-copp {
 		container COPP_GROUP {
+
+			description "Configures Control Plane Policing groups that rate-limit traffic destined to the CPU.";
+
 			list COPP_GROUP_LIST {
+
+				description "A named CoPP group with queue, trap action, and policer settings.";
 				key name;
 
 				leaf name {
@@ -29,25 +34,25 @@ module sonic-copp {
 				leaf queue {
 					type uint32;
 					default 0;
-					description "CPU Rx queue id";
+					description "CPU receive queue number; higher values indicate higher priority.";
 				}
 
 				leaf trap_priority {
 					type uint32;
 					default 0;
-					description "Trap priority";
+					description "Priority assigned to the trap; higher values are matched first.";
 				}
 
 				leaf trap_action {
 					mandatory true;
 					type stypes:policer_packet_action;
-					description "Trap action";
+					description "Action applied to trapped packets (forward, drop, copy, etc.).";
 				}
 
 				leaf meter_type {
 					mandatory true;
 					type stypes:meter_type;
-					description "Policer meter type";
+					description "Metering unit for the embedded policer (packets or bytes).";
 				}
 
 				leaf mode {
@@ -57,12 +62,12 @@ module sonic-copp {
 						enum tr_tcm;
 						enum storm;
 					}
-					description "Policer mode";
+					description "Policer mode: single-rate TCM, two-rate TCM, or storm control.";
 				}
 
 				leaf color {
 					type stypes:policer_color_source;
-					description "Policer color Source";
+					description "Policer color awareness mode (aware or blind).";
 				}
 
 				leaf cir {
@@ -118,20 +123,20 @@ module sonic-copp {
 				leaf green_action {
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Green action";
+					description "Action for packets classified as green by the policer.";
 				}
 
 				leaf yellow_action {
 					when "((current()/../mode = 'sr_tcm') or (current()/../mode = 'tr_tcm'))";
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Yellow action";
+					description "Action for packets classified as yellow by the policer.";
 				}
 
 				leaf red_action {
 					type stypes:policer_packet_action;
 					default "forward";
-					description "Red action";
+					description "Action for packets classified as red by the policer.";
 				}
 			}
 			/* end of list COPP_GROUP_LIST */
@@ -139,7 +144,12 @@ module sonic-copp {
 		/* end of container COPP_GROUP */
 
 		container COPP_TRAP {
+
+			description "Configures CoPP trap entries that bind trap IDs to CoPP groups.";
+
 			list COPP_TRAP_LIST {
+
+				description "A named CoPP trap binding trap IDs to a policing group.";
 				key name;
 
 				leaf name {
@@ -150,19 +160,19 @@ module sonic-copp {
 				leaf trap_ids {
 					mandatory true;
 					type string;
-					description "list of trap_ids";
+					description "Comma-separated list of trap identifiers bound to this entry.";
 				}
 
 				leaf trap_group {
 					type leafref {
 						path "/sonic-copp/COPP_GROUP/COPP_GROUP_LIST/name";
 					}
-					description "reference to CoPP group";
+					description "Reference to the CoPP group that polices these traps.";
 				}
 
 				leaf always_enabled {
 					type boolean;
-					description "field that indicates whether the trap should be always installed";
+					description "When true, the trap is always installed regardless of feature enablement.";
 				}
 			}
 			/* end of list COPP_TRAP_LIST */

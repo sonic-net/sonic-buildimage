@@ -24,11 +24,13 @@ module sonic-dscp-fc-map {
 
         container DSCP_TO_FC_MAP {
 
-            description "DSCP_TO_FC_MAP part of config_db.json";
+            description "Maps DSCP values to forwarding class for Class-Based Forwarding.";
 
             list DSCP_TO_FC_MAP_LIST {
 
                 key "name";
+
+                description "A named DSCP to forwarding class map.";
 
                 leaf name {
                     type string {
@@ -38,11 +40,14 @@ module sonic-dscp-fc-map {
                             error-app-tag map-name-invalid-length;
                         }
                     }
+                    description "Name of the DSCP to FC map.";
                 }
 
-                list DSCP_TO_FC_MAP { //this is list inside list for storing mapping between two fields
+                list DSCP_TO_FC_MAP {
 
                     key "dscp";
+
+                    description "Single mapping entry from a DSCP value to a forwarding class.";
 
                     leaf dscp {
                         type string {
@@ -51,6 +56,7 @@ module sonic-dscp-fc-map {
                                 error-app-tag dscp-invalid;
                             }
                         }
+                        description "DSCP value (0-63).";
                     }
 
                     leaf fc {
@@ -60,6 +66,7 @@ module sonic-dscp-fc-map {
                                 error-app-tag fc-invalid;
                             }
                         }
+                        description "Target forwarding class (0-7) for Class-Based Forwarding.";
                     }
                 }
             }

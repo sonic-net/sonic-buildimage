@@ -489,7 +489,7 @@ write_kdump_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
     case "$sid" in
         Lodoga*|*Quicksilver*|*Moby|Shearwater*|Moranda*|Gardena*|PikeIsland*|\
-        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
+        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2*Quartz4*|Redstart8Mk2*CitrineDd*)
             if ! cmdline_has crashkernel; then
                 cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
             fi
@@ -510,6 +510,8 @@ write_platform_specific_cmdline() {
 
     # detect the size of the flash partition from name in Aboot/EOS/SONiC
     local flash_size=$(($(df "$target_path" | tail -1 | tr -s ' ' | cut -f2 -d' ') / 1000))
+
+    cmdline_add nohz=off
 
     if [ "$platform" = "raven" ]; then
         # Assuming sid=Cloverdale
@@ -728,7 +730,6 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$platform" "hedgehog"; then
         cmdline_add reassign_prefmem
-        cmdline_add nohz=off
         read_system_eeprom
     fi
     if in_array "$platform" "prairieisland"; then

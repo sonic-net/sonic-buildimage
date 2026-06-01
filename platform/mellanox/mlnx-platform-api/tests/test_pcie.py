@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,7 @@ class TestPcie:
         assert info[0]['result'] == 'Failed'
 
         p.check_pcie_sysfs = mock.MagicMock(return_value=False)
-        p._device_id_to_bus_map = {'1f0b': '00'}
+        p._device_id_to_bus_map = {'1f0b:00': '00'}
         info = p.get_pcie_check()
         assert info[0]['result'] == 'Failed'
 
@@ -147,7 +147,7 @@ class TestPcie:
                 'fn': '00'
             }
         ]
-        p._device_id_to_bus_map = {'1f0b': '01'}
+        p._device_id_to_bus_map = {'1f0b:00': '01'}
         p.check_pcie_sysfs = mock.MagicMock(return_value=True)
         info = p.get_pcie_check()
         assert len(info) == 1
@@ -178,12 +178,12 @@ class TestPcie:
     def test_create_device_id_to_bus_map(self, mock_dir):
         p = Pcie('')
         assert not p._device_id_to_bus_map
-        mock_dir.return_value = ['0000:01:00.0']
+        mock_dir.return_value = ['0000:01:22.0']
 
         mock_os_open = mock.mock_open(read_data='0x23')
         with mock.patch('sonic_platform.pcie.open', mock_os_open):
             p._create_device_id_to_bus_map()
-            assert p._device_id_to_bus_map == {'23':'01'}
+            assert p._device_id_to_bus_map == {'23:22':'01'}
 
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_count')
@@ -218,3 +218,38 @@ class TestPcie:
         result = p.get_dpu_pcie_devices()
         assert result == []
         assert mock_get_interface.call_count == 2
+
+
+    @mock.patch('sonic_platform.pcie.Pcie._create_device_id_to_bus_map', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
+    def test_check_multiple_bus(self):
+        p = Pcie('')
+        p.check_pcie_sysfs = mock.MagicMock(return_value=True)
+
+        p._device_id_to_bus_map = {'1f0b:00': '00', '1f0b:11': '01'}
+        p.confInfo = [
+            {
+                'bus': '00',
+                'id': '1f0b',
+                'dev': '00',
+                'fn': '00'
+            },
+            {
+                'bus': '01',
+                'id': '1f0b',
+                'dev': '11',
+                'fn': '00'
+            },
+            {
+                'bus': '02',
+                'id': '1f0b',
+                'dev': '22',
+                'fn': '00'
+            }
+        ]
+
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Passed'
+        assert info[1]['result'] == 'Passed'
+        assert info[2]['result'] == 'Failed'

@@ -30,7 +30,7 @@
 # There are two types of source code packages used by the SONiC repo.
 #
 #         1. Module source code is maintained as part of main repo
-#                 Eg: sonic-utilities, Plaform files etc
+#                 Eg: sonic-utilities, Platform files etc
 #
 #             Some module source code is maintained outside the sonic repo, but
 #             the build framework is part of sonic main repo.
@@ -66,9 +66,51 @@
 
 # Common files and FLAGS
 # Run the 'touch cache.skip.common' command in the base directory to exclude the common files from caching
-SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform slave.mk rules/functions Makefile.cache)
+#
+# Cache scope design:
+#   SONIC_COMMON_FILES_LIST tracks files whose changes affect ALL package outputs.
+#   slave.mk is intentionally excluded because:
+#     - It is 1800+ lines and changed ~20 times per 6 months
+#     - Most changes (new targets, platform additions, cosmetic) do NOT affect
+#       existing package outputs
+#     - Including it causes 100% cache invalidation on every slave.mk commit
+#     - Per-package .dep files already track package-specific dependencies
+#   Instead, SONIC_CACHE_RECIPE_VER acts as a manual version stamp.
+#   Bump it when a slave.mk change genuinely affects package build output
+#   (e.g., dpkg build recipe changes, compiler flag changes, install logic changes).
+#
+SONIC_CACHE_RECIPE_VER := 1
+# Git object hash of slave.mk when SONIC_CACHE_RECIPE_VER was last set/bumped.
+# Used by the guard below to detect unreviewed slave.mk changes.
+SONIC_CACHE_RECIPE_VER_BASELINE := 348388b6882c0c90f4a1c7170d0e33cf9c0e645b
+
+# Guard: warn if slave.mk changed since SONIC_CACHE_RECIPE_VER was last reviewed.
+# This catches the case where someone modifies slave.mk build recipes without
+# bumping the cache version, which could serve stale cached packages.
+# To resolve: review whether the slave.mk change affects package output.
+#   - If yes: bump SONIC_CACHE_RECIPE_VER and update the baseline hash.
+#   - If no:  just update the baseline hash.
+SONIC_CACHE_SLAVE_HASH := $(if $(wildcard .git),$(shell git hash-object slave.mk 2>/dev/null))
+ifneq ($(SONIC_CACHE_SLAVE_HASH),)
+ifneq ($(SONIC_CACHE_SLAVE_HASH),$(SONIC_CACHE_RECIPE_VER_BASELINE))
+ifneq ($(SONIC_DPKG_CACHE_METHOD),none)
+ifneq ($(SONIC_DPKG_CACHE_METHOD),)
+$(warning [CACHE] slave.mk has changed since SONIC_CACHE_RECIPE_VER was last set.)
+$(warning [CACHE] Review whether the change affects package build output:)
+$(warning [CACHE]   If YES: bump SONIC_CACHE_RECIPE_VER in Makefile.cache and update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+$(warning [CACHE]   If NO:  just update SONIC_CACHE_RECIPE_VER_BASELINE to: $(SONIC_CACHE_SLAVE_HASH))
+endif
+endif
+endif
+endif
+
+# SONIC_COMMON_FILES_LIST enumerates files that invalidate the cache when changed.
+# It includes common files like .platform, rules/functions, Makefile.cache etc.
+# NOTE: slave.mk is intentionally NOT included here; see SONIC_CACHE_RECIPE_VER above.
+SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform rules/functions Makefile.cache)
 SONIC_DEVICE_FILES_LIST := $(shell git ls-files -s device | grep -v ^120000 | grep -Eo device.*)
-SONIC_COMMON_FLAGS_LIST :=  $(CONFIGURED_PLATFORM) \
+SONIC_COMMON_FLAGS_LIST :=  $(SONIC_CACHE_RECIPE_VER) \
+                            $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
                             $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
@@ -186,7 +228,7 @@ define GET_MOD_DEP_SHA
 	$(eval $(1)_DEP_MOD_SHA_FILES := $(foreach dfile,$($(1)_MOD_DEP_PKGS), \
 	                        $($(dfile)_DEP_FLAGS_FILE) $($(dfile)_MOD_HASH_FILE) $($(dfile)_SMOD_HASH_FILE)) )
 	$(eval $(1)_DEP_FILES_MISSING := $(filter-out $(wildcard $($(1)_DEP_MOD_SHA_FILES)),$($(1)_DEP_MOD_SHA_FILES)) )
-	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependecy file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
+	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependency file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
 
 	# Include package dependencies hash values into package hash calculation
 	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$($(dfile)_DEP_MOD_SHA) $($(dfile)_MOD_HASH)))
@@ -196,7 +238,7 @@ define GET_MOD_DEP_SHA
 endef
 
 
-# Retrive the list of files that are modified for the target. The files can be from
+# Retrieve the list of files that are modified for the target. The files can be from
 # 1. Any of dependent target is modified
 # 2. Files from the target dependency list
 # 3. Files from submodule dependency list if the target is a submodule
@@ -238,10 +280,10 @@ define LOAD_FROM_CACHE
 	$(eval $(1)_MOD_CACHE_FILE := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
 	$(if $(MDEBUG), $(info $(1)_MODE_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
 
-	# Retrive and log files list that are modified for the target.
+	# Retrieve and log files list that are modified for the target.
 	$(call GET_MODIFIED_FILES,$(1))
 	$(if $($(1)_FILES_MODIFIED),
-		echo "Target $(1) dependencies are modifed - global cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		echo "Target $(1) dependencies are modified - global cache skipped" >> $($(1)_DST_PATH)/$(1).log
 		echo "Modified dependencies are : [$($(1)_FILES_MODIFIED)] " >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR)))
 
@@ -287,13 +329,13 @@ define SAVE_INTO_CACHE
 	$(eval $(1)_MOD_CACHE_FILE  := $(1)-$($(1)_DEP_MOD_SHA)-$($(1)_MOD_HASH).tgz)
 	$(if $(MDEBUG), $(info $(1)_MOD_CACHE_FILE := $($(1)_MOD_CACHE_FILE)))
 
-	# Retrive and log files list that are modified for the target.
+	# Retrieve and log files list that are modified for the target.
 	$(call GET_MODIFIED_FILES,$(1))
 
 	$(eval MOD_CACHE_FILE=$($(1)_MOD_CACHE_FILE))
 	$(call MOD_LOCK,$(1),$(SONIC_DPKG_CACHE_DIR),$(MOD_CACHE_LOCK_SUFFIX),$(MOD_CACHE_LOCK_TIMEOUT))
 	$(if $($(1)_FILES_MODIFIED),
-		echo "Target $(1) dependencies are modifed - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
+		echo "Target $(1) dependencies are modified - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR))
 	 )
 	cp $($(1)_DST_PATH)/$(1).log $($(1)_DST_PATH)/$(1).cached.log
@@ -442,7 +484,7 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 # DPGK framework creates three dependency files for each target.
 #         1. Flags file (.flags)
 #         2. Dependency file (.dep),
-#         3. Dependecy SHA hash file (.sha)
+#         3. Dependency SHA hash file (.sha)
 #         4. If the target is a submodule, corresponding dependency file and hash file are created
 #             sub module dependency file (.smdep)
 #             sub module hash file (.smsha)
@@ -461,9 +503,9 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 #                     SONIC_SANITIZER_ON=y
 #                     etc
 #                 If any of the ENV flag variables are modified, the target needs to be rebuilt as
-#                 the content of flag file is changed becase of value of ENV variable is changed.
+#                 the content of flag file is changed because of value of ENV variable is changed.
 #
-# [2] .dep => contains the dependency files list for a target. Eeach traget can have one or more dependency files.
+# [2] .dep => contains the dependency files list for a target. Each target can have one or more dependency files.
 #                 If any of the ENV flag variables are modified, the target needs to be rebuilt.
 #                 For example: Dependency files list for 'bash' module
 #                     rules/bash.mk
@@ -486,9 +528,9 @@ $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONI
 
 
 
-# ruiles for <.flags> file creation
+# rules for <.flags> file creation
 #
-# Each target defines a variable called '_DEP_FLAGS' that contais  a list of environment flags for that target and
+# Each target defines a variable called '_DEP_FLAGS' that contains  a list of environment flags for that target and
 # that indicates that target needs to be rebuilt if any of the dependent flags are changed.
 # An environmental dependency flags file is created with the name as ‘<target name>.flags’  for each target.
 # This file contains the values of target environment flags and gets updated only when there is a change in the flag's value.

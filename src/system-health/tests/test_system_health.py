@@ -17,8 +17,8 @@ import importlib.util
 import importlib.machinery
 from swsscommon import swsscommon
 
-from mock import Mock, MagicMock, patch
-from sonic_py_common import device_info
+from mock import Mock, MagicMock, patch, call
+from sonic_py_common import device_info, multi_asic
 
 from .mock_connector import MockConnector
 
@@ -354,6 +354,145 @@ def test_service_checker_check_by_monit(mock_run):
     assert checker._info['diskCheck'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
 
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_k8s_containers(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker skips Kubernetes-managed containers (namespace=sonic)"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'snmp': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'restapi': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    
+    # Mock Kubernetes containers with labels
+    mock_containers = MagicMock()
+    mock_snmp_container = MagicMock()
+    mock_snmp_container.name = 'k8s_snmp_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_snmp_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'snmp'
+    }
+    
+    mock_restapi_container = MagicMock()
+    mock_restapi_container.name = 'k8s_restapi_restapi-pod-test_sonic_87654321-4321-4321-4321-cba987654321_0'
+    mock_restapi_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'restapi'
+    }
+    
+    # Mock POD container (should also be skipped)
+    mock_pod_container = MagicMock()
+    mock_pod_container.name = 'k8s_POD_snmp-pod-test_sonic_12345678-1234-1234-1234-123456789abc_0'
+    mock_pod_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'POD'
+    }
+    
+    mock_containers.list = MagicMock(return_value=[mock_snmp_container, mock_restapi_container, mock_pod_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+    
+    mock_run.return_value = mock_supervisorctl_output
+    
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+    
+    # Verify all K8s containers (namespace=sonic) are excluded from running containers
+    running_containers = checker.get_current_running_containers()
+    assert 'snmp' not in running_containers
+    assert 'restapi' not in running_containers
+    assert 'POD' not in running_containers
+    
+    # Verify k8s containers are NOT added to critical processes
+    assert 'snmp' not in checker.container_critical_processes
+    assert 'restapi' not in checker.container_critical_processes
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=test_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_mixed_containers(mock_config_db, mock_run, mock_docker_client):
+    """Test that service checker handles both regular Docker and Kubernetes containers"""
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'swss': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'database': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        }
+    }
+    
+    mock_containers = MagicMock()
+    
+    # Regular Docker container
+    mock_swss_container = MagicMock()
+    mock_swss_container.name = 'swss'
+    mock_swss_container.labels = {}
+    
+    # Kubernetes container
+    mock_database_container = MagicMock()
+    mock_database_container.name = 'k8s_database_database-pod-test_sonic_12345678_0'
+    mock_database_container.labels = {
+        'io.kubernetes.pod.namespace': 'sonic',
+        'io.kubernetes.docker.type': 'container',
+        'io.kubernetes.container.name': 'database'
+    }
+    
+    mock_containers.list = MagicMock(return_value=[mock_swss_container, mock_database_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+    
+    mock_run.return_value = mock_supervisorctl_output
+    
+    checker = ServiceChecker()
+    config = Config()
+    checker.check(config)
+    
+    # Verify regular Docker container is in running containers
+    running_containers = checker.get_current_running_containers()
+    assert 'swss' in running_containers
+    # K8s container (namespace=sonic) is skipped from running containers
+    assert 'database' not in running_containers
+    
+    # Verify only regular Docker containers are monitored for critical processes
+    assert 'swss' in checker.container_critical_processes
+    assert 'database' not in checker.container_critical_processes  # k8s container, skipped entirely
+
+
 def test_hardware_checker():
     MockConnector.data.update({
         'TEMPERATURE_INFO|ASIC': {
@@ -484,7 +623,24 @@ def test_hardware_checker():
             'voltage_max_threshold': '15',
             'power_overload': 'True',
             'power': '101.0'
-        }
+        },
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+        'PSU_INFO|PDB 2': {
+            'presence': 'True',
+            'status': 'False',
+        },
+        'PSU_INFO|PDB 3': {
+            'presence': 'False',
+            'status': 'True',
+        },
     })
 
     MockConnector.data.update({
@@ -582,6 +738,62 @@ def test_hardware_checker():
 
     assert 'liquid_cooling_6' in checker._info
     assert checker._info['liquid_cooling_6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 1' in checker._info
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'PDB 2' in checker._info
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'out of power' in checker._info['PDB 2'][HealthChecker.INFO_FIELD_OBJECT_MSG]
+
+    assert 'PDB 3' in checker._info
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_TYPE] == 'PSU'
+    assert checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert 'missing' in checker._info['PDB 3'][HealthChecker.INFO_FIELD_OBJECT_MSG].lower()
+
+
+def test_hardware_checker_pdb_ignore():
+    """PSU_INFO rows are skipped when the key name is listed in ignore_devices."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PDB 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['PDB 1']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PDB 1' not in checker._info
+
+
+def test_hardware_checker_psu_pdb_ignore_both_skips_psu_check():
+    """When both 'psu' and 'pdb' are in ignore_devices, _check_psu_status returns without entries."""
+    MockConnector.data.clear()
+    MockConnector.data.update({
+        'PSU_INFO|PSU 1': {
+            'presence': 'True',
+            'status': 'True',
+            'temp': '55',
+            'temp_threshold': '100',
+            'voltage': '10',
+            'voltage_min_threshold': '8',
+            'voltage_max_threshold': '15',
+        },
+    })
+    config = Config()
+    config.ignore_devices = ['psu', 'pdb']
+    checker = HardwareChecker()
+    checker.check(config)
+    assert 'PSU 1' not in checker._info
 
 
 def test_config():
@@ -696,6 +908,40 @@ def test_utils():
     assert output
 
 
+@patch('health_checker.utils.logger.log_warning')
+@patch('health_checker.utils.logger.log_notice')
+@patch('health_checker.utils.logger.log_error')
+@patch('os.killpg')
+@patch('subprocess.Popen')
+def test_utils_timeout(mock_popen, mock_killpg, mock_log_error, mock_log_notice, mock_log_warning):
+    # Mock the spawned process
+    from subprocess import TimeoutExpired
+    mock_process = MagicMock()
+    mock_process.pid = 1234
+    mock_process.communicate.side_effect = [
+        TimeoutExpired(cmd='cmd', timeout=0.01), # first call triggers timeout
+        ('', '')                                 # second call during cleanup
+    ]
+    mock_popen.return_value = mock_process
+
+    # Execute with a timeout to trigger the TimeoutExpired path
+    output = utils.run_command('cmd', timeout=0.01)
+
+    # Expectations
+    assert output is None
+
+    assert mock_process.communicate.call_count == 2
+    mock_process.communicate.assert_has_calls([call(timeout=0.01), call(timeout=1)])
+
+    from signal import SIGKILL
+    mock_killpg.assert_called_once()
+    mock_killpg.assert_called_with(mock_process.pid, SIGKILL)
+
+    assert mock_log_notice.call_count == 2  # cleanup + done
+    mock_log_warning.assert_called_once() # command timeout
+    mock_log_error.assert_not_called() # no errors
+
+
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
 @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @patch('docker.DockerClient')
@@ -789,7 +1035,9 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
 
 mock_srv_props={
 'mock_radv.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_radv.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'enabled'},
-'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'}
+'mock_bgp.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_bgp.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'enabled'},
+'mock_swss_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_swss_generated.service', 'LoadState': 'loaded', 'ActiveState': 'active', 'SubState': 'running', 'UnitFileState': 'generated'},
+'mock_syncd_generated.service':{'Type': 'simple', 'Result': 'success', 'Id': 'mock_syncd_generated.service', 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead', 'UnitFileState': 'generated'}
 }
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service', 'mock_bgp.service', 'mock_ns.service']))
@@ -855,6 +1103,28 @@ def test_get_unit_status_not_ok():
     sysmon = Sysmonitor()
     result = sysmon.get_unit_status('mock_bgp.service')
     print("get_unit_status:{}".format(result))
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_swss_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_running_ok():
+    """Test that active/running services with UnitFileState=generated are reported as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_swss_generated.service')
+    print("get_unit_status for generated running service:{}".format(result))
+    assert result == 'OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_syncd_generated.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_generated_inactive_not_ok():
+    """Test that inactive services with UnitFileState=generated are reported as NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_syncd_generated.service')
+    print("get_unit_status for generated inactive service:{}".format(result))
     assert result == 'NOT OK'
 
 
@@ -931,16 +1201,16 @@ def test_update_system_status():
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
     assert result == "UP"
 
-from sonic_py_common.task_base import ProcessTaskBase
-import multiprocessing
-mpmgr = multiprocessing.Manager()
+from sonic_py_common.task_base import ThreadTaskBase
+import threading
+import queue
 
-myQ = mpmgr.Queue()
+myQ = queue.Queue()
 def test_monitor_statedb_task():
     sysmon = MonitorStateDbTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -948,7 +1218,7 @@ def test_monitor_sysbus_task():
     sysmon = MonitorSystemBusTask(myQ)
     sysmon.SubscriberStateTable = MagicMock()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 @patch('health_checker.sysmonitor.MonitorSystemBusTask.subscribe_sysbus', MagicMock())
@@ -956,7 +1226,7 @@ def test_monitor_sysbus_task():
 def test_system_service():
     sysmon = Sysmonitor()
     sysmon.task_run()
-    assert sysmon._task_process is not None
+    assert sysmon._task_thread is not None
     sysmon.task_stop()
 
 
@@ -1016,3 +1286,145 @@ def test_healthd_check_interval(mock_log_warning, mock_log_notice, mock_time):
 
     daemon.stop_event.wait.return_value = True
     assert not daemon._run_checker(manager, chassis)
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_multi_dot_unit_name():
+    """Test that check_unit_status does not crash on unit names with multiple dots.
+
+    Systemd device/mount units can have names like 'sys-devices-pci0000:00.device'
+    which contain multiple dots. Using str.split('.') would raise ValueError
+    (too many values to unpack). Using rsplit('.', 1) correctly handles this.
+    Regression test for issue #25291.
+    """
+    sysmon = Sysmonitor()
+    # These should not raise ValueError
+    sysmon.check_unit_status('sys-devices-pci0000:00-0000:00:1f.0.device')
+    sysmon.check_unit_status('dev-disk-by\\x2did-wwn\\x2d0x5001.mount')
+    sysmon.check_unit_status('run-user-1000.mount')
+    # Normal service name should still work
+    sysmon.check_unit_status('mock_snmp.timer')
+
+
+# --- Tests for multi-ASIC sysready fixes (issue #4936496) ---
+
+mock_condition_unmet_props = {
+    'Type': 'notify', 'Result': 'success',
+    'Id': 'mock_smartmon.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'no'
+}
+
+mock_condition_met_inactive_props = {
+    'Type': 'simple', 'Result': 'success',
+    'Id': 'mock_down.service', 'LoadState': 'loaded',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'enabled', 'ConditionResult': 'yes'
+}
+
+mock_masked_props = {
+    'Type': '', 'Result': 'success',
+    'Id': 'mock_bgp.service', 'LoadState': 'masked',
+    'ActiveState': 'inactive', 'SubState': 'dead',
+    'UnitFileState': 'masked', 'ConditionResult': 'yes'
+}
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_unmet_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_unmet_ok():
+    """Inactive service with ConditionResult=no should be treated as OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_smartmon.service')
+    assert result == 'OK'
+    sysmon.post_unit_status.assert_called_once()
+    call_args = sysmon.post_unit_status.call_args[0]
+    assert call_args[1] == 'OK'              # service_status
+    assert call_args[3] == 'condition-unmet'  # fail_reason
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_condition_met_inactive_props))
+@patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+def test_get_unit_status_condition_met_inactive_not_ok():
+    """Inactive service with ConditionResult=yes should still be NOT OK."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_down.service')
+    assert result == 'NOT OK'
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_masked_props))
+def test_get_unit_status_masked_returns_none():
+    """Masked (not-loaded) service should return None from get_unit_status."""
+    sysmon = Sysmonitor()
+    result = sysmon.get_unit_status('mock_bgp.service')
+    assert result is None
+
+
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_bgp.service', 'mock_snmp.service']))
+@patch('health_checker.sysmonitor.Sysmonitor.get_unit_status', MagicMock(return_value=None))
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
+def test_check_unit_status_masked_cleanup():
+    """When get_unit_status returns None (masked), check_unit_status should:
+       1. Remove the service from dnsrvs_name
+       2. Delete stale ALL_SERVICE_STATUS entry from STATE_DB
+    """
+    sysmon = Sysmonitor()
+    sysmon.dnsrvs_name = {'mock_bgp.service'}
+
+    # Use a real MagicMock for state_db so delete/exists work
+    sysmon.state_db = MagicMock()
+    sysmon.state_db.STATE_DB = 0
+    sysmon.state_db.exists = MagicMock(return_value=1)
+    sysmon.state_db.delete = MagicMock()
+
+    sysmon.check_unit_status('mock_bgp.service')
+
+    assert 'mock_bgp.service' not in sysmon.dnsrvs_name
+    sysmon.state_db.delete.assert_called_once_with(0, 'ALL_SERVICE_STATUS|mock_bgp')
+
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=True))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+@patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
+def test_get_all_service_list_multi_asic(mock_config_db, mock_run, mock_docker_client):
+    """On multi-ASIC, host-level services with has_global_scope=False should be
+       pruned from the monitored list. Services with has_global_scope=True should remain.
+    """
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'bgp': {
+            'state': 'enabled',
+            'has_global_scope': 'False',
+            'has_per_asic_scope': 'True',
+        },
+        'radv': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+        },
+        'syncd': {
+            'state': 'enabled',
+            'has_global_scope': 'false',   # lowercase — must also be handled
+            'has_per_asic_scope': 'True',
+        },
+        'database': {
+            'state': 'always_enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'True',
+        },
+    }
+    sysmon = Sysmonitor()
+    result = sysmon.get_all_service_list()
+    # Host-level services with has_global_scope=False should be pruned
+    assert 'bgp.service' not in result
+    assert 'syncd.service' not in result
+    # Global-scope services should remain
+    assert 'radv.service' in result
+    assert 'database.service' in result

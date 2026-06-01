@@ -31,6 +31,7 @@
 #include <linux/mutex.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define MAX_FAN_DUTY_CYCLE 100
 
@@ -362,8 +363,12 @@ static const struct attribute_group ym2651y_group = {
     .attrs = ym2651y_attributes,
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int ym2651y_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
+#else
+static int ym2651y_probe(struct i2c_client *client)
+#endif
 {
     struct ym2651y_data *data;
     int status;

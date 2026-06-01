@@ -30,6 +30,8 @@ COPY ["docker-telemetry-entry.sh", "/usr/local/bin/"]
 
 FROM $BASE
 
+ARG image_version
+
 {{ rsync_from_builder_stage() }}
 
 ## Make apt-get non-interactive

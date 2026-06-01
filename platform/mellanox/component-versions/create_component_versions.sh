@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,3 +38,4 @@ echo "HW_MANAGEMENT $4" >> temp_versions_file
 echo "MFT $5-$6" >> temp_versions_file
 echo "KERNEL $7" >> temp_versions_file
 echo "SIMX $8" >> temp_versions_file
+echo "RSHIM $9" >> temp_versions_file

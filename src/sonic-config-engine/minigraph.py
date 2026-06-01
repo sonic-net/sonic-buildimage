@@ -966,7 +966,7 @@ def parse_dpg(dpg, hname):
                 intfs_inpc.append(pcmbr_list[i])
                 pc_members[(pcintfname, pcmbr_list[i])] = {}
             if pcintf.find(str(QName(ns, "Fallback"))) != None:
-                pcs[pcintfname] = {'fallback': pcintf.find(str(QName(ns, "Fallback"))).text, 'min_links': str(int(math.ceil(len() * 0.75))), 'lacp_key': 'auto'}
+                pcs[pcintfname] = {'fallback': pcintf.find(str(QName(ns, "Fallback"))).text, 'min_links': str(int(math.ceil(len(pcmbr_list) * 0.75))), 'lacp_key': 'auto'}
             else:
                 pcs[pcintfname] = {'min_links': str(int(math.ceil(len(pcmbr_list) * 0.75))), 'lacp_key': 'auto' }
         port_nhipv4_map = {}
@@ -2188,7 +2188,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if bool(results['PEER_SWITCH']):
         results['DEVICE_METADATA']['localhost']['subtype'] = 'DualToR'
         if len(results['PEER_SWITCH'].keys()) > 1:
-            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
+            print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(next(iter(results['PEER_SWITCH']))), file=sys.stderr)
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
     elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':

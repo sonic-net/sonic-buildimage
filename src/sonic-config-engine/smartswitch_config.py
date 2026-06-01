@@ -27,8 +27,13 @@ def get_smartswitch_config(hwsku=None):
             json_file =  os.path.join(tests_path, "data", "smartswitch", "sample_switch_platform.json")
         elif hwsku == 'SS-DPU-1x400Gb':
             json_file =  os.path.join(tests_path, "data", "smartswitch", "sample_dpu_platform.json")
+        else:
+            return config
     else:
-        platform_path = device_info.get_path_to_platform_dir()
+        try:
+            platform_path = device_info.get_path_to_platform_dir()
+        except OSError:
+            return config
         json_file = os.path.join(platform_path, device_info.PLATFORM_JSON_FILE)
 
     platform_json = portconfig.readJson(json_file)

@@ -53,11 +53,14 @@ jobs:
   - bash: |
       set -ex
       build_options="$(VERSION_CONTROL_OPTIONS)"
-      image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
+      tags=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 2)
+      image_tag=$(printf '%s\n' "$tags" | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
+      user_image_tag=$(printf '%s\n' "$tags" | head -n 1)
       image_branch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName))
       image_branch_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
       docker rmi $image_tag || true
+      docker rmi $user_image_tag || true
 
       if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
         exit 0
@@ -70,6 +73,8 @@ jobs:
 
       docker tag ${image_tag} ${REGISTRY_SERVER}/${image_tag}
       docker push ${REGISTRY_SERVER}/${image_tag}
+      docker tag ${user_image_tag} ${REGISTRY_SERVER}/${user_image_tag}
+      docker push ${REGISTRY_SERVER}/${user_image_tag}
       docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch_arch}
       docker push ${REGISTRY_SERVER}/${image_branch_arch}
       if [[ "${{ parameters.arch }}" == "amd64" ]];then

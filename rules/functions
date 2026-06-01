@@ -156,11 +156,7 @@ expand = $(foreach d,$(1),$(call expand,$($(d)_$(2)),$(2))) $(1)
 ###############################################################################
 define UNINSTALL_DEBS
 if [ -n "$(1)" ]; then \
-    while true; do \
-        if mkdir $(DEBS_PATH)/dpkg_lock &> /dev/null; then \
-		    { sudo DEBIAN_FRONTEND=noninteractive dpkg -P $(foreach deb,$(1),$(firstword $(subst _, ,$(basename $(deb))))) $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { rm -d $(DEBS_PATH)/dpkg_lock && exit 1 ; } \
-        fi; \
-    done; \
+    flock $(DEBS_PATH)/dpkg_lock.lk sudo DEBIAN_FRONTEND=noninteractive dpkg -P $(foreach deb,$(1),$(firstword $(subst _, ,$(basename $(deb))))) $(LOG) ; \
 fi
 endef
 

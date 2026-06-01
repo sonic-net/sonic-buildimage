@@ -44,7 +44,7 @@ binary-arch:
 	#dh_clean -k
 	#dh_installdirs
 
-binary-indep:
+binary-indep: build
 	dh_testdir
 	dh_installdirs
 

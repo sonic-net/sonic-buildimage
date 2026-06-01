@@ -45,6 +45,10 @@ parameters:
     type: boolean
     default: true
 
+  - name: INCLUDE_JOBS
+    type: string
+    default: "t0_job,t1_job,t2_job,t0_2vlans_job,t0_sonic_job,dualtor_job,dpu_job,t1_multi_asic_job"
+
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml
 - template: ../template-variables.yml
@@ -76,12 +80,12 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        GLOBAL_PARAMS:
-          BUILD_REASON: ${{ parameters.BUILD_REASON }}
-          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
-          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        BUILD_REASON: ${{ parameters.BUILD_REASON }}
+        RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_2
     dependsOn:
@@ -90,12 +94,12 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        GLOBAL_PARAMS:
-          BUILD_REASON: ${{ parameters.BUILD_REASON }}
-          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
-          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        BUILD_REASON: ${{ parameters.BUILD_REASON }}
+        RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_3
     dependsOn:
@@ -104,12 +108,12 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        GLOBAL_PARAMS:
-          BUILD_REASON: ${{ parameters.BUILD_REASON }}
-          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
-          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        BUILD_REASON: ${{ parameters.BUILD_REASON }}
+        RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}
 
   - stage: Test_round_4
     dependsOn:
@@ -118,9 +122,9 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        GLOBAL_PARAMS:
-          BUILD_REASON: ${{ parameters.BUILD_REASON }}
-          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
-          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        BUILD_REASON: ${{ parameters.BUILD_REASON }}
+        RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+        STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+        INCLUDE_JOBS: ${{ parameters.INCLUDE_JOBS }}

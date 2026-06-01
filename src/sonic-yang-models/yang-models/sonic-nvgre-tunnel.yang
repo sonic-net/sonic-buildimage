@@ -27,7 +27,7 @@ module sonic-nvgre-tunnel {
 
         container NVGRE_TUNNEL {
 
-            description "NVGRE_TUNNEL part of config_db.json";
+            description "NVGRE tunnel endpoint definitions.";
 
             list NVGRE_TUNNEL_LIST {
 
@@ -56,7 +56,7 @@ module sonic-nvgre-tunnel {
 
         container NVGRE_TUNNEL_MAP {
 
-            description "NVGRE_TUNNEL_MAP part of config_db.json";
+            description "Mappings between VLAN and VSID for an NVGRE tunnel.";
 
             list NVGRE_TUNNEL_MAP_LIST {
 

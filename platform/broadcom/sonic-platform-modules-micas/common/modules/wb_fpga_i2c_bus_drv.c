@@ -1115,14 +1115,20 @@ out:
     return ret;
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
 static int fpga_i2c_remove(struct platform_device *pdev)
+#else
+static void fpga_i2c_remove(struct platform_device *pdev)
+#endif
 {
     fpga_i2c_dev_t *fpga_i2c;
 
     fpga_i2c = platform_get_drvdata(pdev);
     i2c_del_adapter(&fpga_i2c->adap);
     platform_set_drvdata(pdev, NULL);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0)
     return 0;
+#endif
 };
 
 static struct of_device_id fpga_i2c_match[] = {

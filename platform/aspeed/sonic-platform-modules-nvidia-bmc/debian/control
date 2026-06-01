@@ -1,0 +1,13 @@
+Source: sonic-platform-aspeed-nvidia
+Section: misc
+Priority: optional
+Maintainer: NVIDIA <willtsai@nvidia.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Standards-Version: 3.9.6
+
+Package: sonic-platform-aspeed-nvidia-ast2700-bmc
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: SONiC platform support for NVIDIA Aspeed AST2700 BMC
+ This package provides platform-specific implementation for NVIDIA's
+ BMC card based on Aspeed AST2700.

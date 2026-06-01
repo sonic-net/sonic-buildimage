@@ -274,10 +274,9 @@ void delete_all_fpga_data_nodes(void)
 	struct fpga_data_node *node, *tmp;
 	struct list_head local_list;
 
-	// Clear the global list after copying over the pointer
+	// Clear the global list after moving it to local
 	mutex_lock(&fpga_list_lock);
-	local_list = fpga_list;
-	INIT_LIST_HEAD(&fpga_list);
+	list_replace_init(&fpga_list, &local_list);
 	mutex_unlock(&fpga_list_lock);
 
 	// Work on the local copy without the need for a lock
@@ -623,16 +622,6 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 	// Enable DMA
 	pci_set_master(dev);
 
-	// Request MMIO/IOP resources - reserve PCI I/O and memory resources
-	// DRIVER_NAME shows up in /proc/iomem
-	if ((err = pci_request_regions(dev, DRIVER_NAME)) < 0) {
-		pddf_dbg(MULTIFPGA,
-			 KERN_ERR
-			 "[%s] pci_request_regions failed. dev:%s err:%#x\n",
-			 __FUNCTION__, pci_name(dev), err);
-		goto error_pci_req;
-	}
-
 	pci_privdata =
 		kzalloc(sizeof(struct pddf_multifpgapci_drvdata), GFP_KERNEL);
 
@@ -708,7 +697,6 @@ static void pddf_multifpgapci_remove(struct pci_dev *dev)
 	delete_fpga_data_node(pci_name(dev));
 	free_bars(pci_privdata, dev);
 	pci_disable_device(dev);
-	pci_release_regions(dev);
 	kfree(pci_privdata);
 }
 
@@ -720,8 +708,7 @@ static void cleanup_all_protocols(void)
 
 	// Move the list to a local one to be able to process without lock
 	mutex_lock(&protocol_modules_lock);
-	local_list = protocol_modules;
-	INIT_LIST_HEAD(&protocol_modules);
+	list_replace_init(&protocol_modules, &local_list);
 	mutex_unlock(&protocol_modules_lock);
 
 	// Work on local copy without any locks

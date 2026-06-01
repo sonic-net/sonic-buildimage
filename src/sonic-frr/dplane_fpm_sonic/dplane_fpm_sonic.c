@@ -58,6 +58,8 @@
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
+#include "lib/vrf.h"
+#include <nexthopgroup/c-api/nexthopgroup_capi.h>
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620
@@ -120,7 +122,8 @@ enum custom_rtattr_srv6_localsid {
 	FPM_SRV6_LOCALSID_OIF				= 8,
 	FPM_SRV6_LOCALSID_BPF				= 9,
 	FPM_SRV6_LOCALSID_SIDLIST			= 10,
-	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR		= 11,
+	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR	= 11,
+	FPM_SRV6_LOCALSID_IFNAME			= 12,
 };
 
 enum custom_rtattr_encap_srv6 {
@@ -1153,7 +1156,6 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 {
 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
 	struct zebra_vrf *zvrf;
-	struct srv6_locator *l, *locator = NULL;
 	struct listnode *node;
 	struct rtattr *nest;
 	const struct seg6local_context *seg6local_ctx;
@@ -1165,6 +1167,8 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	uint32_t table_id;
 	uint32_t action;
 	uint32_t block_len, node_len, func_len, arg_len;
+	bool is_usid = false;
+	struct interface *ifp;
 
 	struct {
 		struct nlmsghdr n;
@@ -1196,7 +1200,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWSRV6LOCALSID) &&
-		(zrouter.v6_rr_semantics))
+		(zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	req->n.nlmsg_type = cmd;
@@ -1294,23 +1298,18 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	if (cmd == RTM_DELSRV6LOCALSID)
 		return NLMSG_ALIGN(req->n.nlmsg_len);
 
-	for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, l)) {
-		if (prefix_match(&l->prefix, p)) {
-			locator = l;
-			break;
-		}
-	}
+	is_usid = CHECK_SRV6_FLV_OP(nexthop->nh_srv6->seg6local_ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
 
 	switch (nexthop->nh_srv6->seg6local_action) {
 	case ZEBRA_SEG6_LOCAL_ACTION_END:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UN : FPM_SRV6_LOCALSID_ACTION_END;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UA : FPM_SRV6_LOCALSID_ACTION_END_X;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1318,6 +1317,13 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!nl_attr_put(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_NH6, &seg6local_ctx->nh6,
 					sizeof(struct in6_addr)))
+			return -1;
+
+		ifp = if_lookup_by_index(seg6local_ctx->ifindex, VRF_DEFAULT);
+		if (ifp)
+			if (!nl_attr_put(&req->n, datalen,
+					FPM_SRV6_LOCALSID_IFNAME, ifp->name,
+					strlen(ifp->name) + 1))
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_T:
@@ -1336,7 +1342,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX6 : FPM_SRV6_LOCALSID_ACTION_END_DX6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1347,7 +1353,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDX4 : FPM_SRV6_LOCALSID_ACTION_END_DX4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1362,7 +1368,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT6 : FPM_SRV6_LOCALSID_ACTION_END_DT6;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1378,7 +1384,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT4 : FPM_SRV6_LOCALSID_ACTION_END_DT4;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1394,7 +1400,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!zvrf)
 			return false;
 
-		action = (locator && CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID)) ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
+		action = is_usid ? FPM_SRV6_LOCALSID_ACTION_UDT46 : FPM_SRV6_LOCALSID_ACTION_END_DT46;
 		if (!nl_attr_put32(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_ACTION,
 					action))
@@ -1460,7 +1466,7 @@ static ssize_t netlink_vpn_route_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWROUTE) &&
-	    ((p->family == AF_INET) || zrouter.v6_rr_semantics))
+	    ((p->family == AF_INET) || zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	if(cmd == RTM_NEWROUTE)
@@ -1634,7 +1640,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWROUTE) &&
-		((p->family == AF_INET) || zrouter.v6_rr_semantics))
+		((p->family == AF_INET) || zrouter.zav.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	req->n.nlmsg_type = cmd;
@@ -3386,6 +3392,20 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 		 * anyway.
 		 */
 		if (fnc->socket != -1 && fnc->connecting == false) {
+			enum dplane_op_e op = dplane_ctx_get_op(ctx);
+
+			/*
+			 * Skip multicast routes: MRIB routes flow through
+			 * the dataplane pipeline but should not be sent to
+			 * FPM. Without this filter, MRIB ROUTE_DELETE events
+			 * can remove valid unicast routes from APP_DB.
+			 */
+			if ((op == DPLANE_OP_ROUTE_DELETE ||
+			     op == DPLANE_OP_ROUTE_INSTALL ||
+			     op == DPLANE_OP_ROUTE_UPDATE) &&
+			    dplane_ctx_get_safi(ctx) == SAFI_MULTICAST)
+				goto skip;
+
 			frr_with_mutex (&fnc->ctxqueue_mutex) {
 				dplane_ctx_enqueue_tail(&fnc->ctxqueue, ctx);
 				cur_queue =
@@ -3396,7 +3416,7 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 				peak_queue = cur_queue;
 			continue;
 		}
-
+skip:
 		dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_SUCCESS);
 		dplane_provider_enqueue_out_ctx(prov, ctx);
 	}

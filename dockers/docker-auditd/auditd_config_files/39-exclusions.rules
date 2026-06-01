@@ -1,3 +1,0 @@
--a always,exclude -F msgtype=EOE
--a always,exclude -F msgtype=EXECVE
--a always,exclude -F msgtype=PATH -F auid<1000

@@ -1,0 +1,66 @@
+#!/bin/bash
+# /usr/local/bin/cargo — transparent cargo-auditable wrapper.
+#
+# Routes `cargo build` (and only build) through `cargo auditable` so
+# every Rust binary produced in the slave embeds the resolved
+# Cargo.lock into a `.dep-v0` ELF section. Syft's rust-binary
+# cataloger reads that section at SBOM scan time, giving SONiC SBOMs
+# full per-crate visibility for Rust packages with no source-tree
+# changes to individual debian/rules files.
+#
+# This file is shared across every sonic-slave-* Dockerfile via a
+# single COPY from files/build/cargo-wrapper. Edit here only — do
+# not duplicate.
+#
+# Behaviour:
+#   * If cargo-auditable is on PATH and we are wrapping a `cargo
+#     build`, route through it.
+#   * If cargo-auditable is NOT on PATH and we are wrapping a `cargo
+#     build`, fail HARD with an actionable error rather than
+#     silently degrading to plain `cargo build` — the SBOM would
+#     otherwise be quietly missing Rust crate inventory and we'd
+#     have no signal that anything went wrong.
+#   * For any other cargo subcommand, pass through unchanged.
+#
+# CARGO_AUDITABLE_WRAPPED guards against recursion: cargo-auditable
+# itself invokes `cargo build` internally and would loop without it.
+
+REAL=/usr/.cargo/bin/cargo
+
+if [ -n "$CARGO_AUDITABLE_WRAPPED" ]; then
+    exec "$REAL" "$@"
+fi
+
+case "$1" in
+    build)
+        if ! command -v cargo-auditable >/dev/null 2>&1; then
+            cat >&2 <<EOF
+
+ERROR: cargo-auditable is not installed but the SONiC build expects it.
+
+This wrapper at /usr/local/bin/cargo routes 'cargo build' through
+'cargo auditable build' so that SBOM generation can extract Rust
+crate dependency information from compiled binaries. Silently
+falling back to plain 'cargo build' would produce SBOMs that are
+quietly missing Rust crate inventory, which defeats the purpose of
+SBOM_STRICT and is worse than a hard build failure.
+
+To fix, rebuild the sonic-slave-* docker image. cargo-auditable is
+installed via the slave Dockerfile (see the RUN line that runs:
+
+    \$RUST_ROOT/bin/cargo install --locked cargo-auditable@<ver>
+
+with CARGO_HOME=\$RUST_ROOT). If you are using a custom slave image
+that omitted this dependency, install it manually with the same
+command before retrying the build.
+
+EOF
+            exit 1
+        fi
+        export CARGO_AUDITABLE_WRAPPED=1
+        exec "$REAL" auditable "$@"
+        ;;
+    *)
+        exec "$REAL" "$@"
+        ;;
+esac

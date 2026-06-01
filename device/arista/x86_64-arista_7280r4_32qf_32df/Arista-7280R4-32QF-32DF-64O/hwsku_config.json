@@ -1,0 +1,24 @@
+{
+  "gearbox_config": {
+    "file": "gearbox_config.json",
+    "template": "gearbox_config.json.j2",
+    "template_data": "gearbox_intf_config",
+    "port_speed_lane_map": "data/gearbox_port_speed_map.json"
+  },
+  "phy_profile_config": {
+    "file": "gearbox_400G_PAM4_optic.xml",
+    "template": "gearbox_400G_PAM4_optic.xml.j2",
+    "template_data": "phy_profile"
+  },
+  "phy_config": {
+    "file": "phy{}_config.json",
+    "template": "phy_config.json.j2",
+    "template_data": "phy_port_config"
+  },
+  "bcm_config": {
+    "file": "q3d-a7280R4-32QFx400G-32DFx400G.config.bcm",
+    "template" : "q3d-a7280R4-32QFx400G-32DFx400G.config.bcm.j2",
+    "template_data" : "bcm_port_lane_config",
+    "port_lane_map" : "data/bcm_port_lane_map.json"
+  }
+}

@@ -25,6 +25,48 @@
         "desc": "Missing Vxlan_TUNNEL configuration",
         "eStrKey" : "LeafRef"
     },
+    "VNET_ROUTE_VALID_TEST": {
+        "desc": "Valid VNET Route Configuration."
+    },
+    "VNET_ROUTE_MULTI_TEST": {
+        "desc": "Multiple VNET route configurations for different VNETs in VNET_ROUTE_LIST table."
+    },
+    "VNET_ROUTE_TEST_DUPLICATE_NAME": {
+        "desc": "VNET route configuration with duplicate name keys in VNET_ROUTE_LIST table.",
+        "eStr": "Duplicated instance of \"VNET_ROUTE_LIST\" list."
+    },
+    "VNET_ROUTE_TEST_INVALID_NEXTHOP": {
+        "desc": "VNET route configuration with invalid nexthop IP value (256.256.256.256) in VNET_ROUTE_LIST table.",
+        "eStrKey": "Pattern"
+    },
+    "VNET_ROUTE_TEST_INVALID_NAME_FORMAT": {
+        "desc": "VNET route configuration with invalid name format (missing prefix) in VNET_ROUTE_LIST table.",
+        "eStrKey": "ListKey"
+    },
+    "VNET_ROUTE_TEST_INVALID_PREFIX": {
+        "desc": "VNET route configuration with invalid prefix format (300.100.4.0/24) in name field.",
+        "eStrKey": "Pattern"
+    },
+    "VNET_ROUTE_TEST_MISSING_NEXTHOP": {
+        "desc": "VNET route configuration with missing mandatory attribute (nexthop) in VNET_ROUTE_LIST table.",
+        "eStrKey": "Mandatory"
+    },
+    "VNET_ROUTE_TEST_MISSING_INTERFACE": {
+        "desc": "VNET route configuration with missing mandatory attribute (interface) in VNET_ROUTE_LIST table.",
+        "eStrKey": "Mandatory"
+    },
+    "VNET_ROUTE_TEST_NONEXISTENT_VNET": {
+        "desc": "VNET route configuration referencing a non-existent VNET name, violating the must condition.",
+        "eStrKey" : "LeafRef"
+    },
+    "VNET_ROUTE_TEST_MULTI_NEXTHOP_INTERFACE": {
+        "desc": "VNET route configuration with multiple comma-separated nexthop IPs and interfaces in VNET_ROUTE_LIST table."
+    },
+    "VNET_ROUTE_TEST_INVALID_MULTI_NEXTHOP": {
+        "desc": "VNET route configuration with invalid IP in comma-separated nexthop list.",
+        "eStrKey": "Pattern"
+    },
+
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
         "desc": "Basic VNET route tunnel configuration with minimal required field - endpoint in VNET_ROUTE_TUNNEL_LIST table."
     },
@@ -34,7 +76,7 @@
     },
 
     "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
-        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address and vni) in VNET_ROUTE_TUNNEL_LIST table."
+        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address, vni, and metric) in VNET_ROUTE_TUNNEL_LIST table."
     },
 
     "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {
@@ -53,8 +95,8 @@
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_VNI": {
-        "desc": "VNET route tunnel configuration with invalid VXLAN ID (exceeding max value of 16777215) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "Range"
+        "desc": "VNET route tunnel configuration with invalid VXLAN ID in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
@@ -69,7 +111,7 @@
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
         "desc": "VNET route tunnel configuration with missing mandatory attribute (endpoint) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "MinElements"
+        "eStrKey": "Mandatory"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_NONEXISTENT_VNET": {
@@ -105,7 +147,11 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_VNI": {
         "desc": "VNET route tunnel configuration with invalid VNI in comma-separated vni list.",
-        "eStrKey": "Range"
+        "eStrKey": "Pattern"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VNI": {
+        "desc": "VNET route tunnel configuration with duplicate VNI values in comma-separated vni string."
     },
 
     "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING": {
