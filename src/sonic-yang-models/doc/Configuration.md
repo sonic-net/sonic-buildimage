@@ -3262,10 +3262,12 @@ DNS configuration options can also be set when nameservers are defined:
 ```json
 {
     "DNS_OPTIONS": {
-        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-        "ndots": 0,
-        "timeout": 1,
-        "attempts": 2
+        "GLOBAL": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": 0,
+            "timeout": 1,
+            "attempts": 2
+        }
     }
 }
 ```
