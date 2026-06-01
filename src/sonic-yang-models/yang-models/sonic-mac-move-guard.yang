@@ -48,28 +48,15 @@ module sonic-mac-move-guard {
         container MAC_MOVE_GUARD {
 
             description
-                "MAC Move Guard configuration. Only the GLOBAL key is
-                 permitted (enforced by max-elements 1 on the inner list
-                 and by the name leaf being a single-valued enumeration).";
+                "MAC Move Guard configuration. Maps to the
+                 MAC_MOVE_GUARD table in CONFIG_DB, which holds a single
+                 GLOBAL row of switch-wide policy.";
 
-            list MAC_MOVE_GUARD_LIST {
-                key "name";
-                max-elements 1;
+            container GLOBAL {
+
                 description
-                    "Single GLOBAL row holding the switch-wide MAC Move
-                     Guard policy.";
-
-                leaf name {
-                    type enumeration {
-                        enum GLOBAL {
-                            description
-                                "The only permitted key value for the
-                                 MAC_MOVE_GUARD table.";
-                        }
-                    }
-                    description
-                        "Key node; always GLOBAL.";
-                }
+                    "Switch-wide MAC Move Guard policy. CONFIG_DB key
+                     MAC_MOVE_GUARD|GLOBAL.";
 
                 leaf enabled {
                     type boolean;
@@ -82,13 +69,16 @@ module sonic-mac-move-guard {
 
                 leaf threshold {
                     type uint32 {
-                        range "1..max";
+                        range "1..1000000";
                     }
                     default 1000;
                     description
                         "Maximum MAC moves allowed within detect_interval
                          for a single (VLAN, MAC) before it is declared
-                         a bad MAC.";
+                         a bad MAC. Upper bound of 1,000,000 reflects
+                         the largest count that could ever be reached
+                         within the maximum detect_interval (3600 s) at
+                         realistic per-MAC churn rates.";
                 }
 
                 leaf detect_interval {
