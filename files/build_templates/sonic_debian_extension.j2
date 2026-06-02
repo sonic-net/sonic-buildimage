@@ -422,6 +422,8 @@ sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable chrony.service
 sudo cp $IMAGE_CONFIGS/chrony/override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable chrony.service
+# Remove Chrony's hooks into ifupdown system, so that NTP sources are always treated as online
+sudo rm $FILESYSTEM_ROOT/etc/network/if-post-down.d/chrony $FILESYSTEM_ROOT/etc/network/if-up.d/chrony
 
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
