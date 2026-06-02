@@ -19,6 +19,15 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-04-11 {
+        description "Adde use_template_render_for_restore to control the method of config restore in FRR.";
+    }
+
+
+    revision 2026-04-11 {
+        description "Added route_state_async_publish to control async route state publishing.";
+    }
+
     revision 2026-06-02 {
         description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
     }
@@ -264,6 +273,17 @@ module sonic-device_metadata {
                     }
                     default disabled;
                 }
+
+                leaf route_state_async_publish {
+                    description "When enabled, routeorch publishes route states asynchronously in state update thread.
+                                 When disabled, route state is published on the orch task path (synchronous).";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default enabled;
+                }
+
                 leaf rack_mgmt_map {
                     type string {
                         length 0..128 {
@@ -384,6 +404,12 @@ module sonic-device_metadata {
                         enum disabled;
                     }
                     default enabled;
+                }
+
+                leaf use_template_render_for_restore {
+                    type boolean;
+                    description "When set to true, use template rendering to generate FRR configurations during startup in unified mode. When set to false, restore FRR configurations from cached DB tables. This field only takes effect in unified mode.";
+                    default "true";
                 }
 
                 leaf dpu_auto_recovery {

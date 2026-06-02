@@ -2,14 +2,14 @@ gdb==16.3-1
 gdbserver==16.3-1
 libbabeltrace1==1.5.11-4+b2
 libcbor0.10==0.10.2-2
-libcurl3t64-gnutls==8.14.1-2+deb13u2
+libcurl3t64-gnutls==8.14.1-2+deb13u3
 libdebuginfod-common==0.192-4
 libdebuginfod1t64==0.192-4
 libdw1t64==0.192-4
 libedit2==3.1-20250104-1
 libevent-2.1-7t64==2.1.12-stable-10+b1
 libfido2-1==1.15.0-1+b1
-libglib2.0-0t64==2.84.4-3~deb13u2
+libglib2.0-0t64==2.84.4-3~deb13u3
 libgpm2==1.20.7-11+b2
 libipt2==2.1.2-1
 libjson-c5==0.18+ds-1

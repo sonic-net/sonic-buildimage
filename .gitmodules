@@ -150,3 +150,11 @@
 [submodule "src/sonic-redfish"]
 	path = src/sonic-redfish
 	url = https://github.com/sonic-net/sonic-redfish
+[submodule "platform/aspeed/sonic-platform-modules-arista"]
+	path = platform/aspeed/sonic-platform-modules-arista
+	url = https://github.com/aristanetworks/sonic
+
+[submodule "platform/broadcom/saibcm-modules"]
+	path = platform/broadcom/saibcm-modules
+	url = https://github.com/sonic-net/saibcm-modules.git
+	branch = sdk-6.5.34-xgs

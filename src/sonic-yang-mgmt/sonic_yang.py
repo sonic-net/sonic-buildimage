@@ -1,8 +1,11 @@
-import yang as ly
+from __future__ import annotations
+
+import libyang as ly
 import syslog
 
 from json import dump
 from glob import glob
+from typing import Optional, Dict, List, Tuple, Set, Any, cast
 from sonic_yang_ext import SonicYangExtMixin, SonicYangException
 from sonic_yang_path import SonicYangPathMixin
 
@@ -13,59 +16,171 @@ i.e. it is mixin not parent class.
 """
 class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
-    def __init__(self, yang_dir, debug=False, print_log_enabled=True, sonic_yang_options=0):
-        self.yang_dir = yang_dir
-        self.ctx = None
-        self.module = None
-        self.root = None
+    def __init__(self, yang_dir: str, debug: bool = False, print_log_enabled: bool = True):
+        self.yang_dir: str = yang_dir
+        self.ctx: ly.Context = None  # type: ignore[assignment]
+        self.module: Optional[ly.Module] = None
+        self.root: Optional[ly.DNode] = None
         # logging vars
-        self.SYSLOG_IDENTIFIER = "sonic_yang"
-        self.DEBUG = debug
-        self.print_log_enabled = print_log_enabled
-        if not print_log_enabled:
-            # The default libyang log options are ly.LY_LOLOG|ly.LY_LOSTORE_LAST.
-            # Removing ly.LY_LOLOG will stop libyang from printing the logs.
-            ly.set_log_options(ly.LY_LOSTORE_LAST)
+        self.SYSLOG_IDENTIFIER: str = "sonic_yang"
+        self.DEBUG: bool = debug
+        self.print_log_enabled: bool = print_log_enabled
 
         # yang model files, need this map it to module
-        self.yangFiles = list()
+        self.yangFiles: List[str] = list()
         # map from TABLE in config DB to container and module
-        self.confDbYangMap = dict()
-        # JSON format of yang model [similar to pyang conversion]
-        self.yJson = list()
+        self.confDbYangMap: Dict[str, Any] = dict()
+        # map of backlinks dict()[]
+        self.backlinkMap: Optional[Dict[str, List[str]]] = None
         # config DB json input, will be cropped as yang models
-        self.jIn = dict()
+        self.jIn: Dict[str, Any] = dict()
         # YANG JSON, this is traslated from config DB json
-        self.xlateJson = dict()
+        self.xlateJson: Dict[str, Any] = dict()
         # reverse translation from yang JSON, == config db json
-        self.revXlateJson = dict()
+        self.revXlateJson: Dict[str, Any] = dict()
         # below dict store the input config tables which have no YANG models
-        self.tablesWithOutYang = dict()
-        # below dict will store preProcessed yang objects, which may be needed by
-        # all yang modules, such as grouping.
-        self.preProcessedYang = dict()
-        # Lazy caching for backlinks lookups
-        self.backlinkCache = dict()
+        self.tablesWithOutYang: Dict[str, Any] = dict()
+        # Lazy YIN-shape view of the loaded modules, rebuilt on demand from the
+        # compiled SNode tree the first time a backward-compat consumer reads
+        # `self.yJson`. None means "not yet built"; the loader resets this back
+        # to None whenever the schema set changes. See _build_yjson_compat().
+        self._yJsonCache: Optional[List[Dict[str, Any]]] = None
         # Lazy caching for must counts
-        self.mustCache = dict()
+        self.mustCache: Dict[Tuple[Any, bool], int] = dict()
         # Lazy caching for configdb to xpath
-        self.configPathCache = dict()
+        self.configPathCache: Dict[Tuple[str, bool], str] = dict()
         # element path for CONFIG DB. An example for this list could be:
         # ['PORT', 'Ethernet0', 'speed']
-        self.elementPath = []
+        self.elementPath: List[str] = []
         try:
-            self.ctx = ly.Context(yang_dir, sonic_yang_options)
+            self.ctx = ly.Context(yang_dir)
         except Exception as e:
             self.fail(e)
 
         return
 
     def __del__(self):
-        pass
+        if self.root:
+            self.root.free()
+            self.root = None
+        if self.ctx:
+            self.ctx.destroy()
+            self.ctx = None  # type: ignore[assignment]
+
+    @property
+    def yJson(self) -> List[Dict[str, Any]]:
+        """Backward-compat YIN-shape dict tree of all loaded modules.
+
+        Returned shape mirrors the xmltodict output that earlier versions of
+        sonic-yang-mgmt produced from `module.print_mem("yin")`: a list of
+        per-module dicts, each `{'module': {'@name': ..., 'container': ...}}`,
+        with single children rendered as a dict and multiple as a list.
+
+        Built on demand from the **compiled** schema tree, so `uses`,
+        `grouping`, `augment` and `deviation` are already resolved by libyang3
+        — there's no manual inlining and no parsed-tree access. Cached after
+        first build; the cache is invalidated when the schema set changes via
+        `loadYangModel()`.
+
+        This exists solely for external consumers (e.g. sonic-utilities's
+        sonic_cli_gen) that still walk the YIN dict shape. Internal code
+        should walk SNode iteration instead.
+        """
+        if self._yJsonCache is None:
+            self._yJsonCache = self._build_yjson_compat()
+        return self._yJsonCache
+
+    def _build_yjson_compat(self) -> List[Dict[str, Any]]:
+        result: List[Dict[str, Any]] = []
+        for module_name in self.yangFiles:
+            m = self.ctx.get_module(module_name)
+            if m is None:
+                continue
+            module_dict: Dict[str, Any] = {'@name': m.name()}
+            self._yjson_add_subtree(m, module_dict)
+            result.append({'module': module_dict})
+        return result
+
+    def _yjson_add_subtree(self, parent_snode: Any, parent_dict: Dict[str, Any]) -> None:
+        """Add the children of `parent_snode` (a Module or SNode) to
+        `parent_dict`, grouping them by YIN keyword. iter_children with
+        with_choice=True yields direct leaves and choice nodes separately so
+        the choice/case structure is preserved (the consumer expects to find
+        leaves both directly and under `choice/case/leaf`).
+        """
+        groups: Dict[str, List[Dict[str, Any]]] = {}
+        for child in parent_snode.children(with_choice=True):
+            yin_key, yin_dict = self._yjson_node(child)
+            if yin_key is None:
+                continue
+            groups.setdefault(yin_key, []).append(yin_dict)
+        for key, values in groups.items():
+            parent_dict[key] = values[0] if len(values) == 1 else values
+
+    def _yjson_node(self, snode: Any) -> Tuple[Optional[str], Dict[str, Any]]:
+        d: Dict[str, Any] = {'@name': snode.name()}
+        desc = snode.description()
+        if desc is not None:
+            d['description'] = {'text': desc}
+        if snode.mandatory():
+            d['mandatory'] = {'@value': 'true'}
+
+        if isinstance(snode, ly.SLeaf):
+            d['type'] = self._yjson_type(snode.type())
+            default = snode.default()
+            if default is not None:
+                d['default'] = {'@value': str(default)}
+            return 'leaf', d
+        if isinstance(snode, ly.SLeafList):
+            d['type'] = self._yjson_type(snode.type())
+            return 'leaf-list', d
+        if isinstance(snode, ly.SList):
+            keys = [k.name() for k in snode.keys()]
+            if keys:
+                d['key'] = {'@value': ' '.join(keys)}
+            self._yjson_add_subtree(snode, d)
+            return 'list', d
+        if isinstance(snode, ly.SContainer):
+            self._yjson_add_subtree(snode, d)
+            return 'container', d
+        if isinstance(snode, ly.SChoice):
+            cases: List[Dict[str, Any]] = []
+            for case in snode.children(with_case=True, types=(ly.SNode.CASE,)):
+                case_dict: Dict[str, Any] = {'@name': case.name()}
+                case_desc = case.description()
+                if case_desc is not None:
+                    case_dict['description'] = {'text': case_desc}
+                self._yjson_add_subtree(case, case_dict)
+                cases.append(case_dict)
+            if cases:
+                d['case'] = cases[0] if len(cases) == 1 else cases
+            return 'choice', d
+        # Anything else (rpc, action, notification, anyxml/anydata) — skip;
+        # legacy yJson consumers don't read those branches.
+        return None, d
+
+    def _yjson_type(self, type_obj: Any) -> Dict[str, Any]:
+        # Prefer the typedef-aware name (e.g. "stypes:hwsku") so consumers
+        # that text-match on prefixed type names continue to work; fall back
+        # to basename for built-ins.
+        name = type_obj.name() or type_obj.basename()
+        d: Dict[str, Any] = {'@name': name}
+        base = type_obj.basename()
+        if base == 'leafref':
+            path = type_obj.leafref_path()
+            if path:
+                d['path'] = {'@value': path}
+        elif base == 'union':
+            members = [self._yjson_type(t) for t in type_obj.union_types()]
+            if members:
+                d['type'] = members[0] if len(members) == 1 else members
+        return d
 
     def sysLog(self, debug=syslog.LOG_INFO, msg=None, doPrint=False):
         # log debug only if enabled
         if self.DEBUG == False and debug == syslog.LOG_DEBUG:
+            return
+        if msg is None:
             return
         if doPrint and self.print_log_enabled:
             print("{}({}):{}".format(self.SYSLOG_IDENTIFIER, debug, msg))
@@ -76,7 +191,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         return
 
     def fail(self, e):
-        self.sysLog(msg=e, debug=syslog.LOG_ERR, doPrint=True)
+        self.sysLog(msg=str(e), debug=syslog.LOG_ERR, doPrint=True)
         raise e
 
     """
@@ -86,7 +201,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _load_schema_module(self, yang_file):
         try:
-            return self.ctx.parse_module_path(yang_file, ly.LYS_IN_YANG)
+            # Use libyang's own FILEPATH mode rather than opening the file in
+            # Python and passing a file object. This matches the libyang1
+            # behaviour (parse_module_path(path)) and, equally important,
+            # keeps tests that mock builtins.open working — libyang reads the
+            # file via its own C runtime, so a mocked open() is irrelevant.
+            return self.ctx.parse_module(yang_file, ly.IOType.FILEPATH, "yang")
         except Exception as e:
             self.sysLog(msg="Failed to load yang module file: " + yang_file, debug=syslog.LOG_ERR, doPrint=True)
             self.fail(e)
@@ -117,34 +237,19 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
                 self.fail(e)
 
     """
-    load_schema_modules_ctx(): load all Yang model files in the directory to context: ctx
-    input:    yang_dir,  context
-    returns:  Exception if error, returrns context object if no error
-    """
-    def _load_schema_modules_ctx(self, yang_dir=None):
-        if not yang_dir:
-            yang_dir = self.yang_dir
-
-        ctx = ly.Context(yang_dir)
-
-        py = glob(yang_dir+"/*.yang")
-        for file in py:
-            try:
-                ctx.parse_module_path(str(file), ly.LYS_IN_YANG)
-            except Exception as e:
-                self.sysLog(msg="Failed to parse yang module file: " + file, debug=syslog.LOG_ERR, doPrint=True)
-                self.fail(e)
-
-        return ctx
-
-    """
     load_data_file(): load a Yang data json file
     input:    data_file - the full path of the yang json data file to be loaded
     returns:  Exception if error
     """
     def _load_data_file(self, data_file):
        try:
-           data_node = self.ctx.parse_data_path(data_file, ly.LYD_JSON, ly.LYD_OPT_CONFIG | ly.LYD_OPT_STRICT)
+           # Use libyang's FILEPATH mode so libyang reads the file itself —
+           # avoids passing a Python file object whose fileno() may not exist
+           # (e.g. when builtins.open is mocked in tests).
+           data_node = self.ctx.parse_data("json", in_type=ly.IOType.FILEPATH,
+                                           in_data=str(data_file),
+                                           no_state=True, strict=True,
+                                           json_string_datatypes=True)
        except Exception as e:
            self.sysLog(msg="Failed to load data file: " + str(data_file), debug=syslog.LOG_ERR, doPrint=True)
            self.fail(e)
@@ -175,8 +280,8 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     returns: returns (context, root) if no error,  or Exception if failed
     """
     def _load_data_model(self, yang_dir, yang_files, data_files, output=None):
-        if (self.ctx is None):
-            self.ctx = ly.Context(yang_dir)
+        if not self.ctx:
+            raise Exception('ctx not initialized')
 
         try:
             self._load_schema_module_list(yang_files)
@@ -207,10 +312,10 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def load_module_str_name(self, yang_module_str):
         try:
-            module = self.ctx.parse_module_mem(yang_module_str, ly.LYS_IN_YANG)
+            module = self.ctx.parse_module_str(yang_module_str)
         except Exception as e:
             self.fail(e)
-        
+
         return module.name()
 
     """
@@ -218,10 +323,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     input:  option:  "JSON" or "XML"
     """
     def _print_data_mem(self, option):
+        if self.root is None:
+            raise Exception("data not loaded")
         if (option == "JSON"):
-            mem = self.root.print_mem(ly.LYD_JSON, ly.LYP_WITHSIBLINGS | ly.LYP_FORMAT)
+            mem = self.root.print_mem("json", with_siblings=True, pretty=True)
         else:
-            mem = self.root.print_mem(ly.LYD_XML, ly.LYP_WITHSIBLINGS | ly.LYP_FORMAT)
+            mem = self.root.print_mem("yang", with_siblings=True, pretty=True)
 
         return mem
 
@@ -230,7 +337,9 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     input: outfile - full path of the file to save the data tree to
     """
     def _save_data_file_json(self, outfile):
-        mem = self.root.print_mem(ly.LYD_JSON, ly.LYP_FORMAT)
+        if self.root is None:
+            raise Exception("data not loaded")
+        mem = self.root.print_mem("json", pretty=True)
         with open(outfile, 'w') as out:
             dump(mem, out, indent=4)
 
@@ -250,10 +359,9 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         else:
             if (module is not None):
                 if (format == "XML"):
-                    #libyang bug with format
-                    result = module.print_mem(ly.LYD_JSON, ly.LYP_FORMAT)
+                    result = module.print_mem("yin")
                 else:
-                    result = module.print_mem(ly.LYD_XML, ly.LYP_FORMAT)
+                    result = module.print_mem("json")
 
         return result
 
@@ -267,12 +375,11 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     def _validate_data(self, node=None, ctx=None):
         if not node:
             node = self.root
-
-        if not ctx:
-            ctx = self.ctx
+        if node is None:
+            raise Exception("data not loaded")
 
         try:
-            node.validate(ly.LYD_OPT_CONFIG, ctx)
+            node.validate(no_state=True)
         except Exception as e:
             self.fail(e)
 
@@ -336,7 +443,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     def _new_data_node(self, xpath, value):
         val = str(value)
         try:
-            data_node = self.root.new_path(self.ctx, xpath, val, 0, 0)
+            data_node = self.ctx.create_data_path(xpath, parent=self.root, value=val, update=False, force_return_value=False)
         except Exception as e:
             self.sysLog(msg="Failed to add data node for path: " + str(xpath), debug=syslog.LOG_ERR, doPrint=True)
             self.fail(e)
@@ -351,38 +458,36 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
               - Exception if there is error
     """
     def _find_data_node(self, data_xpath):
+        if self.root is None:
+            return None
         try:
-            set = self.root.find_path(data_xpath)
+            set = self.root.find_all(data_xpath)
         except Exception as e:
             self.sysLog(msg="Failed to find data node from xpath: " + str(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
             self.fail(e)
         else:
             if set is not None:
-                for data_node in set.data():
+                for data_node in set:
                     if (data_xpath == data_node.path()):
                         return data_node
             return None
     """
     find_schema_node(): find the schema node from schema xpath
         example schema xpath:
-        "/sonic-port:sonic-port/sonic-port:PORT/sonic-port:PORT_LIST/sonic-port:port_name"
+        "/sonic-port:sonic-port/PORT/PORT_LIST/port_name"
     input:    xpath of the node
     returns:  Schema_Node oject or None if not found
     """
     def _find_schema_node(self, schema_xpath):
         try:
             schema_set = self.ctx.find_path(schema_xpath)
-            for schema_node in schema_set.schema():
-                if (schema_xpath == schema_node.path()):
+            for schema_node in schema_set:
+                if (schema_xpath == schema_node.schema_path()):
                     return schema_node
         except Exception as e:
              self.fail(e)
              return None
-        else:
-             for schema_node in schema_set.schema():
-                 if schema_xpath == schema_node.path():
-                     return schema_node
-             return None
+        return None
     """
     find_data_node_schema_xpath(): find the xpath of the schema node from data xpath
       data xpath example:
@@ -394,14 +499,14 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     def _find_data_node_schema_xpath(self, data_xpath):
         path = ""
         try:
-            set = self.root.find_path(data_xpath)
+            data_node = self._find_data_node(data_xpath)
+            if data_node is not None:
+                path = data_node.schema().schema_path()
+
+            return path
         except Exception as e:
             self.fail(e)
-        else:
-            for data_node in set.data():
-                if data_xpath == data_node.path():
-                    return data_node.schema().path()
-            return path
+            return None
 
     """
     add_node(): add a node to Yang schema or data tree
@@ -419,22 +524,28 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
     """
     merge_data(): merge a data file to the existing data tree
-    input:    yang model directory and full path of the data json file to be merged
+    input:    full path of the data json file to be merged into the existing root
     returns:  Exception if failed
     """
-    def _merge_data(self, data_file, yang_dir=None):
-        #load all yang models to ctx
-        if not yang_dir:
-            yang_dir = self.yang_dir
+    def _merge_data(self, data_file):
+        if not self.ctx:
+            raise Exception('ctx not initialized')
+
+        if not self.root:
+            raise Exception('no root initialized')
 
         try:
-            ctx = self._load_schema_modules_ctx(yang_dir)
-
-            #source data node
-            source_node = ctx.parse_data_path(str(data_file), ly.LYD_JSON, ly.LYD_OPT_CONFIG | ly.LYD_OPT_STRICT)
-
-            #merge
-            self.root.merge(source_node, 0)
+            # See _load_data_file: use FILEPATH mode so libyang reads the file
+            # via its own runtime; avoids issues with mocked builtins.open in
+            # tests and lets libyang handle encoding/EOL details.
+            source_node = self.ctx.parse_data("json", in_type=ly.IOType.FILEPATH,
+                                              in_data=str(data_file),
+                                              no_state=True, strict=True,
+                                              json_string_datatypes=True)
+            if source_node is None:
+                raise Exception("Failed to parse data file: " + str(data_file))
+            # merge
+            self.root.merge(source_node, destruct=True, with_siblings=True)
         except Exception as e:
             self.fail(e)
 
@@ -443,22 +554,13 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     input:    xpath of the schema/data node
     returns:  True - success   False - failed
     """
-    def _deleteNode(self, xpath=None, node=None):
-        if node is None:
-            node = self._find_data_node(xpath)
+    def _deleteNode(self, xpath):
+        dnode = self._find_data_node(xpath)
+        if (dnode):
+            dnode.unlink()
+            return True
 
-        if (node):
-            node.unlink()
-            dnode = self._find_data_node(xpath)
-            if (dnode is None):
-                #deleted node not found
-                return True
-            else:
-                self.sysLog(msg='Could not delete Node', debug=syslog.LOG_ERR, doPrint=True)
-                return False
-        else:
-            self.sysLog(msg="failed to find node, xpath: " + xpath, debug=syslog.LOG_ERR, doPrint=True)
-
+        self.sysLog(msg='Could not delete Node: {}'.format(xpath), debug=syslog.LOG_ERR, doPrint=True)
         return False
 
     """
@@ -475,9 +577,9 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
             self.fail(e)
         else:
             if (data_node is not None):
-                subtype = data_node.subtype()
-                if (subtype is not None):
-                    value = subtype.value_str()
+                schema = data_node.schema()
+                if isinstance(schema, (ly.SLeaf, ly.SLeafList)):
+                    value = cast(ly.DLeaf, data_node).value()
                     return value
             return output
 
@@ -488,7 +590,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _set_data_node_value(self, data_xpath, value):
         try:
-            self.root.new_path(self.ctx, data_xpath, str(value), ly.LYD_ANYDATA_STRING, ly.LYD_PATH_OPT_UPDATE)
+            self.ctx.create_data_path(data_xpath, parent=self.root, value=str(value), update=True, force_return_value=False)
         except Exception as e:
             self.sysLog(msg="set data node value failed for xpath: " + str(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
             self.fail(e)
@@ -500,19 +602,73 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     """
     def _find_data_nodes(self, data_xpath):
         list = []
-        node = self.root.child()
+        node = next(cast(ly.DContainer, self.root).children())
         try:
-            node_set = node.find_path(data_xpath);
+            node_set = node.find_all(data_xpath);
         except Exception as e:
             self.fail(e)
         else:
             if node_set is None:
                 raise Exception('data node not found')
 
-            for data_set in node_set.data():
-                data_set.schema()
+            for data_set in node_set:
                 list.append(data_set.path())
             return list
+
+    def _cache_schema_dependencies(self):
+        if self.backlinkMap is not None:
+            return
+
+        leafRefPaths = self.ctx.find_backlinks_paths(None)  # type: ignore[arg-type]
+        if leafRefPaths is None:
+            return None
+
+        self.backlinkMap = dict()
+
+        for path in leafRefPaths:
+            targets = self.ctx.find_leafref_path_target_paths(path)
+            if targets is None:
+                continue
+
+            for target in targets:
+                if self.backlinkMap.get(target) is None:
+                    self.backlinkMap[target] = list()
+                self.backlinkMap[target].append(path)
+
+    """
+    find_schema_dependencies():  find the schema dependencies from schema xpath
+    input:    schema_xpath     of the schema node
+              match_ancestors  whether or not to treat the specified path as
+                               an ancestor rather than a full path. If set to
+                               true, will add recursively.
+    returns:  - list of xpath of the dependencies
+              - Exception if schema node not found
+    """
+    def find_schema_dependencies(self, schema_xpath, match_ancestors: bool=False):
+        # Lazy building of cache
+        self._cache_schema_dependencies()
+
+        match_path = schema_xpath
+        if match_path is not None and (match_path == "/" or len(match_path) == 0):
+            match_path = None
+
+        if self.backlinkMap is None:
+            return []
+
+        # This is an odd case where you want to know about the subtree.  Do a
+        # string prefix match and create a list.
+        if match_path is None or match_ancestors is True:
+            ret = []
+            for target, leafrefs in self.backlinkMap.items():
+                if match_path is None or target == match_path or target.startswith(match_path + "/"):
+                    ret.extend(leafrefs)
+            return ret
+
+        # Common case
+        result = self.backlinkMap.get(match_path)
+        if result is None:
+            return []
+        return result
 
     """
     find_schema_must_count():  find the number of must clauses for the schema path
@@ -537,6 +693,9 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
             self.fail(e)
             return 0
 
+        if schema_node is None:
+            return 0
+
         # If not doing recursion, just return the result.  This will internally
         # cache the child so no need to update the cache ourselves
         if not match_ancestors:
@@ -544,7 +703,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
         count = 0
         # Recurse first
-        for elem in schema_node.tree_dfs():
+        for elem in schema_node.iter_tree():
             count += self.__find_schema_must_count_only(elem)
 
         # Pull self
@@ -557,113 +716,19 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
     def __find_schema_must_count_only(self, schema_node):
         # Check non-recursive cache
-        key = ( schema_node.path(), False )
+        key = ( schema_node.schema_path(), False )
         result = self.mustCache.get(key)
         if result is not None:
             return result
 
         count = 0
-        if schema_node.nodetype() == ly.LYS_CONTAINER:
-            schema_leaf = ly.Schema_Node_Container(schema_node)
-            if schema_leaf.must() is not None:
-                count += 1
-        elif schema_node.nodetype() == ly.LYS_LEAF:
-            schema_leaf = ly.Schema_Node_Leaf(schema_node)
-            count += schema_leaf.must_size()
-        elif schema_node.nodetype() == ly.LYS_LEAFLIST:
-            schema_leaf = ly.Schema_Node_Leaflist(schema_node)
-            count += schema_leaf.must_size()
-        elif schema_node.nodetype() == ly.LYS_LIST:
-            schema_leaf = ly.Schema_Node_List(schema_node)
-            count += schema_leaf.must_size()
+        musts = schema_node.musts()
+        if musts is not None:
+            count = len(list(musts))
 
         # Cache result
         self.mustCache[key] = count
         return count
-
-    """
-    find_schema_dependencies():  find the schema dependencies from schema xpath
-    input:    schema_xpath     of the schema node
-              match_ancestors  whether or not to treat the specified path as
-                               an ancestor rather than a full path. If set to
-                               true, will add recursively.
-    returns:  - list of xpath of the dependencies
-              - Exception if schema node not found
-    """
-    def find_schema_dependencies(self, schema_xpath, match_ancestors: bool=False):
-        # See if we have this cached
-        key = ( schema_xpath, match_ancestors )
-        result = self.backlinkCache.get(key)
-        if result is not None:
-            return result
-
-        ref_list = []
-        if schema_xpath is None or len(schema_xpath) == 0 or schema_xpath == "/":
-            if not match_ancestors:
-                return ref_list
-
-            # Iterate across all modules, can't use "/"
-            for module in self.ctx.get_module_iter():
-                if module.data() is None:
-                    continue
-
-                module_list = []
-                try:
-                    module_list = self.find_schema_dependencies(module.data().path(), match_ancestors=match_ancestors)
-                except Exception as e:
-                    self.sysLog(msg=f"Exception while finding schema dependencies for module {module.name()}: {str(e)}", debug=syslog.LOG_ERR, doPrint=True)
-
-                ref_list.extend(module_list)
-            return ref_list
-
-        try:
-            schema_node = self._find_schema_node(schema_xpath)
-        except Exception as e:
-            self.sysLog(msg=f"Could not find the schema node from xpath: {str(schema_xpath)}: {str(e)}", debug=syslog.LOG_ERR, doPrint=True)
-            self.fail(e)
-            return ref_list
-
-        # If not doing recursion, just return the result.  This will internally
-        # cache the child so no need to update the cache ourselves
-        if not match_ancestors:
-            return self.__find_schema_dependencies_only(schema_node)
-
-        # Recurse first
-        for elem in schema_node.tree_dfs():
-            ref_list.extend(self.__find_schema_dependencies_only(elem))
-
-        # Pull self
-        ref_list.extend(self.__find_schema_dependencies_only(schema_node))
-
-        # Save in cache
-        self.backlinkCache[key] = ref_list
-
-        return ref_list
-
-    def __find_schema_dependencies_only(self, schema_node):
-        # Check non-recursive cache
-        key = ( schema_node.path(), False )
-        result = self.backlinkCache.get(key)
-        if result is not None:
-            return result
-
-        # New lookup
-        ref_list = []
-        schema_leaf = None
-        if schema_node.nodetype() == ly.LYS_LEAF:
-            schema_leaf = ly.Schema_Node_Leaf(schema_node)
-        elif schema_node.nodetype() == ly.LYS_LEAFLIST:
-            schema_leaf = ly.Schema_Node_Leaflist(schema_node)
-
-        if schema_leaf is not None:
-            backlinks = schema_leaf.backlinks()
-            if backlinks is not None and backlinks.number() > 0:
-                for link in backlinks.schema():
-                    ref_list.append(link.path())
-
-        # Cache result
-        self.backlinkCache[key] = ref_list
-        return ref_list
 
     """
     find_data_dependencies(): find the data dependencies from data xpath  (Public)
@@ -677,12 +742,18 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         ref_list = []
         ref_set = set()
 
-        if data_xpath is None or len(data_xpath) == 0 or data_xpath == "/":
+        if data_xpath is not None and (len(data_xpath) == 0 or data_xpath == "/"):
+            data_xpath = None
+
+        if data_xpath is None:
             return self._find_data_dependencies_global(ref_list, ref_set)
+
+        if self.root is None:
+            return ref_list
 
         dnode_list = []
         try:
-            dnode_list = list(self.root.find_path(data_xpath).data())
+            dnode_list = list(self.root.find_all(data_xpath))
         except Exception as e:
             # Possible no data paths matched, ignore
             pass
@@ -691,69 +762,73 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
             self.sysLog(msg="find_data_dependencies(): Failed to find data node from xpath: {}".format(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
             return ref_list
 
-        if dnode_list[0].schema() is None:
-            return ref_list
-
-        # Iterate all leaf descendants of the matched data nodes and perform
-        # per-leaf value-matched dependency lookups.  This replicates the
-        # behavior of the old caller in sonic-utilities which would enumerate
-        # leaves via tree_dfs() and call find_data_dependencies() per-leaf
-        # with value matching.
+        # Iterate all matched data nodes and perform per-leaf
+        # value-matched dependency lookups via DFS.
         for dnode in dnode_list:
             self._find_data_dependencies_node(dnode, ref_list, ref_set)
 
         return ref_list
 
-    def _find_data_dependencies_node(self, dnode, ref_list, ref_set):
-        for inner_node in dnode.tree_dfs():
-            schema = inner_node.schema()
-            if schema is None:
-                continue
+    def _find_data_dependencies_leaf(self, dnode, ref_list, ref_set):
+        """Process a single leaf/leaf-list node for backlink resolution."""
+        leaf_value = None
+        try:
+            leaf_value = dnode.value()
+        except Exception:
+            return
 
-            ntype = schema.nodetype()
-            if ntype != ly.LYS_LEAF and ntype != ly.LYS_LEAFLIST:
-                continue
+        leaf_schema_path = dnode.schema().schema_path()
+        backlinks = self.find_schema_dependencies(leaf_schema_path, match_ancestors=False)
+        if not backlinks:
+            return
 
-            # Get the leaf's value
-            leaf_value = None
-            try:
-                subtype = inner_node.subtype()
-                if subtype is not None:
-                    leaf_value = subtype.value_str()
-            except Exception as e:
-                # Node may not support subtype/value_str, skip
-                continue
+        self._resolve_backlink_data(backlinks, leaf_value, ref_list, ref_set)
 
-            # Find schema backlinks for this specific leaf
-            leaf_schema_path = schema.path()
+    def _find_data_dependencies_node(self, dnode: ly.DNode, ref_list: List[str], ref_set: Set[str]) -> None:
+        """DFS into dnode: for each leaf descendant, find backlinks and value-match."""
+        if isinstance(dnode, (ly.DLeaf, ly.DLeafList)):
+            leaf_schema_path = dnode.schema().schema_path()
             backlinks = self.find_schema_dependencies(leaf_schema_path, match_ancestors=False)
-            if not backlinks:
-                continue
+            if backlinks:
+                self._resolve_backlink_data(backlinks, dnode.value(), ref_list, ref_set)
+            return
 
-            # Resolve data nodes, filtering by value match
-            self._resolve_backlink_data(backlinks, leaf_value, ref_list, ref_set)
+        # Not a leaf - recurse into children
+        if isinstance(dnode, (ly.DContainer, ly.DList)):
+            try:
+                for child in dnode.children():
+                    self._find_data_dependencies_node(child, ref_list, ref_set)
+            except Exception:
+                pass
 
     def _find_data_dependencies_global(self, ref_list, ref_set):
-        # Iterate all top-level data nodes (siblings under root) and DFS each
-        # to find all leaf/leaflist nodes with value matching.
-        for top_node in self.root.tree_for():
-            self._find_data_dependencies_node(top_node, ref_list, ref_set)
+        """Find all data dependencies globally by iterating all data nodes."""
+        if self.root is None:
+            return ref_list
+        try:
+            for top_node in self.root.siblings():
+                self._find_data_dependencies_node(top_node, ref_list, ref_set)
+        except Exception:
+            pass
         return ref_list
 
     def _resolve_backlink_data(self, lreflist, required_value, ref_list, ref_set):
+        if self.root is None:
+            return
         for lref in lreflist:
             try:
-                data_set = self.root.find_path(lref).data()
-                for dnode in data_set:
+                for dnode in self.root.find_all(lref):
                     if required_value is not None:
-                        subtype = dnode.subtype()
-                        if subtype is None or subtype.value_str() != required_value:
+                        try:
+                            if isinstance(dnode, (ly.DLeaf, ly.DLeafList)) and dnode.value() != required_value:
+                                continue
+                        except Exception:
                             continue
                     path = dnode.path()
                     if path not in ref_set:
                         ref_set.add(path)
                         ref_list.append(path)
-            except Exception as e:
+            except Exception:
                 pass
 
     """
@@ -771,106 +846,66 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         else:
             return module.prefix()
 
-    """
-    str_to_type:   map string to type of node
-    input:    string
-    output:   type
-    """
-    def _str_to_type(self, type_str):
-           mapped_type = {
-                "LY_TYPE_DER":ly.LY_TYPE_DER,
-                "LY_TYPE_BINARY":ly.LY_TYPE_BINARY,
-                "LY_TYPE_BITS":ly.LY_TYPE_BITS,
-                "LY_TYPE_BOOL":ly.LY_TYPE_BOOL,
-                "LY_TYPE_DEC64":ly.LY_TYPE_DEC64,
-                "LY_TYPE_EMPTY":ly.LY_TYPE_EMPTY,
-                "LY_TYPE_ENUM":ly.LY_TYPE_ENUM,
-                "LY_TYPE_IDENT":ly.LY_TYPE_IDENT,
-                "LY_TYPE_INST":ly.LY_TYPE_INST,
-                "LY_TYPE_LEAFREF":ly.LY_TYPE_LEAFREF,
-                "LY_TYPE_STRING":ly.LY_TYPE_STRING,
-                "LY_TYPE_UNION":ly.LY_TYPE_UNION,
-                "LY_TYPE_INT8":ly.LY_TYPE_INT8,
-                "LY_TYPE_UINT8":ly.LY_TYPE_UINT8,
-                "LY_TYPE_INT16":ly.LY_TYPE_INT16,
-                "LY_TYPE_UINT16":ly.LY_TYPE_UINT16,
-                "LY_TYPE_INT32":ly.LY_TYPE_INT32,
-                "LY_TYPE_UINT32":ly.LY_TYPE_UINT32,
-                "LY_TYPE_INT64":ly.LY_TYPE_INT64,
-                "LY_TYPE_UINT64":ly.LY_TYPE_UINT64,
-                "LY_TYPE_UNKNOWN":ly.LY_TYPE_UNKNOWN
-           }
+    def _get_data_type(self, schema_xpath: str) -> Optional[str]:
+        schema_node = self._find_schema_node(schema_xpath)
 
-           if type_str not in mapped_type:
-               return ly.LY_TYPE_UNKNOWN
-
-           return mapped_type[type_str]
-
-    def _get_data_type(self, schema_xpath):
-        try:
-            schema_node = self._find_schema_node(schema_xpath)
-        except Exception as e:
-            self.sysLog(msg="get_data_type(): Failed to find schema node from xpath: {}".format(schema_xpath), debug=syslog.LOG_ERR, doPrint=True)
-            self.fail(e)
+        if schema_node is None or not isinstance(schema_node, (ly.SLeaf, ly.SLeafList)):
             return None
 
-        if (schema_node is not None):
-           return schema_node.subtype().type().base()
-
-        return ly.LY_TYPE_UNKNOWN
+        return schema_node.type().basename()
 
     """
     get_leafref_type:   find the type of node that leafref references to
     input:    data_xpath - xpath of a data node
     output:   type of the node this leafref references to
     """
-    def _get_leafref_type(self, data_xpath):
+    def _get_leafref_type(self, data_xpath: str) -> Optional[str]:
         data_node = self._find_data_node(data_xpath)
-        if (data_node is not None):
-            subtype = data_node.subtype()
-            if (subtype is not None):
-                if data_node.schema().subtype().type().base() != ly.LY_TYPE_LEAFREF:
+        if data_node is not None:
+            schema = data_node.schema()
+            if isinstance(schema, (ly.SLeaf, ly.SLeafList)):
+                if schema.type().base() != ly.Type.LEAFREF:
                     self.sysLog(msg="get_leafref_type() node type for data xpath: {} is not LEAFREF".format(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
-                    return ly.LY_TYPE_UNKNOWN
+                    return None
                 else:
-                    return subtype.value_type()
+                    leafref = schema.type().leafref_type()
+                    return leafref.basename() if leafref else None
 
-        return ly.LY_TYPE_UNKNOWN
+        return None
 
     """
     get_leafref_path():   find the leafref path
     input:    schema_xpath - xpath of a schema node
     output:   path value of the leafref node
     """
-    def _get_leafref_path(self, schema_xpath):
-        schema_node = self._find_schema_node(schema_xpath)
-        if (schema_node is not None):
-            subtype = schema_node.subtype()
-            if (subtype is not None):
-                if subtype.type().base() != ly.LY_TYPE_LEAFREF:
-                    return None
-                else:
-                    return subtype.type().info().lref().path()
+    def _get_leafref_path(self, schema_xpath: str) -> Optional[str]:
+        try:
+            schemas = self.ctx.find_path(schema_xpath)
 
-        return None
+            for schema_node in schemas:
+                if isinstance(schema_node, (ly.SLeaf, ly.SLeafList)):
+                    if schema_node.type().base() == ly.Type.LEAFREF:
+                        return schema_node.type().leafref_path()
+        except Exception as e:
+             self.fail(e)
+             return None
 
     """
     get_leafref_type_schema:   find the type of node that leafref references to
     input:    schema_xpath - xpath of a schema node
     output:   type of the node this leafref references to
     """
-    def _get_leafref_type_schema(self, schema_xpath):
+    def _get_leafref_type_schema(self, schema_xpath: str) -> Optional[str]:
         schema_node = self._find_schema_node(schema_xpath)
-        if (schema_node is not None):
-            subtype = schema_node.subtype()
-            if (subtype is not None):
-                if subtype.type().base() != ly.LY_TYPE_LEAFREF:
-                    return None
-                else:
-                    subtype.type().info().lref().path()
-                    target = subtype.type().info().lref().target()
-                    target_path = target.path()
-                    target_type = self._get_data_type(target_path)
-                    return target_type
+        if schema_node is None or not isinstance(schema_node, (ly.SLeaf, ly.SLeafList)):
+            return None
 
-        return None
+        subtype = schema_node.type()
+        if subtype is None:
+            return None
+
+        if subtype.base() != ly.Type.LEAFREF:
+            return None
+
+        leafref = subtype.leafref_type()
+        return leafref.basename() if leafref else None

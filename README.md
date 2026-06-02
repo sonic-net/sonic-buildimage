@@ -344,6 +344,18 @@ For details refer to [SONiC Buildimage Guide](https://github.com/sonic-net/sonic
 Please refer to [SONiC roadmap](https://github.com/sonic-net/SONiC/wiki/Sonic-Roadmap-Planning)
 on the SAI version for each SONiC release.
 
+## Software Bill of Materials (SBOM) and vulnerability scanning
+
+Opt-in SBOM generation and SBOM-based vulnerability scanning are
+supported via `ENABLE_SBOM=y` at build time. The default build path
+is unchanged; enabling SBOM adds CycloneDX 1.6 + SPDX 2.3 + SLSA
+v1.0 in-toto provenance sidecars per built artifact, along with
+standalone CycloneDX scanner output for vulnerability reports.
+
+See [README.sbom.md](README.sbom.md) for the full design, build
+flag reference, vulnerability-report quick start, VEX workflow,
+reproducibility notes, and known limitations.
+
 ## Notes
 
 * If you are running make for the first time, a sonic-slave-${USER} docker image
