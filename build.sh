@@ -177,7 +177,7 @@ submodule_prs () {
   #
   ############################################################################################################################
   #https://github.com/sonic-net/sonic-swss/pull/3660
-  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss c51d864
+  # conflict _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss c51d864
 
   #https://github.com/sonic-net/sonic-swss/pull/4001
   _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 34e8d49
@@ -186,7 +186,7 @@ submodule_prs () {
   _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 52ed10e
   
   #https://github.com/sonic-net/sonic-swss/pull/4437
-  _submodule_add src/sonic-swss github-vganesan-nokia-sonic-swss https://github.com/vganesan-nokia/sonic-swss.git 6b839a2^..5086d24
+  # bad revisions _submodule_add src/sonic-swss github-vganesan-nokia-sonic-swss https://github.com/vganesan-nokia/sonic-swss.git 6b839a2^..5086d24
 
   #tmp c1
   _submodule_add src/sonic-sairedis hehuang-nokia https://github.com/hehuang-nokia/sonic-sairedis.git 2e8392a
