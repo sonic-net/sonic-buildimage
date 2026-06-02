@@ -49,7 +49,7 @@ fi
 # Set zmq mode by default for DPU vs
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.route_perf_zmq')
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.swss_zmq')
 
 if [ "$SWITCH_TYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
@@ -60,7 +60,7 @@ elif [ "$SYNC_MODE" == "enable" ]; then
 fi
 
 # Enable async swss recorder when explicitly configured
-ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|route_performance" "async_rec")
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|async_rec" "status")
 if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
     ORCHAGENT_ARGS+="-A "
 fi

@@ -12,7 +12,7 @@ module sonic-system-defaults{
     description "System-wide default feature settings YANG module for SONiC OS.";
 
     revision 2026-06-02 {
-        description "Added route_performance container with zmq and async_rec fields.";
+        description "Documented swss_zmq and async_rec as SYSTEM_DEFAULTS list entries.";
     }
 
     container sonic-system-defaults {
@@ -40,25 +40,6 @@ module sonic-system-defaults{
 
             }
 
-            container route_performance {
-
-                description "Route pipeline performance optimization settings.";
-
-                leaf zmq {
-                    description "Enable ZMQ for northbound (fpmsyncd to orchagent route tables)
-                                 and southbound (orchagent to syncd for all SAI operations).";
-                    type stypes:admin_mode;
-                    default "disabled";
-                }
-
-                leaf async_rec {
-                    description "Enable async swss.rec recording and async
-                                 APPL_STATE_DB route state publishing in orchagent.";
-                    type stypes:admin_mode;
-                    default "disabled";
-                }
-
-            }
         }
     }
 }

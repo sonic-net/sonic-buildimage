@@ -3223,18 +3223,20 @@ To have a better management of the features in SONiC, a new table `SYSTEM_DEFAUL
         "dhcp_server": {
             "status": "enabled"
         },
-        "route_performance": {
-            "zmq": "enabled",
-            "async_rec": "enabled"
+        "swss_zmq": {
+            "status": "enabled"
+        },
+        "async_rec": {
+            "status": "enabled"
         }
     }
 ```
 
-The `route_performance` entry controls route-performance optimizations:
-- `zmq`: When set to `"enabled"`, enables ZMQ-based communication between orchagent, syncd, and fpmsyncd (both southbound SAI operations and northbound route programming).
+The `swss_zmq` and `async_rec` entries control route-performance optimizations:
+- `swss_zmq`: When set to `"enabled"`, enables ZMQ-based communication between orchagent, syncd, and fpmsyncd (both southbound SAI operations and northbound route programming).
 - `async_rec`: When set to `"enabled"`, enables asynchronous APPL_STATE_DB recording (swss.rec) for improved route programming throughput.
 
-Both fields default to disabled when not present.
+Both entries default to disabled when not present.
 
 The default value of flags in `SYSTEM_DEFAULTS` table can be set in `init_cfg.json` and loaded into db at system startup. These flags are usually set at image being build, and are unlikely to change at runtime.
 

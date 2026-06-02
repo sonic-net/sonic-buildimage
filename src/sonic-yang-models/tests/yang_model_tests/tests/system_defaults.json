@@ -5,13 +5,5 @@
     "SYSTEM_DEFAULTS_WITH_INVALID_STATUS_VALUE": {
         "desc": "Referring invalid status value",
         "eStrKey": "InvalidValue"
-    },
-    "SYSTEM_DEFAULTS_ROUTE_PERF_INVALID_ZMQ": {
-        "desc": "Referring invalid value for route_performance zmq field",
-        "eStrKey": "InvalidValue"
-    },
-    "SYSTEM_DEFAULTS_ROUTE_PERF_INVALID_ASYNC_REC": {
-        "desc": "Referring invalid value for route_performance async_rec field",
-        "eStrKey": "InvalidValue"
     }
 }
