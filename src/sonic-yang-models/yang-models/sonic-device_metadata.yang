@@ -19,6 +19,12 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
     
+    revision 2026-06-02 {
+        description "Removed route performance knobs (async_swss_rec, route_state_async_publish,
+                     orch_northbond_route_zmq_enabled, orch_southbound_zmq_enabled).
+                     Moved to SYSTEM_DEFAULTS|route_performance in sonic-system-defaults.yang.";
+    }
+
     revision 2026-04-11 {
         description "Adde use_template_render_for_restore to control the method of config restore in FRR.";
     }
@@ -261,25 +267,6 @@ module sonic-device_metadata {
                     }
                 }
 
-                leaf async_swss_rec {
-                    description "Enable asynchronous swss.rec recording in orchagent.";
-                    type enumeration {
-                        enum enabled;
-                        enum disabled;
-                    }
-                    default disabled;
-                }
-
-                leaf route_state_async_publish {
-                    description "When enabled, routeorch publishes route states asynchronously in state update thread.
-                                 When disabled, route state is published on the orch task path (synchronous).";
-                    type enumeration {
-                        enum enabled;
-                        enum disabled;
-                    }
-                    default enabled;
-                }
-
                 leaf rack_mgmt_map {
                     type string {
                         length 0..128 {
@@ -361,18 +348,6 @@ module sonic-device_metadata {
                     type boolean;
                     description "Enable ZMQ feature on APPL_DB DASH tables.";
                     default "true";
-                }
-
-                leaf orch_northbond_route_zmq_enabled {
-                    type boolean;
-                    description "Enable ZMQ feature on APPL_DB ROUTE tables.";
-                    default "false";
-                }
-
-                leaf orch_southbound_zmq_enabled {
-                    type boolean;
-                    description "Enable ZMQ feature between orchagent and syncd (southbound).";
-                    default "false";
                 }
 
                 leaf syslog_with_osversion {

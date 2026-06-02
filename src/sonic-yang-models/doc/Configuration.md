@@ -3209,22 +3209,33 @@ The **SUBNET_DECAP** table is used for subnet decap configuration.
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
-```
+```json
 "SYSTEM_DEFAULTS": {
         "tunnel_qos_remap": {
             "status": "enabled"
-        }
+        },
         "default_bgp_status": {
             "status": "down"
-        }
+        },
         "synchronous_mode": {
             "status": "enable"
-        }
+        },
         "dhcp_server": {
-            "status": "enable"
+            "status": "enabled"
+        },
+        "route_performance": {
+            "zmq": "enabled",
+            "async_rec": "enabled"
         }
     }
 ```
+
+The `route_performance` entry controls route-performance optimizations:
+- `zmq`: When set to `"enabled"`, enables ZMQ-based communication between orchagent, syncd, and fpmsyncd (both southbound SAI operations and northbound route programming).
+- `async_rec`: When set to `"enabled"`, enables asynchronous APPL_STATE_DB recording (swss.rec) for improved route programming throughput.
+
+Both fields default to disabled when not present.
+
 The default value of flags in `SYSTEM_DEFAULTS` table can be set in `init_cfg.json` and loaded into db at system startup. These flags are usually set at image being build, and are unlikely to change at runtime.
 
 If the values in `config_db.json` is changed by user, it will not be rewritten back by `init_cfg.json` as `config_db.json` is loaded after `init_cfg.json` in [docker_image_ctl.j2](https://github.com/Azure/sonic-buildimage/blob/master/files/build_templates/docker_image_ctl.j2)

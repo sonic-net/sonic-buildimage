@@ -24,7 +24,7 @@ DASH_ROUTING_APPLIANCE_TABLE
 DASH_FLOW_SYNC_SESSION_TABLE
 DASH_FLOW_DUMP_FILTER_TABLE
 {% endif %}
-{% if DEVICE_METADATA.localhost.orch_northbond_route_zmq_enabled == "true"  %}
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.route_performance is defined and SYSTEM_DEFAULTS.route_performance.zmq == "enabled"  %}
 ROUTE_TABLE
 LABEL_ROUTE_TABLE
 {% endif %}

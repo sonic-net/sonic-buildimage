@@ -36,7 +36,7 @@ fi
 # Set zmq mode by default for smartswitch DPU and increase the max bulk limit
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.orch_southbound_zmq_enabled')
+SOUTHBOUND_ZMQ=$(echo $SWSS_VARS | jq -r '.route_perf_zmq')
 if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync -k $DPU_BATCH_SIZE "
 elif [ "$SOUTHBOUND_ZMQ" == "true" ]; then
@@ -67,7 +67,7 @@ if [[ "$NAMESPACE_ID" ]]; then
 fi
 
 # Enable async swss recorder when explicitly configured
-ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "async_swss_rec")
+ASYNC_SWSS_REC=$(sonic-db-cli CONFIG_DB hget "SYSTEM_DEFAULTS|route_performance" "async_rec")
 if [ "$ASYNC_SWSS_REC" == "enabled" ]; then
     ORCHAGENT_ARGS+="-A "
 fi

@@ -11,7 +11,11 @@
                         "name": "mux_tunnel_egress_acl",
                         "status": "enabled"
                     }
-                ]
+                ],
+                "route_performance": {
+                    "zmq": "enabled",
+                    "async_rec": "enabled"
+                }
             }
         }
     },
@@ -28,6 +32,26 @@
                         "status": "invalid_status"
                     }
                 ]
+            }
+        }
+    },
+    "SYSTEM_DEFAULTS_ROUTE_PERF_INVALID_ZMQ": {
+        "sonic-system-defaults:sonic-system-defaults": {
+            "sonic-system-defaults:SYSTEM_DEFAULTS": {
+                "route_performance": {
+                    "zmq": "invalid_value",
+                    "async_rec": "enabled"
+                }
+            }
+        }
+    },
+    "SYSTEM_DEFAULTS_ROUTE_PERF_INVALID_ASYNC_REC": {
+        "sonic-system-defaults:sonic-system-defaults": {
+            "sonic-system-defaults:SYSTEM_DEFAULTS": {
+                "route_performance": {
+                    "zmq": "enabled",
+                    "async_rec": "invalid_value"
+                }
             }
         }
     }
