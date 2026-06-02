@@ -81,7 +81,7 @@ def generate_t1_sample_config(data):
 def generate_t1_smartswitch_switch_sample_config(data, ss_config):
     data = generate_t1_sample_config(data)
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
-    data['DEVICE_METADATA']['localhost']['dpu_auto_recovery'] = 'enabled'
+    data['DEVICE_METADATA']['localhost']['dpu_auto_recovery'] = 'enable'
 
     mpbr_prefix = '169.254.200'
     mpbr_address = '{}.254'.format(mpbr_prefix)

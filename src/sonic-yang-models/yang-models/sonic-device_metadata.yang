@@ -19,17 +19,16 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-06-02 {
+        description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
+    }
+
     revision 2026-04-11 {
         description "Adde use_template_render_for_restore to control the method of config restore in FRR.";
     }
 
-
     revision 2026-04-11 {
         description "Added route_state_async_publish to control async route state publishing.";
-    }
-
-    revision 2026-06-02 {
-        description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
     }
 
     revision 2026-04-10 {
@@ -415,10 +414,10 @@ module sonic-device_metadata {
                 leaf dpu_auto_recovery {
                     description "Enable or disable automatic DPU recovery on SmartSwitch platforms.";
                     type enumeration {
-                        enum enabled;
-                        enum disabled;
+                        enum enable;
+                        enum disable;
                     }
-                    default enabled;
+                    default disable;
                 }
             }
             /* end of container localhost */

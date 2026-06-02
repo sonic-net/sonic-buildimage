@@ -425,7 +425,7 @@
                 "nexthop_group": "disabled",
                 "zebra_nexthop": "disabled",
                 "use_template_render_for_restore": "true",
-                "dpu_auto_recovery": "enabled"
+                "dpu_auto_recovery": "enable"
             }
         },
         "VLAN": {

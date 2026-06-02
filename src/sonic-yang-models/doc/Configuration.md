@@ -1113,7 +1113,7 @@ instance is supported in SONiC.
         "timezome": "Europe/Kiev",
         "bgp_router_id": "8.8.8.8",
         "use_template_render_for_restore": "true",
-        "dpu_auto_recovery": "enabled"
+        "dpu_auto_recovery": "enable"
     }
   }
 }

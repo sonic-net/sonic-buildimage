@@ -291,7 +291,7 @@
         "verify": {
             "xpath": "/sonic-device_metadata:sonic-device_metadata/DEVICE_METADATA/localhost/hostname",
             "key": "sonic-device_metadata:dpu_auto_recovery",
-            "value": "enabled"
+            "value": "disable"
         }
     }
 }
