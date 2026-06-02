@@ -81,6 +81,7 @@ def generate_t1_sample_config(data):
 def generate_t1_smartswitch_switch_sample_config(data, ss_config):
     data = generate_t1_sample_config(data)
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
+    data['DEVICE_METADATA']['localhost']['dpu_auto_recovery'] = 'enabled'
 
     mpbr_prefix = '169.254.200'
     mpbr_address = '{}.254'.format(mpbr_prefix)
@@ -118,17 +119,6 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
                 "support_syslog_rate_limit": "True"
             },
             "dhcp_server": {
-                "auto_restart": "enabled",
-                "check_up_status": "False",
-                "delayed": "False",
-                "has_global_scope": "True",
-                "has_per_asic_scope": "False",
-                "high_mem_alert": "disabled",
-                "set_owner": "local",
-                "state": "enabled",
-                "support_syslog_rate_limit": "False"
-            },
-            "dpu-auto-recovery": {
                 "auto_restart": "enabled",
                 "check_up_status": "False",
                 "delayed": "False",
