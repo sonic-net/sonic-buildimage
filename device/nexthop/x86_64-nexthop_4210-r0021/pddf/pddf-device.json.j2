@@ -2,21 +2,26 @@
   "PLATFORM": {
     "num_psus": 4,
     "num_temps": 19,
+    "num_asic_temps": 185,
     "num_nexthop_fpga_asic_temp_sensors": 2,
-    "num_voltage_sensors": 40,
+    "num_voltage_sensors": 70,
     "num_current_sensors": 23,
-    "num_components": 27,
+    "num_components": 28,
     "num_fantrays": 8,
     "num_fans_pertray": 2,
     "std_kos": [
       "at24",
       "optoe",
       "i2c-dev",
+      "i2c-xiic",
+      "tmp464",
+      "xdpe1a2g7b",
       "spi-xilinx"
     ],
     "pddf_kos": [
       "pddf_spi_module",
       "pddf_multifpgapci_i2c_module",
+      "pddf_multifpgapci_i2c_xiic_module",
       "pddf_multifpgapci_gpio_module",
       "pddf_multifpgapci_spi_module",
       "pddf_client_module",
@@ -29,14 +34,13 @@
       "pddf_xcvr_module",
       "pddf_xcvr_driver_module",
       "pddf_cpldmux_module",
-      "pddf_cpldmux_driver"
+      "pddf_cpldmux_driver",
+      "pddf_multifpgapci_gpio_driver"
     ],
     "custom_kos": [
       "pddf_custom_fpga_algo",
       "nh_pmbus_core",
-      "nh_tmp464",
       "nh_adm1266",
-      "nh_tda38740",
       "nh_isl68137"
     ],
     "num_ports": 129,
@@ -187,7 +191,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x8",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{cpu_card_fpga_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -217,10 +223,70 @@
           "chn": "5",
           "dev": "DPM3"
         }
+      ],
+      "channel_irq": [
+        {
+          "msi_domain": 0,
+          "hw_irq": 8
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 9
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 10
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 11
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 12
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 13
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 14
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 15
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 16
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 17
+        },
+        {
+          "msi_domain": 0,
+          "hw_irq": 18
+        }
+      ]
+    },
+    "use_msi": {
+      "min_fpga_version": "0x1",
+      "num_msi_vectors": 1,
+      "msi_domains": [
+        {
+          "msi_vector_num": 0,
+          "irq_chip_name": "bm-msi-0",
+          "irq_line_mask": "0007ff00",
+          "interrupt_enable_reg": "20",
+          "interrupt_status_reg": "24"
+        }
       ]
     },
     "spi_controllers": [
-      "CPUCARD_SPI_CONTROLLER"
+      "CPUCARD_SPI_CONTROLLER",
+      "CPUCARD_SPI_CONTROLLER3"
     ]
   },
   "COMPONENT1": {
@@ -314,7 +380,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x4",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_0_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -871,7 +939,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "seag0-msi-0",
-          "irq_line_mask": "00000f10",
+          "irq_line_mask": "00000f11",
           "interrupt_enable_reg": "170",
           "interrupt_status_reg": "174"
         },
@@ -889,7 +957,11 @@
           "interrupt_enable_reg": "180",
           "interrupt_status_reg": "184"
         }
-      ]
+      ],
+      "watchdog": {
+        "msi_domain": 0,
+        "hw_irq": 0
+      }
     },
     "spi_controllers": [
       "SWITCHCARD_SPI_CONTROLLER0"
@@ -988,7 +1060,9 @@
     },
     "dev_attr": {
       "pwr_cycle_reg_offset": "0x0",
-      "pwr_cycle_enable_word": "0xdeadbeef"
+      "pwr_cycle_enable_word": "0xdeadbeef",
+      "check_fpga_version_cmd": "fpga read32 {{switchcard_fpga_1_bdf}} 0x0 --bits=0:7",
+      "reg_width": 32
     },
     "i2c": {
       "dev_attr": {
@@ -1621,7 +1695,7 @@
         {
           "msi_vector_num": 0,
           "irq_chip_name": "seag1-msi-0",
-          "irq_line_mask": "0003ff10",
+          "irq_line_mask": "0003ff11",
           "interrupt_enable_reg": "170",
           "interrupt_status_reg": "174"
         },
@@ -1639,7 +1713,11 @@
           "interrupt_enable_reg": "180",
           "interrupt_status_reg": "184"
         }
-      ]
+      ],
+      "watchdog": {
+        "msi_domain": 0,
+        "hw_irq": 0
+      }
     }
   },
   "COMPONENT3": {
@@ -1806,7 +1884,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "awk -F = '/onie_version/ {print $2}' /host/machine.conf"
+        "get_cmd": "/usr/local/bin/get-onie-version"
       },
       {
         "attr_name": "model",
@@ -1896,25 +1974,2430 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "bcmcmd 'dsh -c \"pciephy fwinfo\"' | grep 'FW version' | awk -F': ' '{print $2}'"
+        "get_cmd": "asic_pcie_fw_version"
       },
       {
         "attr_name": "model",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "serial",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "revision",
-        "get_cmd": "echo N/A"
+        "get_cmd": "echo 'N/A'"
       },
       {
         "attr_name": "update",
         "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} ASIC_PCIE {}"
       }
     ]
+  },
+  "ASIC_TEMP1": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP1",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP2": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP2",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP3": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP3",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP4": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP4",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP5": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP5",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon4",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP6": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP6",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon5",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP7": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP7",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon6",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP8": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP8",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon7",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP9": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP9",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon8",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP10": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP10",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP11": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP11",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP12": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP12",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP13": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP13",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP14": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP14",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP15": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP15",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP16": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP16",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP17": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP17",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP18": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP18",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP19": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP19",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP20": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP20",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP21": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP21",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP22": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP22",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP23": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP23",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP24": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP24",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP25": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP25",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP26": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP26",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP27": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP27",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP28": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP28",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP29": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP29",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP30": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP30",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP31": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP31",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP32": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP32",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP33": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP33",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP34": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP34",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP35": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP35",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP36": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP36",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP37": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP37",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP38": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP38",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP39": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP39",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP40": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP40",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP41": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP41",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP42": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP42",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP43": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP43",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP44": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP44",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP45": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP45",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP46": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP46",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP47": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP47",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP48": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP48",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP49": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP49",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP50": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP50",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP51": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP51",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP52": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP52",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP53": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP53",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP54": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP54",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP55": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP55",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP56": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP56",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP57": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP57",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt0.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP58": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP58",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP59": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP59",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP60": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP60",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP61": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP61",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP62": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP62",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP63": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP63",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP64": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP64",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP65": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP65",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP66": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP66",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP67": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP67",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP68": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP68",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP69": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP69",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP70": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP70",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP71": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP71",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP72": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP72",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP73": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP73",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt1.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP74": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP74",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP75": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP75",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP76": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP76",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP77": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP77",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP78": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP78",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP79": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP79",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP80": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP80",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP81": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP81",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP82": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP82",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP83": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP83",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP84": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP84",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP85": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP85",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP86": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP86",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP87": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP87",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP88": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP88",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP89": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP89",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt2.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP90": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP90",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP91": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP91",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP92": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP92",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP93": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP93",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP94": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP94",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP95": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP95",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP96": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP96",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP97": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP97",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP98": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP98",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP99": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP99",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP100": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP100",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP101": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP101",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP102": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP102",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP103": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP103",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP104": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP104",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP105": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP105",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt3.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP106": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP106",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP107": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP107",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP108": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP108",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP109": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP109",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP110": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP110",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP111": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP111",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP112": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP112",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP113": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP113",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP114": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP114",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP115": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP115",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP116": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP116",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP117": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP117",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP118": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP118",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP119": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP119",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP120": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP120",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP121": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP121",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt4.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP122": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP122",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP123": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP123",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP124": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP124",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP125": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP125",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP126": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP126",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP127": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP127",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP128": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP128",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP129": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP129",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP130": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP130",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP131": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP131",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP132": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP132",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP133": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP133",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP134": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP134",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP135": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP135",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP136": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP136",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP137": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP137",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt5.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP138": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP138",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP139": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP139",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP140": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP140",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP141": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP141",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP142": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP142",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP143": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP143",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP144": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP144",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP145": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP145",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP146": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP146",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP147": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP147",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP148": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP148",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP149": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP149",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP150": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP150",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP151": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP151",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP152": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP152",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP153": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP153",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt6.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP154": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP154",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon0.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP155": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP155",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon0.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP156": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP156",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon0.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP157": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP157",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon0.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP158": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP158",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP159": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP159",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP160": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP160",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP161": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP161",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP162": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP162",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon2.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP163": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP163",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon2.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP164": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP164",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon2.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP165": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP165",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon2.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP166": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP166",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP167": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP167",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP168": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP168",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP169": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP169",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC pt7.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP170": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP170",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon1.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP171": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP171",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon1.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP172": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP172",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon1.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP173": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP173",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon1.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP174": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP174",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon3.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP175": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP175",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon3.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP176": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP176",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon3.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP177": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP177",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon3.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP178": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP178",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon4.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP179": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP179",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon4.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP180": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP180",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon4.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP181": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP181",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon4.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP182": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP182",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon6.remote0",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP183": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP183",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon6.remote1",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP184": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP184",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon6.remote2",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
+  },
+  "ASIC_TEMP185": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP185",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": null
+    },
+    "dev_attr": {
+      "display_name": "ASIC core.pvtmon6.remote3",
+      "temp1_high_threshold": 105,
+      "temp1_high_crit_threshold": 112
+    }
   },
   "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0": {
     "dev_info": {
@@ -2828,6 +5311,10 @@
     "i2c": {
       "interface": [
         {
+          "itf": "eeprom",
+          "dev": "PSU1-EEPROM"
+        },
+        {
           "itf": "pmbus",
           "dev": "PSU1-PMBUS"
         }
@@ -2887,6 +5374,14 @@
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
           "attr_offset": "0x99",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
           "attr_mask": "0x0",
           "attr_cmpval": "0x00"
         },
@@ -3048,6 +5543,29 @@
       ]
     }
   },
+  "PSU1-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU1-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU1"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x59",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT9": {
     "comp_attr": {
       "name": "PSU1",
@@ -3058,7 +5576,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "cat /sys/bus/i2c/devices/89-0058/psu_fw_version"
       },
       {
         "attr_name": "model",
@@ -3074,7 +5592,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU1 {}"
       }
     ]
   },
@@ -3091,6 +5609,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU2-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU2-PMBUS"
@@ -3155,6 +5677,14 @@
           "attr_cmpval": "0x00"
         },
         {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
           "attr_name": "psu_fan_dir",
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
@@ -3312,6 +5842,29 @@
       ]
     }
   },
+  "PSU2-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU2-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5a",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT10": {
     "comp_attr": {
       "name": "PSU2",
@@ -3322,7 +5875,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "cat /sys/bus/i2c/devices/90-0058/psu_fw_version"
       },
       {
         "attr_name": "model",
@@ -3338,7 +5891,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU2 {}"
       }
     ]
   },
@@ -3355,6 +5908,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU3-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU3-PMBUS"
@@ -3419,6 +5976,14 @@
           "attr_cmpval": "0x00"
         },
         {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
           "attr_name": "psu_fan_dir",
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
@@ -3576,6 +6141,29 @@
       ]
     }
   },
+  "PSU3-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU3-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU3"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5b",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT11": {
     "comp_attr": {
       "name": "PSU3",
@@ -3586,7 +6174,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "cat /sys/bus/i2c/devices/91-0058/psu_fw_version"
       },
       {
         "attr_name": "model",
@@ -3602,7 +6190,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU3 {}"
       }
     ]
   },
@@ -3619,6 +6207,10 @@
     },
     "i2c": {
       "interface": [
+        {
+          "itf": "eeprom",
+          "dev": "PSU4-EEPROM"
+        },
         {
           "itf": "pmbus",
           "dev": "PSU4-PMBUS"
@@ -3683,6 +6275,14 @@
           "attr_cmpval": "0x00"
         },
         {
+          "attr_name": "psu_fw_version",
+          "attr_devaddr": "0x58",
+          "attr_devtype": "pmbus",
+          "attr_offset": "0xd9",
+          "attr_mask": "0x0",
+          "attr_cmpval": "0x00"
+        },
+        {
           "attr_name": "psu_fan_dir",
           "attr_devaddr": "0x58",
           "attr_devtype": "pmbus",
@@ -3840,6 +6440,29 @@
       ]
     }
   },
+  "PSU4-EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "PSU4-EEPROM",
+      "device_parent": "CPLDMUX1",
+      "virt_parent": "PSU4"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5c",
+        "dev_addr": "0x50",
+        "dev_type": "24c02"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "COMPONENT12": {
     "comp_attr": {
       "name": "PSU4",
@@ -3850,7 +6473,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "N/A"
+        "get_cmd": "cat /sys/bus/i2c/devices/92-0058/psu_fw_version"
       },
       {
         "attr_name": "model",
@@ -3866,7 +6489,7 @@
       },
       {
         "attr_name": "update",
-        "get_cmd": "echo 'N/A'"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} PSU4 {}"
       }
     ]
   },
@@ -4161,7 +6784,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -4260,7 +6883,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -4359,7 +6982,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -4458,7 +7081,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -4557,7 +7180,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -4656,7 +7279,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -4755,7 +7378,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -4854,7 +7477,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -4953,7 +7576,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -5052,7 +7675,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -5151,7 +7774,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -5250,7 +7873,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -5349,7 +7972,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -5448,7 +8071,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -5547,7 +8170,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -5646,7 +8269,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -5745,7 +8368,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -5844,7 +8467,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -5943,7 +8566,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -6042,7 +8665,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -6141,7 +8764,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -6240,7 +8863,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -6339,7 +8962,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -6438,7 +9061,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -6537,7 +9160,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -6636,7 +9259,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -6735,7 +9358,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -6834,7 +9457,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -6933,7 +9556,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -7032,7 +9655,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -7131,7 +9754,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x78",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -7329,7 +9952,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -7428,7 +10051,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -7527,7 +10150,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -7626,7 +10249,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -7725,7 +10348,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -7824,7 +10447,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -7923,7 +10546,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -8022,7 +10645,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -8121,7 +10744,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -8220,7 +10843,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -8319,7 +10942,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -8418,7 +11041,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -8517,7 +11140,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -8616,7 +11239,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -8715,7 +11338,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -8814,7 +11437,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -8913,7 +11536,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -9012,7 +11635,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -9111,7 +11734,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -9210,7 +11833,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -9309,7 +11932,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -9408,7 +12031,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -9507,7 +12130,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -9606,7 +12229,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -9705,7 +12328,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -9804,7 +12427,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -9903,7 +12526,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -10002,7 +12625,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -10101,7 +12724,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -10200,7 +12823,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -10299,7 +12922,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x3c",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -10497,7 +13120,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -10596,7 +13219,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -10695,7 +13318,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -10794,7 +13417,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -10893,7 +13516,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -10992,7 +13615,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -11091,7 +13714,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -11190,7 +13813,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -11289,7 +13912,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -11388,7 +14011,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -11487,7 +14110,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -11586,7 +14209,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -11685,7 +14308,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -11784,7 +14407,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -11883,7 +14506,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -11982,7 +14605,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -12081,7 +14704,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -12180,7 +14803,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -12279,7 +14902,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -12378,7 +15001,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -12477,7 +15100,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -12576,7 +15199,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -12675,7 +15298,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -12774,7 +15397,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -12873,7 +15496,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -12972,7 +15595,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -13071,7 +15694,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -13170,7 +15793,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -13269,7 +15892,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -13368,7 +15991,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -13467,7 +16090,7 @@
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x50",
           "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -13535,7 +16158,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1",
+          "attr_mask": "0x0",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13545,7 +16168,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1",
+          "attr_mask": "0x0",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13555,7 +16178,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1",
+          "attr_mask": "0x0",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13565,7 +16188,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1",
+          "attr_mask": "0x0",
           "attr_cmpval": "0x1",
           "attr_len": "1"
         }
@@ -13634,7 +16257,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x0",
+          "attr_mask": "0x1",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13644,7 +16267,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x0",
+          "attr_mask": "0x1",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13654,7 +16277,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x0",
+          "attr_mask": "0x1",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13664,8 +16287,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x0",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1",
+          "attr_cmpval": "0x2",
           "attr_len": "1"
         }
       ]
@@ -13733,7 +16356,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x3",
+          "attr_mask": "0x2",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13743,7 +16366,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x3",
+          "attr_mask": "0x2",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13753,7 +16376,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x3",
+          "attr_mask": "0x2",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13763,8 +16386,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x3",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x2",
+          "attr_cmpval": "0x4",
           "attr_len": "1"
         }
       ]
@@ -13832,7 +16455,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x2",
+          "attr_mask": "0x3",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13842,7 +16465,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x2",
+          "attr_mask": "0x3",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13852,7 +16475,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x2",
+          "attr_mask": "0x3",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13862,8 +16485,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x2",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x3",
+          "attr_cmpval": "0x8",
           "attr_len": "1"
         }
       ]
@@ -13931,7 +16554,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x5",
+          "attr_mask": "0x4",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13941,7 +16564,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x5",
+          "attr_mask": "0x4",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13951,7 +16574,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x5",
+          "attr_mask": "0x4",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -13961,8 +16584,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x5",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x4",
+          "attr_cmpval": "0x10",
           "attr_len": "1"
         }
       ]
@@ -14030,7 +16653,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x4",
+          "attr_mask": "0x5",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14040,7 +16663,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x4",
+          "attr_mask": "0x5",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14050,7 +16673,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x4",
+          "attr_mask": "0x5",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14060,8 +16683,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x4",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x5",
+          "attr_cmpval": "0x20",
           "attr_len": "1"
         }
       ]
@@ -14129,7 +16752,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x7",
+          "attr_mask": "0x6",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14139,7 +16762,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x7",
+          "attr_mask": "0x6",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14149,7 +16772,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x7",
+          "attr_mask": "0x6",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14159,8 +16782,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x7",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x6",
+          "attr_cmpval": "0x40",
           "attr_len": "1"
         }
       ]
@@ -14228,7 +16851,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x6",
+          "attr_mask": "0x7",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14238,7 +16861,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x6",
+          "attr_mask": "0x7",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14248,7 +16871,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x6",
+          "attr_mask": "0x7",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14258,8 +16881,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x6",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x7",
+          "attr_cmpval": "0x80",
           "attr_len": "1"
         }
       ]
@@ -14327,7 +16950,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x9",
+          "attr_mask": "0x8",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14337,7 +16960,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x9",
+          "attr_mask": "0x8",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14347,7 +16970,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x9",
+          "attr_mask": "0x8",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14357,8 +16980,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x9",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x8",
+          "attr_cmpval": "0x100",
           "attr_len": "1"
         }
       ]
@@ -14426,7 +17049,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x8",
+          "attr_mask": "0x9",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14436,7 +17059,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x8",
+          "attr_mask": "0x9",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14446,7 +17069,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x8",
+          "attr_mask": "0x9",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14456,8 +17079,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x8",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x9",
+          "attr_cmpval": "0x200",
           "attr_len": "1"
         }
       ]
@@ -14525,7 +17148,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xb",
+          "attr_mask": "0xa",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14535,7 +17158,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xb",
+          "attr_mask": "0xa",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14545,7 +17168,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xb",
+          "attr_mask": "0xa",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14555,8 +17178,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xb",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xa",
+          "attr_cmpval": "0x400",
           "attr_len": "1"
         }
       ]
@@ -14624,7 +17247,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xa",
+          "attr_mask": "0xb",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14634,7 +17257,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xa",
+          "attr_mask": "0xb",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14644,7 +17267,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xa",
+          "attr_mask": "0xb",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14654,8 +17277,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xa",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xb",
+          "attr_cmpval": "0x800",
           "attr_len": "1"
         }
       ]
@@ -14723,7 +17346,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xd",
+          "attr_mask": "0xc",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14733,7 +17356,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xd",
+          "attr_mask": "0xc",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14743,7 +17366,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xd",
+          "attr_mask": "0xc",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14753,8 +17376,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xd",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xc",
+          "attr_cmpval": "0x1000",
           "attr_len": "1"
         }
       ]
@@ -14822,7 +17445,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xc",
+          "attr_mask": "0xd",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14832,7 +17455,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xc",
+          "attr_mask": "0xd",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14842,7 +17465,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xc",
+          "attr_mask": "0xd",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14852,8 +17475,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xc",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xd",
+          "attr_cmpval": "0x2000",
           "attr_len": "1"
         }
       ]
@@ -14921,7 +17544,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xf",
+          "attr_mask": "0xe",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14931,7 +17554,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xf",
+          "attr_mask": "0xe",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14941,7 +17564,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xf",
+          "attr_mask": "0xe",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -14951,8 +17574,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xf",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xe",
+          "attr_cmpval": "0x4000",
           "attr_len": "1"
         }
       ]
@@ -15020,7 +17643,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0xe",
+          "attr_mask": "0xf",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15030,7 +17653,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0xe",
+          "attr_mask": "0xf",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15040,7 +17663,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0xe",
+          "attr_mask": "0xf",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15050,8 +17673,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0xe",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0xf",
+          "attr_cmpval": "0x8000",
           "attr_len": "1"
         }
       ]
@@ -15119,7 +17742,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x11",
+          "attr_mask": "0x10",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15129,7 +17752,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x11",
+          "attr_mask": "0x10",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15139,7 +17762,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x11",
+          "attr_mask": "0x10",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15149,8 +17772,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x11",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x10",
+          "attr_cmpval": "0x10000",
           "attr_len": "1"
         }
       ]
@@ -15218,7 +17841,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x10",
+          "attr_mask": "0x11",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15228,7 +17851,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x10",
+          "attr_mask": "0x11",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15238,7 +17861,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x10",
+          "attr_mask": "0x11",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15248,8 +17871,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x10",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x11",
+          "attr_cmpval": "0x20000",
           "attr_len": "1"
         }
       ]
@@ -15317,7 +17940,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x13",
+          "attr_mask": "0x12",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15327,7 +17950,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x13",
+          "attr_mask": "0x12",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15337,7 +17960,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x13",
+          "attr_mask": "0x12",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15347,8 +17970,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x13",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x12",
+          "attr_cmpval": "0x40000",
           "attr_len": "1"
         }
       ]
@@ -15416,7 +18039,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x12",
+          "attr_mask": "0x13",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15426,7 +18049,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x12",
+          "attr_mask": "0x13",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15436,7 +18059,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x12",
+          "attr_mask": "0x13",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15446,8 +18069,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x12",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x13",
+          "attr_cmpval": "0x80000",
           "attr_len": "1"
         }
       ]
@@ -15515,7 +18138,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x15",
+          "attr_mask": "0x14",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15525,7 +18148,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x15",
+          "attr_mask": "0x14",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15535,7 +18158,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x15",
+          "attr_mask": "0x14",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15545,8 +18168,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x15",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x14",
+          "attr_cmpval": "0x100000",
           "attr_len": "1"
         }
       ]
@@ -15614,7 +18237,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x14",
+          "attr_mask": "0x15",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15624,7 +18247,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x14",
+          "attr_mask": "0x15",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15634,7 +18257,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x14",
+          "attr_mask": "0x15",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15644,8 +18267,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x14",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x15",
+          "attr_cmpval": "0x200000",
           "attr_len": "1"
         }
       ]
@@ -15713,7 +18336,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x17",
+          "attr_mask": "0x16",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15723,7 +18346,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x17",
+          "attr_mask": "0x16",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15733,7 +18356,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x17",
+          "attr_mask": "0x16",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15743,8 +18366,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x17",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x16",
+          "attr_cmpval": "0x400000",
           "attr_len": "1"
         }
       ]
@@ -15812,7 +18435,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x16",
+          "attr_mask": "0x17",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15822,7 +18445,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x16",
+          "attr_mask": "0x17",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15832,7 +18455,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x16",
+          "attr_mask": "0x17",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15842,8 +18465,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x16",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x17",
+          "attr_cmpval": "0x800000",
           "attr_len": "1"
         }
       ]
@@ -15911,7 +18534,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x19",
+          "attr_mask": "0x18",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15921,7 +18544,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x19",
+          "attr_mask": "0x18",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15931,7 +18554,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x19",
+          "attr_mask": "0x18",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -15941,8 +18564,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x19",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x18",
+          "attr_cmpval": "0x1000000",
           "attr_len": "1"
         }
       ]
@@ -16010,7 +18633,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x18",
+          "attr_mask": "0x19",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16020,7 +18643,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x18",
+          "attr_mask": "0x19",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16030,7 +18653,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x18",
+          "attr_mask": "0x19",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16040,8 +18663,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x18",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x19",
+          "attr_cmpval": "0x2000000",
           "attr_len": "1"
         }
       ]
@@ -16109,7 +18732,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1b",
+          "attr_mask": "0x1a",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16119,7 +18742,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1b",
+          "attr_mask": "0x1a",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16129,7 +18752,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1b",
+          "attr_mask": "0x1a",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16139,8 +18762,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1b",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1a",
+          "attr_cmpval": "0x4000000",
           "attr_len": "1"
         }
       ]
@@ -16208,7 +18831,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1a",
+          "attr_mask": "0x1b",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16218,7 +18841,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1a",
+          "attr_mask": "0x1b",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16228,7 +18851,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1a",
+          "attr_mask": "0x1b",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16238,8 +18861,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1a",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1b",
+          "attr_cmpval": "0x8000000",
           "attr_len": "1"
         }
       ]
@@ -16307,7 +18930,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1d",
+          "attr_mask": "0x1c",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16317,7 +18940,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1d",
+          "attr_mask": "0x1c",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16327,7 +18950,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1d",
+          "attr_mask": "0x1c",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16337,8 +18960,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1d",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1c",
+          "attr_cmpval": "0x10000000",
           "attr_len": "1"
         }
       ]
@@ -16406,7 +19029,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1c",
+          "attr_mask": "0x1d",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16416,7 +19039,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1c",
+          "attr_mask": "0x1d",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16426,7 +19049,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1c",
+          "attr_mask": "0x1d",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16436,8 +19059,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1c",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1d",
+          "attr_cmpval": "0x20000000",
           "attr_len": "1"
         }
       ]
@@ -16505,7 +19128,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1f",
+          "attr_mask": "0x1e",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16515,7 +19138,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1f",
+          "attr_mask": "0x1e",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16525,7 +19148,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1f",
+          "attr_mask": "0x1e",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16535,8 +19158,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1f",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1e",
+          "attr_cmpval": "0x40000000",
           "attr_len": "1"
         }
       ]
@@ -16604,7 +19227,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x58",
-          "attr_mask": "0x1e",
+          "attr_mask": "0x1f",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16614,7 +19237,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x5c",
-          "attr_mask": "0x1e",
+          "attr_mask": "0x1f",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16624,7 +19247,7 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x60",
-          "attr_mask": "0x1e",
+          "attr_mask": "0x1f",
           "attr_cmpval": "0x0",
           "attr_len": "1"
         },
@@ -16634,8 +19257,8 @@
           "attr_devtype": "multifpgapci",
           "attr_devname": "SWITCHCARD_FPGA1",
           "attr_offset": "0x64",
-          "attr_mask": "0x1e",
-          "attr_cmpval": "0x1",
+          "attr_mask": "0x1f",
+          "attr_cmpval": "0x80000000",
           "attr_len": "1"
         }
       ]
@@ -22754,7 +25377,7 @@
       "topo_info": {
         "parent_bus": "0x63",
         "dev_addr": "0x48",
-        "dev_type": "nh_tmp464"
+        "dev_type": "tmp464"
       },
       "attr_list": [
         {
@@ -22779,7 +25402,7 @@
       "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
-      "display_name": "Switch Card Lower Rear"
+      "display_name": "Switch Card Rear"
     },
     "i2c": {
       "attr_list": [
@@ -22807,7 +25430,7 @@
       "nexthop_thermal_pid_domain": null
     },
     "dev_attr": {
-      "display_name": "PSU 2 Intake"
+      "display_name": "Chassis Intake"
     },
     "i2c": {
       "attr_list": [
@@ -23573,7 +26196,7 @@
     "attr_list": [
       {
         "attr_name": "version",
-        "get_cmd": "adm1266_version 8-0041"
+        "get_cmd": "adm1266_version 10-0041"
       },
       {
         "attr_name": "model",
@@ -23589,19 +26212,19 @@
       },
       {
         "attr_name": "update",
-        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM1 {}"
+        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM2 {}"
       }
     ]
   },
-  "VOLTAGE1": {
+  "VOLTAGE18": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL1",
+      "device_name": "DPM2-RAIL1",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS12V0"
+      "display_name": "POS12V_0"
     },
     "i2c": {
       "attr_list": [
@@ -23628,15 +26251,15 @@
       ]
     }
   },
-  "VOLTAGE2": {
+  "VOLTAGE19": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL2",
+      "device_name": "DPM2-RAIL2",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS5V0"
+      "display_name": "POS5V0_0"
     },
     "i2c": {
       "attr_list": [
@@ -23663,15 +26286,15 @@
       ]
     }
   },
-  "VOLTAGE3": {
+  "VOLTAGE20": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL3",
+      "device_name": "DPM2-RAIL3",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS2V0_PHY"
+      "display_name": "POS3V3_WEST"
     },
     "i2c": {
       "attr_list": [
@@ -23698,15 +26321,15 @@
       ]
     }
   },
-  "VOLTAGE4": {
+  "VOLTAGE21": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL4",
+      "device_name": "DPM2-RAIL4",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS5V0_S0"
+      "display_name": "POS3V3"
     },
     "i2c": {
       "attr_list": [
@@ -23733,15 +26356,15 @@
       ]
     }
   },
-  "VOLTAGE5": {
+  "VOLTAGE22": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL5",
+      "device_name": "DPM2-RAIL5",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V0_A7"
+      "display_name": "POS1V8"
     },
     "i2c": {
       "attr_list": [
@@ -23768,15 +26391,15 @@
       ]
     }
   },
-  "VOLTAGE6": {
+  "VOLTAGE23": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL6",
+      "device_name": "DPM2-RAIL6",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V8_A7"
+      "display_name": "POS1V2"
     },
     "i2c": {
       "attr_list": [
@@ -23803,15 +26426,15 @@
       ]
     }
   },
-  "VOLTAGE7": {
+  "VOLTAGE24": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL7",
+      "device_name": "DPM2-RAIL7",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS3V3"
+      "display_name": "POS1V0"
     },
     "i2c": {
       "attr_list": [
@@ -23838,15 +26461,15 @@
       ]
     }
   },
-  "VOLTAGE8": {
+  "VOLTAGE25": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL8",
+      "device_name": "DPM2-RAIL8",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS0V74_PHY"
+      "display_name": "POS1V2_DP_0"
     },
     "i2c": {
       "attr_list": [
@@ -23873,85 +26496,15 @@
       ]
     }
   },
-  "VOLTAGE9": {
+  "VOLTAGE26": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL9",
+      "device_name": "DPM2-RAIL11",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V2_A7"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "volt1_input",
-          "drv_attr_name": "in9_input"
-        },
-        {
-          "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in9_max"
-        },
-        {
-          "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in9_min"
-        },
-        {
-          "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in9_crit"
-        },
-        {
-          "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in9_lcrit"
-        }
-      ]
-    }
-  },
-  "VOLTAGE10": {
-    "dev_info": {
-      "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL10",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
-    },
-    "dev_attr": {
-      "display_name": "POS0V75_S5"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "volt1_input",
-          "drv_attr_name": "in10_input"
-        },
-        {
-          "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in10_max"
-        },
-        {
-          "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in10_min"
-        },
-        {
-          "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in10_crit"
-        },
-        {
-          "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in10_lcrit"
-        }
-      ]
-    }
-  },
-  "VOLTAGE11": {
-    "dev_info": {
-      "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL11",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
-    },
-    "dev_attr": {
-      "display_name": "POS1V8_S5"
+      "display_name": "POS0V9_PVDD_0"
     },
     "i2c": {
       "attr_list": [
@@ -23978,15 +26531,15 @@
       ]
     }
   },
-  "VOLTAGE12": {
+  "VOLTAGE27": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL12",
+      "device_name": "DPM2-RAIL12",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS3V3_S5"
+      "display_name": "POS0V9_PVDD_1"
     },
     "i2c": {
       "attr_list": [
@@ -24013,15 +26566,15 @@
       ]
     }
   },
-  "VOLTAGE13": {
+  "VOLTAGE28": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL13",
+      "device_name": "DPM2-RAIL13",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V1_S0"
+      "display_name": "POS0V9_PVDD_2"
     },
     "i2c": {
       "attr_list": [
@@ -24048,15 +26601,15 @@
       ]
     }
   },
-  "VOLTAGE14": {
+  "VOLTAGE29": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL14",
+      "device_name": "DPM2-RAIL14",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V5_SWT"
+      "display_name": "POS0V9_PVDD_3"
     },
     "i2c": {
       "attr_list": [
@@ -24083,15 +26636,15 @@
       ]
     }
   },
-  "VOLTAGE15": {
+  "VOLTAGE30": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL15",
+      "device_name": "DPM2-RAIL15",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V15_SWT"
+      "display_name": "POS0V8_PB_0"
     },
     "i2c": {
       "attr_list": [
@@ -24118,15 +26671,15 @@
       ]
     }
   },
-  "VOLTAGE16": {
+  "VOLTAGE31": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL16",
+      "device_name": "DPM2-RAIL16",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS1V8_S0"
+      "display_name": "POS0V8_PB_1"
     },
     "i2c": {
       "attr_list": [
@@ -24153,15 +26706,15 @@
       ]
     }
   },
-  "VOLTAGE17": {
+  "VOLTAGE32": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DPM1-RAIL17",
+      "device_name": "DPM2-RAIL17",
       "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent": "DPM1"
+      "virt_parent": "DPM2"
     },
     "dev_attr": {
-      "display_name": "POS3V3_S0"
+      "display_name": "POS1V45_DP_0"
     },
     "i2c": {
       "attr_list": [
@@ -24187,50 +26740,6 @@
         }
       ]
     }
-  },
-  "DPM2": {
-    "dev_info": {
-      "device_type": "DPM",
-      "device_name": "DPM2",
-      "device_parent": "MULTIFPGAPCIE0"
-    },
-    "i2c": {
-      "topo_info": {
-        "parent_bus": "0xa",
-        "dev_addr": "0x41",
-        "dev_type": "nh_adm1266"
-      }
-    }
-  },
-  "COMPONENT13": {
-    "comp_attr": {
-      "name": "DPM2",
-      "type": "dpm",
-      "description": "Digital Power Manager",
-      "boot_type": "none"
-    },
-    "attr_list": [
-      {
-        "attr_name": "version",
-        "get_cmd": "adm1266_version 10-0041"
-      },
-      {
-        "attr_name": "model",
-        "get_cmd": "echo 'N/A'"
-      },
-      {
-        "attr_name": "serial",
-        "get_cmd": "echo 'N/A'"
-      },
-      {
-        "attr_name": "revision",
-        "get_cmd": "echo 'N/A'"
-      },
-      {
-        "attr_name": "update",
-        "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py {{model_name}} DPM2 {}"
-      }
-    ]
   },
   "DPM3": {
     "dev_info": {
@@ -24276,29 +26785,85 @@
       }
     ]
   },
-  "DCDC0": {
-    "dev_info": {
-      "device_type": "DCDC",
-      "device_name": "DCDC0",
-      "device_parent": "MULTIFPGAPCIE2"
-    },
-    "i2c": {
-      "topo_info": {
-        "parent_bus": "0x5d",
-        "dev_addr": "0x70",
-        "dev_type": "nh_xdpe1a2g5b"
-      }
-    }
-  },
-  "VOLTAGE18": {
+  "VOLTAGE33": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
-      "device_name": "DCDC0-RAIL1",
-      "device_parent": "MULTIFPGAPCIE2",
-      "virt_parent": "DCDC0"
+      "device_name": "DPM3-RAIL1",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
     },
     "dev_attr": {
-      "display_name": "POS0V8_VDDC"
+      "display_name": "POS12V_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in1_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in1_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in1_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in1_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in1_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE34": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL2",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS5V0_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE35": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL3",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS3V3_EAST"
     },
     "i2c": {
       "attr_list": [
@@ -24321,6 +26886,505 @@
         {
           "attr_name": "volt1_crit_low_threshold",
           "drv_attr_name": "in3_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE36": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL4",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V8_DP"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in4_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in4_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in4_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in4_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in4_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE37": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL5",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V5_DP"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in5_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in5_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in5_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in5_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in5_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE38": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL8",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_4"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in8_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in8_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in8_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in8_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in8_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE39": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL9",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_5"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in9_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in9_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in9_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in9_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in9_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE40": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL10",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_6"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in10_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in10_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in10_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in10_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in10_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE41": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL11",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V9_PVDD_7"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in11_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in11_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in11_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in11_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in11_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE42": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL12",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_2"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in12_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in12_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in12_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in12_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in12_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE43": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL13",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PB_3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in13_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in13_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in13_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in13_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in13_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE44": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL14",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V45_DP_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in14_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in14_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in14_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in14_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in14_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE45": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL15",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_DP_1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in15_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in15_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in15_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in15_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in15_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE46": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL16",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_PCIE"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in16_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in16_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in16_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in16_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in16_lcrit"
+        }
+      ]
+    }
+  },
+  "VOLTAGE47": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DPM3-RAIL17",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent": "DPM3"
+    },
+    "dev_attr": {
+      "display_name": "POS1V2_PCIE"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in17_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in17_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in17_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in17_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in17_lcrit"
+        }
+      ]
+    }
+  },
+  "DCDC0": {
+    "dev_info": {
+      "device_type": "DCDC",
+      "device_name": "DCDC0",
+      "device_parent": "MULTIFPGAPCIE2"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5d",
+        "dev_addr": "0x70",
+        "dev_type": "xdpe1a2g5b"
+      }
+    }
+  },
+  "COMPONENT16": {
+    "comp_attr": {
+      "name": "DCDC0",
+      "type": "dcdc",
+      "description": "DCDC voltage regulator",
+      "boot_type": "none"
+    },
+    "attr_list": [
+      {
+        "attr_name": "version",
+        "get_cmd": "sudo xdpe1a2g7b_version --bus 93 --address 0x70"
+      },
+      {
+        "attr_name": "model",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "serial",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "revision",
+        "get_cmd": "echo 'N/A'"
+      },
+      {
+        "attr_name": "update",
+        "get_cmd": "echo 'N/A'"
+      }
+    ]
+  },
+  "VOLTAGE48": {
+    "dev_info": {
+      "device_type": "VOLTAGE_SENSOR",
+      "device_name": "DCDC0-RAIL1",
+      "device_parent": "MULTIFPGAPCIE2",
+      "virt_parent": "DCDC0"
+    },
+    "dev_attr": {
+      "display_name": "POS0V8_VDDC"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "volt1_input",
+          "drv_attr_name": "in2_input"
+        },
+        {
+          "attr_name": "volt1_high_threshold",
+          "drv_attr_name": "in2_max"
+        },
+        {
+          "attr_name": "volt1_low_threshold",
+          "drv_attr_name": "in2_min"
+        },
+        {
+          "attr_name": "volt1_crit_high_threshold",
+          "drv_attr_name": "in2_crit"
+        },
+        {
+          "attr_name": "volt1_crit_low_threshold",
+          "drv_attr_name": "in2_lcrit"
         }
       ]
     }
@@ -24395,7 +27459,7 @@
       }
     }
   },
-  "COMPONENT16": {
+  "COMPONENT17": {
     "comp_attr": {
       "name": "DCDC1",
       "type": "dcdc",
@@ -24425,7 +27489,7 @@
       }
     ]
   },
-  "VOLTAGE19": {
+  "VOLTAGE49": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC1-RAIL1",
@@ -24460,7 +27524,7 @@
       ]
     }
   },
-  "VOLTAGE20": {
+  "VOLTAGE50": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC1-RAIL2",
@@ -24592,7 +27656,7 @@
       }
     }
   },
-  "COMPONENT17": {
+  "COMPONENT18": {
     "comp_attr": {
       "name": "DCDC2",
       "type": "dcdc",
@@ -24622,7 +27686,7 @@
       }
     ]
   },
-  "VOLTAGE21": {
+  "VOLTAGE51": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC2-RAIL1",
@@ -24657,7 +27721,7 @@
       ]
     }
   },
-  "VOLTAGE22": {
+  "VOLTAGE52": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC2-RAIL2",
@@ -24789,7 +27853,7 @@
       }
     }
   },
-  "COMPONENT18": {
+  "COMPONENT19": {
     "comp_attr": {
       "name": "DCDC3",
       "type": "dcdc",
@@ -24819,7 +27883,7 @@
       }
     ]
   },
-  "VOLTAGE23": {
+  "VOLTAGE53": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC3-RAIL1",
@@ -24854,7 +27918,7 @@
       ]
     }
   },
-  "VOLTAGE24": {
+  "VOLTAGE54": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC3-RAIL2",
@@ -24986,7 +28050,7 @@
       }
     }
   },
-  "COMPONENT19": {
+  "COMPONENT20": {
     "comp_attr": {
       "name": "DCDC4",
       "type": "dcdc",
@@ -25016,7 +28080,7 @@
       }
     ]
   },
-  "VOLTAGE25": {
+  "VOLTAGE55": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC4-RAIL1",
@@ -25051,7 +28115,7 @@
       ]
     }
   },
-  "VOLTAGE26": {
+  "VOLTAGE56": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC4-RAIL2",
@@ -25183,7 +28247,7 @@
       }
     }
   },
-  "COMPONENT20": {
+  "COMPONENT21": {
     "comp_attr": {
       "name": "DCDC5",
       "type": "dcdc",
@@ -25213,7 +28277,7 @@
       }
     ]
   },
-  "VOLTAGE27": {
+  "VOLTAGE57": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC5-RAIL1",
@@ -25248,7 +28312,7 @@
       ]
     }
   },
-  "VOLTAGE28": {
+  "VOLTAGE58": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC5-RAIL2",
@@ -25380,7 +28444,7 @@
       }
     }
   },
-  "COMPONENT21": {
+  "COMPONENT22": {
     "comp_attr": {
       "name": "DCDC6",
       "type": "dcdc",
@@ -25410,7 +28474,7 @@
       }
     ]
   },
-  "VOLTAGE29": {
+  "VOLTAGE59": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC6-RAIL1",
@@ -25445,7 +28509,7 @@
       ]
     }
   },
-  "VOLTAGE30": {
+  "VOLTAGE60": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC6-RAIL2",
@@ -25577,7 +28641,7 @@
       }
     }
   },
-  "COMPONENT22": {
+  "COMPONENT23": {
     "comp_attr": {
       "name": "DCDC7",
       "type": "dcdc",
@@ -25607,7 +28671,7 @@
       }
     ]
   },
-  "VOLTAGE31": {
+  "VOLTAGE61": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC7-RAIL1",
@@ -25642,7 +28706,7 @@
       ]
     }
   },
-  "VOLTAGE32": {
+  "VOLTAGE62": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC7-RAIL2",
@@ -25774,7 +28838,7 @@
       }
     }
   },
-  "COMPONENT23": {
+  "COMPONENT24": {
     "comp_attr": {
       "name": "DCDC8",
       "type": "dcdc",
@@ -25804,7 +28868,7 @@
       }
     ]
   },
-  "VOLTAGE33": {
+  "VOLTAGE63": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC8-RAIL1",
@@ -25839,7 +28903,7 @@
       ]
     }
   },
-  "VOLTAGE34": {
+  "VOLTAGE64": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC8-RAIL2",
@@ -25971,7 +29035,7 @@
       }
     }
   },
-  "COMPONENT24": {
+  "COMPONENT25": {
     "comp_attr": {
       "name": "DCDC9",
       "type": "dcdc",
@@ -26001,7 +29065,7 @@
       }
     ]
   },
-  "VOLTAGE35": {
+  "VOLTAGE65": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC9-RAIL1",
@@ -26009,7 +29073,8 @@
       "virt_parent": "DCDC9"
     },
     "dev_attr": {
-      "display_name": "POS3V3_WEST"
+      "display_name": "POS3V3_WEST",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -26106,7 +29171,7 @@
       }
     }
   },
-  "COMPONENT25": {
+  "COMPONENT26": {
     "comp_attr": {
       "name": "DCDC10",
       "type": "dcdc",
@@ -26136,7 +29201,7 @@
       }
     ]
   },
-  "VOLTAGE36": {
+  "VOLTAGE66": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC10-RAIL1",
@@ -26144,7 +29209,8 @@
       "virt_parent": "DCDC10"
     },
     "dev_attr": {
-      "display_name": "POS3V3_EAST"
+      "display_name": "POS3V3_EAST",
+      "scaling_factor": 1.2
     },
     "i2c": {
       "attr_list": [
@@ -26241,7 +29307,7 @@
       }
     }
   },
-  "COMPONENT26": {
+  "COMPONENT27": {
     "comp_attr": {
       "name": "DCDC11",
       "type": "dcdc",
@@ -26271,7 +29337,7 @@
       }
     ]
   },
-  "VOLTAGE37": {
+  "VOLTAGE67": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL1",
@@ -26307,7 +29373,7 @@
       ]
     }
   },
-  "VOLTAGE38": {
+  "VOLTAGE68": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC11-RAIL2",
@@ -26440,7 +29506,7 @@
       }
     }
   },
-  "COMPONENT27": {
+  "COMPONENT28": {
     "comp_attr": {
       "name": "DCDC12",
       "type": "dcdc",
@@ -26470,7 +29536,7 @@
       }
     ]
   },
-  "VOLTAGE39": {
+  "VOLTAGE69": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL1",
@@ -26506,7 +29572,7 @@
       ]
     }
   },
-  "VOLTAGE40": {
+  "VOLTAGE70": {
     "dev_info": {
       "device_type": "VOLTAGE_SENSOR",
       "device_name": "DCDC12-RAIL2",
@@ -26670,7 +29736,8 @@
     "dev_attr": {
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
-      "chip_select": 0
+      "chip_select": 0,
+      "mtd_partition_label": "swcf-update"
     }
   },
   "SWITCHCARD_CONFIG_FLASH1": {
@@ -26692,7 +29759,8 @@
     "dev_attr": {
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
-      "chip_select": 0
+      "chip_select": 0,
+      "mtd_partition_label": "swcf-update"
     }
   },
   "MGMT_PHY_FLASH": {
@@ -26716,6 +29784,45 @@
       "spi_device_driver": "spi-nor",
       "max_speed_hz": 0,
       "chip_select": 3
+    }
+  },
+  "CPUCARD_SPI_CONTROLLER3": {
+    "dev_info": {
+      "device_type": "SPI_CONTROLLER",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "spi_mode_commands": [
+      {
+        "enable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x1",
+        "disable": "fpga write32 CPUCARD_FPGA 0x4 --bits=0:0 0x0"
+      }
+    ],
+    "dev_attr": {
+      "spi_base_addr": "0x50600",
+      "virt_spi_controllers": "1",
+      "virt_spi_controller_size": "0x200",
+      "spi_driver": "xilinx_spi",
+      "spi_num_cs": 5,
+      "spi_controller_name": "CPUCARD_SPI_CONTROLLER3",
+      "spi_controller_idx": 3
+    },
+    "spi_devices": [
+      "CPUCARD_CONFIG_FLASH"
+    ]
+  },
+  "CPUCARD_CONFIG_FLASH": {
+    "dev_info": {
+      "device_type": "SPI_DEVICE",
+      "device_name": "CPUCARD_CONFIG_FLASH",
+      "device_parent": "CPUCARD_SPI_CONTROLLER3"
+    },
+    "is_persistent": false,
+    "spi_mode_commands": [],
+    "dev_attr": {
+      "spi_device_driver": "spi-nor",
+      "max_speed_hz": 0,
+      "chip_select": 0,
+      "mtd_partition_label": "cpucf-update"
     }
   },
   "SWITCHCARD_SPI_CONTROLLER0": {
