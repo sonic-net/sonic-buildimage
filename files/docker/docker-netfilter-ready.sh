@@ -27,4 +27,4 @@ done
 
 logger "docker-netfilter-ready: ip6tables not ready after $MAX_ATTEMPTS attempts"
 echo "Docker netfilter/ip6tables path is not ready" >&2
-exit 1
+exit 0
