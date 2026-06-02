@@ -17,7 +17,8 @@ endif
 $(DOCKER_ORCHAGENT)_DBG_DEPENDS = $($(DOCKER_SWSS_LAYER_TRIXIE)_DBG_DEPENDS)
 $(DOCKER_ORCHAGENT)_DBG_DEPENDS +=   $(SWSS_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
-                                $(LIBSAIREDIS_DBG)
+                                $(LIBSAIREDIS_DBG) \
+                                $(LIBSAIMETADATA_DBG)
 $(DOCKER_ORCHAGENT)_PYTHON_WHEELS += $(SCAPY)
 
 $(DOCKER_ORCHAGENT)_DBG_IMAGE_PACKAGES = $($(DOCKER_SWSS_LAYER_TRIXIE)_DBG_IMAGE_PACKAGES)
