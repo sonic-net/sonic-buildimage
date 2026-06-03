@@ -2,7 +2,7 @@ Source: sonic-platform-aspeed-nexthop
 Section: misc
 Priority: optional
 Maintainer: Nexthop <opensource@nexthop.ai>
-Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel, python3-pytest
 Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nexthop-common
