@@ -8,11 +8,6 @@ import struct
 
 from dataclasses import dataclass
 from enum import Enum
-<<<<<<< HEAD:platform/broadcom/sonic-platform-modules-nexthop/common/nexthop/eeprom_utils.py
-=======
-from nexthop_utils.platform_utils import run_cmd, run_and_report
-
->>>>>>> cae8a44e0 (NOS-8349: Move shared broadcom/aspeed files to new nexthop-common directory (#5205)):platform/nexthop-common/sonic-platform-nexthop-utils/nexthop_utils/eeprom_utils.py
 
 try:
     from sonic_platform_base.sonic_eeprom import eeprom_tlvinfo
