@@ -24,6 +24,10 @@
 /* Mock syslog buffer */
 char mock_syslog_message_buffer[1024];
 
+/* Mock TraceId TACACS+ attribute state */
+char mock_tac_trace_id_attr_value[256];
+int mock_tac_trace_id_attr_count;
+
 /* define test scenarios for mock functions return different value by scenario. */
 int test_scenario;
 
@@ -101,6 +105,13 @@ int get_memory_allocate_count()
   return memory_allocate_count;
 }
 
+/* Reset mocked TACACS+ attribute state */
+void reset_mock_tac_attrs()
+{
+	memset(mock_tac_trace_id_attr_value, 0, sizeof(mock_tac_trace_id_attr_value));
+	mock_tac_trace_id_attr_count = 0;
+}
+
 /* Mock xcalloc method */
 void *xcalloc(size_t count, size_t size)
 {
@@ -112,6 +123,12 @@ void *xcalloc(size_t count, size_t size)
 /* Mock tac_free_attrib method */
 void tac_add_attrib(struct tac_attrib **attr, char *attrname, char *attrvalue)
 {
+	if (strcmp(attrname, "TraceId") == 0)
+	{
+		mock_tac_trace_id_attr_count++;
+		snprintf(mock_tac_trace_id_attr_value, sizeof(mock_tac_trace_id_attr_value), "%s", attrvalue);
+	}
+
 	debug_printf("MOCK: tac_add_attrib add attribute: %s, value: %s\n", attrname, attrvalue);
 }
 

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
@@ -97,6 +98,99 @@ void testcase_tacacs_authorization_success() {
 
 	// wuthorization success
 	CU_ASSERT_EQUAL(result, 0);
+}
+
+/* Test send_authorization_message adds TraceId attribute when present */
+void testcase_send_authorization_message_trace_id() {
+	char *testargv[2];
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	setenv("TraceId", "trace-123:abc.def", 1);
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 1);
+	CU_ASSERT_STRING_EQUAL(mock_tac_trace_id_attr_value, "trace-123:abc.def");
+
+	unsetenv("TraceId");
+}
+
+/* Test send_authorization_message skips TraceId attribute when not present */
+void testcase_send_authorization_message_without_trace_id() {
+	char *testargv[2];
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	unsetenv("TraceId");
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+}
+
+/* Test send_authorization_message skips empty TraceId values */
+void testcase_send_authorization_message_empty_trace_id() {
+	char *testargv[2];
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	setenv("TraceId", "", 1);
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+
+	unsetenv("TraceId");
+}
+
+/* Test send_authorization_message skips unsafe TraceId values */
+void testcase_send_authorization_message_invalid_trace_id() {
+	char *testargv[2];
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	setenv("TraceId", "trace\n123", 1);
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+
+	unsetenv("TraceId");
+}
+
+/* Test send_authorization_message skips oversized TraceId values */
+void testcase_send_authorization_message_long_trace_id() {
+	char *testargv[2];
+	char trace_id[249];
+	testargv[0] = "arg1";
+	testargv[1] = "arg2";
+
+	memset(trace_id, 'a', sizeof(trace_id) - 1);
+	trace_id[sizeof(trace_id) - 1] = '\0';
+
+	reset_mock_tac_attrs();
+	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
+	setenv("TraceId", trace_id, 1);
+
+	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
+
+	CU_ASSERT_EQUAL(result, 0);
+	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+
+	unsetenv("TraceId");
 }
 
 /* Test authorization_with_host_and_tty get success case */
@@ -235,6 +329,11 @@ int main(void) {
 	  || !CU_add_test(ste, "Test testcase_tacacs_authorization_read_failed()...\n", testcase_tacacs_authorization_read_failed)
 	  || !CU_add_test(ste, "Test testcase_tacacs_authorization_denined()...\n", testcase_tacacs_authorization_denined)
 	  || !CU_add_test(ste, "Test testcase_tacacs_authorization_success()...\n", testcase_tacacs_authorization_success)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_trace_id()...\n", testcase_send_authorization_message_trace_id)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_without_trace_id()...\n", testcase_send_authorization_message_without_trace_id)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_empty_trace_id()...\n", testcase_send_authorization_message_empty_trace_id)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_invalid_trace_id()...\n", testcase_send_authorization_message_invalid_trace_id)
+	  || !CU_add_test(ste, "Test testcase_send_authorization_message_long_trace_id()...\n", testcase_send_authorization_message_long_trace_id)
 	  || !CU_add_test(ste, "Test testcase_authorization_with_host_and_tty_success()...\n", testcase_authorization_with_host_and_tty_success)
 	  || !CU_add_test(ste, "Test testcase_check_and_load_changed_tacacs_config()...\n", testcase_check_and_load_changed_tacacs_config)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_success()...\n", testcase_on_shell_execve_success)
