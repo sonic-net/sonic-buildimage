@@ -12,7 +12,7 @@ ipv6 prefix-list DEFAULT_IPV6 permit ::/0
 ! which works when allow_list is enabled, but new configuration
 ! is not applied
 !
-{%   if allow_list_default_action == 'deny' %}
+{%   if constants.bgp.allow_list.default_action == 'deny' %}
 !
 route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535
   set community no-export additive
