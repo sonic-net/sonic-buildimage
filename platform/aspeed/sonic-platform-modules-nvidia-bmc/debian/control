@@ -2,7 +2,8 @@ Source: sonic-platform-aspeed-nvidia
 Section: misc
 Priority: optional
 Maintainer: NVIDIA <willtsai@nvidia.com>
-Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools, python3-wheel,
+ python3-pytest, python3-pytest-cov
 Standards-Version: 3.9.6
 
 Package: sonic-platform-aspeed-nvidia-ast2700-bmc

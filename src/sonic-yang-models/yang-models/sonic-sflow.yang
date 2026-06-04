@@ -28,6 +28,9 @@ module sonic-sflow{
     import sonic-mgmt_vrf {
         prefix mvrf;
     }
+    import sonic-loopback-interface {
+        prefix lo;
+    }
 
 
     description "SFLOW yang Module for SONiC OS";
@@ -173,6 +176,9 @@ module sonic-sflow{
                         }
                         type leafref {
                             path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                        type leafref {
+                            path "/lo:sonic-loopback-interface/lo:LOOPBACK_INTERFACE/lo:LOOPBACK_INTERFACE_LIST/lo:name";
                         }
                         /*
                         type leafref {
