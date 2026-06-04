@@ -10,13 +10,15 @@ FROM {{ prefix }}debian:bookworm
 {% endif %}
 
 {% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
-{% set generated_crypto_material_paths = [
-    "/etc/ssh/ssh_host_*_key*",
-    "/etc/ssl/private/ssl-cert-snakeoil.key",
-    "/etc/ssl/certs/ssl-cert-snakeoil.pem",
-    "/etc/ssl/certs/*snakeoil*",
-] %}
-{% macro remove_generated_crypto_material() -%}rm -f {{ generated_crypto_material_paths | join(' ') }}{%- endmacro %}
+{% macro remove_generated_crypto_material() -%}
+rm -f \
+    /etc/ssh/ssh_host_*_key \
+    /etc/ssh/ssh_host_*_key.pub \
+    /etc/ssl/private/ssl-cert-snakeoil.key \
+    /etc/ssl/certs/ssl-cert-snakeoil.pem \
+    /etc/ssl/certs/*snakeoil* \
+    && find /etc/ssl/certs -maxdepth 1 -type l -lname '*ssl-cert-snakeoil.pem' -delete
+{%- endmacro %}
 
 USER root
 WORKDIR /root
