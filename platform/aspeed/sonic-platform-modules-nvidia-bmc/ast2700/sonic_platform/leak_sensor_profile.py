@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -15,13 +15,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# __init__.py
-#
-# Platform-specific SONiC platform API for NVIDIA Aspeed AST2700 BMC
-#
 
 try:
-    from sonic_platform.platform import Platform
-    from sonic_platform.chassis import Chassis
+    from sonic_platform_base.liquid_cooling_base import LeakSensorProfileBase
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
+
+
+class LeakSensorProfile(LeakSensorProfileBase):
+    """
+    Platform-specific leak sensor profile.
+    """
+
+    def __init__(self, sensor_type=None):
+        super().__init__()
+        self._sensor_type = sensor_type
+
+    def get_type(self) -> str:
+        return self._sensor_type
+
+    def get_leak_max_minor_duration_sec(self):
+        """
+        Maximum number of seconds a sensor may remain in MINOR leak state before being
+        escalated to CRITICAL.
+
+        The NVIDIA AST2700 BMC platform does not implement minor-leak escalation timing,
+        so this always returns 0 (no escalation).
+        """
+        return 0
