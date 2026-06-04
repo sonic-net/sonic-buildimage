@@ -1229,9 +1229,9 @@ class Chassis(ChassisBase):
         return False
 
     def initialize_bmc(self):
-        from .bmc import BMC
         if self._bmc_initialized:
             return
+        from .bmc import BMC
         self._bmc = BMC.get_instance()
         if self._bmc is not None:
             try:
