@@ -22,10 +22,12 @@
             "fe80:1000:2000:3000::1": {}
         },
         "DNS_OPTIONS": {
-            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-            "ndots": "0",
-            "timeout": "1",
-            "attempts": "2"
+            "GLOBAL": {
+                "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+                "ndots": "0",
+                "timeout": "1",
+                "attempts": "2"
+            }
         },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
@@ -421,7 +423,8 @@
                 "chassis_hostname": "str-sonic-chassis-1",
                 "slice_type": "AZNG_Production",
                 "nexthop_group": "disabled",
-                "zebra_nexthop": "disabled"
+                "zebra_nexthop": "disabled",
+                "use_template_render_for_restore": "true"
             }
         },
         "VLAN": {
@@ -2765,6 +2768,16 @@
             "POLICIES":{
                 "inactivity_timeout": "15",
                 "sysrq_capabilities": "disabled"
+            }
+        },
+
+        "MAC_MOVE_GUARD": {
+            "GLOBAL": {
+                "enabled": "true",
+                "threshold": "5000",
+                "detect_interval": "5",
+                "action_interval": "120",
+                "action": "DISABLE_PORT"
             }
         },
 

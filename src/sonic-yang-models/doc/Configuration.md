@@ -1111,7 +1111,8 @@ instance is supported in SONiC.
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
         "timezome": "Europe/Kiev",
-        "bgp_router_id": "8.8.8.8"
+        "bgp_router_id": "8.8.8.8",
+        "use_template_render_for_restore": "true"
     }
   }
 }
@@ -3268,10 +3269,12 @@ DNS configuration options can also be set when nameservers are defined:
 ```json
 {
     "DNS_OPTIONS": {
-        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
-        "ndots": 0,
-        "timeout": 1,
-        "attempts": 2
+        "GLOBAL": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": 0,
+            "timeout": 1,
+            "attempts": 2
+        }
     }
 }
 ```

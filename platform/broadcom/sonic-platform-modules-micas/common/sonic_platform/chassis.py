@@ -19,7 +19,9 @@ try:
     import time
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_platform_base.sonic_xcvr.bailly_optoe_base import get_cpo_json_data
     from sonic_platform.sfp import Sfp
+    from sonic_platform.cpo import CPO
     from sonic_platform.psu import Psu
     # from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
@@ -57,29 +59,35 @@ class Chassis(ChassisBase):
         self._dcdc_list = []
         self.int_case = interface()
         # Initialize SFP list
+        self._ports_config = get_cpo_json_data().get("interfaces", None) 
+        self._oes_config = get_cpo_json_data().get("oes", None)                   # oe_config from cpo.json
+        if self.is_cpo_device():
+            self._cpo_eeprom_mode = get_cpo_json_data().get("cpo_eeprom_mode", "joint")
+            self._elss_config = get_cpo_json_data().get("elss", None)             # ELS from cpo.json
+            self._init_port_mappings()
+        else:
+            # sfp.py will read eeprom contents and retrive the eeprom data.
+            # It will also provide support sfp controls like reset and setting
+            # low power mode.
+            # We pass the eeprom path and sfp control path from chassis.py
+            # So that sfp.py implementation can be generic to all platforms
+            try:
+                self._sfp_list = []
+                self.port_num = baseutil.get_config().get("sfps", None).get("port_num", 0)
+                self.port_start_index = baseutil.get_config().get("sfps", None).get("port_index_start", 0)
+                # fix problem with first index is 1, we add a fake sfp node
+                if self.port_start_index == 1:
+                    self._sfp_list.append(Sfp(1))
 
-        # sfp.py will read eeprom contents and retrive the eeprom data.
-        # It will also provide support sfp controls like reset and setting
-        # low power mode.
-        # We pass the eeprom path and sfp control path from chassis.py
-        # So that sfp.py implementation can be generic to all platforms
-        try:
-            self._sfp_list = []
-            self.port_num = baseutil.get_config().get("sfps", None).get("port_num", 0)
-            self.port_start_index = baseutil.get_config().get("sfps", None).get("port_index_start", 0)
-            # fix problem with first index is 1, we add a fake sfp node
-            if self.port_start_index == 1:
-                self._sfp_list.append(Sfp(1))
+                # sfp id always start at 1
+                for index in range(1, self.port_num + 1):
+                    self._sfp_list.append(Sfp(index))
 
-            # sfp id always start at 1
-            for index in range(1, self.port_num + 1):
-                self._sfp_list.append(Sfp(index))
+                for i in range(self.port_start_index, self.port_start_index + self.port_num):
+                    self.sfp_present_dict[i] = self.STATUS_REMOVED
 
-            for i in range(self.port_start_index, self.port_start_index + self.port_num):
-                self.sfp_present_dict[i] = self.STATUS_REMOVED
-
-        except Exception as err:
-            print("SFP init error: %s" % str(err))
+            except Exception as err:
+                print("SFP init error: %s" % str(err))
 
         try:
             self._eeprom = Eeprom(self.int_case)
@@ -535,3 +543,26 @@ class Chassis(ChassisBase):
                 ret_dict[name] = status
         self.voltage_status_dict = current_voltage_status_dict
         return ret_dict
+
+
+    def is_cpo_device(self):
+        return self._oes_config is not None and len(self._oes_config) > 0
+
+    def _init_port_mappings(self):
+        self._sfp_list = []
+        # fix problem with first index is 1, we add a fake sfp node, xcvrd get start at 1,not 0 
+        self.port_num = len(self._ports_config)
+        self.port_start_index = 1
+        self._sfp_list.append(Sfp(1))
+   
+        for eth_name, eth_info in self._ports_config.items():
+            port_id = eth_info.get("index", 0).split(",")[0]
+            oe_id = eth_info.get("oe_id", None)
+            if oe_id != None: # cpo port
+                oe_bank_id= eth_info.get("oe_bank_id", None)
+                els_id = eth_info.get("els_id", None)
+                els_bank_id = eth_info.get("els_bank_id", None)
+                self._sfp_list.append(CPO(port_id, oe_id, oe_bank_id, els_id, els_bank_id))
+            else: # None cpo port
+                self._sfp_list.append(Sfp(port_id))
+
