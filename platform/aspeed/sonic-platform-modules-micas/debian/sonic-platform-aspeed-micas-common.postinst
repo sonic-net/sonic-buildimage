@@ -1,0 +1,23 @@
+#!/bin/bash
+# postinst script for sonic-platform-aspeed-micas-common
+
+set -e
+
+case "$1" in
+    configure)
+        depmod -a 2>/dev/null || true
+        for service in \
+            micas-platform-bootstrap.service \
+            platform_base.service \
+            platform_driver_sh.service \
+            platform_driver.service \
+            platform_driver_late.service \
+            platform_process.service ; do
+            systemctl reenable "$service" 2>/dev/null || systemctl enable "$service" 2>/dev/null || true
+        done
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -5,6 +5,7 @@ include $(PLATFORM_PATH)/aspeed-platform-services.mk
 include $(PLATFORM_PATH)/nvidia-hw-mgmt.mk
 include $(PLATFORM_PATH)/platform-modules-arista.mk
 include $(PLATFORM_PATH)/platform-modules-nokia.mk
+include $(PLATFORM_PATH)/platform-modules-micas.mk
 include $(PLATFORM_PATH)/one-image.mk
 include $(PLATFORM_PATH)/recipes/installer-tftp.mk
 
