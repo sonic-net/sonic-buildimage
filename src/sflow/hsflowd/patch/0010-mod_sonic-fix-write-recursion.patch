@@ -1,0 +1,101 @@
+Description: Prevent unbounded recursion in db_addWriteCB
+ When mod_sonic dispatches a burst of redis commands (e.g. mapPorts() on
+ a switch with many ports after PR #27368 batched the dispatch), the
+ redis send buffer can fill up and write() returns EWOULDBLOCK. Hiredis
+ then re-arms the writable hook by calling our db_addWriteCB() again.
+ Because db_addWriteCB() called redisAsyncHandleWrite() synchronously
+ with no re-entry protection, this turned into infinite recursion and a
+ stack-overflow SIGSEGV on switches with hundreds of ports.
+ .
+ Fix:
+  1. Add a per-client re-entry guard. While inside a write, any
+     recursive db_addWriteCB() invocation just sets a deferred flag
+     and returns instead of calling redisAsyncHandleWrite() again.
+  2. Drain remaining queued output (a) opportunistically after each
+     read callback completes, and (b) as a slow-path safety net in
+     evt_poll_tick(). Both drains are themselves guarded against
+     re-entry.
+ .
+ The change is intentionally small and surgical: it does not touch the
+ batched-dispatch behavior added by 0008, it just makes the write path
+ safe against the back-pressure that batching can produce.
+Author: Ying Xie <ying.xie@microsoft.com>
+Forwarded: not-needed
+--- a/src/Linux/mod_sonic.c
++++ b/src/Linux/mod_sonic.c
+@@ -115,6 +115,8 @@
+     bool connected;
+     uint32_t reads;
+     uint32_t writes;
++    bool inWrite:1;
++    bool writeDeferred:1;
+     UTStrBuf *replyBuf;
+   } HSPSonicDBClient;
+ 
+@@ -629,19 +631,36 @@
+     HSPSonicDBClient *db = (HSPSonicDBClient *)magic;
+     db->reads++;
+     redisAsyncHandleRead(db->ctx);
++    // After a read returns to the loop, the kernel may have drained
++    // the socket send buffer. If we still have queued output and we
++    // are not already inside a write, try a non-recursive drain now.
++    if(db->ctx
++       && db->ctx->c.obuf
++       && sdslen(db->ctx->c.obuf) > 0
++       && !db->inWrite) {
++      db->inWrite = YES;
++      redisAsyncHandleWrite(db->ctx);
++      db->inWrite = NO;
++    }
+   }
+ 
+   static void db_addWriteCB(void *magic) {
+     HSPSonicDBClient *db = (HSPSonicDBClient *)magic;
+-    // We could modify evbus to regulate writes, but
+-    // since the write direction consists only of short
+-    // queries we just assume it's OK to go ahead.
+-    // (If there were any danger of blocking for more than
+-    // a second or so then we could set the file descriptor
+-    // to non-blocking mode with fcntl and looks for an
+-    // EWOULDBLOCK error.)
+     db->writes++;
++    // Re-entry guard. When the kernel send buffer fills up, write()
++    // returns EWOULDBLOCK and hiredis re-arms the writable hook by
++    // calling addWrite again. Without this guard we would recurse
++    // into redisAsyncHandleWrite() until the stack is exhausted
++    // (SIGSEGV on switches with many ports).  Defer to evt_poll_tick
++    // and to the post-read drain in db_readCB().
++    if(db->inWrite) {
++      db->writeDeferred = YES;
++      return;
++    }
++    db->inWrite = YES;
+     redisAsyncHandleWrite(db->ctx);
++    db->inWrite = NO;
++    db->writeDeferred = NO;
+   }
+ 
+   static void db_cleanupCB(void *magic) {
+@@ -1982,6 +2001,22 @@
+       if(mdata->reqCollectorRefresh) {
+ 	mdata->reqCollectorRefresh = NO;
+ 	db_getCollectorNames(mod);
++      }
++      // Drain any redis client whose send buffer was full last time
++      // we tried to write. Slow-path safety net for the
++      // db_addWriteCB recursion guard.
++      {
++	HSPSonicDBClient *db;
++	UTHASH_WALK(mdata->dbInstances, db) {
++	  if(db->ctx
++	     && db->ctx->c.obuf
++	     && sdslen(db->ctx->c.obuf) > 0
++	     && !db->inWrite) {
++	    db->inWrite = YES;
++	    redisAsyncHandleWrite(db->ctx);
++	    db->inWrite = NO;
++	  }
++	}
+       }
+       break;
+     }
