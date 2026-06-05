@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/un.h>  // UNIX domain sockets
 #include <unistd.h>  // read()/write()
+#include <stdio.h>
 
 /**
  * @addtogroup libunixsocket
