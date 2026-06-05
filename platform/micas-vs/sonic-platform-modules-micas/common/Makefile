@@ -30,7 +30,6 @@ all:
 	@if [ ! -d ${INSTALL_LIB_DIR} ]; then mkdir -p ${INSTALL_LIB_DIR} ;fi
 	@if [ -d $(PWD)/lib/ ]; then cp -r $(PWD)/lib/* ${INSTALL_LIB_DIR} ;fi
 	@if [ -d $(PWD)/sonic_platform/ ]; then cp -rf $(PWD)/sonic_platform ${INSTALL_LIB_DIR} ;fi
-	cp -r $(app_build_dir)/module/*.ko $(INSTALL_MODULE_DIR)
 	cp -r $(modules_build_dir)/*.ko $(INSTALL_MODULE_DIR)
 	cp -r $(app_dir)/build/app/*  $(INSTALL_SCRIPT_DIR)
 	cp -r $(SCRIPT_DIR)/*  $(INSTALL_SCRIPT_DIR)
