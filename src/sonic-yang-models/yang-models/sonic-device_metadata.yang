@@ -19,9 +19,12 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2026-06-05 {
+        description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.";
+    }
+
     revision 2026-06-02 {
-        description "Added dpu_auto_recovery to enable/disable automatic DPU recovery on SmartSwitch.
-                     Removed route performance knobs (async_swss_rec, route_state_async_publish,
+        description "Removed route performance knobs (async_swss_rec, route_state_async_publish,
                      orch_northbond_route_zmq_enabled, orch_southbound_zmq_enabled).
                      Moved to SYSTEM_DEFAULTS list entries swss_zmq and async_rec.";
     }
