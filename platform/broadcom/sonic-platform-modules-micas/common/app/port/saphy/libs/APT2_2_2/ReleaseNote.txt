@@ -1,0 +1,519 @@
+---------------------------------------------------------------------------------------------------
+Version APT2_2_2 for Aperta2 chip family driver
+---------------------------------------------------------------------------------------------------
+Please note that EPDM package version 4.4.0 is required in order to use Aperta2 application.
+If an EPDM version later than 4.4.0 is needed to be used,
+please refer to the instructions in README file.
+ 
+i)  Supported Devices
+     BCM85344 (with MACSEC)
+      - 800G(8x106G) PAM4
+      - 400G(4x106G) PAM4
+      - 200G(2x106G) PAM4
+      - 100G(1x106G) PAM4
+      - 400G(8x53G) PAM4
+      - 200G(4x53G) PAM4
+      - 100G(2x53G) PAM4
+      - 50G (1x53G) PAM4
+      - 100G(4x25G) NRZ
+      - 50G (2x25G) NRZ
+      - 25G (1x25G) NRZ
+      - 10G (1x10G) NRZ
+      - 400G - GBOX (8x53G  PAM4 to 4x106G PAM4)
+      - 200G - GBOX (4x53G  PAM4 to 2x106G PAM4)
+      - 100G - GBOX (2x53G  PAM4 to 1x106G PAM4)
+      - 50G  - GBOX (2x25G  NRZ  to 1x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 2x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 1x106G PAM4)
+      - 200G - RGBOX(2x106G PAM4 to 4x53G  PAM4)
+      - 100G - RGBOX(1x106G PAM4 to 2x53G  PAM4)
+      - 100G - RGBOX(2x53G  PAM4 to 4x25G  NRZ)
+      - 400G - RGBOX(4x106G PAM4 to 8x53G  PAM4)
+      - 50G  - RGBOX(1x53G  PAM4 to 2x25G  NRZ)
+      - 100G - RGBOX(1x106G PAM4 to 4x25G  NRZ)
+
+ 
+ii) Compiled with gcc version-11.2.0
+ 
+iii) Firmware information
+    --------------------
+    1. Firmware version 0xD006
+    2. FW release notes detailed in ReleaseNote_fw_aperta2.txt
+ 
+iv) List of features added/updated
+    ------------------------------
+    1. Added support for warmboot.
+    2. Updated bcm_plp_mac_mib_stat_get API to clear MIB stats based on user input.
+    3. Added support for external AVS regulator.
+    4. Added support for PAI.
+    5. Updated bcm_plp_pam4_diag_get to get more SERDES parameters.
+    6. Updated bcm_plp_pcs_diagnostic_dump to dump diagnostics for octal crossed ports.
+
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_mode_config_set
+    bcm_plp_init_fw_bcast
+    bcm_plp_pcs_diagnostic_dump
+    bcm_plp_avs_config_set
+    bcm_plp_mac_mib_stat_get
+    bcm_plp_power_set
+    bcm_plp_phy_pai_info_get
+    bcm_plp_cfye_device_init
+    bcm_plp_cfye_device_limits
+    bcm_plp_cfye_device_limits_get
+    bcm_plp_secy_device_init
+    
+
+vi) Bug Fixes
+     --------
+      - Updated MAC TX threshold to fix issue on packet misalignment during burst traffic.
+      - Updated MAC reset sequence to avoid packet drops when re-initializing the port with traffic enabled.
+      - Fixed flexing issue when moving from Failover port to Octal crossing Failover.
+      - Fixed flexing issue when moving from 100G PT to 200G GB(with system octal crossing) and back to 100G PT mode. 
+      - Fixed link down issue on bcm_plp_power_set.
+ 
+vii) Recommendations
+     ----------------
+     - It is recommended to follow initialization sequence (bcm_plp_init_fw_bcast) when flexing to 
+       a port which requires change in PLL on both the octals.
+
+viii) Known Limitations:
+      ------------------
+     - Traffic fails when flexing from 25G(1x25G NRZ)RS528 FEC to 25G(1x25G NRZ)NOFEC.
+     - IPSEC MPLS support is for preview.
+     - In IPsec ingress operation, enabling second SA for the same vPort is not supported. 
+       To support multiple SAs, old and new SAs and associated TCAM rules should be on different 
+       vPorts.
+
+---------------------------------------------------------------------------------------------------
+Version APT2_2_1 for Aperta2 chip family driver
+---------------------------------------------------------------------------------------------------
+Please note that EPDM package version 4.3.8 is required in order to use Aperta2 application.
+If an EPDM version later than 4.3.8 is needed to be used,
+please refer to the instructions in README file.
+ 
+i)  Supported Devices
+     BCM85344 (with MACSEC)
+      - 800G(8x106G) PAM4
+      - 400G(4x106G) PAM4
+      - 200G(2x106G) PAM4
+      - 100G(1x106G) PAM4
+      - 400G(8x53G) PAM4
+      - 200G(4x53G) PAM4
+      - 100G(2x53G) PAM4
+      - 50G (1x53G) PAM4
+      - 100G(4x25G) NRZ
+      - 50G (2x25G) NRZ
+      - 25G (1x25G) NRZ
+      - 10G (1x10G) NRZ
+      - 400G - GBOX (8x53G  PAM4 to 4x106G PAM4)
+      - 200G - GBOX (4x53G  PAM4 to 2x106G PAM4)
+      - 100G - GBOX (2x53G  PAM4 to 1x106G PAM4)
+      - 50G  - GBOX (2x25G  NRZ  to 1x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 2x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 1x106G PAM4)
+      - 200G - RGBOX(2x106G PAM4 to 4x53G  PAM4)
+      - 100G - RGBOX(1x106G PAM4 to 2x53G  PAM4)
+      - 100G - RGBOX(2x53G  PAM4 to 4x25G  NRZ)
+      - 400G - RGBOX(4x106G PAM4 to 8x53G  PAM4)
+      - 50G  - RGBOX(1x53G  PAM4 to 2x25G  NRZ)
+      - 100G - RGBOX(1x106G PAM4 to 4x25G  NRZ)
+
+ 
+ii) Compiled with gcc version-11.2.0
+ 
+iii) Firmware information
+    --------------------
+    1. Firmware version 0xD005
+    2. FW release notes detailed in ReleaseNote_fw_aperta2.txt
+ 
+iv) List of features added/updated
+    ------------------------------
+    1. Updated bcm_plp_datapath_flush API to resume the port operation when flush fails.
+    2. Updated bcm_plp_mode_config_set API to retry port flush operation while disabling the port.
+    3. Updated bcm_plp_phy_status_dump API.  Refer to User Guide for details.
+    4. Updated bcm_plp_avs_config_set API to not disable AVS if it is already in disabled state.
+    5. Added support for bcm_plp_pcs_diagnostic_dump.
+    6. Added support for bcm_plp_fec_status.
+    7. Added support for bcm_plp_mac_sec_burst_reg_value_get and bcm_plp_mac_sec_burst_reg_value_set.
+    8. Added support for bcm_plp_failover_mode_get.
+    9. Updated bcm_plp_failover_mode_set API to perform switch over between primary and secondary port 
+       based on user specified value. 
+
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_mode_config_set
+    bcm_plp_datapath_flush
+    bcm_plp_phy_status_dump
+    bcm_plp_avs_config_set
+    bcm_plp_pcs_diagnostic_dump
+    bcm_plp_fec_status
+    bcm_plp_mac_sec_burst_reg_value_get
+    bcm_plp_mac_sec_burst_reg_value_set
+    bcm_plp_timesync_config_set
+    bcm_plp_failover_mode_get
+    bcm_plp_failover_mode_set
+    
+
+vi) Bug Fixes
+     --------
+      - PCS AM Table for 100G RS544_2XN updated based on IEEE specifications. 
+      - Fixed incorrect correction field value in TC mode.
+
+vii) Recommendations
+     ----------------
+     - It is recommended to follow initialization sequence (bcm_plp_init_fw_bcast) when flexing to 
+       a port which requires change in PLL on both the octal.
+
+viii) Known Limitations:
+      ------------------
+     - Traffic fails when flexing from 25G(1x25G NRZ)RS528 FEC to 25G(1x25G NRZ)NOFEC.
+     - No warmboot support.
+     - IPSEC MPLS support is for preview.
+     - In IPsec ingress operation, enabling second SA for the same vPort is not supported. 
+       To support multiple SAs, old and new SAs and associated TCAM rules should be on different 
+       vPorts.
+
+---------------------------------------------------------------------------------------------------
+Version APT2_2_0 for Aperta2 chip family driver
+---------------------------------------------------------------------------------------------------
+Please note that EPDM package version 4.3.1 is required in order to use Aperta2 application.
+If an EPDM version later than 4.3.1 is needed to be used,
+please refer to the instructions in README file.
+ 
+i)  Supported Devices
+     BCM85344
+ 
+ii) Compiled with gcc version-11.2.0
+ 
+iii) Firmware information
+    --------------------
+    1. Firmware version 0xD004
+    2. FW release notes detailed in ReleaseNote_fw_aperta2.txt
+ 
+iv) List of features added/updated
+    ------------------------------
+    1. Support for following port modes:  
+      - 800G(8x106G) PAM4
+      - 400G(4x106G) PAM4
+      - 200G(2x106G) PAM4
+      - 100G(1x106G) PAM4
+      - 400G(8x53G) PAM4
+      - 200G(4x53G) PAM4
+      - 100G(2x53G) PAM4
+      - 50G (1x53G) PAM4
+      - 100G(4x25G) NRZ
+      - 50G (2x25G) NRZ
+      - 25G (1x25G) NRZ
+      - 10G (1x10G) NRZ
+      - 400G - GBOX (8x53G  PAM4 to 4x106G PAM4)
+      - 200G - GBOX (4x53G  PAM4 to 2x106G PAM4)
+      - 100G - GBOX (2x53G  PAM4 to 1x106G PAM4)
+      - 50G  - GBOX (2x25G  NRZ  to 1x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 2x53G  PAM4)
+      - 100G - GBOX (4x25G  NRZ  to 1x106G PAM4)
+      - 200G - RGBOX(2x106G PAM4 to 4x53G  PAM4)
+      - 100G - RGBOX(1x106G PAM4 to 2x53G  PAM4)
+      - 100G - RGBOX(2x53G  PAM4 to 4x25G  NRZ)
+      - 400G - RGBOX(4x106G PAM4 to 8x53G  PAM4)
+      - 50G  - RGBOX(1x53G  PAM4 to 2x25G  NRZ)
+      - 100G - RGBOX(1x106G PAM4 to 4x25G  NRZ)
+    2. Supports Cross point, Mixed mode, Octal Crossing, Flexing for all port modes. 
+    3. Supports  Failover MUX modes for all port modes.
+    4. Supports PTP for all port modes
+    5. Supports MACSEC and IPSEC for all port modes.
+    6. Supports Auto negotiation(IEEE/MSA) for,
+        - 25G IEEE and MSA
+        - 50G over 1 lane IEEE and MSA
+        - 50G over 2 lanes MSA
+        - 100G over 4 lanes (IEEE)
+        - 100G over 2 lanes IEEE and MSA
+        - 100G over 1 lane (IEEE)
+        - 200G over 2 lanes (IEEE)
+        - 200G over 4 lanes IEEE and MSA
+        - 400G over 8 lanes (MSA)
+        - 400G over 4 lanes (IEEE)
+    7. Supports recovered clock (SyncE) for all port modes.
+    8. Supports AVS for all port modes.
+    9. Supports GPIO, Module read/write and Interrupts.
+
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_mode_config_set/get
+    bcm_plp_timesync_config_set/get
+    bcm_plp_timesync_enable_set/get
+    bcm_plp_timesync_timestamp_offset_set/get
+    bcm_plp_timesync_time_code_set/get
+    bcm_plp_timesync_framesync_mode_set/get
+    bcm_plp_timesync_mpls_set/get
+    bcm_plp_timesync_inband_filter_set/get
+    bcm_plp_timesync_sopmem_get
+    bcm_plp_pm_timesync_enable_set/get
+    bcm_plp_pm_timesync_tx_info_get
+    bcm_plp_cl73_ability_set/get
+    bcm_plp_autoneg_remote_ability_get
+    bcm_plp_cl73_set/get 
+    bcm_plp_synce_config_set/get 
+    bcm_plp_cfg_gpio_pin_set/get 
+    bcm_plp_module_read/write 
+    bcm_plp_intr_enable_set/get 
+    bcm_plp_intr_status_get 
+    bcm_plp_event_status_get 
+    bcm_plp_intr_status_clear
+    bcm_plp_failover_mode_set
+    bcm_plp_fec_corrected_error_counter
+    bcm_plp_fec_uncorrected_error_counter
+    bcm_plp_mac_max_packet_size_set/get  
+    bcm_plp_mac_runt_threshold_get
+    bcm_plp_tx_mac_sa_set/get
+    bcm_plp_rx_mac_sa_set/get
+    bcm_plp_mac_tx_avg_ipg_set/get
+    bcm_plp_mac_pause_control_set/get
+    bcm_plp_mac_pfc_control_set/get
+    bcm_plp_datapath_flush
+    bcm_plp_port_enable_set/get
+    bcm_plp_avs_config_set/get
+    bcm_plp_avs_status_get
+    bcm_plp_core_diagnostics_get
+    bcm_plp_power_set
+    bcm_plp_mutex_info_set
+    
+    MACSEC/IPSEC APIs
+    bcm_plp_cfye_device_init
+    bcm_plp_cfye_device_uninit
+    bcm_plp_cfye_vport_add                    
+    bcm_plp_cfye_vport_remove
+    bcm_plp_cfye_vport_update
+    bcm_plp_cfye_rule_add
+    bcm_plp_cfye_rule_remove
+    bcm_plp_cfye_rule_update
+    bcm_plp_cfye_rule_enable
+    bcm_plp_cfye_rule_disable
+    bcm_plp_cfye_rule_enable_disable
+    bcm_plp_cfye_vport_id_get
+    bcm_plp_cfye_device_limits
+    bcm_plp_cfye_device_update
+    bcm_plp_cfye_statistics_read
+    bcm_plp_cfye_statistics_summary_read
+    bcm_plp_cfye_statistics_summary_channel_read
+    bcm_plp_cfye_vport_handle_issame
+    bcm_plp_cfye_rule_handle_issame
+    bcm_plp_cfye_intr_enable_set
+    bcm_plp_cfye_intr_enable_get
+    bcm_plp_cfye_intr_status_get
+    bcm_plp_cfye_intr_status_clear
+    bcm_plp_cfye_event_status_get
+    bcm_plp_cfye_rule_handle_get
+    bcm_plp_cfye_rule_index_get
+    bcm_plp_cfye_vport_handle_get
+    bcm_plp_cfye_vport_index_get
+    bcm_plp_cfye_statistics_tcam_get
+    bcm_plp_cfye_statistics_summary_tcam_get
+    bcm_plp_cfye_statistics_channel_get
+    bcm_plp_secy_device_init
+    bcm_plp_secy_device_uninit
+    bcm_plp_secy_sa_add
+    bcm_plp_secy_sa_update
+    bcm_plp_secy_sa_read
+    bcm_plp_secy_sa_remove
+    bcm_plp_secy_rules_sectag_update
+    bcm_plp_secy_bypass_get
+    bcm_plp_secy_bypass_set
+    bcm_plp_secy_config_set
+    bcm_plp_secy_device_limits
+    bcm_plp_secy_device_count_summary_secy_checkandclear
+    bcm_plp_secy_device_count_summary_pifc_checkandclear
+    bcm_plp_secy_device_count_summary_ifc_checkandclear
+    bcm_plp_secy_device_count_summary_pifc1_checkandclear
+    bcm_plp_secy_device_count_summary_ifc1_checkandclear
+    bcm_plp_secy_device_count_summary_prxcam_checkandclear
+    bcm_plp_secy_device_count_summary_psa_checkandclear
+    bcm_plp_secy_device_count_summary_sa_checkandclear
+    bcm_plp_secy_sa_handle_issame
+    bcm_plp_secy_sa_handle_sa_index_issame
+    bcm_plp_secy_crypt_auth_bypass_len_update
+    bcm_plp_secy_sa_nextpn_update
+    bcm_plp_secy_sa_chain
+    bcm_plp_secy_sa_switch
+    bcm_plp_secy_sa_statistics_e_get
+    bcm_plp_secy_sa_statistics_i_get
+    bcm_plp_secy_ifc_statistics_e_get
+    bcm_plp_secy_ifc_statistics_i_get
+    bcm_plp_secy_rxcam_statistics_get
+    bcm_plp_secy_sa_pnthr_summary_checkandclear
+    bcm_plp_secy_sa_expired_summary_checkandclear
+    bcm_plp_secy_rules_mtucheck_update
+    bcm_plp_secy_channel_packets_inflight_get
+    bcm_plp_secy_secy_statistics_e_get
+    bcm_plp_secy_secy_statistics_i_get
+    bcm_plp_secy_device_count_summary_psecy_checkandclear
+    bcm_plp_secy_intr_enable_set
+    bcm_plp_secy_intr_enable_get
+    bcm_plp_secy_intr_status_get
+    bcm_plp_secy_intr_status_clear
+    bcm_plp_secy_event_status_get
+    bcm_plp_secy_sa_handle_get
+    bcm_plp_secy_sa_index_get
+    bcm_plp_secy_device_update
+    bcm_plp_secy_build_transform_record
+    bcm_plp_secy_sa_window_size_update
+    bcm_plp_aecy_sa_nextpn_get
+    bcm_plp_secy_crypt_auth_bypass_len_get
+    bcm_plp_secy_rules_mtucheck_get
+    bcm_plp_secy_sci_next_get
+    bcm_plp_cfye_device_config_get
+    bcm_plp_cfye_device_status_get
+    bcm_plp_cfye_channel_bypass_get
+    bcm_plp_cfye_channel_bypass_set
+    bcm_plp_cfye_rule_get
+    bcm_plp_cfye_rule_next_get
+    bcm_plp_cfye_rule_vport_next_get
+    bcm_plp_cfye_diag_device_dump
+    bcm_plp_cfye_diag_channel_dump
+    bcm_plp_cfye_diag_vport_dump
+    bcm_plp_cfye_diag_rule_dump
+    bcm_plp_cfye_vport_get
+    bcm_plp_cfye_vport_next_get
+    bcm_plp_cfye_diag_insert_sop           
+    bcm_plp_cfye_diag_insert_eop
+    bcm_plp_secy_device_status_get
+    bcm_plp_secy_device_config_get
+    bcm_plp_secy_device_role_get
+    bcm_plp_secy_diag_device_dump
+    bcm_plp_secy_diag_channel_dump
+    bcm_plp_secy_diag_vport_dump
+    bcm_plp_secy_diag_sa_dump
+    bcm_plp_secy_vport_statistics_clear
+    bcm_plp_secy_vport_params_get
+    bcm_plp_secy_diag_insert_sop
+    bcm_plp_secy_diag_insert_eop 
+    bcm_plp_secy_sa_params_get
+    bcm_plp_secy_sa_vport_index_get
+    bcm_plp_secy_sa_next_get
+    bcm_plp_secy_sa_chained_get
+    bcm_plp_secy_sa_windowsize_get
+    bcm_plp_secy_channel_config_set
+    bcm_plp_secy_sa_active_e_get
+    bcm_plp_secy_sa_active_i_get
+    bcm_plp_secy_channel_config_get
+    bcm_plp_cfye_channel_vport_add
+    bcm_plp_cfye_device_limits_get
+    bcm_plp_cfye_statistics_mtt_get
+    bcm_plp_cfye_statistics_summary_mtt_read
+    bcm_plp_cfye_rule_add_index
+    bcm_plp_cfye_mtt_update
+    bcm_plp_cfye_mtt_entry_enable_disable
+    bcm_plp_cfye_mtt_enable_disable
+    bcm_plp_cfye_mtt_read
+    bcm_plp_cfye_diag_mtt_dump
+    bcm_plp_secy_sa_statistics_ipsec_i_get
+    bcm_plp_secy_secy_statistics_ipsec_e_get
+    bcm_plp_secy_secy_statistics_ipsec_i_get
+    bcm_plp_secy_channel_config_update
+
+
+vi) Bug Fixes
+     --------
+      NA
+
+vii) Recommendations
+     ----------------
+     - It is recommended to follow initialization sequence (bcm_plp_init_fw_bcast) when flexing to 
+       a port which requires change in PLL on both the octal.
+
+viii) Known Limitations:
+      ------------------
+     - Traffic fails when flexing from 25G(1x25G NRZ)RS528 FEC to 25G(1x25G NRZ)NOFEC.
+     - No warmboot support.
+     - IPSEC MPLS support is for preview.
+     - In IPsec ingress operation, enabling second SA for the same vPort is not supported. 
+       To support multiple SAs, old and new SAs and associated TCAM rules should be on different 
+       vPorts.
+---------------------------------------------------------------------------------------------------
+Version APT2_1_0 for Aperta2 chip family driver
+---------------------------------------------------------------------------------------------------
+Please note that EPDM package version 4.3.0 is required in order to use Aperta2 application.
+If an EPDM version later than 4.3.0 is needed to be used,
+please refer to the instructions in README file.
+ 
+i)  Supported Devices
+     BCM85344
+ 
+ii) Compiled with gcc version-11.2.0
+ 
+iii) Firmware information
+    --------------------
+    1. Firmware version 0xD002
+    2. FW release notes detailed in ReleaseNote_fw_aperta2.txt
+ 
+iv) List of features added/updated
+    ------------------------------
+    1. Support for following port modes:  
+      - 800G(8x106G) PAM4
+      - 400G(4x106G) PAM4
+      - 200G(2x106G) PAM4
+      - 100G(1x106G) PAM4
+      - 400G(8x53G) PAM4
+      - 200G(4x53G) PAM4
+      - 100G(2x53G) PAM4
+      - 50G (1x53G) PAM4
+      - 100G(4x25G) NRZ
+      - 50G (2x25G) NRZ
+      - 25G (1x25G) NRZ
+    2. Firmware Download using Unicast/Broadcast methods.
+    3. Link training and Tx FIR settings for all port modes.
+    4. Flow control per port.
+    5. Link and PMD lock status.
+    6. TX and RX Lane Control.
+    7. Diagnostic functions: Loopbacks, PHY dump, eyescan (see list of APIs for more information).
+    8. Tx, Rx polarity configuration.
+    9. Lane swap.
+    10. Register access(Read/Write).
+
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_init_fw_bcast
+    bcm_plp_firmware_info_get
+    bcm_plp_rev_id
+    bcm_plp_reg_value_set/get
+    bcm_plp_reg64_value_set/get
+    bcm_plp_reset_set
+    bcm_plp_mode_config_set/get
+    bcm_plp_link_status_get
+    bcm_plp_rx_pmd_lock_get
+    bcm_plp_polarity_set/get
+    bcm_plp_force_tx_training_set/get
+    bcm_plp_force_tx_training_status_get 
+    bcm_plp_loopback_set/get
+    bcm_plp_prbs_set/get
+    bcm_plp_prbs_rx_stat
+    bcm_plp_prbs_clear
+    bcm_plp_prbs_config_get
+    bcm_plp_prbs_status_get
+    bcm_plp_pam4_tx_set/get
+    bcm_plp_tx_lane_control_set/get
+    bcm_plp_rx_lane_control_set/get
+    bcm_plp_firmware_lane_config_set/get
+    bcm_plp_phy_status_dump
+    bcm_plp_display_eye_scan
+    bcm_plp_eye_margin_proj
+    bcm_plp_prbs_error_analyzer_proj
+    bcm_plp_cleanup
+    bcm_plp_mac_cleanup
+    bcm_plp_mac_fault_option_set/get
+    bcm_plp_mac_flow_control_set/get
+    bcm_plp_mac_store_and_forward_mode_set/get
+    bcm_plp_mac_mib_stat_get
+    bcm_plp_phy_pam4_diagnostics_get
+
+vi) Bug Fixes
+     --------
+      NA
+
+vii) Known Limitations:
+    ------------------
+    No support for Flexing, Octal crossing, Gearbox and Reverse gearbox.
+    No MACSEC and PTP support.
+    No mixed mode support.
+    No support for MUX.
+

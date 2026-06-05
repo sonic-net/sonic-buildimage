@@ -1,0 +1,8 @@
+require "commands.sparrow.fecana"
+require "commands.sparrow.fw"
+require "commands.sparrow.gearbox"
+require "commands.sparrow.phy"
+require "commands.sparrow.port"
+require "commands.sparrow.prbs"
+require "commands.sparrow.rsfec"
+require "commands.sparrow.serdes"

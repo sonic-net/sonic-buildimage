@@ -1,0 +1,317 @@
+#
+# $Id$
+# $Copyright: (c) 2020 Broadcom.
+# Broadcom Proprietary and Confidential. All rights reserved.$
+#
+
+---------------------------------------------------------------------------
+- README file for the PHY software driver                                 -
+---------------------------------------------------------------------------
+
+Description
+-----------
+This package contains PHY software drivers.
+
+Further README contents
+-----------------------
+
+  1. List of key files
+  2. How to Compile
+  3. An example of how to write a sample program to access software driver library using EPDM
+  4. How to access documentation
+  5. How to specify firmware download method
+  6. Microcode Release
+  7. Floating point library requirement
+  8. To enable debug message for register read and write
+  9. Updating PRE defined macro with user defined macro/API
+  10. Warmboot support
+  11. Using EPDM common define to compile driver
+  12. Big Endian Support
+  13. Enabling debugging log
+  14. Enabling BaseT and HSIP Macsec PHY simultaneously
+  15. General Recommendations
+  16. Updating utilities path
+  17. Obtaining and using D2XX driver for FTDI devices
+
+1. List of key files
+--------------------
+
+  README                            - This is README file
+  ReleaseNote.txt                   - List of changes between current releases to
+                                      previous release version
+  ReleaseNote_fw_<chip>.txt         - <chip> firmware release notes.
+  bcm_pm_if                         - PHYMOD Interface functionalities
+  bcm_plp_sec or bcm_plp_base_t_sec - CfyE and SecY Interface functionality or SecY interface support
+  DDK or IMACSEC                    - CfyE and SecY source or SecY support
+  doc                               - Documentation (using Doxygen)
+  <chip>_reference_app              - Sample application to access phy chip
+  make                              - make rules and config files
+  Makefile                          - Makefile provides 'build' and 'clean' the targets
+  phymod/acc                        - Platform specific register access mechanism
+  phymod/chip                       - All supported CHIPs
+  phymod/chip/<chip>                - chip specific functionalities
+  phymod/core                       - PHYMOD APIs for dispatch,access,diagnostics and
+                                      debug
+  phymod/diag                       - PHYMOD diag APIs for eyescan,dsc.. etc
+  phymod/doc                        - Documentation for phymod (using Doxygen)
+  phymod/include                    - Header files, phymod custom config header file
+  phymod/include/phymod             - PHYMOD APIs related header files
+  phymod/include/phymod/acc         - PHYMOD APIs access header files
+  phymod/include/phymod/chip        - PHYMOD APIs chip related header files
+
+
+2. How to compile
+------------------
+
+To compile, unpack it to a directory and run
+
+ To Unpack
+ ---------
+
+ tar -zxvf <CHIP>_<Y>_<Z>.tgz
+
+ To compile
+ ----------
+ cd <CHIP>_<Y>_<Z>.tgz
+ make clean
+ make
+
+3. An example of how to write a sample program to access software driver library using EPDM
+-------------------------------------------------------------------------------------------
+
+Application users have to download EPDM(External PHY Device manager) to their code to access phy drivers.
+
+All supported EPDM APIs are listed under $EPDM/epdm.h and $EPDM/epdm_sec.h(for DDK) or $EPDM/epdm_base_t_sec.h(for IMACSEC).
+
+-> User needs to set $EPDM_HOME in Makefile with the EPDM source code location
+-> User needs to implement the MDIO read/write callbacks. Reference implementation is available in $<CHIP>_<Y>_<Z>/<chip>_reference_app/<chip>_common.c
+-> Below PHY families support Clause 22 MDIO read/write callbacks only
+   BCM541XX (Broncos, Seahawks)
+   BCM542XX (Ravens, Rams, Giants, Cowboys)
+   BCM502XX (Cowboys)
+
+ Example Application program:
+ ----------------------------
+ $<CHIP>_<Y>_<Z>/<chip>_reference_app have an example of accessing PHY driver library through EPDM
+
+
+4. How to access documentation
+-------------------------------
+See the included doc pages for more information on $<CHIP>_<Y>_<Z>.
+
+ Documentation pages available at $<CHIP>_<Y>_<Z>/doc/html/index.html
+5. How to specify firmware download method
+----------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+Broadcast Firmware Download
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+Broadcast Firmware download is a method to broadcast firmware on all phy devices connected on same MDIO bus. Broadcast is supported by MDIO download method.
+Application has to follow below steps to start the broadcast firmware download using this API:
+
+int bcm_plp_init_fw_bcast(char* chip_name, bcm_plp_access_t phy_info,
+                          int (*read)(void* user_acc, unsigned int core_addr, unsigned int reg_addr, unsigned int* val),
+                          int (*write)(void* user_acc, unsigned int core_addr, unsigned int reg_addr, unsigned int val),
+                          bcm_plp_firmware_load_type_t *firmware_load_type,
+                          bcm_plp_firmware_broadcast_method_t broadcast_method);
+
+firmware_load_type.firmware_load_method     Specify the firmware load method
+0 - bcmpmFirmwareLoadMethodNone             Do not download firmware
+1 - bcmpmFirmwareLoadMethodInternal         Internal Firmware Download: MDIO download
+2 - bcmpmFirmwareLoadMethodExternal         Load FW using a user registered function
+3 - bcmpmFirmwareLoadMethodProgEEPROM       Load FW and flash it into EEPROM
+
+firmware_load_type.force_load_method        Force firmware load method
+0 - bcmpmFirmwareLoadSkip                   Skip firmware download if firmware is already present
+1 - bcmpmFirmwareLoadForce                  Always download the firmware specified by firmware load method
+2 - bcmpmFirmwareLoadAuto                   Check the firmware version: if it is different from current version download the firmware,
+                                            otherwise skip the download
+Following steps are followed for broadcast method:
+firmware_load_type.firmware_load_method=bcmpmFirmwareLoadMethodInternal;
+firmware_load_type.force_load_method=bcmpmFirmwareLoadForce;
+
+Identify list of PHY's that needs to be broadcasted on a MDIO Bus which is refered as BCAST_LIST, To perform broadcast follow below steps,
+i)   For each PHY in BCAST_LIST call,
+     bcm_plp_init_fw_bcast("chip_name",phy_info, read, write, &firmware_load_type, bcmpmFirmwareBroadcastCoreReset); ## This Hard reset the core.
+
+ii)  For each PHY in BCAST_LIST call,
+     bcm_plp_init_fw_bcast("chip_name",phy_info, read, write, &firmware_load_type, bcmFirmwareBroadcastEnable); ## Enable Broadcast mode, Broadcast Starts
+
+iii) Load Firmware for any one Phy/Core in BCAST_LIST,
+     bcm_plp_init_fw_bcast("chip_name",phy_info, read, write, &firmware_load_type, bcmFirmwareBroadcastFirmwareExecute); ## Download MICROCODE
+
+iv)  For each PHY in BCAST_LIST call,
+     bcm_plp_init_fw_bcast("chip_name",phy_info, read, write, &firmware_load_type, bcmFirmwareBroadcastFirmwareVerify); ## verify FW
+
+v)   For each PHY in BCAST_LIST call,
+     bcm_plp_init_fw_bcast("chip_name",phy_info, read, write, &firmware_load_type, bcmFirmwareBroadcastEnd); ## End of broadcast
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+Unicast Firmware Download
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+Unicast firmware download can also be acheived through "bcm_plp_init_fw_bcast", By calling with bcmFirmwareBroadcastNone API as follows,
+  bcm_plp_init_fw_bcast("chip_name",phy_info, read, write,&firmware_load_type,bcmFirmwareBroadcastNone);
+
+
+6. Microcode Release
+--------------------
+i) Hex version of microcode(firmware) file, <chip>_ucode.c available in
+$<CHIP>_<Y>_<Z>/phymod/chip/<phy chip>/tier1
+
+<Version> denotes the version of the firmware.
+<chip>    denotes the phy chip
+
+7. Floating Point Library Requirement:
+--------------------------------------
+bcm_pm_if_eye_margin_proj API requires floating point library support.
+User has to compile ePIL with SERDES_API_FLOATING_POINT in config.mk as mentioned below(conditional compilation flag, specified in make file with -D option)
+for enabling bcm_pm_if_eye_margin_proj API support.
+
+TMP_PHYMOD_EPIL_CPPFLAGS += -DSERDES_API_FLOATING_POINT
+before
+export PHYMOD_EPIL_DSYM_CPPFLAGS
+
+Please note that the user must add -DSERDES_API_FLOATING_POINT in user application Makefile if epdm.h file is used due to a newer version of EPDM is being used
+
+8. To enable debug message for register read and write:
+-------------------------------------------------------
+Add TMP_PHYMOD_EPIL_CPPFLAGS += -DPHYMOD_DEBUG_BUS_WRITE -DPHYMOD_DEBUG_BUS_READ in make\config.mk file
+
+9. Updating PRE defined PHYMOD macro with user defined macro/API
+----------------------------------------------------------------
+PHYMOD provides a way to update pre defined macro with user defined API.
+User needs to update macros in $<CHIP>_<Y>_<Z>/phymod/include/phymod_custom_config.h based on user environment.
+
+eg: #define PHYMOD_USLEEP        user_usleep
+
+10. Port Macro Warmboot Support(does not include Macsec Warmboot, for Macsec Warmboot, see section 10.1)
+--------------------------------------------------------------------------------------------------------
+Application has to follow below steps to perform warmboot,
+
+   1. To enable driver to supports warmboot,
+       Compile with TMP_PHYMOD_EPIL_CPPFLAGS += -DBCM_PLP_WARM_BOOT_SUPPORT -DBCM_WARM_BOOT_SUPPORT in make\config.mk file
+
+   2. To use warmboot feature,
+       Call bcm_plp_init API or bcm_plp_init_fw_bcast API (for broadcast enabled init) with
+       flags(under bcm_plp_info structure) as BCM_PLP_WARM_BOOT.
+       For MACSEC module(This applies for Evora/Europa/Miura chipsets only),
+          Call bcm_plp_cyfe_device_init with flags(under bcm_plp_info structure) as BCM_PLP_WARM_BOOT and
+          Call bcm_plp_secy_device_init with flags(under bcm_plp_info structure) as BCM_PLP_WARM_BOOT.
+
+    3. Choose  FW load method as below:
+          fw_load_type.firmware_load_method = bcmpmFirmwareLoadMethodNone;
+          fw_load_type.force_load_method    = bcmpmFirmwareLoadSkip;
+
+NOTE: For cold boot it is expected to clear flags (under bcm_plp_info structure)
+
+10.1 MACSEC Warmboot(applies to Aperta chipsets only)
+-----------------------------------------------------
+     - This feature when enabled, helps to save and restore running Macsec Configuration.
+     - Enable Port Macro Warmboot in the previous section 10, if enabling Macsec Warmboot
+       Macsec Pre-warmboot:
+     - Compile the driver with MACSEC enabled
+     - Compile the driver with -DBCM_PLP_MACSEC_WARM_BOOT_SUPPORT enabled in make/config.mk
+         * Uncomment #TMP_PHYMOD_EPIL_CPPFLAGS += -DBCM_PLP_MACSEC_WARM_BOOT_SUPPORT in make/config.mk
+         * During Pre-warmboot or coldboot of the PHY device, Configure PHY for macsec and save all the needed macsec config in persistent memory(files /tmp/warmbootfile0../tmp/warmbootfile8)
+           see reference app aperta_macsec_transform_pre_warmboot_100G_4x25G_NRZ.c
+       Macsec Warmboot:
+     - Compile the driver with MACSEC enabled
+     - Compile the driver with -DBCM_PLP_MACSEC_WARM_BOOT_SUPPORT enabled in make/config.mk
+         * Uncomment #TMP_PHYMOD_EPIL_CPPFLAGS += -DBCM_PLP_MACSEC_WARM_BOOT_SUPPORT in make/config.mk
+         * Macsec configuration is not required, see reference app, aperta_macsec_transform_warmboot_100G_4x25G_NRZ.c
+         *This will Warmboot the PHY device, and restore all macsec config from persistent memory(files /tmp/warmbootfile0../tmp/warmbootfile8)
+         *
+         * When the driver is initialized and runs, it uses the provided callback
+         * functions to allocate space to store driver state and to write updated
+         * driver state. The callback functions are responsible for maintaining
+         * the stored state in a memory that will be preserved when the CPU is
+         * restarted.
+         *
+         * Warm boot: the hardware device remains operational, while the CPU running
+         * the software is restarted. This restart can be either planned or unexpected.
+         *
+         * For a planned warm boot, the application is supposed to call
+         * bcm_plp_warmboot_shutdown() for each of the data items allocated by the
+         * driver through this API. This allows the driver to relinquish
+         * software resources without shutting down the hardware devices, so
+         * the CPU can restart in an orderly manner.
+         * For an unexpected warm boot, bcm_plp_warmboot_shutdown() will not be called.
+         * After a warm boot:
+         * - bcm_plp_warmboot_register()
+         *        to register callbacks with the API.
+         * - For each of the data items allocated by the driver through this API:
+         *   - bcm_plp_warmboot_restore()
+         *        to restore all driver internal state, which corresponds to the
+         *        state of the running hardware.
+         * No other driver API calls are permitted before the last bcm_plp_warmboot_restore() call returns.
+
+
+
+11. Using EPDM with multiple chip family drivers
+------------------------------------------------
+    If user intends to use an EPDM version that is different (and newer) than the one released with the PHY driver
+    the following steps need to be followed to enable the driver to use epdm common defines.
+       Step 1: Uncomment and define EPDM_HOME based on your EPDM installation directory in make\config.mk file
+       Step 2: Compile with TMP_PHYMOD_EPIL_CPPFLAGS += -DUSE_EPDM_COMMON_DEFINES in make\config.mk file
+
+    Note: By default driver uses common defines that is available in the driver package.
+
+12. Big Endian Support
+----------------------
+   Application has to follow below step to enable the support for Big Endian host (applicable
+   to selected PHYs, please refer to user guide)
+
+       Compile with TMP_PHYMOD_EPIL_CPPFLAGS += -DBE_HOST in make/config.mk file
+
+13. Enabling Debug Log
+----------------------
+    Debug log can be enabled for PHY driver by changing PHYMOD_LOG_SEVERITY_LEVEL
+    and PHYMOD_DEBUG_SUB_LEVEL (Sub-Layer debugging) to desired severity level inside phymod_custom_config.h header file.
+    PHYMOD_LOG_SEVERITY_LEVEL defines the debug log level for the entire system
+    Supported debug log levels are:
+       0 - PHYMOD_LOG_SEVERITY_NO_INFO     : No information message is displayed while initialization
+                                             except error and diagnostics API log. This is enabled when user does not want initialization
+                                             information be displayed.
+       1 - PHYMOD_LOG_SEVERITY_CRITICAL_INFO : Display critical information that provides top level view of the
+                                             phy chip initialization. This is enabled by default.
+       2 - PHYMOD_LOG_SEVERITY_DEBUG_INFO    : This will enable complete debugging info log. Recommended for debug purposes.
+       Log priority 0, 1, and 2 denote priority from highest to lowest. For example, when PHYMOD_LOG_SEVERITY_LEVEL is set to
+       PHYMOD_LOG_SEVERITY_DEBUG_INFO, log for higher priority (PHYMOD_LOG_SEVERITY_CRITICAL_INFO) will be enabled, as well,
+       which will include critical information as well as complete debug information.
+    Default severity level is set to critical in phymod_custom_config.h:
+    #define PHYMOD_LOG_SEVERITY_LEVEL                  PHYMOD_LOG_SEVERITY_CRITICAL_INFO
+
+    Sub-layer debugging can be enabled or disabled selectively:
+    Note: it is enabled for selected layers if PHYMOD_LOG_SEVERITY_LEVEL is set to PHYMOD_LOG_SEVERITY_DEBUG_INFO.
+    Following sub-layers are defined as bit fields:
+        DEBUG_BCM      0x1    : BCM layer log
+        DEBUG_PHYMOD   0x2    : PHYMOD layer log
+        DEBUG_DRIVER   0x4    : Chip specific driver log
+        DEBUG_MISC     0x8    : Low level debug log from Firmware, SerDes, etc.
+        DEBUG_BUS      0x10   : Debug log for MDIO BUS read/write
+        DEBUG_DEV      0x20   : Development debug info
+    e.g. #define DEBUG_ALL       (DEBUG_BCM | DEBUG_PHYMOD | DEBUG_DRIVER | DEBUG_MISC)
+    #define PHYMOD_DEBUG_SUB_LEVEL   DEBUG_ALL
+
+14. Enabling both BaseT and HSIP Macsec PHY simultaneously
+    ------------------------------------------------------
+    - If the user application requires to enable both BaseT and HSIP Macsec PHY simultaneously, then BASET_HSIP_MACSEC_SUPPORT
+        should be defined in the user application's Makefile.
+
+15. General Recommendations
+    -----------------------
+    - All unused input parameters are recommended to be initialized to zero.
+
+16. Updating utilities path
+    -----------------------
+    - The driver package sets the default utilities path.  If needed, user can override default path 
+      by updating below define in make/config.mk file.
+      
+      EPIL_UTIL_PATH 
+
+17. Obtaining and using D2XX driver for FTDI devices
+    ------------------------------------------------
+    - The driver package for FTDI devices can be downloaded from https://ftdichip.com/drivers/d2xx-drivers/.
+      Users need to select the correct files for their host OS and HW architecture. To compile and use 
+      Broadcom provided reference applications WinTypes.h, ftd2xx.h and libftd2xx.a are needed.  The 
+      reference application Makefile needs to be modified to provide path to D2XX driver using FTDI_HOME
+      variable. 

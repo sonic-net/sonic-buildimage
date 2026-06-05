@@ -1,0 +1,253 @@
+----------------------------------------------------------------------------------------------
+Release notes for Version - D012
+----------------------------------------------------------------------------------------------
+1. Enhancement to fail-over mux switch sequence.
+2. Enhancements to AN timeout for NRZ modes.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_img_D012.bin 74176 bytes, MD5 checksum: 3e5c8a3cf5af514a17a2ec6882d6ab4a
+2. Chip level FW CRC: 0x895A
+3. Blackhawk Serdes FW CRC: 0x4865
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D011
+----------------------------------------------------------------------------------------------
+1. Added FEC support to Failover MUX ports.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_img_D011.bin 74560 bytes, MD5 checksum: 6c5d68c2716ecb42c94af9a03e5a6e98
+2. Chip level FW CRC: 0x45D9
+3. Blackhawk Serdes FW CRC: 0x4865
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D010
+----------------------------------------------------------------------------------------------
+1. Serdes FW updated to the latest version: D003_0E.
+2. Improvements to AutoNeg:
+    a. Allow user programmable link fail inhibit timer
+    b. Allow simultaneous AN on one side with forced Link training on the other
+3. Provide ability to read/write/erase EEPROM.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_img_D010.bin 73984 bytes, MD5 checksum: c73e906b89bafe161fa9973ed55c94f1
+2. Chip level FW CRC: 0xC88C
+3. Blackhawk Serdes FW CRC: 0x4865
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D00E
+----------------------------------------------------------------------------------------------
+1. Serdes FW updated to the latest version: D003_0C.
+2. Added option for the FW to program user provided FIR values in Remote PHY application, for both LPHY and RPHY on the line sides when AutoNeg is
+   enabled without link training.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_img_D00E.bin 72576 bytes, MD5 checksum: 191c1acd5d97c8246327c84ce5210f15
+2. Chip level FW CRC: 0x0D0E
+3. Blackhawk Serdes FW CRC: 0x4D35
+
+----------------------------------------------------------------------------------------------
+ Please note - D00B to D00D versions are intentionally skipped
+----------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D00A
+----------------------------------------------------------------------------------------------
+Features added/updated from D009:
+---------------------------------
+1. Serdes FW updated to the latest version: D003_0A
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_a0_img_D00A.bin 72064 bytes, MD5 checksum: 7649030cc99fafe020df1caf857bc386
+2. Chip level FW CRC: 0x28EA
+3. Blackhawk Serdes FW CRC: 0xDD1E
+
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D009
+----------------------------------------------------------------------------------------------
+Features added/updated from D008:
+---------------------------------
+1. Serdes FW updated to the latest version: D003_07
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_a0_img_D009.bin 71552 bytes, MD5 checksum: 38b8463c252d930aa6bc15de1139028c
+2. Chip level FW CRC: 0x6C18
+3. Blackhawk Serdes FW CRC: 0xDEBF
+
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D008
+----------------------------------------------------------------------------------------------
+Features added/updated from D006:
+---------------------------------
+1. Blackhawk Serdes firmware is updated to D003_06.
+2. Fixed issues with HW-FW interaction during AN
+3. Support proprietary AN without link training (NRZ)
+4. Fixed issues in failover mux switching
+5. Added support to Blackhawk FW longer than 64k bytes.
+
+Barchetta firmware image file information:
+-----------------------------------------
+1. barchetta_img_D008.bin 71296 bytes, MD5 checksum: dc217aeb541d3bd463fec69891eeb2bd
+2. Chip level FW CRC: 0x25DC
+3. Blackhawk Serdes FW CRC: 0xB5D5
+
+
+----------------------------------------------------------------------------------------------
+Please note - D007 version number is internally skipped
+----------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D006
+----------------------------------------------------------------------------------------------
+Features added/updated from D005:
+---------------------------------
+1. Blackhawk Serdes firmware is updated to D002_01.
+    a. Improved performance at VT corners
+    b. Improved link training times
+2. Autoneg in 40G-KR4/CR4 mode now supports any lane as master lane
+3. Autoneg restart issue in PAM4 modes fixed
+
+Known issues:
+------------
+1. AN in RPHY works only with Link Training enabled
+ 
+Barchetta firmware image file information:
+-----------------------------------------
+1. Barchetta_img_D006.bin 67520 bytes, MD5 checksum: ef871459f7e1cd4b3e5dc833d99ecad9
+2. Chip level FW CRC: 0xD65B
+3. Blackhawk Serdes FW CRC: 0xA647
+
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - D005
+----------------------------------------------------------------------------------------------
+New features from D004
+-----------------------
+1. Added support for RPHY application in three speed modes
+          RPHY_10G (10G)
+          RPHY_25G (25G)
+          RPHY_50G (25G/50G).
+2. Blackhawk Serdes firmware updated to D002_00.
+ 
+Known Issues
+------------
+1. 40G-KR4/CR4 AN fails when master lane is not 0.
+2. AN in RPHY works only with Link Training enabled
+ 
+Barchetta firmware image file information:
+-----------------------------------------
+1. Barchetta_img_D005.bin 67264 bytes, MD5 checksum: 9e35c1afd35ef4c7012021724c2bbd36
+2. Chip level FW CRC: 0x0C0E
+3. Blackhawk Serdes FW CRC: 0x275B
+
+----------------------------------------------------------------------------------------------
+Release notes for version - D004
+----------------------------------------------------------------------------------------------
+New features from D003:
+-----------------------
+(1) Enable FEC for NRZ traffic per autonegotiation results.
+(2) CL91 FEC mandated by IEEE standard for 100G-CR4/KR4 can be forced off with config
+    port or modify port messages.
+(2) Add per-side option to disable PRBS at non-AN side when AN speed-negotiation and
+    link training.
+(3) Add per-side option to disable link fail inhibit timer during AN.
+
+Bug fixes and improvements:
+---------------------------
+(1) Improvements to datapath state machine and AN code for better robustness.
+
+Know issues and limitations:
+----------------------------
+(1) 40G-KR4/CR4 AN fails when master lane is not 0.
+(2) No AN support with PAM4 traffic.
+
+Blackhawk SerDes version -- E001_0A
+
+----------------------------------------------------------------------------------------------
+Release notes for version - C006
+----------------------------------------------------------------------------------------------
+New features from D003:
+-----------------------
+This is same as D003 except support propritary AN feature.
+ 
+Known issues:
+-------------
+Same as D003
+
+Blackhawk SerDes version -- E001_0A
+
+----------------------------------------------------------------------------------------------
+Release notes for version - D003
+----------------------------------------------------------------------------------------------
+New features from D002:
+-----------------------
+(1) Link training on both sides with PAM4 traffic.
+(2) AN support on system side with NRZ traffic. 
+    [Tested with 100G-KR4/CR4, 50G-CR2/KR2, 40G-KR4/CR4, 25G-CR/KR and 10G-KR]
+(3) Limited FEC ability supported in AN.
+ 
+Known issues:
+-------------
+(1) 40G-KR4/CR4 AN fails when master lane is not 0.
+(2) Limited FEC ability supported in AN.
+    [RS FEC with 25G-CR/KR is not supported]
+(3) No AN support with PAM4 traffic.
+
+Blackhawk SerDes version -- D101_03
+
+----------------------------------------------------------------------------------------------
+Release notes for version - D002
+----------------------------------------------------------------------------------------------
+New features from D001:
+-----------------------
+(1) Link tranining on both sides with NRZ traffic.
+(2) AN support on line side with NRZ traffic. Tested with 25G-CR/KR and 10G-KR.
+ 
+Known issues:
+-------------
+(1) 40G-KR4/CR4 AN fails when master lane is not 0.
+(2) 50G/100G AN link up has some inconsistency
+(3) FEC ability is not supported.
+(4) No link training or AN support with PAM4 traffic.
+ 
+Blackhawk SerDes version -- D101_02
+
+----------------------------------------------------------------------------------------------
+Firmware version: D001
+----------------------------------------------------------------------------------------------
+Known issue(s):
+--------------
+ 1. First development version supports 400G/200G/100G/50G/40G/10G
+ 2. Transmit Training and Auto-Negotiation are not Supported.
+
+Technical Details:
+------------------
+   - Serdes uCode version 
+      BlackHawk - D001_0 
+   - Ucode Image file
+      barchetta_img_D001.bin 60864 bytes, MD5 checksum: 4ec9a495416c1b804f71988dcceebd73
+
+
+----------------------------------------------------------------------------------------------
+Firmware version: E001
+----------------------------------------------------------------------------------------------
+First engineering version with basic functionalities tested.
+
+Technical Details:
+------------------
+Serdes uCode version - D001_0 
+Image file info:
+Barchetta firmware image file information:
+barchetta_img_E001.bin 60864 bytes, MD5 checksum: 773cbfa202bf2e86720dd5071f684720
+
+
+
+

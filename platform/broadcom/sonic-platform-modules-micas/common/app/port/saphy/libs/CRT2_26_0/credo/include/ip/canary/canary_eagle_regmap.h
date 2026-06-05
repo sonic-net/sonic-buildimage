@@ -1,0 +1,91 @@
+#ifndef CANARY_EAGLE_REGMAP_H
+#define CANARY_EAGLE_REGMAP_H
+
+//  Eagle state machine
+#define REG_EAGLE_RX_CNTR_TARGET               REGBITR(EAGLE, 0x02, 15, 4)
+#define REG_EAGLE_RX_DELTA_ADAPT_EN            REGBITR(EAGLE, 0x01, 14)
+#define REG_EAGLE_RX_TIMER_MEAS_S6             REGBITR(EAGLE, 0x08, 7, 4)
+#define REG_EAGLE_RX_EM_EN                     REGBITR(EAGLE, 0x09, 15)
+#define REG_EAGLE_RX_MAX_EYE_DELTA_OWEN        REGBITR(EAGLE, 0x0A, 14)
+#define REG_EAGLE_RX_DELTA_OWEN                REGBITR(EAGLE, 0x0A, 12)
+#define REG_EAGLE_RX_BP1_EN                    REGBITR(EAGLE, 0x0B, 15)
+#define REG_EAGLE_RX_BP1_ST                    REGBITR(EAGLE, 0x0B, 12, 8)
+#define REG_EAGLE_RX_BP2_EN                    REGBITR(EAGLE, 0x0B, 7)
+#define REG_EAGLE_RX_BP2_ST                    REGBITR(EAGLE, 0x0B, 4, 0)
+#define REG_EAGLE_RX_SM_CONT                   REGBITR(EAGLE, 0x0C, 15)
+#define REG_EAGLE_RX_ACAL_DONE_OW              REGBITR(EAGLE, 0x0C, 0)
+#define REG_EAGLE_RX_ACAL_DONE_OWEN            REGBITR(EAGLE, 0x0C, 1)
+#define REG_EAGLE_RX_BP1_REACHED               REGBITR(EAGLE, 0x0D, 15)
+#define REG_EAGLE_RX_BP2_REACHED               REGBITR(EAGLE, 0x0D, 14)
+#define REG_EAGLE_RX_STATE                     REGBITR(EAGLE, 0x0D, 12, 8)
+#define REG_EAGLE_RX_DELTA                     REGBITR(EAGLE, 0x0D, 6, 0)
+#define REG_EAGLE_RX_FIXED_PATT_PLUS_MARGIN_H  REGBITR(EAGLE, 0x27, 3, 0)    // HIGH
+#define REG_EAGLE_RX_FIXED_PATT_PLUS_MARGIN_L  REGBITR(EAGLE, 0x28, 15, 8)   // LOW
+#define REG_EAGLE_RX_FIXED_PATT_MINUS_MARGIN_H REGBITR(EAGLE, 0x28, 7, 0)    // HIGH
+#define REG_EAGLE_RX_FIXED_PATT_MINUS_MARGIN_L REGBITR(EAGLE, 0x29, 15, 12)  // LOW
+#define REG_EAGLE_RX_MAX_EYE_MARGIN            REGBITR(EAGLE, 0x29, 11, 0)
+#define REG_EAGLE_RX_EM                        REGBITR(EAGLE, 0x2A, 11, 0)
+#define REG_EAGLE_RX_MAX_EYE_DELTA             REGBITR(EAGLE, 0x2B, 14, 8)
+#define REG_EAGLE_RX_F1                        REGBITR(EAGLE, 0x2B, 6, 0)
+#define REG_EAGLE_RX_F2                        REGBITR(EAGLE, 0x2C, 14, 8)
+#define REG_EAGLE_RX_F3                        REGBITR(EAGLE, 0x2C, 6, 0)
+#define REG_EAGLE_RX_KP                        REGBITR(EAGLE, 0x2E, 14, 12)
+#define REG_EAGLE_RX_KF                        REGBITR(EAGLE, 0x2E, 8, 7)
+#define REG_EAGLE_RX_SD                        REGBITR(EAGLE, 0x2E, 3)
+#define REG_EAGLE_RX_RDY                       REGBITR(EAGLE, 0x2E, 2)
+#define REG_EAGLE_RX_KP_OWEN                   REGBITR(EAGLE, 0x3B, 15)
+#define REG_EAGLE_RX_KP_OW                     REGBITR(EAGLE, 0x3B, 14, 12)
+#define REG_EAGLE_RX_KTHETA_OWEN               REGBITR(EAGLE, 0x3B, 10)
+#define REG_EAGLE_RX_KTHETA_OW                 REGBITR(EAGLE, 0x3B, 9, 8)
+#define REG_EAGLE_RX_KF_OWEN                   REGBITR(EAGLE, 0x3B, 7)
+#define REG_EAGLE_RX_KF_OW                     REGBITR(EAGLE, 0x3B, 6, 5)
+#define REG_EAGLE_RX_ACAL_CLK_EN_OWEN          REGBITR(EAGLE, 0x45, 15)
+#define REG_EAGLE_RX_ACAL_CLK_EN_OW            REGBITR(EAGLE, 0x45, 7)
+#define REG_EAGLE_RX_ACAL_START_OW             REGBITR(EAGLE, 0x44, 7)
+#define REG_EAGLE_RX_ACAL_START_OWEN           REGBITR(EAGLE, 0x44, 15)
+#define REG_EAGLE_RX_OF_PERIOD                 REGBITR(EAGLE, 0x4A, 11, 7)
+#define REG_EAGLE_RX_HF_PERIOD                 REGBITR(EAGLE, 0x4C, 12, 8)
+#define REG_EAGLE_RX_OF_THS                    REGBITR(EAGLE, 0x4A, 6, 0)
+#define REG_EAGLE_RX_HF_THS                    REGBITR(EAGLE, 0x4C, 6, 0)
+#define REG_EAGLE_RX_OF_CNTR_UPPER_LIMIT       REGBITR(EAGLE, 0x48, 15, 0)
+#define REG_EAGLE_RX_OF_CNTR_LOWER_LIMIT       REGBITR(EAGLE, 0x49, 15, 0)
+#define REG_EAGLE_RX_HF_CNTR_TARGET            REGBITR(EAGLE, 0x4B, 15, 0)
+#define REG_EAGLE_RX_AGC_OW                    REGBITR(EAGLE, 0x4E, 13, 11)
+#define REG_EAGLE_RX_AGC_OWEN                  REGBITR(EAGLE, 0x4D, 15)
+#define REG_EAGLE_RX_DELTA_OW                  REGBITR(EAGLE, 0x5F, 6, 0)
+#define REG_EAGLE_RX_DAC_OW                    REGBITR(EAGLE, 0x4F, 15, 12)
+#define REG_EAGLE_RX_DAC_OWEN                  REGBITR(EAGLE, 0x4C, 7)
+#define REG_EAGLE_RX_MAX_EYE_DELTA_OW          REGBITR(EAGLE, 0x5F, 14, 8)
+#define REG_EAGLE_RX_DAC                       REGBITR(EAGLE, 0x7F, 15, 12)
+#define REG_EAGLE_RX_RESTART_CNTR              REGBITR(EAGLE, 0x7F, 4, 0)
+#define REG_EAGLE_RX_LANE_RST                  REGBITR(EAGLE, 0x81, 11)
+
+//  Eagle RX digital top
+#define REG_EAGLE_RX_ERR_CNTR_RST      REGBITR(EAGLE, 0x61, 15)  // USE SYNC ERR CNTR
+#define REG_EAGLE_RX_POL               REGBITR(EAGLE, 0x61, 14)  // FIRMWARE FLIP [8], CUSTOMER FLIP [7]
+#define REG_EAGLE_RX_PRBS_CHECKER_PU   REGBITR(EAGLE, 0x61, 10)  // USE SYNC CHECKER
+#define REG_EAGLE_RX_PRBS_MODE         REGBITR(EAGLE, 0x61, 13, 12)
+#define REG_EAGLE_RX_THETA_UPDATE_MODE REGBITR(EAGLE, 0x65, 7, 5)
+#define REG_EAGLE_RX_FIXED_PATT_MODE   REGBITR(EAGLE, 0x65, 4, 1)
+#define REG_EAGLE_RX_ERR_CNTR_MSB      REGBITR(EAGLE, 0x66, 15, 0)
+#define REG_EAGLE_RX_ERR_CNTR_LSB      REGBITR(EAGLE, 0x67, 15, 0)
+#define REG_EAGLE_RX_FREQ_ACCUM        REGBITR(EAGLE, 0x73, 10, 0)
+#define REG_EAGLE_RX_TOP_ROTATOR_EN    REGBITR(EAGLE, 0x75, 15)
+#define REG_EAGLE_RX_AGC_MAP0          REGBITR(EAGLE, 0x76, 15, 0)  // HIGHEST PEAKING
+#define REG_EAGLE_RX_AGC_MAP1          REGBITR(EAGLE, 0x77, 15, 0)
+#define REG_EAGLE_RX_AGC_MAP2          REGBITR(EAGLE, 0x78, 15, 0)  // LOWEST PEAKING
+#define REG_EAGLE_RX_AGC_ENTRY7        REGBITR(EAGLE, 0x78, 5, 0)
+#define REG_EAGLE_RX_BB_EN             REGBITR(EAGLE, 0x79, 6)
+#define REG_EAGLE_RX_MODE10G           REGBITR(EAGLE, 0x79, 0)
+#define REG_EAGLE_RX_PATT_CNT          REGBITR(EAGLE, 0x74, 15, 0)
+#define REG_EAGLE_NRZ_TRF              REGBITR(EAGLE, 0x7A, 12, 0)
+#define REG_EAGLE_NRZ_TRF_SPEED_SEL    REGBITR(EAGLE, 0x7A, 12, 8)
+#define REG_EAGLE_NRZ_TRF_FREQ         REGBITR(EAGLE, 0x7A, 4, 3)
+
+//  FFE related registers
+#define REG_EAGLE_RX_FFE_SF_MSB REGBITR(EAGLE, 0xE1, 15, 12)
+#define REG_EAGLE_RX_FFE_SF_LSB REGBITR(EAGLE, 0xE1, 7, 4)
+
+// #define REG_EAGLE_RX_F1OVER3                 REGBITR(EAGLE, 0x004,11,5)
+
+#endif
