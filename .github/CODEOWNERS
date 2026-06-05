@@ -62,11 +62,11 @@
 /src/hiredis/                           @sonic-net/sonic-management
 
 # yang
-/src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft
-/src/sonic-yang-mgmt/                   @sonic-net/sonic-management
-/src/libyang/                           @sonic-net/sonic-management
-/src/libyang3/                          @sonic-net/sonic-management
-/src/libyang3-py3/                      @sonic-net/sonic-management
+/src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft @vaibhavhd
+/src/sonic-yang-mgmt/                   @sonic-net/sonic-management @vaibhavhd
+/src/libyang/                           @sonic-net/sonic-management @vaibhavhd
+/src/libyang3/                          @sonic-net/sonic-management @vaibhavhd
+/src/libyang3-py3/                      @sonic-net/sonic-management @vaibhavhd
 
 # bgpcfgd
 /src/sonic-bgpcfgd/                     @StormLiangMS
