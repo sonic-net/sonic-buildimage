@@ -1,0 +1,48 @@
+/***********************************************************************************
+ *                                                                                 *
+ * Copyright: (c) 2021 Broadcom.                                                   *
+ * Broadcom Proprietary and Confidential. All rights reserved.                     *
+ *                                                                                 *
+ ***********************************************************************************/
+
+/***********************************************************************************
+ ***********************************************************************************
+ *                                                                                 *
+ *  Revision      :   *
+ *                                                                                 *
+ *  Description   :  Common types used by Serdes API functions                     *
+ *                                                                                 *
+ ***********************************************************************************
+ ***********************************************************************************/
+
+/** @file srds_api_types.h
+ * Common types used by Serdes API functions
+ * This file contains types which are common to all serdes cores
+ */
+
+#ifndef SRDS_API_TYPES_H
+#define SRDS_API_TYPES_H
+
+#include <phymod/phymod.h>
+
+#define srds_access_t const plp_barchetta_phymod_access_t
+
+typedef struct {
+    uint32_t signature;
+    uint32_t diag_mem_ram_base;
+    uint32_t diag_mem_ram_size;
+    uint32_t core_var_ram_base; /* Must be the same as CORE_VAR_RAM_BASE */
+    uint32_t core_var_ram_size;
+    uint32_t lane_var_ram_base; /* Must be the same as LANE_VAR_RAM_BASE */
+    uint32_t lane_var_ram_size; /* Must be the same as LANE_VAR_RAM_SIZE */
+    uint32_t trace_mem_ram_base;
+    uint32_t trace_mem_ram_size;
+    uint32_t micro_var_ram_base;
+    uint8_t  lane_count; /* lanes per micro */
+    uint8_t  trace_memory_descending_writes;
+    uint8_t  micro_count;
+    uint8_t  micro_var_ram_size;
+    uint16_t grp_ram_size;
+    uint32_t ucode_version;
+} srds_info_t;
+#endif

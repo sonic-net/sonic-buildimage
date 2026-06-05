@@ -1,0 +1,8 @@
+require "commands.nighthawk.eye"
+require "commands.nighthawk.fecana"
+require "commands.nighthawk.fw"
+require "commands.nighthawk.lane"
+require "commands.nighthawk.phy"
+require "commands.nighthawk.prbs"
+require "commands.nighthawk.serdes"
+require "commands.nighthawk.pll"

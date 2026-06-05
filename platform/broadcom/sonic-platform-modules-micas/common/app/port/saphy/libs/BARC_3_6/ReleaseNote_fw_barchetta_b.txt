@@ -1,0 +1,86 @@
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB09
+----------------------------------------------------------------------------------------------
+1. Enhancement to fail-over mux switch sequence.
+2. Enhancements to AN timeout for NRZ modes.
+3. Serdes firmware updated to D100_13
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_b0_img_DB09.bin 85696 bytes, MD5 checksum: f907b99048376351198d818c62e0ff96
+2. Chip level FW CRC: 0x2E79
+3. Blackhawk Serdes FW CRC: 0x7EF5
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB08
+----------------------------------------------------------------------------------------------
+1. Serdes FW updated to the latest version: D100_0B.
+2. Added FEC support to Failover MUX ports.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_b0_img_DB08.bin 85824 bytes, MD5 checksum: adcda7381b96bf27c822f16c6fe1a6e2
+2. Chip level FW CRC: 0xA82C
+3. Blackhawk Serdes FW CRC: 0x22FE
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB07
+----------------------------------------------------------------------------------------------
+1. Serdes FW updated to the latest version: D100_09.
+2. Improvements to AutoNeg:
+    a. Allow user programmable link fail inhibit timer
+    b. Allow simultaneous AN on one side with forced Link training on the other
+3. Provide ability to read/write/erase EEPROM.
+
+Barchetta firmware image file information:
+-----------------------------------------------------
+1. barchetta_b0_img_DB07.bin 84800 bytes, MD5 checksum: cb77a1c347074b72903f7f0679084948
+2. Chip level FW CRC: 0xB5BF
+3. Blackhawk Serdes FW CRC: 0x5393
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB06
+----------------------------------------------------------------------------------------------
+Features added/updated:
+-----------------------
+1. Serdes FW updated to the latest version: D100_07
+2. Fix a bug that affects PAM4 Auto Neg
+3. Updated FW to allow user to force ns/es option during PAM4 link training.
+
+Barchetta firmware image file information:
+------------------------------------------
+1. barchetta_b0_img_DB06.bin 82944 bytes, MD5 checksum: 3be18b6b2b7a798865d9dabce7ad476d
+2. Chip level FW CRC: 0xD0D5.
+3. Blackhawk Serdes FW CRC: 0xC038
+
+----------------------------------------------------------------------------------------------
+ Please note - DB04 and DB05 versions are intentionally skipped
+----------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB03
+----------------------------------------------------------------------------------------------
+Features added/updated:
+-----------------------
+1. Serdes FW updated to the latest version: D100_05
+
+Barchetta firmware image file information:
+------------------------------------------
+1. barchetta_b0_img_DB03.bin 82816 bytes, MD5 checksum: 9e42eb49dc7198d8539d65359a9cb5d6
+2. Chip level FW CRC: 0x718E
+3. Blackhawk Serdes FW CRC: 0x4F5A
+
+----------------------------------------------------------------------------------------------
+Release notes for Version - DB01
+----------------------------------------------------------------------------------------------
+Features added/updated:
+-----------------------
+1. First developmental FW for B0 silicon revision.
+2. Serdes FW updated to the latest version: D100_02
+
+Barchetta firmware image file information:
+------------------------------------------
+1. barchetta_b0_img_DB01.bin 80832 bytes, MD5 checksum: 84b876eee0f3c5cf223e976c60a52550
+2. Chip level FW CRC: 0x5B62
+3. Blackhawk Serdes FW CRC: 0xF542
+

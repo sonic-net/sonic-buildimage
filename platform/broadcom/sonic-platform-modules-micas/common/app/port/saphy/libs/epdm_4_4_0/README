@@ -1,0 +1,62 @@
+#
+# $Id$
+# $Copyright: (c) 2020 Broadcom.
+# Broadcom Proprietary and Confidential. All rights reserved.$
+#
+
+---------------------------------------------------------------------------
+- README file for the External Phy Device Manager (EPDM) 
+---------------------------------------------------------------------------
+ 
+1) Description
+   -----------
+   EPDM provides common API interface for Broadcom External PHY drivers.
+ 
+2) To Unpack
+   --------- 
+   tar -zxvf epdm.<x.y.z>.tgz 
+ 
+3) EPDM usage
+   ----------
+    EPDM is not a PHY driver source, user cannot use EPDM package as standalone source. It always needs to be used with PHY driver source. 
+ 
+4) Recommendation for EPDM usage
+   -----------------------------
+   - User needs to compile and create the epdm library with the required driver support turned on in the Makefile. 
+
+    Example 1
+    ---------
+    To enable evora support, uncomment following defines in the Makefile, 
+       CFLAGS += -DPLP_EVORA_SUPPORT
+       CFLAGS += -DPLP_MACSEC_SUPPORT
+
+    Example 2
+    ---------
+    Multiple chip support can be enabled by uncommenting the corresponding lines in the Makefile.
+    CFLAGS += -DPLP_DINO_SUPPORT
+    CFLAGS += -DPLP_EVORA_SUPPORT
+
+   - For chips supporting MACSEC uncomment the line
+     CFLAGS += -DPLP_MACSEC_SUPPORT
+
+- To access EPDM APIs, user application needs to include epdm.h and epdm_sec.h(if security and MAC operation needed).
+ 
+- Reference Makefile and example for EPDM usage is available in PHY driver source (path: <CHIP>.<Y>.<Z>\<CHIP>_reference_application)
+
+- Please refer to EPDM html documentation for a list of APIs, their signatures and structures used. HTML documentation is located at $EPDM/doc/html/index.html 
+
+5) Inline command for compiling reference application with EPDM
+   ------------------------------------------------------------
+
+   gcc ref_application.c  -I /epdm -I ./ -o ./ref_app_out -g -Wall -Werror -Wno-uninitialized -L. ./libftd2xx.*a -ldl -lrt -lpthread -Wl,-whole-archive ../build/libphymodepil.a /libepdm.a -Wl,-no-whole-archive -lm -DPLP_<CHIP>_SUPPORT -DPLP_MACSEC_SUPPORT
+
+6) Using EPDM with multiple chip family drivers
+   ---------------------------------------------
+    If user intends to use an EPDM version that is different (and newer) than the one released with the PHY driver
+    the following steps need to be followed to enable the PHY driver to use epdm common defines.
+       Step 1: Uncomment and define EPDM_HOME based on your EPDM installation directory in make\config.mk file of the PHY driver
+       Step 2: Compile the driver with TMP_PHYMOD_EPIL_CPPFLAGS += -DUSE_EPDM_COMMON_DEFINES in make\config.mk file
+
+    Note: By default driver uses common defines that is available in the driver package.
+
+--------------------------------------------------------------------------------

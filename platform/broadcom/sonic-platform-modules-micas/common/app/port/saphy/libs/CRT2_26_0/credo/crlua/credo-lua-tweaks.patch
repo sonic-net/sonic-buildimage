@@ -1,0 +1,147 @@
+From 4c333d3d19590e2d283954d4c4db8b51fc635926 Mon Sep 17 00:00:00 2001
+From: Nathan Page <nathan.page@credosemi.com>
+Date: Sun, 24 Jul 2022 17:52:46 -0700
+Subject: [PATCH] csdk reapply tweaks without the formatting
+
+---
+ credo/crlua/lauxlib.h |  7 ++++++-
+ credo/crlua/linit.c   | 36 ++++++++++++++++++++++++++++++++++++
+ credo/crlua/loadlib.c |  4 ++--
+ credo/crlua/loslib.c  |  2 +-
+ credo/crlua/luaconf.h |  6 +++---
+ 5 files changed, 48 insertions(+), 7 deletions(-)
+
+diff --git a/credo/crlua/lauxlib.h b/credo/crlua/lauxlib.h
+index a7b16dcc..b184230a 100644
+--- a/credo/crlua/lauxlib.h
++++ b/credo/crlua/lauxlib.h
+@@ -247,6 +247,7 @@ typedef struct luaL_Stream {
+ ** ===================================================================
+ */
+
++#if 0
+ /* print a string */
+ #if !defined(lua_writestring)
+ #define lua_writestring(s,l)   fwrite((s), sizeof(char), (l), stdout)
+@@ -262,7 +263,11 @@ typedef struct luaL_Stream {
+ #define lua_writestringerror(s,p) \
+         (fprintf(stderr, (s), (p)), fflush(stderr))
+ #endif
+-
++#else
++size_t lua_writestring(const char *str, int length);
++#define lua_writeline() (lua_writestring("\n", 1))
++int lua_writestringerror(const char *format, const char *p);
++#endif
+ /* }================================================================== */
+
+
+diff --git a/credo/crlua/linit.c b/credo/crlua/linit.c
+index 3935d6a6..ece42547 100644
+--- a/credo/crlua/linit.c
++++ b/credo/crlua/linit.c
+@@ -53,6 +53,36 @@ static const luaL_Reg loadedlibs[] = {
+   {NULL, NULL}
+ };
+
++extern int luaopen__credo(lua_State *L);
++extern int luaopen__shell(lua_State *L);
++extern int luaopen_cfort(lua_State *L);
++extern int luaopen__libs(lua_State *L);
++extern int luaopen__loader(lua_State *L);
++extern int luaopen_lfs(lua_State *L);
++extern int luaopen__crs(lua_State *L);
++extern int luaopen__time(lua_State *L);
++extern int luaopen__linenoise(lua_State *L);
++extern int luaopen_lpeg(lua_State *L);
++extern int luaopen_miniz(lua_State *L);
++extern int luaopen_b64(lua_State *L);
++extern int luaopen_term_core(lua_State *L);
++
++static const luaL_Reg preloadedlibs[] = {
++    {"_time", luaopen__time},
++    {"lpeg", luaopen_lpeg},
++    {"miniz", luaopen_miniz},
++    {"b64", luaopen_b64},
++    {"term.core", luaopen_term_core},
++    {"_linenoise", luaopen__linenoise},
++    {"_credo", luaopen__credo},
++    {"_crs", luaopen__crs},
++    {"_shell", luaopen__shell},
++    {"cfort", luaopen_cfort},
++    {"lfs", luaopen_lfs},
++    {"_libs", luaopen__libs},
++    {"_loader", luaopen__loader},  // due to startup.lua this should be at the end
++    {NULL, NULL},
++};
+
+ LUALIB_API void luaL_openlibs (lua_State *L) {
+   const luaL_Reg *lib;
+@@ -61,4 +91,10 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
+     luaL_requiref(L, lib->name, lib->func, 1);
+     lua_pop(L, 1);  /* remove lib */
+   }
++
++  /* "require" functions from 'loadedlibs' do not set results to global table */
++  for (lib = preloadedlibs; lib->func; lib++) {
++    luaL_requiref(L, lib->name, lib->func, 0);
++    lua_pop(L, 1); /* remove lib */
++  }
+ }
+diff --git a/credo/crlua/loadlib.c b/credo/crlua/loadlib.c
+index 926c9dc7..a0e2075f 100644
+--- a/credo/crlua/loadlib.c
++++ b/credo/crlua/loadlib.c
+@@ -270,11 +270,11 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
+ ** variables that Lua check to set its paths.
+ */
+ #if !defined(LUA_PATH_VAR)
+-#define LUA_PATH_VAR    "LUA_PATH"
++#define LUA_PATH_VAR "CREDO_LUA_PATH"
+ #endif
+
+ #if !defined(LUA_CPATH_VAR)
+-#define LUA_CPATH_VAR   "LUA_CPATH"
++#define LUA_CPATH_VAR "CREDO_LUA_CPATH"
+ #endif
+
+
+diff --git a/credo/crlua/loslib.c b/credo/crlua/loslib.c
+index c28059db..8703f5c5 100644
+--- a/credo/crlua/loslib.c
++++ b/credo/crlua/loslib.c
+@@ -110,7 +110,7 @@
+ */
+ #if !defined(lua_tmpnam)	/* { */
+
+-#if defined(LUA_USE_POSIX)	/* { */
++#if 1	/* { */
+
+ #include <unistd.h>
+
+diff --git a/credo/crlua/luaconf.h b/credo/crlua/luaconf.h
+index 580e654e..57bab168 100644
+--- a/credo/crlua/luaconf.h
++++ b/credo/crlua/luaconf.h
+@@ -218,8 +218,8 @@
+ #else			/* }{ */
+
+ #define LUA_ROOT	"/usr/local/"
+-#define LUA_LDIR	LUA_ROOT "share/lua/" LUA_VDIR "/"
+-#define LUA_CDIR	LUA_ROOT "lib/lua/" LUA_VDIR "/"
++#define LUA_LDIR	LUA_ROOT "share/credo/lua"
++#define LUA_CDIR	LUA_ROOT "lib/credo/"
+
+ #if !defined(LUA_PATH_DEFAULT)
+ #define LUA_PATH_DEFAULT  \
+@@ -754,7 +754,7 @@
+ @@ of a function in debug information.
+ ** CHANGE it if you want a different size.
+ */
+-#define LUA_IDSIZE	60
++#define LUA_IDSIZE	128
+
+
+ /*
+--
+2.25.1

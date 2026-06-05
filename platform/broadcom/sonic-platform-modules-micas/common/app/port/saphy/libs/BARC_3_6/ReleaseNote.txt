@@ -1,0 +1,1297 @@
+-----------------------------------------------------------------------------------------------------------------------
+Version BARC_3_6 for Barchetta chip family driver
+-----------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 4.2.4.  If an EPDM version later
+          than 4.2.4 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+
+iii) Compiled with gcc version-8.2.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D012) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes (DB09) for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added bcm_plp_loopback_mode_t to be able to use enumerated values for loopback APIs.
+    - Added conditional compilation option for using D2XX driver for FTDI devices.
+
+vi) List of APIs updated
+   --------------------------
+    bcm_plp_loopback_set/get
+    bcm_plp_init_fw_bcast
+    bcm_plp_fec_corrected_error_counter
+    bcm_plp_fec_uncorrected_error_counter
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+      - Fixed local fault issue in case of invoking bcm_plp_fec_corrected_error_counter 
+        and bcm_plp_fec_uncorrected_error_counter API.
+      - Updated bcm_plp_init_fw_bcast in case of API failure during FW initialization in
+        multi-threaded environment. With this fix, the mutex is unlocked before the clean up.
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-----------------------------------------------------------------------------------------------------------------------
+Version BARC_3_5 for Barchetta chip family driver
+-----------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 4.2.0.  If an EPDM version later
+          than 4.2.0 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-8.2.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D012) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes (DB09) for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Corrected mode config get parameters for failover lanes.
+    - Added bcm_plp_phy_pai_info_get for open source support.
+    - Updated firmware
+
+vi) List of APIs updated
+   --------------------------
+    bcm_plp_mode_config_get/set
+    bcm_plp_phy_pai_info_get
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    - Fixed mode config get parameters for failover lanes
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-----------------------------------------------------------------------------------------------------------------------
+Version BARC_3_4 for Barchetta chip family driver
+-----------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 4.0.7.  If an EPDM version later
+          than 4.0.7 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-8.2.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D011) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes (DB08) for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Port allocation mechanism updated to avoid lane reset for existing port during flexing mode of operation
+
+vi) List of APIs updated
+   --------------------------
+    bcm_plp_mode_config_set
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    NA
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-----------------------------------------------------------------------------------------------------------------------
+Version BARC_3_3 for Barchetta chip family driver
+-----------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 4.0.3.  If an EPDM version later
+          than 4.0.3 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-8.2.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D011) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes (DB08) for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Updated bcm_plp_core_diagnostics_t to change type of temperature parameter from unsigned int to signed int to support negative temperature readings
+
+vi) List of APIs updated
+   --------------------------
+    NA
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    - Fixed EEPROM FW download issue when SERBOOT pin is set high.
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_3_2 for Barchetta chip family driver
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 3.1.1.  If an EPDM version later
+          than 3.1.1 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-9.1.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D011) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes (DB08) for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added support for FEC corrected and uncorrected error counter
+    - When firmware_lane_config->firmware_mode selected as bcm_pm_fw_default,
+      bcm_plp_firmware_lane_config_set will not change DFE values which are set by firmware
+
+vi) List of APIs updated
+   --------------------------
+    The following APIs have been updated.
+    No changes made to API signatures.
+   - bcm_plp_failover_mode_set
+   - bcm_plp_fec_corrected_error_counter
+   - bcm_plp_fec_uncorrected_error_counter
+   - bcm_plp_firmware_lane_config_set
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    - FEC support for Failover MUX ports.
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_3_1 for Barchetta chip family driver
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 3.0.1.  If an EPDM version later
+          than 3.0.1 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-8.1.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D010) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : FW release notes for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added support for powering down unused PLL repeater blocks
+      to reduce current draw in dual PLL configuration for B0 chip version.
+    - Added support for pattern generation (Square wave.)
+
+vi) List of APIs updated
+   --------------------------
+    The following APIs have been updated.
+    No changes made to API signatures.
+   - bcm_plp_pattern_enable_set
+   - bcm_plp_pattern_enable_get
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    NA
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_3_0   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Incremental release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 2.0.1.  If an EPDM version later
+          than 2.0.1 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-8.1.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D00E) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : B0 support added
+       - Firmware version D00E (For A1) and DB06 (For B0)
+       - FW release notes for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added support to restrict multiple AN capabilities while setting AN abilities.
+    - Logging mechanism enhanced to support debug, error and sub-layer debugging. Please refer to README for more instructions.
+    - Modified following debug level enum values:
+        -> BCM_PLP_INTERNAL_DUMP_L1
+        -> BCM_PLP_INTERNAL_DUMP_L2
+        -> BCM_PLP_INTERNAL_DUMP_L3
+
+
+vi) List of APIs updated
+   --------------------------
+    NA
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    - Fixed the race condition happening between SW and FW that would cause FW download failure.
+    - Fixed an issue in bcm_plp_cl73_ability_set, bcm_plp_cl73_ability_get APIs to set/get CR, CRS, KR, KRS AN abilities.
+    - Corrected slice register configuration before reading serdes hardware registers for applicable APIs.
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_2_1   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Phase 8 release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 1.9.6.  If an EPDM version later
+          than 1.9.6 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D00A) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : B0 support added
+       - Firmware version D00A (For A1) and DB03 (For B0)
+       - FW release notes for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added new debug levels to dump serdes information using bcm_plp_phy_status_dump API.
+        -> BCM_PLP_INTERNAL_DUMP_L1
+        -> BCM_PLP_INTERNAL_DUMP_L2
+        -> BCM_PLP_INTERNAL_DUMP_L3
+    - Added new API bcm_plp_serdes_diag_access_enable for debugging purposes.
+    - Added CAUI, CAUI4_C2C, CAUI4_C2M support.
+    - Improved microcode download procedure for faster execution.
+    - Added recovered clock output support (bcm_plp_synce_config_get/bcm_plp_synce_config_set).
+    - Added device address check to reject illegal device address accesses.
+    - Updated retry_count to support firmware download at 106.25MHz ref clock.
+
+vi) List of APIs updated
+   --------------------------
+    NA
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    NA
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_2_0   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Phase 7 release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 1.8.3.  If an EPDM version later
+          than 1.8.3 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. BCM81381: FW release notes (D009) detailed in ReleaseNote_fw_barchetta.txt
+    b. BCM81338 & BCM81321 : B0 support added
+       - Firmware version D009 (For A1) and DB01 (For B0)
+       - FW release notes for B0 detailed in ReleaseNote_fw_barchetta_b.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added support for B0 revision.
+
+vi) List of APIs updated
+   --------------------------
+    NA
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    NA
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_1_8   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Phase 6 release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 1.7.4.  If an EPDM version later
+          than 1.7.4 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. Firmware version D008
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Added support for OTN, FC and PAM4 custom datarates
+
+vi) List of APIs updated
+   --------------------------
+   The following APIs have been updated.
+   No changes made to API signatures.
+   - bcm_plp_mode_config_set
+   - bcm_plp_mode_config_get
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    NA
+
+ix) Resolved Limitation
+   -------------------
+    NA
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_1_7   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details
+please refer to respective README file.
+
+i) Phase 5 release
+        - This release supports multiple packages and not all modes are supported on every package.
+          Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support
+        - This needs EPDM package version 1.7.2.  If an EPDM version later
+          than 1.7.2 is needed to be used, please refer to the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. Firmware version D008
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of features added/updated
+    ------------------------------
+    - Supports failover port configuration
+    - Supports PRBS10, PRBS20 and PRBS13
+    - Supports proprietary AN without link training (NRZ)
+
+vi) List of APIs updated
+   --------------------------
+   The following APIs have been updated.
+   No changes made to API signatures.
+   - bcm_plp_loopback_set
+   - bcm_plp_failover_mode_set
+   - bcm_plp_failover_mode_get
+   - bcm_plp_prbs_set
+   - bcm_plp_mode_config_set
+
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Bug Fixes
+    ---------
+    1. Resolved port configuration issue when user customize maximum number of phy.
+
+ix) Resolved Limitation
+   -------------------
+     - Digital loopback supported in Gearbox and Reverse Gearbox mode with this release
+     - Switching chip mode from PAM4 to NRZ is supported with this release.
+     - CL91 FEC supported in 25G & 50G(2x25G) Consortium AN mode.
+
+x) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARC_1_6   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details 
+please refer to respective README file.
+ 
+i) Phase 4 release 
+        - This release supports multiple packages and not all modes are supported on every package. 
+        Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G/RPHY mode support 
+        - This needs EPDM package version 1.6.3.  If an EPDM version later
+          than 1.6.3 is needed to be used, please refer to the instructions in README file.
+ 
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+        Note : Support for chip revision A0 has been discontinued.
+ 
+iii) Compiled with gcc version-7.1.0
+ 
+iv) Firmware info
+    -------------
+    a. Firmware version D006
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of features added/updated
+    ------------------------------ 
+    - Supports Warmboot
+    - Supports PAM4 auto negotiation
+    - Interrupt and PLL configuration APIs have been refactored to improve performance
+    - Supports Digital loopback in passthrough modes
+    - Supports A1 chip rev
+    - Supports flexing and multi port configuration
+
+vi) List of APIs updated
+   --------------------------
+   The following APIs have been refactored to improve performance.  
+   No changes made to API signatures.
+   - bcm_plp_intr_status_get
+   - bcm_plp_event_status_get
+   - bcm_plp_intr_enable_set
+   - bcm_plp_intr_enable_get
+   - bcm_plp_intr_status_clear
+   - bcm_plp_mode_config_set
+ 
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training and AN on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports forced FEC mode
+    4. Supports custom datarates. Please refer to user specification for more details.
+
+viii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or its derived per lane Over Sampled (OS) 
+     data rates as the same within the same Quad for chip revision A0.
+     2. CL91 FEC not supported in 25G & 50G(2x25G) Consortium AN mode.
+     3. Digital loopback is not supported in Gearbox and Reverse Gearbox mode.
+     4. Switching chip mode from PAM4 to NRZ is not supported with this release.
+ 
+ix) Bug Fixes
+    ---------
+    1. Resolved speed change issue from 25G to 50G.
+
+x) Resolved Limitation         
+   -------------------
+     - 40G(KR4/CR4) AN supported only with master lane as 0.
+
+xi) Recommendations
+    ---------------
+     - It is recommended to do force speed mode followed by AN disable in PAM4 modes.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.5   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details 
+please refer to respective README file.
+ 
+i) Phase 3B release with limited feature support
+        - This release supports multiple packages and not all modes are supported on every package. 
+        Refer to datasheets for more details.
+        - 400G/200G/100G/40G/51G/53G/25G/10G/1G/56G mode support 
+        - This needs EPDM package version 1.6.0.  If an EPDM version later
+          than 1.6.0 is needed to be used, please refer to the instructions in README file.
+ 
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+        - BCM81321
+ 
+iii) Compiled with gcc version-7.1.0
+ 
+iv) Firmware info
+    -------------
+    a. Firmware version D005
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of features added/updated
+    ------------------------------ 
+    - Supports Interrupts and events.
+    - Supports Module read/write and IO pin configuration.
+    - Supports SPI EEPROM FW download.
+    - Supports following proprietary AN for RPHY (only with Link Training enabled),
+         - 10G RPHY
+         - 25G RPHY
+         - 50G RPHY used to move between 50G to 25G
+
+vi) List of APIs added/updated
+   --------------------------
+   - bcm_plp_intr_status_get
+   - bcm_plp_event_status_get
+   - bcm_plp_intr_enable_set
+   - bcm_plp_intr_enable_get
+   - bcm_plp_intr_status_clear
+   - bcm_plp_init_fw_bcast
+   - bcm_cfg_gpio_pin_set
+   - bcm_cfg_gpio_pin_get
+   - bcm_module_read
+   - bcm_module_write
+   - bcm_fc_pcs_chkr_enable_set
+   - bcm_fc_pcs_chkr_enable_get
+   - bcm_fc_pcs_chkr_status_get
+ 
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G, 56G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+    2. Supports Link Training on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports Auto Negotiation on both line and system sides only for supported NRZ modes
+    4. Supports forced FEC mode
+    5. Supports custom datarates. Please refer to user specification for more details.
+ 
+viii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or its derived per lane Over Sampled (OS) 
+     data rates as the same within the same Quad.
+     2. 40G(KR4/CR4) AN supported only with master lane as 0.
+     3. CL91 FEC not supported in 25G & 50G(2x25G) Consortium AN mode.
+     4. Digital loopback is not supported with this release.
+ 
+ix) Resolved Limitation         
+      -------------------
+      -NA-
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.4   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details 
+please refer to respective README file.
+ 
+i) Phase 3A release with limited feature support
+        - This release supports multiple Packages and not all modes are supported on every package. 
+        Refer to datasheet for more details.
+        - 400G/200G/100G/40G/51G/50G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.8.  If an EPDM version later than 1.5.8 is needed 
+        to be used, please refer to the instructions in README file.
+ 
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+ 
+iii) Compiled with gcc version-7.1.0
+ 
+iv) Firmware info
+    -------------
+    a. Firmware version D004
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+ 
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_cl73_ability_set
+    bcm_plp_cl73_ability_get
+    bcm_plp_cl73_set
+    bcm_plp_cl73_get
+    bcm_plp_fec_enable_set
+    bcm_plp_fec_enable_get
+ 
+vi) List of features added/updated
+    ------------------------------
+    - Forced FEC modes are supported in 10G,40G,25G-IEEE,100G speed modes
+    - Forced FEC mode for 25G supports Cl.108, Cl.74 only but not Cl.91
+    - AN is supported in 10/25/40/100G NRZ modes only
+    - AN with FEC support is added for 10G,25G-IEEE,40G,100G speed modes. For 25G-CAN AN; only Cl.74 FEC is supported but not Cl.91
+    
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+        - 25G (Custom NRZ datarate)
+        - 50G (Custom PAM4 datarate)
+    2. Supports Link Training on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports Auto Negotiation on both line and system sides only on supported NRZ modes
+    4. Supports forced FEC mode
+ 
+viii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or its derived per lane Over Sampled (OS) 
+     data rates as the same with in the same Quad.
+     2. AN works with only 156.25 MHz ref clock support. 
+     3. 40G(KR4/CR4) AN supported only with master lane as 0.
+ 
+ix) Resolved Limitation         
+      -------------------
+      -NA-
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.3   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details 
+please refer to respective README file.
+ 
+i) Phase 3 release with limited feature support
+        - This release supports multiple Packages and not all modes are supported on every package. 
+        Refer to datasheet for more details.
+        - 400G/200G/100G/40G/51G/50G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.7.  If an EPDM version later than 1.5.7 is needed 
+          to be used, please refer to the instructions in README file.
+ 
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+ 
+iii) Compiled with gcc version-7.1.0
+ 
+iv) Firmware info
+    -------------
+    a. Firmware version C006
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+ 
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_remote_ability_get
+
+vi) List of new features added
+   -------------------------------
+    Propritory AN support for RPHY (only with training is supported in this release)
+ 
+vii) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+        - 25G (Custom NRZ datarate)
+        - 50G (Custom PAM4 datarate)
+    2. Supports proprietary AN for RPHY
+ 
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.2   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details 
+please refer to respective README file.
+ 
+i) Phase 2 release with limited feature support
+        - This release supports multiple Packages and not all modes are supported on every package. 
+        Refer to datasheet for more details.
+        - 400G/200G/100G/40G/51G/50G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.4.  If an EPDM version later than 1.5.4 is needed 
+        to be used, please refer to the instructions in README file.
+ 
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+ 
+iii) Compiled with gcc version-7.1.0
+ 
+iv) Firmware info
+    -------------
+    a. Firmware version D003
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+ 
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_cl73_ability_set
+    bcm_plp_cl73_ability_get
+    bcm_plp_cl73_set
+    bcm_plp_cl73_get
+    bcm_plp_force_tx_training_set
+    bcm_plp_force_tx_training_get
+    bcm_plp_force_tx_training_status_get
+    bcm_plp_firmware_lane_config_set
+    bcm_plp_firmware_lane_config_get
+ 
+vi) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 51G, 53G PAM4
+        - 25G NRZ (IEEE)
+        - 10G NRZ (IEEE)
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x51G/8x53G PAM4)
+        - 200G (4x51G/4x53G PAM4)
+        - 25G (Custom NRZ datarate)
+        - 50G (Custom PAM4 datarate)
+    2. Supports Link Training on both System and Line sides for NRZ and PAM4 modes.
+    3. Supports Auto Negotiation on both line and system side only for below NRZ modes
+        -10G
+        -25G(IEEE/Consortium) [NO FEC]
+        -40G
+        -50G(2x25G) (Consortium)[NO FEC]
+        -100G(4x25G) [No FEC]
+ 
+vii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or its derived per lane Over Sampled (OS) 
+     data rates as the same with in the same Quad.
+     2. 50G(2x25G) AN link up has some rare inconsistency.
+     3. Post 100G KR4/CR4 AN; FEC in Barchetta is not enabled. This limitation will be fixed in 
+     the next release. It is only recommended to use in end-to-end FEC applications.
+     4. AN works with only 156.25 MHz ref clock support. 
+     5. 40G(KR4/CR4) AN supported only with master lane as 0.
+ 
+viii) Resolved Limitation         
+    -------------------
+     1. Upon AN completion; AN disable works as expected.
+     2. AN on System side is supported.
+ 
+ix) Bug fixes
+   ---------
+   1. Loopback(Digital/Remote) API enhanced to support asymmetric lane maps.
+ 
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.1   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details please refer to respective README file.
+
+i) Phase 2A release with limited feature support
+        - This release supports multiple Packages and not all modes are supported on every package. Refer to datasheet for more details.
+        - 400G/200G/100G/40G/50G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.3.  If an EPDM version later than 1.5.3 is needed to be used, please refer to 
+          the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81381
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. Firmware version D002
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of APIs added/updated
+   --------------------------
+    bcm_plp_cl73_ability_set
+    bcm_plp_cl73_ability_get
+    bcm_plp_cl73_set
+    bcm_plp_cl73_get
+    bcm_plp_force_tx_training_set
+    bcm_plp_force_tx_training_get
+    bcm_plp_force_tx_training_status_get
+
+vi) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 50G, 53G PAM4
+        - 25G NRZ 
+        - 10G NRZ
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x50G/8x53G PAM4)
+        - 200G (4x50G/4x53G PAM4)
+    2. Supports Link Training on both System and Line sides only for NRZ modes(10G/25G/100G(4x25G)/50G(2x25G))
+    3. Supports Auto Negotiation only on Line side for NRZ only modes(10G/25G(IEEE/Consortium)). FEC support will be added in later releases.
+
+vii) Requirements in this release
+     ----------------------------      
+      1. It is required to have PMD lock on other side (e.g Line side) when force training is enabled (e.g System side).
+
+viii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or its derived per lane Over Sampled (OS) data rates as the same with in the same Quad.
+     2. AN on System side is not supported in this release.
+     3. Upon AN completion; AN disable is not recommended.
+     4. 50G/100G AN link up has some inconsistency
+         
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.1.0   - Release for Barchetta chip family with limited features and functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details please refer to respective README file.
+
+i) Phase 1 release with limited feature support
+        - This release supports multiple Packages and not all modes are supported on every package. Refer to datasheet for more details.
+        - 400G/200G/100G/40G/50G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.1.  If an EPDM version later than 1.5.1 is needed to be used, please refer to 
+          the instructions in README file.
+
+ii) Supported Devices
+    a.  Barchetta
+        Supported packages
+        ------------------
+        - BCM81338
+        - BCM81318
+
+iii) Compiled with gcc version-7.1.0
+
+iv) Firmware info
+    -------------
+    a. Firmware version D001
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of APIs added/updated
+   --------------------------
+   bcm_plp_init
+   bcm_plp_init_fw_bcast
+   bcm_plp_logical_lane_set/get
+   bcm_plp_mode_config_set/get
+   bcm_plp_link_status_get
+   bcm_plp_rx_pmd_lock_get
+   bcm_plp_reg_value_set/get
+   bcm_plp_polarity_set/get
+   bcm_plp_reset_set
+   bcm_plp_firmware_info_get
+   bcm_plp_rev_id
+   bcm_plp_version_get
+   bcm_plp_prbs_set/get
+   bcm_plp_prbs_config_get
+   bcm_plp_prbs_rx_stat
+   bcm_plp_prbs_clear
+   bcm_plp_prbs_status_get
+   bcm_plp_phy_status_dump
+   bcm_plp_display_eye_scan
+   bcm_plp_cleanup
+   bcm_plp_pam4_tx_set/get
+   bcm_plp_rx_set/get
+   bcm_plp_power_set/get
+   bcm_plp_loopback_set/get
+   bcm_plp_eye_margin_proj
+   bcm_plp_prbs_error_analyzer_proj
+   bcm_plp_phy_diagnostics_get
+
+vi) List of features supported
+    --------------------------
+    1. Below modes of operation are supported
+        - 50G, 53G PAM4
+        - 25G NRZ 
+        - 10G NRZ
+        - 100G (4x25G NRZ)
+        - 40G  (4x10G NRZ)
+        - 400G (8x50G/8x53G PAM4)
+        - 200G (4x50G/4x53G PAM4)
+
+vii) Known Limitations
+     -----------------
+     1. It is a must to configure per lane data rates or the drived per lane Over Sampled (OS) data rates the same across all 8 ports.
+     e.g: 200G (4x50) and 200G (4x53) are not supported together. But, 200G(4x50) and 100G(4x25) are supported at the same time.
+
+-------------------------------------------------------------------------------------------------------------------------------------
+Version BARCHETTA.0.1   - This is an early accees SW version. This engineering release for Barchetta only supports limited features/functionalites
+-------------------------------------------------------------------------------------------------------------------------------------
+Please note that EPDM package is required in order to use Barchetta application.  For more details please refer to respective README file.
+
+i) Engineering release 
+        - 100G(4x25G)/40G(4x10G)/51G/53G/25G/10G mode support 
+        - This needs EPDM package version 1.5.0.  If an EPDM version later than 1.5.0 is needed to be used, please refer to 
+
+ii) Supported Devices
+        - BCM81338
+        - BCM81318
+
+iii) Compiled with gcc version-4.5.4
+
+iv) Firmware info
+    -------------
+    a. Firmware version E001
+    b. FW release notes detailed in ReleaseNote_fw_barchetta.txt
+
+v) List of APIs added/updated
+   --------------------------
+   bcm_plp_init
+   bcm_plp_logical_lane_set/get
+   bcm_plp_mode_config_set/get
+   bcm_plp_link_status_get
+   bcm_plp_rx_pmd_lock_get
+   bcm_plp_reg_value_set/get
+   bcm_plp_polarity_set/get
+   bcm_plp_reset_set
+   bcm_plp_firmware_info_get
+   bcm_plp_rev_id
+   bcm_plp_version_get
+   bcm_plp_prbs_set
+   bcm_plp_prbs_get
+   bcm_plp_prbs_rx_stat
+   bcm_plp_prbs_clear
+   bcm_plp_prbs_config_get
+   bcm_plp_prbs_status_get
+   bcm_plp_phy_status_dump
+   bcm_plp_display_eye_scan
+   bcm_plp_cleanup
+
+
+vi) List of features supported
+    --------------------------
+    1. Support for below mentioned modes of operation are added 8 channel
+        - 51G, 53G PAM4
+        - 25G NRZ 
+        - 10G NRZ
+        - 100G (4x25G NRZ)
+        - 40G (4x10G NRZ)
+

@@ -249,6 +249,23 @@ class DevMonitor():
         val_t = getattr(DevMonitor, slotsattr, None)
         devdebuglog("slotsattr:value:%s" % (val_t))
         return ret
+    
+    def binddevsmonitor(self):
+        binddevs_conf = DEV_MONITOR_PARAM.get('binddevs')
+        if binddevs_conf is None:
+            return 0
+        binddevsattr = 'binddevsattr'
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        if val_t == 'OK':
+            return 0
+        ret = self.monitor(binddevs_conf)
+        if ret == 0:
+            setattr(DevMonitor, binddevsattr, 'OK')
+        else:
+            setattr(DevMonitor, binddevsattr, 'NOT OK')
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        devdebuglog("binddevsattr:value:%s" % (val_t))
+        return ret
 
     def othersmonitor(self):
         others_conf = DEV_MONITOR_PARAM.get('others')
@@ -274,6 +291,7 @@ def doDevMonitor(devMonitor):
     ret_t += devMonitor.fansmonitor()
     ret_t += devMonitor.slotsmonitor()
     ret_t += devMonitor.othersmonitor()
+    ret_t += devMonitor.binddevsmonitor()
     return ret_t
 
 

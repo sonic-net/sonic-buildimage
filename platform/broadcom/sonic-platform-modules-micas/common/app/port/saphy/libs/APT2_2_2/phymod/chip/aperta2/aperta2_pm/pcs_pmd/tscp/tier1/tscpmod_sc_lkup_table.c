@@ -1,0 +1,570 @@
+/*----------------------------------------------------------------------
+ * $Id: tscpmod_sc_lkup_table.c, $
+ * $Copyright: $
+ *
+ * $Copyright: (c) 2014 Broadcom Corporation All Rights Reserved.$
+ *  Broadcom Corporation
+ *  Proprietary and Confidential information
+ *  All rights reserved
+ *  This source file is the property of Broadcom Corporation, and
+ *  may not be copied or distributed in any isomorphic form without the
+ *  prior written consent of Broadcom Corporation.
+ *----------------------------------------------------------------------
+ *  Description: define enumerators
+ *----------------------------------------------------------------------*/
+#include "tscpmod.h"
+#include <phymod/phymod.h>
+
+#include "tscpmod_sc_lkup_table.h"
+
+const tscpmod_sc_pmd_entry_st plp_aperta2_tscpmod_sc_pmd_entry[] = {
+  /*`SPD_10G_IEEE_KR1 0*/                         { TSCPMOD_OS_MODE_5, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_25G_IEEE_KS1_CS1: 1*/                    { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_25G_IEEE_KR1_CR1: 2*/                    { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`NULL ENTRY: 3*/                              {         0, 0},
+  /*`NULL ENTRY: 4*/                              {         0, 0},
+  /*`SPD_50G_IEEE_KR1_CR1: 5*/                    { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_100G_IEEE_KR4: 6*/                       { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_IEEE_CR4: 7*/                       { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_IEEE_KR2_CR2: 8*/                   { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_IEEE_KR4_CR4: 9*/                   { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_800G_BRCM_KR8_CR8: 10*/                  { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_CL73_IEEE_20GVCO: 11*/                   { TSCPMOD_OS_MODE_33, TSCPMOD_PLL_MODE_DIV_132},
+  /*`SPD_CL73_IEEE_25GVCO: 12*/                   { TSCPMOD_OS_MODE_41p25, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_CL73_IEEE_26GVCO: 13*/                   { TSCPMOD_OS_MODE_42p5, TSCPMOD_PLL_MODE_DIV_170},
+  /*`NULL ENTRY: 14*/                             {         0, 0},
+  /*`NULL ENTRY: 15*/                             {         0, 0},
+  /*`SPD_25G_BRCM_CR1: 16*/                       { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_25G_BRCM_KR1: 17*/                       { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`NULL ENTRY: 18*/                             {         0, 0},
+  /*`NULL ENTRY: 19*/                             {         0, 0},
+  /*`SPD_50G_BRCM_CR2_KR2_NO_FEC: 20*/            { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_50G_BRCM_CR2_KR2_RS_FEC: 21*/            { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`NULL ENTRY: 22*/                             {         0, 0},
+  /*`NULL ENTRY: 23*/                             {         0, 0},
+  /*`SPD_50G_BRCM_FEC_544_CR2_KR2: 24*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`NULL ENTRY: 25*/                             {         0, 0},
+  /*`NULL ENTRY: 26*/                             {         0, 0},
+  /*`NULL ENTRY: 27*/                             {         0, 0},
+  /*`SPD_50G_BRCM_FEC_528_CR1_KR1: 28*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`NULL ENTRY: 29*/                             {         0, 0},
+  /*`SPD_400G_BRCM_FEC_KR8_CR8: 30*/              { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_NO_FEC_KR4_CR4: 31*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_200G_BRCM_KR4_CR4: 32*/                  { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`NULL ENTRY: 33*/                             {         0, 0},
+  /*`NULL ENTRY: 34*/                             {         0, 0},
+  /*`SPD_100G_BRCM_FEC_528_KR2_CR2: 35*/          { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_BRCM_NO_FEC_KR2_CR2: 36*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_BRCM_NO_FEC_X4: 37*/                { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_50G_BRCM_FEC_272_CR1_KR1: 38*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_100G_BRCM_FEC_272_CR2_KR2: 39*/          { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_KR4_CR4: 40*/                  { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_25G_BRCM_NO_FEC_KR1_CR1: 41*/            { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_IEEE_KR1_CR1_OPT: 42*/              { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_25G_BRCM_FEC_528_KR1_CR1 :43*/           { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPEED_400G_IEEE_KR4_CR4: 44*/                { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPEED_200G_IEEE_KR2_CR2: 45*/                { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPEED_100G_IEEE_KR1_CR1: 46*/                { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPEED_100G_BRCM_KR1_CR1: 47*/                { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`NULL ENTRY: 48*/                             {         0, 0},
+  /*`NULL ENTRY: 49*/                             {         0, 0},
+  /*`NULL ENTRY: 50*/                             {         0, 0},
+  /*`NULL ENTRY: 51*/                             {         0, 0},
+  /*`NULL ENTRY: 52*/                             {         0, 0},
+  /*`NULL ENTRY: 53*/                             {         0, 0},
+  /*`NULL ENTRY: 54*/                             {         0, 0},
+  /*`NULL ENTRY: 55*/                             {         0, 0},
+  /*`NULL ENTRY: 56*/                             {         0, 0},
+  /*`NULL ENTRY: 57*/                             {         0, 0},
+  /*`NULL ENTRY: 58*/                             {         0, 0},
+  /*`NULL ENTRY: 59*/                             {         0, 0},
+  /*`NULL ENTRY: 60*/                             {         0, 0},
+  /*`NULL ENTRY: 61*/                             {         0, 0},
+  /*`NULL ENTRY: 62*/                             {         0, 0},
+  /*`NULL ENTRY: 63*/                             {         0, 0},
+  /*`NULL ENTRY: 64*/                             {         0, 0},
+  /*`NULL ENTRY: 65*/                             {         0, 0},
+  /*`NULL ENTRY: 66*/                             {         0, 0},
+  /*`NULL ENTRY: 67*/                             {         0, 0},
+  /*`SPD_200G_BRCM_FEC_272_N4: 68*/               { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`NULL ENTRY: 69*/                             {         0, 0},
+  /*`NULL ENTRY: 70*/                             {         0, 0},
+  /*`SPD_400G_BRCM_FEC_272_N8: 71*/               { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_544_CR8_KR8: 72*/          { TSCPMOD_OS_MODE_2, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_400G_BRCM_FEC_272_KR4_CR4: 73*/          { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_272_KR2_CR2: 74*/          { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_544_KR2_CR2: 75*/          { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_272_N2: 76*/               { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_100G_BRCM_FEC_272_KR1_CR1: 77*/          { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_400G_BRCM_NO_FEC_NRZ_KR8_CR8: 78*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_400G_BRCM_FEC_544_2XN_NRZ_KR8_CR8: 79*/  { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_400G_BRCM_FEC_272_2XN_NRZ_N8 80*/        { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_350G_BRCM_NRZ_FEC_544_2XN_N7: 81*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_350G_BRCM_NRZ_FEC_544_2XN_N6: 82*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_IEEE_NRZ_FEC_544_2XN_KR4_CR4: 83*/  { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_NRZ_FEC_544_KR4_CR4: 84*/      { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_272_2XN_NRZ_CR4_KR4: 85*/  { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_FEC_272_NRZ_N4: 86*/           { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_200G_BRCM_NO_FEC_NRZ_KR4_CR4: 87*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_150G_BRCM_NRZ_N3: 88*/                   { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_100G_IEEE_NRZ_KR2_CR2: 89*/              { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_100G_BRCM_NO_FEC_NRZ_KR2_CR2: 90*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_BRCM_FEC_528_NRZ_KR2_CR2: 91*/      { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_100G_BRCM_FEC_272_NRZ_KR2_CR2: 92*/      { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_50G_IEEE_NRZ_KR1_CR1: 93*/               { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_50G_BRCM_FEC_528_NRZ_CR1_KR1: 94*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+  /*`SPD_50G_BRCM_FEC_272_NRZ_CR1_KR1: 95*/       { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_170},
+  /*`SPD_50G_BRCM_NO_FEC_NRZ_CR1_KR1: 96*/        { TSCPMOD_OS_MODE_1, TSCPMOD_PLL_MODE_DIV_165},
+};
+
+
+/* the following speed id table, am_table and um table are based off
+ * Speed_Control_3VCOs_Unified.xlsx, AM_Table_Unified.xlsx and UM_Table_Unified.xlsx. */
+
+static uint32_t plp_aperta2_tscp_spd_id_entry[TSCPMOD_SPEED_ID_TABLE_SIZE][TSCPMOD_SPEED_ID_ENTRY_SIZE] = {
+    { 0x00000000, 0x00000000, 0x22314400, 0x62821008, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x12309800, 0x42821008, 0x00000000 },
+    { 0x06869402, 0x0001f800, 0x12309805, 0x42852814, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x63b29505, 0x0009d000, 0x1aa0583e, 0x27355014, 0x00000000 },
+    { 0x06869486, 0x00406800, 0x12a0983e, 0x40b14a14, 0x00000000 },
+    { 0x06869486, 0x00406800, 0x12a0983e, 0x40b14a14, 0x00000000 },
+    { 0x63b29508, 0x0028c000, 0x1aa0583e, 0x2632a814, 0x00000000 },
+    { 0x56e29b49, 0x004800c0, 0x1ac0593e, 0x2572a828, 0x00000000 },
+    { 0x56e29b4b, 0x00700040, 0x1ac0393e, 0x0472a828, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x24014000, 0x62800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x24014000, 0x62800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x06869400, 0x0001f800, 0x12309805, 0x42852814, 0x00000000 },
+    { 0x06869400, 0x0001f800, 0x12309805, 0x42852814, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000014, 0x25280000, 0x12a09800, 0x41a21010, 0x00000000 },
+    { 0x06869495, 0x0020f000, 0x12a0983e, 0x41b29414, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x63b29505, 0x0020f000, 0x12a0983e, 0x4232a814, 0x00000000 },
+    { 0x00000019, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x06869495, 0x0009e000, 0x1aa0583e, 0x26b52814, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x56e29b4a, 0x00680040, 0x1ac0393e, 0x24715428, 0x00000000 },
+    { 0x0000001f, 0x48480000, 0x1aa05800, 0x24e21020, 0x00000000 },
+    { 0x56e29b09, 0x00484000, 0x1ac0593e, 0x25715414, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000022, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x06869486, 0x0028d000, 0x1aa0583e, 0x25b29414, 0x00000000 },
+    { 0x00000024, 0x48280000, 0x1aa05800, 0x25a21010, 0x00000000 },
+    { 0x00000025, 0x0f580000, 0x12a09800, 0x40a29428, 0x00000000 },
+    { 0x31da94c5, 0x00090000, 0x1aa0583e, 0x2732a80a, 0x00000000 },
+    { 0x2b7294c8, 0x00287000, 0x1aa0583e, 0x2631540a, 0x00000000 },
+    { 0x2b729b89, 0x00480070, 0x1ac0593e, 0x25715414, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x12309800, 0x42821008, 0x00000000 },
+    { 0x63b2956a, 0x0010c1d0, 0x1aa0383e, 0x073aa028, 0x00000000 },
+    { 0x06869490, 0x0001f800, 0x12309804, 0x42852814, 0x00000000 },
+    { 0x56e29b4a, 0x00500040, 0x1ac0393e, 0x0572a828, 0x00000000 },
+    { 0x56e29b49, 0x003000c0, 0x1ac0393e, 0x06755028, 0x00000000 },
+    { 0x63b29508, 0x0010c1d0, 0x1aa0383e, 0x07355014, 0x00000000 },
+    { 0x63b29508, 0x0010c000, 0x1aa0383e, 0x07355014, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x2b729ac9, 0x00483000, 0x1ac0593e, 0x25715414, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x2b729b8a, 0x00680030, 0x1ac0393e, 0x24715428, 0x00000000 },
+    { 0x56e29b7c, 0x00600070, 0x02c0193e, 0x40715428, 0x00000000 },
+    { 0x2b729b8a, 0x00500020, 0x1ac0393e, 0x0572a828, 0x00000000 },
+    { 0x2b729b89, 0x00300070, 0x1ac0393e, 0x0672a814, 0x00000000 },
+    { 0x56e29b09, 0x00304000, 0x1ac0393e, 0x0672a814, 0x00000000 },
+    { 0x2b729ac9, 0x00303000, 0x1ac0393e, 0x0672a814, 0x00000000 },
+    { 0x2b7294c8, 0x00107000, 0x1aa0383e, 0x0732a80a, 0x00000000 },
+    { 0x0000003b, 0x48680000, 0x1aa03800, 0x20e10820, 0x00000000 },
+    { 0x56e29b4a, 0x00680040, 0x1ac0393e, 0x20715428, 0x00000000 },
+    { 0x2b729b8a, 0x00680030, 0x1ac0393e, 0x20715428, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x56e29b49, 0x004800c0, 0x1ac0593e, 0x2172a828, 0x00000000 },
+    { 0x56e29b09, 0x00484000, 0x1ac0593e, 0x21715414, 0x00000000 },
+    { 0x2b729b89, 0x00480070, 0x1ac0593e, 0x21715414, 0x00000000 },
+    { 0x2b729ac9, 0x00483000, 0x1ac0593e, 0x21715414, 0x00000000 },
+    { 0x0000001f, 0x48480000, 0x1aa05800, 0x20e21020, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000, 0x63800000, 0x00000000 },
+    { 0x63b29508, 0x0028c000, 0x1aa0583e, 0x2232a814, 0x00000000 },
+    { 0x00000024, 0x48280000, 0x1aa05800, 0x21a21010, 0x00000000 },
+    { 0x06869486, 0x0028d000, 0x1aa0583e, 0x21b29414, 0x00000000 },
+    { 0x2b7294c8, 0x00287000, 0x1aa0583e, 0x2231540a, 0x00000000 },
+    { 0x63b29505, 0x0009d000, 0x1aa0583e, 0x23355014, 0x00000000 },
+    { 0x06869495, 0x0009e000, 0x1aa0583e, 0x22b52814, 0x00000000 },
+    { 0x31da94c5, 0x00090000, 0x1aa0583e, 0x2332a80a, 0x00000000 },
+    { 0x00000014, 0x25100000, 0x1aa05800, 0x22a42010, 0x00000000 }
+};
+
+uint32_t* plp_aperta2_tscp_spd_id_entry_get(void)
+{
+    return &plp_aperta2_tscp_spd_id_entry[0][0];
+}
+
+
+
+uint32_t plp_aperta2_tscp_spd_id_entry_100g_4lane_no_fec[TSCPMOD_SPEED_ID_ENTRY_SIZE] = {
+    /* Same as entry 'd 37 in tscp_spd_id_entry_51 */
+    0x00000025, 0x0f580000, 0x00105800, 0x0400a808, 0x40452850
+};
+
+uint32_t* plp_aperta2_tscp_spd_id_entry_100g_4lane_no_fec_get(void)
+{
+    return &plp_aperta2_tscp_spd_id_entry_100g_4lane_no_fec[0];
+}
+
+
+
+static uint32_t plp_aperta2_tscp_am_table_entry[TSCPMOD_UM_TABLE_SIZE][TSCPMOD_AM_ENTRY_SIZE] = {
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x182008c8, 0x0084242d, 0x00000028 },
+    { 0x0000080f, 0x40004000, 0x00000020 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000809, 0x00446000, 0x00000428 },
+    { 0x0000282a, 0x0084a000, 0x000004a0 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x182c282a, 0x0088042d, 0x000004a0 },
+    { 0x00001023, 0x0044c000, 0x000004a0 },
+    { 0x00002044, 0x0044e000, 0x00000540 },
+    { 0x00004054, 0x0044e000, 0x00003e80 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x182008c8, 0x0084242d, 0x00000428 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x0000080f, 0x40006000, 0x00000020 },
+    { 0x00000809, 0x00426000, 0x00000428 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00001017, 0x4000c000, 0x00000040 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x0000080f, 0x4000a000, 0x00000020 },
+    { 0x0000282f, 0x4000a000, 0x000000a0 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x1822282a, 0x0088042d, 0x000004a0 },
+    { 0x00000007, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00000000 },
+    { 0x00002027, 0x40012000, 0x00000080 },
+    { 0x00001023, 0x0044c000, 0x000004a0 },
+    { 0x00000c1b, 0x0044c000, 0x00000478 },
+    { 0x00001834, 0x0044e000, 0x000004f0 },
+    { 0x00001c3c, 0x0044e000, 0x00000518 }
+};
+
+uint32_t* plp_aperta2_tscp_am_table_entry_get(void)
+{
+    return &plp_aperta2_tscp_am_table_entry[0][0];
+}
+
+
+static uint32_t plp_aperta2_tscp_um_table_entry[TSCPMOD_UM_TABLE_SIZE][TSCPMOD_UM_ENTRY_SIZE] = {
+    { 0x33e6c4f0, 0x00000133 },
+    { 0x009b65c5, 0x00000033 },
+    { 0x003d79a2, 0x00000033 },
+    { 0x00000000, 0x00000000 },
+    { 0x00de973e, 0x00000000 },
+    { 0x00718e62, 0x00000000 },
+    { 0x0017b4a6, 0x00000000 },
+    { 0x00846ab2, 0x00000000 },
+    { 0x00f6f80a, 0x00000000 },
+    { 0x003deb22, 0x00000000 },
+    { 0x00d9b565, 0x00000000 },
+    { 0x0099ba84, 0x00000000 },
+    { 0x0089db5f, 0x00000000 },
+    { 0x00043697, 0x00000000 },
+    { 0x00669302, 0x00000000 },
+    { 0x00aa6e46, 0x00000000 },
+    { 0x004d46a3, 0x00000000 },
+    { 0x004207e5, 0x00000000 },
+    { 0x0035387c, 0x00000000 },
+    { 0x0032c9ca, 0x00000000 },
+    { 0x00b3ce3b, 0x00000000 },
+    { 0x00482952, 0x00000000 },
+    { 0x00d599a0, 0x00000000 },
+    { 0x001a0f3f, 0x00000000 },
+    { 0x002168c1, 0x00000000 },
+    { 0x008e719d, 0x00000000 },
+    { 0x00e84b59, 0x00000000 },
+    { 0x007b954d, 0x00000000 },
+    { 0x000907f5, 0x00000000 },
+    { 0x00c214dd, 0x00000000 },
+    { 0x00264a9a, 0x00000000 },
+    { 0x0066457b, 0x00000000 },
+    { 0x007624a0, 0x00000000 },
+    { 0x00fbc968, 0x00000000 },
+    { 0x00996cfd, 0x00000000 },
+    { 0x005591b9, 0x00000000 },
+    { 0x00b2b95c, 0x00000000 },
+    { 0x00bdf81a, 0x00000000 },
+    { 0x00cac783, 0x00000000 },
+    { 0x00cd3635, 0x00000000 },
+    { 0x004c31c4, 0x00000000 },
+    { 0x00b7d6ad, 0x00000000 },
+    { 0x002a665f, 0x00000000 },
+    { 0x00e5f0c0, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 },
+    { 0x00000000, 0x00000000 }
+};
+
+uint32_t* plp_aperta2_tscp_um_table_entry_get(void)
+{
+    return &plp_aperta2_tscp_um_table_entry[0][0];
+}
+
+
+static uint32_t plp_aperta2_tscp_speed_priority_mapping_table[TSCPMOD_SPEED_PRIORITY_MAPPING_TABLE_SIZE][TSCPMOD_SPEED_PRIORITY_MAPPING_ENTRY_SIZE] = {
+    {0x5eb0a662, 0x8b9f809b, 0x9238461c, 0x54718165, 0x24930c45, 0x38f41104, 0x00000000, 0x00000000, 0x00000000}
+};
+
+uint32_t* plp_aperta2_tscp_speed_priority_mapping_table_get(void)
+{
+    return &plp_aperta2_tscp_speed_priority_mapping_table[0][0];
+}
+
+
+static uint32_t plp_aperta2_tscp_spd_id_entry_gsh[TSCPMOD_SPEED_ID_TABLE_SIZE][TSCPMOD_SPEED_ID_ENTRY_SIZE] = {
+    { 0x00020000, 0x00000000, 0x00500400, 0x0600cc04, 0x00042010 },
+    { 0x00040000, 0x00000000, 0x00101800, 0x0700cc02, 0x00442010 },
+    { 0x34352802, 0x0001f800, 0x00101805, 0x1800cc02, 0x004a5028 },
+    { 0x00040003, 0x1e400000, 0x00501800, 0x0400c808, 0x40042040 },
+    { 0x00040003, 0x1e400000, 0x00501800, 0x0400c808, 0x40042040 },
+    { 0x1d912905, 0x0009d003, 0x0010583e, 0x0601c804, 0x056aa028 },
+    { 0x34312886, 0x00406800, 0x0010183e, 0x0400c804, 0x41629428 },
+    { 0x34312886, 0x00406800, 0x0010183e, 0x0400c804, 0x41629428 },
+    { 0x1d912908, 0x0028c003, 0x0010583e, 0x0401c804, 0x05655028 },
+    { 0xb7113749, 0x004800c2, 0x0010393e, 0x0401d008, 0x45e55050 },
+    { 0xb71137ca, 0x00000042, 0x8000193e, 0x0401d000, 0x05f54050 },
+    { 0x00000000, 0x00000000, 0x00500000, 0x05000004, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00500000, 0x05000004, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00514000, 0x05000004, 0x00000000 },
+    { 0x00020000, 0x00000000, 0x00500000, 0x0500cc08, 0x00442010 },
+    { 0x00020000, 0x00000000, 0x00500000, 0x0500cc08, 0x00442010 },
+    { 0x34352800, 0x0001f800, 0x00101805, 0x1800cc02, 0x004a5028 },
+    { 0x34352800, 0x0001f800, 0x00101805, 0x1800cc02, 0x004a5028 },
+    { 0x00000003, 0x1e280000, 0x00501800, 0x0400c808, 0x00442020 },
+    { 0x00000003, 0x1e280000, 0x00501800, 0x0400c808, 0x00442020 },
+    { 0x00000014, 0x25280000, 0x00101800, 0x0400c802, 0x00442020 },
+    { 0x34312895, 0x0020f000, 0x0010183e, 0x0500c802, 0x01652828 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00c00000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00c00000 },
+    { 0x1d912905, 0x0020f003, 0x0010983e, 0x0500c802, 0x01655028 },
+    { 0x00000019, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000014, 0x25100000, 0x80001800, 0x0201c800, 0x00c84020 },
+    { 0x34312895, 0x0009e000, 0x0010183e, 0x0601c804, 0x056a5028 },
+    { 0x000001c0, 0x00000000, 0x80000000, 0x00004000, 0x01200000 },
+    { 0xb711374a, 0x00680042, 0x0010393e, 0x0401d008, 0x45e2a850 },
+    { 0x0000001f, 0x48480000, 0x00101800, 0x0401c808, 0x44c42040 },
+    { 0xb7113509, 0x00484002, 0x0010393e, 0x0401d008, 0x45e2a828 },
+    { 0x1d912908, 0x00406003, 0x0010183e, 0x0400c804, 0x4162a828 },
+    { 0x00000022, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x34312886, 0x0028d000, 0x0010183e, 0x0401c804, 0x05652828 },
+    { 0x00000024, 0x48280000, 0x00101800, 0x0401c804, 0x04442020 },
+    { 0x00000025, 0x0f580000, 0x00101800, 0x0400c804, 0x40452850 },
+    { 0x8ed128c5, 0x00090001, 0x0010583e, 0x0601c804, 0x05655014 },
+    { 0x5b9128c8, 0x00287001, 0x0010583e, 0x0401c804, 0x0562a814 },
+    { 0x5b913789, 0x00480071, 0x0010393e, 0x0401d008, 0x45e2a828 },
+    { 0x00000000, 0x00000000, 0x00101800, 0x0700cc02, 0x00442010 },
+    { 0x1d912908, 0x0010c003, 0x0010383e, 0x0400c808, 0x3a6aa028 },
+    { 0x34312890, 0x0001f800, 0x00101804, 0x1800cc02, 0x014a5028 },
+    { 0xb711374a, 0x00500042, 0x0010393e, 0x0401d008, 0x3ae55050 },
+    { 0xb7113749, 0x003000c2, 0x0010393e, 0x0401d008, 0x3aeaa050 },
+    { 0x1d913348, 0x001001d3, 0x0010383e, 0x0401c808, 0x3a754050 },
+    { 0x1d912908, 0x0010c003, 0x0010383e, 0x0401c808, 0x3a6aa028 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x00500000, 0x00004004, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00000000, 0x00000000, 0x80000000, 0x00004000, 0x00000000 },
+    { 0x00020040, 0x00000000, 0x80000400, 0x0600cc00, 0x00842010 },
+    { 0x00020040, 0x00000000, 0x80000000, 0x0500cc00, 0x00c42010 },
+    { 0x00040043, 0x1e000000, 0x80001800, 0x0500c800, 0x00908040 },
+    { 0xb711377d, 0x00880132, 0x0050393e, 0x05015006, 0x45e00000 },
+    { 0x5b9134c9, 0x00483001, 0x0010393e, 0x0401d008, 0x45e2a828 },
+    { 0xb711377e, 0x00a800c2, 0x0050393e, 0x04015006, 0x45e00000 },
+    { 0xb711377f, 0x00c800b2, 0x0030393e, 0x04015007, 0x45e00000 },
+    { 0x5b91378a, 0x00680031, 0x0010393e, 0x0401d008, 0x45e2a850 },
+    { 0xb711377c, 0x00600072, 0x0010593e, 0x0400d004, 0x41e2a850 },
+    { 0x5b91378a, 0x00500021, 0x0010393e, 0x0401d008, 0x3ae55050 },
+    { 0x5b913789, 0x00300071, 0x0010393e, 0x0401d008, 0x3ae55028 },
+    { 0xb7113509, 0x00304002, 0x0010393e, 0x0401d008, 0x3ae55028 },
+    { 0x5b9134c9, 0x00303001, 0x0010393e, 0x0401d008, 0x3ae55028 },
+    { 0x5b9128c8, 0x00107001, 0x0010383e, 0x0401c808, 0x3a655014 },
+    { 0x0000003b, 0x48680000, 0x00101800, 0x0401c808, 0x40c21040 },
+    { 0xb711374a, 0x00680042, 0x0010393e, 0x0401d008, 0x41e2a850 },
+    { 0x5b91378a, 0x00680031, 0x0010393e, 0x0401d008, 0x41e2a850 },
+    { 0xb711377f, 0x00c800b2, 0x0030393e, 0x04015007, 0x41e00000 },
+    { 0xb711377e, 0x00a800c2, 0x0050393e, 0x04015006, 0x41e00000 },
+    { 0xb7113749, 0x004800c2, 0x0010393e, 0x0401d008, 0x41e55050 },
+    { 0xb7113509, 0x00484002, 0x0010393e, 0x0401d008, 0x41e2a828 },
+    { 0x5b913789, 0x00480071, 0x0010393e, 0x0401d008, 0x41e2a828 },
+    { 0x5b9134c9, 0x00483001, 0x0010393e, 0x0401d008, 0x41e2a828 },
+    { 0x0000001f, 0x48480000, 0x00101800, 0x0401c808, 0x40c42040 },
+    { 0xb711377d, 0x00880132, 0x0050393e, 0x05015006, 0x41e00000 },
+    { 0x1d912908, 0x0028c003, 0x0010583e, 0x0401c804, 0x01655028 },
+    { 0x00000024, 0x48280000, 0x00101800, 0x0401c804, 0x00442020 },
+    { 0x34312886, 0x0028d000, 0x0010183e, 0x0401c804, 0x01652828 },
+    { 0x5b9128c8, 0x00287001, 0x0010583e, 0x0401c804, 0x0162a814 },
+    { 0x1d912905, 0x0009d003, 0x0010583e, 0x0601c804, 0x016aa028 },
+    { 0x34312895, 0x0009e000, 0x0010183e, 0x0601c804, 0x016a5028 },
+    { 0x8ed128c5, 0x00090001, 0x0010583e, 0x0601c804, 0x01655014 },
+    { 0x00000014, 0x25100000, 0x00101800, 0x0201c804, 0x00484020 }
+};
+
+uint32_t* plp_aperta2_tscp_spd_id_entry_gsh_get(void)
+{
+    return &plp_aperta2_tscp_spd_id_entry_gsh[0][0];
+}
+
+int plp_aperta2_tscpmod_get_mapped_speed(tscpmod_spd_intfc_type_t spd_intf, int *speed)
+{
+    *speed = -1;
+    /* speeds covered in Forced-speed */
+    if (spd_intf == TSCPMOD_SPD_10G_IEEE_KR1)                   *speed = 0;
+    if (spd_intf == TSCPMOD_SPD_25G_IEEE_KS1_CS1)               *speed = 1;
+    if (spd_intf == TSCPMOD_SPD_25G_IEEE_KR1_CR1)               *speed = 2;
+    if (spd_intf == TSCPMOD_SPD_25G_BRCM_CR1)                   *speed = 16;
+    if (spd_intf == TSCPMOD_SPD_25G_BRCM_KR1)                   *speed = 17;
+    if (spd_intf == TSCPMOD_SPD_25G_BRCM_NO_FEC_KR1_CR1)        *speed = 41;
+    if (spd_intf == TSCPMOD_SPD_25G_BRCM_FEC_528_KR1_CR1)       *speed = 43;
+    if (spd_intf == TSCPMOD_SPD_50G_IEEE_KR1_CR1)               *speed = 5;
+    if (spd_intf == TSCPMOD_SPD_50G_BRCM_FEC_528_CR1_KR1)       *speed = 28;
+    if (spd_intf == TSCPMOD_SPD_50G_BRCM_FEC_272_CR1_KR1)       *speed = 38;
+    if (spd_intf == TSCPMOD_SPD_50G_BRCM_CR2_KR2_NO_FEC)        *speed = 20;
+    if (spd_intf == TSCPMOD_SPD_50G_BRCM_CR2_KR2_RS_FEC)        *speed = 21;
+    if (spd_intf == TSCPMOD_SPD_50G_BRCM_FEC_544_CR2_KR2)       *speed = 24;
+    if (spd_intf == TSCPMOD_SPD_100G_IEEE_KR4)                  *speed = 6;
+    if (spd_intf == TSCPMOD_SPD_100G_IEEE_CR4)                  *speed = 7;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_NO_FEC_X4)            *speed = 37;
+    if (spd_intf == TSCPMOD_SPD_CL73_IEEE_41G)                  *speed = 11;
+    if (spd_intf == TSCPMOD_SPD_CL73_IEEE_51G)                  *speed = 12;
+    if (spd_intf == TSCPMOD_SPD_CL73_IEEE_53G)                  *speed = 13;
+    if (spd_intf == TSCPMOD_SPD_100G_IEEE_KR2_CR2)              *speed = 8;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_NO_FEC_KR2_CR2)       *speed = 36;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_FEC_528_KR2_CR2)      *speed = 35;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_FEC_272_CR2_KR2)      *speed = 39;
+    if (spd_intf == TSCPMOD_SPD_100G_IEEE_KR1_CR1_OPT)          *speed = 42;
+    if (spd_intf == TSCPMOD_SPD_100G_IEEE_KR1_CR1)              *speed = 46;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_KR1_CR1)              *speed = 47;
+    if (spd_intf == TSCPMOD_SPD_100G_BRCM_FEC_272_KR1_CR1)      *speed = 77;
+    if (spd_intf == TSCPMOD_SPD_200G_IEEE_KR4_CR4)              *speed = 9;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_272_N4)           *speed = 68;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_272_CR4_KR4)      *speed = 40;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_544_CR8_KR8)      *speed = 72;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_NO_FEC_KR4_CR4)       *speed = 31;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_KR4_CR4)              *speed = 32;
+    if (spd_intf == TSCPMOD_SPD_200G_IEEE_KR2_CR2)              *speed = 45;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_272_KR2_CR2)      *speed = 74;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_544_KR2_CR2)      *speed = 75;
+    if (spd_intf == TSCPMOD_SPD_200G_BRCM_FEC_272_N2)           *speed = 76;
+    if (spd_intf == TSCPMOD_SPD_400G_BRCM_FEC_KR8_CR8)          *speed = 30;
+    if (spd_intf == TSCPMOD_SPD_400G_BRCM_FEC_272_N8)           *speed = 71;
+    if (spd_intf == TSCPMOD_SPD_400G_IEEE_KR4_CR4)              *speed = 44;
+    if (spd_intf == TSCPMOD_SPD_400G_BRCM_FEC_272_KR4_CR4)      *speed = 73;
+    if (spd_intf == TSCPMOD_SPD_400G_IEEE_KR4_CR4)              *speed = 44;
+    if (spd_intf == TSCPMOD_SPD_800G_BRCM_KR8_CR8)              *speed = 10;
+    if (spd_intf == TSCPMOD_SPD_800G_IEEE_KR8_CR8)              *speed = 10; /* same as TSCPMOD_SPD_800G_BRCM_KR8_CR8 */
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_56)                *speed = 56;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_57)                *speed = 57;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_58)                *speed = 58;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_59)                *speed = 59;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_60)                *speed = 60;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_61)                *speed = 61;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_62)                *speed = 62;
+    if (spd_intf == TSCPMOD_SPD_CUSTOM_ENTRY_63)                *speed = 63;
+    if (*speed == -1) {
+        return PHYMOD_E_UNAVAIL;
+    }
+
+    return PHYMOD_E_NONE;
+}
+
+int plp_aperta2_tscpmod_mapped_speed_get_osmode (int mapped_speed_id)
+{
+    return plp_aperta2_tscpmod_sc_pmd_entry[mapped_speed_id].t_pma_os_mode;
+}

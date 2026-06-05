@@ -1,0 +1,205 @@
+#ifndef SCREAMING_EAGLE_H
+#define SCREAMING_EAGLE_H
+
+#include "se_fw_config.h"
+
+#include "swift/swift_regmap.h"
+
+#include "sdk.h"
+
+extern const RegHive_t Top[], TopPLL[], TopOneLane[], TopSensor[], Ecc[], Efuse[], TopAna[], PllTx[];
+
+#define HAL_CHIP_12NM
+#define HAL_SUPPORT_ANLT            1
+#define HAL_SUPPORT_FEC_ANA         1
+#define HAL_SUPPORT_TX_PRBS_CHECKER 1
+#define HAL_SUPPORT_TOP_PLL_CAL     1
+#define HAL_SUPPORT_EYE_MONITOR     1
+
+#define HAL_SUPPORT_FW_ADAPT_COUNT 1
+#define HAL_SUPPORT_FW_EYE         0
+#define HAL_SUPPORT_FW_ISI         0
+#define HAL_SUPPORT_FW_FFE         0
+#define HAL_SUPPORT_FW_FFE_NBIAS   0
+#define HAL_SUPPORT_FW_FFE_KACCU   0
+#define HAL_SUPPORT_FW_FFE_JUMP    0
+#define HAL_SUPPORT_FW_RATIO       0
+#define HAL_SUPPORT_FW_OF          0
+#define HAL_SUPPORT_FW_HF          0
+
+#define HAL_SUPPORT_PARAMS_SLICE  1
+#define HAL_SUPPORT_PARAMS_PORT   1
+#define HAL_SUPPORT_PARAMS_SERDES 1
+
+#define HAL_SUPPORT_OPTIONS_PORT 1
+
+#define FW_SPEED_INFO       SE_INFO, SE_INFO_SPEED_MODE
+#define FW_ADAPT_COUNT_NRZ  SE_INFO, SE_INFO_RESTART_COUNT
+#define FW_ADAPT_COUNT_PAM4 SE_INFO, SE_INFO_RESTART_COUNT
+#define FW_READAPT_COUNT    SE_INFO, SE_INFO_READAPT_COUNT
+#define FW_LINK_LOST_COUNT  SE_INFO, SE_INFO_LINK_LOST_COUNT
+#define FW_LOS_COUNT        SE_INFO, SE_INFO_LOS_COUNT
+
+#define SP_FW_PRESET_IDX "fw_preset_idx", "firmware preset index", CR_PARAM_TYPE_PARAM
+#define SP_FLEXSPEEN_EN  "flexspeen_en", "indicate if flexspeed is enabled", CR_PARAM_TYPE_STATUS
+
+// TODO, move to common
+#define SP_RX_FFE_CM1         "cm1", "Rx FFE cm1", CR_PARAM_TYPE_PARAM
+#define SP_RX_FLT_SEL         "rx_flt_sel", "Rx FLT sel", CR_PARAM_TYPE_PARAM
+#define SP_RX_FLT_LOC         "rx_flt_loc", "Rx FLT location", CR_PARAM_TYPE_PARAM
+#define SP_RX_CTLE_IND        "rx_ctle_ind", "Rx CTLE inductive peaking", CR_PARAM_TYPE_PARAM
+#define SP_RX_CTLE_CS         "rx_ctle_cs", "Rx CTLE peaking capacitor control", CR_PARAM_TYPE_PARAM
+#define SP_RX_DTL_PHASE0      "rx_dtl_phase0", "Rx DTL phase0", CR_PARAM_TYPE_PARAM
+#define SP_RX_CHANNEL_EST_PSD "rx_channel_est_psd", "RX firmware Channel estimate PSD 0 and 1", CR_PARAM_TYPE_PARAM
+
+#define PHASE_NUM 16
+
+/* Other registers */
+#define HOST_LANES 8
+#define LINE_LANES 8
+#define CHIP_LANES (HOST_LANES + LINE_LANES)
+#define TOP        HIVE(Top)
+#define TOPPLL     HIVE(TopPLL)
+#define PLLTX      HIVE(PllTx)
+#define TOPANA     HIVE(TopAna)
+#define TOPONELANE HIVE(TopOneLane)
+#define TOPSENSOR  HIVE(TopSensor)
+#define ECC        HIVE(Ecc)
+#define EFUSE      HIVE(Efuse)
+
+#define REG_CMD_RAW          0xE028
+#define REG_DATA             0xFE00
+#define REG_MDIO_MAGIC_NUMER 0xE01A
+#define REG_FRECOV_ARMED     0xE023  // link recover armed
+
+// reset value
+#define CHIP_SOFT_RST_VAL  0x888
+#define CHIP_LOGIC_RST_VAL 0x777
+#define CHIP_CPU_RST_VAL   0xAAA
+#define CHIP_REG_RST_VAL   0x999
+
+#define T_CLK       75.0
+#define T_DIV_RATIO 11.0
+
+#define FW_CMD_TIMEOUT 100000
+
+// firmware define
+#define REG_MAGIC             REGBITR(TOP, 0x13, 15, 0)
+#define REG_CMD               REGBITR(TOP, 0x14, 15, 0)
+#define REG_CMD_DETAIL        REGBITR(TOP, 0x15, 15, 0)
+#define REG_CMD_DETAIL2       REGBITR(TOP, 0x16, 15, 0)
+#define REG_CMD_DETAIL3       REGBITR(TOP, 0x24, 15, 0)
+#define REG_FW_REG_VALUE      REGBITR(TOP, 0x11, 15, 0)
+#define REG_FW_PHY_READY      REGBITR(TOP, 0x20, 15, 0)
+#define REG_FW_TOPPLL_CALDONE REGBITR(TOP, 0x21, 15)
+
+#define REG_CHIP_RST    REGBITR(TOP, 0x0B, 11, 0)
+#define REG_MCU_CLK_SEL REGBITR(TOP, 0x1B, 14)
+
+#define REG_FW_RX_POL REGBITR(TOP, 0x26, 15, 0)
+#define REG_FW_TX_POL REGBITR(TOP, 0x27, 15, 0)
+
+/* Top PLL */
+#define REG_TOP_PLL_LCVCOCAP REGBITR(TOPPLL, 0x001, 12, 6)
+
+/* REG ONE LANE: 0000 */
+#define REG_LOGIC_RESET_M   REGBITR(TOPONELANE, 0x00, 3)
+#define REG_LOOPBACK_R2T_EN REGBITR(TOPONELANE, 0x00, 2)
+#define REG_LOGIC_RESET     REGBITR(TOPONELANE, 0x00, 1)
+#define REG_REGISTER_RESET  REGBITR(TOPONELANE, 0x00, 0)
+
+/* REG ONE LANE: 0001 */
+#define REG_ONELANE_01 REGBITR(TOPONELANE, 0x01, 15, 0)
+#define REG_ADR_DIFF_0 REGBITR(TOPONELANE, 0x01, 15, 13)
+#define REG_ADR_DIFF_1 REGBITR(TOPONELANE, 0x01, 12, 10)
+
+#define REG_LOOPBACK_T2R_EN REGBITR(TOPONELANE, 0x48, 0)
+
+/* SENSOR REG */
+#define REG_TOP_SENSOR_AUTO_VS    REGBITR(TOPSENSOR, 0x3A, 4, 3)
+#define REG_TOP_SENSOR_RSTB_VS    REGBITR(TOPSENSOR, 0x3A, 1, 0)
+#define REG_TOP_SENSOR_CLK_SEL_VS REGBITR(TOPSENSOR, 0x3F, 15)
+#define REG_TOP_SENSOR_CLK_CNT_VS REGBITR(TOPSENSOR, 0x3F, 14, 0)
+#define REG_TOP_SENSOR_VS_CFG     REGBITR(TOPSENSOR, 0x4A, 3, 0)  // actually [15:0], only use 4 LSB
+#define REG_TOP_SENSOR_VS_SDE     REGBITR(TOPSENSOR, 0xF6, 7)
+#define REG_TOP_SENSOR_VS_RSTN    REGBITR(TOPSENSOR, 0xF6, 10)
+#define REG_TOP_SENSOR_VS_RUN     REGBITR(TOPSENSOR, 0xF6, 11)
+#define REG_TOP_SENSOR_VS_RDY     REGBITR(TOPSENSOR, 0xF5, 14)
+#define REG_TOP_SENSOR_VS_DOUT    REGBITR(TOPSENSOR, 0xF5, 13, 0)
+
+/* ECC */
+#define REG_ECC_TEST   REGBITR(ECC, 0x0, 14, 13)
+#define REG_ECC_STATUS REGBITR(ECC, 0x1, 15, 0)
+
+#define CKO_STATE_UNCONFIG     0
+#define CKO_STATE_SQUELCHED    1
+#define CKO_STATE_ACTIVE       2
+#define CKO_STATE_INVALID      3
+#define REG_TOP_CDR_MUX0       REGBITR(TOP, 0x70, 3, 0)
+#define REG_TOP_CDR_MUX1       REGBITR(TOP, 0x70, 12, 8)
+#define REG_TOP_CDR_MUX2       REGBITR(TOP, 0x70, 7, 4)
+#define REG_TOP_CDR_DIV_MUX0   REGBITR(TOP, 0x71, 2, 0)
+#define REG_TOP_CDR_DIV_MUX1   REGBITR(TOP, 0x71, 5, 3)
+#define REG_TOP_CDR_DIV_MUX2   REGBITR(TOP, 0x71, 8, 6)
+#define REG_TOP_CDR_CLK_EN0    REGBITR(TOP, 0x71, 12)
+#define REG_TOP_CDR_CLK_EN1    REGBITR(TOP, 0x71, 13)
+#define REG_TOP_CDR_CLK_EN2    REGBITR(TOP, 0x71, 14)
+#define REG_TOP_CDR_CLK_GATE   REGBITR(TOP, 0x72, 15, 0)
+#define REG_TOP_PU_BG          REGBITR(TOP, 0x73, 0)
+#define REG_TOP_PU_RVDD        REGBITR(TOP, 0x73, 1)
+#define REG_TOP_BYPASS_SG2REG  REGBITR(TOP, 0x73, 8)
+#define REG_TOP_BYPASS_SG1REG  REGBITR(TOP, 0x73, 9)
+#define REG_TOP_VREF_CLK_SG2   REGBITR(TOP, 0x73, 12, 10)
+#define REG_TOP_VREF_CLK_SG1   REGBITR(TOP, 0x73, 15, 13)
+#define REG_TOP_BYPASS_DIFFREG REGBITR(TOP, 0x74, 2)
+#define REG_TOP_VRVDD          REGBITR(TOP, 0x74, 6, 4)
+#define REG_TOP_EN_CKO_SG2     REGBITR(TOP, 0x74, 3)
+#define REG_TOP_EN_CKO_SG1     REGBITR(TOP, 0x74, 7)
+#define REG_TOP_VREF_CLK_DIFF  REGBITR(TOP, 0x74, 10, 8)
+#define REG_TOP_EN_CKO_DIFF    REGBITR(TOP, 0x74, 11)
+#define REG_TOP_EN_CKO         REGBITR(TOP, 0x74, 13)
+#define REG_TOP_BYPASS_RVDDREG REGBITR(TOP, 0x74, 14)
+#define REG_TOP_EN_RVDDVCO     REGBITR(TOP, 0x74, 15)
+#define REG_TOP_VBG_C          REGBITR(TOP, 0x75, 3, 0)
+
+// analog testpoint
+#define REG_TOPANA_ENTSTPGROUP_PLL      REGBITR(TOPANA, 0xF9, 3)
+#define REG_TOPANA_VTSTGROUP_PLL        REGBITR(TOPANA, 0xF9, 8, 4)
+#define REG_TOPANA_TESTMODE_PLL         REGBITR(TOPANA, 0xF9, 11, 9)
+#define REG_TOPANA_TESTMODE_RX          REGBITR(TOPANA, 0xE4, 15, 13)
+#define REG_TOPANA_VTSTGROUP_RX         REGBITR(TOPANA, 0xE4, 12, 5)
+#define REG_TOPANA_ENTSTPGROUP_RX       REGBITR(TOPANA, 0xE4, 4)
+#define REG_TOPANA_ENTSTPGROUP_ADC      REGBITR(TOPANA, 0xD6, 13)
+#define REG_TOPANA_VTSTGROUP_ADC        REGBITR(TOPANA, 0xB4, 12, 8)
+#define REG_TOPANA_ENTSTPGROUP_AFE      REGBITR(TOPANA, 0xBE, 15)
+#define REG_TOPANA_VTSTGROUP_AFE        REGBITR(TOPANA, 0xBE, 7, 4)
+#define REG_TOPANA_VTSTGROUP_CLKPHASE   REGBITR(TOPANA, 0xD2, 9, 6)
+#define REG_TOPANA_ENTSTPGROUP_CLKPHASE REGBITR(TOPANA, 0xD2, 5)
+#define REG_TOPANA_TEST_EN_BG           REGBITR(TOPANA, 0xD3, 6)
+#define REG_TOPANA_TSTBUF_DIV_EN        REGBITR(TOPANA, 0xB0, 13)
+
+#define REG_PLL_TX_TESTMODE_PLL_TX    REGBITR(PLLTX, 0xB9, 15, 13)
+#define REG_PLL_TX_VTSTGROUP_PLL_TX   REGBITR(PLLTX, 0xB9, 12, 8)
+#define REG_PLL_TX_ENTSTPGROUP_PLL_TX REGBITR(PLLTX, 0xB9, 7)
+#define REG_PLL_TX_TESTMODE_TX        REGBITR(PLLTX, 0xB6, 15, 13)
+#define REG_PLL_TX_VTSTGROUP_TX       REGBITR(PLLTX, 0xB6, 12, 9)
+#define REG_PLL_TX_ENTSTPGROUP_TX     REGBITR(PLLTX, 0xB6, 8)
+#define REG_PLL_TX_TSTBUF_DIV_EN_TX   REGBITR(PLLTX, 0xB6, 7)
+
+#define REG_TOP_PLL_ENTSTPGROUP REGBITR(TOPPLL, 0x4, 1)
+#define REG_TOP_PLL_VTSTGROUP   REGBITR(TOPPLL, 0x4, 6, 2)
+#define REG_TOP_PLL_TESTMODE    REGBITR(TOPPLL, 0x4, 9, 7)
+
+#define REG_TOP_ENTSTPGROUP_REG18 REGBITR(TOP, 0x7A, 7)
+#define REG_TOP_VTSTGROUP_REG18   REGBITR(TOP, 0x7A, 6, 4)
+#define REG_TOP_RESERVE_REG18     REGBITR(TOP, 0x7A, 15, 8)
+
+#define EFUSE_BASE_REG 0xFD00
+
+#ifndef __EMSCRIPTEN__
+void hal_register_sdk(void) __attribute__((constructor));
+#else
+void hal_register_sdk(void) __attribute__((visibility("default")));
+#endif
+
+#endif
