@@ -20,8 +20,8 @@ DEBUG_FILE = "/etc/.dfx_blackbox_record_debug_flag"
 def logger_init(type):
     global blackbox_logger
     if not os.path.exists(BSP_COMMON_LOG_DIR):
-        os.system("mkdir -p %s" % BSP_COMMON_LOG_DIR)
-        os.system("sync")
+        os.makedirs(BSP_COMMON_LOG_DIR, exist_ok=True)
+        os.sync()
 
     # Define the backup log file path with a timestamp
     backup_file = os.path.join(BSP_COMMON_LOG_DIR, f"{PSU_LOG_FILE}.last_startup")

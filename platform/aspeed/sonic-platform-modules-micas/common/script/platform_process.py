@@ -3,6 +3,7 @@ import os
 import subprocess
 import glob
 import time
+import signal
 import click
 import shutil
 from platform_config import STARTMODULE, AIRFLOW_RESULT_FILE
@@ -75,10 +76,11 @@ def getPid(name):
     return ret
 
 def generate_air_flow():
-    cmd = f"nohup {EXECUTABLE_FILE_PATH}generate_airflow.py > /dev/null 2>&1 &"
+    cmd = [f"{EXECUTABLE_FILE_PATH}generate_airflow.py"]
     rets = getPid("generate_airflow.py")
     if len(rets) == 0:
-        os.system(cmd)
+        with open(os.devnull, "w") as devnull:
+            subprocess.Popen(cmd, stdout=devnull, stderr=devnull, start_new_session=True)
         time.sleep(1)
 
 def startGenerate_air_flow():
@@ -98,8 +100,7 @@ def stopGenerate_air_flow():
     if STARTMODULE.get('generate_airflow', 0) == 1:
         rets = getPid("generate_airflow.py")
         for ret in rets:
-            cmd = "kill " + ret
-            os.system(cmd)
+            os.kill(int(ret), signal.SIGTERM)
 
 
 

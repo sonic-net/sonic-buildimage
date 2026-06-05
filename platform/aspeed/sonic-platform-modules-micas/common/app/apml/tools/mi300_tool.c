@@ -139,10 +139,11 @@ static void apml_display_alarms_status(enum alarms_type type, uint32_t buffer)
 			if ((strlen(data) + alarms_len) > 100)
 				break;
 			if (status)
-				strncat(strncat(data, separator, strlen(separator)),
-					alarm_status[index], alarms_len);
+				snprintf(data + strlen(data), sizeof(data) - strlen(data),
+					 "%s%s", separator, alarm_status[index]);
 			else
-				strncat(data, alarm_status[index], alarms_len);
+				snprintf(data + strlen(data), sizeof(data) - strlen(data),
+					 "%s", alarm_status[index]);
 			status = true;
 			break;
 		default:
@@ -556,14 +557,14 @@ static void apml_query_statistics(uint8_t soc_num, struct statistics stat)
 			printf("Stop data Collection\n");
 			return;
 		case 1:
-			strncpy(unit, "mW", NIBBLE_BITS);
+			snprintf(unit, sizeof(unit), "%s", "mW");
 			break;
 		case 2:
-			strncpy(unit,"Celsius", BYTE_BITS);
+			snprintf(unit, sizeof(unit), "%s", "Celsius");
 			break;
 		case 4:
 		case 6:
-			strncpy(unit,"mA", NIBBLE_BITS);
+			snprintf(unit, sizeof(unit), "%s", "mA");
 			break;
 		case 3:
 		case 5:
@@ -582,7 +583,7 @@ static void apml_query_statistics(uint8_t soc_num, struct statistics stat)
 		case 2:
 		case 4:
 		case 6:
-			strncpy(unit, "ms", NIBBLE_BITS);
+			snprintf(unit, sizeof(unit), "%s", "ms");
 			break;
 		case 3:
 		case 5:

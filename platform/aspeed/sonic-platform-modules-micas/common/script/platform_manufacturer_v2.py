@@ -4,6 +4,7 @@ import time
 import fcntl
 import copy
 import os
+import sys
 import syslog
 import argparse
 from platform_util import *
@@ -488,7 +489,13 @@ def get_info_from_common(config):
     elif way == 'direct_config':
         return True, config.get("value")
     elif way == 'func':
-        return True, eval(config.get("funcname"))(config.get("params"))
+        func_name = config.get("funcname")
+        if not isinstance(func_name, str) or not func_name.isidentifier() or func_name.startswith("_"):
+            return False, "invalid func name: %s" % func_name
+        func = getattr(sys.modules[__name__], func_name, None)
+        if not callable(func):
+            return False, "func not found: %s" % func_name
+        return True, func(config.get("params"))
     else:
         return False, "not support read type: %s" % way
 

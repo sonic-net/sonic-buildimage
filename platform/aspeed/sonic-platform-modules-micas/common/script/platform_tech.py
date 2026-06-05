@@ -2,6 +2,7 @@
 import importlib
 import json
 import os
+import re
 import sys
 import tarfile
 import time
@@ -141,11 +142,15 @@ def save_output(results):
 def load_collectors(modules):
     collectors = []
     base_pkg = 'tech_support'
+    allowed_modules = set(COLLECT_MODULES)
 
     for module_name in modules:
+        if module_name not in allowed_modules or re.fullmatch(r"[A-Za-z0-9_]+", module_name) is None:
+            print(f'invalid module name: {module_name}')
+            continue
         mod_name = f'{base_pkg}.{module_name}_collector'
         try:
-            mod = importlib.import_module(mod_name)
+            mod = __import__(mod_name, fromlist=['*'])
         except Exception as e:
             print(f'load module {mod_name} failed: {e}')
             continue

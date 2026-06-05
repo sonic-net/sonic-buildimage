@@ -583,8 +583,7 @@ def get_eeprom_config_by_json_file(file_path):
 def write_rawdata_to_file(rawdata,out_file):
     out_file_dir = os.path.dirname(out_file)
     if len(out_file_dir) != 0:
-        cmd = "mkdir -p %s" % out_file_dir
-        os.system(cmd)
+        os.makedirs(out_file_dir, exist_ok=True)
     data_array = bytearray()
     for x in rawdata:
         data_array.append(ord(x))

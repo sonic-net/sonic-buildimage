@@ -379,7 +379,7 @@ int firmware_upgrade_mtd_topo_blk_alloc(const char *mtd_name, firmware_mtd_block
             continue;
         }
 
-        strncpy(topo->block[count].name, entry->d_name, sizeof(topo->block[count].name) - 1);
+        snprintf(topo->block[count].name, sizeof(topo->block[count].name), "%s", entry->d_name);
 
         /* parse offset and size from sysfs, if failed, return error, because these info are necessary for upgrade */
         ret = fw_up_read_mtd_attr_u32(entry->d_name, "offset", &topo->block[count].offset);

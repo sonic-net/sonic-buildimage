@@ -27,8 +27,8 @@ XDPE_SUPPORTED_DEVICES = ["XDPE12284C", "XDPE132G5C", "XDPE132G5D", "XDPE1A2G5B"
 def monitor_syslog_init():
     global dev_logger
     if not os.path.exists(LOG_DIR):
-        os.system("mkdir -p %s" % LOG_DIR)
-        os.system("sync")
+        os.makedirs(LOG_DIR, exist_ok=True)
+        os.sync()
     dev_logger = logging.getLogger(__name__)
     dev_logger.setLevel(logging.DEBUG)
     dev_handler = RotatingFileHandler(filename=LOG_FILE, maxBytes=1 * 1024 * 1024, backupCount=1)

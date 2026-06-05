@@ -2,6 +2,7 @@
 import os
 import json
 import subprocess
+import shlex
 import time
 import sys
 import syslog
@@ -797,7 +798,13 @@ class fancontrol(object):
                 fancontrol_debug(msg)
             return True, msg
         else:
-            os.system(self.__check_crit_recover_cmd)
+            cmd = self.__check_crit_recover_cmd.strip()
+            if cmd.startswith("echo ") and " > " in cmd:
+                value, path = cmd[5:].split(" > ", 1)
+                with open(path.strip(), "w") as fd:
+                    fd.write(value.strip())
+            else:
+                subprocess.run(shlex.split(cmd), check=False)
 
     def checkCritReboot(self):
         try:

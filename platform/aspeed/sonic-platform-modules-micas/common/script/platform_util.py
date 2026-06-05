@@ -502,7 +502,13 @@ def getonieplatform(path):
 def getplatform_config_db():
     if not os.path.isfile(CONFIG_DB_PATH):
         return ""
-    val = os.popen("sonic-cfggen -j %s -v DEVICE_METADATA.localhost.platform" % CONFIG_DB_PATH).read().strip()
+    result = subprocess.run(
+        ["sonic-cfggen", "-j", CONFIG_DB_PATH, "-v", "DEVICE_METADATA.localhost.platform"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    val = result.stdout.strip()
     if len(val) <= 0:
         return ""
     return val
@@ -1053,7 +1059,7 @@ def decode_value(config, value=None):
             attr_decimal_precision = decode_info.get("decimal_precision", None)
             formula = decode_info.get("formula", None)
             if formula is not None:
-                value = str(eval(formula % (float(value))))
+                value = str(get_format_value(formula % (float(value))))
                 format_value = value
             if attr_decimal_precision is not None:
                 format = "%%.%df" % attr_decimal_precision

@@ -1,5 +1,6 @@
 #!/usr/bin/env python_nos
 import os
+import subprocess
 import time
 import sys
 from platform_util import exec_os_cmd, get_value, set_value, PLATFORM_I2C_RETRY_TIME
@@ -24,7 +25,7 @@ def log_message(message):
 
 def platform_debug_init():
     if os.path.isfile(PLATFORM_DEBUG_INIT_PATH):
-        os.system(PLATFORM_DEBUG_INIT_PATH)
+        subprocess.run([PLATFORM_DEBUG_INIT_PATH], check=False)
     return
 
 

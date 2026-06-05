@@ -135,7 +135,7 @@ def adjust_picocom():
             shutil.copy2(src_local, dest_sys)
             # Ensure executable permissions (755)
             st = os.stat(dest_sys)
-            os.chmod(dest_sys, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+            os.chmod(dest_sys, 0o755)
             print(f"Installed custom picocom from {src_local} -> {dest_sys}")
         except Exception as e:
             print(f"ERROR: failed to copy {src_local} -> {dest_sys}: {e}")
