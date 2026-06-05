@@ -121,7 +121,7 @@ void output_debug(const char *format, ...)
 /*
  * Check whether a TraceId character is safe to send as a TACACS+ attribute.
  */
-int is_valid_trace_id_char(char value)
+static int is_valid_trace_id_char(char value)
 {
     unsigned char ch = (unsigned char)value;
     return isalnum(ch) || ch == '.' || ch == '_' || ch == ':' || ch == '-';
@@ -130,7 +130,7 @@ int is_valid_trace_id_char(char value)
 /*
  * Get SSH supplied TraceId for TACACS+ authorization.
  */
-int get_trace_id(char *dst, size_t size)
+static int get_trace_id(char *dst, size_t size)
 {
     const char *trace_id;
     size_t trace_id_len, i;

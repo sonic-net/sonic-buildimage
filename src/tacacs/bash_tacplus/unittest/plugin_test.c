@@ -6,6 +6,8 @@
 #include "mock_helper.h"
 #include <libtac/support.h>
 
+#define TRACE_ID_ENV_VARIABLE   "TraceId"
+
 #define IS_LOCAL_USER              0
 #define IS_REMOTE_USER             1
 #define ERROR_CHECK_LOCAL_USER     2
@@ -21,6 +23,36 @@ int start_up() {
   initialize_tacacs_servers();
   tacacs_ctrl = PAM_TAC_DEBUG;
   return 0;
+}
+
+typedef struct {
+	char *value;
+	int was_set;
+} trace_id_env_state_t;
+
+static void save_trace_id_env(trace_id_env_state_t *state)
+{
+	const char *value = getenv(TRACE_ID_ENV_VARIABLE);
+
+	state->value = NULL;
+	state->was_set = value != NULL;
+    if (value != NULL) {
+		state->value = strdup(value);
+	}
+}
+
+static void restore_trace_id_env(trace_id_env_state_t *state)
+{
+	if (state->was_set) {
+		setenv(TRACE_ID_ENV_VARIABLE, state->value, 1);
+	}
+	else {
+		unsetenv(TRACE_ID_ENV_VARIABLE);
+	}
+
+	free(state->value);
+	state->value = NULL;
+	state->was_set = 0;
 }
 
 /* Test tacacs_authorization all tacacs server connect failed case */
@@ -103,12 +135,14 @@ void testcase_tacacs_authorization_success() {
 /* Test send_authorization_message adds TraceId attribute when present */
 void testcase_send_authorization_message_trace_id() {
 	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
+	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
-	setenv("TraceId", "trace-123:abc.def", 1);
+	setenv(TRACE_ID_ENV_VARIABLE, "trace-123:abc.def", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
@@ -116,64 +150,73 @@ void testcase_send_authorization_message_trace_id() {
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 1);
 	CU_ASSERT_STRING_EQUAL(mock_tac_trace_id_attr_value, "trace-123:abc.def");
 
-	unsetenv("TraceId");
+	restore_trace_id_env(&trace_id_env);
 }
 
 /* Test send_authorization_message skips TraceId attribute when not present */
 void testcase_send_authorization_message_without_trace_id() {
 	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
+	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
-	unsetenv("TraceId");
+	unsetenv(TRACE_ID_ENV_VARIABLE);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
+
+	restore_trace_id_env(&trace_id_env);
 }
 
 /* Test send_authorization_message skips empty TraceId values */
 void testcase_send_authorization_message_empty_trace_id() {
 	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
+	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
-	setenv("TraceId", "", 1);
+	setenv(TRACE_ID_ENV_VARIABLE, "", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
-	unsetenv("TraceId");
+	restore_trace_id_env(&trace_id_env);
 }
 
 /* Test send_authorization_message skips unsafe TraceId values */
 void testcase_send_authorization_message_invalid_trace_id() {
 	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 
+	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
-	setenv("TraceId", "trace\n123", 1);
+	setenv(TRACE_ID_ENV_VARIABLE, "trace\n123", 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
-	unsetenv("TraceId");
+	restore_trace_id_env(&trace_id_env);
 }
 
 /* Test send_authorization_message skips oversized TraceId values */
 void testcase_send_authorization_message_long_trace_id() {
 	char *testargv[2];
+	trace_id_env_state_t trace_id_env;
 	char trace_id[249];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
@@ -181,16 +224,17 @@ void testcase_send_authorization_message_long_trace_id() {
 	memset(trace_id, 'a', sizeof(trace_id) - 1);
 	trace_id[sizeof(trace_id) - 1] = '\0';
 
+	save_trace_id_env(&trace_id_env);
 	reset_mock_tac_attrs();
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
-	setenv("TraceId", trace_id, 1);
+	setenv(TRACE_ID_ENV_VARIABLE, trace_id, 1);
 
 	int result = send_authorization_message(0, "test_user", "tty0", "test_host", 42, "test_command", testargv, 2);
 
 	CU_ASSERT_EQUAL(result, 0);
 	CU_ASSERT_EQUAL(mock_tac_trace_id_attr_count, 0);
 
-	unsetenv("TraceId");
+	restore_trace_id_env(&trace_id_env);
 }
 
 /* Test authorization_with_host_and_tty get success case */

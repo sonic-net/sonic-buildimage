@@ -12,6 +12,8 @@
 
 #include "mock_helper.h"
 
+#define TRACE_ID_ATTR_NAME      "traceid"
+
 // define BASH_PLUGIN_UT_DEBUG to output UT debug message.
 #if defined (BASH_PLUGIN_UT_DEBUG)
 #define debug_printf printf
@@ -123,7 +125,7 @@ void *xcalloc(size_t count, size_t size)
 /* Mock tac_free_attrib method */
 void tac_add_attrib(struct tac_attrib **attr, char *attrname, char *attrvalue)
 {
-	if (strcmp(attrname, "TraceId") == 0)
+	if (strcmp(attrname, TRACE_ID_ATTR_NAME) == 0)
 	{
 		mock_tac_trace_id_attr_count++;
 		snprintf(mock_tac_trace_id_attr_value, sizeof(mock_tac_trace_id_attr_value), "%s", attrvalue);
