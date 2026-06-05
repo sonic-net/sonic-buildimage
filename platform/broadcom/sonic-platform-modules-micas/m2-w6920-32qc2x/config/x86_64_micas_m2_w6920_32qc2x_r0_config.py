@@ -751,6 +751,10 @@ DRIVERLISTS = [
     {"name": "plat_sff", "delay":0},
     {"name": "plat_sensor", "delay":0},
     {"name": "hw_test", "delay": 0},
+    {"name": "firmware_driver_cpld", "delay": 0},
+    {"name": "firmware_driver_ispvme", "delay": 0},
+    {"name": "firmware_driver_sysfs", "delay": 0},
+    {"name": "wb_firmware_upgrade_device", "delay": 0},
 ]
 
 
@@ -1271,9 +1275,9 @@ UPGRADE_SUMMARY = {
                 "init_cmd": [
                     {"cmd": "modprobe wb_spi_gpio", "gettype": "cmd"},
                     {"cmd": "modprobe wb_spi_gpio_device sck=139 miso=88 mosi=89 cs=87 bus=0 gpio_chip_name=INTC3000:00", "gettype": "cmd"},
-                    {"cmd": "echo 457 > /sys/class/gpio/export", "gettype": "cmd"},
-                    {"cmd": "echo out > /sys/class/gpio/gpio457/direction", "gettype": "cmd", "delay": 0.1},
-                    {"cmd": "echo 0 > /sys/class/gpio/gpio457/value", "gettype": "cmd", "delay": 0.1},
+                    {"cmd": "echo 611 > /sys/class/gpio/export", "gettype": "cmd"},
+                    {"cmd": "echo out > /sys/class/gpio/gpio611/direction", "gettype": "cmd", "delay": 0.1},
+                    {"cmd": "echo 0 > /sys/class/gpio/gpio611/value", "gettype": "cmd", "delay": 0.1},
                     {"io_addr": 0x991, "value": 0xfa, "gettype": "io"},
                     {"io_addr": 0x990, "value": 0xfd, "gettype": "io"},
                     {"io_addr": 0x9a6, "value": 0xfe, "gettype": "io"},
@@ -1286,12 +1290,13 @@ UPGRADE_SUMMARY = {
                     {"io_addr": 0x9a6, "value": 0xff, "gettype": "io"},
                     {"io_addr": 0x990, "value": 0xfc, "gettype": "io"},
                     {"io_addr": 0x991, "value": 0xf8, "gettype": "io"},
-                    {"cmd": "echo 1 > /sys/class/gpio/gpio457/value", "gettype": "cmd"},
-                    {"cmd": "echo 457 > /sys/class/gpio/unexport", "gettype": "cmd", "delay": 0.1},
+                    {"cmd": "echo 1 > /sys/class/gpio/gpio611/value", "gettype": "cmd"},
+                    {"cmd": "echo 611 > /sys/class/gpio/unexport", "gettype": "cmd", "delay": 0.1},
                     {"cmd": "rmmod wb_spi_gpio_device", "gettype": "cmd"},
                     {"cmd": "rmmod wb_spi_gpio", "gettype": "cmd", "delay": 0.1},
                 ],
             },
+
 
             "chain3": {
                 "name": "BIOS",

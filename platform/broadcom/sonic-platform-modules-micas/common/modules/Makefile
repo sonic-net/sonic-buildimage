@@ -58,6 +58,10 @@ obj-m += ct7148.o
 obj-m += wb_ucd9081.o
 obj-m += wb_indirect_dev.o
 obj-m += wb_vr_common.o
+obj-m += wb_spi_gpio.o
+obj-m += wb_spi_93xx46.o
+obj-m += wb_eeprom_93xx46.o
+obj-m += wb_spi_nor_device.o
 
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
