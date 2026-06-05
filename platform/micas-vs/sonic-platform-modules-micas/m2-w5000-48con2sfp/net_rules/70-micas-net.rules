@@ -1,3 +1,0 @@
-SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:03:00.0", NAME="etp1"
-SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:e9:00.2", NAME="etp2"
-SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:e9:00.3", NAME="etp3"
