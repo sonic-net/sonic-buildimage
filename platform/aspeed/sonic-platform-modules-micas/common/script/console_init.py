@@ -6,7 +6,6 @@ import shutil
 import sys
 import subprocess
 import tempfile
-import stat
 
 INIT_CFG_FILE = "/etc/sonic/init_cfg.json"
 CONFIG_DB_FILE = "/etc/sonic/config_db.json"
@@ -133,9 +132,6 @@ def adjust_picocom():
         try:
             # Use copy2 instead of move, so the source file remains if debugging is needed
             shutil.copy2(src_local, dest_sys)
-            # Ensure executable permissions (755)
-            st = os.stat(dest_sys)
-            os.chmod(dest_sys, 0o755)
             print(f"Installed custom picocom from {src_local} -> {dest_sys}")
         except Exception as e:
             print(f"ERROR: failed to copy {src_local} -> {dest_sys}: {e}")
