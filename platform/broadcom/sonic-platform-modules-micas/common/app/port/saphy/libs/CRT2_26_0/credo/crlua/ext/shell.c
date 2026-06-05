@@ -160,7 +160,7 @@ static CredoError_t credo_enhanced_readline(const char *prompt, char input[CR_CM
             continue;
         }
     }
-    strncpy(input, line, CR_CMDLINE_SIZE);
+    snprintf(input, CR_CMDLINE_SIZE, "%s", line);
     linenoiseHistoryAdd(line);
     linenoiseHistorySave("./.crsh_history");
     linenoiseFree(line);

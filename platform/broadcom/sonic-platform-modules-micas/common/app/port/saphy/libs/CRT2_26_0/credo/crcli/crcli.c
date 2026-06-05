@@ -67,7 +67,7 @@ void get_completions(const char *data, linenoiseCompletions *lc, size_t pos) {
             break;
         }
         char autobuff[4096];
-        strncpy(autobuff, dataBuffer, sizeof(autobuff));
+        snprintf(autobuff, sizeof(autobuff), "%s", dataBuffer);
         send_data(sockfd, "ack");
         recieve_data(sockfd);
         size_t autopos = strtoul(dataBuffer, NULL, 10);

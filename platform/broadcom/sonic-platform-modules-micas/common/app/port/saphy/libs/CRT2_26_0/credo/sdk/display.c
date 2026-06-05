@@ -15,7 +15,8 @@ CredoError_t cr_slice_display_info(CredoSlice_t* slice, const char* command) {
 
     // duplicate command to not break const contract when using strtok_r
     char command_buffer[CR_CMDLINE_SIZE] = {0};
-    char* command_parse = strncpy(command_buffer, command, CR_CMDLINE_SIZE - 1);
+    snprintf(command_buffer, CR_CMDLINE_SIZE, "%s", command);
+    char* command_parse = command_buffer;
 
     char* argv[MAX_DISPLAY_ARGC] = {NULL};
     int argc = 0;

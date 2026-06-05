@@ -125,7 +125,7 @@ CredoError_t socket_readline(const char* prompt, char input[CR_CMDLINE_SIZE]) {
     if (strncmp(databuffer, "@input:", 7) != 0) {  // invalid packet sent
         goto send_quit;
     }
-    strncpy(input, databuffer + 7, CR_CMDLINE_SIZE-1);
+    snprintf(input, CR_CMDLINE_SIZE, "%s", databuffer + 7);
     input[CR_CMDLINE_SIZE - 1] = '\0';
 
     int outfd = accept_unix_stream_socket(server_state.listenoutfd, 0);
@@ -228,7 +228,7 @@ CredoError_t cr_shell_spawn_server2(const char* socket_path) {
     if (socket_path == NULL) {
         socket_path = "/tmp/credo-server.sock";
     }
-    strncpy(server_state.socket_path, socket_path, sizeof(server_state.socket_path));
+    snprintf(server_state.socket_path, sizeof(server_state.socket_path), "%s", socket_path);
     snprintf(server_state.socket_path2, sizeof(server_state.socket_path2), "%s-out", socket_path);
     CredoError_t err = run_server();
     cr_shell_set_logger(NULL);

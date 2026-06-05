@@ -404,7 +404,7 @@ static int server_socket_init(NET_COMM_OBJECT_T *server)
     unlink(server->service_info->host_name);
     /* 填充服务器地址（sockaddr_un）*/
     server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, server->service_info->host_name, sizeof(server_addr.sun_path) - 1);
+    snprintf(server_addr.sun_path, sizeof(server_addr.sun_path), "%s", server->service_info->host_name);
     bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     listen(sockfd, 100);
     return sockfd;
@@ -422,7 +422,7 @@ static int client_socket_init(NET_COMM_OBJECT_T *client)
     }
     /* 填充服务器地址 */
     server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, client->service_info->host_name, sizeof(server_addr.sun_path) - 1);
+    snprintf(server_addr.sun_path, sizeof(server_addr.sun_path), "%s", client->service_info->host_name);
     /* 连接到服务器 */
     if (connect(client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         close(client_fd);

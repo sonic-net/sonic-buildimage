@@ -583,7 +583,7 @@ static int platform_get_system_free_mem(size_t *free_size)
             len++;
         }
         FAC_LOG_DBG(GRTD_LOG_DEBUG, "free mem info:%s, len:%d \n", loc, len);
-        strncpy(mem_size, loc, len);
+        snprintf(mem_size, len, "%s", loc);
         mem_size[len] = 0;
         all_free_size = strtoul(mem_size, NULL, 10);
         /* Use 90% to test */

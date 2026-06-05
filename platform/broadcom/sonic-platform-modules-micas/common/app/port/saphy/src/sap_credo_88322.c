@@ -2150,7 +2150,7 @@ static void processDsc(const char* rx_param, int count, int type, CredoParamData
     int k;
     char result[4096] = {0}; /* 用来存储拼接后的字符串 */
     char temp[128]; /* 临时存储每个数值的字符串表示 */
-    strcat(result, "(");
+    snprintf(result + strlen(result), 1024, "%s", "(");
     for (k = 0; k < count; k++) {
         switch (type) {
             case CR_PARAM_VAL_INT:
@@ -2166,11 +2166,11 @@ static void processDsc(const char* rx_param, int count, int type, CredoParamData
                 continue;
         }
         if (k > 0) {
-            strcat(result, ", ");
+            snprintf(result + strlen(result), 1024, "%s", ", ");
         }
-        strcat(result, temp);
+        snprintf(result + strlen(result), 1024, "%s", temp);
     }
-    strcat(result, ")");
+    snprintf(result + strlen(result), 1024, "%s", ")");
     SAP_CLI_LOG_NO_LF("%-32s", result);
 }
 

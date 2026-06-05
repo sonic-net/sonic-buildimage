@@ -133,7 +133,7 @@ void SMBus_read_regulator_status(char *chip_name, bcm_plp_access_t plp_info, uin
         regulator_info[k].len = rbuf[0];
         ialConfig.connection.Bits.PecEnabled = 1;
         smbusWrRdBlock(chip_name, plp_info, &ialConfig, &cmd, 1, rbuf, rbuf[0]+1);
-        strncpy(regulator_info[k].info, (const char*)(rbuf+1), rbuf[0]);
+        snprintf(regulator_info[k].info, rbuf[0] + 1, "%s", (const char*)(rbuf+1));
         LOGX(LOG_INFO,"%-20s [%02X]      :  %s ", regulator_info[k].name, regulator_info[k].cmd, regulator_info[k].info);
     }
 

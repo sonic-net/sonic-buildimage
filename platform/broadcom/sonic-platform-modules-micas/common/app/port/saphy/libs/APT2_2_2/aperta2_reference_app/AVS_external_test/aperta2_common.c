@@ -644,7 +644,7 @@ void config_regulators(char *chip_name, bcm_plp_access_t plp_info, uint8_t rail_
 
 void init_actor(actor_t* r, bcm_plp_access_t plp_info, char* tag)
 {
-    strncpy(r->tag, tag, 7);
+    snprintf(r->tag, 8, "%s", tag);
     r->tag[7] = '\0';
     memcpy(&r->phy_info, &plp_info, sizeof(bcm_plp_access_t));
     r->cnt = r->state = 0;

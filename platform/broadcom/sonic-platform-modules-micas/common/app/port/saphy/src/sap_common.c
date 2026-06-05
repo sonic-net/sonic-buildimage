@@ -591,6 +591,7 @@ int sap_get_cfg_info(char *file_path, char *config_buf, int *val, bool is_arr)
 
 int sap_get_cfg_info_str(char *file_path, char *config_buf, char *val)
 {
+    char *saveptr;
     FILE *fp = NULL;
     char *sp = NULL;
     char *find = NULL;
@@ -619,8 +620,8 @@ int sap_get_cfg_info_str(char *file_path, char *config_buf, char *val)
             *find = '\0';
         }
         if (strncmp(config_line, config_prefix, strlen(config_prefix)) == 0) {
-            sp = strtok(config_line, "=");
-            sp = strtok(NULL, "=");
+            sp = strtok_r(config_line, "=", &saveptr);
+            sp = strtok_r(NULL, "=", &saveptr);
             // SAP_LOG_DBG("value : %s\n", sp);
             memcpy(val, sp, strlen(sp));
             fclose(fp);
@@ -638,10 +639,10 @@ char* _dump_int_array(int *input, int input_size, char *output, int output_size)
     memset(output, 0, output_size);
     for (i = 0; i<input_size; i++) {
         if (i != 0) {
-            strncat(output, ",", strlen(output));
+            snprintf(output + strlen(output), 2, "%s", ",");
         }
         snprintf(number_str, sizeof(number_str), "%d", input[i]);
-        strncat(output, number_str, strlen(number_str));
+        snprintf(output + strlen(output), strlen(number_str)+1, "%s", number_str);
     }
     return output;
 }

@@ -79,9 +79,16 @@ class Chassis(ChassisBase):
                 if self.port_start_index == 1:
                     self._sfp_list.append(Sfp(1))
 
+                sfp_config = baseutil.get_config().get("sfps", {})
+                logical_to_physical_sfp_map = sfp_config.get("logical_to_physical_sfp_map", {})
+
                 # sfp id always start at 1
                 for index in range(1, self.port_num + 1):
-                    self._sfp_list.append(Sfp(index))
+                    physical_index = logical_to_physical_sfp_map.get(index, logical_to_physical_sfp_map.get(str(index), index))
+                    if physical_index != index:
+                        self._sfp_list.append(self._sfp_list[physical_index - 1])
+                    else:
+                        self._sfp_list.append(Sfp(index))
 
                 for i in range(self.port_start_index, self.port_start_index + self.port_num):
                     self.sfp_present_dict[i] = self.STATUS_REMOVED

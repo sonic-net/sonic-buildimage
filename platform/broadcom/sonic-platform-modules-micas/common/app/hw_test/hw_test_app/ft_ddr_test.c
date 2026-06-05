@@ -2068,7 +2068,7 @@ static int ddr_swap_blocks(char *desc)
         v->map[0].end = (unsigned int *)((ulong)v->map[0].start + MEMORY_SIZE_1G);
     }
     ret = swap_blocks(desc, test_times, swap_times, blk_size);
-    strncpy((char *)(v), (char *)(&v_tmp), sizeof(struct vars));
+    memcpy(v, &v_tmp, sizeof(struct vars));
 
     return ret;
 }

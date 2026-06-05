@@ -275,7 +275,8 @@ int atoix(char *ix) {
 /* get the next hexadecimal/decimal number from user input command */
 int next_num(void)
 {
-    char *dstr = strtok(NULL, DELIMITERS);
+    char *saveptr;
+    char *dstr = strtok_r(NULL, DELIMITERS, &saveptr);
 
     if ( NULL == dstr)   return PHY_INVALID_ARG;
 
@@ -291,7 +292,8 @@ int next_num(void)
 /* get the next text string token from user input command */
 char *next_word(char *sentence)
 {
-    char *dstr = strtok(sentence, DELIMITERS);
+    char *saveptr;
+    char *dstr = strtok_r(sentence, DELIMITERS, &saveptr);
     return  (dstr) ? dstr : (char*) empty_str;
 }
 
@@ -666,16 +668,17 @@ scallop(char cmdline[])
  *  Extract each command and feed them into scallop() to run.
  */
 int run_cmdline(char *cline) {
+    char *saveptr;
     int    rv = 0;
     char  *cmd, *cmdline_ptr;
 
     cmdline_ptr = cline;
-    cmd = strtok(cmdline_ptr, ";\n");
+    cmd = strtok_r(cmdline_ptr, ";\n", &saveptr);
     while ( cmd ) {
         cmdline_ptr += strlen(cmd);     cmdline_ptr++;
         /* if ( cmd && cmdline_ptr )   printf("[%s](%s)\n", cmd, cmdline_ptr); */
         rv = scallop(cmd);      printf("\n");
-        cmd = strtok(cmdline_ptr, ";\n");
+        cmd = strtok_r(cmdline_ptr, ";\n", &saveptr);
     }
     return rv;
 }
@@ -708,7 +711,7 @@ int cli_shell(char *chipname) {
 
     while ( rv != EXIT_SHELL ) {
         memset(input_line, 0, CMDLINE_MAX);
-        strcpy(input_line, readline_gets(prompt));
+        strlcpy(input_line, readline_gets(prompt), sizeof(input_line));
         rv = run_cmdline(input_line);
     }
     return 0;
@@ -720,6 +723,7 @@ int cli_shell(char *chipname) {
 
 /* Main loop to receive user input command lines */
 int cli_shell(char *chipname) {
+    char *saveptr;
     int  rv = 0;
     char cmdline[CMDLINE_MAX], last_cmdline[CMDLINE_MAX] = { '\n', '\0' };
 
@@ -727,15 +731,15 @@ int cli_shell(char *chipname) {
         printf("%s:) ", chipname);
         /*  printf("\033[01;34m%s\033[00;33m>\033[00m ", chipname);  */
         if ( rv == EMPTY_LINE ) {
-            strcpy(cmdline, last_cmdline);
+            strlcpy(cmdline, last_cmdline, sizeof(cmdline));
             puts(cmdline);  /* repeat last command line */
         } else {
             fgets(cmdline, CMDLINE_MAX, stdin);
             if ( cmdline[0] == '\n' ) {
-                strcpy(cmdline, last_cmdline);
+                strlcpy(cmdline, last_cmdline, sizeof(cmdline));
                 /* printf(":) %s", cmdline); */  /* repeat last command line */
             } else {
-                strcpy(last_cmdline, cmdline);
+                strlcpy(last_cmdline, cmdline, sizeof(last_cmdline));
             }
         }
 
@@ -744,12 +748,13 @@ int cli_shell(char *chipname) {
 #else
         {
             char *cmd, *cmdline_ptr = cmdline;
-            cmd = strtok(cmdline, CMD_DELIMITERS);
+            char *saveptr;
+            cmd = strtok_r(cmdline, CMD_DELIMITERS, &saveptr);
             while ( cmd ) {
                 cmdline_ptr += strlen(cmd);     cmdline_ptr++;
                 /* if ( cmd && cmdline_ptr )   printf("[%s][%s]\n", cmd, cmdline_ptr); */
                 rv = scallop(cmd);      printf("\n");
-                cmd = strtok(cmdline_ptr, ";\n");
+                cmd = strtok_r(cmdline_ptr, ";\n", &saveptr);
             }
         }
 #endif
@@ -758,4 +763,3 @@ int cli_shell(char *chipname) {
 }
 
 #endif  /* GNU_READLINE_SUPPORT */
-

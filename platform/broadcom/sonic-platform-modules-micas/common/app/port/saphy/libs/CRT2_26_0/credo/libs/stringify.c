@@ -105,9 +105,9 @@ CredoError_t port_flags_to_string(uint32_t flags, char* buf, uint32_t size) {
 
 void ppm_to_format_string(int32_t ppm, char ppm_str[8]) {
     if (ppm > 999) {
-        strncpy(ppm_str, "+###", 8);
+        snprintf(ppm_str, 8, "%s", "+###");
     } else if (ppm < -999) {
-        strncpy(ppm_str, "-###", 8);
+        snprintf(ppm_str, 8, "%s", "-###");
     } else {
         snprintf(ppm_str, 8, "%d", ppm);
     }

@@ -827,7 +827,7 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
     if (history_len > 1) {
         if (l->history_search == false) {
             l->history_search = true;
-            strncpy(l->history_buf, l->buf, l->buflen);
+            snprintf(l->history_buf, l->buflen, "%s", l->buf);
             l->history_buf[strlen(l->buf)] = '\0';
             l->history_index = 0;
         }
@@ -853,7 +853,7 @@ void linenoiseEditHistoryNext(struct linenoiseState *l, int dir) {
             }
         } while (true);
 
-        strncpy(l->buf, history[history_len - 1 - l->history_index], l->buflen);
+        snprintf(l->buf, l->buflen, "%s", history[history_len - 1 - l->history_index]);
         l->buf[l->buflen - 1] = '\0';
         l->len = l->pos = strlen(l->buf);
         refreshLineKeepHistory(l);

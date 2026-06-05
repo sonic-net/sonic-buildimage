@@ -129,7 +129,7 @@ int create_unix_stream_socket(const char* path, int flags) {
     }
 
     saddr.sun_family = AF_UNIX;
-    strncpy(saddr.sun_path, path, sizeof(saddr.sun_path) - 1);
+    snprintf(saddr.sun_path, sizeof(saddr.sun_path), "%s", path);
 
     if (-1 == check_error(connect(sfd, (struct sockaddr*)&saddr, sizeof(saddr.sun_family) + strlen(saddr.sun_path)))) {
         close(sfd);
@@ -172,7 +172,7 @@ int create_unix_dgram_socket(const char* bind_path, int flags) {
         }
 
         saddr.sun_family = AF_UNIX;
-        strncpy(saddr.sun_path, bind_path, sizeof(saddr.sun_path) - 1);
+        snprintf(saddr.sun_path, sizeof(saddr.sun_path), "%s", bind_path);
 
         bind(sfd, (struct sockaddr*)&saddr, sizeof(saddr.sun_family) + strlen(saddr.sun_path));
     }
@@ -219,7 +219,7 @@ int connect_unix_dgram_socket(int sfd, const char* path) {
         return -1;
     }
 
-    strncpy(new_addr.sun_path, path, sizeof(new_addr.sun_path) - 1);
+    snprintf(new_addr.sun_path, sizeof(new_addr.sun_path), "%s", path);
 
     if (-1 ==
         check_error(connect(sfd, (struct sockaddr*)&new_addr, sizeof(new_addr.sun_family) + strlen(new_addr.sun_path))))
@@ -329,7 +329,7 @@ int create_unix_server_socket(const char* path, int socktype, int flags) {
 
     saddr.sun_family = AF_UNIX;
 
-    strncpy(saddr.sun_path, path, sizeof(saddr.sun_path) - 1);
+    snprintf(saddr.sun_path, sizeof(saddr.sun_path), "%s", path);
 
     if (-1 == check_error(bind(sfd, (struct sockaddr*)&saddr, sizeof(saddr.sun_family) + strlen(saddr.sun_path))))
         return -1;
@@ -387,7 +387,7 @@ ssize_t recvfrom_unix_dgram_socket(int sfd, void* buf, size_t size, char* from, 
     if (-1 == check_error(bytes = recvfrom(sfd, buf, size, recvfrom_flags, (struct sockaddr*)&saddr, &socksize)))
         return -1;
 
-    if (from != NULL && from_size > 0) strncpy(from, saddr.sun_path, from_size);
+    if (from != NULL && from_size > 0) snprintf(from, from_size, "%s", saddr.sun_path);
 
     return bytes;
 }
@@ -420,7 +420,7 @@ ssize_t sendto_unix_dgram_socket(int sfd, const void* buf, size_t size, const ch
     memset(&saddr, 0, sizeof(struct sockaddr_un));
 
     saddr.sun_family = AF_UNIX;
-    strncpy(saddr.sun_path, path, sizeof(saddr.sun_path) - 1);
+    snprintf(saddr.sun_path, sizeof(saddr.sun_path), "%s", path);
 
     if (-1 ==
         check_error(bytes = sendto(sfd, buf, size, sendto_flags, (struct sockaddr*)&saddr, sizeof(struct sockaddr_un))))

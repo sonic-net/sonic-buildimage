@@ -91,16 +91,25 @@ class LedSwitchMonitor:
         return sorted(ports)
     
     def execute_sap_command(self, command: str):
-        """Execute sap command"""
-        cmd = f"/usr/local/bin/sap {command}"
+        """Execute sap command safely without shell injection risk"""
+        # Use list format instead of string to avoid shell=True
+        cmd = ["/usr/local/bin/sap", command]
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                cmd,
+                shell=False,  # Explicitly set to False for security
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
             if result.returncode == 0:
-                logger.info(f"Command executed successfully: {cmd}")
+                logger.info(f"Command executed successfully: {' '.join(cmd)}")
             else:
-                logger.error(f"Command execution failed: {cmd}, error: {result.stderr}")
+                logger.error(f"Command execution failed: {' '.join(cmd)}, error: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            logger.error(f"Command execution timeout (5s): {' '.join(cmd)}")
         except Exception as e:
-            logger.error(f"Command execution exception: {cmd}, error: {e}")
+            logger.error(f"Command execution exception: {' '.join(cmd)}, error: {e}")
     
     def handle_special_port(self):
         """Handle Ethernet1024 specially - directly monitor its netdev_oper_status"""
