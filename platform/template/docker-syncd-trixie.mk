@@ -23,6 +23,7 @@ endif
 $(DOCKER_SYNCD_BASE)_CONTAINER_NAME = syncd
 $(DOCKER_SYNCD_BASE)_RUN_OPT += --privileged -t
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 
 SONIC_TRIXIE_DOCKERS += $(DOCKER_SYNCD_BASE)
