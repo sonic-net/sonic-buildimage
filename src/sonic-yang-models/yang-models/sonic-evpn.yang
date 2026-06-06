@@ -104,9 +104,10 @@ module sonic-evpn {
             description "CONFIG_DB EVPN_MH_GLOBAL Table";
 
             list EVPN_MH_GLOBAL_LIST {
-                key "default_key";
+                key "name";
 
-                leaf default_key {
+                leaf name {
+                    description "EVPN_MH_GLOBAL singleton entry name. Only default is valid.";
                     type string {
                         pattern "default";
                     }

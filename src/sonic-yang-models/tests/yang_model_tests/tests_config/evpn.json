@@ -223,7 +223,7 @@
             "sonic-evpn:EVPN_MH_GLOBAL": {
                 "EVPN_MH_GLOBAL_LIST": [
                     {
-                        "default_key": "default",
+                        "name": "default",
                         "startup_delay": 1800,
                         "mac_holdtime": 1000,
                         "neigh_holdtime": 600
@@ -237,7 +237,7 @@
             "sonic-evpn:EVPN_MH_GLOBAL": {
                 "EVPN_MH_GLOBAL_LIST": [
                     {
-                        "default_key": "default",
+                        "name": "default",
                         "startup_delay": 3601,
                         "mac_holdtime": 1000,
                         "neigh_holdtime": 600
@@ -251,7 +251,7 @@
             "sonic-evpn:EVPN_MH_GLOBAL": {
                 "EVPN_MH_GLOBAL_LIST": [
                     {
-                        "default_key": "default",
+                        "name": "default",
                         "startup_delay": 1800,
                         "mac_holdtime": 86401,
                         "neigh_holdtime": 600
@@ -265,7 +265,7 @@
             "sonic-evpn:EVPN_MH_GLOBAL": {
                 "EVPN_MH_GLOBAL_LIST": [
                     {
-                        "default_key": "default",
+                        "name": "default",
                         "startup_delay": 1800,
                         "mac_holdtime": 1000,
                         "neigh_holdtime": 86401
