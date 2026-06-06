@@ -87,6 +87,17 @@ class TestDeviceInfo(object):
         with mock.patch.dict(os.environ, {}, clear=True):
             yield
 
+    @pytest.fixture(autouse=True)
+    def reset_caches(self):
+        # Reset module-level caches before each test to prevent cross-test contamination
+        device_info.hw_info_dict.clear()
+        device_info.sonic_ver_info.clear()
+        device_info._platform_cache = None
+        yield
+        device_info.hw_info_dict.clear()
+        device_info.sonic_ver_info.clear()
+        device_info._platform_cache = None
+
     def test_get_machine_info(self):
         with mock.patch("os.path.isfile") as mock_isfile:
             mock_isfile.return_value = True
@@ -193,8 +204,7 @@ class TestDeviceInfo(object):
             assert hw_info_dict["hwsku"] == "Mellanox-SN2700"
             assert hw_info_dict["switch_type"] == "npu"
         mock_sonic_ver.assert_called_once()
-        # TODO(trixie): Figure out why this is failing
-        # mock_machine_info.assert_called_once()
+        mock_machine_info.assert_called_once()
         mock_hwsku.assert_called_once()
         mock_cfg_inst.get_table.assert_called_once_with("DEVICE_METADATA")
 
