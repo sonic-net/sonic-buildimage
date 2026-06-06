@@ -1,0 +1,14 @@
+[Unit]
+Description=Set eth mac address
+Before=interfaces-config.service
+Requires=platform_driver.service
+After=platform_driver.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/set_eth_mac.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=baresdk plus socket
+After=opennsl-modules.service
+
+[Service]
+ExecStart=/usr/local/bin/sdkmsg.sh start
+ExecStop=/usr/local/bin/sdkmsg.sh stop
+KillMode=process
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target

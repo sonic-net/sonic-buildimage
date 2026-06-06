@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+import os
+import importlib.machinery
+import argparse
+import sys
+import subprocess
+import click
+
+def find_column_indices(header_line):
+    """解析表头行，找出name和index列的位置"""
+    # 移除开头的#号并分割
+    header_parts = header_line.lstrip('#').strip().split()
+    
+    # 查找name和index的位置
+    try:
+        name_index = header_parts.index('name')
+        index_index = header_parts.index('index')
+        return name_index, index_index, None
+    except ValueError as e:
+        return None, None, f"错误：表头中未找到必要的列 'name' 或 'index': {str(e)}"
+
+def parse_port_config(file_path):
+    """
+    解析端口配置文件，提取name和index的映射关系
+    
+    Args:
+        file_path: 配置文件路径
+        adjust_index: 是否将index减1
+    """
+    result = {}
+    
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            
+            if not lines:
+                return None, "错误：文件为空"
+                
+            # 解析表头获取列位置
+            name_col, index_col, error = find_column_indices(lines[0])
+            if error:
+                return None, error
+                
+            # 解析数据行
+            min_idx = 100
+            for line in lines[1:]:
+                line = line.strip()
+                if not line:  # 跳过空行
+                    continue
+                    
+                parts = line.split()
+                if len(parts) > max(name_col, index_col):
+                    name = parts[name_col]
+                    index = int(parts[index_col])
+                    result[name] = index
+                    if min_idx > index:
+                        min_idx = index
+            for key in result.keys():
+                result[key] -= min_idx
+        return result, None
+    except Exception as e:
+        return None, f"解析文件时发生错误: {str(e)}"
+
+def get_sku_from_script():
+    """
+    通过 config-hwsku.sh -p 命令获取 SKU
+    返回: (sku, error_message)
+    """
+    script_path = "/usr/local/bin/config-hwsku.sh"  # 根据实际路径修改
+    
+    if not os.path.exists(script_path):
+        return None, "config-hwsku.sh 不存在"
+        
+    try:
+        # 设置超时时间为2秒
+        process = subprocess.Popen([script_path, "-p"], 
+                                 stdout=subprocess.PIPE, 
+                                 stderr=subprocess.PIPE)
+        
+        try:
+            stdout, stderr = process.communicate(timeout=2)
+            
+            if process.returncode == 0:
+                sku = stdout.decode().strip()
+                if sku:
+                    return sku, None
+                return None, "命令执行成功但未返回SKU"
+            else:
+                return None, f"命令执行失败: {stderr.decode().strip()}"
+                
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return None, "命令执行超时(2s)"
+            
+    except Exception as e:
+        return None, f"执行命令时发生错误: {str(e)}"
+
+def get_sku_from_file(file_path):
+    """
+    从 default_sku 文件获取 SKU
+    返回: (sku, error_message)
+    """
+
+    try:
+        if not os.path.exists(file_path):
+            return None, "default_sku 文件不存在"
+            
+        with open(file_path, 'r') as f:
+            content = f.read().strip()
+            # 提取第一个空格前的内容作为SKU
+            sku = content.split()[0] if content else None
+            if sku:
+                return sku, None
+            return None, "文件内容格式不正确"
+            
+    except Exception as e:
+        return None, f"读取文件时发生错误: {str(e)}"
+
+def get_sku(file_path):
+    """ 获取SKU """
+    sku, error = get_sku_from_script()
+    
+    # 如果从脚本获取失败，尝试从文件获取
+    if not sku:
+        sku, error = get_sku_from_file(file_path)
+    return sku, error
+
+def is_int_or_convertible(value):
+    if not value:
+        return False
+    if isinstance(value, int):
+        return True
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
+
+def sfputil_get_temp(sfputil_path, port):
+    try:
+        platform_sfputil = None
+        module = importlib.machinery.SourceFileLoader("sfputil", sfputil_path).load_module()
+        platform_sfputil_class = getattr(module, "SfpUtil")
+        platform_sfputil = platform_sfputil_class()
+
+        if port < platform_sfputil.port_start or port > platform_sfputil.port_end:
+            return -100.00, "port %d out of range" % port
+        if platform_sfputil.get_presence(port) is False:
+            return -100.00, "port %d not presence" % port
+        eeprom_path = platform_sfputil._get_port_eeprom_path(port, 0x50)
+        with open(eeprom_path, mode="rb", buffering=0) as eeprom:
+            eeprom_raw = platform_sfputil._read_eeprom_specific_bytes(eeprom, 0, 128)
+            if eeprom_raw:
+                # QSFP-DD or OSFP
+                # print("eeprom_raw %s" % eeprom_raw[0])
+                if (eeprom_raw[0] == '1e' or eeprom_raw[0] == '18' or eeprom_raw[0] == '19'):
+                    offset = 14
+                # QSPF
+                elif (eeprom_raw[0] == '11' or eeprom_raw[0] == '0d'):
+                    offset = 22
+                else:
+                    offset = 96
+                    eeprom_raw = platform_sfputil._read_eeprom_specific_bytes(eeprom, 256, 128)
+                    if not eeprom_raw:
+                        return -99.99, "port get sfp temperature error"
+                # print("offset %s" % offset)
+                msb = int(eeprom_raw[offset+0], 16)
+                lsb = int(eeprom_raw[offset+1], 16)
+
+                result = (msb << 8) | (lsb & 0xff)
+                # 处理负数情况
+                if ((result & (1 << (16 - 1))) != 0):
+                    result = result - (1 << 16)
+                temperature = float(result / 256.0)
+                # print("temperature :%0.3f" % temperature) 
+                return temperature, None
+    except Exception as e:
+        print("port %d get sfp temperature error, msg:%s" % (port, str(e)))
+    return -99.99, "port get sfp temperature error"
+
+def show_sfp_temperature(temp, err):
+    if temp:
+        for key, value in temp.items():
+            # 不做温度过滤
+            print("%s: %.3fC" % (key, value))
+            if key in err and err[key]:
+                print("    err: %s" % err[key])
+            # print("%s:" % key)
+            # if -50 <= value <= 200:
+            #     print("%s: %.3fC" % (key,value))
+            # elif key in err and err[key]:
+            #     print("%s:" % key)
+            #     print("    err: %s" % err[key])
+            # else:
+            #     print("%s:" % key)
+            
+
+# port 面板口从1开始，或者Ethernet1
+def get_sfp_temperature(port):
+    """读取指定端口SFP模块的温度"""
+
+    sfputil_dir = "/usr/share/sonic/device/"
+
+    if not os.path.exists(sfputil_dir):
+        sfputil_dir = "/usr/share/sonic/platform/"
+        sfputil_path = sfputil_dir + "/plugins/sfputil.py"
+        sku_path =  sfputil_dir + "/default_sku"
+    else:
+        cmd = "cat /host/machine.conf | grep onie_platform"
+        ret, output = subprocess.getstatusoutput(cmd)
+        if ret != 0:
+            print("cmd: %s execution fail, output: %s" % (cmd, output))
+
+        onie_platform = output.split("=")[1]
+        sfputil_path = sfputil_dir + onie_platform + "/plugins/sfputil.py"
+        sku_path =  sfputil_dir + onie_platform + "/default_sku"
+
+    sku, error = get_sku(sku_path)
+    if not sku:
+        print("get sku failed with %s", error)
+
+    # 解析port参数
+    if is_int_or_convertible(port):
+        port_idx = int(port)-1
+        port = "eth" + port
+    elif sku:
+        port_ini_path = sfputil_dir + onie_platform + "/" + sku + "/port_config.ini"
+        port_disk, error = parse_port_config(port_ini_path)
+        # print("get port disk ")
+        if not port_disk:
+            print("get port disk failed with %s", error)
+            return
+        if port in port_disk:
+            # print("%s:%d" % (port, port_disk[port]))
+            port_idx = port_disk[port]
+        elif port:
+            print("Valid values for port:%s"% list(port_disk.keys()))
+            return
+
+    temp = {}
+    err = {}
+    if port:
+        temp[port], err[port] = sfputil_get_temp(sfputil_path, port_idx)
+    else:
+        for key in port_disk.keys():
+            temp[key], err[key]= sfputil_get_temp(sfputil_path, port_disk[key])
+    show_sfp_temperature(temp, err)
+
+@click.command()
+@click.option('-p', '--port', help='Display SFP EEPROM data for port <port_name> only')
+def cli(port):
+    """show SFP temperature"""
+    get_sfp_temperature(port)
+
+
+if __name__ == '__main__':
+    cli()

@@ -1,0 +1,9 @@
+MPATH       := $($(FS_N9600_64OD_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-fs.mk platform/broadcom/platform-modules-fs.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(addprefix $(MPATH)/,$(shell cd $(MPATH) && git ls-files))
+
+
+$(FS_N9600_64OD_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(FS_N9600_64OD_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(FS_N9600_64OD_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)

@@ -1,0 +1,17 @@
+obj-m := syseeprom_device_driver.o
+obj-m += fan_device_driver.o
+obj-m += cpld_device_driver.o
+obj-m += sysled_device_driver.o
+obj-m += slot_device_driver.o
+obj-m += psu_device_driver.o
+obj-m += transceiver_device_driver.o
+obj-m += temp_sensor_device_driver.o
+obj-m += vol_sensor_device_driver.o
+obj-m += curr_sensor_device_driver.o
+obj-m += power_sensor_device_driver.o
+obj-m += fpga_device_driver.o
+obj-m += watchdog_device_driver.o
+obj-m += system_device_driver.o
+obj-m += eeprom_device_driver.o
+obj-m += cabletray_device_driver.o
+obj-m += misc_fw_device_driver.o
