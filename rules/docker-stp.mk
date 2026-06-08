@@ -32,6 +32,8 @@ $(DOCKER_STP)_LOAD_DOCKERS = $(DOCKER_CONFIG_ENGINE_BOOKWORM)
 $(DOCKER_STP)_CONTAINER_NAME = stp
 $(DOCKER_STP)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_STP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_STP)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_STP)_BASE_IMAGE_FILES += stpctl:/usr/bin/stpctl
 

@@ -34,6 +34,8 @@ $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/syste
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(CONTAINER_CHECKER)
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(SERVICE_CHECKER_PY)

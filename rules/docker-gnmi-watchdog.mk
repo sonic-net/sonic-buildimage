@@ -28,4 +28,6 @@ $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -t --pid=host
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_GNMI_WATCHDOG)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 

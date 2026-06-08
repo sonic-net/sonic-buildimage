@@ -31,5 +31,7 @@ $(DOCKER_TELEMETRY)_CONTAINER_NAME = telemetry
 $(DOCKER_TELEMETRY)_RUN_OPT += -t
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_TELEMETRY)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_TELEMETRY)_BASE_IMAGE_FILES += monit_telemetry:/etc/monit/conf.d

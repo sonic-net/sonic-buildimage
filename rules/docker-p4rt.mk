@@ -34,5 +34,7 @@ $(DOCKER_P4RT)_RUN_OPT += -t
 $(DOCKER_P4RT)_RUN_OPT += -v /etc/sonic:/etc/sonic:rw
 $(DOCKER_P4RT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_P4RT)_RUN_OPT += -v /zmq_swss:/zmq_swss:rw
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_P4RT)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 $(DOCKER_P4RT)_GIT_COMMIT = $(shell cd "$($(SONIC_P4RT)_SRC_PATH)" && git log -n 1 --format=format:"%H %s" || echo "Unable to fetch git log for p4rt")
 

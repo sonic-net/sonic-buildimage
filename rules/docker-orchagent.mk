@@ -44,6 +44,8 @@ $(DOCKER_ORCHAGENT)_RUN_OPT += -v /host/machine.conf:/host/machine.conf:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /var/log/swss:/var/log/swss:rw
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /zmq_swss:/zmq_swss:rw
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_ORCHAGENT)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_ORCHAGENT)_BASE_IMAGE_FILES += swssloglevel:/usr/bin/swssloglevel
 $(DOCKER_ORCHAGENT)_FILES += $(ARP_UPDATE_SCRIPT) $(ARP_UPDATE_VARS_TEMPLATE)

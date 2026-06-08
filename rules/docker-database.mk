@@ -31,6 +31,8 @@ $(DOCKER_DATABASE)_CONTAINER_NAME = database
 $(DOCKER_DATABASE)_RUN_OPT += -t --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_DATABASE)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_DATABASE)_BASE_IMAGE_FILES += redis-cli:/usr/bin/redis-cli
 $(DOCKER_DATABASE)_FILES += $(SYSCTL_NET_CONFIG)

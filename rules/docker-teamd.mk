@@ -35,6 +35,8 @@ $(DOCKER_TEAMD)_CONTAINER_NAME = teamd
 $(DOCKER_TEAMD)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TEAMD)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_TEAMD)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_TEAMD)_BASE_IMAGE_FILES += teamdctl:/usr/bin/teamdctl
 

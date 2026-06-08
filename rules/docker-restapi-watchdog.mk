@@ -26,3 +26,5 @@ $(DOCKER_RESTAPI_WATCHDOG)_CONTAINER_NAME = restapi_watchdog
 $(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -t
 $(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /etc/sonic/credentials:/etc/sonic/credentials:ro
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_RESTAPI_WATCHDOG)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro

@@ -41,5 +41,7 @@ $(DOCKER_BMP)_RUN_OPT += -t
 $(DOCKER_BMP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_BMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_BMP)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_BMP)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_BMP)_BASE_IMAGE_FILES += monit_bmp:/etc/monit/conf.d

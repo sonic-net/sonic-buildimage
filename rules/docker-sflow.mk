@@ -33,6 +33,8 @@ $(DOCKER_SFLOW)_CONTAINER_NAME = sflow
 $(DOCKER_SFLOW)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_SFLOW)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SFLOW)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+# For gNMI/gNOI Unix Domain Socket (local access without TLS)
+$(DOCKER_SFLOW)_RUN_OPT += -v /var/run/gnmi:/var/run/gnmi:ro
 
 $(DOCKER_SFLOW)_BASE_IMAGE_FILES += psample:/usr/bin/psample
 $(DOCKER_SFLOW)_BASE_IMAGE_FILES += sflowtool:/usr/bin/sflowtool
