@@ -40,9 +40,18 @@ if PY3:
         'sonic_py_common.grpc',
         'sonic_py_common.grpc.gnoi',
     ]
+    # protobuf 4.21 introduced the runtime-version check embedded in
+    # generated *_pb2.py stubs (see Protobuf Python Version header).
+    # Stubs in sonic_py_common/grpc/gnoi were generated with protoc-gen
+    # >= 4.25 and refuse to import under protobuf < 4.21, so pin the
+    # lower bound explicitly rather than silently importing on bullseye
+    # images that still ship the locally-built protobuf 3.21.12
+    # (rules/protobuf.mk). Modern SONiC base images (bookworm, trixie)
+    # already satisfy this; older ones get a clear ImportError instead
+    # of a low-level descriptor mismatch.
     extra_install_requires = [
         'grpcio',
-        'protobuf',
+        'protobuf>=4.21',
     ]
 
 setup(
