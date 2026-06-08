@@ -165,7 +165,7 @@ int psu_update_attr(struct device *dev, struct psu_attr_info *data, PSU_DATA_ATT
 
 static u8 psu_get_vout_mode(struct i2c_client *client)
 {
-    u8 status = 0, retry = 10;
+    u8 status = 0, retry = 2;
     uint8_t offset = PSU_REG_VOUT_MODE;
 
     while (retry)
@@ -173,7 +173,7 @@ static u8 psu_get_vout_mode(struct i2c_client *client)
         status = i2c_smbus_read_byte_data((struct i2c_client *)client, offset);
         if (unlikely(status < 0)) 
         {
-            msleep(60);
+            msleep(1);
             retry--;
             continue;
         }
@@ -513,7 +513,7 @@ ret:
 
 int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
-    int status = 0, retry = 10;
+    int status = 0, retry = 2;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
     char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
@@ -549,7 +549,7 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
 
         if (unlikely(status<0))
         {
-            msleep(60);
+            msleep(1);
             retry--;
             continue;
         }
@@ -582,14 +582,14 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
 int sonic_i2c_get_psu_word_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
 
-    int status = 0, retry = 10;
+    int status = 0, retry = 2;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
     uint8_t offset = (uint8_t)adata->offset;
 
     while (retry) {
         status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
         if (unlikely(status < 0)) {
-            msleep(60);
+            msleep(1);
             retry--;
             continue;
         }
