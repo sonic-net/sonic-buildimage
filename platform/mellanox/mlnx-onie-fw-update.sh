@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 
 this_script="$(basename $(realpath ${0}))"
 lock_file="/var/run/${this_script%.*}.lock"
@@ -114,8 +114,15 @@ system_reboot() {
     # Give user some time to cancel the update
     sleep 5s
 
+    # The staged ONIE update is committed past this point. Clear the rollback
+    # trap so a SIGHUP/SIGTERM delivered during systemd's orderly shutdown
+    # (e.g. when serial-getty@ttyS0 is stopped) cannot race terminate_handler
+    # into running disable_onie_fw_update_mode and undoing the staging.
+    trap - SIGHUP SIGINT SIGQUIT SIGTERM
+    echo "INFO: Reboot is underway, the ONIE firmware update can no longer be cancelled"
+
     # Use SONiC reboot scenario
-    /usr/local/bin/reboot -f
+    /usr/local/bin/reboot
     exit $?
 }
 
